@@ -182,6 +182,28 @@ impl Animation {
         }
     }
 
+    fn leaves_at<'a>(&'a self, start: f32, leaves: &mut Vec<(f32, &'a Self)>) {
+        match self {
+            Self::Set { .. } | Self::Spring { .. } => leaves.push((start, self)),
+            Self::Sequence(animations) => {
+                let mut cursor = start;
+                for animation in animations {
+                    animation.leaves_at(cursor, leaves);
+                    cursor += animation.duration();
+                }
+            }
+            Self::Parallel(animations) => {
+                for animation in animations {
+                    animation.leaves_at(start, leaves);
+                }
+            }
+            Self::Delay { seconds, animation } => {
+                animation.leaves_at(start + seconds, leaves);
+            }
+            Self::Hold(_) => {}
+        }
+    }
+
     fn validate(&self) -> Result<()> {
         let mut writes = Vec::new();
         self.writes_at(0.0, &mut writes);
@@ -268,12 +290,27 @@ impl Timeline {
                 .collect(),
             duration: animation.duration(),
         };
-        timeline.compile_at(animation, 0.0)?;
+        let mut leaves = Vec::new();
+        animation.leaves_at(0.0, &mut leaves);
+        leaves.sort_by(|(left, _), (right, _)| left.total_cmp(right));
+        for (start, leaf) in leaves {
+            timeline.compile_leaf(leaf, start)?;
+        }
         Ok(timeline)
     }
 
     pub fn duration(&self) -> f32 {
         self.duration
+    }
+
+    pub(crate) fn compile_with_duration(
+        initial_values: impl IntoIterator<Item = (PropertyId, f32)>,
+        animation: &Animation,
+        duration: f32,
+    ) -> Result<Self> {
+        let mut timeline = Self::compile(initial_values, animation)?;
+        timeline.duration = duration;
+        Ok(timeline)
     }
 
     pub fn sample(&self, property: &PropertyId, time: f32) -> Option<MotionState> {
@@ -285,7 +322,7 @@ impl Timeline {
         Some(segment.sample(time.max(0.0)))
     }
 
-    fn compile_at(&mut self, animation: &Animation, start: f32) -> Result<()> {
+    fn compile_leaf(&mut self, animation: &Animation, start: f32) -> Result<()> {
         match animation {
             Animation::Set { property, value } => {
                 self.push_segment(
@@ -319,22 +356,10 @@ impl Timeline {
                     },
                 );
             }
-            Animation::Sequence(animations) => {
-                let mut cursor = start;
-                for child in animations {
-                    self.compile_at(child, cursor)?;
-                    cursor += child.duration();
-                }
-            }
-            Animation::Parallel(animations) => {
-                for child in animations {
-                    self.compile_at(child, start)?;
-                }
-            }
-            Animation::Delay { seconds, animation } => {
-                self.compile_at(animation, start + seconds)?;
-            }
-            Animation::Hold(_) => {}
+            Animation::Sequence(_)
+            | Animation::Parallel(_)
+            | Animation::Delay { .. }
+            | Animation::Hold(_) => unreachable!("only animation leaves are compiled"),
         }
         Ok(())
     }
@@ -392,6 +417,28 @@ mod tests {
 
         assert!(timeline.sample(&x, 0.4).unwrap().velocity.abs() > 0.0);
         assert!(timeline.sample(&x, 2.0).unwrap().position > 19.9);
+    }
+
+    #[test]
+    fn delayed_parallel_retargeting_is_independent_of_child_order() {
+        let x = PropertyId::new("pointer.x");
+        let forward = Animation::parallel([
+            Animation::spring(x.clone(), 10.0, profile()),
+            Animation::delay(0.4, Animation::spring(x.clone(), 20.0, profile())),
+        ]);
+        let reversed = Animation::parallel([
+            Animation::delay(0.4, Animation::spring(x.clone(), 20.0, profile())),
+            Animation::spring(x.clone(), 10.0, profile()),
+        ]);
+        let forward = Timeline::compile([(x.clone(), 0.0)], &forward).unwrap();
+        let reversed = Timeline::compile([(x.clone(), 0.0)], &reversed).unwrap();
+
+        for time in [0.0, 0.2, 0.4, 0.8, 2.0] {
+            let forward = forward.sample(&x, time).unwrap();
+            let reversed = reversed.sample(&x, time).unwrap();
+            assert!((forward.position - reversed.position).abs() < 0.0001);
+            assert!((forward.velocity - reversed.velocity).abs() < 0.0001);
+        }
     }
 
     #[test]

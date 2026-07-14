@@ -27,7 +27,7 @@ This scene is the benchmark. Architecture that does not improve the scene or aut
 
 Authors should describe what changes, what remains stable, and when an event occurs. They should not calculate frame numbers or interpolate properties themselves.
 
-An ideal TypeScript authoring surface looks like this:
+An early TypeScript sketch captured the desired semantic authoring style:
 
 ```ts
 export default video("effect-service", {
@@ -72,11 +72,13 @@ export default video("effect-service", {
 })
 ```
 
-This syntax is illustrative. The prototype should discover the final API by producing the hero scene, not by polishing a speculative DSL first.
+This syntax remains prior design evidence rather than the selected authoring language. The prototype discovered its public API by producing the hero scene in Rust.
 
-## Rust Owns Execution, Not Necessarily Authoring
+## Rust Owns Authoring And Execution
 
-The renderer and motion engine should be Rust. The first authoring frontend should remain TypeScript because `effect-institute` already demonstrates the important domain model:
+The renderer, motion engine, and public authoring DSL are Rust. Scene programs construct pure typed values and compile them directly; there is no user-authored JSON or TypeScript execution boundary.
+
+The Rust API carries forward the important domain lessons from `effect-institute`:
 
 - `line` gives stable structural identity.
 - `slot` describes a controlled state change.
@@ -86,22 +88,16 @@ The renderer and motion engine should be Rust. The first authoring frontend shou
 - focus and annotations target semantic content.
 - stability analysis catches unnecessarily replaced text.
 
-The TypeScript DSL will compile to a versioned JSON intermediate representation, or IR. The Rust CLI will consume only this IR. This boundary lets Kinograph add a custom textual DSL or embedded Rust API later without coupling language design to rendering.
-
 ```text
-TypeScript DSL                 Future frontends
-      |                       Rust API / text DSL
-      +-------------+---------------+
-                    |
-             Kinograph scene IR
-                    |
-       timeline and motion compiler
-                    |
-         scene sampled at time t
-                    |
-            wgpu render graph
-                    |
-              FFmpeg encoder
+Rust scene values
+       |
+Composition: motion + script clips + layer clips + cues
+       |
+CompiledScene: property tracks + media placements
+       |
+scene sampled at time t
+       |
+wgpu pixels + FFmpeg media assembly
 ```
 
 ## The Scene IR Preserves Identity
@@ -130,7 +126,7 @@ A pose is a target state for an actor: transform, opacity, crop, style, or conte
 
 ### Cues
 
-A cue names a point on the timeline. Cues can come from an explicit offset, a previous action, or narration word timing. `on("NotFound")` and `after(350.ms())` should ultimately compile to the same cue representation.
+A cue names a range on the timeline. Cues can wrap an authored composition or come from narration word and phrase timing. Their start and end provide semantic synchronization points; explicit time remains an escape hatch.
 
 ### Transitions
 
@@ -268,7 +264,7 @@ Exit criteria:
 
 ### Milestone 3: Stable Code Transitions
 
-Compile the existing `line`, `slot`, `stack`, focus, and annotation concepts into the scene IR. Animate only changed spans while stable spans retain identity.
+Compile the existing `line`, `slot`, `stack`, focus, and annotation concepts into typed Rust scene values. Animate only changed spans while stable spans retain identity.
 
 Exit criteria:
 
@@ -289,7 +285,7 @@ Exit criteria:
 
 ### Milestone 5: Author the Hero Scene
 
-Build the 5-10 second benchmark scene through the least elaborate authoring API that works. Extract repeated operations into the TypeScript DSL only after the scene exposes them.
+Build the 5-10 second benchmark scene through the least elaborate authoring API that works. Extract repeated operations into the Rust DSL only after the scene exposes them.
 
 Exit criteria:
 
@@ -300,7 +296,7 @@ Exit criteria:
 
 ### Milestone 6: Tighten the Authoring Loop
 
-Add file watching, IR validation, low-resolution preview rendering, and frame or time-range selection.
+Add file watching, composition validation, low-resolution preview rendering, and frame or time-range selection.
 
 Exit criteria:
 
@@ -315,23 +311,21 @@ kinograph/
   PLAN.md
   Cargo.toml
   src/
-    main.rs              # render and inspect commands
-    ir.rs                # serializable scene model
-    motion.rs            # trajectories, springs, timeline compiler
+    lib.rs               # public Rust library boundary
+    dsl.rs               # scene values, semantic targets, and actors
+    composition.rs       # media clips, cues, and cross-media timing
+    timeline.rs          # scalar property-track compiler
+    motion.rs            # analytic spring trajectories
     render.rs            # wgpu renderer and accumulation passes
-  packages/
-    dsl/                 # TypeScript authoring frontend
-  examples/
-    hero/                # benchmark source, IR, assets, and expected render
-  tests/
-    fixtures/            # small deterministic scenes
+    encode.rs            # FFmpeg subprocess boundary
+    main.rs              # benchmark choreography and application wiring
 ```
 
 Modules should become crates only after the implementation creates a real reuse or compilation boundary.
 
 ## Scope Cuts Protect the Experiment
 
-The first prototype will not include:
+The completed visual prototype deliberately excluded:
 
 - React, HTML, CSS, or a browser renderer
 - a graphical timeline editor
@@ -346,7 +340,7 @@ The first prototype will not include:
 - real-time full-resolution playback
 - feature parity with Remotion or Manim
 
-FFmpeg remains responsible for encoding. Kinograph is responsible for scene evaluation and pixels.
+The next phase reopens audio, transcription, images, video layers, and interactive preview behind the proven Rust DSL. FFmpeg remains responsible for codec work and final media assembly; Kinograph owns source-range edits, timing, scene evaluation, and pixels.
 
 ## Risks Have Cheap Tests
 
@@ -357,7 +351,7 @@ FFmpeg remains responsible for encoding. Kinograph is responsible for scene eval
 | Temporal supersampling is too slow | Benchmark 1080p with 1, 4, and 8 samples as the first task in Milestone 4 |
 | Springs still feel generic | Build the trajectory visualizer and tune against reference clips before adding DSL features |
 | Stable code identity becomes cumbersome | Port one complex `effect-institute` animation before generalizing the IR |
-| TypeScript-to-Rust iteration is awkward | Keep the IR human-readable and provide `inspect` before adding a custom protocol |
+| Transcript edits drift out of sync with visuals | Compile both from shared cue ranges on one exact media clock |
 | DSL design expands without evidence | Require every new primitive to remove repetition from the hero scene |
 
 ## Prototype Success Is Aesthetic and Technical
@@ -375,13 +369,13 @@ It fails if most effort goes into general layout, language syntax, codecs, edito
 
 ## Immediate Next Step
 
-Implement a one-day rendering spike before designing more API:
+Build one short narration-led scene using the composition algebra:
 
-1. Initialize one Rust binary crate.
-2. Open a headless `wgpu` device.
-3. Render a rounded panel and representative code text to an offscreen texture.
-4. Read back RGBA pixels.
-5. Pipe 120 identical or trivially translated frames to FFmpeg.
-6. Record render time and inspect typography at 100% scale.
+1. Import multiple immutable audio takes.
+2. Transcribe them with word-level source timing.
+3. Assemble selected script clips non-destructively.
+4. Derive phrase cue ranges from the edited script.
+5. Synchronize existing code motion and one sound-effect layer to those cues.
+6. Have FFmpeg assemble the compiled audio placements with the rendered frames.
 
-That spike answers the first expensive question: whether the chosen Rust text and GPU stack can produce the desired visual baseline. If it cannot, change the rendering stack before investing in motion or DSL design.
+This answers the next expensive question: whether transcript-led source edits and deterministic visual choreography can remain synchronized through an iterative, agent-controlled edit.

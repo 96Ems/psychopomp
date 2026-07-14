@@ -1,0 +1,527 @@
+use std::{
+    collections::HashMap,
+    path::{Path, PathBuf},
+};
+
+use anyhow::{Result, bail};
+
+use crate::dsl::Motion;
+
+const NANOS_PER_SECOND: u64 = 1_000_000_000;
+const MAX_SECONDS: f64 = u64::MAX as f64 / NANOS_PER_SECOND as f64;
+
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq, PartialOrd)]
+pub struct Time(u64);
+
+impl Time {
+    pub const ZERO: Self = Self(0);
+
+    pub fn seconds(value: f64) -> Self {
+        assert!(
+            value.is_finite() && (0.0..=MAX_SECONDS).contains(&value),
+            "time must be finite, non-negative, and representable"
+        );
+        Self((value * NANOS_PER_SECOND as f64).round() as u64)
+    }
+
+    pub fn as_seconds(self) -> f64 {
+        self.0 as f64 / NANOS_PER_SECOND as f64
+    }
+
+    pub fn after(self, duration: Duration) -> Self {
+        Self(
+            self.0
+                .checked_add(duration.0)
+                .expect("timeline time overflowed"),
+        )
+    }
+
+    pub fn before(self, duration: Duration) -> Self {
+        assert!(
+            duration.0 <= self.0,
+            "time offset precedes composition start"
+        );
+        Self(self.0 - duration.0)
+    }
+}
+
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq, PartialOrd)]
+pub struct Duration(u64);
+
+impl Duration {
+    pub const ZERO: Self = Self(0);
+
+    pub fn seconds(value: f64) -> Self {
+        assert!(
+            value.is_finite() && (0.0..=MAX_SECONDS).contains(&value),
+            "duration must be finite, non-negative, and representable"
+        );
+        Self((value * NANOS_PER_SECOND as f64).round() as u64)
+    }
+
+    pub fn milliseconds(value: f64) -> Self {
+        Self::seconds(value / 1_000.0)
+    }
+
+    pub fn as_seconds(self) -> f64 {
+        self.0 as f64 / NANOS_PER_SECOND as f64
+    }
+
+    pub fn frame_count(self, frames_per_second: u32) -> u64 {
+        assert!(frames_per_second > 0, "frame rate must be positive");
+        let scaled = u128::from(self.0) * u128::from(frames_per_second);
+        u64::try_from(scaled.div_ceil(u128::from(NANOS_PER_SECOND)))
+            .expect("frame count overflowed")
+    }
+}
+
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+pub struct TimeRange {
+    start: Time,
+    end: Time,
+}
+
+impl TimeRange {
+    pub fn new(start: Time, end: Time) -> Self {
+        assert!(end >= start, "time range must not end before it starts");
+        Self { start, end }
+    }
+
+    pub fn start(self) -> Time {
+        self.start
+    }
+
+    pub fn end(self) -> Time {
+        self.end
+    }
+
+    pub fn duration(self) -> Duration {
+        Duration(self.end.0 - self.start.0)
+    }
+}
+
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+pub struct AssetId(String);
+
+impl AssetId {
+    pub fn new(value: impl Into<String>) -> Self {
+        let value = value.into();
+        assert!(!value.is_empty(), "asset ID must not be empty");
+        Self(value)
+    }
+
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum AssetKind {
+    Audio,
+    Video,
+    Image,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct Asset {
+    id: AssetId,
+    path: PathBuf,
+    kind: AssetKind,
+}
+
+impl Asset {
+    pub fn new(id: impl Into<String>, path: impl Into<PathBuf>, kind: AssetKind) -> Self {
+        Self {
+            id: AssetId::new(id),
+            path: path.into(),
+            kind,
+        }
+    }
+
+    pub fn audio(id: impl Into<String>, path: impl Into<PathBuf>) -> Self {
+        Self::new(id, path, AssetKind::Audio)
+    }
+
+    pub fn video(id: impl Into<String>, path: impl Into<PathBuf>) -> Self {
+        Self::new(id, path, AssetKind::Video)
+    }
+
+    pub fn image(id: impl Into<String>, path: impl Into<PathBuf>) -> Self {
+        Self::new(id, path, AssetKind::Image)
+    }
+
+    pub fn id(&self) -> &AssetId {
+        &self.id
+    }
+
+    pub fn path(&self) -> &Path {
+        &self.path
+    }
+
+    pub fn kind(&self) -> AssetKind {
+        self.kind
+    }
+
+    pub fn clip(&self, source_range: TimeRange) -> Clip {
+        Clip::new(self.clone(), source_range)
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct Clip {
+    asset: Asset,
+    source_range: TimeRange,
+}
+
+impl Clip {
+    pub fn new(asset: Asset, source_range: TimeRange) -> Self {
+        assert!(
+            asset.kind != AssetKind::Image,
+            "still images are visual actors, not time-based clips"
+        );
+        assert!(
+            source_range.duration() > Duration::ZERO,
+            "clip source range must have positive duration"
+        );
+        Self {
+            asset,
+            source_range,
+        }
+    }
+
+    pub fn asset(&self) -> &Asset {
+        &self.asset
+    }
+
+    pub fn source_range(&self) -> TimeRange {
+        self.source_range
+    }
+
+    pub fn duration(&self) -> Duration {
+        self.source_range.duration()
+    }
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum MediaRole {
+    /// Primary spoken media whose transcript can drive structural edits.
+    Script,
+    /// Accompanying music, sound effects, B-roll, and other timed media.
+    Layer,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct MediaPlacement {
+    clip: Clip,
+    role: MediaRole,
+    timeline_range: TimeRange,
+}
+
+impl MediaPlacement {
+    pub fn clip(&self) -> &Clip {
+        &self.clip
+    }
+
+    pub fn role(&self) -> MediaRole {
+        self.role
+    }
+
+    pub fn timeline_range(&self) -> TimeRange {
+        self.timeline_range
+    }
+}
+
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+pub struct CueId(String);
+
+impl CueId {
+    pub fn new(value: impl Into<String>) -> Self {
+        let value = value.into();
+        assert!(!value.is_empty(), "cue ID must not be empty");
+        Self(value)
+    }
+
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct Cue {
+    id: CueId,
+    range: TimeRange,
+}
+
+impl Cue {
+    pub fn new(id: impl Into<String>, range: TimeRange) -> Self {
+        Self {
+            id: CueId::new(id),
+            range,
+        }
+    }
+
+    pub fn point(id: impl Into<String>, at: Time) -> Self {
+        Self::new(id, TimeRange::new(at, at))
+    }
+
+    pub fn id(&self) -> &CueId {
+        &self.id
+    }
+
+    pub fn range(&self) -> TimeRange {
+        self.range
+    }
+
+    pub fn start(&self) -> Time {
+        self.range.start
+    }
+
+    pub fn end(&self) -> Time {
+        self.range.end
+    }
+
+    pub fn before_start(&self, duration: Duration) -> Time {
+        self.start().before(duration)
+    }
+
+    pub fn start_offset(&self) -> Duration {
+        Duration(self.start().0)
+    }
+}
+
+#[derive(Clone, Debug)]
+pub enum Composition {
+    Animate(Motion),
+    Play {
+        clip: Clip,
+        role: MediaRole,
+    },
+    Sequence(Vec<Composition>),
+    Parallel(Vec<Composition>),
+    Delay {
+        duration: Duration,
+        composition: Box<Composition>,
+    },
+    Hold(Duration),
+    Named {
+        id: CueId,
+        composition: Box<Composition>,
+    },
+}
+
+impl Composition {
+    pub fn animate(motion: Motion) -> Self {
+        Self::Animate(motion)
+    }
+
+    pub fn script(clip: Clip) -> Self {
+        Self::Play {
+            clip,
+            role: MediaRole::Script,
+        }
+    }
+
+    pub fn layer(clip: Clip) -> Self {
+        Self::Play {
+            clip,
+            role: MediaRole::Layer,
+        }
+    }
+
+    pub fn sequence(compositions: impl IntoIterator<Item = Composition>) -> Self {
+        Self::Sequence(compositions.into_iter().collect())
+    }
+
+    pub fn parallel(compositions: impl IntoIterator<Item = Composition>) -> Self {
+        Self::Parallel(compositions.into_iter().collect())
+    }
+
+    pub fn delay(duration: Duration, composition: impl Into<Composition>) -> Self {
+        Self::Delay {
+            duration,
+            composition: Box::new(composition.into()),
+        }
+    }
+
+    pub fn hold(duration: Duration) -> Self {
+        Self::Hold(duration)
+    }
+
+    pub fn named(id: impl Into<String>, composition: impl Into<Composition>) -> Self {
+        Self::Named {
+            id: CueId::new(id),
+            composition: Box::new(composition.into()),
+        }
+    }
+
+    pub fn duration(&self) -> Duration {
+        match self {
+            Self::Animate(motion) => Duration::seconds(f64::from(motion.duration())),
+            Self::Play { clip, .. } => clip.duration(),
+            Self::Sequence(compositions) => Duration(
+                compositions
+                    .iter()
+                    .map(|composition| composition.duration().0)
+                    .try_fold(0_u64, u64::checked_add)
+                    .expect("composition duration overflowed"),
+            ),
+            Self::Parallel(compositions) => Duration(
+                compositions
+                    .iter()
+                    .map(|composition| composition.duration().0)
+                    .max()
+                    .unwrap_or(0),
+            ),
+            Self::Delay {
+                duration,
+                composition,
+            } => Duration(
+                duration
+                    .0
+                    .checked_add(composition.duration().0)
+                    .expect("composition duration overflowed"),
+            ),
+            Self::Hold(duration) => *duration,
+            Self::Named { composition, .. } => composition.duration(),
+        }
+    }
+
+    pub(crate) fn lower(&self) -> Result<LoweredComposition> {
+        let mut scheduled = Scheduled::default();
+        self.schedule(Time::ZERO, &mut scheduled)?;
+        let duration = self.duration();
+        let mut motions = scheduled
+            .motions
+            .into_iter()
+            .map(|(start, motion)| Motion::delay(start.as_seconds() as f32, motion))
+            .collect::<Vec<_>>();
+        motions.push(Motion::hold(duration.as_seconds() as f32));
+        Ok(LoweredComposition {
+            motion: Motion::parallel(motions),
+            media: scheduled.media,
+            cues: scheduled.cues,
+            duration,
+        })
+    }
+
+    fn schedule(&self, start: Time, scheduled: &mut Scheduled) -> Result<()> {
+        match self {
+            Self::Animate(motion) => scheduled.motions.push((start, motion.clone())),
+            Self::Play { clip, role } => scheduled.media.push(MediaPlacement {
+                clip: clip.clone(),
+                role: *role,
+                timeline_range: TimeRange::new(start, start.after(clip.duration())),
+            }),
+            Self::Sequence(compositions) => {
+                let mut cursor = start;
+                for composition in compositions {
+                    composition.schedule(cursor, scheduled)?;
+                    cursor = cursor.after(composition.duration());
+                }
+            }
+            Self::Parallel(compositions) => {
+                for composition in compositions {
+                    composition.schedule(start, scheduled)?;
+                }
+            }
+            Self::Delay {
+                duration,
+                composition,
+            } => composition.schedule(start.after(*duration), scheduled)?,
+            Self::Hold(_) => {}
+            Self::Named { id, composition } => {
+                let range = TimeRange::new(start, start.after(composition.duration()));
+                if scheduled.cues.insert(id.clone(), range).is_some() {
+                    bail!("composition defines cue '{}' more than once", id.as_str());
+                }
+                composition.schedule(start, scheduled)?;
+            }
+        }
+        Ok(())
+    }
+}
+
+impl From<Motion> for Composition {
+    fn from(value: Motion) -> Self {
+        Self::animate(value)
+    }
+}
+
+#[derive(Default)]
+struct Scheduled {
+    motions: Vec<(Time, Motion)>,
+    media: Vec<MediaPlacement>,
+    cues: HashMap<CueId, TimeRange>,
+}
+
+pub(crate) struct LoweredComposition {
+    pub motion: Motion,
+    pub media: Vec<MediaPlacement>,
+    pub cues: HashMap<CueId, TimeRange>,
+    pub duration: Duration,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{Asset, Composition, Cue, Duration, MediaRole, Time, TimeRange};
+
+    fn range(start: f64, end: f64) -> TimeRange {
+        TimeRange::new(Time::seconds(start), Time::seconds(end))
+    }
+
+    #[test]
+    fn script_edits_preserve_source_ranges_and_place_clips_sequentially() {
+        let take = Asset::audio("take-3", "assets/take-3.wav");
+        let opening = take.clip(range(4.2, 8.7));
+        let explanation = take.clip(range(12.1, 18.4));
+        let composition = Composition::sequence([
+            Composition::script(opening),
+            Composition::hold(Duration::milliseconds(150.0)),
+            Composition::script(explanation),
+        ]);
+
+        let lowered = composition.lower().unwrap();
+
+        assert_eq!(lowered.duration, Duration::seconds(10.95));
+        assert_eq!(lowered.media.len(), 2);
+        assert_eq!(lowered.media[0].role(), MediaRole::Script);
+        assert_eq!(lowered.media[0].timeline_range(), range(0.0, 4.5));
+        assert_eq!(lowered.media[0].clip().source_range(), range(4.2, 8.7));
+        assert_eq!(lowered.media[1].timeline_range(), range(4.65, 10.95));
+    }
+
+    #[test]
+    fn layers_can_be_synchronized_to_external_cue_ranges() {
+        let cue = Cue::new("not-found", range(3.0, 3.8));
+        let pop = Asset::audio("pop", "assets/pop.wav").clip(range(0.0, 0.4));
+        let composition = Composition::delay(cue.start_offset(), Composition::layer(pop));
+
+        let lowered = composition.lower().unwrap();
+
+        assert_eq!(lowered.media[0].role(), MediaRole::Layer);
+        assert_eq!(lowered.media[0].timeline_range(), range(3.0, 3.4));
+    }
+
+    #[test]
+    fn named_compositions_compile_to_inspectable_cue_ranges() {
+        let clip = Asset::audio("take", "assets/take.wav").clip(range(0.0, 1.25));
+        let composition = Composition::sequence([
+            Composition::hold(Duration::seconds(0.5)),
+            Composition::named("opening", Composition::script(clip)),
+        ]);
+
+        let lowered = composition.lower().unwrap();
+
+        assert_eq!(
+            lowered.cues[&super::CueId::new("opening")],
+            range(0.5, 1.75)
+        );
+    }
+
+    #[test]
+    fn frame_count_is_exact_at_frame_aligned_decimal_durations() {
+        assert_eq!(Duration::seconds(4.15).frame_count(60), 249);
+        assert_eq!(Duration::seconds(5.0).frame_count(60), 300);
+        assert_eq!(Duration::milliseconds(1.0).frame_count(60), 1);
+    }
+}

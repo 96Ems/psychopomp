@@ -2,6 +2,9 @@ use std::collections::HashMap;
 
 use anyhow::{Context, Result};
 
+use crate::composition::{
+    Asset, AssetKind, Composition, CueId, Duration, MediaPlacement, TimeRange,
+};
 use crate::timeline::{Animation, PropertyId, SpringProfile, Timeline};
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
@@ -116,6 +119,17 @@ impl Motion {
         Self::Hold(seconds)
     }
 
+    pub fn duration(&self) -> f32 {
+        match self {
+            Self::Set { .. } => 0.0,
+            Self::Spring { profile, .. } => profile.advance_time(),
+            Self::Sequence(motions) => motions.iter().map(Self::duration).sum(),
+            Self::Parallel(motions) => motions.iter().map(Self::duration).fold(0.0, f32::max),
+            Self::Delay { seconds, motion } => seconds + motion.duration(),
+            Self::Hold(seconds) => *seconds,
+        }
+    }
+
     fn resolve(&self, targets: &HashMap<TextTarget, TargetGeometry>) -> Result<Animation> {
         Ok(match self {
             Self::Set { property, value } => {
@@ -146,27 +160,82 @@ impl Motion {
 
 pub struct Scene {
     initial_values: Vec<(PropertyId, Scalar)>,
-    animation: Motion,
+    composition: Composition,
+    images: Vec<Image>,
 }
 
 impl Scene {
     pub fn new(
         initial_values: impl IntoIterator<Item = (PropertyId, Scalar)>,
-        animation: Motion,
+        composition: impl Into<Composition>,
     ) -> Self {
         Self {
             initial_values: initial_values.into_iter().collect(),
-            animation,
+            composition: composition.into(),
+            images: Vec::new(),
         }
     }
 
-    pub fn compile(&self, targets: &HashMap<TextTarget, TargetGeometry>) -> Result<Timeline> {
+    pub fn with_image(mut self, image: Image) -> Self {
+        self.images.push(image);
+        self
+    }
+
+    pub fn compile(&self, targets: &HashMap<TextTarget, TargetGeometry>) -> Result<CompiledScene> {
         let initial_values = self
             .initial_values
             .iter()
             .map(|(property, value)| Ok((property.clone(), resolve_scalar(value, targets)?)))
             .collect::<Result<Vec<_>>>()?;
-        Timeline::compile(initial_values, &self.animation.resolve(targets)?)
+        let lowered = self.composition.lower()?;
+        let timeline = Timeline::compile_with_duration(
+            initial_values,
+            &lowered.motion.resolve(targets)?,
+            lowered.duration.as_seconds() as f32,
+        )?;
+        Ok(CompiledScene {
+            timeline,
+            media: lowered.media,
+            cues: lowered.cues,
+            duration: lowered.duration,
+            images: self.images.clone(),
+        })
+    }
+}
+
+pub struct CompiledScene {
+    timeline: Timeline,
+    media: Vec<MediaPlacement>,
+    cues: HashMap<CueId, TimeRange>,
+    duration: Duration,
+    images: Vec<Image>,
+}
+
+impl CompiledScene {
+    pub fn timeline(&self) -> &Timeline {
+        &self.timeline
+    }
+
+    pub fn media(&self) -> &[MediaPlacement] {
+        &self.media
+    }
+
+    pub fn cue(&self, id: &str) -> Option<TimeRange> {
+        self.cues
+            .iter()
+            .find_map(|(cue_id, range)| (cue_id.as_str() == id).then_some(*range))
+    }
+
+    pub fn cues(&self) -> impl Iterator<Item = (&CueId, TimeRange)> {
+        self.cues.iter().map(|(id, range)| (id, *range))
+    }
+
+    pub fn duration(&self) -> Duration {
+        self.duration
+    }
+
+    pub fn images(&self) -> &[Image] {
+        &self.images
     }
 }
 
@@ -177,6 +246,40 @@ pub struct Pointer {
     pub opacity: PropertyId,
     pub scale: PropertyId,
     pub blur: PropertyId,
+}
+
+#[derive(Clone, Debug)]
+pub struct Image {
+    asset: Asset,
+    pub x: PropertyId,
+    pub y: PropertyId,
+    pub scale: PropertyId,
+    pub rotation: PropertyId,
+    pub opacity: PropertyId,
+    pub blur: PropertyId,
+}
+
+impl Image {
+    pub fn new(id: &str, asset: Asset) -> Self {
+        assert_eq!(
+            asset.kind(),
+            AssetKind::Image,
+            "image actors require an image asset"
+        );
+        Self {
+            asset,
+            x: PropertyId::new(format!("{id}.x")),
+            y: PropertyId::new(format!("{id}.y")),
+            scale: PropertyId::new(format!("{id}.scale")),
+            rotation: PropertyId::new(format!("{id}.rotation")),
+            opacity: PropertyId::new(format!("{id}.opacity")),
+            blur: PropertyId::new(format!("{id}.blur")),
+        }
+    }
+
+    pub fn asset(&self) -> &Asset {
+        &self.asset
+    }
 }
 
 #[derive(Clone)]
@@ -281,7 +384,8 @@ fn resolve_scalar(scalar: &Scalar, targets: &HashMap<TextTarget, TargetGeometry>
 
 #[cfg(test)]
 mod tests {
-    use super::{Motion, Pointer, Scalar, Scene, TargetGeometry, TextTarget};
+    use super::{Image, Motion, Pointer, Scalar, Scene, TargetGeometry, TextTarget};
+    use crate::composition::{Asset, Composition, MediaRole, Time, TimeRange};
     use crate::timeline::SpringProfile;
     use std::collections::HashMap;
 
@@ -305,10 +409,63 @@ mod tests {
                 line_y: 80.0,
             },
         )]);
-        let timeline = scene.compile(&targets).unwrap();
+        let compiled = scene.compile(&targets).unwrap();
+        let timeline = compiled.timeline();
 
         assert_eq!(timeline.sample(&pointer.x, 0.0).unwrap().position, 0.0);
         assert!((timeline.sample(&pointer.x, 2.0).unwrap().position - 120.0).abs() < 0.01);
         assert!((timeline.sample(&pointer.y, 2.0).unwrap().position - 135.0).abs() < 0.01);
+    }
+
+    #[test]
+    fn scene_compilation_preserves_scheduled_media_with_visual_motion() {
+        let opacity = crate::timeline::PropertyId::new("title.opacity");
+        let profile = SpringProfile::from_visual_duration(0.3, 0.0, 0.001, 0.001);
+        let narration = Asset::audio("narration", "assets/narration.wav")
+            .clip(TimeRange::new(Time::seconds(1.0), Time::seconds(3.0)));
+        let composition = Composition::parallel([
+            Composition::script(narration),
+            Composition::named("title", Motion::spring(opacity.clone(), 1.0, profile)),
+        ]);
+        let scene = Scene::new([(opacity.clone(), Scalar::Literal(0.0))], composition);
+
+        let compiled = scene.compile(&HashMap::new()).unwrap();
+
+        assert_eq!(compiled.media().len(), 1);
+        assert_eq!(compiled.media()[0].role(), MediaRole::Script);
+        assert_eq!(compiled.duration().as_seconds(), 2.0);
+        assert_eq!(compiled.timeline().duration(), 2.0);
+        assert_eq!(compiled.cue("title").unwrap().start(), Time::ZERO);
+        assert!(compiled.timeline().sample(&opacity, 1.0).unwrap().position > 0.99);
+    }
+
+    #[test]
+    fn image_assets_compile_as_stable_animated_scene_actors() {
+        let logo = Image::new("logo", Asset::image("logo", "assets/logo.svg"));
+        let profile = SpringProfile::from_visual_duration(0.3, 0.0, 0.001, 0.001);
+        let scene = Scene::new(
+            [
+                (logo.opacity.clone(), Scalar::Literal(0.0)),
+                (logo.scale.clone(), Scalar::Literal(0.8)),
+            ],
+            Motion::parallel([
+                Motion::spring(logo.opacity.clone(), 1.0, profile),
+                Motion::spring(logo.scale.clone(), 1.0, profile),
+            ]),
+        )
+        .with_image(logo.clone());
+
+        let compiled = scene.compile(&HashMap::new()).unwrap();
+
+        assert_eq!(compiled.images().len(), 1);
+        assert_eq!(compiled.images()[0].asset().id().as_str(), "logo");
+        assert!(
+            compiled
+                .timeline()
+                .sample(&logo.opacity, 1.0)
+                .unwrap()
+                .position
+                > 0.99
+        );
     }
 }

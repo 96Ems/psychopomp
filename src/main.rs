@@ -14,20 +14,18 @@ use kinograph::{
         CodeDocument, CodeLayout, CodeLine, CodeSnapshot, CodeTransition, PlacedLine, StyledSpan,
         SyntaxStyle, TransitionProgress,
     },
-    dsl::{Code, Motion, Pointer, Scalar, Scene, TargetGeometry},
+    dsl::{Code, CompiledScene, Motion, Pointer, Scalar, Scene, TargetGeometry},
     encode::{FfmpegEncoder, VideoSpec},
     render::{
         EditorFrame, HeadlessRenderer, InlineRevealFrame, PointerFrame, RenderSpec,
         TextRangeBounds, TokenHighlight,
     },
-    timeline::{PropertyId, SpringProfile, Timeline},
+    timeline::{PropertyId, SpringProfile},
 };
 
 const WIDTH: u32 = 1920;
 const HEIGHT: u32 = 1080;
 const FPS: u32 = 60;
-const DURATION_SECONDS: u32 = 5;
-const FRAME_COUNT: u32 = FPS * DURATION_SECONDS;
 const TEMPORAL_SAMPLES: u32 = 8;
 const SHUTTER_ANGLE: f32 = 180.0;
 const FONT_PATH: &str = "/Users/kit/Library/Fonts/CommitMono-400-Regular.otf";
@@ -72,6 +70,7 @@ async fn render_video(output: &Path) -> Result<()> {
     let not_found = measure_target(&mut renderer, &settled_lines, FOCUS_LINE_ID, "NotFound")?;
     let context = measure_target(&mut renderer, &settled_lines, "class-open", "Context.Tag")?;
     let choreography = hero_choreography(effect, string, not_found, context)?;
+    let frame_count = choreography.scene.duration().frame_count(FPS);
     let mut encoder = FfmpegEncoder::start(
         output,
         VideoSpec {
@@ -85,7 +84,7 @@ async fn render_video(output: &Path) -> Result<()> {
     let mut accumulation = vec![0_u32; frame_byte_count];
     let mut blended_frame = vec![0_u8; frame_byte_count];
 
-    for frame in 0..FRAME_COUNT {
+    for frame in 0..frame_count {
         accumulation.fill(0);
         let center_time = (frame as f32 + 0.5) / FPS as f32;
         let shutter_duration = SHUTTER_ANGLE / 360.0 / FPS as f32;
@@ -125,9 +124,9 @@ async fn render_video(output: &Path) -> Result<()> {
 
         encoder.write_frame(&blended_frame)?;
 
-        if frame % FPS == 0 || frame + 1 == FRAME_COUNT {
+        if frame % u64::from(FPS) == 0 || frame + 1 == frame_count {
             println!(
-                "Rendered {:>3}/{FRAME_COUNT} frames ({:.1}s, {TEMPORAL_SAMPLES} samples)",
+                "Rendered {:>3}/{frame_count} frames ({:.1}s, {TEMPORAL_SAMPLES} samples)",
                 frame + 1,
                 center_time
             );
@@ -176,7 +175,7 @@ fn measure_target(
 }
 
 struct HeroChoreography {
-    timeline: Timeline,
+    scene: CompiledScene,
     panel_y: PropertyId,
     code_layout: PropertyId,
     code_content: PropertyId,
@@ -226,6 +225,7 @@ fn hero_choreography(
         (context_target.clone(), context.into()),
     ]);
     let animation = Motion::parallel([
+        Motion::hold(5.0),
         Motion::delay(0.08, Motion::spring(panel_y.clone(), 0.0, profile)),
         Motion::delay(0.88, Motion::spring(code_layout.clone(), 1.0, profile)),
         Motion::delay(1.12, Motion::spring(code_content.clone(), 1.0, profile)),
@@ -286,10 +286,10 @@ fn hero_choreography(
         ],
         animation,
     );
-    let timeline = scene.compile(&targets)?;
+    let scene = scene.compile(&targets)?;
 
     Ok(HeroChoreography {
-        timeline,
+        scene,
         panel_y,
         code_layout,
         code_content,
@@ -321,14 +321,16 @@ fn sample_editor<'a>(
 ) {
     let sample = |property| {
         choreography
-            .timeline
+            .scene
+            .timeline()
             .sample(property, time)
             .expect("hero choreography property has an initial value")
             .position
     };
     let sample_state_at = |property, sample_time| {
         choreography
-            .timeline
+            .scene
+            .timeline()
             .sample(property, sample_time)
             .expect("hero choreography property has an initial value")
     };

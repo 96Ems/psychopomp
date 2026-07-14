@@ -32,6 +32,7 @@ Do not run the full render as routine validation when unit tests and static chec
 ## Architecture
 
 - `src/code.rs`: stable line identity, code documents and snapshots, validation, and sampled line placement
+- `src/composition.rs`: exact media time, immutable assets and clips, script/layer scheduling, cues, and cross-media composition
 - `src/dsl.rs`: public Rust scene values, semantic targets, actor helpers, and lowering into scalar tracks
 - `src/motion.rs`: deterministic arbitrary-time analytic spring sampling with position and velocity
 - `src/render.rs`: concrete headless `wgpu` renderer and `cosmic-text` sprite compositor

@@ -26,7 +26,39 @@ A pure value describing a property change or the composition of other animations
 
 ## Scene
 
-A pure Rust value containing initial property expressions and a composed animation. Compiling a scene resolves semantic targets and produces deterministic property tracks.
+A pure Rust value containing initial property expressions and a composition. Compiling a scene resolves semantic targets and produces deterministic property tracks plus scheduled media placements and cue ranges.
+
+## Composition
+
+A pure, time-bearing value that arranges visual motion and media with sequence, parallel, delay, and hold. Composition owns cross-media timing; Motion remains responsible for visual property trajectories.
+
+## Asset
+
+Immutable source material identified independently from any use on the timeline. Audio, video, and image assets retain their original files while edits refer to them non-destructively.
+
+## Clip
+
+One positive-duration source range from an audio or video asset. Moving, copying, or removing a clip changes the edit without changing its source asset.
+
+## Image Actor
+
+A stable visual actor backed by an image asset. Position, scale, rotation, opacity, and blur are ordinary property tracks; unlike a clip, an image has no intrinsic timeline duration.
+
+## Script Clip
+
+A clip on the primary spoken-media track. Its transcript may drive structural edits, captions, and semantic timing.
+
+## Layer Clip
+
+Accompanying timed media such as music, sound effects, or B-roll. Layer clips share composition timing but do not implicitly become part of the editable transcript.
+
+## Cue
+
+A named timeline range. Cues may be authored around a composition or imported from transcript word and phrase timing; their start and end can synchronize motion and media.
+
+## Media Placement
+
+A compiled relationship between a clip's immutable source range and its scheduled timeline range. Media placement time uses integer nanoseconds so edit boundaries remain exact across repeated composition.
 
 ## Property Track
 

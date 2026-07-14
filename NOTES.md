@@ -51,7 +51,11 @@ The default artifact is `output/kinograph-prototype.mp4`.
 - Token highlights and an independently moving pointer can target those ranges through ordinary property tracks.
 - The exact Effect Institute Phosphor hand can be loaded through a reusable SVG sprite pipeline, transformed per temporal sample, and accumulated with motion blur.
 - A stable line can reveal `, NotFound` by expanding the inserted spans, resolving opacity and blur, and moving the existing `>` suffix without replacing it.
+- A pure Rust DSL can preserve semantic text targets until scene compilation and lower typed actor operations into the same scalar property tracks.
+- Cross-media sequence, parallel, delay, and hold can schedule visual motion together with non-destructive audio or video clips.
+- Transcript-bearing script clips and accompanying layer clips require distinct roles even though they share the same composition clock.
+- Integer-nanosecond media time avoids source-range drift that appears immediately when decimal clip boundaries are repeatedly subtracted as floating-point values.
 
 ## Next Question
 
-Can these proven, renderer-specific operations compile from a small serializable scene IR without losing their stable identities or physical trajectories?
+Can an edited narration track and transcript cues drive the existing visual DSL while FFmpeg assembles the compiled media placements into the final artifact?

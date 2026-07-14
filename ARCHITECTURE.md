@@ -1,8 +1,8 @@
 # Prototype Architecture
 
-Kinograph currently has four deep Modules. Each Interface hides a concentrated Implementation and corresponds to a real change seam in the prototype.
+Kinograph is organized around a small set of Modules whose Interfaces correspond to demonstrated change seams: code identity, media composition, motion trajectories, scalar tracks, rendering, and encoding.
 
-`src/timeline.rs` is an emerging fifth Module. It compiles pure animation values into deterministic scalar property tracks. Its current Interface is renderer-neutral and drives the hero scene's panel, code-layout, code-content, and focus properties while proving composition, conflict detection, and velocity-preserving spring retargeting before an authoring frontend is chosen.
+`src/timeline.rs` compiles pure animation values into deterministic scalar property tracks. Its renderer-neutral Interface drives the hero scene's panel, code-layout, code-content, focus, highlight, and pointer properties while preserving velocity across spring retargeting.
 
 ```text
 Code snapshots ──> CodeTransition.sample(progress) ──┐
@@ -28,6 +28,16 @@ The current model intentionally stops at line identity. Inline part identity, na
 `src/motion.rs` owns the analytic damped-spring equation. Its Interface accepts an initial motion state, target, and arbitrary elapsed time.
 
 This Interface provides leverage beyond easing: deterministic out-of-order sampling and future momentum-preserving interruptions use the same Implementation. Timeline compilation remains deferred until a scene contains an actual interrupted transition.
+
+## Composition Owns Cross-Media Time
+
+`src/composition.rs` keeps immutable source assets separate from their uses in an edit. A `Clip` selects an exact source range; compiling a `Composition` places that range on the output timeline without modifying the asset.
+
+Composition supplies sequence, parallel, delay, hold, and named cue ranges across both visual `Motion` and timed media. It distinguishes transcript-bearing script clips from accompanying layer clips such as sound effects, music, and B-roll. This mirrors the real behavioral difference exposed by transcript-led editors without introducing a graphical editor or media decoder.
+
+Media time is stored as integer nanoseconds. Conversion to floating-point seconds happens only when visual motion is lowered into scalar trajectories, so repeated source-range edits retain exact boundaries.
+
+Still images remain stable scene actors rather than pretending to be time-based clips. A compiled scene retains each image asset and its transform property IDs; actual image composition remains renderer work for the first image-backed scene.
 
 ## Rendering Is One Concrete Adapter
 
@@ -68,9 +78,9 @@ Choreography should move behind a scene compiler only after a second scene revea
 
 ## The Rust DSL Produces Pure Values
 
-`src/dsl.rs` is the public authoring boundary exported through `src/lib.rs`. Authors compose `Motion` values with sequence, parallel, delay, hold, set, and spring operations. Typed actors such as `Pointer` return the same values rather than executing animation.
+`src/dsl.rs` is the public authoring boundary exported through `src/lib.rs`. Authors compose property `Motion`, then place it alongside media in a `Composition`. Typed actors such as `Pointer` return ordinary motion values rather than executing animation.
 
-Scalar targets may remain semantic while authoring. `TextTarget` identifies meaningful code content; `Scalar` expressions request its left edge, width, center, or attached offset. `Scene::compile` resolves measured target geometry once and lowers the complete tree into the existing renderer-independent `Timeline`.
+Scalar targets may remain semantic while authoring. `TextTarget` identifies meaningful code content; `Scalar` expressions request its left edge, width, center, or attached offset. `Scene::compile` resolves measured target geometry once and lowers the complete tree into a `CompiledScene` containing the renderer-independent property `Timeline`, scheduled media placements, named cue ranges, and total duration.
 
 The current hero is the first client of this API. There is no JSON or TypeScript authoring boundary.
 
