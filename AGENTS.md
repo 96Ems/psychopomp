@@ -32,10 +32,12 @@ Do not run the full render as routine validation when unit tests and static chec
 ## Architecture
 
 - `src/code.rs`: stable line identity, code documents and snapshots, validation, and sampled line placement
+- `src/dsl.rs`: public Rust scene values, semantic targets, actor helpers, and lowering into scalar tracks
 - `src/motion.rs`: deterministic arbitrary-time analytic spring sampling with position and velocity
 - `src/render.rs`: concrete headless `wgpu` renderer and `cosmic-text` sprite compositor
 - `src/encode.rs`: concrete FFmpeg subprocess and raw RGBA frame protocol
 - `src/main.rs`: visible prototype choreography and application wiring
+- `src/lib.rs`: public library module boundary used by the Rust authoring DSL
 - `src/scene.wgsl`: editor geometry and focus shader
 
 Preserve these boundaries unless a concrete scene or second implementation demonstrates a better seam. In particular, do not introduce a generic scene graph, renderer or encoder traits, plugins, extra crates, or a speculative authoring DSL merely for future flexibility.

@@ -66,6 +66,14 @@ FFmpeg remains a subprocess because it avoids unsafe bindings and codec linkage 
 
 Choreography should move behind a scene compiler only after a second scene reveals repeated authoring operations. Moving it now would create a shallow pass-through Module.
 
+## The Rust DSL Produces Pure Values
+
+`src/dsl.rs` is the public authoring boundary exported through `src/lib.rs`. Authors compose `Motion` values with sequence, parallel, delay, hold, set, and spring operations. Typed actors such as `Pointer` return the same values rather than executing animation.
+
+Scalar targets may remain semantic while authoring. `TextTarget` identifies meaningful code content; `Scalar` expressions request its left edge, width, center, or attached offset. `Scene::compile` resolves measured target geometry once and lowers the complete tree into the existing renderer-independent `Timeline`.
+
+The current hero is the first client of this API. There is no JSON or TypeScript authoring boundary.
+
 ## Current Stack Decisions
 
 - [`wgpu 30`](https://github.com/gfx-rs/wgpu) is the headless GPU substrate. Rendering targets an offscreen texture without a window or surface.

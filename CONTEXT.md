@@ -24,6 +24,10 @@ The position and velocity of one animated scalar at a specific time. Carrying bo
 
 A pure value describing a property change or the composition of other animations. Sequence, parallel, delay, and hold determine relative timing without rendering or mutating scene state.
 
+## Scene
+
+A pure Rust value containing initial property expressions and a composed animation. Compiling a scene resolves semantic targets and produces deterministic property tracks.
+
 ## Property Track
 
 The compiled trajectory of one scalar actor property. A later spring on the same track begins from the earlier trajectory's sampled position and velocity.

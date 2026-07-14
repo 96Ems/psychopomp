@@ -1,12 +1,7 @@
 //! PROTOTYPE: stable code choreography rendered headlessly with wgpu.
 
-mod code;
-mod encode;
-mod motion;
-mod render;
-pub mod timeline;
-
 use std::{
+    collections::HashMap,
     fs,
     path::{Path, PathBuf},
     time::Instant,
@@ -14,17 +9,18 @@ use std::{
 
 use anyhow::{Context, Result};
 
-use crate::{
+use kinograph::{
     code::{
         CodeDocument, CodeLayout, CodeLine, CodeSnapshot, CodeTransition, PlacedLine, StyledSpan,
         SyntaxStyle, TransitionProgress,
     },
+    dsl::{Code, Motion, Pointer, Scalar, Scene, TargetGeometry},
     encode::{FfmpegEncoder, VideoSpec},
     render::{
         EditorFrame, HeadlessRenderer, InlineRevealFrame, PointerFrame, RenderSpec,
         TextRangeBounds, TokenHighlight,
     },
-    timeline::{Animation, PropertyId, SpringProfile, Timeline},
+    timeline::{PropertyId, SpringProfile, Timeline},
 };
 
 const WIDTH: u32 = 1920;
@@ -153,13 +149,13 @@ struct CodeTarget {
     line_y: f32,
 }
 
-impl CodeTarget {
-    fn pointer_x(self) -> f32 {
-        self.bounds.x + self.bounds.width * 0.5
-    }
-
-    fn pointer_y(self) -> f32 {
-        self.line_y + 55.0
+impl From<CodeTarget> for TargetGeometry {
+    fn from(target: CodeTarget) -> Self {
+        Self {
+            x: target.bounds.x,
+            width: target.bounds.width,
+            line_y: target.line_y,
+        }
     }
 }
 
@@ -202,99 +198,95 @@ fn hero_choreography(
     not_found: CodeTarget,
     context: CodeTarget,
 ) -> Result<HeroChoreography> {
-    let panel_y = PropertyId::new("editor.panel_y");
-    let code_layout = PropertyId::new("editor.code_layout");
-    let code_content = PropertyId::new("editor.code_content");
-    let focus = PropertyId::new("editor.focus");
-    let token_x = PropertyId::new("editor.token_highlight.x");
-    let token_width = PropertyId::new("editor.token_highlight.width");
-    let token_opacity = PropertyId::new("editor.token_highlight.opacity");
-    let pointer_x = PropertyId::new("pointer.x");
-    let pointer_y = PropertyId::new("pointer.y");
-    let pointer_opacity = PropertyId::new("pointer.opacity");
-    let pointer_scale = PropertyId::new("pointer.scale");
-    let pointer_blur = PropertyId::new("pointer.blur");
-    let inline_reveal = PropertyId::new("editor.inline_reveal");
+    let code = Code::new("editor");
+    let panel_y = code.panel_y.clone();
+    let code_layout = code.layout.clone();
+    let code_content = code.content.clone();
+    let focus = code.focus.clone();
+    let token_x = code.highlight_x.clone();
+    let token_width = code.highlight_width.clone();
+    let token_opacity = code.highlight_opacity.clone();
+    let pointer = Pointer::new("pointer");
+    let pointer_x = pointer.x.clone();
+    let pointer_y = pointer.y.clone();
+    let pointer_opacity = pointer.opacity.clone();
+    let pointer_scale = pointer.scale.clone();
+    let pointer_blur = pointer.blur.clone();
+    let inline_reveal = code.inline_reveal.clone();
     let profile = SpringProfile::from_visual_duration(0.3, 0.0, 0.001, 0.001);
     let pointer_profile = SpringProfile::from_visual_duration(0.42, 0.18, 0.001, 0.001);
-    let animation = Animation::parallel([
-        Animation::delay(0.08, Animation::spring(panel_y.clone(), 0.0, profile)),
-        Animation::delay(0.88, Animation::spring(code_layout.clone(), 1.0, profile)),
-        Animation::delay(1.12, Animation::spring(code_content.clone(), 1.0, profile)),
-        Animation::delay(1.55, Animation::spring(focus.clone(), 1.0, profile)),
-        Animation::delay(1.72, Animation::spring(token_opacity.clone(), 1.0, profile)),
-        Animation::delay(
-            1.72,
-            Animation::spring(pointer_opacity.clone(), 1.0, pointer_profile),
-        ),
-        Animation::delay(
-            1.72,
-            Animation::spring(pointer_scale.clone(), 1.0, pointer_profile),
-        ),
-        Animation::delay(
-            1.72,
-            Animation::spring(pointer_blur.clone(), 0.0, pointer_profile),
-        ),
-        Animation::delay(
-            1.72,
-            Animation::spring(pointer_x.clone(), effect.pointer_x(), pointer_profile),
-        ),
-        Animation::delay(
-            1.72,
-            Animation::spring(pointer_y.clone(), effect.pointer_y(), pointer_profile),
-        ),
-        Animation::delay(2.72, Animation::spring(inline_reveal.clone(), 1.0, profile)),
-        Animation::delay(
-            3.15,
-            Animation::spring(token_x.clone(), not_found.bounds.x, profile),
-        ),
-        Animation::delay(
-            3.15,
-            Animation::spring(token_width.clone(), not_found.bounds.width, profile),
-        ),
-        Animation::delay(
-            2.35,
-            Animation::spring(pointer_x.clone(), string.pointer_x(), pointer_profile),
-        ),
-        Animation::delay(
-            2.35,
-            Animation::spring(pointer_y.clone(), string.pointer_y(), pointer_profile),
-        ),
-        Animation::delay(
-            3.15,
-            Animation::spring(pointer_x.clone(), not_found.pointer_x(), pointer_profile),
-        ),
-        Animation::delay(
-            3.15,
-            Animation::spring(pointer_y.clone(), not_found.pointer_y(), pointer_profile),
-        ),
-        Animation::delay(
-            4.05,
-            Animation::spring(pointer_x.clone(), context.pointer_x(), pointer_profile),
-        ),
-        Animation::delay(
-            4.05,
-            Animation::spring(pointer_y.clone(), context.pointer_y(), pointer_profile),
-        ),
+    let effect_target = code.text(FOCUS_LINE_ID, "Effect.Effect");
+    let string_target = code.text("find-signature", "string");
+    let not_found_target = code.text(FOCUS_LINE_ID, "NotFound");
+    let context_target = code.text("class-open", "Context.Tag");
+    let targets = HashMap::from([
+        (effect_target.clone(), effect.into()),
+        (string_target.clone(), string.into()),
+        (not_found_target.clone(), not_found.into()),
+        (context_target.clone(), context.into()),
     ]);
-    let timeline = Timeline::compile(
+    let animation = Motion::parallel([
+        Motion::delay(0.08, Motion::spring(panel_y.clone(), 0.0, profile)),
+        Motion::delay(0.88, Motion::spring(code_layout.clone(), 1.0, profile)),
+        Motion::delay(1.12, Motion::spring(code_content.clone(), 1.0, profile)),
+        Motion::delay(1.55, Motion::spring(focus.clone(), 1.0, profile)),
+        Motion::delay(1.72, code.highlight(effect_target.clone(), profile)),
+        Motion::delay(
+            1.72,
+            Motion::spring(pointer_opacity.clone(), 1.0, pointer_profile),
+        ),
+        Motion::delay(
+            1.72,
+            Motion::spring(pointer_scale.clone(), 1.0, pointer_profile),
+        ),
+        Motion::delay(
+            1.72,
+            Motion::spring(pointer_blur.clone(), 0.0, pointer_profile),
+        ),
+        Motion::delay(
+            1.72,
+            pointer.move_to(effect_target.clone(), 55.0, pointer_profile),
+        ),
+        Motion::delay(2.72, code.reveal_inline(profile)),
+        Motion::delay(3.15, code.highlight(not_found_target.clone(), profile)),
+        Motion::delay(2.35, pointer.move_to(string_target, 55.0, pointer_profile)),
+        Motion::delay(
+            3.15,
+            pointer.move_to(not_found_target, 55.0, pointer_profile),
+        ),
+        Motion::delay(4.05, pointer.move_to(context_target, 55.0, pointer_profile)),
+    ]);
+    let scene = Scene::new(
         [
-            (panel_y.clone(), 250.0),
-            (code_layout.clone(), 0.0),
-            (code_content.clone(), 0.0),
-            (focus.clone(), 0.0),
-            (token_x.clone(), effect.bounds.x),
-            (token_width.clone(), effect.bounds.width),
-            (token_opacity.clone(), 0.0),
-            (pointer_x.clone(), effect.pointer_x() + 40.0),
-            (pointer_y.clone(), effect.pointer_y() + 30.0),
-            (pointer_opacity.clone(), 0.0),
-            (pointer_scale.clone(), 0.7),
-            (pointer_blur.clone(), 4.0),
-            (inline_reveal.clone(), 0.0),
+            (panel_y.clone(), Scalar::Literal(250.0)),
+            (code_layout.clone(), Scalar::Literal(0.0)),
+            (code_content.clone(), Scalar::Literal(0.0)),
+            (focus.clone(), Scalar::Literal(0.0)),
+            (token_x.clone(), Scalar::TargetX(effect_target.clone())),
+            (
+                token_width.clone(),
+                Scalar::TargetWidth(effect_target.clone()),
+            ),
+            (token_opacity.clone(), Scalar::Literal(0.0)),
+            (
+                pointer_x.clone(),
+                Scalar::TargetCenterX(effect_target.clone()).offset(40.0),
+            ),
+            (
+                pointer_y.clone(),
+                Scalar::TargetBelow {
+                    target: effect_target,
+                    offset: 85.0,
+                },
+            ),
+            (pointer_opacity.clone(), Scalar::Literal(0.0)),
+            (pointer_scale.clone(), Scalar::Literal(0.7)),
+            (pointer_blur.clone(), Scalar::Literal(4.0)),
+            (inline_reveal.clone(), Scalar::Literal(0.0)),
         ],
-        &animation,
-    )?;
+        animation,
+    );
+    let timeline = scene.compile(&targets)?;
 
     Ok(HeroChoreography {
         timeline,
