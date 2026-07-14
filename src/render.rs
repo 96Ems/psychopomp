@@ -33,6 +33,7 @@ pub struct EditorFrame<'a> {
     pub focus_line_y: f32,
     pub token_highlight: TokenHighlight,
     pub pointer: PointerFrame,
+    pub inline_reveal: InlineRevealFrame,
     pub lines: &'a [PlacedLine<'a>],
 }
 
@@ -48,6 +49,17 @@ pub struct PointerFrame {
     pub x: f32,
     pub y: f32,
     pub opacity: f32,
+    pub rotation: f32,
+    pub scale: f32,
+    pub blur: f32,
+}
+
+#[derive(Clone, Copy)]
+pub struct InlineRevealFrame {
+    pub line_id: &'static str,
+    pub start_span: usize,
+    pub end_span: usize,
+    pub progress: f32,
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -65,12 +77,12 @@ struct SceneUniforms {
     focus: [f32; 2],
     _padding_1: [f32; 2],
     token_highlight: [f32; 4],
-    pointer: [f32; 4],
 }
 
 struct TextSprite {
     width: u32,
     height: u32,
+    advance: f32,
     pixels: Vec<u8>,
 }
 
@@ -88,7 +100,9 @@ pub struct HeadlessRenderer {
     font_system: FontSystem,
     swash_cache: SwashCache,
     title_sprite: TextSprite,
+    pointer_sprite: TextSprite,
     line_sprites: HashMap<LineId, (u64, TextSprite)>,
+    part_sprites: HashMap<String, (u64, TextSprite)>,
 }
 
 impl HeadlessRenderer {
@@ -176,7 +190,6 @@ impl HeadlessRenderer {
             focus: [0.0, 0.0],
             _padding_1: [0.0; 2],
             token_highlight: [0.0; 4],
-            pointer: [0.0; 4],
         };
         let uniform_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("scene uniforms"),
@@ -201,6 +214,7 @@ impl HeadlessRenderer {
         }
         let mut swash_cache = SwashCache::new();
         let title_sprite = make_title_sprite(&mut font_system, &mut swash_cache, &spec.file_name);
+        let pointer_sprite = make_pointer_sprite()?;
 
         Ok(Self {
             spec,
@@ -216,7 +230,9 @@ impl HeadlessRenderer {
             font_system,
             swash_cache,
             title_sprite,
+            pointer_sprite,
             line_sprites: HashMap::new(),
+            part_sprites: HashMap::new(),
         })
     }
 
@@ -237,7 +253,6 @@ impl HeadlessRenderer {
                 frame.token_highlight.width,
                 frame.token_highlight.opacity,
             ],
-            pointer: [frame.pointer.x, frame.pointer.y, frame.pointer.opacity, 0.0],
         };
         self.queue
             .write_buffer(&self.uniform_buffer, 0, bytemuck::bytes_of(&uniforms));
@@ -354,6 +369,12 @@ impl HeadlessRenderer {
             if placed.opacity <= 0.001 {
                 continue;
             }
+            let line_x = self.spec.width as f32 * 0.145 + placed.x;
+            let line_y = code_top + placed.y;
+            if placed.line.id.as_str() == frame.inline_reveal.line_id {
+                self.composite_inline_reveal(pixels, placed, frame, line_x, line_y)?;
+                continue;
+            }
             let sprite = self
                 .line_sprites
                 .get(&placed.line.id)
@@ -364,11 +385,99 @@ impl HeadlessRenderer {
                 self.spec.width,
                 self.spec.height,
                 sprite,
-                (self.spec.width as f32 * 0.145 + placed.x).round() as i32,
-                (code_top + placed.y).round() as i32,
+                line_x.round() as i32,
+                line_y.round() as i32,
                 placed.opacity,
             );
         }
+        composite_sprite_rotated(
+            pixels,
+            self.spec.width,
+            self.spec.height,
+            &self.pointer_sprite,
+            36.0 * frame.pointer.scale,
+            36.0 * frame.pointer.scale,
+            self.spec.width as f32 * 0.145 + frame.pointer.x,
+            code_top + frame.pointer.y,
+            frame.pointer.rotation,
+            frame.pointer.blur,
+            frame.pointer.opacity,
+        );
+        Ok(())
+    }
+
+    fn composite_inline_reveal(
+        &mut self,
+        pixels: &mut [u8],
+        placed: &PlacedLine<'_>,
+        frame: &EditorFrame<'_>,
+        x: f32,
+        y: f32,
+    ) -> Result<()> {
+        let reveal = frame.inline_reveal;
+        if reveal.start_span > reveal.end_span || reveal.end_span > placed.line.spans.len() {
+            bail!("inline reveal span range is outside the code line");
+        }
+        let groups = [
+            ("prefix", &placed.line.spans[..reveal.start_span]),
+            (
+                "reveal",
+                &placed.line.spans[reveal.start_span..reveal.end_span],
+            ),
+            ("suffix", &placed.line.spans[reveal.end_span..]),
+        ];
+        for (name, spans) in groups {
+            let key = format!("{}:{name}", placed.line.id.as_str());
+            let fingerprint = spans_fingerprint(spans);
+            let stale = self
+                .part_sprites
+                .get(&key)
+                .is_none_or(|(cached, _)| *cached != fingerprint);
+            if stale {
+                let sprite = make_spans_sprite(&mut self.font_system, &mut self.swash_cache, spans);
+                self.part_sprites.insert(key, (fingerprint, sprite));
+            }
+        }
+
+        let prefix_key = format!("{}:prefix", placed.line.id.as_str());
+        let reveal_key = format!("{}:reveal", placed.line.id.as_str());
+        let suffix_key = format!("{}:suffix", placed.line.id.as_str());
+        let prefix = &self.part_sprites[&prefix_key].1;
+        let reveal_sprite = &self.part_sprites[&reveal_key].1;
+        let suffix = &self.part_sprites[&suffix_key].1;
+        let progress = reveal.progress.clamp(0.0, 1.0);
+        let x = x.round() as i32;
+        let y = y.round() as i32;
+
+        composite_sprite(
+            pixels,
+            self.spec.width,
+            self.spec.height,
+            prefix,
+            x,
+            y,
+            placed.opacity,
+        );
+        composite_sprite_clipped_blurred(
+            pixels,
+            self.spec.width,
+            self.spec.height,
+            reveal_sprite,
+            x + prefix.advance.round() as i32,
+            y,
+            reveal_sprite.advance * progress,
+            (1.0 - progress) * 4.0,
+            placed.opacity * progress,
+        );
+        composite_sprite(
+            pixels,
+            self.spec.width,
+            self.spec.height,
+            suffix,
+            x + (prefix.advance + reveal_sprite.advance * progress).round() as i32,
+            y,
+            placed.opacity,
+        );
         Ok(())
     }
 
@@ -411,6 +520,45 @@ impl HeadlessRenderer {
     }
 }
 
+fn make_pointer_sprite() -> Result<TextSprite> {
+    const SIZE: u32 = 36 * 4;
+    const SVG: &str = r##"<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 256 256">
+      <path fill="#f4f7f5" d="M224,104v50.93c0,46.2-36.85,84.55-83,85.06A83.71,83.71,0,0,1,80.6,215.4C58.79,192.33,34.15,136,34.15,136a16,16,0,0,1,6.53-22.23c7.66-4,17.1-.84,21.4,6.62l21,36.44a6.09,6.09,0,0,0,6,3.09l.12,0A8.19,8.19,0,0,0,96,151.74V32a16,16,0,0,1,16.77-16c8.61.4,15.23,7.82,15.23,16.43V104a8,8,0,0,0,8.53,8,8.17,8.17,0,0,0,7.47-8.25V88a16,16,0,0,1,16.77-16c8.61.4,15.23,7.82,15.23,16.43V112a8,8,0,0,0,8.53,8,8.17,8.17,0,0,0,7.47-8.25v-7.28c0-8.61,6.62-16,15.23-16.43A16,16,0,0,1,224,104Z"/>
+    </svg>"##;
+
+    rasterize_svg(SVG, SIZE, SIZE).context("rasterize Phosphor hand pointer")
+}
+
+fn rasterize_svg(svg: &str, width: u32, height: u32) -> Result<TextSprite> {
+    let tree = resvg::usvg::Tree::from_str(svg, &resvg::usvg::Options::default())
+        .context("parse SVG sprite")?;
+    let mut pixmap = resvg::tiny_skia::Pixmap::new(width, height).context("allocate SVG sprite")?;
+    let transform = resvg::tiny_skia::Transform::from_scale(
+        width as f32 / tree.size().width(),
+        height as f32 / tree.size().height(),
+    );
+    resvg::render(&tree, transform, &mut pixmap.as_mut());
+    let mut pixels = pixmap.data().to_vec();
+    for pixel in pixels.chunks_exact_mut(4) {
+        let alpha = u32::from(pixel[3]);
+        if alpha > 0 {
+            for channel in &mut pixel[..3] {
+                *channel = u32::from(*channel)
+                    .saturating_mul(255)
+                    .checked_div(alpha)
+                    .unwrap_or(0)
+                    .min(255) as u8;
+            }
+        }
+    }
+    Ok(TextSprite {
+        width,
+        height,
+        advance: width as f32,
+        pixels,
+    })
+}
+
 fn make_title_sprite(
     font_system: &mut FontSystem,
     swash_cache: &mut SwashCache,
@@ -432,8 +580,12 @@ fn make_title_sprite(
 }
 
 fn line_fingerprint(line: &CodeLine) -> u64 {
+    spans_fingerprint(&line.spans)
+}
+
+fn spans_fingerprint(spans: &[crate::code::StyledSpan]) -> u64 {
     let mut hasher = DefaultHasher::new();
-    for span in &line.spans {
+    for span in spans {
         span.text.hash(&mut hasher);
         span.style.hash(&mut hasher);
     }
@@ -445,11 +597,19 @@ fn make_line_sprite(
     swash_cache: &mut SwashCache,
     line: &CodeLine,
 ) -> TextSprite {
+    make_spans_sprite(font_system, swash_cache, &line.spans)
+}
+
+fn make_spans_sprite(
+    font_system: &mut FontSystem,
+    swash_cache: &mut SwashCache,
+    line_spans: &[crate::code::StyledSpan],
+) -> TextSprite {
     let base = Attrs::new().family(Family::Name("CommitMono"));
-    let spans: Vec<_> = if line.spans.is_empty() {
+    let spans: Vec<_> = if line_spans.is_empty() {
         vec![(" ", attributes(base.clone(), SyntaxStyle::Plain))]
     } else {
-        line.spans
+        line_spans
             .iter()
             .map(|span| (span.text.as_str(), attributes(base.clone(), span.style)))
             .collect()
@@ -478,6 +638,8 @@ fn make_sprite<'a>(
     buffer.set_size(Some(width as f32), Some(height as f32));
     buffer.set_wrap(Wrap::None);
     buffer.set_rich_text(spans, &base, Shaping::Advanced, None);
+    buffer.shape_until_scroll(font_system, false);
+    let advance = buffer.layout_runs().next().map_or(0.0, |run| run.line_w);
 
     let mut pixels = vec![0_u8; width as usize * height as usize * 4];
     buffer.draw(
@@ -500,6 +662,7 @@ fn make_sprite<'a>(
     TextSprite {
         width,
         height,
+        advance,
         pixels,
     }
 }
@@ -562,6 +725,152 @@ fn composite_sprite(
                     .expect("RGBA pixel has four channels"),
                 opacity,
             );
+        }
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
+fn composite_sprite_clipped_blurred(
+    canvas: &mut [u8],
+    canvas_width: u32,
+    canvas_height: u32,
+    sprite: &TextSprite,
+    x: i32,
+    y: i32,
+    clip_width: f32,
+    blur: f32,
+    opacity: f32,
+) {
+    if opacity <= 0.001 || clip_width <= 0.0 {
+        return;
+    }
+    let visible_width = clip_width.ceil().min(sprite.width as f32) as i32;
+    for sprite_y in 0..sprite.height as i32 {
+        let target_y = y + sprite_y;
+        if !(0..canvas_height as i32).contains(&target_y) {
+            continue;
+        }
+        for sprite_x in 0..visible_width {
+            let target_x = x + sprite_x;
+            if !(0..canvas_width as i32).contains(&target_x) {
+                continue;
+            }
+            const SAMPLE_GRID: i32 = 3;
+            let mut alpha_sum = 0_u32;
+            let mut premultiplied = [0_u32; 3];
+            for sample_y in 0..SAMPLE_GRID {
+                for sample_x in 0..SAMPLE_GRID {
+                    let offset_x = (sample_x as f32 / (SAMPLE_GRID - 1) as f32 - 0.5) * blur * 2.0;
+                    let offset_y = (sample_y as f32 / (SAMPLE_GRID - 1) as f32 - 0.5) * blur * 2.0;
+                    let source_x = (sprite_x as f32 + offset_x).round() as i32;
+                    let source_y = (sprite_y as f32 + offset_y).round() as i32;
+                    if !(0..sprite.width as i32).contains(&source_x)
+                        || !(0..sprite.height as i32).contains(&source_y)
+                    {
+                        continue;
+                    }
+                    let source_index =
+                        (source_y as usize * sprite.width as usize + source_x as usize) * 4;
+                    let alpha = u32::from(sprite.pixels[source_index + 3]);
+                    alpha_sum += alpha;
+                    for (channel, sum) in premultiplied.iter_mut().enumerate() {
+                        *sum += u32::from(sprite.pixels[source_index + channel]) * alpha;
+                    }
+                }
+            }
+            if alpha_sum == 0 {
+                continue;
+            }
+            let sample_count = (SAMPLE_GRID * SAMPLE_GRID) as u32;
+            let source = [
+                premultiplied[0].checked_div(alpha_sum).unwrap_or(0) as u8,
+                premultiplied[1].checked_div(alpha_sum).unwrap_or(0) as u8,
+                premultiplied[2].checked_div(alpha_sum).unwrap_or(0) as u8,
+                (alpha_sum / sample_count) as u8,
+            ];
+            let target_index = (target_y as usize * canvas_width as usize + target_x as usize) * 4;
+            blend_pixel(&mut canvas[target_index..target_index + 4], source, opacity);
+        }
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
+fn composite_sprite_rotated(
+    canvas: &mut [u8],
+    canvas_width: u32,
+    canvas_height: u32,
+    sprite: &TextSprite,
+    display_width: f32,
+    display_height: f32,
+    center_x: f32,
+    center_y: f32,
+    rotation: f32,
+    blur: f32,
+    opacity: f32,
+) {
+    if opacity <= 0.001 {
+        return;
+    }
+    let radius = (display_width * display_width + display_height * display_height)
+        .sqrt()
+        .mul_add(0.5, blur + 1.0)
+        .ceil() as i32;
+    let sine = rotation.sin();
+    let cosine = rotation.cos();
+    let center_pixel_x = center_x.round() as i32;
+    let center_pixel_y = center_y.round() as i32;
+
+    for offset_y in -radius..=radius {
+        let target_y = center_pixel_y + offset_y;
+        if !(0..canvas_height as i32).contains(&target_y) {
+            continue;
+        }
+        for offset_x in -radius..=radius {
+            let target_x = center_pixel_x + offset_x;
+            if !(0..canvas_width as i32).contains(&target_x) {
+                continue;
+            }
+            const SAMPLE_GRID: i32 = 4;
+            let mut alpha_sum = 0_u32;
+            let mut premultiplied = [0_u32; 3];
+            for sample_y in 0..SAMPLE_GRID {
+                for sample_x in 0..SAMPLE_GRID {
+                    let subpixel_x = offset_x as f32
+                        + ((sample_x as f32 + 0.5) / SAMPLE_GRID as f32 - 0.5) * (1.0 + blur * 2.0);
+                    let subpixel_y = offset_y as f32
+                        + ((sample_y as f32 + 0.5) / SAMPLE_GRID as f32 - 0.5) * (1.0 + blur * 2.0);
+                    let local_x = subpixel_x * cosine + subpixel_y * sine;
+                    let local_y = -subpixel_x * sine + subpixel_y * cosine;
+                    let source_x =
+                        ((local_x / display_width + 0.5) * sprite.width as f32).floor() as i32;
+                    let source_y =
+                        ((local_y / display_height + 0.5) * sprite.height as f32).floor() as i32;
+                    if !(0..sprite.width as i32).contains(&source_x)
+                        || !(0..sprite.height as i32).contains(&source_y)
+                    {
+                        continue;
+                    }
+                    let source_index =
+                        (source_y as usize * sprite.width as usize + source_x as usize) * 4;
+                    let alpha = u32::from(sprite.pixels[source_index + 3]);
+                    alpha_sum += alpha;
+                    for (channel, sum) in premultiplied.iter_mut().enumerate() {
+                        *sum += u32::from(sprite.pixels[source_index + channel]) * alpha;
+                    }
+                }
+            }
+            if alpha_sum == 0 {
+                continue;
+            }
+            let sample_count = (SAMPLE_GRID * SAMPLE_GRID) as u32;
+            let source = [
+                premultiplied[0].checked_div(alpha_sum).unwrap_or(0) as u8,
+                premultiplied[1].checked_div(alpha_sum).unwrap_or(0) as u8,
+                premultiplied[2].checked_div(alpha_sum).unwrap_or(0) as u8,
+                (alpha_sum / sample_count) as u8,
+            ];
+            let target_index = (target_y as usize * canvas_width as usize + target_x as usize) * 4;
+            blend_pixel(&mut canvas[target_index..target_index + 4], source, opacity);
         }
     }
 }

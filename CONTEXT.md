@@ -32,6 +32,10 @@ The compiled trajectory of one scalar actor property. A later spring on the same
 
 A measured visual range resolved from meaningful content, such as a token inside a stable code line. Highlights and pointers attach to semantic targets rather than authored screen coordinates.
 
+## Inline Reveal
+
+A transition that introduces authored spans inside a stable code line. The revealed spans animate width, opacity, and blur while stable suffix spans move to their new position without replacement.
+
 ## Pointer
 
 A stable visual actor that directs attention to a semantic target. Its position and opacity are ordinary property tracks, so retargeting and temporal sampling use the same motion system as every other actor.

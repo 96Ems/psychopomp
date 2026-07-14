@@ -35,6 +35,14 @@ This Interface provides leverage beyond easing: deterministic out-of-order sampl
 
 The Adapter also resolves semantic token targets from `cosmic-text` glyph cluster hitboxes. Token highlights and the pointer consume those measured bounds; choreography does not estimate monospace character widths or hardcode target coordinates.
 
+SVG assets are parsed and rasterized once into reusable cached sprites, then transformed and composited for each temporal sample. The pointer uses the exact filled Phosphor `HandPointingIcon` path selected by default in `effect-institute`; the same path supports future SVG actors without adding asset-specific shader geometry.
+
+SVG sprites are rasterized at four times their display resolution and coverage-sampled during rotation. The compositor also supports animated scale, opacity, and blur, which the pointer uses for its Effect Institute-style entrance.
+
+Pointer translation uses mildly underdamped scalar property tracks; rotation is derived from sampled velocity and acceleration so the hand leans against acceleration and follows through while decelerating. The complete transform remains deterministic and participates in temporal accumulation.
+
+Stable code lines can be split into cached prefix, reveal, and suffix sprites. An inline reveal opens the inserted span's layout width while opacity rises and blur resolves; the suffix position is derived from the sampled width. This is the first concrete inline-identity seam and remains narrower than a general recursive slot AST.
+
 The Adapter keeps these details private:
 
 - headless Metal adapter and device creation

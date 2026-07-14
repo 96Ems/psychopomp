@@ -115,6 +115,22 @@ What Kinograph should avoid:
 - implicit real-time state that makes offline random-access sampling ambiguous
 - APIs where convenience hides the compiled timeline and prevents inspection
 
+### Pointer Motion Principles
+
+[Emil Kowalski's animation guidance](https://emilkowal.ski/ui/great-animations) emphasizes natural spring motion, speed, purpose, interruptibility, and reviewing work in slow motion or frame by frame. His published design-engineering skill specifically recommends spring interpolation for decorative pointer-following motion because direct target assignment feels artificial.
+
+Kinograph applies that guidance with restraint:
+
+- the pointer is explanatory rather than a frequently repeated control
+- translation remains fast, interruptible, and velocity-preserving
+- the pointer uses the filled Phosphor `HandPointingIcon` style that `effect-institute` selects by default
+- acceleration makes the cursor lean against a direction change, creating physically grounded anticipation
+- velocity turns the cursor into travel while deceleration carries it through the arrival
+- pointer targets and highlight targets remain independent so attention can lead or leave the highlighted concept
+- every pointer transform participates in temporal sampling and motion blur
+
+Anticipation and follow-through come from classical animation, but should remain secondary action here. They must clarify direction and weight without delaying the pointer or turning functional explanation into decorative spectacle.
+
 ## Theatre.js
 
 [Theatre.js](https://www.theatrejs.com/) is prior art for explicit keyframe authoring and timeline data.

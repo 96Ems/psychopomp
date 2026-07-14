@@ -5,7 +5,6 @@ struct SceneUniforms {
     focus: vec2<f32>,
     _padding_1: vec2<f32>,
     token_highlight: vec4<f32>,
-    pointer: vec4<f32>,
 }
 
 @group(0) @binding(0)
@@ -128,24 +127,6 @@ fn fragment_main(input: VertexOutput) -> @location(0) vec4<f32> {
         vec2<f32>(scene.token_highlight.z + 12.0, 36.0),
         5.0,
         mix(color, vec3<f32>(0.055, 0.12, 0.095), scene.token_highlight.w * 0.72)
-    );
-
-    let pointer_center = code_origin + scene.pointer.xy;
-    color = fill_box(
-        color,
-        pixel,
-        pointer_center,
-        vec2<f32>(15.0),
-        7.5,
-        mix(color, vec3<f32>(0.72, 0.96, 0.86), scene.pointer.z)
-    );
-    color = fill_box(
-        color,
-        pixel,
-        pointer_center,
-        vec2<f32>(7.0),
-        3.5,
-        mix(color, vec3<f32>(0.025, 0.055, 0.045), scene.pointer.z)
     );
 
     return vec4<f32>(color, 1.0);

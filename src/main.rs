@@ -21,7 +21,8 @@ use crate::{
     },
     encode::{FfmpegEncoder, VideoSpec},
     render::{
-        EditorFrame, HeadlessRenderer, PointerFrame, RenderSpec, TextRangeBounds, TokenHighlight,
+        EditorFrame, HeadlessRenderer, InlineRevealFrame, PointerFrame, RenderSpec,
+        TextRangeBounds, TokenHighlight,
     },
     timeline::{Animation, PropertyId, SpringProfile, Timeline},
 };
@@ -29,7 +30,7 @@ use crate::{
 const WIDTH: u32 = 1920;
 const HEIGHT: u32 = 1080;
 const FPS: u32 = 60;
-const DURATION_SECONDS: u32 = 3;
+const DURATION_SECONDS: u32 = 5;
 const FRAME_COUNT: u32 = FPS * DURATION_SECONDS;
 const TEMPORAL_SAMPLES: u32 = 8;
 const SHUTTER_ANGLE: f32 = 180.0;
@@ -65,13 +66,16 @@ async fn render_video(output: &Path) -> Result<()> {
         layout: 1.0,
         content: 1.0,
     });
-    let focus_line = settled_lines
-        .iter()
-        .find(|placed| placed.line.id.as_str() == FOCUS_LINE_ID)
-        .expect("focus line is part of the compiled code manifest");
-    let effect_bounds = renderer.measure_text_range(focus_line.line, "Effect.Effect")?;
-    let not_found_bounds = renderer.measure_text_range(focus_line.line, "NotFound")?;
-    let choreography = hero_choreography(effect_bounds, not_found_bounds, focus_line.y)?;
+    let effect = measure_target(
+        &mut renderer,
+        &settled_lines,
+        FOCUS_LINE_ID,
+        "Effect.Effect",
+    )?;
+    let string = measure_target(&mut renderer, &settled_lines, "find-signature", "string")?;
+    let not_found = measure_target(&mut renderer, &settled_lines, FOCUS_LINE_ID, "NotFound")?;
+    let context = measure_target(&mut renderer, &settled_lines, "class-open", "Context.Tag")?;
+    let choreography = hero_choreography(effect, string, not_found, context)?;
     let mut encoder = FfmpegEncoder::start(
         output,
         VideoSpec {
@@ -93,14 +97,22 @@ async fn render_video(output: &Path) -> Result<()> {
         for sample in 0..TEMPORAL_SAMPLES {
             let sample_phase = (sample as f32 + 0.5) / TEMPORAL_SAMPLES as f32 - 0.5;
             let time = (center_time + sample_phase * shutter_duration).max(0.0);
-            let (panel_offset_y, focus_intensity, focus_line_y, token_highlight, pointer, lines) =
-                sample_editor(&transition, &choreography, time);
+            let (
+                panel_offset_y,
+                focus_intensity,
+                focus_line_y,
+                token_highlight,
+                pointer,
+                inline_reveal,
+                lines,
+            ) = sample_editor(&transition, &choreography, time);
             let sample_frame = EditorFrame {
                 panel_offset_y,
                 focus_intensity,
                 focus_line_y,
                 token_highlight,
                 pointer,
+                inline_reveal,
                 lines: &lines,
             };
             let mut pixels = renderer.render_shapes(&sample_frame)?;
@@ -135,6 +147,38 @@ async fn render_video(output: &Path) -> Result<()> {
     Ok(())
 }
 
+#[derive(Clone, Copy)]
+struct CodeTarget {
+    bounds: TextRangeBounds,
+    line_y: f32,
+}
+
+impl CodeTarget {
+    fn pointer_x(self) -> f32 {
+        self.bounds.x + self.bounds.width * 0.5
+    }
+
+    fn pointer_y(self) -> f32 {
+        self.line_y + 55.0
+    }
+}
+
+fn measure_target(
+    renderer: &mut HeadlessRenderer,
+    lines: &[PlacedLine<'_>],
+    line_id: &str,
+    text: &str,
+) -> Result<CodeTarget> {
+    let placed = lines
+        .iter()
+        .find(|placed| placed.line.id.as_str() == line_id)
+        .with_context(|| format!("code target line '{line_id}' is not in the settled scene"))?;
+    Ok(CodeTarget {
+        bounds: renderer.measure_text_range(placed.line, text)?,
+        line_y: placed.y,
+    })
+}
+
 struct HeroChoreography {
     timeline: Timeline,
     panel_y: PropertyId,
@@ -147,12 +191,16 @@ struct HeroChoreography {
     pointer_x: PropertyId,
     pointer_y: PropertyId,
     pointer_opacity: PropertyId,
+    pointer_scale: PropertyId,
+    pointer_blur: PropertyId,
+    inline_reveal: PropertyId,
 }
 
 fn hero_choreography(
-    effect: TextRangeBounds,
-    not_found: TextRangeBounds,
-    focus_line_y: f32,
+    effect: CodeTarget,
+    string: CodeTarget,
+    not_found: CodeTarget,
+    context: CodeTarget,
 ) -> Result<HeroChoreography> {
     let panel_y = PropertyId::new("editor.panel_y");
     let code_layout = PropertyId::new("editor.code_layout");
@@ -164,30 +212,69 @@ fn hero_choreography(
     let pointer_x = PropertyId::new("pointer.x");
     let pointer_y = PropertyId::new("pointer.y");
     let pointer_opacity = PropertyId::new("pointer.opacity");
+    let pointer_scale = PropertyId::new("pointer.scale");
+    let pointer_blur = PropertyId::new("pointer.blur");
+    let inline_reveal = PropertyId::new("editor.inline_reveal");
     let profile = SpringProfile::from_visual_duration(0.3, 0.0, 0.001, 0.001);
-    let effect_center = effect.x + effect.width * 0.5;
-    let not_found_center = not_found.x + not_found.width * 0.5;
+    let pointer_profile = SpringProfile::from_visual_duration(0.42, 0.18, 0.001, 0.001);
     let animation = Animation::parallel([
         Animation::delay(0.08, Animation::spring(panel_y.clone(), 0.0, profile)),
         Animation::delay(0.88, Animation::spring(code_layout.clone(), 1.0, profile)),
         Animation::delay(1.12, Animation::spring(code_content.clone(), 1.0, profile)),
         Animation::delay(1.55, Animation::spring(focus.clone(), 1.0, profile)),
-        Animation::delay(1.68, Animation::spring(token_opacity.clone(), 1.0, profile)),
+        Animation::delay(1.72, Animation::spring(token_opacity.clone(), 1.0, profile)),
         Animation::delay(
-            1.68,
-            Animation::spring(pointer_opacity.clone(), 1.0, profile),
+            1.72,
+            Animation::spring(pointer_opacity.clone(), 1.0, pointer_profile),
         ),
         Animation::delay(
-            2.08,
-            Animation::spring(token_x.clone(), not_found.x, profile),
+            1.72,
+            Animation::spring(pointer_scale.clone(), 1.0, pointer_profile),
         ),
         Animation::delay(
-            2.08,
-            Animation::spring(token_width.clone(), not_found.width, profile),
+            1.72,
+            Animation::spring(pointer_blur.clone(), 0.0, pointer_profile),
         ),
         Animation::delay(
-            2.08,
-            Animation::spring(pointer_x.clone(), not_found_center, profile),
+            1.72,
+            Animation::spring(pointer_x.clone(), effect.pointer_x(), pointer_profile),
+        ),
+        Animation::delay(
+            1.72,
+            Animation::spring(pointer_y.clone(), effect.pointer_y(), pointer_profile),
+        ),
+        Animation::delay(2.72, Animation::spring(inline_reveal.clone(), 1.0, profile)),
+        Animation::delay(
+            3.15,
+            Animation::spring(token_x.clone(), not_found.bounds.x, profile),
+        ),
+        Animation::delay(
+            3.15,
+            Animation::spring(token_width.clone(), not_found.bounds.width, profile),
+        ),
+        Animation::delay(
+            2.35,
+            Animation::spring(pointer_x.clone(), string.pointer_x(), pointer_profile),
+        ),
+        Animation::delay(
+            2.35,
+            Animation::spring(pointer_y.clone(), string.pointer_y(), pointer_profile),
+        ),
+        Animation::delay(
+            3.15,
+            Animation::spring(pointer_x.clone(), not_found.pointer_x(), pointer_profile),
+        ),
+        Animation::delay(
+            3.15,
+            Animation::spring(pointer_y.clone(), not_found.pointer_y(), pointer_profile),
+        ),
+        Animation::delay(
+            4.05,
+            Animation::spring(pointer_x.clone(), context.pointer_x(), pointer_profile),
+        ),
+        Animation::delay(
+            4.05,
+            Animation::spring(pointer_y.clone(), context.pointer_y(), pointer_profile),
         ),
     ]);
     let timeline = Timeline::compile(
@@ -196,12 +283,15 @@ fn hero_choreography(
             (code_layout.clone(), 0.0),
             (code_content.clone(), 0.0),
             (focus.clone(), 0.0),
-            (token_x.clone(), effect.x),
-            (token_width.clone(), effect.width),
+            (token_x.clone(), effect.bounds.x),
+            (token_width.clone(), effect.bounds.width),
             (token_opacity.clone(), 0.0),
-            (pointer_x.clone(), effect_center),
-            (pointer_y.clone(), focus_line_y + 55.0),
+            (pointer_x.clone(), effect.pointer_x() + 40.0),
+            (pointer_y.clone(), effect.pointer_y() + 30.0),
             (pointer_opacity.clone(), 0.0),
+            (pointer_scale.clone(), 0.7),
+            (pointer_blur.clone(), 4.0),
+            (inline_reveal.clone(), 0.0),
         ],
         &animation,
     )?;
@@ -218,6 +308,9 @@ fn hero_choreography(
         pointer_x,
         pointer_y,
         pointer_opacity,
+        pointer_scale,
+        pointer_blur,
+        inline_reveal,
     })
 }
 
@@ -231,6 +324,7 @@ fn sample_editor<'a>(
     f32,
     TokenHighlight,
     PointerFrame,
+    InlineRevealFrame,
     Vec<PlacedLine<'a>>,
 ) {
     let sample = |property| {
@@ -239,6 +333,12 @@ fn sample_editor<'a>(
             .sample(property, time)
             .expect("hero choreography property has an initial value")
             .position
+    };
+    let sample_state_at = |property, sample_time| {
+        choreography
+            .timeline
+            .sample(property, sample_time)
+            .expect("hero choreography property has an initial value")
     };
     let panel_offset_y = sample(&choreography.panel_y);
     let layout_progress = sample(&choreography.code_layout);
@@ -249,10 +349,29 @@ fn sample_editor<'a>(
         width: sample(&choreography.token_width),
         opacity: sample(&choreography.token_opacity).clamp(0.0, 1.0),
     };
+    let pointer_x = sample_state_at(&choreography.pointer_x, time);
+    let pointer_y = sample_state_at(&choreography.pointer_y, time);
+    let derivative_step = 1.0 / 240.0;
+    let previous_time = (time - derivative_step).max(0.0);
+    let previous_x = sample_state_at(&choreography.pointer_x, previous_time);
+    let previous_y = sample_state_at(&choreography.pointer_y, previous_time);
+    let acceleration_x = (pointer_x.velocity - previous_x.velocity) / derivative_step;
+    let acceleration_y = (pointer_y.velocity - previous_y.velocity) / derivative_step;
+    let travel_tilt = pointer_x.velocity * 0.00012 + pointer_y.velocity * 0.00004;
+    let inertial_tilt = -acceleration_x * 0.000012 - acceleration_y * 0.000004;
     let pointer = PointerFrame {
-        x: sample(&choreography.pointer_x),
-        y: sample(&choreography.pointer_y),
+        x: pointer_x.position,
+        y: pointer_y.position,
         opacity: sample(&choreography.pointer_opacity).clamp(0.0, 1.0),
+        rotation: (travel_tilt + inertial_tilt).clamp(-0.30, 0.30),
+        scale: sample(&choreography.pointer_scale),
+        blur: sample(&choreography.pointer_blur).max(0.0),
+    };
+    let inline_reveal = InlineRevealFrame {
+        line_id: FOCUS_LINE_ID,
+        start_span: 4,
+        end_span: 6,
+        progress: sample(&choreography.inline_reveal),
     };
     let lines = transition.sample(TransitionProgress {
         layout: layout_progress,
@@ -269,6 +388,7 @@ fn sample_editor<'a>(
         focus_line_y,
         token_highlight,
         pointer,
+        inline_reveal,
         lines,
     )
 }

@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
 use anyhow::{Result, bail};
 
@@ -160,46 +160,43 @@ impl Animation {
         }
     }
 
-    fn written_properties(&self) -> HashSet<PropertyId> {
+    fn writes_at(&self, start: f32, writes: &mut Vec<(PropertyId, f32)>) {
         match self {
             Self::Set { property, .. } | Self::Spring { property, .. } => {
-                HashSet::from([property.clone()])
+                writes.push((property.clone(), start));
             }
-            Self::Sequence(animations) | Self::Parallel(animations) => animations
-                .iter()
-                .flat_map(|animation| animation.written_properties())
-                .collect(),
-            Self::Delay { animation, .. } => animation.written_properties(),
-            Self::Hold(_) => HashSet::new(),
+            Self::Sequence(animations) => {
+                let mut cursor = start;
+                for animation in animations {
+                    animation.writes_at(cursor, writes);
+                    cursor += animation.duration();
+                }
+            }
+            Self::Parallel(animations) => {
+                for animation in animations {
+                    animation.writes_at(start, writes);
+                }
+            }
+            Self::Delay { seconds, animation } => animation.writes_at(start + seconds, writes),
+            Self::Hold(_) => {}
         }
     }
 
     fn validate(&self) -> Result<()> {
-        match self {
-            Self::Parallel(animations) => {
-                let mut written = HashSet::new();
-                for animation in animations {
-                    animation.validate()?;
-                    for property in animation.written_properties() {
-                        if !written.insert(property.clone()) {
-                            bail!(
-                                "parallel animations both write property '{}'",
-                                property.as_str()
-                            );
-                        }
-                    }
-                }
-                Ok(())
+        let mut writes = Vec::new();
+        self.writes_at(0.0, &mut writes);
+        for (index, (property, start)) in writes.iter().enumerate() {
+            if writes[..index]
+                .iter()
+                .any(|(other, other_start)| other == property && other_start == start)
+            {
+                bail!(
+                    "parallel animations both write property '{}' at {start:.3}s",
+                    property.as_str()
+                );
             }
-            Self::Sequence(animations) => {
-                for animation in animations {
-                    animation.validate()?;
-                }
-                Ok(())
-            }
-            Self::Delay { animation, .. } => animation.validate(),
-            Self::Set { .. } | Self::Spring { .. } | Self::Hold(_) => Ok(()),
         }
+        Ok(())
     }
 }
 
@@ -382,6 +379,19 @@ mod tests {
 
         let error = Timeline::compile([], &animation).err().unwrap();
         assert!(error.to_string().contains("both write property 'panel.x'"));
+    }
+
+    #[test]
+    fn delayed_parallel_writes_retarget_the_same_property() {
+        let x = PropertyId::new("pointer.x");
+        let animation = Animation::parallel([
+            Animation::spring(x.clone(), 10.0, profile()),
+            Animation::delay(0.4, Animation::spring(x.clone(), 20.0, profile())),
+        ]);
+        let timeline = Timeline::compile([(x.clone(), 0.0)], &animation).unwrap();
+
+        assert!(timeline.sample(&x, 0.4).unwrap().velocity.abs() > 0.0);
+        assert!(timeline.sample(&x, 2.0).unwrap().position > 19.9);
     }
 
     #[test]
