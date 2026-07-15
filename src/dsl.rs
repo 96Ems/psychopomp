@@ -5,6 +5,7 @@ use anyhow::{Context, Result};
 use crate::composition::{
     Asset, AssetKind, Composition, CueId, Duration, MediaPlacement, TimeRange,
 };
+use crate::motion::{MotionState, Spring};
 use crate::timeline::{Animation, PropertyId, SpringProfile, Timeline};
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
@@ -94,6 +95,115 @@ pub struct AnnotationFrame {
     pub target: TargetGeometry,
     pub effect: AnnotationEffect,
     pub phase: f32,
+}
+
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+pub struct TaskId(String);
+
+impl TaskId {
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct Task {
+    id: TaskId,
+    name: String,
+    x: f32,
+    y: f32,
+}
+
+impl Task {
+    pub fn new(id: impl Into<String>, name: impl Into<String>) -> Self {
+        let id = id.into();
+        assert!(!id.is_empty(), "task ID must not be empty");
+        Self {
+            id: TaskId(id),
+            name: name.into(),
+            x: 0.0,
+            y: 0.0,
+        }
+    }
+
+    pub fn at(mut self, x: f32, y: f32) -> Self {
+        assert!(
+            x.is_finite() && y.is_finite(),
+            "task position must be finite"
+        );
+        self.x = x;
+        self.y = y;
+        self
+    }
+
+    pub fn idle(&self) -> TaskChange {
+        self.change(TaskState::Idle)
+    }
+
+    pub fn run(&self) -> TaskChange {
+        self.change(TaskState::Running)
+    }
+
+    pub fn succeed(&self, result: impl Into<String>) -> TaskChange {
+        self.change(TaskState::Succeeded(result.into()))
+    }
+
+    pub fn fail(&self, error: impl Into<String>) -> TaskChange {
+        self.change(TaskState::Failed(error.into()))
+    }
+
+    pub fn die(&self, defect: impl Into<String>) -> TaskChange {
+        self.change(TaskState::Death(defect.into()))
+    }
+
+    pub fn hide(&self) -> TaskChange {
+        self.change(TaskState::Hidden)
+    }
+
+    fn change(&self, state: TaskState) -> TaskChange {
+        TaskChange {
+            task: self.clone(),
+            state,
+        }
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum TaskState {
+    Hidden,
+    Idle,
+    Running,
+    Succeeded(String),
+    Failed(String),
+    Death(String),
+}
+
+#[derive(Clone, Debug)]
+pub struct TaskChange {
+    task: Task,
+    state: TaskState,
+}
+
+impl TaskChange {
+    pub(crate) fn task(&self) -> &Task {
+        &self.task
+    }
+
+    pub(crate) fn state(&self) -> &TaskState {
+        &self.state
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct TaskFrame<'a> {
+    pub id: &'a TaskId,
+    pub x: f32,
+    pub y: f32,
+    pub name: &'a str,
+    pub previous_state: &'a TaskState,
+    pub state: &'a TaskState,
+    pub state_age: f32,
+    pub visible_age: f32,
 }
 
 #[derive(Clone, Debug)]
@@ -246,6 +356,16 @@ impl Scene {
             .map(|(property, value)| Ok((property.clone(), resolve_scalar(value, targets)?)))
             .collect::<Result<Vec<_>>>()?;
         let lowered = self.composition.lower()?;
+        let mut tasks = lowered
+            .tasks
+            .into_iter()
+            .map(|(at, change)| CompiledTaskChange {
+                at,
+                task: change.task().clone(),
+                state: change.state().clone(),
+            })
+            .collect::<Vec<_>>();
+        tasks.sort_by_key(|change| change.at);
         let timeline = Timeline::compile_with_duration(
             initial_values,
             &lowered.motion.resolve(targets)?,
@@ -257,6 +377,7 @@ impl Scene {
             cues: lowered.cues,
             duration: lowered.duration,
             images: self.images.clone(),
+            tasks,
             annotations: lowered
                 .annotations
                 .into_iter()
@@ -278,7 +399,14 @@ pub struct CompiledScene {
     cues: HashMap<CueId, TimeRange>,
     duration: Duration,
     images: Vec<Image>,
+    tasks: Vec<CompiledTaskChange>,
     annotations: Vec<CompiledAnnotation>,
+}
+
+struct CompiledTaskChange {
+    at: crate::composition::Time,
+    task: Task,
+    state: TaskState,
 }
 
 struct CompiledAnnotation {
@@ -312,6 +440,49 @@ impl CompiledScene {
 
     pub fn images(&self) -> &[Image] {
         &self.images
+    }
+
+    pub fn task_frames_at(&self, seconds: f32) -> Vec<TaskFrame<'_>> {
+        let seconds = f64::from(seconds.max(0.0));
+        let mut ids = Vec::<&TaskId>::new();
+        for change in &self.tasks {
+            if !ids.contains(&&change.task.id) {
+                ids.push(&change.task.id);
+            }
+        }
+        ids.into_iter()
+            .filter_map(|id| {
+                let changes = self
+                    .tasks
+                    .iter()
+                    .filter(|change| &change.task.id == id && change.at.as_seconds() <= seconds)
+                    .collect::<Vec<_>>();
+                let current = *changes.last()?;
+                if current.state == TaskState::Hidden {
+                    return None;
+                }
+                let previous = changes.iter().rev().nth(1).copied().unwrap_or(current);
+                let state_age = (seconds - current.at.as_seconds()) as f32;
+                let visible_at = changes
+                    .iter()
+                    .find(|change| change.state != TaskState::Hidden)
+                    .map_or(current.at, |change| change.at);
+                // Matches the Pixi row's stiffness: 220, damping: 24, mass: 0.8.
+                let layout = Spring::new(0.38, 0.9)
+                    .sample(MotionState::at(0.0), 1.0, state_age)
+                    .position;
+                Some(TaskFrame {
+                    id,
+                    x: previous.task.x + (current.task.x - previous.task.x) * layout,
+                    y: previous.task.y + (current.task.y - previous.task.y) * layout,
+                    name: &current.task.name,
+                    previous_state: &previous.state,
+                    state: &current.state,
+                    state_age,
+                    visible_age: (seconds - visible_at.as_seconds()) as f32,
+                })
+            })
+            .collect()
     }
 
     pub fn annotations_at(&self, seconds: f32) -> impl Iterator<Item = AnnotationFrame> + '_ {
@@ -506,12 +677,34 @@ fn resolve_target(
 #[cfg(test)]
 mod tests {
     use super::{
-        Annotation, AnnotationEffect, Image, Motion, Pointer, Scalar, Scene, TargetGeometry,
-        TextTarget,
+        Annotation, AnnotationEffect, Image, Motion, Pointer, Scalar, Scene, TargetGeometry, Task,
+        TaskState, TextTarget,
     };
     use crate::composition::{Asset, Composition, Duration, MediaRole, Time, TimeRange};
     use crate::timeline::SpringProfile;
     use std::collections::HashMap;
+
+    #[test]
+    fn task_state_changes_compile_as_composable_timeline_events() {
+        let task = Task::new("request", "request").at(120.0, 80.0);
+        let moved = task.clone().at(240.0, 80.0);
+        let scene = Scene::new(
+            [],
+            Composition::parallel([
+                task.idle().into(),
+                Composition::delay(Duration::seconds(0.5), task.run()),
+                Composition::delay(Duration::seconds(1.0), moved.succeed("OK")),
+                Composition::hold(Duration::seconds(2.0)),
+            ]),
+        );
+        let compiled = scene.compile(&HashMap::new()).unwrap();
+
+        assert_eq!(compiled.task_frames_at(0.25)[0].state, &TaskState::Idle);
+        assert_eq!(compiled.task_frames_at(0.75)[0].state, &TaskState::Running);
+        let completed = &compiled.task_frames_at(1.9)[0];
+        assert_eq!(completed.state, &TaskState::Succeeded("OK".to_owned()));
+        assert!((completed.x - 240.0).abs() < 0.1);
+    }
 
     #[test]
     fn semantic_pointer_motion_compiles_to_scalar_tracks() {

@@ -16,6 +16,9 @@ use crate::code::{CodeLine, LineId, PlacedLine, SyntaxStyle};
 use crate::dsl::AnnotationFrame;
 
 mod effects;
+mod task;
+
+pub use task::{QuoteFrame, TaskSceneFrame};
 
 const FORMAT: wgpu::TextureFormat = wgpu::TextureFormat::Rgba8UnormSrgb;
 const BYTES_PER_PIXEL: u32 = 4;

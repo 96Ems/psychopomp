@@ -1,0 +1,7611 @@
+{
+	"id": "visual-effects",
+	"text": "Before I attempt to answer your question, \"why would I ever want to use Effect?\" I'd like to desensitize you with some tastefully animated Effect simulacra. This is an Effect, a recipe for some computation. Effects may succeed, or they may fail, either possibility will be evident at the type level. They'll even die for you, if necessary. You can turn promises into effects, and then combine them into larger programs, running one after another. If an Effect fails, you can retry it on a schedule.",
+	"code": "",
+	"contentHash": "4hb3mp",
+	"componentFlow": {
+		"name": "WhirlwindTourDemo",
+		"steps": [
+			{
+				"name": "start",
+				"at": "start"
+			},
+			{
+				"name": "why",
+				"at": "why",
+				"nth": 1
+			},
+			{
+				"name": "would",
+				"at": "would"
+			},
+			{
+				"name": "I",
+				"at": "I",
+				"nth": 2
+			},
+			{
+				"name": "ever",
+				"at": "ever"
+			},
+			{
+				"name": "want",
+				"at": "want"
+			},
+			{
+				"name": "to",
+				"at": "to",
+				"nth": 2
+			},
+			{
+				"name": "use",
+				"at": "use"
+			},
+			{
+				"name": "Effect?",
+				"at": "Effect?"
+			},
+			{
+				"name": "I'd",
+				"at": "I'd"
+			},
+			{
+				"name": "tastefully",
+				"at": "tastefully"
+			},
+			{
+				"name": "This",
+				"at": "This"
+			},
+			{
+				"name": "Effect",
+				"at": "Effect",
+				"nth": 3
+			},
+			{
+				"name": "succeed",
+				"at": "succeed"
+			},
+			{
+				"name": "or",
+				"at": "or"
+			},
+			{
+				"name": "they",
+				"at": "they"
+			},
+			{
+				"name": "fail",
+				"at": "fail"
+			},
+			{
+				"name": "They'll",
+				"at": "They'll"
+			},
+			{
+				"name": "even",
+				"at": "even"
+			},
+			{
+				"name": "die",
+				"at": "die"
+			},
+			{
+				"name": "You",
+				"at": "You",
+				"after": "necessary"
+			},
+			{
+				"name": "effects",
+				"at": "effects",
+				"after": "promises"
+			},
+			{
+				"name": "combine",
+				"at": "combine"
+			},
+			{
+				"name": "running",
+				"at": "running"
+			},
+			{
+				"name": "after",
+				"at": "after"
+			},
+			{
+				"name": "another",
+				"at": "another"
+			},
+			{
+				"name": "fails",
+				"at": "fails"
+			},
+			{
+				"name": "retry",
+				"at": "retry"
+			},
+			{
+				"name": "schedule",
+				"at": "schedule"
+			}
+		],
+		"snapshots": [
+			{
+				"mode": "quote",
+				"quoteHighlightIndex": -1,
+				"showHypnotic": false,
+				"nodeCount": 1,
+				"name1": "lang",
+				"state1": "idle",
+				"result1": "TypeScript",
+				"resultScale1": 1
+			},
+			{
+				"mode": "quote",
+				"quoteHighlightIndex": 0,
+				"showHypnotic": true,
+				"nodeCount": 1,
+				"name1": "lang",
+				"state1": "idle",
+				"result1": "TypeScript",
+				"resultScale1": 1
+			},
+			{
+				"mode": "quote",
+				"quoteHighlightIndex": 1,
+				"showHypnotic": true,
+				"nodeCount": 1,
+				"name1": "lang",
+				"state1": "idle",
+				"result1": "TypeScript",
+				"resultScale1": 1
+			},
+			{
+				"mode": "quote",
+				"quoteHighlightIndex": 2,
+				"showHypnotic": true,
+				"nodeCount": 1,
+				"name1": "lang",
+				"state1": "idle",
+				"result1": "TypeScript",
+				"resultScale1": 1
+			},
+			{
+				"mode": "quote",
+				"quoteHighlightIndex": 3,
+				"showHypnotic": true,
+				"nodeCount": 1,
+				"name1": "lang",
+				"state1": "idle",
+				"result1": "TypeScript",
+				"resultScale1": 1
+			},
+			{
+				"mode": "quote",
+				"quoteHighlightIndex": 4,
+				"showHypnotic": true,
+				"nodeCount": 1,
+				"name1": "lang",
+				"state1": "idle",
+				"result1": "TypeScript",
+				"resultScale1": 1
+			},
+			{
+				"mode": "quote",
+				"quoteHighlightIndex": 5,
+				"showHypnotic": true,
+				"nodeCount": 1,
+				"name1": "lang",
+				"state1": "idle",
+				"result1": "TypeScript",
+				"resultScale1": 1
+			},
+			{
+				"mode": "quote",
+				"quoteHighlightIndex": 6,
+				"showHypnotic": true,
+				"nodeCount": 1,
+				"name1": "lang",
+				"state1": "idle",
+				"result1": "TypeScript",
+				"resultScale1": 1
+			},
+			{
+				"mode": "quote",
+				"quoteHighlightIndex": 7,
+				"showHypnotic": true,
+				"nodeCount": 1,
+				"name1": "lang",
+				"state1": "idle",
+				"result1": "TypeScript",
+				"resultScale1": 1
+			},
+			{
+				"mode": "quote",
+				"quoteHighlightIndex": 7,
+				"showHypnotic": true,
+				"nodeCount": 1,
+				"name1": "lang",
+				"state1": "idle",
+				"result1": "TypeScript",
+				"resultScale1": 1,
+				"hideQuote": true
+			},
+			{
+				"mode": "quote",
+				"quoteHighlightIndex": 7,
+				"showHypnotic": true,
+				"nodeCount": 1,
+				"name1": "lang",
+				"state1": "idle",
+				"result1": "TypeScript",
+				"resultScale1": 1,
+				"hideQuote": true,
+				"showSubliminal": true
+			},
+			{
+				"mode": "demo",
+				"quoteHighlightIndex": 7,
+				"showHypnotic": false,
+				"nodeCount": 1,
+				"name1": "lang",
+				"state1": "idle",
+				"result1": "TypeScript",
+				"resultScale1": 1,
+				"hideQuote": true,
+				"showSubliminal": true
+			},
+			{
+				"mode": "demo",
+				"quoteHighlightIndex": 7,
+				"showHypnotic": false,
+				"nodeCount": 1,
+				"name1": "lang",
+				"state1": "running",
+				"result1": "TypeScript",
+				"resultScale1": 1,
+				"hideQuote": true,
+				"showSubliminal": true
+			},
+			{
+				"mode": "demo",
+				"quoteHighlightIndex": 7,
+				"showHypnotic": false,
+				"nodeCount": 1,
+				"name1": "lang",
+				"state1": "completed",
+				"result1": "TypeScript",
+				"resultScale1": 1,
+				"hideQuote": true,
+				"showSubliminal": true
+			},
+			{
+				"mode": "demo",
+				"quoteHighlightIndex": 7,
+				"showHypnotic": false,
+				"nodeCount": 2,
+				"name1": "lang",
+				"state1": "completed",
+				"result1": "TypeScript",
+				"resultScale1": 1,
+				"hideQuote": true,
+				"showSubliminal": true,
+				"name2": "launch",
+				"state2": "idle",
+				"error2": "NoFuel"
+			},
+			{
+				"mode": "demo",
+				"quoteHighlightIndex": 7,
+				"showHypnotic": false,
+				"nodeCount": 2,
+				"name1": "lang",
+				"state1": "completed",
+				"result1": "TypeScript",
+				"resultScale1": 1,
+				"hideQuote": true,
+				"showSubliminal": true,
+				"name2": "launch",
+				"state2": "running",
+				"error2": "NoFuel"
+			},
+			{
+				"mode": "demo",
+				"quoteHighlightIndex": 7,
+				"showHypnotic": false,
+				"nodeCount": 2,
+				"name1": "lang",
+				"state1": "completed",
+				"result1": "TypeScript",
+				"resultScale1": 1,
+				"hideQuote": true,
+				"showSubliminal": true,
+				"name2": "launch",
+				"state2": "failed",
+				"error2": "NoFuel"
+			},
+			{
+				"mode": "demo",
+				"quoteHighlightIndex": 7,
+				"showHypnotic": false,
+				"nodeCount": 3,
+				"name1": "lang",
+				"state1": "completed",
+				"result1": "TypeScript",
+				"resultScale1": 1,
+				"hideQuote": true,
+				"showSubliminal": true,
+				"name2": "launch",
+				"state2": "failed",
+				"error2": "NoFuel",
+				"name3": "pact",
+				"state3": "idle"
+			},
+			{
+				"mode": "demo",
+				"quoteHighlightIndex": 7,
+				"showHypnotic": false,
+				"nodeCount": 3,
+				"name1": "lang",
+				"state1": "completed",
+				"result1": "TypeScript",
+				"resultScale1": 1,
+				"hideQuote": true,
+				"showSubliminal": true,
+				"name2": "launch",
+				"state2": "failed",
+				"error2": "NoFuel",
+				"name3": "pact",
+				"state3": "running"
+			},
+			{
+				"mode": "demo",
+				"quoteHighlightIndex": 7,
+				"showHypnotic": false,
+				"nodeCount": 3,
+				"name1": "lang",
+				"state1": "completed",
+				"result1": "TypeScript",
+				"resultScale1": 1,
+				"hideQuote": true,
+				"showSubliminal": true,
+				"name2": "launch",
+				"state2": "failed",
+				"error2": "NoFuel",
+				"name3": "pact",
+				"state3": "death"
+			},
+			{
+				"mode": "demo",
+				"quoteHighlightIndex": 7,
+				"showHypnotic": false,
+				"nodeCount": 1,
+				"name1": "classify",
+				"state1": "idle",
+				"result1": "",
+				"resultScale1": 1.15,
+				"hideQuote": true,
+				"showSubliminal": true,
+				"name2": "launch",
+				"state2": "failed",
+				"error2": "NoFuel",
+				"name3": "pact",
+				"state3": "death",
+				"showArrows": false,
+				"error1": ""
+			},
+			{
+				"mode": "demo",
+				"quoteHighlightIndex": 7,
+				"showHypnotic": false,
+				"nodeCount": 1,
+				"name1": "classify",
+				"state1": "idle",
+				"result1": "",
+				"resultScale1": 1.15,
+				"hideQuote": true,
+				"showSubliminal": true,
+				"name2": "launch",
+				"state2": "failed",
+				"error2": "NoFuel",
+				"name3": "pact",
+				"state3": "death",
+				"showArrows": false,
+				"error1": ""
+			},
+			{
+				"mode": "demo",
+				"quoteHighlightIndex": 7,
+				"showHypnotic": false,
+				"nodeCount": 3,
+				"name1": "classify",
+				"state1": "idle",
+				"result1": "HOMICIDE",
+				"resultScale1": 1.15,
+				"hideQuote": true,
+				"showSubliminal": true,
+				"name2": "assign",
+				"state2": "idle",
+				"error2": "",
+				"name3": "notify",
+				"state3": "idle",
+				"showArrows": false,
+				"error1": "",
+				"result2": "JR. DETECTIVE",
+				"error3": ""
+			},
+			{
+				"mode": "demo",
+				"quoteHighlightIndex": 7,
+				"showHypnotic": false,
+				"nodeCount": 3,
+				"name1": "classify",
+				"state1": "running",
+				"result1": "HOMICIDE",
+				"resultScale1": 1.15,
+				"hideQuote": true,
+				"showSubliminal": true,
+				"name2": "assign",
+				"state2": "idle",
+				"error2": "",
+				"name3": "notify",
+				"state3": "idle",
+				"showArrows": false,
+				"error1": "",
+				"result2": "JR. DETECTIVE",
+				"error3": ""
+			},
+			{
+				"mode": "demo",
+				"quoteHighlightIndex": 7,
+				"showHypnotic": false,
+				"nodeCount": 3,
+				"name1": "classify",
+				"state1": "completed",
+				"result1": "HOMICIDE",
+				"resultScale1": 1.15,
+				"hideQuote": true,
+				"showSubliminal": true,
+				"name2": "assign",
+				"state2": "running",
+				"error2": "",
+				"name3": "notify",
+				"state3": "idle",
+				"showArrows": false,
+				"error1": "",
+				"result2": "JR. DETECTIVE",
+				"error3": ""
+			},
+			{
+				"mode": "demo",
+				"quoteHighlightIndex": 7,
+				"showHypnotic": false,
+				"nodeCount": 3,
+				"name1": "classify",
+				"state1": "completed",
+				"result1": "HOMICIDE",
+				"resultScale1": 1.15,
+				"hideQuote": true,
+				"showSubliminal": true,
+				"name2": "assign",
+				"state2": "completed",
+				"error2": "",
+				"name3": "notify",
+				"state3": "running",
+				"showArrows": false,
+				"error1": "",
+				"result2": "JR. DETECTIVE",
+				"error3": ""
+			},
+			{
+				"mode": "demo",
+				"quoteHighlightIndex": 7,
+				"showHypnotic": false,
+				"nodeCount": 3,
+				"name1": "classify",
+				"state1": "completed",
+				"result1": "HOMICIDE",
+				"resultScale1": 1.15,
+				"hideQuote": true,
+				"showSubliminal": true,
+				"name2": "assign",
+				"state2": "completed",
+				"error2": "",
+				"name3": "notify",
+				"state3": "failed",
+				"showArrows": false,
+				"error1": "",
+				"result2": "JR. DETECTIVE",
+				"error3": "RateLimitError"
+			},
+			{
+				"mode": "demo",
+				"quoteHighlightIndex": 7,
+				"showHypnotic": false,
+				"nodeCount": 3,
+				"name1": "classify",
+				"state1": "completed",
+				"result1": "HOMICIDE",
+				"resultScale1": 1.15,
+				"hideQuote": true,
+				"showSubliminal": true,
+				"name2": "assign",
+				"state2": "completed",
+				"error2": "",
+				"name3": "notify",
+				"state3": "running",
+				"showArrows": false,
+				"error1": "",
+				"result2": "JR. DETECTIVE",
+				"error3": ""
+			},
+			{
+				"mode": "demo",
+				"quoteHighlightIndex": 7,
+				"showHypnotic": false,
+				"nodeCount": 3,
+				"name1": "classify",
+				"state1": "completed",
+				"result1": "HOMICIDE",
+				"resultScale1": 1.15,
+				"hideQuote": true,
+				"showSubliminal": true,
+				"name2": "assign",
+				"state2": "completed",
+				"error2": "",
+				"name3": "notify",
+				"state3": "completed",
+				"showArrows": false,
+				"error1": "",
+				"result2": "JR. DETECTIVE",
+				"error3": ""
+			}
+		]
+	},
+	"groupId": "whirlwind-tour",
+	"groupTitle": "Whirlwind Tour",
+	"isFirstInGroup": true,
+	"groupDraft": true,
+	"wordTimings": [
+		{
+			"word": "Before",
+			"start": 0.09999999999999998,
+			"end": 0.46099999999999997
+		},
+		{
+			"word": "I",
+			"start": 0.5399999999999999,
+			"end": 0.58
+		},
+		{
+			"word": "attempt",
+			"start": 0.62,
+			"end": 0.9999999999999999
+		},
+		{
+			"word": "to",
+			"start": 1.06,
+			"end": 1.1800000000000002
+		},
+		{
+			"word": "answer",
+			"start": 1.3410000000000002,
+			"end": 1.581
+		},
+		{
+			"word": "your",
+			"start": 1.6400000000000001,
+			"end": 1.7400000000000002
+		},
+		{
+			"word": "question,",
+			"start": 1.8599999999999999,
+			"end": 2.3400000000000003
+		},
+		{
+			"word": "\"why",
+			"start": 2.7600000000000002,
+			"end": 2.9
+		},
+		{
+			"word": "would",
+			"start": 2.9410000000000003,
+			"end": 3.04
+		},
+		{
+			"word": "I",
+			"start": 3.1,
+			"end": 3.12
+		},
+		{
+			"word": "ever",
+			"start": 3.16,
+			"end": 3.3000000000000003
+		},
+		{
+			"word": "want",
+			"start": 3.4,
+			"end": 3.48
+		},
+		{
+			"word": "to",
+			"start": 3.56,
+			"end": 3.64
+		},
+		{
+			"word": "use",
+			"start": 3.8200000000000003,
+			"end": 4.04
+		},
+		{
+			"word": "Effect?\"",
+			"start": 4.121,
+			"end": 4.5200000000000005
+		},
+		{
+			"word": "I'd",
+			"start": 5.36,
+			"end": 5.46
+		},
+		{
+			"word": "like",
+			"start": 5.5,
+			"end": 5.6610000000000005
+		},
+		{
+			"word": "to",
+			"start": 5.721,
+			"end": 5.84
+		},
+		{
+			"word": "desensitize",
+			"start": 5.94,
+			"end": 6.74
+		},
+		{
+			"word": "you",
+			"start": 6.82,
+			"end": 6.98
+		},
+		{
+			"word": "with",
+			"start": 7.5200000000000005,
+			"end": 7.721
+		},
+		{
+			"word": "some",
+			"start": 7.800000000000001,
+			"end": 7.981
+		},
+		{
+			"word": "tastefully",
+			"start": 8.2,
+			"end": 8.78
+		},
+		{
+			"word": "animated",
+			"start": 8.96,
+			"end": 9.46
+		},
+		{
+			"word": "Effect",
+			"start": 9.721,
+			"end": 10.12,
+			"style": {
+				"code": true
+			}
+		},
+		{
+			"word": "simulacra.",
+			"start": 10.4,
+			"end": 11.08,
+			"definition": "Representations or imitations of something. Here, visual animations that mimic how Effects behave."
+		},
+		{
+			"word": "This",
+			"start": 12.66,
+			"end": 13.02,
+			"paragraphBreak": true
+		},
+		{
+			"word": "is",
+			"start": 13.141,
+			"end": 13.48
+		},
+		{
+			"word": "an",
+			"start": 13.561,
+			"end": 13.641
+		},
+		{
+			"word": "Effect,",
+			"start": 13.721,
+			"end": 14.181000000000001,
+			"style": {
+				"code": true
+			}
+		},
+		{
+			"word": "a",
+			"start": 15.101,
+			"end": 15.12
+		},
+		{
+			"word": "recipe",
+			"start": 15.221,
+			"end": 15.741
+		},
+		{
+			"word": "for",
+			"start": 15.8,
+			"end": 15.940000000000001
+		},
+		{
+			"word": "some",
+			"start": 16.1,
+			"end": 16.321
+		},
+		{
+			"word": "computation.",
+			"start": 16.44,
+			"end": 17.16
+		},
+		{
+			"word": "Effects",
+			"start": 18.241,
+			"end": 18.741
+		},
+		{
+			"word": "may",
+			"start": 18.821,
+			"end": 18.981
+		},
+		{
+			"word": "succeed,",
+			"start": 19.061,
+			"end": 19.66
+		},
+		{
+			"word": "or",
+			"start": 20.76,
+			"end": 20.86
+		},
+		{
+			"word": "they",
+			"start": 20.94,
+			"end": 21.061
+		},
+		{
+			"word": "may",
+			"start": 21.16,
+			"end": 21.3
+		},
+		{
+			"word": "fail,",
+			"start": 21.52,
+			"end": 21.86
+		},
+		{
+			"word": "either",
+			"start": 23.12,
+			"end": 23.5
+		},
+		{
+			"word": "possibility",
+			"start": 23.78,
+			"end": 24.5
+		},
+		{
+			"word": "will",
+			"start": 24.62,
+			"end": 24.8
+		},
+		{
+			"word": "be",
+			"start": 24.86,
+			"end": 25
+		},
+		{
+			"word": "evident",
+			"start": 25.080000000000002,
+			"end": 25.46
+		},
+		{
+			"word": "at",
+			"start": 25.92,
+			"end": 26.001
+		},
+		{
+			"word": "the",
+			"start": 26.04,
+			"end": 26.1
+		},
+		{
+			"word": "type",
+			"start": 26.221,
+			"end": 26.52
+		},
+		{
+			"word": "level.",
+			"start": 26.62,
+			"end": 26.981
+		},
+		{
+			"word": "They'll",
+			"start": 28.12,
+			"end": 28.401
+		},
+		{
+			"word": "even",
+			"start": 28.481,
+			"end": 29.04
+		},
+		{
+			"word": "die",
+			"start": 29.12,
+			"end": 29.52
+		},
+		{
+			"word": "for",
+			"start": 29.6,
+			"end": 29.76
+		},
+		{
+			"word": "you,",
+			"start": 29.86,
+			"end": 30
+		},
+		{
+			"word": "if",
+			"start": 30.62,
+			"end": 30.84
+		},
+		{
+			"word": "necessary.",
+			"start": 30.92,
+			"end": 31.6
+		},
+		{
+			"word": "You",
+			"start": 33.3,
+			"end": 33.379999999999995,
+			"paragraphBreak": true
+		},
+		{
+			"word": "can",
+			"start": 33.421,
+			"end": 33.561
+		},
+		{
+			"word": "turn",
+			"start": 33.62,
+			"end": 33.8
+		},
+		{
+			"word": "promises",
+			"start": 33.959999999999994,
+			"end": 34.580999999999996
+		},
+		{
+			"word": "into",
+			"start": 34.63999999999999,
+			"end": 34.839999999999996
+		},
+		{
+			"word": "effects,",
+			"start": 34.900999999999996,
+			"end": 35.459999999999994
+		},
+		{
+			"word": "and",
+			"start": 36.16,
+			"end": 36.3
+		},
+		{
+			"word": "then",
+			"start": 36.36,
+			"end": 36.66
+		},
+		{
+			"word": "combine",
+			"start": 36.721,
+			"end": 37.101
+		},
+		{
+			"word": "them",
+			"start": 37.18,
+			"end": 37.48
+		},
+		{
+			"word": "into",
+			"start": 37.54,
+			"end": 37.81999999999999
+		},
+		{
+			"word": "larger",
+			"start": 37.900999999999996,
+			"end": 38.279999999999994
+		},
+		{
+			"word": "programs,",
+			"start": 38.339999999999996,
+			"end": 38.94
+		},
+		{
+			"word": "running",
+			"start": 39.779999999999994,
+			"end": 40.13999999999999
+		},
+		{
+			"word": "one",
+			"start": 40.260999999999996,
+			"end": 41.12
+		},
+		{
+			"word": "after",
+			"start": 41.241,
+			"end": 41.62
+		},
+		{
+			"word": "another.",
+			"start": 41.959999999999994,
+			"end": 42.54
+		},
+		{
+			"word": "If",
+			"start": 43.599999999999994,
+			"end": 43.81999999999999
+		},
+		{
+			"word": "an",
+			"start": 43.879999999999995,
+			"end": 43.921
+		},
+		{
+			"word": "Effect",
+			"start": 44.080999999999996,
+			"end": 44.379999999999995,
+			"style": {
+				"code": true
+			}
+		},
+		{
+			"word": "fails,",
+			"start": 44.561,
+			"end": 45.099999999999994
+		},
+		{
+			"word": "you",
+			"start": 45.959999999999994,
+			"end": 46
+		},
+		{
+			"word": "can",
+			"start": 46.061,
+			"end": 46.13999999999999
+		},
+		{
+			"word": "retry",
+			"start": 46.16,
+			"end": 46.580999999999996
+		},
+		{
+			"word": "it",
+			"start": 46.63999999999999,
+			"end": 46.8
+		},
+		{
+			"word": "on",
+			"start": 47.561,
+			"end": 47.66
+		},
+		{
+			"word": "a",
+			"start": 47.699999999999996,
+			"end": 47.81999999999999
+		},
+		{
+			"word": "schedule.",
+			"start": 47.900999999999996,
+			"end": 48.519999999999996
+		}
+	],
+	"slideshowData": {
+		"template": {
+			"lines": {
+				"import": {
+					"parts": {
+						"p0": {
+							"tokens": [
+								{
+									"text": "import",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " { Effect } ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "from",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "\"effect\"",
+									"type": "default",
+									"color": "#9ECBFF"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"p0"
+					]
+				},
+				"blank": {
+					"parts": {
+						"blank-empty": {
+							"tokens": [],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"blank-empty"
+					]
+				},
+				"lang": {
+					"parts": {
+						"p0": {
+							"tokens": [
+								{
+									"text": "const",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "lang",
+									"type": "default",
+									"color": "#79B8FF"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						},
+						"langType:shown/0": {
+							"tokens": [
+								{
+									"text": ":",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "Effect",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": ".",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "Effect",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": "<",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "string",
+									"type": "default",
+									"color": "#79B8FF"
+								},
+								{
+									"text": ">",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": true,
+							"crossfade": false
+						},
+						"p1": {
+							"tokens": [
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "=",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " Effect.",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "succeed",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": "(",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "\"TypeScript\"",
+									"type": "default",
+									"color": "#9ECBFF"
+								},
+								{
+									"text": ")",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"p0",
+						"langType:shown/0",
+						"p1"
+					]
+				},
+				"launch": {
+					"parts": {
+						"p0": {
+							"tokens": [
+								{
+									"text": "const",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "launch",
+									"type": "default",
+									"color": "#79B8FF"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						},
+						"launchType:shown/0": {
+							"tokens": [
+								{
+									"text": ":",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "Effect",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": ".",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "Effect",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": "<",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "never",
+									"type": "default",
+									"color": "#79B8FF"
+								},
+								{
+									"text": ", ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "NoFuel",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": ">",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": true,
+							"crossfade": false
+						},
+						"p1": {
+							"tokens": [
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "=",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " Effect.",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "fail",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": "(",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "new",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "NoFuel",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": "())",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"p0",
+						"launchType:shown/0",
+						"p1"
+					]
+				},
+				"pact": {
+					"parts": {
+						"p0": {
+							"tokens": [
+								{
+									"text": "const",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "pact",
+									"type": "default",
+									"color": "#79B8FF"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "=",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " Effect.",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "die",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": "(",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "\"wat\"",
+									"type": "default",
+									"color": "#9ECBFF"
+								},
+								{
+									"text": ")",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"p0"
+					]
+				},
+				"classifySig": {
+					"parts": {
+						"classifySigIndent:program/0": {
+							"tokens": [
+								{
+									"text": "  ",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": true,
+							"crossfade": false
+						},
+						"p0": {
+							"tokens": [
+								{
+									"text": "const",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						},
+						"classifyPrefix:program/0": {
+							"tokens": [
+								{
+									"text": "classification",
+									"type": "default",
+									"color": "#79B8FF"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "=",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "yield*",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": true,
+							"crossfade": false
+						},
+						"p1": {
+							"tokens": [
+								{
+									"text": "classify",
+									"type": "default",
+									"color": "#B392F0"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						},
+						"classifyOpen:*/0": {
+							"tokens": [
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "=",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " (",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": true,
+							"versions": {
+								" = (": [
+									{
+										"text": " ",
+										"type": "default",
+										"color": "#E1E4E8"
+									},
+									{
+										"text": "=",
+										"type": "default",
+										"color": "#F97583"
+									},
+									{
+										"text": " (",
+										"type": "default",
+										"color": "#E1E4E8"
+									}
+								],
+								"(": [
+									{
+										"text": "(",
+										"type": "default",
+										"color": "#E1E4E8"
+									}
+								]
+							}
+						},
+						"p2": {
+							"tokens": [
+								{
+									"text": "input",
+									"type": "default",
+									"color": "#FFAB70"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						},
+						"classifyType:wrapper/0": {
+							"tokens": [
+								{
+									"text": ":",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "string",
+									"type": "default",
+									"color": "#79B8FF"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						},
+						"p3": {
+							"tokens": [
+								{
+									"text": ")",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						},
+						"classifyReturnType:shown/0": {
+							"tokens": [
+								{
+									"text": ":",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						},
+						"classifyReturnType:shown/classifyReturnTypeWrapper:*/0": {
+							"tokens": [
+								{
+									"text": "Promise",
+									"type": "default",
+									"color": "#B392F0"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": true,
+							"versions": {
+								"Promise": [
+									{
+										"text": "Promise",
+										"type": "default",
+										"color": "#B392F0"
+									}
+								],
+								"Effect.Effect": [
+									{
+										"text": "Effect",
+										"type": "default",
+										"color": "#B392F0"
+									},
+									{
+										"text": ".",
+										"type": "default",
+										"color": "#E1E4E8"
+									},
+									{
+										"text": "Effect",
+										"type": "default",
+										"color": "#B392F0"
+									}
+								]
+							}
+						},
+						"classifyReturnType:shown/1": {
+							"tokens": [
+								{
+									"text": "<",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "Response",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": ">",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						},
+						"classifyTail:wrapper/0": {
+							"tokens": [
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "=>",
+									"type": "default",
+									"color": "#F97583"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"classifySigIndent:program/0",
+						"p0",
+						"classifyPrefix:program/0",
+						"p1",
+						"classifyOpen:*/0",
+						"p2",
+						"classifyType:wrapper/0",
+						"p3",
+						"classifyReturnType:shown/0",
+						"classifyReturnType:shown/classifyReturnTypeWrapper:*/0",
+						"classifyReturnType:shown/1",
+						"classifyTail:wrapper/0"
+					]
+				},
+				"classifyFetch": {
+					"parts": {
+						"classifyIndent:*/0": {
+							"tokens": [
+								{
+									"text": "  ",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": true,
+							"versions": {
+								"  ": [
+									{
+										"text": "  ",
+										"type": "default",
+										"color": "#E1E4E8"
+									}
+								],
+								"    ": [
+									{
+										"text": "    ",
+										"type": "default",
+										"color": "#E1E4E8"
+									}
+								]
+							}
+						},
+						"p0": {
+							"tokens": [
+								{
+									"text": "fetch",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": "(",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "\"/classify\"",
+									"type": "default",
+									"color": "#9ECBFF"
+								},
+								{
+									"text": ", {",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"classifyIndent:*/0",
+						"p0"
+					]
+				},
+				"classifyMethod": {
+					"parts": {
+						"classifyIndent:*/0": {
+							"tokens": [
+								{
+									"text": "    ",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": true,
+							"versions": {
+								"    ": [
+									{
+										"text": "    ",
+										"type": "default",
+										"color": "#E1E4E8"
+									}
+								],
+								"      ": [
+									{
+										"text": "      ",
+										"type": "default",
+										"color": "#E1E4E8"
+									}
+								]
+							}
+						},
+						"p0": {
+							"tokens": [
+								{
+									"text": "method",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": ": ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "\"POST\"",
+									"type": "default",
+									"color": "#9ECBFF"
+								},
+								{
+									"text": ",",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"classifyIndent:*/0",
+						"p0"
+					]
+				},
+				"classifyBody": {
+					"parts": {
+						"classifyIndent:*/0": {
+							"tokens": [
+								{
+									"text": "    ",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": true,
+							"versions": {
+								"    ": [
+									{
+										"text": "    ",
+										"type": "default",
+										"color": "#E1E4E8"
+									}
+								],
+								"      ": [
+									{
+										"text": "      ",
+										"type": "default",
+										"color": "#E1E4E8"
+									}
+								]
+							}
+						},
+						"p0": {
+							"tokens": [
+								{
+									"text": "body",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": ": ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "JSON",
+									"type": "default",
+									"color": "#79B8FF"
+								},
+								{
+									"text": ".",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "stringify",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": "({ input }),",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"classifyIndent:*/0",
+						"p0"
+					]
+				},
+				"classifyClose": {
+					"parts": {
+						"classifyIndent:*/0": {
+							"tokens": [
+								{
+									"text": "  ",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": true,
+							"versions": {
+								"  ": [
+									{
+										"text": "  ",
+										"type": "default",
+										"color": "#E1E4E8"
+									}
+								],
+								"    ": [
+									{
+										"text": "    ",
+										"type": "default",
+										"color": "#E1E4E8"
+									}
+								]
+							}
+						},
+						"p0": {
+							"tokens": [
+								{
+									"text": "})",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"classifyIndent:*/0",
+						"p0"
+					]
+				},
+				"classifyWrapOpen": {
+					"parts": {
+						"p0": {
+							"tokens": [
+								{
+									"text": "  Effect.",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "promise",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": "(() ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "=>",
+									"type": "default",
+									"color": "#F97583"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"p0"
+					]
+				},
+				"classifyWrapClose": {
+					"parts": {
+						"p0": {
+							"tokens": [
+								{
+									"text": "  )",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"p0"
+					]
+				},
+				"programOpen": {
+					"parts": {
+						"p0": {
+							"tokens": [
+								{
+									"text": "const",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "program",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "=",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " (",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "input",
+									"type": "default",
+									"color": "#FFAB70"
+								},
+								{
+									"text": ":",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "string",
+									"type": "default",
+									"color": "#79B8FF"
+								},
+								{
+									"text": ") ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "=>",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " Effect.",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "gen",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": "(",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "function*",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " () {",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"p0"
+					]
+				},
+				"programAssign": {
+					"parts": {
+						"p0": {
+							"tokens": [
+								{
+									"text": "  ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "const",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "assignment",
+									"type": "default",
+									"color": "#79B8FF"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "=",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "yield*",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "assign",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": "(classification)",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"p0"
+					]
+				},
+				"programNotifyLine": {
+					"parts": {
+						"p0": {
+							"tokens": [
+								{
+									"text": "  ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "yield*",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "notify",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": "(assignment)",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						},
+						"notifyPipe:shown/0": {
+							"tokens": [
+								{
+									"text": ".",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "pipe",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": "(",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": true,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"p0",
+						"notifyPipe:shown/0"
+					]
+				},
+				"programClose": {
+					"parts": {
+						"p0": {
+							"tokens": [
+								{
+									"text": "})",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"p0"
+					]
+				},
+				"notifyRetry": {
+					"parts": {
+						"p0": {
+							"tokens": [
+								{
+									"text": "    Effect.",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "retry",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": "(Schedule.",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "exponential",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": "(",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "\"1 second\"",
+									"type": "default",
+									"color": "#9ECBFF"
+								},
+								{
+									"text": "))",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"p0"
+					]
+				},
+				"notifyPipeClose": {
+					"parts": {
+						"p0": {
+							"tokens": [
+								{
+									"text": "  )",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"p0"
+					]
+				}
+			}
+		},
+		"frames": [
+			{
+				"id": 0,
+				"lineOrder": [],
+				"state": {},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"status": {
+					"ranges": {},
+					"allRanges": {
+						"lang": [
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 36,
+								"end": 64
+							},
+							{
+								"start": 36,
+								"end": 64
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							}
+						],
+						"launch": [
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 45,
+								"end": 70
+							},
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 15,
+								"end": 40
+							}
+						],
+						"pact": [
+							{
+								"start": 13,
+								"end": 30
+							},
+							{
+								"start": 13,
+								"end": 30
+							},
+							{
+								"start": 13,
+								"end": 30
+							}
+						],
+						"classifySig": [
+							{
+								"start": 32,
+								"end": 47
+							},
+							{
+								"start": 32,
+								"end": 47
+							},
+							{
+								"start": 32,
+								"end": 47
+							},
+							{
+								"start": 32,
+								"end": 47
+							},
+							{
+								"start": 32,
+								"end": 47
+							},
+							{
+								"start": 32,
+								"end": 47
+							}
+						],
+						"programAssign": [
+							{
+								"start": 28,
+								"end": 50
+							},
+							{
+								"start": 28,
+								"end": 50
+							},
+							{
+								"start": 28,
+								"end": 50
+							},
+							{
+								"start": 28,
+								"end": 50
+							},
+							{
+								"start": 28,
+								"end": 50
+							}
+						],
+						"programNotifyLine": [
+							{
+								"start": 9,
+								"end": 27
+							},
+							{
+								"start": 9,
+								"end": 27
+							},
+							{
+								"start": 9,
+								"end": 27
+							},
+							{
+								"start": 9,
+								"end": 27
+							}
+						]
+					}
+				},
+				"bursts": []
+			},
+			{
+				"id": 1,
+				"lineOrder": [
+					"import",
+					"blank",
+					"lang"
+				],
+				"state": {
+					"import": {
+						"parts": {
+							"p0": true
+						},
+						"entering": true
+					},
+					"blank": {
+						"parts": {
+							"blank-empty": true
+						},
+						"entering": true
+					},
+					"lang": {
+						"parts": {
+							"p0": true,
+							"langType:shown/0": false,
+							"p1": true
+						},
+						"entering": true
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"status": {
+					"ranges": {},
+					"allRanges": {
+						"lang": [
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 36,
+								"end": 64
+							},
+							{
+								"start": 36,
+								"end": 64
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							}
+						],
+						"launch": [
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 45,
+								"end": 70
+							},
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 15,
+								"end": 40
+							}
+						],
+						"pact": [
+							{
+								"start": 13,
+								"end": 30
+							},
+							{
+								"start": 13,
+								"end": 30
+							},
+							{
+								"start": 13,
+								"end": 30
+							}
+						],
+						"classifySig": [
+							{
+								"start": 32,
+								"end": 47
+							},
+							{
+								"start": 32,
+								"end": 47
+							},
+							{
+								"start": 32,
+								"end": 47
+							},
+							{
+								"start": 32,
+								"end": 47
+							},
+							{
+								"start": 32,
+								"end": 47
+							},
+							{
+								"start": 32,
+								"end": 47
+							}
+						],
+						"programAssign": [
+							{
+								"start": 28,
+								"end": 50
+							},
+							{
+								"start": 28,
+								"end": 50
+							},
+							{
+								"start": 28,
+								"end": 50
+							},
+							{
+								"start": 28,
+								"end": 50
+							},
+							{
+								"start": 28,
+								"end": 50
+							}
+						],
+						"programNotifyLine": [
+							{
+								"start": 9,
+								"end": 27
+							},
+							{
+								"start": 9,
+								"end": 27
+							},
+							{
+								"start": 9,
+								"end": 27
+							},
+							{
+								"start": 9,
+								"end": 27
+							}
+						]
+					}
+				},
+				"cursor": {
+					"lineIndex": 2,
+					"charOffset": 20,
+					"textLength": 7,
+					"type": "hand"
+				},
+				"bursts": []
+			},
+			{
+				"id": 2,
+				"lineOrder": [
+					"import",
+					"blank",
+					"lang"
+				],
+				"state": {
+					"import": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"blank": {
+						"parts": {
+							"blank-empty": true
+						},
+						"dimmed": true
+					},
+					"lang": {
+						"parts": {
+							"p0": true,
+							"langType:shown/0": false,
+							"p1": true
+						}
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"status": {
+					"ranges": {
+						"2": [
+							{
+								"start": 13,
+								"end": 41,
+								"status": "running"
+							}
+						]
+					},
+					"allRanges": {
+						"lang": [
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 36,
+								"end": 64
+							},
+							{
+								"start": 36,
+								"end": 64
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							}
+						],
+						"launch": [
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 45,
+								"end": 70
+							},
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 15,
+								"end": 40
+							}
+						],
+						"pact": [
+							{
+								"start": 13,
+								"end": 30
+							},
+							{
+								"start": 13,
+								"end": 30
+							},
+							{
+								"start": 13,
+								"end": 30
+							}
+						],
+						"classifySig": [
+							{
+								"start": 32,
+								"end": 47
+							},
+							{
+								"start": 32,
+								"end": 47
+							},
+							{
+								"start": 32,
+								"end": 47
+							},
+							{
+								"start": 32,
+								"end": 47
+							},
+							{
+								"start": 32,
+								"end": 47
+							},
+							{
+								"start": 32,
+								"end": 47
+							}
+						],
+						"programAssign": [
+							{
+								"start": 28,
+								"end": 50
+							},
+							{
+								"start": 28,
+								"end": 50
+							},
+							{
+								"start": 28,
+								"end": 50
+							},
+							{
+								"start": 28,
+								"end": 50
+							},
+							{
+								"start": 28,
+								"end": 50
+							}
+						],
+						"programNotifyLine": [
+							{
+								"start": 9,
+								"end": 27
+							},
+							{
+								"start": 9,
+								"end": 27
+							},
+							{
+								"start": 9,
+								"end": 27
+							},
+							{
+								"start": 9,
+								"end": 27
+							}
+						]
+					}
+				},
+				"cursor": {
+					"lineIndex": 2,
+					"charOffset": 20,
+					"textLength": 7,
+					"type": "hand"
+				},
+				"bursts": []
+			},
+			{
+				"id": 3,
+				"lineOrder": [
+					"import",
+					"blank",
+					"lang"
+				],
+				"state": {
+					"import": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"blank": {
+						"parts": {
+							"blank-empty": true
+						},
+						"dimmed": true
+					},
+					"lang": {
+						"parts": {
+							"p0": true,
+							"langType:shown/0": false,
+							"p1": true
+						}
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [
+					{
+						"lineIndex": 2,
+						"start": 20,
+						"end": 27
+					}
+				],
+				"status": {
+					"ranges": {
+						"2": [
+							{
+								"start": 13,
+								"end": 41,
+								"status": "success"
+							}
+						]
+					},
+					"allRanges": {
+						"lang": [
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 36,
+								"end": 64
+							},
+							{
+								"start": 36,
+								"end": 64
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							}
+						],
+						"launch": [
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 45,
+								"end": 70
+							},
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 15,
+								"end": 40
+							}
+						],
+						"pact": [
+							{
+								"start": 13,
+								"end": 30
+							},
+							{
+								"start": 13,
+								"end": 30
+							},
+							{
+								"start": 13,
+								"end": 30
+							}
+						],
+						"classifySig": [
+							{
+								"start": 32,
+								"end": 47
+							},
+							{
+								"start": 32,
+								"end": 47
+							},
+							{
+								"start": 32,
+								"end": 47
+							},
+							{
+								"start": 32,
+								"end": 47
+							},
+							{
+								"start": 32,
+								"end": 47
+							},
+							{
+								"start": 32,
+								"end": 47
+							}
+						],
+						"programAssign": [
+							{
+								"start": 28,
+								"end": 50
+							},
+							{
+								"start": 28,
+								"end": 50
+							},
+							{
+								"start": 28,
+								"end": 50
+							},
+							{
+								"start": 28,
+								"end": 50
+							},
+							{
+								"start": 28,
+								"end": 50
+							}
+						],
+						"programNotifyLine": [
+							{
+								"start": 9,
+								"end": 27
+							},
+							{
+								"start": 9,
+								"end": 27
+							},
+							{
+								"start": 9,
+								"end": 27
+							},
+							{
+								"start": 9,
+								"end": 27
+							}
+						]
+					}
+				},
+				"cursor": {
+					"lineIndex": 2,
+					"charOffset": 20,
+					"textLength": 7,
+					"type": "hand"
+				},
+				"bursts": []
+			},
+			{
+				"id": 4,
+				"lineOrder": [
+					"import",
+					"blank",
+					"lang",
+					"launch"
+				],
+				"state": {
+					"import": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"blank": {
+						"parts": {
+							"blank-empty": true
+						},
+						"dimmed": true
+					},
+					"lang": {
+						"parts": {
+							"p0": true,
+							"langType:shown/0": false,
+							"p1": true
+						},
+						"dimmed": true
+					},
+					"launch": {
+						"parts": {
+							"p0": true,
+							"launchType:shown/0": false,
+							"p1": true
+						},
+						"entering": true
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"status": {
+					"ranges": {
+						"2": [
+							{
+								"start": 13,
+								"end": 41,
+								"status": "success"
+							}
+						]
+					},
+					"allRanges": {
+						"lang": [
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 36,
+								"end": 64
+							},
+							{
+								"start": 36,
+								"end": 64
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							}
+						],
+						"launch": [
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 45,
+								"end": 70
+							},
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 15,
+								"end": 40
+							}
+						],
+						"pact": [
+							{
+								"start": 13,
+								"end": 30
+							},
+							{
+								"start": 13,
+								"end": 30
+							},
+							{
+								"start": 13,
+								"end": 30
+							}
+						],
+						"classifySig": [
+							{
+								"start": 32,
+								"end": 47
+							},
+							{
+								"start": 32,
+								"end": 47
+							},
+							{
+								"start": 32,
+								"end": 47
+							},
+							{
+								"start": 32,
+								"end": 47
+							},
+							{
+								"start": 32,
+								"end": 47
+							},
+							{
+								"start": 32,
+								"end": 47
+							}
+						],
+						"programAssign": [
+							{
+								"start": 28,
+								"end": 50
+							},
+							{
+								"start": 28,
+								"end": 50
+							},
+							{
+								"start": 28,
+								"end": 50
+							},
+							{
+								"start": 28,
+								"end": 50
+							},
+							{
+								"start": 28,
+								"end": 50
+							}
+						],
+						"programNotifyLine": [
+							{
+								"start": 9,
+								"end": 27
+							},
+							{
+								"start": 9,
+								"end": 27
+							},
+							{
+								"start": 9,
+								"end": 27
+							},
+							{
+								"start": 9,
+								"end": 27
+							}
+						]
+					}
+				},
+				"cursor": {
+					"lineIndex": 3,
+					"charOffset": 22,
+					"textLength": 4,
+					"type": "hand"
+				},
+				"bursts": []
+			},
+			{
+				"id": 5,
+				"lineOrder": [
+					"import",
+					"blank",
+					"lang",
+					"launch"
+				],
+				"state": {
+					"import": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"blank": {
+						"parts": {
+							"blank-empty": true
+						},
+						"dimmed": true
+					},
+					"lang": {
+						"parts": {
+							"p0": true,
+							"langType:shown/0": false,
+							"p1": true
+						},
+						"dimmed": true
+					},
+					"launch": {
+						"parts": {
+							"p0": true,
+							"launchType:shown/0": false,
+							"p1": true
+						}
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"status": {
+					"ranges": {
+						"2": [
+							{
+								"start": 13,
+								"end": 41,
+								"status": "success"
+							}
+						],
+						"3": [
+							{
+								"start": 15,
+								"end": 40,
+								"status": "running"
+							}
+						]
+					},
+					"allRanges": {
+						"lang": [
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 36,
+								"end": 64
+							},
+							{
+								"start": 36,
+								"end": 64
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							}
+						],
+						"launch": [
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 45,
+								"end": 70
+							},
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 15,
+								"end": 40
+							}
+						],
+						"pact": [
+							{
+								"start": 13,
+								"end": 30
+							},
+							{
+								"start": 13,
+								"end": 30
+							},
+							{
+								"start": 13,
+								"end": 30
+							}
+						],
+						"classifySig": [
+							{
+								"start": 32,
+								"end": 47
+							},
+							{
+								"start": 32,
+								"end": 47
+							},
+							{
+								"start": 32,
+								"end": 47
+							},
+							{
+								"start": 32,
+								"end": 47
+							},
+							{
+								"start": 32,
+								"end": 47
+							},
+							{
+								"start": 32,
+								"end": 47
+							}
+						],
+						"programAssign": [
+							{
+								"start": 28,
+								"end": 50
+							},
+							{
+								"start": 28,
+								"end": 50
+							},
+							{
+								"start": 28,
+								"end": 50
+							},
+							{
+								"start": 28,
+								"end": 50
+							},
+							{
+								"start": 28,
+								"end": 50
+							}
+						],
+						"programNotifyLine": [
+							{
+								"start": 9,
+								"end": 27
+							},
+							{
+								"start": 9,
+								"end": 27
+							},
+							{
+								"start": 9,
+								"end": 27
+							},
+							{
+								"start": 9,
+								"end": 27
+							}
+						]
+					}
+				},
+				"cursor": {
+					"lineIndex": 3,
+					"charOffset": 22,
+					"textLength": 4,
+					"type": "hand"
+				},
+				"bursts": []
+			},
+			{
+				"id": 6,
+				"lineOrder": [
+					"import",
+					"blank",
+					"lang",
+					"launch"
+				],
+				"state": {
+					"import": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"blank": {
+						"parts": {
+							"blank-empty": true
+						},
+						"dimmed": true
+					},
+					"lang": {
+						"parts": {
+							"p0": true,
+							"langType:shown/0": false,
+							"p1": true
+						},
+						"dimmed": true
+					},
+					"launch": {
+						"parts": {
+							"p0": true,
+							"launchType:shown/0": false,
+							"p1": true
+						}
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [
+					{
+						"lineIndex": 3,
+						"start": 31,
+						"end": 37
+					}
+				],
+				"status": {
+					"ranges": {
+						"2": [
+							{
+								"start": 13,
+								"end": 41,
+								"status": "success"
+							}
+						],
+						"3": [
+							{
+								"start": 15,
+								"end": 40,
+								"status": "error"
+							}
+						]
+					},
+					"allRanges": {
+						"lang": [
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 36,
+								"end": 64
+							},
+							{
+								"start": 36,
+								"end": 64
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							}
+						],
+						"launch": [
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 45,
+								"end": 70
+							},
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 15,
+								"end": 40
+							}
+						],
+						"pact": [
+							{
+								"start": 13,
+								"end": 30
+							},
+							{
+								"start": 13,
+								"end": 30
+							},
+							{
+								"start": 13,
+								"end": 30
+							}
+						],
+						"classifySig": [
+							{
+								"start": 32,
+								"end": 47
+							},
+							{
+								"start": 32,
+								"end": 47
+							},
+							{
+								"start": 32,
+								"end": 47
+							},
+							{
+								"start": 32,
+								"end": 47
+							},
+							{
+								"start": 32,
+								"end": 47
+							},
+							{
+								"start": 32,
+								"end": 47
+							}
+						],
+						"programAssign": [
+							{
+								"start": 28,
+								"end": 50
+							},
+							{
+								"start": 28,
+								"end": 50
+							},
+							{
+								"start": 28,
+								"end": 50
+							},
+							{
+								"start": 28,
+								"end": 50
+							},
+							{
+								"start": 28,
+								"end": 50
+							}
+						],
+						"programNotifyLine": [
+							{
+								"start": 9,
+								"end": 27
+							},
+							{
+								"start": 9,
+								"end": 27
+							},
+							{
+								"start": 9,
+								"end": 27
+							},
+							{
+								"start": 9,
+								"end": 27
+							}
+						]
+					}
+				},
+				"cursor": {
+					"lineIndex": 3,
+					"charOffset": 22,
+					"textLength": 4,
+					"type": "hand"
+				},
+				"bursts": []
+			},
+			{
+				"id": 7,
+				"lineOrder": [
+					"import",
+					"blank",
+					"lang",
+					"launch"
+				],
+				"state": {
+					"import": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"blank": {
+						"parts": {
+							"blank-empty": true
+						},
+						"dimmed": true
+					},
+					"lang": {
+						"parts": {
+							"p0": true,
+							"langType:shown/0": true,
+							"p1": true
+						}
+					},
+					"launch": {
+						"parts": {
+							"p0": true,
+							"launchType:shown/0": false,
+							"p1": true
+						},
+						"dimmed": true
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"status": {
+					"ranges": {
+						"2": [
+							{
+								"start": 36,
+								"end": 64,
+								"status": "success"
+							}
+						],
+						"3": [
+							{
+								"start": 15,
+								"end": 40,
+								"status": "error"
+							}
+						]
+					},
+					"allRanges": {
+						"lang": [
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 36,
+								"end": 64
+							},
+							{
+								"start": 36,
+								"end": 64
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							}
+						],
+						"launch": [
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 45,
+								"end": 70
+							},
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 15,
+								"end": 40
+							}
+						],
+						"pact": [
+							{
+								"start": 13,
+								"end": 30
+							},
+							{
+								"start": 13,
+								"end": 30
+							},
+							{
+								"start": 13,
+								"end": 30
+							}
+						],
+						"classifySig": [
+							{
+								"start": 32,
+								"end": 47
+							},
+							{
+								"start": 32,
+								"end": 47
+							},
+							{
+								"start": 32,
+								"end": 47
+							},
+							{
+								"start": 32,
+								"end": 47
+							},
+							{
+								"start": 32,
+								"end": 47
+							},
+							{
+								"start": 32,
+								"end": 47
+							}
+						],
+						"programAssign": [
+							{
+								"start": 28,
+								"end": 50
+							},
+							{
+								"start": 28,
+								"end": 50
+							},
+							{
+								"start": 28,
+								"end": 50
+							},
+							{
+								"start": 28,
+								"end": 50
+							},
+							{
+								"start": 28,
+								"end": 50
+							}
+						],
+						"programNotifyLine": [
+							{
+								"start": 9,
+								"end": 27
+							},
+							{
+								"start": 9,
+								"end": 27
+							},
+							{
+								"start": 9,
+								"end": 27
+							},
+							{
+								"start": 9,
+								"end": 27
+							}
+						]
+					}
+				},
+				"cursor": {
+					"lineIndex": 2,
+					"charOffset": 12,
+					"textLength": 21,
+					"type": "hand"
+				},
+				"bursts": []
+			},
+			{
+				"id": 8,
+				"lineOrder": [
+					"import",
+					"blank",
+					"lang",
+					"launch"
+				],
+				"state": {
+					"import": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"blank": {
+						"parts": {
+							"blank-empty": true
+						},
+						"dimmed": true
+					},
+					"lang": {
+						"parts": {
+							"p0": true,
+							"langType:shown/0": true,
+							"p1": true
+						}
+					},
+					"launch": {
+						"parts": {
+							"p0": true,
+							"launchType:shown/0": true,
+							"p1": true
+						}
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"status": {
+					"ranges": {
+						"2": [
+							{
+								"start": 36,
+								"end": 64,
+								"status": "success"
+							}
+						],
+						"3": [
+							{
+								"start": 45,
+								"end": 70,
+								"status": "error"
+							}
+						]
+					},
+					"allRanges": {
+						"lang": [
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 36,
+								"end": 64
+							},
+							{
+								"start": 36,
+								"end": 64
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							}
+						],
+						"launch": [
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 45,
+								"end": 70
+							},
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 15,
+								"end": 40
+							}
+						],
+						"pact": [
+							{
+								"start": 13,
+								"end": 30
+							},
+							{
+								"start": 13,
+								"end": 30
+							},
+							{
+								"start": 13,
+								"end": 30
+							}
+						],
+						"classifySig": [
+							{
+								"start": 32,
+								"end": 47
+							},
+							{
+								"start": 32,
+								"end": 47
+							},
+							{
+								"start": 32,
+								"end": 47
+							},
+							{
+								"start": 32,
+								"end": 47
+							},
+							{
+								"start": 32,
+								"end": 47
+							},
+							{
+								"start": 32,
+								"end": 47
+							}
+						],
+						"programAssign": [
+							{
+								"start": 28,
+								"end": 50
+							},
+							{
+								"start": 28,
+								"end": 50
+							},
+							{
+								"start": 28,
+								"end": 50
+							},
+							{
+								"start": 28,
+								"end": 50
+							},
+							{
+								"start": 28,
+								"end": 50
+							}
+						],
+						"programNotifyLine": [
+							{
+								"start": 9,
+								"end": 27
+							},
+							{
+								"start": 9,
+								"end": 27
+							},
+							{
+								"start": 9,
+								"end": 27
+							},
+							{
+								"start": 9,
+								"end": 27
+							}
+						]
+					}
+				},
+				"cursor": {
+					"lineIndex": 3,
+					"charOffset": 35,
+					"textLength": 6,
+					"type": "hand"
+				},
+				"bursts": []
+			},
+			{
+				"id": 9,
+				"lineOrder": [
+					"import",
+					"blank",
+					"lang",
+					"launch",
+					"pact"
+				],
+				"state": {
+					"import": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"blank": {
+						"parts": {
+							"blank-empty": true
+						},
+						"dimmed": true
+					},
+					"lang": {
+						"parts": {
+							"p0": true,
+							"langType:shown/0": false,
+							"p1": true
+						},
+						"dimmed": true
+					},
+					"launch": {
+						"parts": {
+							"p0": true,
+							"launchType:shown/0": false,
+							"p1": true
+						},
+						"dimmed": true
+					},
+					"pact": {
+						"parts": {
+							"p0": true
+						},
+						"entering": true
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"status": {
+					"ranges": {
+						"2": [
+							{
+								"start": 13,
+								"end": 41,
+								"status": "success"
+							}
+						],
+						"3": [
+							{
+								"start": 15,
+								"end": 40,
+								"status": "error"
+							}
+						]
+					},
+					"allRanges": {
+						"lang": [
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 36,
+								"end": 64
+							},
+							{
+								"start": 36,
+								"end": 64
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							}
+						],
+						"launch": [
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 45,
+								"end": 70
+							},
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 15,
+								"end": 40
+							}
+						],
+						"pact": [
+							{
+								"start": 13,
+								"end": 30
+							},
+							{
+								"start": 13,
+								"end": 30
+							},
+							{
+								"start": 13,
+								"end": 30
+							}
+						],
+						"classifySig": [
+							{
+								"start": 32,
+								"end": 47
+							},
+							{
+								"start": 32,
+								"end": 47
+							},
+							{
+								"start": 32,
+								"end": 47
+							},
+							{
+								"start": 32,
+								"end": 47
+							},
+							{
+								"start": 32,
+								"end": 47
+							},
+							{
+								"start": 32,
+								"end": 47
+							}
+						],
+						"programAssign": [
+							{
+								"start": 28,
+								"end": 50
+							},
+							{
+								"start": 28,
+								"end": 50
+							},
+							{
+								"start": 28,
+								"end": 50
+							},
+							{
+								"start": 28,
+								"end": 50
+							},
+							{
+								"start": 28,
+								"end": 50
+							}
+						],
+						"programNotifyLine": [
+							{
+								"start": 9,
+								"end": 27
+							},
+							{
+								"start": 9,
+								"end": 27
+							},
+							{
+								"start": 9,
+								"end": 27
+							},
+							{
+								"start": 9,
+								"end": 27
+							}
+						]
+					}
+				},
+				"cursor": {
+					"lineIndex": 4,
+					"charOffset": 20,
+					"textLength": 3,
+					"type": "hand"
+				},
+				"bursts": []
+			},
+			{
+				"id": 10,
+				"lineOrder": [
+					"import",
+					"blank",
+					"lang",
+					"launch",
+					"pact"
+				],
+				"state": {
+					"import": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"blank": {
+						"parts": {
+							"blank-empty": true
+						},
+						"dimmed": true
+					},
+					"lang": {
+						"parts": {
+							"p0": true,
+							"langType:shown/0": false,
+							"p1": true
+						},
+						"dimmed": true
+					},
+					"launch": {
+						"parts": {
+							"p0": true,
+							"launchType:shown/0": false,
+							"p1": true
+						},
+						"dimmed": true
+					},
+					"pact": {
+						"parts": {
+							"p0": true
+						}
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"status": {
+					"ranges": {
+						"2": [
+							{
+								"start": 13,
+								"end": 41,
+								"status": "success"
+							}
+						],
+						"3": [
+							{
+								"start": 15,
+								"end": 40,
+								"status": "error"
+							}
+						],
+						"4": [
+							{
+								"start": 13,
+								"end": 30,
+								"status": "running"
+							}
+						]
+					},
+					"allRanges": {
+						"lang": [
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 36,
+								"end": 64
+							},
+							{
+								"start": 36,
+								"end": 64
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							}
+						],
+						"launch": [
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 45,
+								"end": 70
+							},
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 15,
+								"end": 40
+							}
+						],
+						"pact": [
+							{
+								"start": 13,
+								"end": 30
+							},
+							{
+								"start": 13,
+								"end": 30
+							},
+							{
+								"start": 13,
+								"end": 30
+							}
+						],
+						"classifySig": [
+							{
+								"start": 32,
+								"end": 47
+							},
+							{
+								"start": 32,
+								"end": 47
+							},
+							{
+								"start": 32,
+								"end": 47
+							},
+							{
+								"start": 32,
+								"end": 47
+							},
+							{
+								"start": 32,
+								"end": 47
+							},
+							{
+								"start": 32,
+								"end": 47
+							}
+						],
+						"programAssign": [
+							{
+								"start": 28,
+								"end": 50
+							},
+							{
+								"start": 28,
+								"end": 50
+							},
+							{
+								"start": 28,
+								"end": 50
+							},
+							{
+								"start": 28,
+								"end": 50
+							},
+							{
+								"start": 28,
+								"end": 50
+							}
+						],
+						"programNotifyLine": [
+							{
+								"start": 9,
+								"end": 27
+							},
+							{
+								"start": 9,
+								"end": 27
+							},
+							{
+								"start": 9,
+								"end": 27
+							},
+							{
+								"start": 9,
+								"end": 27
+							}
+						]
+					}
+				},
+				"cursor": {
+					"lineIndex": 4,
+					"charOffset": 20,
+					"textLength": 3,
+					"type": "hand"
+				},
+				"bursts": []
+			},
+			{
+				"id": 11,
+				"lineOrder": [
+					"import",
+					"blank",
+					"lang",
+					"launch",
+					"pact"
+				],
+				"state": {
+					"import": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"blank": {
+						"parts": {
+							"blank-empty": true
+						},
+						"dimmed": true
+					},
+					"lang": {
+						"parts": {
+							"p0": true,
+							"langType:shown/0": false,
+							"p1": true
+						},
+						"dimmed": true
+					},
+					"launch": {
+						"parts": {
+							"p0": true,
+							"launchType:shown/0": false,
+							"p1": true
+						},
+						"dimmed": true
+					},
+					"pact": {
+						"parts": {
+							"p0": true
+						}
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"status": {
+					"ranges": {
+						"2": [
+							{
+								"start": 13,
+								"end": 41,
+								"status": "success"
+							}
+						],
+						"3": [
+							{
+								"start": 15,
+								"end": 40,
+								"status": "error"
+							}
+						],
+						"4": [
+							{
+								"start": 13,
+								"end": 30,
+								"status": "die"
+							}
+						]
+					},
+					"allRanges": {
+						"lang": [
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 36,
+								"end": 64
+							},
+							{
+								"start": 36,
+								"end": 64
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							}
+						],
+						"launch": [
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 45,
+								"end": 70
+							},
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 15,
+								"end": 40
+							}
+						],
+						"pact": [
+							{
+								"start": 13,
+								"end": 30
+							},
+							{
+								"start": 13,
+								"end": 30
+							},
+							{
+								"start": 13,
+								"end": 30
+							}
+						],
+						"classifySig": [
+							{
+								"start": 32,
+								"end": 47
+							},
+							{
+								"start": 32,
+								"end": 47
+							},
+							{
+								"start": 32,
+								"end": 47
+							},
+							{
+								"start": 32,
+								"end": 47
+							},
+							{
+								"start": 32,
+								"end": 47
+							},
+							{
+								"start": 32,
+								"end": 47
+							}
+						],
+						"programAssign": [
+							{
+								"start": 28,
+								"end": 50
+							},
+							{
+								"start": 28,
+								"end": 50
+							},
+							{
+								"start": 28,
+								"end": 50
+							},
+							{
+								"start": 28,
+								"end": 50
+							},
+							{
+								"start": 28,
+								"end": 50
+							}
+						],
+						"programNotifyLine": [
+							{
+								"start": 9,
+								"end": 27
+							},
+							{
+								"start": 9,
+								"end": 27
+							},
+							{
+								"start": 9,
+								"end": 27
+							},
+							{
+								"start": 9,
+								"end": 27
+							}
+						]
+					}
+				},
+				"cursor": {
+					"lineIndex": 4,
+					"charOffset": 20,
+					"textLength": 3,
+					"type": "hand"
+				},
+				"bursts": []
+			},
+			{
+				"id": 12,
+				"lineOrder": [
+					"import",
+					"blank",
+					"lang",
+					"launch",
+					"pact"
+				],
+				"state": {
+					"import": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"blank": {
+						"parts": {
+							"blank-empty": true
+						},
+						"dimmed": true
+					},
+					"lang": {
+						"parts": {
+							"p0": true,
+							"langType:shown/0": false,
+							"p1": true
+						},
+						"dimmed": true
+					},
+					"launch": {
+						"parts": {
+							"p0": true,
+							"launchType:shown/0": false,
+							"p1": true
+						},
+						"dimmed": true
+					},
+					"pact": {
+						"parts": {
+							"p0": true
+						}
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"status": {
+					"ranges": {
+						"2": [
+							{
+								"start": 13,
+								"end": 41,
+								"status": "success"
+							}
+						],
+						"3": [
+							{
+								"start": 15,
+								"end": 40,
+								"status": "error"
+							}
+						],
+						"4": [
+							{
+								"start": 13,
+								"end": 30,
+								"status": "die"
+							}
+						]
+					},
+					"allRanges": {
+						"lang": [
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 36,
+								"end": 64
+							},
+							{
+								"start": 36,
+								"end": 64
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							}
+						],
+						"launch": [
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 45,
+								"end": 70
+							},
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 15,
+								"end": 40
+							}
+						],
+						"pact": [
+							{
+								"start": 13,
+								"end": 30
+							},
+							{
+								"start": 13,
+								"end": 30
+							},
+							{
+								"start": 13,
+								"end": 30
+							}
+						],
+						"classifySig": [
+							{
+								"start": 32,
+								"end": 47
+							},
+							{
+								"start": 32,
+								"end": 47
+							},
+							{
+								"start": 32,
+								"end": 47
+							},
+							{
+								"start": 32,
+								"end": 47
+							},
+							{
+								"start": 32,
+								"end": 47
+							},
+							{
+								"start": 32,
+								"end": 47
+							}
+						],
+						"programAssign": [
+							{
+								"start": 28,
+								"end": 50
+							},
+							{
+								"start": 28,
+								"end": 50
+							},
+							{
+								"start": 28,
+								"end": 50
+							},
+							{
+								"start": 28,
+								"end": 50
+							},
+							{
+								"start": 28,
+								"end": 50
+							}
+						],
+						"programNotifyLine": [
+							{
+								"start": 9,
+								"end": 27
+							},
+							{
+								"start": 9,
+								"end": 27
+							},
+							{
+								"start": 9,
+								"end": 27
+							},
+							{
+								"start": 9,
+								"end": 27
+							}
+						]
+					}
+				},
+				"cursor": {
+					"lineIndex": 4,
+					"charOffset": 20,
+					"textLength": 3,
+					"type": "hand"
+				},
+				"bursts": []
+			},
+			{
+				"id": 13,
+				"lineOrder": [
+					"import",
+					"blank",
+					"classifySig",
+					"classifyFetch",
+					"classifyMethod",
+					"classifyBody",
+					"classifyClose"
+				],
+				"state": {
+					"import": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"blank": {
+						"parts": {
+							"blank-empty": true
+						},
+						"dimmed": true
+					},
+					"classifySig": {
+						"parts": {
+							"classifySigIndent:program/0": false,
+							"p0": true,
+							"classifyPrefix:program/0": false,
+							"p1": true,
+							"classifyOpen:*/0": " = (",
+							"p2": true,
+							"classifyType:wrapper/0": true,
+							"p3": true,
+							"classifyReturnType:shown/0": true,
+							"classifyReturnType:shown/classifyReturnTypeWrapper:*/0": "Promise",
+							"classifyReturnType:shown/1": true,
+							"classifyTail:wrapper/0": true
+						},
+						"entering": true
+					},
+					"classifyFetch": {
+						"parts": {
+							"classifyIndent:*/0": "  ",
+							"p0": true
+						},
+						"entering": true
+					},
+					"classifyMethod": {
+						"parts": {
+							"classifyIndent:*/0": "    ",
+							"p0": true
+						},
+						"entering": true
+					},
+					"classifyBody": {
+						"parts": {
+							"classifyIndent:*/0": "    ",
+							"p0": true
+						},
+						"entering": true
+					},
+					"classifyClose": {
+						"parts": {
+							"classifyIndent:*/0": "  ",
+							"p0": true
+						},
+						"entering": true
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"status": {
+					"ranges": {},
+					"allRanges": {
+						"lang": [
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 36,
+								"end": 64
+							},
+							{
+								"start": 36,
+								"end": 64
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							}
+						],
+						"launch": [
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 45,
+								"end": 70
+							},
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 15,
+								"end": 40
+							}
+						],
+						"pact": [
+							{
+								"start": 13,
+								"end": 30
+							},
+							{
+								"start": 13,
+								"end": 30
+							},
+							{
+								"start": 13,
+								"end": 30
+							}
+						],
+						"classifySig": [
+							{
+								"start": 32,
+								"end": 47
+							},
+							{
+								"start": 32,
+								"end": 47
+							},
+							{
+								"start": 32,
+								"end": 47
+							},
+							{
+								"start": 32,
+								"end": 47
+							},
+							{
+								"start": 32,
+								"end": 47
+							},
+							{
+								"start": 32,
+								"end": 47
+							}
+						],
+						"programAssign": [
+							{
+								"start": 28,
+								"end": 50
+							},
+							{
+								"start": 28,
+								"end": 50
+							},
+							{
+								"start": 28,
+								"end": 50
+							},
+							{
+								"start": 28,
+								"end": 50
+							},
+							{
+								"start": 28,
+								"end": 50
+							}
+						],
+						"programNotifyLine": [
+							{
+								"start": 9,
+								"end": 27
+							},
+							{
+								"start": 9,
+								"end": 27
+							},
+							{
+								"start": 9,
+								"end": 27
+							},
+							{
+								"start": 9,
+								"end": 27
+							}
+						]
+					}
+				},
+				"bursts": []
+			},
+			{
+				"id": 14,
+				"lineOrder": [
+					"import",
+					"blank",
+					"classifySig",
+					"classifyWrapOpen",
+					"classifyFetch",
+					"classifyMethod",
+					"classifyBody",
+					"classifyClose",
+					"classifyWrapClose"
+				],
+				"state": {
+					"import": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"blank": {
+						"parts": {
+							"blank-empty": true
+						},
+						"dimmed": true
+					},
+					"classifySig": {
+						"parts": {
+							"classifySigIndent:program/0": false,
+							"p0": true,
+							"classifyPrefix:program/0": false,
+							"p1": true,
+							"classifyOpen:*/0": " = (",
+							"p2": true,
+							"classifyType:wrapper/0": true,
+							"p3": true,
+							"classifyReturnType:shown/0": true,
+							"classifyReturnType:shown/classifyReturnTypeWrapper:*/0": "Effect.Effect",
+							"classifyReturnType:shown/1": true,
+							"classifyTail:wrapper/0": true
+						}
+					},
+					"classifyWrapOpen": {
+						"parts": {
+							"p0": true
+						},
+						"entering": true
+					},
+					"classifyFetch": {
+						"parts": {
+							"classifyIndent:*/0": "    ",
+							"p0": true
+						}
+					},
+					"classifyMethod": {
+						"parts": {
+							"classifyIndent:*/0": "      ",
+							"p0": true
+						}
+					},
+					"classifyBody": {
+						"parts": {
+							"classifyIndent:*/0": "      ",
+							"p0": true
+						}
+					},
+					"classifyClose": {
+						"parts": {
+							"classifyIndent:*/0": "    ",
+							"p0": true
+						}
+					},
+					"classifyWrapClose": {
+						"parts": {
+							"p0": true
+						},
+						"entering": true
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"status": {
+					"ranges": {},
+					"allRanges": {
+						"lang": [
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 36,
+								"end": 64
+							},
+							{
+								"start": 36,
+								"end": 64
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							}
+						],
+						"launch": [
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 45,
+								"end": 70
+							},
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 15,
+								"end": 40
+							}
+						],
+						"pact": [
+							{
+								"start": 13,
+								"end": 30
+							},
+							{
+								"start": 13,
+								"end": 30
+							},
+							{
+								"start": 13,
+								"end": 30
+							}
+						],
+						"classifySig": [
+							{
+								"start": 32,
+								"end": 47
+							},
+							{
+								"start": 32,
+								"end": 47
+							},
+							{
+								"start": 32,
+								"end": 47
+							},
+							{
+								"start": 32,
+								"end": 47
+							},
+							{
+								"start": 32,
+								"end": 47
+							},
+							{
+								"start": 32,
+								"end": 47
+							}
+						],
+						"programAssign": [
+							{
+								"start": 28,
+								"end": 50
+							},
+							{
+								"start": 28,
+								"end": 50
+							},
+							{
+								"start": 28,
+								"end": 50
+							},
+							{
+								"start": 28,
+								"end": 50
+							},
+							{
+								"start": 28,
+								"end": 50
+							}
+						],
+						"programNotifyLine": [
+							{
+								"start": 9,
+								"end": 27
+							},
+							{
+								"start": 9,
+								"end": 27
+							},
+							{
+								"start": 9,
+								"end": 27
+							},
+							{
+								"start": 9,
+								"end": 27
+							}
+						]
+					}
+				},
+				"bursts": []
+			},
+			{
+				"id": 15,
+				"lineOrder": [
+					"import",
+					"blank",
+					"programOpen",
+					"classifySig",
+					"programAssign",
+					"programNotifyLine",
+					"programClose"
+				],
+				"state": {
+					"import": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"blank": {
+						"parts": {
+							"blank-empty": true
+						},
+						"dimmed": true
+					},
+					"programOpen": {
+						"parts": {
+							"p0": true
+						},
+						"entering": true
+					},
+					"classifySig": {
+						"parts": {
+							"classifySigIndent:program/0": true,
+							"p0": true,
+							"classifyPrefix:program/0": true,
+							"p1": true,
+							"classifyOpen:*/0": "(",
+							"p2": true,
+							"classifyType:wrapper/0": false,
+							"p3": true,
+							"classifyReturnType:shown/0": false,
+							"classifyReturnType:shown/classifyReturnTypeWrapper:*/0": false,
+							"classifyReturnType:shown/1": false,
+							"classifyTail:wrapper/0": false
+						}
+					},
+					"programAssign": {
+						"parts": {
+							"p0": true
+						},
+						"entering": true
+					},
+					"programNotifyLine": {
+						"parts": {
+							"p0": true,
+							"notifyPipe:shown/0": false
+						},
+						"entering": true
+					},
+					"programClose": {
+						"parts": {
+							"p0": true
+						},
+						"entering": true
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"status": {
+					"ranges": {},
+					"allRanges": {
+						"lang": [
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 36,
+								"end": 64
+							},
+							{
+								"start": 36,
+								"end": 64
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							}
+						],
+						"launch": [
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 45,
+								"end": 70
+							},
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 15,
+								"end": 40
+							}
+						],
+						"pact": [
+							{
+								"start": 13,
+								"end": 30
+							},
+							{
+								"start": 13,
+								"end": 30
+							},
+							{
+								"start": 13,
+								"end": 30
+							}
+						],
+						"classifySig": [
+							{
+								"start": 32,
+								"end": 47
+							},
+							{
+								"start": 32,
+								"end": 47
+							},
+							{
+								"start": 32,
+								"end": 47
+							},
+							{
+								"start": 32,
+								"end": 47
+							},
+							{
+								"start": 32,
+								"end": 47
+							},
+							{
+								"start": 32,
+								"end": 47
+							}
+						],
+						"programAssign": [
+							{
+								"start": 28,
+								"end": 50
+							},
+							{
+								"start": 28,
+								"end": 50
+							},
+							{
+								"start": 28,
+								"end": 50
+							},
+							{
+								"start": 28,
+								"end": 50
+							},
+							{
+								"start": 28,
+								"end": 50
+							}
+						],
+						"programNotifyLine": [
+							{
+								"start": 9,
+								"end": 27
+							},
+							{
+								"start": 9,
+								"end": 27
+							},
+							{
+								"start": 9,
+								"end": 27
+							},
+							{
+								"start": 9,
+								"end": 27
+							}
+						]
+					}
+				},
+				"bursts": []
+			},
+			{
+				"id": 16,
+				"lineOrder": [
+					"import",
+					"blank",
+					"programOpen",
+					"classifySig",
+					"programAssign",
+					"programNotifyLine",
+					"programClose"
+				],
+				"state": {
+					"import": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"blank": {
+						"parts": {
+							"blank-empty": true
+						},
+						"dimmed": true
+					},
+					"programOpen": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"classifySig": {
+						"parts": {
+							"classifySigIndent:program/0": true,
+							"p0": true,
+							"classifyPrefix:program/0": true,
+							"p1": true,
+							"classifyOpen:*/0": "(",
+							"p2": true,
+							"classifyType:wrapper/0": false,
+							"p3": true,
+							"classifyReturnType:shown/0": false,
+							"classifyReturnType:shown/classifyReturnTypeWrapper:*/0": false,
+							"classifyReturnType:shown/1": false,
+							"classifyTail:wrapper/0": false
+						}
+					},
+					"programAssign": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"programNotifyLine": {
+						"parts": {
+							"p0": true,
+							"notifyPipe:shown/0": false
+						}
+					},
+					"programClose": {
+						"parts": {
+							"p0": true
+						}
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"status": {
+					"ranges": {
+						"3": [
+							{
+								"start": 32,
+								"end": 47,
+								"status": "running"
+							}
+						]
+					},
+					"allRanges": {
+						"lang": [
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 36,
+								"end": 64
+							},
+							{
+								"start": 36,
+								"end": 64
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							}
+						],
+						"launch": [
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 45,
+								"end": 70
+							},
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 15,
+								"end": 40
+							}
+						],
+						"pact": [
+							{
+								"start": 13,
+								"end": 30
+							},
+							{
+								"start": 13,
+								"end": 30
+							},
+							{
+								"start": 13,
+								"end": 30
+							}
+						],
+						"classifySig": [
+							{
+								"start": 32,
+								"end": 47
+							},
+							{
+								"start": 32,
+								"end": 47
+							},
+							{
+								"start": 32,
+								"end": 47
+							},
+							{
+								"start": 32,
+								"end": 47
+							},
+							{
+								"start": 32,
+								"end": 47
+							},
+							{
+								"start": 32,
+								"end": 47
+							}
+						],
+						"programAssign": [
+							{
+								"start": 28,
+								"end": 50
+							},
+							{
+								"start": 28,
+								"end": 50
+							},
+							{
+								"start": 28,
+								"end": 50
+							},
+							{
+								"start": 28,
+								"end": 50
+							},
+							{
+								"start": 28,
+								"end": 50
+							}
+						],
+						"programNotifyLine": [
+							{
+								"start": 9,
+								"end": 27
+							},
+							{
+								"start": 9,
+								"end": 27
+							},
+							{
+								"start": 9,
+								"end": 27
+							},
+							{
+								"start": 9,
+								"end": 27
+							}
+						]
+					}
+				},
+				"bursts": []
+			},
+			{
+				"id": 17,
+				"lineOrder": [
+					"import",
+					"blank",
+					"programOpen",
+					"classifySig",
+					"programAssign",
+					"programNotifyLine",
+					"programClose"
+				],
+				"state": {
+					"import": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"blank": {
+						"parts": {
+							"blank-empty": true
+						},
+						"dimmed": true
+					},
+					"programOpen": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"classifySig": {
+						"parts": {
+							"classifySigIndent:program/0": true,
+							"p0": true,
+							"classifyPrefix:program/0": true,
+							"p1": true,
+							"classifyOpen:*/0": "(",
+							"p2": true,
+							"classifyType:wrapper/0": false,
+							"p3": true,
+							"classifyReturnType:shown/0": false,
+							"classifyReturnType:shown/classifyReturnTypeWrapper:*/0": false,
+							"classifyReturnType:shown/1": false,
+							"classifyTail:wrapper/0": false
+						}
+					},
+					"programAssign": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"programNotifyLine": {
+						"parts": {
+							"p0": true,
+							"notifyPipe:shown/0": false
+						}
+					},
+					"programClose": {
+						"parts": {
+							"p0": true
+						}
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"status": {
+					"ranges": {
+						"3": [
+							{
+								"start": 32,
+								"end": 47,
+								"status": "success"
+							}
+						],
+						"4": [
+							{
+								"start": 28,
+								"end": 50,
+								"status": "running"
+							}
+						]
+					},
+					"allRanges": {
+						"lang": [
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 36,
+								"end": 64
+							},
+							{
+								"start": 36,
+								"end": 64
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							}
+						],
+						"launch": [
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 45,
+								"end": 70
+							},
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 15,
+								"end": 40
+							}
+						],
+						"pact": [
+							{
+								"start": 13,
+								"end": 30
+							},
+							{
+								"start": 13,
+								"end": 30
+							},
+							{
+								"start": 13,
+								"end": 30
+							}
+						],
+						"classifySig": [
+							{
+								"start": 32,
+								"end": 47
+							},
+							{
+								"start": 32,
+								"end": 47
+							},
+							{
+								"start": 32,
+								"end": 47
+							},
+							{
+								"start": 32,
+								"end": 47
+							},
+							{
+								"start": 32,
+								"end": 47
+							},
+							{
+								"start": 32,
+								"end": 47
+							}
+						],
+						"programAssign": [
+							{
+								"start": 28,
+								"end": 50
+							},
+							{
+								"start": 28,
+								"end": 50
+							},
+							{
+								"start": 28,
+								"end": 50
+							},
+							{
+								"start": 28,
+								"end": 50
+							},
+							{
+								"start": 28,
+								"end": 50
+							}
+						],
+						"programNotifyLine": [
+							{
+								"start": 9,
+								"end": 27
+							},
+							{
+								"start": 9,
+								"end": 27
+							},
+							{
+								"start": 9,
+								"end": 27
+							},
+							{
+								"start": 9,
+								"end": 27
+							}
+						]
+					}
+				},
+				"bursts": []
+			},
+			{
+				"id": 18,
+				"lineOrder": [
+					"import",
+					"blank",
+					"programOpen",
+					"classifySig",
+					"programAssign",
+					"programNotifyLine",
+					"programClose"
+				],
+				"state": {
+					"import": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"blank": {
+						"parts": {
+							"blank-empty": true
+						},
+						"dimmed": true
+					},
+					"programOpen": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"classifySig": {
+						"parts": {
+							"classifySigIndent:program/0": true,
+							"p0": true,
+							"classifyPrefix:program/0": true,
+							"p1": true,
+							"classifyOpen:*/0": "(",
+							"p2": true,
+							"classifyType:wrapper/0": false,
+							"p3": true,
+							"classifyReturnType:shown/0": false,
+							"classifyReturnType:shown/classifyReturnTypeWrapper:*/0": false,
+							"classifyReturnType:shown/1": false,
+							"classifyTail:wrapper/0": false
+						}
+					},
+					"programAssign": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"programNotifyLine": {
+						"parts": {
+							"p0": true,
+							"notifyPipe:shown/0": false
+						}
+					},
+					"programClose": {
+						"parts": {
+							"p0": true
+						}
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"status": {
+					"ranges": {
+						"3": [
+							{
+								"start": 32,
+								"end": 47,
+								"status": "success"
+							}
+						],
+						"4": [
+							{
+								"start": 28,
+								"end": 50,
+								"status": "success"
+							}
+						],
+						"5": [
+							{
+								"start": 9,
+								"end": 27,
+								"status": "running"
+							}
+						]
+					},
+					"allRanges": {
+						"lang": [
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 36,
+								"end": 64
+							},
+							{
+								"start": 36,
+								"end": 64
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							}
+						],
+						"launch": [
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 45,
+								"end": 70
+							},
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 15,
+								"end": 40
+							}
+						],
+						"pact": [
+							{
+								"start": 13,
+								"end": 30
+							},
+							{
+								"start": 13,
+								"end": 30
+							},
+							{
+								"start": 13,
+								"end": 30
+							}
+						],
+						"classifySig": [
+							{
+								"start": 32,
+								"end": 47
+							},
+							{
+								"start": 32,
+								"end": 47
+							},
+							{
+								"start": 32,
+								"end": 47
+							},
+							{
+								"start": 32,
+								"end": 47
+							},
+							{
+								"start": 32,
+								"end": 47
+							},
+							{
+								"start": 32,
+								"end": 47
+							}
+						],
+						"programAssign": [
+							{
+								"start": 28,
+								"end": 50
+							},
+							{
+								"start": 28,
+								"end": 50
+							},
+							{
+								"start": 28,
+								"end": 50
+							},
+							{
+								"start": 28,
+								"end": 50
+							},
+							{
+								"start": 28,
+								"end": 50
+							}
+						],
+						"programNotifyLine": [
+							{
+								"start": 9,
+								"end": 27
+							},
+							{
+								"start": 9,
+								"end": 27
+							},
+							{
+								"start": 9,
+								"end": 27
+							},
+							{
+								"start": 9,
+								"end": 27
+							}
+						]
+					}
+				},
+				"bursts": []
+			},
+			{
+				"id": 19,
+				"lineOrder": [
+					"import",
+					"blank",
+					"programOpen",
+					"classifySig",
+					"programAssign",
+					"programNotifyLine",
+					"programClose"
+				],
+				"state": {
+					"import": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"blank": {
+						"parts": {
+							"blank-empty": true
+						},
+						"dimmed": true
+					},
+					"programOpen": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"classifySig": {
+						"parts": {
+							"classifySigIndent:program/0": true,
+							"p0": true,
+							"classifyPrefix:program/0": true,
+							"p1": true,
+							"classifyOpen:*/0": "(",
+							"p2": true,
+							"classifyType:wrapper/0": false,
+							"p3": true,
+							"classifyReturnType:shown/0": false,
+							"classifyReturnType:shown/classifyReturnTypeWrapper:*/0": false,
+							"classifyReturnType:shown/1": false,
+							"classifyTail:wrapper/0": false
+						}
+					},
+					"programAssign": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"programNotifyLine": {
+						"parts": {
+							"p0": true,
+							"notifyPipe:shown/0": false
+						}
+					},
+					"programClose": {
+						"parts": {
+							"p0": true
+						}
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"status": {
+					"ranges": {
+						"3": [
+							{
+								"start": 32,
+								"end": 47,
+								"status": "success"
+							}
+						],
+						"4": [
+							{
+								"start": 28,
+								"end": 50,
+								"status": "success"
+							}
+						],
+						"5": [
+							{
+								"start": 9,
+								"end": 27,
+								"status": "error"
+							}
+						]
+					},
+					"allRanges": {
+						"lang": [
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 36,
+								"end": 64
+							},
+							{
+								"start": 36,
+								"end": 64
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							}
+						],
+						"launch": [
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 45,
+								"end": 70
+							},
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 15,
+								"end": 40
+							}
+						],
+						"pact": [
+							{
+								"start": 13,
+								"end": 30
+							},
+							{
+								"start": 13,
+								"end": 30
+							},
+							{
+								"start": 13,
+								"end": 30
+							}
+						],
+						"classifySig": [
+							{
+								"start": 32,
+								"end": 47
+							},
+							{
+								"start": 32,
+								"end": 47
+							},
+							{
+								"start": 32,
+								"end": 47
+							},
+							{
+								"start": 32,
+								"end": 47
+							},
+							{
+								"start": 32,
+								"end": 47
+							},
+							{
+								"start": 32,
+								"end": 47
+							}
+						],
+						"programAssign": [
+							{
+								"start": 28,
+								"end": 50
+							},
+							{
+								"start": 28,
+								"end": 50
+							},
+							{
+								"start": 28,
+								"end": 50
+							},
+							{
+								"start": 28,
+								"end": 50
+							},
+							{
+								"start": 28,
+								"end": 50
+							}
+						],
+						"programNotifyLine": [
+							{
+								"start": 9,
+								"end": 27
+							},
+							{
+								"start": 9,
+								"end": 27
+							},
+							{
+								"start": 9,
+								"end": 27
+							},
+							{
+								"start": 9,
+								"end": 27
+							}
+						]
+					}
+				},
+				"bursts": []
+			},
+			{
+				"id": 20,
+				"lineOrder": [
+					"import",
+					"blank",
+					"programOpen",
+					"classifySig",
+					"programAssign",
+					"programNotifyLine",
+					"notifyRetry",
+					"notifyPipeClose",
+					"programClose"
+				],
+				"state": {
+					"import": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"blank": {
+						"parts": {
+							"blank-empty": true
+						},
+						"dimmed": true
+					},
+					"programOpen": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"classifySig": {
+						"parts": {
+							"classifySigIndent:program/0": true,
+							"p0": true,
+							"classifyPrefix:program/0": true,
+							"p1": true,
+							"classifyOpen:*/0": "(",
+							"p2": true,
+							"classifyType:wrapper/0": false,
+							"p3": true,
+							"classifyReturnType:shown/0": false,
+							"classifyReturnType:shown/classifyReturnTypeWrapper:*/0": false,
+							"classifyReturnType:shown/1": false,
+							"classifyTail:wrapper/0": false
+						}
+					},
+					"programAssign": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"programNotifyLine": {
+						"parts": {
+							"p0": true,
+							"notifyPipe:shown/0": true
+						}
+					},
+					"notifyRetry": {
+						"parts": {
+							"p0": true
+						},
+						"entering": true
+					},
+					"notifyPipeClose": {
+						"parts": {
+							"p0": true
+						},
+						"entering": true
+					},
+					"programClose": {
+						"parts": {
+							"p0": true
+						}
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"status": {
+					"ranges": {
+						"3": [
+							{
+								"start": 32,
+								"end": 47,
+								"status": "success"
+							}
+						],
+						"4": [
+							{
+								"start": 28,
+								"end": 50,
+								"status": "success"
+							}
+						],
+						"5": [
+							{
+								"start": 9,
+								"end": 27,
+								"status": "running"
+							}
+						]
+					},
+					"allRanges": {
+						"lang": [
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 36,
+								"end": 64
+							},
+							{
+								"start": 36,
+								"end": 64
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							}
+						],
+						"launch": [
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 45,
+								"end": 70
+							},
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 15,
+								"end": 40
+							}
+						],
+						"pact": [
+							{
+								"start": 13,
+								"end": 30
+							},
+							{
+								"start": 13,
+								"end": 30
+							},
+							{
+								"start": 13,
+								"end": 30
+							}
+						],
+						"classifySig": [
+							{
+								"start": 32,
+								"end": 47
+							},
+							{
+								"start": 32,
+								"end": 47
+							},
+							{
+								"start": 32,
+								"end": 47
+							},
+							{
+								"start": 32,
+								"end": 47
+							},
+							{
+								"start": 32,
+								"end": 47
+							},
+							{
+								"start": 32,
+								"end": 47
+							}
+						],
+						"programAssign": [
+							{
+								"start": 28,
+								"end": 50
+							},
+							{
+								"start": 28,
+								"end": 50
+							},
+							{
+								"start": 28,
+								"end": 50
+							},
+							{
+								"start": 28,
+								"end": 50
+							},
+							{
+								"start": 28,
+								"end": 50
+							}
+						],
+						"programNotifyLine": [
+							{
+								"start": 9,
+								"end": 27
+							},
+							{
+								"start": 9,
+								"end": 27
+							},
+							{
+								"start": 9,
+								"end": 27
+							},
+							{
+								"start": 9,
+								"end": 27
+							}
+						]
+					}
+				},
+				"cursor": {
+					"lineIndex": 6,
+					"charOffset": 11,
+					"textLength": 5,
+					"type": "hand"
+				},
+				"bursts": []
+			},
+			{
+				"id": 21,
+				"lineOrder": [
+					"import",
+					"blank",
+					"programOpen",
+					"classifySig",
+					"programAssign",
+					"programNotifyLine",
+					"notifyRetry",
+					"notifyPipeClose",
+					"programClose"
+				],
+				"state": {
+					"import": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"blank": {
+						"parts": {
+							"blank-empty": true
+						},
+						"dimmed": true
+					},
+					"programOpen": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"classifySig": {
+						"parts": {
+							"classifySigIndent:program/0": true,
+							"p0": true,
+							"classifyPrefix:program/0": true,
+							"p1": true,
+							"classifyOpen:*/0": "(",
+							"p2": true,
+							"classifyType:wrapper/0": false,
+							"p3": true,
+							"classifyReturnType:shown/0": false,
+							"classifyReturnType:shown/classifyReturnTypeWrapper:*/0": false,
+							"classifyReturnType:shown/1": false,
+							"classifyTail:wrapper/0": false
+						}
+					},
+					"programAssign": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"programNotifyLine": {
+						"parts": {
+							"p0": true,
+							"notifyPipe:shown/0": true
+						}
+					},
+					"notifyRetry": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"notifyPipeClose": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"programClose": {
+						"parts": {
+							"p0": true
+						}
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"status": {
+					"ranges": {
+						"3": [
+							{
+								"start": 32,
+								"end": 47,
+								"status": "success"
+							}
+						],
+						"4": [
+							{
+								"start": 28,
+								"end": 50,
+								"status": "success"
+							}
+						],
+						"5": [
+							{
+								"start": 9,
+								"end": 27,
+								"status": "success"
+							}
+						]
+					},
+					"allRanges": {
+						"lang": [
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 36,
+								"end": 64
+							},
+							{
+								"start": 36,
+								"end": 64
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							},
+							{
+								"start": 13,
+								"end": 41
+							}
+						],
+						"launch": [
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 45,
+								"end": 70
+							},
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 15,
+								"end": 40
+							},
+							{
+								"start": 15,
+								"end": 40
+							}
+						],
+						"pact": [
+							{
+								"start": 13,
+								"end": 30
+							},
+							{
+								"start": 13,
+								"end": 30
+							},
+							{
+								"start": 13,
+								"end": 30
+							}
+						],
+						"classifySig": [
+							{
+								"start": 32,
+								"end": 47
+							},
+							{
+								"start": 32,
+								"end": 47
+							},
+							{
+								"start": 32,
+								"end": 47
+							},
+							{
+								"start": 32,
+								"end": 47
+							},
+							{
+								"start": 32,
+								"end": 47
+							},
+							{
+								"start": 32,
+								"end": 47
+							}
+						],
+						"programAssign": [
+							{
+								"start": 28,
+								"end": 50
+							},
+							{
+								"start": 28,
+								"end": 50
+							},
+							{
+								"start": 28,
+								"end": 50
+							},
+							{
+								"start": 28,
+								"end": 50
+							},
+							{
+								"start": 28,
+								"end": 50
+							}
+						],
+						"programNotifyLine": [
+							{
+								"start": 9,
+								"end": 27
+							},
+							{
+								"start": 9,
+								"end": 27
+							},
+							{
+								"start": 9,
+								"end": 27
+							},
+							{
+								"start": 9,
+								"end": 27
+							}
+						]
+					}
+				},
+				"cursor": {
+					"lineIndex": 6,
+					"charOffset": 17,
+					"textLength": 32,
+					"type": "hand"
+				},
+				"bursts": []
+			}
+		]
+	},
+	"steps": [
+		{
+			"name": "start",
+			"at": "start"
+		},
+		{
+			"name": "This",
+			"at": "This"
+		},
+		{
+			"name": "Effect",
+			"at": "Effect",
+			"nth": 3
+		},
+		{
+			"name": "succeed",
+			"at": "succeed"
+		},
+		{
+			"name": "or",
+			"at": "or"
+		},
+		{
+			"name": "they",
+			"at": "they"
+		},
+		{
+			"name": "fail",
+			"at": "fail"
+		},
+		{
+			"name": "either",
+			"at": "either"
+		},
+		{
+			"name": "possibility",
+			"at": "possibility"
+		},
+		{
+			"name": "They'll",
+			"at": "They'll"
+		},
+		{
+			"name": "even",
+			"at": "even"
+		},
+		{
+			"name": "die",
+			"at": "die"
+		},
+		{
+			"name": "necessary",
+			"at": "necessary"
+		},
+		{
+			"name": "You",
+			"at": "You",
+			"after": "necessary"
+		},
+		{
+			"name": "effects",
+			"at": "effects",
+			"after": "promises"
+		},
+		{
+			"name": "combine",
+			"at": "combine"
+		},
+		{
+			"name": "running",
+			"at": "running"
+		},
+		{
+			"name": "after",
+			"at": "after"
+		},
+		{
+			"name": "another",
+			"at": "another"
+		},
+		{
+			"name": "fails",
+			"at": "fails"
+		},
+		{
+			"name": "retry",
+			"at": "retry"
+		},
+		{
+			"name": "schedule",
+			"at": "schedule"
+		}
+	],
+	"stepTimes": [
+		0,
+		12.51,
+		13.571,
+		18.911,
+		20.610000000000003,
+		20.790000000000003,
+		21.37,
+		22.970000000000002,
+		23.630000000000003,
+		27.970000000000002,
+		28.331000000000003,
+		28.970000000000002,
+		30.770000000000003,
+		33.15,
+		34.751,
+		36.571,
+		39.629999999999995,
+		41.091,
+		41.809999999999995,
+		44.411,
+		46.01,
+		47.751
+	],
+	"componentStepTimes": [
+		0,
+		2.6100000000000003,
+		2.7910000000000004,
+		2.95,
+		3.0100000000000002,
+		3.25,
+		3.41,
+		3.6700000000000004,
+		3.9710000000000005,
+		5.21,
+		8.049999999999999,
+		12.51,
+		13.571,
+		18.911,
+		20.610000000000003,
+		20.790000000000003,
+		21.37,
+		27.970000000000002,
+		28.331000000000003,
+		28.970000000000002,
+		33.15,
+		34.751,
+		36.571,
+		39.629999999999995,
+		41.091,
+		41.809999999999995,
+		44.411,
+		46.01,
+		47.751
+	],
+	"audioFile": "visual-effects.3e70a98e.webm",
+	"_debug": {
+		"timingsStatus": "matched",
+		"dslWordCount": 86
+	}
+}

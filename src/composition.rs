@@ -5,12 +5,12 @@ use std::{
 
 use anyhow::{Result, bail};
 
-use crate::dsl::{Annotation, Motion};
+use crate::dsl::{Annotation, Motion, TaskChange};
 
 const NANOS_PER_SECOND: u64 = 1_000_000_000;
 const MAX_SECONDS: f64 = u64::MAX as f64 / NANOS_PER_SECOND as f64;
 
-#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq, PartialOrd)]
+#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct Time(u64);
 
 impl Time {
@@ -310,6 +310,7 @@ impl Cue {
 pub enum Composition {
     Animate(Motion),
     Annotate(Annotation),
+    Task(TaskChange),
     Play {
         clip: Clip,
         role: MediaRole,
@@ -334,6 +335,10 @@ impl Composition {
 
     pub fn annotate(annotation: Annotation) -> Self {
         Self::Annotate(annotation)
+    }
+
+    pub fn task(change: TaskChange) -> Self {
+        Self::Task(change)
     }
 
     pub fn script(clip: Clip) -> Self {
@@ -380,6 +385,7 @@ impl Composition {
         match self {
             Self::Animate(motion) => Duration::seconds(f64::from(motion.duration())),
             Self::Annotate(annotation) => annotation.duration(),
+            Self::Task(_) => Duration::ZERO,
             Self::Play { clip, .. } => clip.duration(),
             Self::Sequence(compositions) => Duration(
                 compositions
@@ -424,6 +430,7 @@ impl Composition {
             media: scheduled.media,
             cues: scheduled.cues,
             annotations: scheduled.annotations,
+            tasks: scheduled.tasks,
             duration,
         })
     }
@@ -434,6 +441,7 @@ impl Composition {
             Self::Annotate(annotation) => {
                 scheduled.annotations.push((start, annotation.clone()));
             }
+            Self::Task(change) => scheduled.tasks.push((start, change.clone())),
             Self::Play { clip, role } => scheduled.media.push(MediaPlacement {
                 clip: clip.clone(),
                 role: *role,
@@ -480,12 +488,19 @@ impl From<Annotation> for Composition {
     }
 }
 
+impl From<TaskChange> for Composition {
+    fn from(value: TaskChange) -> Self {
+        Self::task(value)
+    }
+}
+
 #[derive(Default)]
 struct Scheduled {
     motions: Vec<(Time, Motion)>,
     media: Vec<MediaPlacement>,
     cues: HashMap<CueId, TimeRange>,
     annotations: Vec<(Time, Annotation)>,
+    tasks: Vec<(Time, TaskChange)>,
 }
 
 pub(crate) struct LoweredComposition {
@@ -493,6 +508,7 @@ pub(crate) struct LoweredComposition {
     pub media: Vec<MediaPlacement>,
     pub cues: HashMap<CueId, TimeRange>,
     pub annotations: Vec<(Time, Annotation)>,
+    pub tasks: Vec<(Time, TaskChange)>,
     pub duration: Duration,
 }
 

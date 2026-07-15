@@ -17,12 +17,12 @@ use kinograph::{
     composition::{Asset, Composition, Time, TimeRange},
     dsl::{
         Annotation, AnnotationEffect, Code, CompiledScene, Motion, Pointer, Scalar, Scene,
-        TargetGeometry,
+        TargetGeometry, Task,
     },
     encode::{FfmpegEncoder, VideoSpec},
     render::{
-        EditorFrame, HeadlessRenderer, InlineRevealFrame, PointerFrame, RenderSpec, SquiggleFrame,
-        TextRangeBounds, TokenHighlight,
+        EditorFrame, HeadlessRenderer, InlineRevealFrame, PointerFrame, QuoteFrame, RenderSpec,
+        SquiggleFrame, TaskSceneFrame, TextRangeBounds, TokenHighlight,
     },
     timeline::{PropertyId, SpringProfile},
     transcript::Transcript,
@@ -44,6 +44,7 @@ enum RenderScene {
     Hero,
     EffectShowsErrors,
     PromisesOnlyHappyPath,
+    VisualEffects,
 }
 
 impl RenderScene {
@@ -52,6 +53,7 @@ impl RenderScene {
             "hero" => Some(Self::Hero),
             "effect-shows-errors" => Some(Self::EffectShowsErrors),
             "promises-only-happy-path" => Some(Self::PromisesOnlyHappyPath),
+            "visual-effects" => Some(Self::VisualEffects),
             _ => None,
         }
     }
@@ -61,6 +63,7 @@ impl RenderScene {
             Self::Hero => "output/kinograph-prototype.mp4",
             Self::EffectShowsErrors => "output/effect-shows-errors.mp4",
             Self::PromisesOnlyHappyPath => "output/promises-only-happy-path.mp4",
+            Self::VisualEffects => "output/visual-effects.mp4",
         }
     }
 }
@@ -80,7 +83,7 @@ fn main() -> Result<()> {
         ),
         _ => bail!(
             "usage: kinograph [output] | kinograph render \
-             <hero|effect-shows-errors|promises-only-happy-path> [output]"
+             <hero|effect-shows-errors|promises-only-happy-path|visual-effects> [output]"
         ),
     };
     let output = PathBuf::from(explicit_output.unwrap_or_else(|| scene.default_output()));
@@ -96,6 +99,7 @@ fn main() -> Result<()> {
         RenderScene::PromisesOnlyHappyPath => {
             pollster::block_on(render_promises_only_happy_path(&output))
         }
+        RenderScene::VisualEffects => pollster::block_on(render_visual_effects(&output)),
     }
 }
 
@@ -361,6 +365,381 @@ async fn render_promises_only_happy_path(output: &Path) -> Result<()> {
             render_promises_only_happy_path_sample(renderer, &transition, &choreography, time)
         },
     )
+}
+
+async fn render_visual_effects(output: &Path) -> Result<()> {
+    let asset_directory = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("assets")
+        .join("visual-effects");
+    let transcript = Transcript::load(&asset_directory.join("timings.json"))?;
+    let narration = Asset::audio("visual-effects", asset_directory.join("narration.webm"))
+        .clip(TimeRange::new(Time::ZERO, Time::seconds(48.627)));
+    let cues = VisualEffectsCues::from_transcript(&transcript)?;
+    let center = WIDTH as f32 * 0.5;
+    let y = HEIGHT as f32 * 0.5;
+    let lang_one = Task::new("lang", "lang").at(center, y);
+    let lang_two = lang_one.clone().at(872.0, y);
+    let lang_three = lang_one.clone().at(784.0, y);
+    let launch_two = Task::new("launch", "launch").at(1100.0, y);
+    let launch_three = launch_two.clone().at(1013.0, y);
+    let pact = Task::new("pact", "pact").at(1189.0, y);
+    let classify_one = Task::new("classify", "classify").at(center, y);
+    let classify = classify_one.clone().at(784.0, y);
+    let classify_done = classify_one.clone().at(696.0, y);
+    let assign = Task::new("assign", "assign").at(960.0, y);
+    let assign_running = assign.clone().at(1004.0, y);
+    let notify = Task::new("notify", "notify").at(1136.0, y);
+    let notify_after_classify = notify.clone().at(1180.0, y);
+    let notify_after_assign = notify.clone().at(1268.0, y);
+    let at = |seconds: f32, change| {
+        Composition::delay(
+            kinograph::composition::Duration::seconds(f64::from(seconds)),
+            change,
+        )
+    };
+    let composition = Composition::parallel([
+        Composition::script(narration),
+        at(cues.demo, lang_one.idle()),
+        at(cues.lang_running, lang_one.run()),
+        at(cues.lang_completed, lang_one.succeed("TypeScript")),
+        at(cues.launch_visible, lang_two.succeed("TypeScript")),
+        at(cues.launch_visible, launch_two.idle()),
+        at(cues.launch_running, launch_two.run()),
+        at(cues.launch_failed, launch_two.fail("NoFuel")),
+        at(cues.pact_visible, lang_three.succeed("TypeScript")),
+        at(cues.pact_visible, launch_three.fail("NoFuel")),
+        at(cues.pact_visible, pact.idle()),
+        at(cues.pact_running, pact.run()),
+        at(cues.pact_death, pact.die("wat")),
+        at(cues.classify_visible, lang_three.hide()),
+        at(cues.classify_visible, launch_three.hide()),
+        at(cues.classify_visible, pact.hide()),
+        at(cues.classify_visible, classify_one.idle()),
+        at(cues.combined, classify.idle()),
+        at(cues.combined, assign.idle()),
+        at(cues.combined, notify.idle()),
+        at(cues.classify_running, classify.run()),
+        at(cues.assign_running, classify.succeed("HOMICIDE")),
+        at(cues.assign_running, assign_running.run()),
+        at(cues.assign_running, notify_after_classify.idle()),
+        at(cues.notify_running, classify_done.succeed("HOMICIDE")),
+        at(cues.notify_running, assign_running.succeed("JR. DETECTIVE")),
+        at(cues.notify_running, notify_after_assign.run()),
+        at(
+            cues.notify_failed,
+            notify_after_assign.fail("RateLimitError"),
+        ),
+        at(cues.notify_retry, notify_after_assign.run()),
+        at(cues.notify_completed, notify_after_assign.succeed("DONE")),
+    ]);
+    let scene =
+        Scene::new(Vec::<(PropertyId, Scalar)>::new(), composition).compile(&HashMap::new())?;
+    let mut renderer = HeadlessRenderer::new(RenderSpec {
+        width: WIDTH,
+        height: HEIGHT,
+        font_path: PathBuf::from(FONT_PATH),
+        file_name: "effect-simulacra".to_owned(),
+    })
+    .await?;
+
+    encode_editor_video(&mut renderer, output, &scene, |renderer, time| {
+        let quote = visual_effects_quote(time, &cues);
+        let nodes = scene.task_frames_at(time);
+        renderer.render_task_scene(&TaskSceneFrame {
+            quote,
+            nodes: &nodes,
+        })
+    })
+}
+
+struct VisualEffectsCues {
+    quote_words: [f32; 8],
+    hide_quote: f32,
+    subliminal: f32,
+    demo: f32,
+    lang_running: f32,
+    lang_completed: f32,
+    launch_visible: f32,
+    launch_running: f32,
+    launch_failed: f32,
+    pact_visible: f32,
+    pact_running: f32,
+    pact_death: f32,
+    classify_visible: f32,
+    combined: f32,
+    classify_running: f32,
+    assign_running: f32,
+    notify_running: f32,
+    notify_failed: f32,
+    notify_retry: f32,
+    notify_completed: f32,
+}
+
+impl VisualEffectsCues {
+    fn from_transcript(transcript: &Transcript) -> Result<Self> {
+        let start = |word: &str, occurrence| {
+            Ok::<_, anyhow::Error>(
+                transcript
+                    .word_occurrence(word, occurrence)?
+                    .start()
+                    .as_seconds() as f32
+                    - 0.15,
+            )
+        };
+        Ok(Self {
+            quote_words: [
+                start("\"why", 0)?,
+                start("would", 0)?,
+                start("I", 1)?,
+                start("ever", 0)?,
+                start("want", 0)?,
+                start("to", 1)?,
+                start("use", 0)?,
+                start("Effect?\"", 0)?,
+            ],
+            hide_quote: start("I'd", 0)?,
+            subliminal: start("tastefully", 0)?,
+            demo: start("This", 0)?,
+            lang_running: start("Effect,", 0)?,
+            lang_completed: start("succeed,", 0)?,
+            launch_visible: start("or", 0)?,
+            launch_running: start("they", 0)?,
+            launch_failed: start("fail,", 0)?,
+            pact_visible: start("They'll", 0)?,
+            pact_running: start("even", 0)?,
+            pact_death: start("die", 0)?,
+            classify_visible: start("You", 0)?,
+            combined: start("combine", 0)?,
+            classify_running: start("running", 0)?,
+            assign_running: start("after", 0)?,
+            notify_running: start("another.", 0)?,
+            notify_failed: start("fails,", 0)?,
+            notify_retry: start("retry", 0)?,
+            notify_completed: start("schedule.", 0)?,
+        })
+    }
+}
+
+fn visual_effects_quote(time: f32, cues: &VisualEffectsCues) -> Option<QuoteFrame<'static>> {
+    const SUBLIMINAL: [&str; 8] = [
+        "EFFECT", "IS", "THE", "GREATEST", "LIBRARY", "OF", "ALL", "TIME",
+    ];
+    if time >= cues.demo {
+        return None;
+    }
+    let highlight = cues.quote_words.iter().rposition(|cue| time >= *cue);
+    let subliminal_index = ((time - cues.subliminal) / 0.1).floor() as isize;
+    let subliminal = (0..SUBLIMINAL.len() as isize)
+        .contains(&subliminal_index)
+        .then(|| SUBLIMINAL[subliminal_index as usize]);
+    Some(QuoteFrame {
+        time,
+        highlight,
+        hide_quote: time >= cues.hide_quote,
+        subliminal,
+    })
+}
+
+#[cfg(any())]
+fn old_visual_effects_frame(time: f32, cues: &VisualEffectsCues) {
+    let y = HEIGHT as f32 * 0.5;
+    if time < cues.launch_visible {
+        let (state, state_age) = task_state(
+            time,
+            cues.demo,
+            &[
+                (cues.lang_running, TaskVisualState::Running),
+                (cues.lang_completed, TaskVisualState::Completed),
+            ],
+        );
+        return (
+            None,
+            vec![TaskNodeFrame {
+                x: WIDTH as f32 * 0.5,
+                y,
+                name: "lang",
+                state,
+                state_age,
+                visible_age: time - cues.demo,
+                result: Some("TypeScript"),
+                error: None,
+            }],
+        );
+    }
+    if time < cues.pact_visible {
+        let (launch_state, launch_age) = task_state(
+            time,
+            cues.launch_visible,
+            &[
+                (cues.launch_running, TaskVisualState::Running),
+                (cues.launch_failed, TaskVisualState::Failed),
+            ],
+        );
+        return (
+            None,
+            vec![
+                TaskNodeFrame {
+                    x: WIDTH as f32 * 0.5 - 100.0,
+                    y,
+                    name: "lang",
+                    state: TaskVisualState::Completed,
+                    state_age: time - cues.lang_completed,
+                    visible_age: time - cues.demo,
+                    result: Some("TypeScript"),
+                    error: None,
+                },
+                TaskNodeFrame {
+                    x: WIDTH as f32 * 0.5 + 100.0,
+                    y,
+                    name: "launch",
+                    state: launch_state,
+                    state_age: launch_age,
+                    visible_age: time - cues.launch_visible,
+                    result: None,
+                    error: Some("NoFuel"),
+                },
+            ],
+        );
+    }
+    if time < cues.classify_visible {
+        let (pact_state, pact_age) = task_state(
+            time,
+            cues.pact_visible,
+            &[
+                (cues.pact_running, TaskVisualState::Running),
+                (cues.pact_death, TaskVisualState::Death),
+            ],
+        );
+        return (
+            None,
+            vec![
+                TaskNodeFrame {
+                    x: WIDTH as f32 * 0.5 - 210.0,
+                    y,
+                    name: "lang",
+                    state: TaskVisualState::Completed,
+                    state_age: time - cues.lang_completed,
+                    visible_age: time - cues.demo,
+                    result: Some("TypeScript"),
+                    error: None,
+                },
+                TaskNodeFrame {
+                    x: WIDTH as f32 * 0.5,
+                    y,
+                    name: "launch",
+                    state: TaskVisualState::Failed,
+                    state_age: time - cues.launch_failed,
+                    visible_age: time - cues.launch_visible,
+                    result: None,
+                    error: Some("NoFuel"),
+                },
+                TaskNodeFrame {
+                    x: WIDTH as f32 * 0.5 + 210.0,
+                    y,
+                    name: "pact",
+                    state: pact_state,
+                    state_age: pact_age,
+                    visible_age: time - cues.pact_visible,
+                    result: None,
+                    error: Some("wat"),
+                },
+            ],
+        );
+    }
+    if time < cues.combined {
+        return (
+            None,
+            vec![TaskNodeFrame {
+                x: WIDTH as f32 * 0.5,
+                y,
+                name: "classify",
+                state: TaskVisualState::Idle,
+                state_age: time - cues.classify_visible,
+                visible_age: time - cues.classify_visible,
+                result: Some("HOMICIDE"),
+                error: None,
+            }],
+        );
+    }
+    let (classify_state, classify_age) = task_state(
+        time,
+        cues.combined,
+        &[
+            (cues.classify_running, TaskVisualState::Running),
+            (cues.assign_running, TaskVisualState::Completed),
+        ],
+    );
+    let (assign_state, assign_age) = task_state(
+        time,
+        cues.combined,
+        &[
+            (cues.assign_running, TaskVisualState::Running),
+            (cues.notify_running, TaskVisualState::Completed),
+        ],
+    );
+    let (notify_state, notify_age) = task_state(
+        time,
+        cues.combined,
+        &[
+            (cues.notify_running, TaskVisualState::Running),
+            (cues.notify_failed, TaskVisualState::Failed),
+            (cues.notify_retry, TaskVisualState::Running),
+            (cues.notify_completed, TaskVisualState::Completed),
+        ],
+    );
+    (
+        None,
+        vec![
+            TaskNodeFrame {
+                x: WIDTH as f32 * 0.5 - 240.0,
+                y,
+                name: "classify",
+                state: classify_state,
+                state_age: classify_age,
+                visible_age: time - cues.combined,
+                result: Some("HOMICIDE"),
+                error: None,
+            },
+            TaskNodeFrame {
+                x: WIDTH as f32 * 0.5,
+                y,
+                name: "assign",
+                state: assign_state,
+                state_age: assign_age,
+                visible_age: time - cues.combined,
+                result: Some("JR. DETECTIVE"),
+                error: None,
+            },
+            TaskNodeFrame {
+                x: WIDTH as f32 * 0.5 + 240.0,
+                y,
+                name: "notify",
+                state: notify_state,
+                state_age: notify_age,
+                visible_age: time - cues.combined,
+                result: Some("DONE"),
+                error: Some("RateLimitError"),
+            },
+        ],
+    )
+}
+
+#[cfg(any())]
+fn task_state(
+    time: f32,
+    visible_at: f32,
+    changes: &[(f32, TaskVisualState)],
+) -> (TaskVisualState, f32) {
+    let mut state = TaskVisualState::Idle;
+    let mut changed_at = visible_at;
+    for (at, next) in changes {
+        if time < *at {
+            break;
+        }
+        state = *next;
+        changed_at = *at;
+    }
+    (state, time - changed_at)
 }
 
 #[derive(Clone, Copy)]
