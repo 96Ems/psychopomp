@@ -252,9 +252,12 @@ async fn render_effect_shows_errors(output: &Path) -> Result<()> {
         Time::ZERO,
         Time::seconds(LESSON_AUDIO_DURATION),
     ));
-    let success = Asset::audio("success", asset_directory.join("success.wav"))
-        .clip(TimeRange::new(Time::ZERO, Time::seconds(0.43)))
-        .gain_db(18.0);
+    let success = Asset::audio(
+        "prismatic-bloom",
+        asset_directory.join("prismatic-bloom.wav"),
+    )
+    .clip(TimeRange::new(Time::ZERO, Time::seconds(0.795)))
+    .gain_db(-10.0);
     let choreography = effect_shows_errors_choreography(&transcript, targets, narration, success)?;
 
     encode_editor_video(
