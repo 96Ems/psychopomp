@@ -5,7 +5,7 @@ use std::{
 
 use anyhow::{Result, bail};
 
-use crate::dsl::{Annotation, Motion, TaskChange};
+use crate::dsl::{Annotation, Motion, TaskChange, TaskPoseChange};
 
 const NANOS_PER_SECOND: u64 = 1_000_000_000;
 const MAX_SECONDS: f64 = u64::MAX as f64 / NANOS_PER_SECOND as f64;
@@ -311,6 +311,7 @@ pub enum Composition {
     Animate(Motion),
     Annotate(Annotation),
     Task(TaskChange),
+    TaskPose(TaskPoseChange),
     Play {
         clip: Clip,
         role: MediaRole,
@@ -339,6 +340,10 @@ impl Composition {
 
     pub fn task(change: TaskChange) -> Self {
         Self::Task(change)
+    }
+
+    pub fn task_pose(change: TaskPoseChange) -> Self {
+        Self::TaskPose(change)
     }
 
     pub fn script(clip: Clip) -> Self {
@@ -385,7 +390,7 @@ impl Composition {
         match self {
             Self::Animate(motion) => Duration::seconds(f64::from(motion.duration())),
             Self::Annotate(annotation) => annotation.duration(),
-            Self::Task(_) => Duration::ZERO,
+            Self::Task(_) | Self::TaskPose(_) => Duration::ZERO,
             Self::Play { clip, .. } => clip.duration(),
             Self::Sequence(compositions) => Duration(
                 compositions
@@ -431,6 +436,7 @@ impl Composition {
             cues: scheduled.cues,
             annotations: scheduled.annotations,
             tasks: scheduled.tasks,
+            task_poses: scheduled.task_poses,
             duration,
         })
     }
@@ -442,6 +448,7 @@ impl Composition {
                 scheduled.annotations.push((start, annotation.clone()));
             }
             Self::Task(change) => scheduled.tasks.push((start, change.clone())),
+            Self::TaskPose(change) => scheduled.task_poses.push((start, change.clone())),
             Self::Play { clip, role } => scheduled.media.push(MediaPlacement {
                 clip: clip.clone(),
                 role: *role,
@@ -494,6 +501,12 @@ impl From<TaskChange> for Composition {
     }
 }
 
+impl From<TaskPoseChange> for Composition {
+    fn from(value: TaskPoseChange) -> Self {
+        Self::task_pose(value)
+    }
+}
+
 #[derive(Default)]
 struct Scheduled {
     motions: Vec<(Time, Motion)>,
@@ -501,6 +514,7 @@ struct Scheduled {
     cues: HashMap<CueId, TimeRange>,
     annotations: Vec<(Time, Annotation)>,
     tasks: Vec<(Time, TaskChange)>,
+    task_poses: Vec<(Time, TaskPoseChange)>,
 }
 
 pub(crate) struct LoweredComposition {
@@ -509,6 +523,7 @@ pub(crate) struct LoweredComposition {
     pub cues: HashMap<CueId, TimeRange>,
     pub annotations: Vec<(Time, Annotation)>,
     pub tasks: Vec<(Time, TaskChange)>,
+    pub task_poses: Vec<(Time, TaskPoseChange)>,
     pub duration: Duration,
 }
 

@@ -22,7 +22,7 @@ use kinograph::{
     encode::{FfmpegEncoder, VideoSpec},
     render::{
         EditorFrame, HeadlessRenderer, InlineRevealFrame, PointerFrame, QuoteFrame, RenderSpec,
-        SquiggleFrame, TaskSceneFrame, TextRangeBounds, TokenHighlight,
+        SquiggleFrame, TaskLinkFrame, TaskSceneFrame, TextRangeBounds, TokenHighlight,
     },
     timeline::{PropertyId, SpringProfile},
     transcript::Transcript,
@@ -185,11 +185,28 @@ fn encode_editor_video(
     )?;
 
     let frame_byte_count = WIDTH as usize * HEIGHT as usize * 4;
-    let mut accumulation = vec![0_u32; frame_byte_count];
+    let srgb_to_linear = std::array::from_fn::<_, 256, _>(|value| {
+        let encoded = value as f32 / 255.0;
+        if encoded <= 0.04045 {
+            encoded / 12.92
+        } else {
+            ((encoded + 0.055) / 1.055).powf(2.4)
+        }
+    });
+    let linear_to_srgb = std::array::from_fn::<_, 65536, _>(|value| {
+        let linear = value as f32 / 65535.0;
+        let encoded = if linear <= 0.003_130_8 {
+            linear * 12.92
+        } else {
+            1.055 * linear.powf(1.0 / 2.4) - 0.055
+        };
+        (encoded * 255.0).round() as u8
+    });
+    let mut accumulation = vec![0.0_f32; frame_byte_count];
     let mut blended_frame = vec![0_u8; frame_byte_count];
 
     for frame in 0..frame_count {
-        accumulation.fill(0);
+        accumulation.fill(0.0);
         let center_time = (frame as f32 + 0.5) / FPS as f32;
         let shutter_duration = SHUTTER_ANGLE / 360.0 / FPS as f32;
 
@@ -203,13 +220,24 @@ fn encode_editor_video(
             let time = (center_time + sample_phase * shutter_duration).max(0.0);
             let pixels = render_sample(renderer, time)?;
 
-            for (sum, byte) in accumulation.iter_mut().zip(pixels) {
-                *sum += u32::from(byte);
+            for (sum, pixel) in accumulation.chunks_exact_mut(4).zip(pixels.chunks_exact(4)) {
+                sum[0] += srgb_to_linear[pixel[0] as usize];
+                sum[1] += srgb_to_linear[pixel[1] as usize];
+                sum[2] += srgb_to_linear[pixel[2] as usize];
+                sum[3] += f32::from(pixel[3]) / 255.0;
             }
         }
 
-        for (output, sum) in blended_frame.iter_mut().zip(&accumulation) {
-            *output = ((sum + temporal_samples / 2) / temporal_samples) as u8;
+        let inverse_samples = 1.0 / temporal_samples as f32;
+        for (output, sum) in blended_frame
+            .chunks_exact_mut(4)
+            .zip(accumulation.chunks_exact(4))
+        {
+            for channel in 0..3 {
+                let linear = (sum[channel] * inverse_samples).clamp(0.0, 1.0);
+                output[channel] = linear_to_srgb[(linear * 65535.0).round() as usize];
+            }
+            output[3] = (sum[3] * inverse_samples * 255.0).round() as u8;
         }
 
         encoder.write_frame(&blended_frame)?;
@@ -389,24 +417,43 @@ async fn render_visual_effects(output: &Path) -> Result<()> {
     let cues = VisualEffectsCues::from_transcript(&transcript)?;
     let center = WIDTH as f32 * 0.5;
     let y = HEIGHT as f32 * 0.5;
-    let lang_one = Task::new("lang", "lang").at(center, y);
-    let lang_two = lang_one.clone().at(884.0, y);
-    let lang_three = lang_one.clone().at(808.0, y);
-    let launch_two = Task::new("launch", "launch").at(1112.0, y);
-    let launch_three = launch_two.clone().at(1036.0, y);
-    let pact = Task::new("pact", "pact").at(1188.0, y);
-    let classify_one = Task::new("classify", "classify").at(center, y);
-    let classify = classify_one.clone().at(808.0, y);
-    let classify_done = classify_one.clone().at(702.0, y);
-    let assign = Task::new("assign", "assign").at(960.0, y);
-    let assign_running = assign.clone().at(1015.0, y);
-    let notify = Task::new("notify", "notify").at(1112.0, y);
-    let notify_after_classify = notify.clone().at(1167.0, y);
-    let notify_after_assign = notify.clone().at(1273.0, y);
+    let mut renderer = HeadlessRenderer::new(RenderSpec {
+        width: WIDTH,
+        height: HEIGHT,
+        font_path: PathBuf::from(FONT_PATH),
+        file_name: "effect-simulacra".to_owned(),
+    })
+    .await?;
+    let typescript_width = renderer.measure_task_result_width("TypeScript");
+    let homicide_width = renderer.measure_task_result_width("HOMICIDE");
+    let detective_width = renderer.measure_task_result_width("JR. DETECTIVE");
+    let two_nodes = centered_task_row(center, &[typescript_width, 128.0], 24.0);
+    let three_nodes = centered_task_row(center, &[typescript_width, 128.0, 128.0], 24.0);
+    let idle_row = centered_task_row(center, &[128.0, 128.0, 128.0], 24.0);
+    let classify_done = centered_task_row(center, &[homicide_width, 128.0, 128.0], 24.0);
+    let assign_done = centered_task_row(center, &[homicide_width, detective_width, 128.0], 24.0);
+    let lang = Task::new("lang", "lang")
+        .at(center, y)
+        .with_result_width(typescript_width);
+    let launch = Task::new("launch", "launch").at(two_nodes[1], y);
+    let pact = Task::new("pact", "pact").at(three_nodes[2], y);
+    let classify = Task::new("classify", "classify")
+        .at(center, y)
+        .with_result_width(homicide_width);
+    let assign = Task::new("assign", "assign")
+        .at(idle_row[1], y)
+        .with_result_width(detective_width);
+    let notify = Task::new("notify", "notify").at(idle_row[2], y);
     let at = |seconds: f32, change| {
         Composition::delay(
             kinograph::composition::Duration::seconds(f64::from(seconds)),
             change,
+        )
+    };
+    let pose_at = |seconds: f32, change| {
+        Composition::delay(
+            kinograph::composition::Duration::seconds(f64::from(seconds)),
+            Composition::task_pose(change),
         )
     };
     let sound_at = |seconds: f32, clip: Clip| {
@@ -417,38 +464,37 @@ async fn render_visual_effects(output: &Path) -> Result<()> {
     };
     let composition = Composition::parallel([
         Composition::script(narration),
-        at(cues.demo, lang_one.idle()),
-        at(cues.lang_running, lang_one.run()),
-        at(cues.lang_completed, lang_one.succeed("TypeScript")),
-        at(cues.launch_visible, lang_two.succeed("TypeScript")),
-        at(cues.launch_visible, launch_two.idle()),
-        at(cues.launch_running, launch_two.run()),
-        at(cues.launch_failed, launch_two.fail("NoFuel")),
-        at(cues.pact_visible, lang_three.succeed("TypeScript")),
-        at(cues.pact_visible, launch_three.fail("NoFuel")),
+        at(cues.demo, lang.idle()),
+        at(cues.lang_running, lang.run()),
+        at(cues.lang_completed, lang.succeed("TypeScript")),
+        pose_at(cues.launch_visible, lang.move_to(two_nodes[0], y)),
+        at(cues.launch_visible, launch.idle()),
+        at(cues.launch_running, launch.run()),
+        at(cues.launch_failed, launch.fail("NoFuel")),
+        pose_at(cues.pact_visible, lang.move_to(three_nodes[0], y)),
+        pose_at(cues.pact_visible, launch.move_to(three_nodes[1], y)),
         at(cues.pact_visible, pact.idle()),
         at(cues.pact_running, pact.run()),
         at(cues.pact_death, pact.die("")),
-        at(cues.classify_visible, lang_three.hide()),
-        at(cues.classify_visible, launch_three.hide()),
+        at(cues.classify_visible, lang.hide()),
+        at(cues.classify_visible, launch.hide()),
         at(cues.classify_visible, pact.hide()),
-        at(cues.classify_visible, classify_one.idle()),
-        at(cues.combined, classify.idle()),
+        at(cues.classify_visible + 0.18, classify.idle()),
+        pose_at(cues.combined, classify.move_to(idle_row[0], y)),
         at(cues.combined, assign.idle()),
         at(cues.combined, notify.idle()),
         at(cues.classify_running, classify.run()),
         at(cues.assign_running, classify.succeed("HOMICIDE")),
-        at(cues.assign_running, assign_running.run()),
-        at(cues.assign_running, notify_after_classify.idle()),
-        at(cues.notify_running, classify_done.succeed("HOMICIDE")),
-        at(cues.notify_running, assign_running.succeed("JR. DETECTIVE")),
-        at(cues.notify_running, notify_after_assign.run()),
-        at(
-            cues.notify_failed,
-            notify_after_assign.fail("RateLimitError"),
-        ),
-        at(cues.notify_retry, notify_after_assign.run()),
-        at(cues.notify_completed, notify_after_assign.complete()),
+        pose_at(cues.assign_running, assign.move_to(classify_done[1], y)),
+        at(cues.assign_running, assign.run()),
+        pose_at(cues.assign_running, notify.move_to(classify_done[2], y)),
+        pose_at(cues.notify_running, classify.move_to(assign_done[0], y)),
+        at(cues.notify_running, assign.succeed("JR. DETECTIVE")),
+        pose_at(cues.notify_running, notify.move_to(assign_done[2], y)),
+        at(cues.notify_running, notify.run()),
+        at(cues.notify_failed, notify.fail("RateLimitError")),
+        at(cues.notify_retry, notify.run()),
+        at(cues.notify_completed, notify.complete()),
         sound_at(cues.lang_running, running_sound.clone()),
         sound_at(cues.launch_running, running_sound.clone()),
         sound_at(cues.pact_running, running_sound.clone()),
@@ -466,19 +512,13 @@ async fn render_visual_effects(output: &Path) -> Result<()> {
     ]);
     let scene =
         Scene::new(Vec::<(PropertyId, Scalar)>::new(), composition).compile(&HashMap::new())?;
-    let mut renderer = HeadlessRenderer::new(RenderSpec {
-        width: WIDTH,
-        height: HEIGHT,
-        font_path: PathBuf::from(FONT_PATH),
-        file_name: "effect-simulacra".to_owned(),
-    })
-    .await?;
-
     encode_editor_video(&mut renderer, output, &scene, |renderer, time| {
         let quote = visual_effects_quote(time, &cues);
         let nodes = scene.task_frames_at(time);
+        let links = visual_effects_task_links(time, &cues, &nodes);
         renderer.render_task_scene(&TaskSceneFrame {
             quote,
+            links: &links,
             nodes: &nodes,
         })
     })
@@ -571,6 +611,56 @@ fn visual_effects_quote(time: f32, cues: &VisualEffectsCues) -> Option<QuoteFram
         hide_quote: time >= cues.hide_quote,
         subliminal,
     })
+}
+
+fn centered_task_row(center: f32, widths: &[f32], gap: f32) -> Vec<f32> {
+    let total_width = widths.iter().sum::<f32>() + gap * widths.len().saturating_sub(1) as f32;
+    let mut cursor = center - total_width * 0.5;
+    widths
+        .iter()
+        .map(|width| {
+            let position = cursor + width * 0.5;
+            cursor += width + gap;
+            position
+        })
+        .collect()
+}
+
+fn visual_effects_task_links(
+    time: f32,
+    cues: &VisualEffectsCues,
+    nodes: &[kinograph::dsl::TaskFrame<'_>],
+) -> Vec<TaskLinkFrame> {
+    if time < cues.combined {
+        return Vec::new();
+    }
+    let node = |id: &str| {
+        nodes
+            .iter()
+            .find(|node| node.id.as_str() == id)
+            .map(|node| [node.x, node.y])
+    };
+    let (Some(classify), Some(assign), Some(notify)) =
+        (node("classify"), node("assign"), node("notify"))
+    else {
+        return Vec::new();
+    };
+    let handoff = |arrival: f32| {
+        let progress = (time - (arrival - 0.38)) / 0.38;
+        (0.0..=1.0).contains(&progress).then_some(progress)
+    };
+    vec![
+        TaskLinkFrame {
+            from: classify,
+            to: assign,
+            pulse: handoff(cues.assign_running),
+        },
+        TaskLinkFrame {
+            from: assign,
+            to: notify,
+            pulse: handoff(cues.notify_running),
+        },
+    ]
 }
 
 #[cfg(any())]

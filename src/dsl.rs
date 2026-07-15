@@ -5,7 +5,6 @@ use anyhow::{Context, Result};
 use crate::composition::{
     Asset, AssetKind, Composition, CueId, Duration, MediaPlacement, TimeRange,
 };
-use crate::motion::{MotionState, Spring};
 use crate::timeline::{Animation, PropertyId, SpringProfile, Timeline};
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
@@ -112,6 +111,7 @@ pub struct Task {
     name: String,
     x: f32,
     y: f32,
+    result_width: Option<f32>,
 }
 
 impl Task {
@@ -123,6 +123,7 @@ impl Task {
             name: name.into(),
             x: 0.0,
             y: 0.0,
+            result_width: None,
         }
     }
 
@@ -133,6 +134,27 @@ impl Task {
         );
         self.x = x;
         self.y = y;
+        self
+    }
+
+    pub fn move_to(&self, x: f32, y: f32) -> TaskPoseChange {
+        assert!(
+            x.is_finite() && y.is_finite(),
+            "task position must be finite"
+        );
+        TaskPoseChange {
+            id: self.id.clone(),
+            x,
+            y,
+        }
+    }
+
+    pub fn with_result_width(mut self, width: f32) -> Self {
+        assert!(
+            width.is_finite() && width > 0.0,
+            "task result width must be positive"
+        );
+        self.result_width = Some(width);
         self
     }
 
@@ -188,6 +210,23 @@ pub struct TaskChange {
     state: TaskState,
 }
 
+#[derive(Clone, Debug)]
+pub struct TaskPoseChange {
+    id: TaskId,
+    x: f32,
+    y: f32,
+}
+
+impl TaskPoseChange {
+    pub(crate) fn id(&self) -> &TaskId {
+        &self.id
+    }
+
+    pub(crate) fn position(&self) -> [f32; 2] {
+        [self.x, self.y]
+    }
+}
+
 impl TaskChange {
     pub(crate) fn task(&self) -> &Task {
         &self.task
@@ -203,7 +242,10 @@ pub struct TaskFrame<'a> {
     pub id: &'a TaskId,
     pub x: f32,
     pub y: f32,
+    pub x_velocity: f32,
+    pub y_velocity: f32,
     pub name: &'a str,
+    pub result_width: Option<f32>,
     pub previous_state: &'a TaskState,
     pub state: &'a TaskState,
     pub state_age: f32,
@@ -370,6 +412,48 @@ impl Scene {
             })
             .collect::<Vec<_>>();
         tasks.sort_by_key(|change| change.at);
+        let mut task_pose_properties = HashMap::new();
+        let mut task_pose_initial_values = Vec::new();
+        for task in &tasks {
+            if task_pose_properties.contains_key(&task.task.id) {
+                continue;
+            }
+            let x = PropertyId::new(format!("task.{}.x", task.task.id.as_str()));
+            let y = PropertyId::new(format!("task.{}.y", task.task.id.as_str()));
+            task_pose_initial_values.extend([(x.clone(), task.task.x), (y.clone(), task.task.y)]);
+            task_pose_properties.insert(task.task.id.clone(), (x, y));
+        }
+        let pose_profile = SpringProfile::new(0.379, 0.904, 0.01, 0.01);
+        let task_pose_animation = Animation::parallel(
+            lowered
+                .task_poses
+                .into_iter()
+                .map(|(at, pose)| {
+                    let (x, y) = task_pose_properties
+                        .get(pose.id())
+                        .with_context(|| {
+                            format!("task pose references unknown task '{}'", pose.id().as_str())
+                        })?
+                        .clone();
+                    let [target_x, target_y] = pose.position();
+                    Ok(Animation::delay(
+                        at.as_seconds() as f32,
+                        Animation::parallel([
+                            Animation::spring(x, target_x, pose_profile),
+                            Animation::spring(y, target_y, pose_profile),
+                        ]),
+                    ))
+                })
+                .chain(std::iter::once(Ok(Animation::hold(
+                    lowered.duration.as_seconds() as f32,
+                ))))
+                .collect::<Result<Vec<_>>>()?,
+        );
+        let task_pose_timeline = Timeline::compile_with_duration(
+            task_pose_initial_values,
+            &task_pose_animation,
+            lowered.duration.as_seconds() as f32,
+        )?;
         let timeline = Timeline::compile_with_duration(
             initial_values,
             &lowered.motion.resolve(targets)?,
@@ -382,6 +466,8 @@ impl Scene {
             duration: lowered.duration,
             images: self.images.clone(),
             tasks,
+            task_pose_timeline,
+            task_pose_properties,
             annotations: lowered
                 .annotations
                 .into_iter()
@@ -404,6 +490,8 @@ pub struct CompiledScene {
     duration: Duration,
     images: Vec<Image>,
     tasks: Vec<CompiledTaskChange>,
+    task_pose_timeline: Timeline,
+    task_pose_properties: HashMap<TaskId, (PropertyId, PropertyId)>,
     annotations: Vec<CompiledAnnotation>,
 }
 
@@ -461,11 +549,7 @@ impl CompiledScene {
                     .iter()
                     .filter(|change| &change.task.id == id && change.at.as_seconds() <= seconds)
                     .collect::<Vec<_>>();
-                let current_pose = *changes.last()?;
-                if current_pose.state == TaskState::Hidden {
-                    return None;
-                }
-                let previous_pose = changes.iter().rev().nth(1).copied().unwrap_or(current_pose);
+                let current = *changes.last()?;
                 let state_changes = changes
                     .iter()
                     .enumerate()
@@ -481,22 +565,31 @@ impl CompiledScene {
                     .copied()
                     .unwrap_or(current_state);
                 let state_age = (seconds - current_state.at.as_seconds()) as f32;
-                let pose_age = (seconds - current_pose.at.as_seconds()) as f32;
-                let visible_at = changes
+                if current_state.state == TaskState::Hidden && state_age >= 0.25 {
+                    return None;
+                }
+                let visible_change_count = if current_state.state == TaskState::Hidden {
+                    changes.len().saturating_sub(1)
+                } else {
+                    changes.len()
+                };
+                let visible_at = changes[..visible_change_count]
                     .iter()
                     .rev()
                     .take_while(|change| change.state != TaskState::Hidden)
                     .last()
-                    .map_or(current_pose.at, |change| change.at);
-                // Matches the Pixi row's stiffness: 220, damping: 24, mass: 0.8.
-                let layout = Spring::new(0.38, 0.9)
-                    .sample(MotionState::at(0.0), 1.0, pose_age)
-                    .position;
+                    .map_or(current.at, |change| change.at);
+                let (x_property, y_property) = self.task_pose_properties.get(id)?;
+                let x = self.task_pose_timeline.sample(x_property, seconds as f32)?;
+                let y = self.task_pose_timeline.sample(y_property, seconds as f32)?;
                 Some(TaskFrame {
                     id,
-                    x: previous_pose.task.x + (current_pose.task.x - previous_pose.task.x) * layout,
-                    y: previous_pose.task.y + (current_pose.task.y - previous_pose.task.y) * layout,
-                    name: &current_pose.task.name,
+                    x: x.position,
+                    y: y.position,
+                    x_velocity: x.velocity,
+                    y_velocity: y.velocity,
+                    name: &current.task.name,
+                    result_width: current.task.result_width,
                     previous_state: &previous_state.state,
                     state: &current_state.state,
                     state_age,
@@ -708,13 +801,13 @@ mod tests {
     #[test]
     fn task_state_changes_compile_as_composable_timeline_events() {
         let task = Task::new("request", "request").at(120.0, 80.0);
-        let moved = task.clone().at(240.0, 80.0);
         let scene = Scene::new(
             [],
             Composition::parallel([
                 task.idle().into(),
                 Composition::delay(Duration::seconds(0.5), task.run()),
-                Composition::delay(Duration::seconds(1.0), moved.succeed("OK")),
+                Composition::delay(Duration::seconds(1.0), task.succeed("OK")),
+                Composition::delay(Duration::seconds(1.0), task.move_to(240.0, 80.0)),
                 Composition::hold(Duration::seconds(2.0)),
             ]),
         );
@@ -744,6 +837,9 @@ mod tests {
         );
         let compiled = scene.compile(&HashMap::new()).unwrap();
 
+        let exiting = &compiled.task_frames_at(0.55)[0];
+        assert_eq!(exiting.state, &TaskState::Hidden);
+        assert!((exiting.visible_age - 0.55).abs() < 0.001);
         assert!(compiled.task_frames_at(0.75).is_empty());
         let shown = &compiled.task_frames_at(1.1)[0];
         assert_eq!(shown.state, &TaskState::Running);
@@ -751,15 +847,14 @@ mod tests {
     }
 
     #[test]
-    fn restating_a_task_state_for_layout_does_not_restart_its_transition() {
+    fn moving_a_task_does_not_restart_its_state_transition() {
         let task = Task::new("request", "request").at(120.0, 80.0);
-        let moved = task.clone().at(240.0, 80.0);
         let scene = Scene::new(
             [],
             Composition::parallel([
                 task.run().into(),
                 Composition::delay(Duration::seconds(0.5), task.succeed("OK")),
-                Composition::delay(Duration::seconds(1.0), moved.succeed("OK")),
+                Composition::delay(Duration::seconds(1.0), task.move_to(240.0, 80.0)),
                 Composition::hold(Duration::seconds(2.0)),
             ]),
         );
@@ -769,6 +864,27 @@ mod tests {
         assert_eq!(frame.state, &TaskState::Succeeded(Some("OK".to_owned())));
         assert!((frame.state_age - 0.6).abs() < 0.001);
         assert!(frame.x > 120.0 && frame.x < 240.0);
+    }
+
+    #[test]
+    fn interrupted_task_pose_motion_preserves_velocity() {
+        let task = Task::new("request", "request").at(120.0, 80.0);
+        let scene = Scene::new(
+            [],
+            Composition::parallel([
+                task.idle().into(),
+                Composition::delay(Duration::seconds(0.2), task.move_to(240.0, 80.0)),
+                Composition::delay(Duration::seconds(0.3), task.move_to(0.0, 80.0)),
+                Composition::hold(Duration::seconds(1.0)),
+            ]),
+        );
+        let compiled = scene.compile(&HashMap::new()).unwrap();
+
+        let before = &compiled.task_frames_at(0.2999)[0];
+        let redirected = &compiled.task_frames_at(0.3)[0];
+        assert!((redirected.x - before.x).abs() < 0.1);
+        assert!(redirected.x_velocity > 0.0);
+        assert!((redirected.x_velocity - before.x_velocity).abs() < 1.0);
     }
 
     #[test]

@@ -33,7 +33,7 @@ This Interface provides leverage beyond easing: deterministic out-of-order sampl
 
 `src/composition.rs` keeps immutable source assets separate from their uses in an edit. A `Clip` selects an exact source range; compiling a `Composition` places that range on the output timeline without modifying the asset.
 
-Composition supplies sequence, parallel, delay, hold, and named cue ranges across visual `Motion`, semantic annotations, stable Task state changes, and timed media. It distinguishes transcript-bearing script clips from accompanying layer clips such as sound effects, music, and B-roll. Cue-local parallel composition keeps an annotation and its sound synchronized as one authored event without coupling renderer recipes to audio assets. This mirrors the real behavioral difference exposed by transcript-led editors without introducing a graphical editor or media decoder.
+Composition supplies sequence, parallel, delay, hold, and named cue ranges across visual `Motion`, semantic annotations, stable Task state and pose changes, and timed media. It distinguishes transcript-bearing script clips from accompanying layer clips such as sound effects, music, and B-roll. Cue-local parallel composition keeps an annotation and its sound synchronized as one authored event without coupling renderer recipes to audio assets. This mirrors the real behavioral difference exposed by transcript-led editors without introducing a graphical editor or media decoder.
 
 Media time is stored as integer nanoseconds. Conversion to floating-point seconds happens only when visual motion is lowered into scalar trajectories, so repeated source-range edits retain exact boundaries.
 
@@ -92,7 +92,7 @@ Choreography should move behind a scene compiler only after a second scene revea
 
 ## The Rust DSL Produces Pure Values
 
-`src/dsl.rs` is the public authoring boundary exported through `src/lib.rs`. Authors compose property `Motion`, semantic `Annotation` values, Task state changes, and media in a `Composition`. Typed actors such as `Pointer` return ordinary motion values rather than executing animation. An annotation owns a semantic target, a closed effect recipe, and a positive duration; composition schedules it while scene compilation resolves its target and produces deterministic arbitrary-time annotation frames. Tasks similarly return composable `idle`, `run`, `succeed`, `complete`, `fail`, `die`, and `hide` leaves rather than retaining mutable renderer state.
+`src/dsl.rs` is the public authoring boundary exported through `src/lib.rs`. Authors compose property `Motion`, semantic `Annotation` values, Task state and pose changes, and media in a `Composition`. Typed actors such as `Pointer` return ordinary motion values rather than executing animation. An annotation owns a semantic target, a closed effect recipe, and a positive duration; composition schedules it while scene compilation resolves its target and produces deterministic arbitrary-time annotation frames. Tasks similarly return composable `idle`, `run`, `succeed`, `complete`, `fail`, `die`, `hide`, and `move_to` leaves rather than retaining mutable renderer state. Scene compilation lowers Task poses into independent x/y spring tracks, preserving velocity without treating layout as semantic feedback.
 
 Scalar targets may remain semantic while authoring. `TextTarget` identifies meaningful code content; `Scalar` expressions request its left edge, width, center, or attached offset. `Scene::compile` resolves measured target geometry once and lowers the complete tree into a `CompiledScene` containing the renderer-independent property `Timeline`, scheduled media placements, named cue ranges, and total duration.
 
@@ -106,7 +106,7 @@ The current hero is the first client of this API. There is no JSON or TypeScript
 - WGSL remains the shader language because it is native to wgpu and translated by Naga.
 - An FFmpeg subprocess handles H.264 encoding. [`ffmpeg-next`](https://github.com/zmwangx/rust-ffmpeg) is maintenance-only and adds an unnecessary FFI seam.
 - [`Vello`](https://github.com/linebender/vello) remains deferred because its API and wgpu compatibility are still moving. `lyon` is the likely addition if authored vector paths become necessary.
-- The current RGBA8 target is sufficient for the visual prototype. A production compositor should render and accumulate in linear `Rgba16Float`, then tone-map into the delivery color space.
+- The current RGBA8 render target is sufficient for the visual prototype. Temporal samples are decoded to linear light before CPU accumulation and converted back to sRGB once per output frame, avoiding dark gamma-space motion trails. A production compositor should render and accumulate directly in linear `Rgba16Float`, then tone-map into the delivery color space.
 
 ## Explicit Non-Abstractions
 

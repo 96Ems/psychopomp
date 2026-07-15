@@ -18,7 +18,7 @@ use crate::dsl::AnnotationFrame;
 mod effects;
 mod task;
 
-pub use task::{QuoteFrame, TaskSceneFrame};
+pub use task::{QuoteFrame, TaskLinkFrame, TaskSceneFrame};
 
 const FORMAT: wgpu::TextureFormat = wgpu::TextureFormat::Rgba8UnormSrgb;
 const BYTES_PER_PIXEL: u32 = 4;
@@ -227,6 +227,9 @@ pub struct HeadlessRenderer {
     pointer_sprite: TextSprite,
     line_sprites: HashMap<LineId, (u64, TextSprite)>,
     part_sprites: HashMap<String, (u64, TextSprite)>,
+    task_layer_pixels: Vec<u8>,
+    task_blur_source: Vec<[f32; 4]>,
+    task_blur_scratch: Vec<[f32; 4]>,
 }
 
 impl HeadlessRenderer {
@@ -362,6 +365,9 @@ impl HeadlessRenderer {
             pointer_sprite,
             line_sprites: HashMap::new(),
             part_sprites: HashMap::new(),
+            task_layer_pixels: Vec::new(),
+            task_blur_source: Vec::new(),
+            task_blur_scratch: Vec::new(),
         })
     }
 

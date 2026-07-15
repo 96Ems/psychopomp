@@ -77,6 +77,9 @@ The default artifact is `output/kinograph-prototype.mp4`.
 - Positive `asetpts` offsets do not place delayed layer audio reliably through FFmpeg's `amix`; explicit `adelay` placement is required. A band-limited comparison against narration confirmed that the old path silently mixed task sounds at the wrong time even though the output contained an AAC stream.
 - Task entrance defocus reads coherently only when blur applies to the assembled node layer. Blurring the icon independently while leaving its body and label sharp separates one stable actor into unrelated optical planes; container blur plus temporal sampling keeps defocus and motion blur distinct.
 - Task success audio works better as a compact confirmation than a musical reward: a quiet two-tone interval with a short 420 ms decay leaves narration space and matches the brief result-resolution motion better than the earlier sustained triad.
+- Task layout is a real motion channel rather than repeated state authoring. Dedicated pose leaves compile into velocity-preserving x/y tracks, while completed widths are measured from the same `cosmic-text` recipe used to render results and feed one centered row calculation.
+- Averaging encoded sRGB bytes darkens glow and motion-blurred edges. Decoding temporal samples through a lookup table, accumulating RGB in linear light, and encoding once per output frame preserves energy without requiring a new GPU target.
+- The sequential lesson reads more causally with two subdued authored links and short traveling handoff pulses. Keeping these links scene-specific avoids implying that every Task row is a generic dataflow graph.
 
 ## Next Question
 

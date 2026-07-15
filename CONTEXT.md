@@ -92,6 +92,10 @@ A stable visual actor representing one Effect computation. Composition schedules
 
 One meaningful snapshot of a Task. A task state selects semantic content and visual targets, while the renderer derives the transition from the preceding state at arbitrary media time. A succeeded task may carry a result or represent payload-free completion.
 
+## Task Pose
+
+The renderer-independent position of one Task. Pose changes are composition leaves distinct from semantic Task State changes, so row recentering cannot replay state feedback. Compiled x/y property tracks preserve position and velocity when layout movement is interrupted or redirected.
+
 ## Temporal Sample
 
 One evaluation of the complete scene within an output frame's shutter interval. Kinograph averages temporal samples to produce motion blur from real scene movement.
