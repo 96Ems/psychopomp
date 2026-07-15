@@ -122,9 +122,7 @@ async fn render_hero(output: &Path) -> Result<()> {
                 bursts: &bursts,
                 lines: &lines,
             };
-            let mut pixels = renderer.render_shapes(&frame)?;
-            renderer.composite_text(&mut pixels, &frame)?;
-            Ok(pixels)
+            renderer.render_editor(&frame)
         },
     )
 }
@@ -212,6 +210,7 @@ async fn render_effect_shows_errors(output: &Path) -> Result<()> {
         content: 1.0,
     });
     let hidden_indent_width = measure_text_width(&mut renderer, "  ")?;
+    let hidden_ellipsis_width = measure_text_width(&mut renderer, "...")?;
     let closing_angle_width = measure_text_width(&mut renderer, ">")?;
     let mut effect_target =
         measure_target(&mut renderer, &initial_lines, "sig", "Effect.Effect<number")?;
@@ -225,14 +224,18 @@ async fn render_effect_shows_errors(output: &Path) -> Result<()> {
     random_target.bounds.x -= hidden_indent_width;
     let mut sleep_target = measure_target(&mut renderer, &initial_lines, "sleep", "Effect.sleep")?;
     sleep_target.bounds.x -= hidden_indent_width;
+    let mut bad_roll_fail = measure_target(&mut renderer, &settled_lines, "fail", "VeryBadRoll")?;
+    bad_roll_fail.bounds.x -= hidden_ellipsis_width;
+    let mut fail_call = measure_target(&mut renderer, &settled_lines, "fail", "Effect.fail")?;
+    fail_call.bounds.x -= hidden_ellipsis_width;
     let targets = LessonTargets {
         effect: effect_target,
         slow_die: measure_target(&mut renderer, &initial_lines, "sig", "slowDie")?,
         random: random_target,
         sleep: sleep_target,
         roll: measure_target(&mut renderer, &settled_lines, "fail", "(n === 4)")?,
-        bad_roll_fail: measure_target(&mut renderer, &settled_lines, "fail", "VeryBadRoll")?,
-        fail_call: measure_target(&mut renderer, &settled_lines, "fail", "Effect.fail")?,
+        bad_roll_fail,
+        fail_call,
         error: measure_target(
             &mut renderer,
             &settled_lines,
@@ -326,8 +329,12 @@ fn effect_shows_errors_choreography(
     let squiggle = PropertyId::new("lesson.code.squiggle");
     let burst = PropertyId::new("lesson.code.burst");
     let focus_height = PropertyId::new("lesson.code.focus_height");
-    let product = SpringProfile::from_visual_duration(0.3, 0.0, 0.001, 0.001);
-    let pointer_motion = SpringProfile::from_visual_duration(0.42, 0.18, 0.001, 0.001);
+    let spotlight = SpringProfile::from_visual_duration(0.3, 0.0, 0.001, 0.001);
+    let variable_part = SpringProfile::from_visual_duration(0.4, 0.0, 0.001, 0.001);
+    let line_motion = SpringProfile::from_visual_duration(0.45, 0.0, 0.001, 0.001);
+    let pointer_motion = SpringProfile::from_visual_duration(0.5, 0.35, 0.001, 0.001);
+    let burst_motion = SpringProfile::from_visual_duration(0.4, 0.2, 0.001, 0.001);
+    let pointer_scale = 24.0 / 36.0;
 
     let effect = code.text("sig", "Effect.Effect<number");
     let slow_die = code.text("sig", "slowDie");
@@ -358,7 +365,7 @@ fn effect_shows_errors_choreography(
         at(
             cue,
             Motion::parallel([
-                code.highlight(target.clone(), product),
+                code.highlight(target.clone(), spotlight),
                 Motion::spring(pointer.opacity.clone(), 1.0, pointer_motion),
                 pointer.move_to(target, 55.0, pointer_motion),
             ]),
@@ -368,8 +375,8 @@ fn effect_shows_errors_choreography(
         at(
             cue,
             Motion::parallel([
-                code.focus(target.clone(), product),
-                code.highlight(target.clone(), product),
+                code.focus(target.clone(), spotlight),
+                code.highlight(target.clone(), spotlight),
                 Motion::spring(pointer.opacity.clone(), 1.0, pointer_motion),
                 pointer.move_to(target, 55.0, pointer_motion),
             ]),
@@ -380,14 +387,14 @@ fn effect_shows_errors_choreography(
         Composition::delay(reckon.start_offset(), Composition::layer(success)),
         Composition::delay(
             kinograph::composition::Duration::milliseconds(80.0),
-            Motion::spring(code.panel_y.clone(), 0.0, product),
+            Motion::spring(code.panel_y.clone(), 0.0, spotlight),
         ),
         at(
             transcript.word("Effect")?,
             Motion::parallel([
-                code.highlight(effect.clone(), product),
+                code.highlight(effect.clone(), spotlight),
                 Motion::spring(pointer.opacity.clone(), 1.0, pointer_motion),
-                Motion::spring(pointer.scale.clone(), 1.0, pointer_motion),
+                Motion::spring(pointer.scale.clone(), pointer_scale, pointer_motion),
                 Motion::spring(pointer.blur.clone(), 0.0, pointer_motion),
                 pointer.move_to(effect.clone(), 55.0, pointer_motion),
             ]),
@@ -398,53 +405,53 @@ fn effect_shows_errors_choreography(
         at(
             transcript.word("result.")?,
             Motion::parallel([
-                Motion::spring(code.focus.clone(), 0.0, product),
-                Motion::spring(code.highlight_opacity.clone(), 0.0, product),
-                Motion::spring(pointer.opacity.clone(), 0.0, product),
+                Motion::spring(code.focus.clone(), 0.0, spotlight),
+                Motion::spring(code.highlight_opacity.clone(), 0.0, spotlight),
+                Motion::spring(pointer.opacity.clone(), 0.0, pointer_motion),
             ]),
         ),
         at(
             transcript.word("lethal.")?,
             Motion::parallel([
-                Motion::spring(code.layout.clone(), 1.0, product),
-                Motion::spring(code.content.clone(), 1.0, product),
-                Motion::spring(inline_gen.clone(), 0.0, product),
-                Motion::spring(indent.clone(), 1.0, product),
+                Motion::spring(code.layout.clone(), 1.0, line_motion),
+                Motion::spring(code.content.clone(), 1.0, line_motion),
+                Motion::spring(inline_gen.clone(), 0.0, variable_part),
+                Motion::spring(indent.clone(), 1.0, variable_part),
             ]),
         ),
         at(
             transcript.word("roll")?,
             Motion::parallel([
-                Motion::spring(fail_layout.clone(), 1.0, product),
-                Motion::spring(fail_content.clone(), 1.0, product),
+                Motion::spring(fail_layout.clone(), 1.0, line_motion),
+                Motion::spring(fail_content.clone(), 1.0, line_motion),
                 Motion::spring(pointer.opacity.clone(), 1.0, pointer_motion),
-                code.focus(roll.clone(), product),
-                code.highlight(roll.clone(), product),
+                code.focus(roll.clone(), spotlight),
+                code.highlight(roll.clone(), spotlight),
                 pointer.move_to(roll, 55.0, pointer_motion),
             ]),
         ),
         at(
             transcript.word("fail")?,
             Motion::parallel([
-                Motion::spring(fail_action.clone(), 1.0, product),
-                Motion::spring(ellipsis.clone(), 0.0, product),
-                code.highlight(bad_roll_fail.clone(), product),
+                Motion::spring(fail_action.clone(), 1.0, variable_part),
+                Motion::spring(ellipsis.clone(), 0.0, variable_part),
+                code.highlight(bad_roll_fail.clone(), spotlight),
                 pointer.move_to(bad_roll_fail, 55.0, pointer_motion),
             ]),
         ),
         at(
             transcript.word("finally,")?,
             Motion::parallel([
-                Motion::spring(error_comment.clone(), 1.0, product),
-                Motion::spring(squiggle.clone(), 1.0, product),
-                Motion::spring(code.focus.clone(), 1.0, product),
+                Motion::spring(error_comment.clone(), 1.0, variable_part),
+                Motion::spring(squiggle.clone(), 1.0, spotlight),
+                Motion::spring(code.focus.clone(), 1.0, spotlight),
                 Motion::spring(
                     code.focus_y.clone(),
                     Scalar::TargetLineY(effect.clone()).offset(-22.0),
-                    product,
+                    spotlight,
                 ),
-                Motion::spring(focus_height.clone(), 88.0, product),
-                Motion::spring(code.highlight_opacity.clone(), 0.0, product),
+                Motion::spring(focus_height.clone(), 88.0, spotlight),
+                Motion::spring(code.highlight_opacity.clone(), 0.0, spotlight),
                 Motion::spring(pointer.opacity.clone(), 0.0, pointer_motion),
             ]),
         ),
@@ -453,33 +460,33 @@ fn effect_shows_errors_choreography(
             at(
                 transcript.word("propagates")?,
                 Motion::parallel([
-                    Motion::spring(code.focus.clone(), 0.0, product),
-                    Motion::spring(focus_height.clone(), 44.0, product),
+                    Motion::spring(code.focus.clone(), 0.0, spotlight),
+                    Motion::spring(focus_height.clone(), 44.0, spotlight),
                 ]),
             ),
         ]),
         at(
             reckon.clone(),
             Motion::parallel([
-                Motion::spring(error_comment.clone(), 0.0, product),
-                Motion::spring(error_type.clone(), 1.0, product),
-                Motion::spring(squiggle.clone(), 0.0, product),
-                Motion::spring(burst.clone(), 1.0, product),
-                Motion::spring(code.focus.clone(), 0.0, product),
-                code.highlight(bad_roll_type.clone(), product),
+                Motion::spring(error_comment.clone(), 0.0, variable_part),
+                Motion::spring(error_type.clone(), 1.0, variable_part),
+                Motion::spring(squiggle.clone(), 0.0, spotlight),
+                Motion::spring(burst.clone(), 1.0, burst_motion),
+                Motion::spring(code.focus.clone(), 0.0, spotlight),
+                code.highlight(bad_roll_type.clone(), spotlight),
                 pointer.move_to(bad_roll_type, 55.0, pointer_motion),
             ]),
         ),
         Composition::delay(
             kinograph::composition::Duration::seconds(reckon.start().as_seconds() + 0.7),
-            Motion::spring(burst.clone(), 0.0, product),
+            Motion::spring(burst.clone(), 0.0, burst_motion),
         ),
         at(
             transcript.word("TypeScript.")?,
             Motion::parallel([
-                Motion::spring(code.focus.clone(), 0.0, product),
-                Motion::spring(code.highlight_opacity.clone(), 0.0, product),
-                Motion::spring(pointer.opacity.clone(), 0.0, product),
+                Motion::spring(code.focus.clone(), 0.0, spotlight),
+                Motion::spring(code.highlight_opacity.clone(), 0.0, spotlight),
+                Motion::spring(pointer.opacity.clone(), 0.0, spotlight),
             ]),
         ),
     ]);
@@ -515,7 +522,7 @@ fn effect_shows_errors_choreography(
                 },
             ),
             (pointer.opacity.clone(), Scalar::Literal(0.0)),
-            (pointer.scale.clone(), Scalar::Literal(0.7)),
+            (pointer.scale.clone(), Scalar::Literal(pointer_scale * 0.7)),
             (pointer.blur.clone(), Scalar::Literal(4.0)),
             (fail_action.clone(), Scalar::Literal(0.0)),
             (error_comment.clone(), Scalar::Literal(0.0)),
@@ -611,6 +618,7 @@ fn render_effect_shows_errors_sample(
             content: sample(&choreography.fail_content),
         })
     };
+    let indent = sample(&choreography.indent);
     let reveals = vec![
         InlineRevealFrame {
             line_id: "comment",
@@ -646,25 +654,25 @@ fn render_effect_shows_errors_sample(
             line_id: "random",
             start_span: 0,
             end_span: 1,
-            progress: sample(&choreography.indent),
+            progress: indent,
         },
         InlineRevealFrame {
             line_id: "sleep",
             start_span: 0,
             end_span: 1,
-            progress: sample(&choreography.indent),
+            progress: indent,
         },
         InlineRevealFrame {
             line_id: "return",
             start_span: 0,
             end_span: 1,
-            progress: sample(&choreography.indent),
+            progress: indent,
         },
         InlineRevealFrame {
             line_id: "close",
             start_span: 0,
             end_span: 1,
-            progress: sample(&choreography.indent),
+            progress: indent,
         },
     ];
     let squiggles = [SquiggleFrame {
@@ -695,9 +703,7 @@ fn render_effect_shows_errors_sample(
         bursts: &bursts,
         lines: &lines,
     };
-    let mut pixels = renderer.render_shapes(&frame)?;
-    renderer.composite_text(&mut pixels, &frame)?;
-    Ok(pixels)
+    renderer.render_editor(&frame)
 }
 
 #[derive(Clone, Copy)]

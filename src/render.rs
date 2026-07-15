@@ -358,6 +358,12 @@ impl HeadlessRenderer {
         Ok(frame_bytes)
     }
 
+    pub fn render_editor(&mut self, frame: &EditorFrame<'_>) -> Result<Vec<u8>> {
+        let mut pixels = self.render_shapes(frame)?;
+        self.composite_text(&mut pixels, frame)?;
+        Ok(pixels)
+    }
+
     pub fn composite_text(&mut self, pixels: &mut [u8], frame: &EditorFrame<'_>) -> Result<()> {
         let expected = self.spec.width as usize * self.spec.height as usize * 4;
         if pixels.len() != expected {
@@ -395,13 +401,17 @@ impl HeadlessRenderer {
             }
             let line_x = self.spec.width as f32 * 0.145 + placed.x;
             let line_y = code_top + placed.y;
-            let reveals = frame
+            if frame
                 .inline_reveals
                 .iter()
-                .filter(|reveal| placed.line.id.as_str() == reveal.line_id)
-                .copied()
-                .collect::<Vec<_>>();
-            if !reveals.is_empty() {
+                .any(|reveal| placed.line.id.as_str() == reveal.line_id)
+            {
+                let reveals = frame
+                    .inline_reveals
+                    .iter()
+                    .filter(|reveal| placed.line.id.as_str() == reveal.line_id)
+                    .copied()
+                    .collect::<Vec<_>>();
                 self.composite_inline_reveals(pixels, placed, &reveals, line_x, line_y)?;
                 continue;
             }
@@ -989,6 +999,9 @@ fn composite_squiggle(
     opacity: f32,
 ) {
     let opacity = opacity.clamp(0.0, 1.0);
+    if opacity <= 0.001 {
+        return;
+    }
     for offset_x in 0..width.max(0.0).round() as i32 {
         let wave_y = ((offset_x as f32 * 0.48).sin() * 2.0).round() as i32;
         for thickness in 0..2 {
