@@ -248,6 +248,7 @@ pub struct TaskFrame<'a> {
     pub name: &'a str,
     pub result_width: Option<f32>,
     pub previous_state: &'a TaskState,
+    pub previous_state_duration: f32,
     pub state: &'a TaskState,
     pub state_age: f32,
     pub visible_age: f32,
@@ -565,6 +566,8 @@ impl CompiledScene {
                     .nth(1)
                     .copied()
                     .unwrap_or(current_state);
+                let previous_state_duration =
+                    (current_state.at.as_seconds() - previous_state.at.as_seconds()) as f32;
                 let state_age = (seconds - current_state.at.as_seconds()) as f32;
                 if current_state.state == TaskState::Hidden && state_age >= 0.25 {
                     return None;
@@ -592,6 +595,7 @@ impl CompiledScene {
                     name: &current.task.name,
                     result_width: current.task.result_width,
                     previous_state: &previous_state.state,
+                    previous_state_duration,
                     state: &current_state.state,
                     state_age,
                     visible_age: (seconds - visible_at.as_seconds()) as f32,
@@ -943,6 +947,7 @@ mod tests {
             completed.state,
             &TaskState::Succeeded(Some("OK".to_owned()))
         );
+        assert!((completed.previous_state_duration - 0.5).abs() < 0.001);
         assert!((completed.x - 240.0).abs() < 0.1);
     }
 

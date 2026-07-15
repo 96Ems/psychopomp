@@ -95,9 +95,37 @@ pub(crate) async fn render(output: &Path) -> Result<()> {
         Time::ZERO,
         Time::seconds(DESCRIPTION_AUDIO_DURATION),
     ));
+    let task_asset_directory = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("assets")
+        .join("visual-effects");
+    let running_sound = Asset::audio(
+        "description-task-running",
+        task_asset_directory.join("task-running.wav"),
+    )
+    .clip(TimeRange::new(Time::ZERO, Time::seconds(0.14)))
+    .gain_db(18.0);
+    let success_sound = Asset::audio(
+        "description-task-success",
+        task_asset_directory.join("task-success.wav"),
+    )
+    .clip(TimeRange::new(Time::ZERO, Time::seconds(0.42)))
+    .gain_db(12.0);
+    let reset_sound = Asset::audio(
+        "description-task-reset",
+        task_asset_directory.join("task-reset.wav"),
+    )
+    .clip(TimeRange::new(Time::ZERO, Time::seconds(0.34)))
+    .gain_db(12.0);
     let timestamp_width = renderer.measure_task_result_width("1736078400000");
-    let choreography =
-        effect_is_a_description_choreography(&transcript, targets, timestamp_width, narration)?;
+    let choreography = effect_is_a_description_choreography(
+        &transcript,
+        targets,
+        timestamp_width,
+        narration,
+        running_sound,
+        success_sound,
+        reset_sound,
+    )?;
 
     encode_video_with_samples(
         &mut renderer,
@@ -161,6 +189,9 @@ fn effect_is_a_description_choreography(
     measured: DescriptionTargets,
     timestamp_width: f32,
     narration: Clip,
+    running_sound: Clip,
+    success_sound: Clip,
+    reset_sound: Clip,
 ) -> Result<EffectIsADescriptionChoreography> {
     let code = Code::new("description.code");
     let pointer = Pointer::new("description.pointer");
@@ -245,7 +276,9 @@ fn effect_is_a_description_choreography(
         ])),
         focus_cursor_at(run_effect, run.clone()),
         run.at(get_time.run()),
+        run.at(Composition::layer(running_sound)),
         explicitly.at(get_time.succeed("1736078400000")),
+        explicitly.at(Composition::layer(success_sound)),
         function.at(Motion::parallel([
             function_edit.enter(line_motion),
             Motion::spring(type_annotation.clone(), 0.0, variable_part),
@@ -258,6 +291,7 @@ fn effect_is_a_description_choreography(
             pointer.move_to(function_impl, 55.0, pointer_motion),
         ])),
         function.at(get_time.idle()),
+        function.at(Composition::layer(reset_sound)),
         focus_cursor_at(function_call, called),
         laziness.at(Motion::parallel([
             function_comment_edit.enter(line_motion),

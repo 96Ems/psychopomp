@@ -1092,6 +1092,37 @@ fn composite_sprite_rotated(
     blur: f32,
     opacity: f32,
 ) {
+    composite_sprite_rotated_with_coverage(
+        canvas,
+        canvas_width,
+        canvas_height,
+        sprite,
+        display_width,
+        display_height,
+        center_x,
+        center_y,
+        rotation,
+        blur,
+        opacity,
+        |_, _| 1.0,
+    );
+}
+
+#[allow(clippy::too_many_arguments)]
+fn composite_sprite_rotated_with_coverage(
+    canvas: &mut [u8],
+    canvas_width: u32,
+    canvas_height: u32,
+    sprite: &TextSprite,
+    display_width: f32,
+    display_height: f32,
+    center_x: f32,
+    center_y: f32,
+    rotation: f32,
+    blur: f32,
+    opacity: f32,
+    coverage_at: impl Fn(f32, f32) -> f32,
+) {
     if opacity <= 0.001 {
         return;
     }
@@ -1112,6 +1143,10 @@ fn composite_sprite_rotated(
         for offset_x in -radius..=radius {
             let target_x = center_pixel_x + offset_x;
             if !(0..canvas_width as i32).contains(&target_x) {
+                continue;
+            }
+            let coverage = coverage_at(target_x as f32 + 0.5, target_y as f32 + 0.5);
+            if coverage <= 0.0 {
                 continue;
             }
             const SAMPLE_GRID: i32 = 4;
@@ -1154,7 +1189,11 @@ fn composite_sprite_rotated(
                 (alpha_sum / sample_count) as u8,
             ];
             let target_index = (target_y as usize * canvas_width as usize + target_x as usize) * 4;
-            blend_pixel(&mut canvas[target_index..target_index + 4], source, opacity);
+            blend_pixel(
+                &mut canvas[target_index..target_index + 4],
+                source,
+                opacity * coverage,
+            );
         }
     }
 }
@@ -1372,8 +1411,96 @@ fn attributes(base: Attrs<'static>, style: SyntaxStyle) -> Attrs<'static> {
 #[cfg(test)]
 mod tests {
     use super::{
-        InlineRevealFrame, inline_reveal_segments, invert_matrix_3x3, multiply_matrix_point,
+        InlineRevealFrame, TextSprite, composite_sprite_rotated,
+        composite_sprite_rotated_with_coverage, inline_reveal_segments, invert_matrix_3x3,
+        multiply_matrix_point,
     };
+
+    fn opaque_test_sprite() -> TextSprite {
+        TextSprite {
+            width: 4,
+            height: 4,
+            advance: 4.0,
+            pixels: vec![255; 4 * 4 * 4],
+        }
+    }
+
+    #[test]
+    fn unmasked_rotated_sprite_matches_constant_coverage() {
+        let sprite = opaque_test_sprite();
+        let mut wrapped = vec![0_u8; 20 * 20 * 4];
+        let mut generic = wrapped.clone();
+
+        composite_sprite_rotated(
+            &mut wrapped,
+            20,
+            20,
+            &sprite,
+            8.0,
+            8.0,
+            10.0,
+            10.0,
+            0.2,
+            1.0,
+            0.8,
+        );
+        composite_sprite_rotated_with_coverage(
+            &mut generic,
+            20,
+            20,
+            &sprite,
+            8.0,
+            8.0,
+            10.0,
+            10.0,
+            0.2,
+            1.0,
+            0.8,
+            |_, _| 1.0,
+        );
+
+        assert_eq!(wrapped, generic);
+    }
+
+    #[test]
+    fn rotated_sprite_coverage_clips_after_blur_sampling() {
+        let sprite = opaque_test_sprite();
+        let mut pixels = vec![0_u8; 20 * 20 * 4];
+        let coverage = |x: f32, y: f32| {
+            if (8.0..12.0).contains(&x) && (8.0..12.0).contains(&y) {
+                1.0
+            } else {
+                0.0
+            }
+        };
+
+        composite_sprite_rotated_with_coverage(
+            &mut pixels,
+            20,
+            20,
+            &sprite,
+            12.0,
+            12.0,
+            10.0,
+            10.0,
+            0.35,
+            2.0,
+            1.0,
+            coverage,
+        );
+
+        let mut painted = 0;
+        for y in 0..20 {
+            for x in 0..20 {
+                let alpha = pixels[(y * 20 + x) * 4 + 3];
+                if alpha > 0 {
+                    painted += 1;
+                    assert!(coverage(x as f32 + 0.5, y as f32 + 0.5) > 0.0);
+                }
+            }
+        }
+        assert!(painted > 0);
+    }
 
     #[test]
     fn perspective_matrix_round_trips_points() {

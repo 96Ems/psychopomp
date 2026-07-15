@@ -12,7 +12,7 @@ use crate::motion::{MotionState, Spring};
 
 use super::{
     HeadlessRenderer, TextSprite, blend_pixel, composite_sprite, composite_sprite_rotated,
-    make_sprite, rasterize_svg,
+    composite_sprite_rotated_with_coverage, make_sprite, rasterize_svg,
 };
 
 const QUOTE_WORDS: [&str; 8] = ["why", "would", "I", "ever", "want", "to", "use", "Effect?"];
@@ -22,6 +22,13 @@ const RUNNING_JITTER_MAX_INTERVAL: f32 = 0.14;
 const RUNNING_JITTER_LAMBDA: f32 = 28.0;
 const ENERGY_SPEED: f32 = 500.0;
 const ENERGY_SPACING: f32 = 122.0;
+
+#[derive(Clone, Copy)]
+struct TaskClip {
+    center: [f32; 2],
+    size: [f32; 2],
+    rotation: f32,
+}
 
 #[derive(Clone, Copy)]
 pub struct QuoteFrame<'a> {
@@ -236,6 +243,17 @@ impl HeadlessRenderer {
         let mut offset = [0.0, 0.0];
         let mut rotation = 0.0;
         let mut charge_energy = 0.0;
+        if matches!(node.previous_state, TaskState::Running)
+            && !matches!(node.state, TaskState::Running)
+        {
+            let jitter = settling_running_jitter(
+                node.id.as_str(),
+                node.previous_state_duration,
+                node.state_age,
+            );
+            offset = [jitter[0], jitter[1]];
+            rotation = jitter[2];
+        }
         let target_color = match node.state {
             TaskState::Hidden => task_state_color(node.previous_state),
             TaskState::Idle => [71, 85, 105],
@@ -250,12 +268,13 @@ impl HeadlessRenderer {
             TaskState::Succeeded(_) => [21, 128, 61],
             TaskState::Failed(_) => {
                 let jitter = failure_jitter(node.id.as_str(), node.state_age, 0.32);
-                offset = [jitter[0], jitter[1]];
-                rotation = jitter[2];
+                offset[0] += jitter[0];
+                offset[1] += jitter[1];
+                rotation += jitter[2];
                 [239, 68, 68]
             }
             TaskState::Death(_) => {
-                offset[1] = 6.0 * (1.0 - (-8.0 * node.state_age).exp());
+                offset[1] += 6.0 * (1.0 - (-8.0 * node.state_age).exp());
                 [8, 8, 9]
             }
         };
@@ -284,6 +303,11 @@ impl HeadlessRenderer {
         let center = [node.x + offset[0], node.y + offset[1]];
         width *= scale;
         height *= scale;
+        let clip = TaskClip {
+            center,
+            size: [width.max(0.0), height.max(0.0)],
+            rotation,
+        };
 
         if matches!(node.state, TaskState::Running) {
             let glow = 0.2 + charge_energy * 0.18;
@@ -343,42 +367,36 @@ impl HeadlessRenderer {
             );
         }
 
+        let state_changed = node.state != node.previous_state;
+        if state_changed {
+            self.composite_exiting_task_content(pixels, node.previous_state, clip, node.state_age);
+        }
+
         match node.state {
-            TaskState::Idle => self.composite_task_icon(
-                pixels,
-                "sparkle",
-                center,
-                58.0 * enter,
-                0.0,
-                enter,
-                0.0,
-                [245, 245, 245],
-            ),
-            TaskState::Running => {
-                let overlap = 1.0 - smoothstep((node.state_age / 0.14).clamp(0.0, 1.0));
-                match node.previous_state {
-                    TaskState::Idle => self.composite_task_icon(
-                        pixels,
-                        "sparkle",
-                        center,
-                        58.0 * (0.9 + overlap * 0.1),
-                        rotation,
-                        overlap,
-                        (1.0 - overlap) * 3.0,
-                        [245, 245, 245],
-                    ),
-                    TaskState::Failed(_) | TaskState::Death(_) => self.composite_task_icon(
-                        pixels,
-                        "error",
-                        center,
-                        58.0 * (0.9 + overlap * 0.1),
-                        rotation,
-                        overlap,
-                        (1.0 - overlap) * 4.0,
-                        [255, 245, 245],
-                    ),
-                    _ => {}
+            TaskState::Idle => {
+                let icon = if state_changed {
+                    let delay = if matches!(node.previous_state, TaskState::Succeeded(_)) {
+                        0.1
+                    } else {
+                        0.0
+                    };
+                    1.0 - (-18.0 * (node.state_age - delay).max(0.0)).exp()
+                } else {
+                    enter
                 }
+                .clamp(0.0, 1.0);
+                self.composite_task_icon(
+                    pixels,
+                    "sparkle",
+                    center,
+                    58.0 * (0.7 + icon * 0.3),
+                    rotation - (1.0 - icon) * 0.14,
+                    icon,
+                    (1.0 - icon) * 6.0,
+                    [245, 245, 245],
+                );
+            }
+            TaskState::Running => {
                 if let TaskState::Failed(error) = node.previous_state
                     && !error.is_empty()
                     && node.state_age < 0.2
@@ -395,7 +413,10 @@ impl HeadlessRenderer {
                 }
             }
             TaskState::Succeeded(_) => {
-                let content = spring_progress(node.state_age, 0.25, 0.68);
+                let content_opacity = (1.0 - (-18.0 * node.state_age).exp()) * 0.9;
+                let content_scale =
+                    motion_spring_progress(node.state_age, 0.25, 0.4).clamp(0.0, 1.0);
+                let content_blur = (-20.0 * node.state_age).exp() * 10.0;
                 draw_state_pulse(
                     pixels,
                     self.spec.width,
@@ -410,29 +431,33 @@ impl HeadlessRenderer {
                     true,
                 );
                 if let Some(result) = result {
-                    self.composite_task_text(
+                    self.composite_task_text_effect(
                         pixels,
                         result,
-                        center[0],
-                        center[1],
-                        32.0 * 1.15 * (0.5 + content * 0.5),
+                        clip,
+                        32.0 * 1.15,
                         [245, 250, 247],
-                        content.clamp(0.0, 1.0),
+                        0.5 + content_scale * 0.5,
+                        rotation,
+                        content_blur,
+                        content_opacity,
                     );
                 } else {
-                    self.composite_task_text(
+                    self.composite_task_text_effect(
                         pixels,
                         "✓",
-                        center[0],
-                        center[1],
-                        46.0 * (0.6 + content * 0.4),
+                        clip,
+                        46.0,
                         [245, 250, 247],
-                        content.clamp(0.0, 1.0),
+                        0.5 + content_scale * 0.5,
+                        rotation,
+                        content_blur,
+                        content_opacity,
                     );
                 }
             }
             TaskState::Failed(_) | TaskState::Death(_) => {
-                let icon = spring_progress(node.state_age, 0.25, 0.72);
+                let icon = (1.0 - (-18.0 * node.state_age).exp()).clamp(0.0, 1.0);
                 draw_state_pulse(
                     pixels,
                     self.spec.width,
@@ -454,10 +479,10 @@ impl HeadlessRenderer {
                     pixels,
                     "error",
                     center,
-                    58.0 * icon,
-                    rotation,
-                    icon.clamp(0.0, 1.0),
-                    (1.0 - icon.clamp(0.0, 1.0)) * 6.0,
+                    58.0 * (0.7 + icon * 0.3),
+                    rotation - (1.0 - icon) * 0.14,
+                    icon,
+                    (1.0 - icon) * 6.0,
                     if matches!(node.state, TaskState::Death(_)) {
                         [255, 45, 45]
                     } else {
@@ -478,36 +503,8 @@ impl HeadlessRenderer {
                     );
                 }
             }
-            TaskState::Hidden => match node.previous_state {
-                TaskState::Idle => self.composite_task_icon(
-                    pixels,
-                    "sparkle",
-                    center,
-                    58.0 * exit,
-                    rotation,
-                    exit,
-                    (1.0 - exit) * 5.0,
-                    [245, 245, 245],
-                ),
-                TaskState::Succeeded(Some(result)) => self.composite_task_text(
-                    pixels,
-                    result,
-                    center[0],
-                    center[1],
-                    32.0 * 1.15,
-                    [245, 250, 247],
-                    exit,
-                ),
-                TaskState::Succeeded(None) => self.composite_task_text(
-                    pixels,
-                    "✓",
-                    center[0],
-                    center[1],
-                    46.0,
-                    [245, 250, 247],
-                    exit,
-                ),
-                TaskState::Running => {
+            TaskState::Hidden => {
+                if matches!(node.previous_state, TaskState::Running) {
                     draw_energy_sweep(
                         pixels,
                         self.spec.width,
@@ -515,7 +512,7 @@ impl HeadlessRenderer {
                         center,
                         [width, height],
                         rotation,
-                        node.state_age,
+                        node.previous_state_duration + node.state_age,
                     );
                     stroke_rotated_rect(
                         pixels,
@@ -528,18 +525,7 @@ impl HeadlessRenderer {
                         exit * 0.5,
                     );
                 }
-                TaskState::Failed(_) | TaskState::Death(_) => self.composite_task_icon(
-                    pixels,
-                    "error",
-                    center,
-                    58.0 * exit,
-                    rotation,
-                    exit,
-                    (1.0 - exit) * 5.0,
-                    [255, 245, 245],
-                ),
-                TaskState::Hidden => {}
-            },
+            }
         }
         self.composite_task_text(
             pixels,
@@ -554,6 +540,68 @@ impl HeadlessRenderer {
             },
             enter * exit * 0.8,
         );
+    }
+
+    fn composite_exiting_task_content(
+        &mut self,
+        pixels: &mut [u8],
+        state: &TaskState,
+        clip: TaskClip,
+        age: f32,
+    ) {
+        let opacity = (-18.0 * age).exp();
+        let progress = 1.0 - opacity;
+        let center = clip.center;
+        let rotation = clip.rotation;
+        match state {
+            TaskState::Idle => self.composite_task_icon(
+                pixels,
+                "sparkle",
+                center,
+                58.0 * (1.0 - progress * 0.1),
+                rotation + progress * 0.08,
+                opacity,
+                progress * 6.0,
+                [245, 245, 245],
+            ),
+            TaskState::Succeeded(Some(result)) => self.composite_task_text_effect(
+                pixels,
+                result,
+                clip,
+                32.0 * 1.15,
+                [245, 250, 247],
+                1.0 - progress * 0.04,
+                rotation,
+                progress * 6.0,
+                opacity,
+            ),
+            TaskState::Succeeded(None) => self.composite_task_text_effect(
+                pixels,
+                "✓",
+                clip,
+                46.0,
+                [245, 250, 247],
+                1.0 - progress * 0.04,
+                rotation,
+                progress * 6.0,
+                opacity,
+            ),
+            TaskState::Failed(_) | TaskState::Death(_) => self.composite_task_icon(
+                pixels,
+                "error",
+                center,
+                58.0 * (1.0 - progress * 0.1),
+                rotation + progress * 0.08,
+                opacity,
+                progress * 6.0,
+                if matches!(state, TaskState::Death(_)) {
+                    [255, 45, 45]
+                } else {
+                    [255, 245, 245]
+                },
+            ),
+            TaskState::Hidden | TaskState::Running => {}
+        }
     }
 
     fn composite_task_bubble(
@@ -678,6 +726,48 @@ impl HeadlessRenderer {
         );
     }
 
+    #[allow(clippy::too_many_arguments)]
+    fn composite_task_text_effect(
+        &mut self,
+        pixels: &mut [u8],
+        text: &str,
+        clip: TaskClip,
+        font_size: f32,
+        color: [u8; 3],
+        scale: f32,
+        rotation: f32,
+        blur: f32,
+        opacity: f32,
+    ) {
+        let canvas_width = self.spec.width;
+        let canvas_height = self.spec.height;
+        let sprite = self.task_text_sprite(text, font_size, color);
+        let (clip_sine, clip_cosine) = clip.rotation.sin_cos();
+        composite_sprite_rotated_with_coverage(
+            pixels,
+            canvas_width,
+            canvas_height,
+            sprite,
+            sprite.width as f32 * scale,
+            sprite.height as f32 * scale,
+            clip.center[0],
+            clip.center[1],
+            rotation,
+            blur,
+            opacity,
+            move |x, y| {
+                if clip.size[0] <= 0.0 || clip.size[1] <= 0.0 {
+                    return 0.0;
+                }
+                let dx = x - clip.center[0];
+                let dy = y - clip.center[1];
+                let local_x = dx * clip_cosine + dy * clip_sine;
+                let local_y = -dx * clip_sine + dy * clip_cosine;
+                rounded_rect_coverage(local_x, local_y, clip.size)
+            },
+        );
+    }
+
     fn task_text_sprite(&mut self, text: &str, font_size: f32, color: [u8; 3]) -> &TextSprite {
         let mut hasher = DefaultHasher::new();
         text.hash(&mut hasher);
@@ -690,7 +780,7 @@ impl HeadlessRenderer {
                 .weight(Weight::NORMAL)
                 .color(Color::rgb(color[0], color[1], color[2]));
             let height = (font_size * 1.5).ceil() as u32;
-            let sprite = make_sprite(
+            let mut sprite = make_sprite(
                 &mut self.font_system,
                 &mut self.swash_cache,
                 vec![(text, attrs.clone())],
@@ -699,6 +789,19 @@ impl HeadlessRenderer {
                 720,
                 height,
             );
+            let cropped_width = sprite.advance.ceil().max(1.0) as u32;
+            if cropped_width < sprite.width {
+                let mut cropped = vec![0_u8; cropped_width as usize * sprite.height as usize * 4];
+                for y in 0..sprite.height as usize {
+                    let source_start = y * sprite.width as usize * 4;
+                    let target_start = y * cropped_width as usize * 4;
+                    let row_bytes = cropped_width as usize * 4;
+                    cropped[target_start..target_start + row_bytes]
+                        .copy_from_slice(&sprite.pixels[source_start..source_start + row_bytes]);
+                }
+                sprite.width = cropped_width;
+                sprite.pixels = cropped;
+            }
             self.part_sprites.insert(key.clone(), (0, sprite));
         }
         &self.part_sprites[&key].1
@@ -1030,6 +1133,11 @@ fn running_jitter(id: &str, age: f32) -> [f32; 3] {
     }
 }
 
+fn settling_running_jitter(id: &str, running_duration: f32, age: f32) -> [f32; 3] {
+    let decay = (-18.0 * age.max(0.0)).exp();
+    running_jitter(id, running_duration).map(|value| value * decay)
+}
+
 fn jitter_interval(id: &str, segment: u32) -> f32 {
     let unit = jitter_target(id, segment, 3) * 0.5 + 0.5;
     RUNNING_JITTER_MIN_INTERVAL + unit * (RUNNING_JITTER_MAX_INTERVAL - RUNNING_JITTER_MIN_INTERVAL)
@@ -1085,6 +1193,7 @@ fn draw_energy_sweep(
     time: f32,
 ) {
     let (sine, cosine) = rotation.sin_cos();
+    let phase = energy_band_phase(time);
     let (min_x, max_x, min_y, max_y) = rotated_rect_bounds(center, size, rotation, 1.0);
     for y in min_y..=max_y {
         for x in min_x..=max_x {
@@ -1097,7 +1206,7 @@ fn draw_energy_sweep(
                 continue;
             }
             let position = local_x + size[0] * 0.5;
-            let distance = energy_band_distance(position, time);
+            let distance = energy_band_distance_from_phase(position, phase);
             let band = 1.0 - smoothstep(((distance - 1.0) / 39.0).clamp(0.0, 1.0));
             let alpha = band * 0.5 * coverage;
             if alpha > 0.002 {
@@ -1107,8 +1216,11 @@ fn draw_energy_sweep(
     }
 }
 
-fn energy_band_distance(position: f32, time: f32) -> f32 {
-    let phase = (time * ENERGY_SPEED).rem_euclid(ENERGY_SPACING);
+fn energy_band_phase(time: f32) -> f32 {
+    (time * ENERGY_SPEED).rem_euclid(ENERGY_SPACING)
+}
+
+fn energy_band_distance_from_phase(position: f32, phase: f32) -> f32 {
     ((position - phase + ENERGY_SPACING * 0.5).rem_euclid(ENERGY_SPACING) - ENERGY_SPACING * 0.5)
         .abs()
 }
@@ -1366,8 +1478,8 @@ fn paint(pixels: &mut [u8], width: u32, height: u32, x: i32, y: i32, color: [u8;
 #[cfg(test)]
 mod tests {
     use super::{
-        ENERGY_SPACING, ENERGY_SPEED, blur_task_layer, energy_band_distance, jitter_interval,
-        running_jitter,
+        ENERGY_SPACING, ENERGY_SPEED, blur_task_layer, energy_band_distance_from_phase,
+        energy_band_phase, jitter_interval, running_jitter, settling_running_jitter,
     };
 
     #[test]
@@ -1379,6 +1491,13 @@ mod tests {
         assert_eq!(earlier, running_jitter("clock", 0.41));
         assert_eq!(running_jitter("clock", 0.0), [0.0; 3]);
         assert_ne!(jitter_interval("clock", 0), jitter_interval("clock", 1));
+
+        let running_end = running_jitter("clock", 1.37);
+        assert_eq!(settling_running_jitter("clock", 1.37, 0.0), running_end);
+        let settled = settling_running_jitter("clock", 1.37, 0.2);
+        for axis in 0..3 {
+            assert!(settled[axis].abs() < running_end[axis].abs());
+        }
     }
 
     #[test]
@@ -1389,7 +1508,7 @@ mod tests {
 
         for pulse in 0..6 {
             let time = first + pulse as f32 * interval;
-            assert!(energy_band_distance(position, time) < 0.001);
+            assert!(energy_band_distance_from_phase(position, energy_band_phase(time)) < 0.001);
         }
     }
 
