@@ -38,7 +38,7 @@ Immutable source material identified independently from any use on the timeline.
 
 ## Clip
 
-One positive-duration source range from an audio or video asset. Moving, copying, or removing a clip changes the edit without changing its source asset.
+One positive-duration source range from an audio or video asset. Moving, copying, removing, or changing an audio clip's gain changes the edit without changing its source asset.
 
 ## Image Actor
 

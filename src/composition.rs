@@ -171,6 +171,7 @@ impl Asset {
 pub struct Clip {
     asset: Asset,
     source_range: TimeRange,
+    gain_db: f32,
 }
 
 impl Clip {
@@ -186,7 +187,19 @@ impl Clip {
         Self {
             asset,
             source_range,
+            gain_db: 0.0,
         }
+    }
+
+    pub fn gain_db(mut self, gain_db: f32) -> Self {
+        assert!(gain_db.is_finite(), "clip gain must be finite");
+        assert_eq!(
+            self.asset.kind,
+            AssetKind::Audio,
+            "clip gain currently applies only to audio assets"
+        );
+        self.gain_db = gain_db;
+        self
     }
 
     pub fn asset(&self) -> &Asset {
@@ -199,6 +212,10 @@ impl Clip {
 
     pub fn duration(&self) -> Duration {
         self.source_range.duration()
+    }
+
+    pub fn audio_gain_db(&self) -> f32 {
+        self.gain_db
     }
 }
 
@@ -511,13 +528,16 @@ mod tests {
     #[test]
     fn layers_can_be_synchronized_to_external_cue_ranges() {
         let cue = Cue::new("not-found", range(3.0, 3.8));
-        let pop = Asset::audio("pop", "assets/pop.wav").clip(range(0.0, 0.4));
+        let pop = Asset::audio("pop", "assets/pop.wav")
+            .clip(range(0.0, 0.4))
+            .gain_db(12.0);
         let composition = Composition::delay(cue.start_offset(), Composition::layer(pop));
 
         let lowered = composition.lower().unwrap();
 
         assert_eq!(lowered.media[0].role(), MediaRole::Layer);
         assert_eq!(lowered.media[0].timeline_range(), range(3.0, 3.4));
+        assert_eq!(lowered.media[0].clip().audio_gain_db(), 12.0);
     }
 
     #[test]

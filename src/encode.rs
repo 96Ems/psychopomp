@@ -73,10 +73,11 @@ impl FfmpegEncoder {
             arguments.push(asset.path().to_string_lossy().into_owned());
             let source = placement.clip().source_range();
             filters.push(format!(
-                "[{}:a]atrim=start={:.9}:end={:.9},asetpts=PTS-STARTPTS+{:.9}/TB[a{index}]",
+                "[{}:a]atrim=start={:.9}:end={:.9},volume={:.3}dB,asetpts=PTS-STARTPTS+{:.9}/TB[a{index}]",
                 index + 1,
                 source.start().as_seconds(),
                 source.end().as_seconds(),
+                placement.clip().audio_gain_db(),
                 placement.timeline_range().start().as_seconds(),
             ));
         }

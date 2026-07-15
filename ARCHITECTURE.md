@@ -33,7 +33,7 @@ This Interface provides leverage beyond easing: deterministic out-of-order sampl
 
 `src/composition.rs` keeps immutable source assets separate from their uses in an edit. A `Clip` selects an exact source range; compiling a `Composition` places that range on the output timeline without modifying the asset.
 
-Composition supplies sequence, parallel, delay, hold, and named cue ranges across both visual `Motion` and timed media. It distinguishes transcript-bearing script clips from accompanying layer clips such as sound effects, music, and B-roll. This mirrors the real behavioral difference exposed by transcript-led editors without introducing a graphical editor or media decoder.
+Composition supplies sequence, parallel, delay, hold, and named cue ranges across visual `Motion`, semantic annotations, and timed media. It distinguishes transcript-bearing script clips from accompanying layer clips such as sound effects, music, and B-roll. Cue-local parallel composition keeps an annotation and its sound synchronized as one authored event without coupling renderer recipes to audio assets. This mirrors the real behavioral difference exposed by transcript-led editors without introducing a graphical editor or media decoder.
 
 Media time is stored as integer nanoseconds. Conversion to floating-point seconds happens only when visual motion is lowered into scalar trajectories, so repeated source-range edits retain exact boundaries.
 
@@ -76,7 +76,7 @@ There is no renderer trait. One Adapter is a hypothetical seam; a second backend
 
 ## Encoding Is One Concrete Adapter
 
-`src/encode.rs` owns the FFmpeg process, raw-frame protocol, audio placement filters, argument construction, and exit validation. The Interface accepts tightly packed RGBA frames plus compiled audio media placements. FFmpeg trims immutable source ranges, shifts them onto the composition clock, mixes overlapping layers through a peak limiter, and encodes AAC beside H.264.
+`src/encode.rs` owns the FFmpeg process, raw-frame protocol, audio placement filters, argument construction, and exit validation. The Interface accepts tightly packed RGBA frames plus compiled audio media placements. FFmpeg trims immutable source ranges, applies each clip's non-destructive gain, shifts clips onto the composition clock, mixes overlapping layers through a peak limiter, and encodes AAC beside H.264.
 
 FFmpeg remains a subprocess because it avoids unsafe bindings and codec linkage while preserving access to the installed encoder set. A second encoder is not currently justified.
 

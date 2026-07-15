@@ -253,7 +253,8 @@ async fn render_effect_shows_errors(output: &Path) -> Result<()> {
         Time::seconds(LESSON_AUDIO_DURATION),
     ));
     let success = Asset::audio("success", asset_directory.join("success.wav"))
-        .clip(TimeRange::new(Time::ZERO, Time::seconds(0.43)));
+        .clip(TimeRange::new(Time::ZERO, Time::seconds(0.43)))
+        .gain_db(18.0);
     let choreography = effect_shows_errors_choreography(&transcript, targets, narration, success)?;
 
     encode_editor_video(
@@ -381,8 +382,13 @@ fn effect_shows_errors_choreography(
     };
     let composition = Composition::parallel([
         Composition::script(narration),
-        Composition::delay(reckon.start_offset(), Composition::layer(success)),
-        Composition::delay(reckon.start_offset(), success_annotation),
+        Composition::delay(
+            reckon.start_offset(),
+            Composition::parallel([
+                Composition::layer(success),
+                Composition::annotate(success_annotation),
+            ]),
+        ),
         Composition::delay(
             kinograph::composition::Duration::milliseconds(80.0),
             Motion::spring(code.panel_y.clone(), 0.0, spotlight),
