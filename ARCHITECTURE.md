@@ -33,7 +33,7 @@ This Interface provides leverage beyond easing: deterministic out-of-order sampl
 
 `src/composition.rs` keeps immutable source assets separate from their uses in an edit. A `Clip` selects an exact source range; compiling a `Composition` places that range on the output timeline without modifying the asset.
 
-Composition supplies sequence, parallel, delay, hold, and named cue ranges across visual `Motion`, semantic annotations, and timed media. It distinguishes transcript-bearing script clips from accompanying layer clips such as sound effects, music, and B-roll. Cue-local parallel composition keeps an annotation and its sound synchronized as one authored event without coupling renderer recipes to audio assets. This mirrors the real behavioral difference exposed by transcript-led editors without introducing a graphical editor or media decoder.
+Composition supplies sequence, parallel, delay, hold, and named cue ranges across visual `Motion`, semantic annotations, stable Task state changes, and timed media. It distinguishes transcript-bearing script clips from accompanying layer clips such as sound effects, music, and B-roll. Cue-local parallel composition keeps an annotation and its sound synchronized as one authored event without coupling renderer recipes to audio assets. This mirrors the real behavioral difference exposed by transcript-led editors without introducing a graphical editor or media decoder.
 
 Media time is stored as integer nanoseconds. Conversion to floating-point seconds happens only when visual motion is lowered into scalar trajectories, so repeated source-range edits retain exact boundaries.
 
@@ -65,6 +65,8 @@ The lesson port extends the compositor to multiple non-overlapping reveals on on
 
 `src/render/effects/` owns the concrete pixel implementations for celebration annotations. Prismatic bloom and focus pulse share one small frame interface but keep their particle and halo recipes in separate files. `render.rs` only translates resolved target geometry into canvas coordinates and dispatches the selected closed recipe; adding another demonstrated built-in effect does not enlarge the renderer adapter or require a plugin interface.
 
+`src/render/task.rs` owns the concrete Effect Task visual recipe demonstrated by the `visual-effects` lesson: compressed running nodes, energy sweeps, state flashes, pulses, icons, error bubbles, and labels. The DSL and composition retain stable Task identity and semantic state changes; this renderer alone owns their current 128-pixel presentation. All moving pixel layers share one fractional transform and analytic edge coverage so temporal jitter does not separate the body, sweep, border, flash, and glow.
+
 The Adapter keeps these details private:
 
 - headless Metal adapter and device creation
@@ -90,7 +92,7 @@ Choreography should move behind a scene compiler only after a second scene revea
 
 ## The Rust DSL Produces Pure Values
 
-`src/dsl.rs` is the public authoring boundary exported through `src/lib.rs`. Authors compose property `Motion`, semantic `Annotation` values, and media in a `Composition`. Typed actors such as `Pointer` return ordinary motion values rather than executing animation. An annotation owns a semantic target, a closed effect recipe, and a positive duration; composition schedules it while scene compilation resolves its target and produces deterministic arbitrary-time annotation frames.
+`src/dsl.rs` is the public authoring boundary exported through `src/lib.rs`. Authors compose property `Motion`, semantic `Annotation` values, Task state changes, and media in a `Composition`. Typed actors such as `Pointer` return ordinary motion values rather than executing animation. An annotation owns a semantic target, a closed effect recipe, and a positive duration; composition schedules it while scene compilation resolves its target and produces deterministic arbitrary-time annotation frames. Tasks similarly return composable `idle`, `run`, `succeed`, `complete`, `fail`, `die`, and `hide` leaves rather than retaining mutable renderer state.
 
 Scalar targets may remain semantic while authoring. `TextTarget` identifies meaningful code content; `Scalar` expressions request its left edge, width, center, or attached offset. `Scene::compile` resolves measured target geometry once and lowers the complete tree into a `CompiledScene` containing the renderer-independent property `Timeline`, scheduled media placements, named cue ranges, and total duration.
 

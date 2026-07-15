@@ -84,6 +84,14 @@ A transient or persistent visual attached to a semantic target without changing 
 
 A stable visual actor that directs attention to a semantic target. Its position and opacity are ordinary property tracks, so retargeting and temporal sampling use the same motion system as every other actor.
 
+## Task
+
+A stable visual actor representing one Effect computation. Composition schedules its idle, running, succeeded, failed, death, hidden, and retry state changes; the stable task ID preserves identity across those changes.
+
+## Task State
+
+One meaningful snapshot of a Task. A task state selects semantic content and visual targets, while the renderer derives the transition from the preceding state at arbitrary media time. A succeeded task may carry a result or represent payload-free completion.
+
 ## Temporal Sample
 
 One evaluation of the complete scene within an output frame's shutter interval. Kinograph averages temporal samples to produce motion blur from real scene movement.

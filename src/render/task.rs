@@ -21,6 +21,7 @@ const NODE_SIZE: f32 = 128.0;
 pub struct QuoteFrame<'a> {
     pub time: f32,
     pub highlight: Option<usize>,
+    pub show_hypnotic: bool,
     pub hide_quote: bool,
     pub subliminal: Option<&'a str>,
 }
@@ -47,19 +48,21 @@ impl HeadlessRenderer {
 
     fn composite_quote(&mut self, pixels: &mut [u8], frame: QuoteFrame<'_>) {
         let center = [self.spec.width as f32 * 0.5, self.spec.height as f32 * 0.5];
-        for index in 0..12 {
-            let phase = (frame.time / 10.0 + index as f32 / 12.0).fract();
-            let radius = 60.0 + phase * 510.0;
-            let opacity = (1.0 - (phase * 2.0 - 1.0).abs()).max(0.0) * 0.16;
-            draw_ring(
-                pixels,
-                self.spec.width,
-                self.spec.height,
-                center,
-                radius,
-                [210, 220, 230, 255],
-                opacity,
-            );
+        if frame.show_hypnotic {
+            for index in 0..12 {
+                let phase = (frame.time / 10.0 + index as f32 / 12.0).fract();
+                let radius = 60.0 + phase * 510.0;
+                let opacity = (1.0 - (phase * 2.0 - 1.0).abs()).max(0.0) * 0.16;
+                draw_ring(
+                    pixels,
+                    self.spec.width,
+                    self.spec.height,
+                    center,
+                    radius,
+                    [210, 220, 230, 255],
+                    opacity,
+                );
+            }
         }
         if let Some(word) = frame.subliminal {
             self.composite_task_text(
@@ -109,39 +112,32 @@ impl HeadlessRenderer {
 
     fn composite_task_node(&mut self, pixels: &mut [u8], node: TaskFrame<'_>) {
         let result = match node.state {
-            TaskState::Succeeded(result) => Some(result.as_str()),
+            TaskState::Succeeded(result) => result.as_deref(),
             _ => None,
         };
         let error = match node.state {
-            TaskState::Failed(error) | TaskState::Death(error) => Some(error.as_str()),
+            TaskState::Failed(error) | TaskState::Death(error) => {
+                (!error.is_empty()).then_some(error.as_str())
+            }
             _ => None,
         };
         let enter = spring_progress(node.visible_age, 0.45, 0.72).max(0.0);
-        let transition = spring_progress(
-            node.state_age,
-            if matches!(node.state, TaskState::Running) {
-                0.2
-            } else {
-                0.35
-            },
-            if matches!(node.state, TaskState::Running) {
-                0.65
-            } else {
-                0.72
-            },
-        );
+        let width_transition = motion_spring_progress(node.state_age, 0.35, 0.35);
+        let height_transition = motion_spring_progress(node.state_age, 0.2, 0.5);
+        let scale_transition = motion_spring_progress(node.state_age, 3.0 / 18.0, 0.0);
         let previous_size = task_node_size(node.previous_state);
         let target_size = task_node_size(node.state);
-        let mut width = previous_size[0] + (target_size[0] - previous_size[0]) * transition;
-        let mut height = previous_size[1] + (target_size[1] - previous_size[1]) * transition;
-        let mut scale = enter;
+        let mut width = previous_size[0] + (target_size[0] - previous_size[0]) * width_transition;
+        let mut height = previous_size[1] + (target_size[1] - previous_size[1]) * height_transition;
+        let previous_scale = task_node_scale(node.previous_state);
+        let target_scale = task_node_scale(node.state);
+        let scale = enter * (previous_scale + (target_scale - previous_scale) * scale_transition);
         let mut offset = [0.0, 0.0];
         let mut rotation = 0.0;
         let target_color = match node.state {
             TaskState::Hidden => return,
             TaskState::Idle => [71, 85, 105],
             TaskState::Running => {
-                scale *= 1.0 + (0.95 - 1.0) * transition;
                 offset = [
                     (node.state_age * 37.0).sin() * 1.8,
                     (node.state_age * 29.0).sin() * 0.8,
@@ -151,12 +147,14 @@ impl HeadlessRenderer {
             }
             TaskState::Succeeded(_) => [21, 128, 61],
             TaskState::Failed(_) | TaskState::Death(_) => {
-                let intensity = (1.0 - node.state_age / 0.7).clamp(0.0, 1.0).powi(2);
-                offset = [
-                    (node.state_age * 53.0).sin() * 12.0 * intensity,
-                    (node.state_age * 41.0).sin() * 7.0 * intensity,
-                ];
-                rotation = (node.state_age * 47.0).sin() * 0.14 * intensity;
+                let duration = if matches!(node.state, TaskState::Death(_)) {
+                    0.7
+                } else {
+                    0.42
+                };
+                let jitter = failure_jitter(node.id.as_str(), node.state_age, duration);
+                offset = [jitter[0], jitter[1]];
+                rotation = jitter[2];
                 if matches!(node.state, TaskState::Death(_)) {
                     [8, 8, 9]
                 } else {
@@ -171,6 +169,20 @@ impl HeadlessRenderer {
             mix_channel(previous_color[1], target_color[1], color_mix),
             mix_channel(previous_color[2], target_color[2], color_mix),
         ];
+        let (flash_duration, flash_mix, flash_color) = match node.state {
+            TaskState::Succeeded(_) => (1.0, 0.6, [55, 163, 95]),
+            TaskState::Failed(_) => (0.6, 0.5, [244, 92, 92]),
+            TaskState::Death(_) => (0.6, 0.5, [255, 45, 45]),
+            TaskState::Running => (1.0, 0.2, [92, 158, 248]),
+            TaskState::Idle | TaskState::Hidden => (1.0, 0.2, [100, 112, 130]),
+        };
+        let remaining = (1.0 - node.state_age / flash_duration).clamp(0.0, 1.0);
+        let flash = (remaining * std::f32::consts::FRAC_PI_2).sin() * flash_mix;
+        let color = [
+            mix_channel(color[0], flash_color[0], flash),
+            mix_channel(color[1], flash_color[1], flash),
+            mix_channel(color[2], flash_color[2], flash),
+        ];
         let center = [node.x + offset[0], node.y + offset[1]];
         width *= scale;
         height *= scale;
@@ -183,7 +195,8 @@ impl HeadlessRenderer {
                 self.spec.height,
                 center,
                 [width, height],
-                18.0,
+                rotation,
+                8.0,
                 [59, 130, 246, 255],
                 glow,
             );
@@ -208,46 +221,29 @@ impl HeadlessRenderer {
                 rotation,
                 node.state_age,
             );
-            stroke_rect(
+            stroke_rotated_rect(
                 pixels,
                 self.spec.width,
                 self.spec.height,
                 center,
                 [width, height],
+                rotation,
                 [130, 200, 255, 255],
                 0.4 + 0.6 * (0.5 + 0.5 * (node.state_age / 0.22).sin()),
             );
         }
         if matches!(node.state, TaskState::Death(_)) {
-            stroke_rect(
+            stroke_rotated_rect(
                 pixels,
                 self.spec.width,
                 self.spec.height,
                 center,
                 [width, height],
+                rotation,
                 [255, 45, 45, 255],
                 0.9,
             );
         }
-
-        let (duration, mix, flash_color) = match node.state {
-            TaskState::Succeeded(_) => (1.0, 0.6, [55, 163, 95, 255]),
-            TaskState::Failed(_) => (0.6, 0.5, [244, 92, 92, 255]),
-            TaskState::Death(_) => (0.6, 0.5, [255, 45, 45, 255]),
-            TaskState::Running => (1.0, 0.2, [92, 158, 248, 255]),
-            TaskState::Idle | TaskState::Hidden => (1.0, 0.2, [100, 112, 130, 255]),
-        };
-        let remaining = (1.0 - node.state_age / duration).clamp(0.0, 1.0);
-        let flash = (remaining * std::f32::consts::FRAC_PI_2).sin() * mix;
-        fill_rect(
-            pixels,
-            self.spec.width,
-            self.spec.height,
-            center,
-            [width, height],
-            flash_color,
-            flash,
-        );
 
         match node.state {
             TaskState::Hidden => {}
@@ -270,6 +266,16 @@ impl HeadlessRenderer {
                         center[0],
                         center[1],
                         32.0 * (0.6 + content * 0.4),
+                        [245, 250, 247],
+                        content.clamp(0.0, 1.0),
+                    );
+                } else {
+                    self.composite_task_text(
+                        pixels,
+                        "✓",
+                        center[0],
+                        center[1],
+                        46.0 * (0.6 + content * 0.4),
                         [245, 250, 247],
                         content.clamp(0.0, 1.0),
                     );
@@ -475,15 +481,28 @@ fn spring_progress(age: f32, response: f32, damping_ratio: f32) -> f32 {
         .position
 }
 
+fn motion_spring_progress(age: f32, visual_duration: f32, bounce: f32) -> f32 {
+    spring_progress(age, visual_duration * 1.2, 1.0 - bounce)
+}
+
 fn task_node_size(state: &TaskState) -> [f32; 2] {
     match state {
         TaskState::Running => [NODE_SIZE, NODE_SIZE * 0.4],
-        TaskState::Succeeded(result) => [
+        TaskState::Succeeded(Some(result)) => [
             (result.chars().count() as f32 * 32.0 * 0.56 + 72.0).clamp(NODE_SIZE, 520.0),
             NODE_SIZE,
         ],
+        TaskState::Succeeded(None) => [NODE_SIZE, NODE_SIZE],
         TaskState::Hidden => [0.0, 0.0],
         TaskState::Idle | TaskState::Failed(_) | TaskState::Death(_) => [NODE_SIZE, NODE_SIZE],
+    }
+}
+
+fn task_node_scale(state: &TaskState) -> f32 {
+    if matches!(state, TaskState::Running) {
+        0.95
+    } else {
+        1.0
     }
 }
 
@@ -501,6 +520,32 @@ fn mix_channel(from: u8, to: u8, progress: f32) -> u8 {
     (from as f32 + (to as f32 - from as f32) * progress.clamp(0.0, 1.0)).round() as u8
 }
 
+fn failure_jitter(id: &str, age: f32, duration: f32) -> [f32; 3] {
+    if !(0.0..duration).contains(&age) {
+        return [0.0; 3];
+    }
+    let interval = 0.045;
+    let sample = age / interval;
+    let step = sample.floor() as u32;
+    let blend = smoothstep(sample.fract());
+    let envelope = (1.0 - age / duration).powi(2);
+    let channel = |index, amplitude| {
+        let from = jitter_noise(id, step, index);
+        let to = jitter_noise(id, step + 1, index);
+        (from + (to - from) * blend) * amplitude * envelope
+    };
+    [channel(0, 10.0), channel(1, 7.0), channel(2, 0.12)]
+}
+
+fn jitter_noise(id: &str, step: u32, channel: u32) -> f32 {
+    let mut hasher = DefaultHasher::new();
+    id.hash(&mut hasher);
+    step.hash(&mut hasher);
+    channel.hash(&mut hasher);
+    let value = hasher.finish() as u32;
+    value as f32 / u32::MAX as f32 * 2.0 - 1.0
+}
+
 #[allow(clippy::too_many_arguments)]
 fn draw_soft_rect_glow(
     pixels: &mut [u8],
@@ -508,28 +553,27 @@ fn draw_soft_rect_glow(
     height: u32,
     center: [f32; 2],
     size: [f32; 2],
+    rotation: f32,
     radius: f32,
     color: [u8; 4],
     opacity: f32,
 ) {
     let extent_x = size[0] * 0.5 + radius * 3.0;
     let extent_y = size[1] * 0.5 + radius * 3.0;
-    for y in -extent_y.ceil() as i32..=extent_y.ceil() as i32 {
-        for x in -extent_x.ceil() as i32..=extent_x.ceil() as i32 {
-            let dx = (x.abs() as f32 - size[0] * 0.5).max(0.0);
-            let dy = (y.abs() as f32 - size[1] * 0.5).max(0.0);
+    let extent = extent_x.hypot(extent_y);
+    let min_x = (center[0] - extent).floor() as i32;
+    let max_x = (center[0] + extent).ceil() as i32;
+    let min_y = (center[1] - extent).floor() as i32;
+    let max_y = (center[1] + extent).ceil() as i32;
+    for y in min_y..=max_y {
+        for x in min_x..=max_x {
+            let [local_x, local_y] = rotated_local(center, rotation, x, y);
+            let dx = (local_x.abs() - size[0] * 0.5).max(0.0);
+            let dy = (local_y.abs() - size[1] * 0.5).max(0.0);
             let distance = dx.hypot(dy);
             let alpha = (-distance * distance / (2.0 * radius * radius)).exp() * opacity;
             if alpha > 0.002 {
-                paint(
-                    pixels,
-                    width,
-                    height,
-                    center[0].round() as i32 + x,
-                    center[1].round() as i32 + y,
-                    color,
-                    alpha,
-                );
+                paint(pixels, width, height, x, y, color, alpha);
             }
         }
     }
@@ -546,34 +590,33 @@ fn draw_energy_sweep(
     time: f32,
 ) {
     let (sine, cosine) = rotation.sin_cos();
-    let travel = size[0] + 80.0 * 2.0 + 244.0 * 2.0;
-    let start = (time * 1000.0) % travel - 80.0;
+    let travel = size[0] + 40.0 * 2.0 + 122.0 * 2.0;
+    let start = (time * 500.0) % travel - 40.0;
     let radius = size[0].hypot(size[1]).ceil() as i32;
-    for y in -radius..=radius {
-        for x in -radius..=radius {
-            let local_x = x as f32 * cosine + y as f32 * sine;
-            let local_y = -x as f32 * sine + y as f32 * cosine;
-            if local_x.abs() > size[0] * 0.5 || local_y.abs() > size[1] * 0.5 {
+    let min_x = (center[0] - radius as f32).floor() as i32;
+    let max_x = (center[0] + radius as f32).ceil() as i32;
+    let min_y = (center[1] - radius as f32).floor() as i32;
+    let max_y = (center[1] + radius as f32).ceil() as i32;
+    for y in min_y..=max_y {
+        for x in min_x..=max_x {
+            let dx = x as f32 + 0.5 - center[0];
+            let dy = y as f32 + 0.5 - center[1];
+            let local_x = dx * cosine + dy * sine;
+            let local_y = -dx * sine + dy * cosine;
+            let coverage = rect_coverage(local_x, local_y, size);
+            if coverage <= 0.0 {
                 continue;
             }
             let position = local_x + size[0] * 0.5;
             let mut band = 0.0_f32;
             for index in 0..3 {
-                let distance = (position - (start - index as f32 * 244.0)).abs();
-                band = band.max(1.0 - smoothstep(((distance - 2.0) / 78.0).clamp(0.0, 1.0)));
+                let distance = (position - (start - index as f32 * 122.0)).abs();
+                band = band.max(1.0 - smoothstep(((distance - 1.0) / 39.0).clamp(0.0, 1.0)));
             }
             let pulse = 0.85 + 0.15 * (time * 7.6).sin();
-            let alpha = band * pulse * 0.5;
+            let alpha = band * pulse * 0.5 * coverage;
             if alpha > 0.002 {
-                paint(
-                    pixels,
-                    width,
-                    height,
-                    center[0].round() as i32 + x,
-                    center[1].round() as i32 + y,
-                    [150, 215, 255, 255],
-                    alpha,
-                );
+                paint(pixels, width, height, x, y, [150, 215, 255, 255], alpha);
             }
         }
     }
@@ -656,48 +699,62 @@ fn fill_rotated_rect(
     color: [u8; 4],
     opacity: f32,
 ) {
-    let radius = (size[0].hypot(size[1]) * 0.5).ceil() as i32;
-    let (sine, cosine) = rotation.sin_cos();
-    for y in -radius..=radius {
-        for x in -radius..=radius {
-            let local_x = x as f32 * cosine + y as f32 * sine;
-            let local_y = -x as f32 * sine + y as f32 * cosine;
-            if local_x.abs() <= size[0] * 0.5 && local_y.abs() <= size[1] * 0.5 {
-                paint(
-                    pixels,
-                    width,
-                    height,
-                    center[0].round() as i32 + x,
-                    center[1].round() as i32 + y,
-                    color,
-                    opacity,
-                );
+    let radius = size[0].hypot(size[1]) * 0.5 + 1.0;
+    let min_x = (center[0] - radius).floor() as i32;
+    let max_x = (center[0] + radius).ceil() as i32;
+    let min_y = (center[1] - radius).floor() as i32;
+    let max_y = (center[1] + radius).ceil() as i32;
+    for y in min_y..=max_y {
+        for x in min_x..=max_x {
+            let [local_x, local_y] = rotated_local(center, rotation, x, y);
+            let coverage = rect_coverage(local_x, local_y, size);
+            if coverage > 0.0 {
+                paint(pixels, width, height, x, y, color, opacity * coverage);
             }
         }
     }
 }
 
-fn stroke_rect(
+#[allow(clippy::too_many_arguments)]
+fn stroke_rotated_rect(
     pixels: &mut [u8],
     width: u32,
     height: u32,
     center: [f32; 2],
     size: [f32; 2],
+    rotation: f32,
     color: [u8; 4],
     opacity: f32,
 ) {
-    let left = (center[0] - size[0] * 0.5).round() as i32;
-    let right = (center[0] + size[0] * 0.5).round() as i32;
-    let top = (center[1] - size[1] * 0.5).round() as i32;
-    let bottom = (center[1] + size[1] * 0.5).round() as i32;
-    for x in left..=right {
-        paint(pixels, width, height, x, top, color, opacity);
-        paint(pixels, width, height, x, bottom, color, opacity);
+    let radius = size[0].hypot(size[1]) * 0.5 + 1.0;
+    let min_x = (center[0] - radius).floor() as i32;
+    let max_x = (center[0] + radius).ceil() as i32;
+    let min_y = (center[1] - radius).floor() as i32;
+    let max_y = (center[1] + radius).ceil() as i32;
+    for y in min_y..=max_y {
+        for x in min_x..=max_x {
+            let [local_x, local_y] = rotated_local(center, rotation, x, y);
+            let edge_x = size[0] * 0.5 - local_x.abs();
+            let edge_y = size[1] * 0.5 - local_y.abs();
+            let coverage =
+                rect_coverage(local_x, local_y, size) * (1.75 - edge_x.min(edge_y)).clamp(0.0, 1.0);
+            if coverage > 0.0 {
+                paint(pixels, width, height, x, y, color, opacity * coverage);
+            }
+        }
     }
-    for y in top..=bottom {
-        paint(pixels, width, height, left, y, color, opacity);
-        paint(pixels, width, height, right, y, color, opacity);
-    }
+}
+
+fn rotated_local(center: [f32; 2], rotation: f32, x: i32, y: i32) -> [f32; 2] {
+    let dx = x as f32 + 0.5 - center[0];
+    let dy = y as f32 + 0.5 - center[1];
+    let (sine, cosine) = rotation.sin_cos();
+    [dx * cosine + dy * sine, -dx * sine + dy * cosine]
+}
+
+fn rect_coverage(local_x: f32, local_y: f32, size: [f32; 2]) -> f32 {
+    let edge = (size[0] * 0.5 - local_x.abs()).min(size[1] * 0.5 - local_y.abs());
+    (edge + 0.5).clamp(0.0, 1.0)
 }
 
 fn draw_face(pixels: &mut [u8], width: u32, height: u32, center: [f32; 2], radius: f32, time: f32) {

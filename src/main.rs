@@ -14,7 +14,7 @@ use kinograph::{
         CodeDocument, CodeLayout, CodeLine, CodeSnapshot, CodeTransition, PlacedLine, StyledSpan,
         SyntaxStyle, TransitionProgress,
     },
-    composition::{Asset, Composition, Time, TimeRange},
+    composition::{Asset, Clip, Composition, Time, TimeRange},
     dsl::{
         Annotation, AnnotationEffect, Code, CompiledScene, Motion, Pointer, Scalar, Scene,
         TargetGeometry, Task,
@@ -374,27 +374,41 @@ async fn render_visual_effects(output: &Path) -> Result<()> {
     let transcript = Transcript::load(&asset_directory.join("timings.json"))?;
     let narration = Asset::audio("visual-effects", asset_directory.join("narration.webm"))
         .clip(TimeRange::new(Time::ZERO, Time::seconds(48.627)));
+    let running_sound = Asset::audio("task-running", asset_directory.join("task-running.wav"))
+        .clip(TimeRange::new(Time::ZERO, Time::seconds(0.14)));
+    let success_sound = Asset::audio("task-success", asset_directory.join("task-success.wav"))
+        .clip(TimeRange::new(Time::ZERO, Time::seconds(0.75)));
+    let failure_sound = Asset::audio("task-failure", asset_directory.join("task-failure.wav"))
+        .clip(TimeRange::new(Time::ZERO, Time::seconds(0.48)));
+    let death_sound = Asset::audio("task-death", asset_directory.join("task-death.wav"))
+        .clip(TimeRange::new(Time::ZERO, Time::seconds(1.1)));
     let cues = VisualEffectsCues::from_transcript(&transcript)?;
     let center = WIDTH as f32 * 0.5;
     let y = HEIGHT as f32 * 0.5;
     let lang_one = Task::new("lang", "lang").at(center, y);
-    let lang_two = lang_one.clone().at(872.0, y);
-    let lang_three = lang_one.clone().at(784.0, y);
-    let launch_two = Task::new("launch", "launch").at(1100.0, y);
-    let launch_three = launch_two.clone().at(1013.0, y);
-    let pact = Task::new("pact", "pact").at(1189.0, y);
+    let lang_two = lang_one.clone().at(884.0, y);
+    let lang_three = lang_one.clone().at(808.0, y);
+    let launch_two = Task::new("launch", "launch").at(1098.0, y);
+    let launch_three = launch_two.clone().at(1014.0, y);
+    let pact = Task::new("pact", "pact").at(1166.0, y);
     let classify_one = Task::new("classify", "classify").at(center, y);
-    let classify = classify_one.clone().at(784.0, y);
-    let classify_done = classify_one.clone().at(696.0, y);
+    let classify = classify_one.clone().at(808.0, y);
+    let classify_done = classify_one.clone().at(720.0, y);
     let assign = Task::new("assign", "assign").at(960.0, y);
     let assign_running = assign.clone().at(1004.0, y);
-    let notify = Task::new("notify", "notify").at(1136.0, y);
-    let notify_after_classify = notify.clone().at(1180.0, y);
-    let notify_after_assign = notify.clone().at(1268.0, y);
+    let notify = Task::new("notify", "notify").at(1112.0, y);
+    let notify_after_classify = notify.clone().at(1156.0, y);
+    let notify_after_assign = notify.clone().at(1244.0, y);
     let at = |seconds: f32, change| {
         Composition::delay(
             kinograph::composition::Duration::seconds(f64::from(seconds)),
             change,
+        )
+    };
+    let sound_at = |seconds: f32, clip: Clip| {
+        Composition::delay(
+            kinograph::composition::Duration::seconds(f64::from(seconds)),
+            Composition::layer(clip),
         )
     };
     let composition = Composition::parallel([
@@ -410,7 +424,7 @@ async fn render_visual_effects(output: &Path) -> Result<()> {
         at(cues.pact_visible, launch_three.fail("NoFuel")),
         at(cues.pact_visible, pact.idle()),
         at(cues.pact_running, pact.run()),
-        at(cues.pact_death, pact.die("wat")),
+        at(cues.pact_death, pact.die("")),
         at(cues.classify_visible, lang_three.hide()),
         at(cues.classify_visible, launch_three.hide()),
         at(cues.classify_visible, pact.hide()),
@@ -430,7 +444,21 @@ async fn render_visual_effects(output: &Path) -> Result<()> {
             notify_after_assign.fail("RateLimitError"),
         ),
         at(cues.notify_retry, notify_after_assign.run()),
-        at(cues.notify_completed, notify_after_assign.succeed("DONE")),
+        at(cues.notify_completed, notify_after_assign.complete()),
+        sound_at(cues.lang_running, running_sound.clone()),
+        sound_at(cues.launch_running, running_sound.clone()),
+        sound_at(cues.pact_running, running_sound.clone()),
+        sound_at(cues.classify_running, running_sound.clone()),
+        sound_at(cues.assign_running, running_sound.clone()),
+        sound_at(cues.notify_running, running_sound.clone()),
+        sound_at(cues.notify_retry, running_sound),
+        sound_at(cues.lang_completed, success_sound.clone()),
+        sound_at(cues.assign_running, success_sound.clone()),
+        sound_at(cues.notify_running, success_sound.clone()),
+        sound_at(cues.notify_completed, success_sound),
+        sound_at(cues.launch_failed, failure_sound.clone()),
+        sound_at(cues.notify_failed, failure_sound),
+        sound_at(cues.pact_death, death_sound),
     ]);
     let scene =
         Scene::new(Vec::<(PropertyId, Scalar)>::new(), composition).compile(&HashMap::new())?;
@@ -535,6 +563,7 @@ fn visual_effects_quote(time: f32, cues: &VisualEffectsCues) -> Option<QuoteFram
     Some(QuoteFrame {
         time,
         highlight,
+        show_hypnotic: time >= cues.quote_words[0],
         hide_quote: time >= cues.hide_quote,
         subliminal,
     })

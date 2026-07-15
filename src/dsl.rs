@@ -145,7 +145,11 @@ impl Task {
     }
 
     pub fn succeed(&self, result: impl Into<String>) -> TaskChange {
-        self.change(TaskState::Succeeded(result.into()))
+        self.change(TaskState::Succeeded(Some(result.into())))
+    }
+
+    pub fn complete(&self) -> TaskChange {
+        self.change(TaskState::Succeeded(None))
     }
 
     pub fn fail(&self, error: impl Into<String>) -> TaskChange {
@@ -173,7 +177,7 @@ pub enum TaskState {
     Hidden,
     Idle,
     Running,
-    Succeeded(String),
+    Succeeded(Option<String>),
     Failed(String),
     Death(String),
 }
@@ -465,7 +469,9 @@ impl CompiledScene {
                 let state_age = (seconds - current.at.as_seconds()) as f32;
                 let visible_at = changes
                     .iter()
-                    .find(|change| change.state != TaskState::Hidden)
+                    .rev()
+                    .take_while(|change| change.state != TaskState::Hidden)
+                    .last()
                     .map_or(current.at, |change| change.at);
                 // Matches the Pixi row's stiffness: 220, damping: 24, mass: 0.8.
                 let layout = Spring::new(0.38, 0.9)
@@ -702,8 +708,31 @@ mod tests {
         assert_eq!(compiled.task_frames_at(0.25)[0].state, &TaskState::Idle);
         assert_eq!(compiled.task_frames_at(0.75)[0].state, &TaskState::Running);
         let completed = &compiled.task_frames_at(1.9)[0];
-        assert_eq!(completed.state, &TaskState::Succeeded("OK".to_owned()));
+        assert_eq!(
+            completed.state,
+            &TaskState::Succeeded(Some("OK".to_owned()))
+        );
         assert!((completed.x - 240.0).abs() < 0.1);
+    }
+
+    #[test]
+    fn showing_a_hidden_task_starts_a_new_visibility_interval() {
+        let task = Task::new("request", "request").at(120.0, 80.0);
+        let scene = Scene::new(
+            [],
+            Composition::parallel([
+                task.idle().into(),
+                Composition::delay(Duration::seconds(0.5), task.hide()),
+                Composition::delay(Duration::seconds(1.0), task.run()),
+                Composition::hold(Duration::seconds(2.0)),
+            ]),
+        );
+        let compiled = scene.compile(&HashMap::new()).unwrap();
+
+        assert!(compiled.task_frames_at(0.75).is_empty());
+        let shown = &compiled.task_frames_at(1.1)[0];
+        assert_eq!(shown.state, &TaskState::Running);
+        assert!((shown.visible_age - 0.1).abs() < 0.001);
     }
 
     #[test]

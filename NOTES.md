@@ -69,6 +69,9 @@ The default artifact is `output/kinograph-prototype.mp4`.
 - Applying one sampled translation, three-axis rotation, and scale to both shader geometry and the CPU-composited foreground produces a coherent 0.7-second perspective entrance whose temporal blur comes from scene motion rather than a post-process blur.
 - Extreme perspective entrances expose sampling quality quickly: a five-tap cross reads as repeated glyph copies, and eight shutter samples reveal ghost contours during a 150%-to-100% pullback. A depth-weighted 3x3 Gaussian kernel plus 16 entrance samples produces a smoother near-plane blur while settled frames retain the normal eight-sample cost.
 - Published narration bytes can still produce a different browser mix when a lesson flow schedules synthesized sounds separately. The Promise lesson's narration asset is byte-identical to production; its descending E5-to-C5 Tone.js cue must be represented as a cue-local layer clip.
+- Effect Task states can be authored as ordinary Composition leaves while stable IDs preserve nodes across idle, running, success, failure, death, retry, and hidden intervals. Arbitrary-time sampling resets entrance age after a hidden interval rather than depending on prior rendered frames.
+- Porting Pixi task pixels requires one shared fractional transform for every moving layer. Integer-snapped or independently transformed body, sweep, border, flash, and glow edges visibly separate under subpixel jitter even when their high-level spring targets match.
+- Motion's width and height springs are intentionally independent in the Task recipe: running height changes over 0.2 seconds, completed result width over 0.35 seconds, and running scale returns from 0.95 without a one-frame geometry jump.
 
 ## Next Question
 
