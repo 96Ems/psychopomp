@@ -1,13 +1,13 @@
 import { defineScript, wait } from "opencode-drive"
 
-const command = `---
-description: Turn up the heat
----
-Reply with exactly: Everything is live.
-`
+const viewport = { cols: 120, rows: 36 } as const
+const commandFile = new URL(
+  "../assets/opencode-hot-reload/fire-the-missiles.md",
+  import.meta.url,
+)
 
 export default defineScript({
-  viewport: { cols: 120, rows: 36 },
+  viewport,
   async setup({ config, fs }) {
     config.autoupdate = false
     await fs.writeFile("README.md", "# Missile Control\n")
@@ -36,6 +36,7 @@ export default defineScript({
     await wait(900)
 
     mark("command-created")
+    const command = await Bun.file(commandFile).text()
     await fs.writeFile(".opencode/commands/fire-the-missiles.md", command)
     await ui.waitFor("/fire-the-missiles", { timeout: 10_000 })
     mark("command-live")
@@ -59,7 +60,7 @@ export default defineScript({
 
     await Bun.write(
       `${artifacts}/fire-cues.json`,
-      `${JSON.stringify({ viewport: { cols: 120, rows: 36 }, cues }, null, 2)}\n`,
+      `${JSON.stringify({ viewport, cues }, null, 2)}\n`,
     )
   },
 })

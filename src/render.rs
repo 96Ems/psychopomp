@@ -17,8 +17,10 @@ use crate::dsl::AnnotationFrame;
 
 mod effects;
 mod task;
+mod terminal;
 
 pub use task::{QuoteFrame, TaskLinkFrame, TaskSceneFrame};
+pub use terminal::{CommandFileFrame, TerminalSceneFrame};
 
 const FORMAT: wgpu::TextureFormat = wgpu::TextureFormat::Rgba8UnormSrgb;
 const BYTES_PER_PIXEL: u32 = 4;
@@ -230,6 +232,7 @@ pub struct HeadlessRenderer {
     task_layer_pixels: Vec<u8>,
     task_blur_source: Vec<[f32; 4]>,
     task_blur_scratch: Vec<[f32; 4]>,
+    terminal_background_pixels: Vec<u8>,
 }
 
 impl HeadlessRenderer {
@@ -368,6 +371,7 @@ impl HeadlessRenderer {
             task_layer_pixels: Vec::new(),
             task_blur_source: Vec::new(),
             task_blur_scratch: Vec::new(),
+            terminal_background_pixels: Vec::new(),
         })
     }
 

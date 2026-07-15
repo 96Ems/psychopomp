@@ -96,6 +96,10 @@ One meaningful snapshot of a Task. A task state selects semantic content and vis
 
 The renderer-independent position of one Task. Pose changes are composition leaves distinct from semantic Task State changes, so row recentering cannot replay state feedback. Compiled x/y property tracks preserve position and velocity when layout movement is interrupted or redirected.
 
+## Terminal Recording
+
+An immutable recording of a real terminal interaction used as source pixels inside authored choreography. Kinograph samples the recording by media time, while a terminal frame supplies presentation such as rounded clipping, whole-card camera motion, explanatory split views, and effects. The recording remains evidence of the actual product behavior rather than a reconstructed terminal simulation.
+
 ## Temporal Sample
 
 One evaluation of the complete scene within an output frame's shutter interval. Kinograph averages temporal samples to produce motion blur from real scene movement.

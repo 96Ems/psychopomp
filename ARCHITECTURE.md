@@ -39,6 +39,8 @@ Media time is stored as integer nanoseconds. Conversion to floating-point second
 
 Still images remain stable scene actors rather than pretending to be time-based clips. A compiled scene retains each image asset and its transform property IDs; actual image composition remains renderer work for the first image-backed scene.
 
+`src/video.rs` is the narrow input-video boundary demonstrated by the OpenCode command-hot-reload scene. FFmpeg decodes a checked-in H.264 terminal recording into an ignored seekable RGBA cache under `target/`; fixed-size frame offsets then provide deterministic arbitrary-time sampling without codec bindings or retaining the decoded recording in memory. The cache is regenerated when the immutable source changes.
+
 ## Transcript Cues Drive Choreography
 
 `src/transcript.rs` ingests word timing sidecars and resolves exact word occurrences into cue ranges. The `effect-shows-errors` and `promises-only-happy-path` ports demonstrate the intended boundary: original narration is a script clip, while published word timings schedule ordinary code and pointer motions through `Composition::delay`.
@@ -66,6 +68,8 @@ The lesson port extends the compositor to multiple non-overlapping reveals on on
 `src/render/effects/` owns the concrete pixel implementations for celebration annotations. Prismatic bloom and focus pulse share one small frame interface but keep their particle and halo recipes in separate files. `render.rs` only translates resolved target geometry into canvas coordinates and dispatches the selected closed recipe; adding another demonstrated built-in effect does not enlarge the renderer adapter or require a plugin interface.
 
 `src/render/task.rs` owns the concrete Effect Task visual recipe demonstrated by the `visual-effects` lesson: compressed running nodes, energy sweeps, state flashes, pulses, icons, error bubbles, and labels. The DSL and composition retain stable Task identity and semantic state changes; this renderer alone owns their current 128-pixel presentation. All moving pixel layers share one fractional transform, rounded signed-distance edge, and analytic coverage so the body, sweep, border, pulse, and glow remain one coherent material. A short container-level entrance blur applies to the assembled node while ordinary shutter sampling supplies motion blur from actual movement.
+
+`src/render/terminal.rs` owns the concrete OpenCode terminal presentation: bilinear source sampling, one rounded panel material, a short split-screen command-file editor, and the missile payoff. The source recording supplies authentic TUI pixels; Kinograph supplies whole-card camera movement, the external file-write explanation, impact defocus and shake, and foreground effects. This is intentionally not a terminal emulator, ANSI parser, generic video layer, or particle plugin.
 
 The Adapter keeps these details private:
 
