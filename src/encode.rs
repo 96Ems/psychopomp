@@ -72,13 +72,13 @@ impl FfmpegEncoder {
             arguments.push("-i".to_owned());
             arguments.push(asset.path().to_string_lossy().into_owned());
             let source = placement.clip().source_range();
-            filters.push(format!(
-                "[{}:a]atrim=start={:.9}:end={:.9},volume={:.3}dB,asetpts=PTS-STARTPTS+{:.9}/TB[a{index}]",
+            filters.push(audio_clip_filter(
+                index,
                 index + 1,
                 source.start().as_seconds(),
                 source.end().as_seconds(),
                 placement.clip().audio_gain_db(),
-                placement.timeline_range().start().as_seconds(),
+                placement.timeline_range().start().as_seconds() * 1000.0,
             ));
         }
         if media.is_empty() {
@@ -177,6 +177,19 @@ impl FfmpegEncoder {
     }
 }
 
+fn audio_clip_filter(
+    output_index: usize,
+    input_index: usize,
+    source_start: f64,
+    source_end: f64,
+    gain_db: f32,
+    delay_ms: f64,
+) -> String {
+    format!(
+        "[{input_index}:a]atrim=start={source_start:.9}:end={source_end:.9},volume={gain_db:.3}dB,asetpts=PTS-STARTPTS,adelay={delay_ms:.3}:all=1[a{output_index}]"
+    )
+}
+
 impl Drop for FfmpegEncoder {
     fn drop(&mut self) {
         self.stdin.take();
@@ -189,5 +202,20 @@ impl Drop for FfmpegEncoder {
         if !self.finished {
             let _ = fs::remove_file(&self.temporary_output);
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::audio_clip_filter;
+
+    #[test]
+    fn audio_placement_uses_delay_instead_of_positive_pts_offsets() {
+        let filter = audio_clip_filter(2, 3, 0.25, 0.75, 12.0, 1_234.5);
+
+        assert_eq!(
+            filter,
+            "[3:a]atrim=start=0.250000000:end=0.750000000,volume=12.000dB,asetpts=PTS-STARTPTS,adelay=1234.500:all=1[a2]"
+        );
     }
 }

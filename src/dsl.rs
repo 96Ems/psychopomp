@@ -461,29 +461,44 @@ impl CompiledScene {
                     .iter()
                     .filter(|change| &change.task.id == id && change.at.as_seconds() <= seconds)
                     .collect::<Vec<_>>();
-                let current = *changes.last()?;
-                if current.state == TaskState::Hidden {
+                let current_pose = *changes.last()?;
+                if current_pose.state == TaskState::Hidden {
                     return None;
                 }
-                let previous = changes.iter().rev().nth(1).copied().unwrap_or(current);
-                let state_age = (seconds - current.at.as_seconds()) as f32;
+                let previous_pose = changes.iter().rev().nth(1).copied().unwrap_or(current_pose);
+                let state_changes = changes
+                    .iter()
+                    .enumerate()
+                    .filter_map(|(index, change)| {
+                        (index == 0 || change.state != changes[index - 1].state).then_some(*change)
+                    })
+                    .collect::<Vec<_>>();
+                let current_state = *state_changes.last()?;
+                let previous_state = state_changes
+                    .iter()
+                    .rev()
+                    .nth(1)
+                    .copied()
+                    .unwrap_or(current_state);
+                let state_age = (seconds - current_state.at.as_seconds()) as f32;
+                let pose_age = (seconds - current_pose.at.as_seconds()) as f32;
                 let visible_at = changes
                     .iter()
                     .rev()
                     .take_while(|change| change.state != TaskState::Hidden)
                     .last()
-                    .map_or(current.at, |change| change.at);
+                    .map_or(current_pose.at, |change| change.at);
                 // Matches the Pixi row's stiffness: 220, damping: 24, mass: 0.8.
                 let layout = Spring::new(0.38, 0.9)
-                    .sample(MotionState::at(0.0), 1.0, state_age)
+                    .sample(MotionState::at(0.0), 1.0, pose_age)
                     .position;
                 Some(TaskFrame {
                     id,
-                    x: previous.task.x + (current.task.x - previous.task.x) * layout,
-                    y: previous.task.y + (current.task.y - previous.task.y) * layout,
-                    name: &current.task.name,
-                    previous_state: &previous.state,
-                    state: &current.state,
+                    x: previous_pose.task.x + (current_pose.task.x - previous_pose.task.x) * layout,
+                    y: previous_pose.task.y + (current_pose.task.y - previous_pose.task.y) * layout,
+                    name: &current_pose.task.name,
+                    previous_state: &previous_state.state,
+                    state: &current_state.state,
                     state_age,
                     visible_age: (seconds - visible_at.as_seconds()) as f32,
                 })
@@ -733,6 +748,27 @@ mod tests {
         let shown = &compiled.task_frames_at(1.1)[0];
         assert_eq!(shown.state, &TaskState::Running);
         assert!((shown.visible_age - 0.1).abs() < 0.001);
+    }
+
+    #[test]
+    fn restating_a_task_state_for_layout_does_not_restart_its_transition() {
+        let task = Task::new("request", "request").at(120.0, 80.0);
+        let moved = task.clone().at(240.0, 80.0);
+        let scene = Scene::new(
+            [],
+            Composition::parallel([
+                task.run().into(),
+                Composition::delay(Duration::seconds(0.5), task.succeed("OK")),
+                Composition::delay(Duration::seconds(1.0), moved.succeed("OK")),
+                Composition::hold(Duration::seconds(2.0)),
+            ]),
+        );
+        let compiled = scene.compile(&HashMap::new()).unwrap();
+
+        let frame = &compiled.task_frames_at(1.1)[0];
+        assert_eq!(frame.state, &TaskState::Succeeded(Some("OK".to_owned())));
+        assert!((frame.state_age - 0.6).abs() < 0.001);
+        assert!(frame.x > 120.0 && frame.x < 240.0);
     }
 
     #[test]

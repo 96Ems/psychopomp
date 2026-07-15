@@ -111,6 +111,33 @@ impl HeadlessRenderer {
     }
 
     fn composite_task_node(&mut self, pixels: &mut [u8], node: TaskFrame<'_>) {
+        let blur = 6.0 * (-18.0 * node.visible_age).exp();
+        if blur < 0.1 {
+            self.composite_task_node_contents(pixels, node);
+            return;
+        }
+
+        let mut layer = vec![0_u8; pixels.len()];
+        self.composite_task_node_contents(&mut layer, node);
+        blur_task_layer(
+            &mut layer,
+            self.spec.width,
+            self.spec.height,
+            [node.x, node.y],
+            blur,
+        );
+        for (destination, source) in pixels.chunks_exact_mut(4).zip(layer.chunks_exact(4)) {
+            if source[3] > 0 {
+                blend_pixel(
+                    destination,
+                    [source[0], source[1], source[2], source[3]],
+                    1.0,
+                );
+            }
+        }
+    }
+
+    fn composite_task_node_contents(&mut self, pixels: &mut [u8], node: TaskFrame<'_>) {
         let result = match node.state {
             TaskState::Succeeded(result) => result.as_deref(),
             _ => None,
@@ -124,42 +151,38 @@ impl HeadlessRenderer {
         let enter = spring_progress(node.visible_age, 0.45, 0.72).max(0.0);
         let width_transition = motion_spring_progress(node.state_age, 0.35, 0.35);
         let height_transition = motion_spring_progress(node.state_age, 0.2, 0.5);
-        let scale_transition = motion_spring_progress(node.state_age, 3.0 / 18.0, 0.0);
+        let scale_transition = if matches!(node.state, TaskState::Death(_)) {
+            motion_spring_progress(node.state_age, 0.45, 0.0)
+        } else {
+            motion_spring_progress(node.state_age, 3.0 / 18.0, 0.0)
+        };
         let previous_size = task_node_size(node.previous_state);
         let target_size = task_node_size(node.state);
         let mut width = previous_size[0] + (target_size[0] - previous_size[0]) * width_transition;
         let mut height = previous_size[1] + (target_size[1] - previous_size[1]) * height_transition;
         let previous_scale = task_node_scale(node.previous_state);
         let target_scale = task_node_scale(node.state);
-        let scale = enter * (previous_scale + (target_scale - previous_scale) * scale_transition);
+        let mut scale =
+            enter * (previous_scale + (target_scale - previous_scale) * scale_transition);
         let mut offset = [0.0, 0.0];
         let mut rotation = 0.0;
         let target_color = match node.state {
             TaskState::Hidden => return,
             TaskState::Idle => [71, 85, 105],
             TaskState::Running => {
-                offset = [
-                    (node.state_age * 37.0).sin() * 1.8,
-                    (node.state_age * 29.0).sin() * 0.8,
-                ];
-                rotation = (node.state_age * 31.0).sin() * 0.04;
+                scale *= 1.0 + (node.state_age * std::f32::consts::TAU * 1.2).sin() * 0.008;
                 [59, 130, 246]
             }
             TaskState::Succeeded(_) => [21, 128, 61],
-            TaskState::Failed(_) | TaskState::Death(_) => {
-                let duration = if matches!(node.state, TaskState::Death(_)) {
-                    0.7
-                } else {
-                    0.42
-                };
-                let jitter = failure_jitter(node.id.as_str(), node.state_age, duration);
+            TaskState::Failed(_) => {
+                let jitter = failure_jitter(node.id.as_str(), node.state_age, 0.32);
                 offset = [jitter[0], jitter[1]];
                 rotation = jitter[2];
-                if matches!(node.state, TaskState::Death(_)) {
-                    [8, 8, 9]
-                } else {
-                    [239, 68, 68]
-                }
+                [239, 68, 68]
+            }
+            TaskState::Death(_) => {
+                offset[1] = 6.0 * (1.0 - (-8.0 * node.state_age).exp());
+                [8, 8, 9]
             }
         };
         let previous_color = task_state_color(node.previous_state);
@@ -170,14 +193,15 @@ impl HeadlessRenderer {
             mix_channel(previous_color[2], target_color[2], color_mix),
         ];
         let (flash_duration, flash_mix, flash_color) = match node.state {
-            TaskState::Succeeded(_) => (1.0, 0.6, [55, 163, 95]),
-            TaskState::Failed(_) => (0.6, 0.5, [244, 92, 92]),
-            TaskState::Death(_) => (0.6, 0.5, [255, 45, 45]),
-            TaskState::Running => (1.0, 0.2, [92, 158, 248]),
-            TaskState::Idle | TaskState::Hidden => (1.0, 0.2, [100, 112, 130]),
+            TaskState::Succeeded(_) => (0.45, 0.38, [55, 163, 95]),
+            TaskState::Failed(_) => (0.32, 0.45, [244, 92, 92]),
+            TaskState::Death(_) => (0.45, 0.5, [255, 45, 45]),
+            TaskState::Running => (0.18, 0.12, [92, 158, 248]),
+            TaskState::Idle | TaskState::Hidden => (0.2, 0.12, [100, 112, 130]),
         };
         let remaining = (1.0 - node.state_age / flash_duration).clamp(0.0, 1.0);
-        let flash = (remaining * std::f32::consts::FRAC_PI_2).sin() * flash_mix;
+        let attack = smoothstep((node.state_age / 0.025).clamp(0.0, 1.0));
+        let flash = (remaining * std::f32::consts::FRAC_PI_2).sin() * flash_mix * attack;
         let color = [
             mix_channel(color[0], flash_color[0], flash),
             mix_channel(color[1], flash_color[1], flash),
@@ -254,18 +278,31 @@ impl HeadlessRenderer {
                 58.0 * enter,
                 0.0,
                 enter,
+                0.0,
                 [245, 245, 245],
             ),
             TaskState::Running => {}
             TaskState::Succeeded(_) => {
                 let content = spring_progress(node.state_age, 0.25, 0.68);
+                draw_state_pulse(
+                    pixels,
+                    self.spec.width,
+                    self.spec.height,
+                    center,
+                    [width, height],
+                    node.state_age,
+                    0.55,
+                    [120, 255, 170, 255],
+                    0.08,
+                    true,
+                );
                 if let Some(result) = result {
                     self.composite_task_text(
                         pixels,
                         result,
                         center[0],
                         center[1],
-                        32.0 * (0.6 + content * 0.4),
+                        32.0 * 1.15 * (0.5 + content * 0.5),
                         [245, 250, 247],
                         content.clamp(0.0, 1.0),
                     );
@@ -280,34 +317,9 @@ impl HeadlessRenderer {
                         content.clamp(0.0, 1.0),
                     );
                 }
-                draw_state_pulse(
-                    pixels,
-                    self.spec.width,
-                    self.spec.height,
-                    center,
-                    [width, height],
-                    node.state_age,
-                    1.0,
-                    [120, 255, 170, 255],
-                    0.12,
-                    true,
-                );
             }
             TaskState::Failed(_) | TaskState::Death(_) => {
                 let icon = spring_progress(node.state_age, 0.25, 0.72);
-                self.composite_task_icon(
-                    pixels,
-                    "error",
-                    center,
-                    58.0 * icon,
-                    rotation,
-                    icon.clamp(0.0, 1.0),
-                    if matches!(node.state, TaskState::Death(_)) {
-                        [255, 45, 45]
-                    } else {
-                        [255, 245, 245]
-                    },
-                );
                 draw_state_pulse(
                     pixels,
                     self.spec.width,
@@ -321,13 +333,27 @@ impl HeadlessRenderer {
                     } else {
                         [255, 110, 110, 255]
                     },
-                    0.9,
+                    0.65,
                     false,
                 );
-                if node.state_age < 3.0
+                self.composite_task_icon(
+                    pixels,
+                    "error",
+                    center,
+                    58.0 * icon,
+                    rotation,
+                    icon.clamp(0.0, 1.0),
+                    (1.0 - icon.clamp(0.0, 1.0)) * 6.0,
+                    if matches!(node.state, TaskState::Death(_)) {
+                        [255, 45, 45]
+                    } else {
+                        [255, 245, 245]
+                    },
+                );
+                if (0.06..3.0).contains(&node.state_age)
                     && let Some(error) = error
                 {
-                    let rise = spring_progress(node.state_age, 0.25, 0.65);
+                    let rise = spring_progress(node.state_age - 0.06, 0.25, 0.65);
                     let bubble_center = [
                         center[0],
                         center[1] - height * 0.5 - 58.0 + (1.0 - rise) * 32.0,
@@ -378,6 +404,7 @@ impl HeadlessRenderer {
         size: f32,
         rotation: f32,
         opacity: f32,
+        blur: f32,
         color: [u8; 3],
     ) {
         let canvas_width = self.spec.width;
@@ -393,7 +420,7 @@ impl HeadlessRenderer {
             center[0],
             center[1],
             rotation,
-            (1.0 - opacity) * 8.0,
+            blur,
             opacity,
         );
     }
@@ -471,6 +498,118 @@ impl HeadlessRenderer {
     }
 }
 
+fn blur_task_layer(
+    pixels: &mut [u8],
+    canvas_width: u32,
+    canvas_height: u32,
+    center: [f32; 2],
+    strength: f32,
+) {
+    let radius = strength.ceil().clamp(1.0, 6.0) as usize;
+    let padding = radius as i32 + 2;
+    let min_x = (center[0] as i32 - 340 - padding).max(0) as usize;
+    let max_x = (center[0] as i32 + 340 + padding).min(canvas_width as i32 - 1) as usize;
+    let min_y = (center[1] as i32 - 260 - padding).max(0) as usize;
+    let max_y = (center[1] as i32 + 220 + padding).min(canvas_height as i32 - 1) as usize;
+    let width = max_x - min_x + 1;
+    let height = max_y - min_y + 1;
+    let mut source = vec![[0.0_f32; 4]; width * height];
+    let mut scratch = vec![[0.0_f32; 4]; width * height];
+
+    for y in 0..height {
+        for x in 0..width {
+            let canvas_index = ((min_y + y) * canvas_width as usize + min_x + x) * 4;
+            let alpha = f32::from(pixels[canvas_index + 3]) / 255.0;
+            source[y * width + x] = [
+                f32::from(pixels[canvas_index]) / 255.0 * alpha,
+                f32::from(pixels[canvas_index + 1]) / 255.0 * alpha,
+                f32::from(pixels[canvas_index + 2]) / 255.0 * alpha,
+                alpha,
+            ];
+        }
+    }
+
+    box_blur_pass(&source, &mut scratch, width, height, radius, true);
+    box_blur_pass(&scratch, &mut source, width, height, radius, false);
+
+    for y in 0..height {
+        for x in 0..width {
+            let value = source[y * width + x];
+            let canvas_index = ((min_y + y) * canvas_width as usize + min_x + x) * 4;
+            if value[3] <= 0.0001 {
+                pixels[canvas_index..canvas_index + 4].fill(0);
+                continue;
+            }
+            pixels[canvas_index] = (value[0] / value[3] * 255.0).round() as u8;
+            pixels[canvas_index + 1] = (value[1] / value[3] * 255.0).round() as u8;
+            pixels[canvas_index + 2] = (value[2] / value[3] * 255.0).round() as u8;
+            pixels[canvas_index + 3] = (value[3] * 255.0).round() as u8;
+        }
+    }
+}
+
+fn box_blur_pass(
+    source: &[[f32; 4]],
+    destination: &mut [[f32; 4]],
+    width: usize,
+    height: usize,
+    radius: usize,
+    horizontal: bool,
+) {
+    let kernel = (radius * 2 + 1) as f32;
+    if horizontal {
+        for y in 0..height {
+            let mut sum = [0.0_f32; 4];
+            for x in 0..=radius.min(width - 1) {
+                let sample = source[y * width + x];
+                for channel in 0..4 {
+                    sum[channel] += sample[channel];
+                }
+            }
+            for x in 0..width {
+                destination[y * width + x] = sum.map(|channel| channel / kernel);
+                if x >= radius {
+                    let sample = source[y * width + x - radius];
+                    for channel in 0..4 {
+                        sum[channel] -= sample[channel];
+                    }
+                }
+                if x + radius + 1 < width {
+                    let sample = source[y * width + x + radius + 1];
+                    for channel in 0..4 {
+                        sum[channel] += sample[channel];
+                    }
+                }
+            }
+        }
+    } else {
+        for x in 0..width {
+            let mut sum = [0.0_f32; 4];
+            for y in 0..=radius.min(height - 1) {
+                let sample = source[y * width + x];
+                for channel in 0..4 {
+                    sum[channel] += sample[channel];
+                }
+            }
+            for y in 0..height {
+                destination[y * width + x] = sum.map(|channel| channel / kernel);
+                if y >= radius {
+                    let sample = source[(y - radius) * width + x];
+                    for channel in 0..4 {
+                        sum[channel] -= sample[channel];
+                    }
+                }
+                if y + radius + 1 < height {
+                    let sample = source[(y + radius + 1) * width + x];
+                    for channel in 0..4 {
+                        sum[channel] += sample[channel];
+                    }
+                }
+            }
+        }
+    }
+}
+
 fn smoothstep(value: f32) -> f32 {
     value * value * (3.0 - 2.0 * value)
 }
@@ -488,21 +627,23 @@ fn motion_spring_progress(age: f32, visual_duration: f32, bounce: f32) -> f32 {
 fn task_node_size(state: &TaskState) -> [f32; 2] {
     match state {
         TaskState::Running => [NODE_SIZE, NODE_SIZE * 0.4],
-        TaskState::Succeeded(Some(result)) => [
-            (result.chars().count() as f32 * 32.0 * 0.56 + 72.0).clamp(NODE_SIZE, 520.0),
-            NODE_SIZE,
-        ],
+        TaskState::Succeeded(Some(result)) => [task_result_width(result), NODE_SIZE],
         TaskState::Succeeded(None) => [NODE_SIZE, NODE_SIZE],
         TaskState::Hidden => [0.0, 0.0],
         TaskState::Idle | TaskState::Failed(_) | TaskState::Death(_) => [NODE_SIZE, NODE_SIZE],
     }
 }
 
+fn task_result_width(result: &str) -> f32 {
+    ((result.chars().count() as f32 * 16.0 * 1.15 * 0.56 + 36.0).ceil() * 2.0)
+        .clamp(NODE_SIZE, 520.0)
+}
+
 fn task_node_scale(state: &TaskState) -> f32 {
-    if matches!(state, TaskState::Running) {
-        0.95
-    } else {
-        1.0
+    match state {
+        TaskState::Running => 0.95,
+        TaskState::Death(_) => 0.9,
+        _ => 1.0,
     }
 }
 
@@ -524,26 +665,14 @@ fn failure_jitter(id: &str, age: f32, duration: f32) -> [f32; 3] {
     if !(0.0..duration).contains(&age) {
         return [0.0; 3];
     }
-    let interval = 0.045;
-    let sample = age / interval;
-    let step = sample.floor() as u32;
-    let blend = smoothstep(sample.fract());
-    let envelope = (1.0 - age / duration).powi(2);
-    let channel = |index, amplitude| {
-        let from = jitter_noise(id, step, index);
-        let to = jitter_noise(id, step + 1, index);
-        (from + (to - from) * blend) * amplitude * envelope
-    };
-    [channel(0, 10.0), channel(1, 7.0), channel(2, 0.12)]
-}
-
-fn jitter_noise(id: &str, step: u32, channel: u32) -> f32 {
     let mut hasher = DefaultHasher::new();
     id.hash(&mut hasher);
-    step.hash(&mut hasher);
-    channel.hash(&mut hasher);
-    let value = hasher.finish() as u32;
-    value as f32 / u32::MAX as f32 * 2.0 - 1.0
+    let direction = if hasher.finish() & 1 == 0 { 1.0 } else { -1.0 };
+    let envelope = (-10.0 * age).exp() * (1.0 - age / duration);
+    let primary = (std::f32::consts::TAU * 11.0 * age).sin();
+    let accent = (std::f32::consts::TAU * 17.0 * age).sin() * 0.18;
+    let x = direction * (primary + accent) * 10.0 * envelope;
+    [x, primary * 0.6 * envelope, -x * 0.008]
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -568,9 +697,7 @@ fn draw_soft_rect_glow(
     for y in min_y..=max_y {
         for x in min_x..=max_x {
             let [local_x, local_y] = rotated_local(center, rotation, x, y);
-            let dx = (local_x.abs() - size[0] * 0.5).max(0.0);
-            let dy = (local_y.abs() - size[1] * 0.5).max(0.0);
-            let distance = dx.hypot(dy);
+            let distance = rounded_rect_distance(local_x, local_y, size).max(0.0);
             let alpha = (-distance * distance / (2.0 * radius * radius)).exp() * opacity;
             if alpha > 0.002 {
                 paint(pixels, width, height, x, y, color, alpha);
@@ -603,7 +730,7 @@ fn draw_energy_sweep(
             let dy = y as f32 + 0.5 - center[1];
             let local_x = dx * cosine + dy * sine;
             let local_y = -dx * sine + dy * cosine;
-            let coverage = rect_coverage(local_x, local_y, size);
+            let coverage = rounded_rect_coverage(local_x, local_y, size);
             if coverage <= 0.0 {
                 continue;
             }
@@ -651,8 +778,11 @@ fn draw_state_pulse(
     for y in -half_height..=half_height {
         for x in -half_width..=half_width {
             let distance = (x as f32).hypot(y as f32);
-            let alpha =
-                (-(distance - radius).powi(2) / (2.0 * softness.powi(2))).exp() * fade * intensity;
+            let coverage = rounded_rect_coverage(x as f32, y as f32, size);
+            let alpha = (-(distance - radius).powi(2) / (2.0 * softness.powi(2))).exp()
+                * fade
+                * intensity
+                * coverage;
             if alpha > 0.003 {
                 paint(
                     pixels,
@@ -683,7 +813,9 @@ fn fill_rect(
     let max_y = (center[1] + size[1] * 0.5).ceil() as i32;
     for y in min_y..=max_y {
         for x in min_x..=max_x {
-            paint(pixels, width, height, x, y, color, opacity);
+            let coverage =
+                rounded_rect_coverage(x as f32 + 0.5 - center[0], y as f32 + 0.5 - center[1], size);
+            paint(pixels, width, height, x, y, color, opacity * coverage);
         }
     }
 }
@@ -707,7 +839,7 @@ fn fill_rotated_rect(
     for y in min_y..=max_y {
         for x in min_x..=max_x {
             let [local_x, local_y] = rotated_local(center, rotation, x, y);
-            let coverage = rect_coverage(local_x, local_y, size);
+            let coverage = rounded_rect_coverage(local_x, local_y, size);
             if coverage > 0.0 {
                 paint(pixels, width, height, x, y, color, opacity * coverage);
             }
@@ -734,10 +866,13 @@ fn stroke_rotated_rect(
     for y in min_y..=max_y {
         for x in min_x..=max_x {
             let [local_x, local_y] = rotated_local(center, rotation, x, y);
-            let edge_x = size[0] * 0.5 - local_x.abs();
-            let edge_y = size[1] * 0.5 - local_y.abs();
-            let coverage =
-                rect_coverage(local_x, local_y, size) * (1.75 - edge_x.min(edge_y)).clamp(0.0, 1.0);
+            let outer = rounded_rect_coverage(local_x, local_y, size);
+            let inner = rounded_rect_coverage(
+                local_x,
+                local_y,
+                [(size[0] - 2.5).max(0.0), (size[1] - 2.5).max(0.0)],
+            );
+            let coverage = (outer - inner).clamp(0.0, 1.0);
             if coverage > 0.0 {
                 paint(pixels, width, height, x, y, color, opacity * coverage);
             }
@@ -752,9 +887,15 @@ fn rotated_local(center: [f32; 2], rotation: f32, x: i32, y: i32) -> [f32; 2] {
     [dx * cosine + dy * sine, -dx * sine + dy * cosine]
 }
 
-fn rect_coverage(local_x: f32, local_y: f32, size: [f32; 2]) -> f32 {
-    let edge = (size[0] * 0.5 - local_x.abs()).min(size[1] * 0.5 - local_y.abs());
-    (edge + 0.5).clamp(0.0, 1.0)
+fn rounded_rect_coverage(local_x: f32, local_y: f32, size: [f32; 2]) -> f32 {
+    (0.5 - rounded_rect_distance(local_x, local_y, size)).clamp(0.0, 1.0)
+}
+
+fn rounded_rect_distance(local_x: f32, local_y: f32, size: [f32; 2]) -> f32 {
+    let radius = 8.0_f32.min(size[0].min(size[1]) * 0.5 - 1.0).max(0.0);
+    let x = local_x.abs() - (size[0] * 0.5 - radius);
+    let y = local_y.abs() - (size[1] * 0.5 - radius);
+    x.max(0.0).hypot(y.max(0.0)) + x.max(y).min(0.0) - radius
 }
 
 fn draw_face(pixels: &mut [u8], width: u32, height: u32, center: [f32; 2], radius: f32, time: f32) {

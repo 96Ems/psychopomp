@@ -65,7 +65,7 @@ The lesson port extends the compositor to multiple non-overlapping reveals on on
 
 `src/render/effects/` owns the concrete pixel implementations for celebration annotations. Prismatic bloom and focus pulse share one small frame interface but keep their particle and halo recipes in separate files. `render.rs` only translates resolved target geometry into canvas coordinates and dispatches the selected closed recipe; adding another demonstrated built-in effect does not enlarge the renderer adapter or require a plugin interface.
 
-`src/render/task.rs` owns the concrete Effect Task visual recipe demonstrated by the `visual-effects` lesson: compressed running nodes, energy sweeps, state flashes, pulses, icons, error bubbles, and labels. The DSL and composition retain stable Task identity and semantic state changes; this renderer alone owns their current 128-pixel presentation. All moving pixel layers share one fractional transform and analytic edge coverage so temporal jitter does not separate the body, sweep, border, flash, and glow.
+`src/render/task.rs` owns the concrete Effect Task visual recipe demonstrated by the `visual-effects` lesson: compressed running nodes, energy sweeps, state flashes, pulses, icons, error bubbles, and labels. The DSL and composition retain stable Task identity and semantic state changes; this renderer alone owns their current 128-pixel presentation. All moving pixel layers share one fractional transform, rounded signed-distance edge, and analytic coverage so the body, sweep, border, pulse, and glow remain one coherent material. A short container-level entrance blur applies to the assembled node while ordinary shutter sampling supplies motion blur from actual movement.
 
 The Adapter keeps these details private:
 

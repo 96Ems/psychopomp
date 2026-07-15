@@ -375,30 +375,34 @@ async fn render_visual_effects(output: &Path) -> Result<()> {
     let narration = Asset::audio("visual-effects", asset_directory.join("narration.webm"))
         .clip(TimeRange::new(Time::ZERO, Time::seconds(48.627)));
     let running_sound = Asset::audio("task-running", asset_directory.join("task-running.wav"))
-        .clip(TimeRange::new(Time::ZERO, Time::seconds(0.14)));
+        .clip(TimeRange::new(Time::ZERO, Time::seconds(0.14)))
+        .gain_db(18.0);
     let success_sound = Asset::audio("task-success", asset_directory.join("task-success.wav"))
-        .clip(TimeRange::new(Time::ZERO, Time::seconds(0.75)));
+        .clip(TimeRange::new(Time::ZERO, Time::seconds(0.75)))
+        .gain_db(18.0);
     let failure_sound = Asset::audio("task-failure", asset_directory.join("task-failure.wav"))
-        .clip(TimeRange::new(Time::ZERO, Time::seconds(0.48)));
+        .clip(TimeRange::new(Time::ZERO, Time::seconds(0.48)))
+        .gain_db(16.0);
     let death_sound = Asset::audio("task-death", asset_directory.join("task-death.wav"))
-        .clip(TimeRange::new(Time::ZERO, Time::seconds(1.1)));
+        .clip(TimeRange::new(Time::ZERO, Time::seconds(1.1)))
+        .gain_db(16.0);
     let cues = VisualEffectsCues::from_transcript(&transcript)?;
     let center = WIDTH as f32 * 0.5;
     let y = HEIGHT as f32 * 0.5;
     let lang_one = Task::new("lang", "lang").at(center, y);
     let lang_two = lang_one.clone().at(884.0, y);
     let lang_three = lang_one.clone().at(808.0, y);
-    let launch_two = Task::new("launch", "launch").at(1098.0, y);
-    let launch_three = launch_two.clone().at(1014.0, y);
-    let pact = Task::new("pact", "pact").at(1166.0, y);
+    let launch_two = Task::new("launch", "launch").at(1112.0, y);
+    let launch_three = launch_two.clone().at(1036.0, y);
+    let pact = Task::new("pact", "pact").at(1188.0, y);
     let classify_one = Task::new("classify", "classify").at(center, y);
     let classify = classify_one.clone().at(808.0, y);
-    let classify_done = classify_one.clone().at(720.0, y);
+    let classify_done = classify_one.clone().at(702.0, y);
     let assign = Task::new("assign", "assign").at(960.0, y);
-    let assign_running = assign.clone().at(1004.0, y);
+    let assign_running = assign.clone().at(1015.0, y);
     let notify = Task::new("notify", "notify").at(1112.0, y);
-    let notify_after_classify = notify.clone().at(1156.0, y);
-    let notify_after_assign = notify.clone().at(1244.0, y);
+    let notify_after_classify = notify.clone().at(1167.0, y);
+    let notify_after_assign = notify.clone().at(1273.0, y);
     let at = |seconds: f32, change| {
         Composition::delay(
             kinograph::composition::Duration::seconds(f64::from(seconds)),

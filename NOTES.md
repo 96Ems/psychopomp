@@ -72,6 +72,10 @@ The default artifact is `output/kinograph-prototype.mp4`.
 - Effect Task states can be authored as ordinary Composition leaves while stable IDs preserve nodes across idle, running, success, failure, death, retry, and hidden intervals. Arbitrary-time sampling resets entrance age after a hidden interval rather than depending on prior rendered frames.
 - Porting Pixi task pixels requires one shared fractional transform for every moving layer. Integer-snapped or independently transformed body, sweep, border, flash, and glow edges visibly separate under subpixel jitter even when their high-level spring targets match.
 - Motion's width and height springs are intentionally independent in the Task recipe: running height changes over 0.2 seconds, completed result width over 0.35 seconds, and running scale returns from 0.95 without a one-frame geometry jump.
+- Task pose changes and semantic state changes need independent ages even before they become separate compiled tracks. Restating an unchanged success or idle state to recenter a row must move the stable Task without replaying its flash, pulse, sound-equivalent visual accent, or content entrance.
+- Product motion guidance favors one dominant action per Task transition: compression and sweep for running, result resolution for success, a brief horizontal impact for failure, and loss of energy for death. Continuous running shake and multi-axis random failure noise made state meaning less clear despite adding more motion.
+- Positive `asetpts` offsets do not place delayed layer audio reliably through FFmpeg's `amix`; explicit `adelay` placement is required. A band-limited comparison against narration confirmed that the old path silently mixed task sounds at the wrong time even though the output contained an AAC stream.
+- Task entrance defocus reads coherently only when blur applies to the assembled node layer. Blurring the icon independently while leaving its body and label sharp separates one stable actor into unrelated optical planes; container blur plus temporal sampling keeps defocus and motion blur distinct.
 
 ## Next Question
 

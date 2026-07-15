@@ -153,6 +153,22 @@ What Kinograph should defer:
 - a graphical timeline, property inspector, graph editor, or extension system
 - editor-specific project structures before the code-authored hero scene reveals the required data model
 
+## Product Motion Guidance
+
+[Apple's Human Interface Guidelines for Motion](https://developer.apple.com/design/human-interface-guidelines/motion), [Material 3's motion system](https://m3.material.io/styles/motion/overview/how-it-works), [IBM's classic animation principles](https://www.ibm.com/design/language/animation/classic-principles/), and [Fluent 2 choreography guidance](https://fluent2.microsoft.design/motion) constrain how classical animation principles should enter technical UI scenes.
+
+Relevant ideas:
+
+- feedback motion should be brief, precise, and immediately tied to a meaningful state change
+- physics-based motion improves continuity and interruption, but visible oscillation should be reserved for expressive moments rather than every utility transition
+- one primary action should establish the new state; glow, pulse, copy, and sound are subordinate actions that reinforce it
+- success can use one restrained overshoot, failure should use a short directional impact and definitive rest, and terminal states should lose energy rather than behaving like a stronger recoverable failure
+- running activity should remain readable without continuous decorative instability
+- audio's main transient should coincide with visual contact, while longer sonic decay may provide follow-through after geometry has settled
+- state must remain legible through shape, text, icon, and contrast without depending on motion, color, or sound alone
+
+Kinograph applies these constraints to Effect Task states. Running uses compression and a directional energy sweep rather than perpetual shake. Success prioritizes result expansion and content resolution. Failure stages a short horizontal impact before its error bubble, then becomes still. Death darkens and settles with less scale instead of reusing failure shake. Layout-only changes do not restart semantic flashes or pulses.
+
 ## effect-institute
 
 `/Users/kit/code/experiments/typescript/effect-institute` is local product prior art for semantic code states, not the immediate timeline model.
