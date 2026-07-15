@@ -3,11 +3,14 @@ use std::{
     io::Write,
     path::{Path, PathBuf},
     process::{Child, ChildStdin, Command, Stdio},
+    sync::atomic::{AtomicU64, Ordering},
 };
 
 use anyhow::{Context, Result, bail};
 
 use crate::composition::{AssetKind, MediaPlacement};
+
+static NEXT_TEMPORARY_OUTPUT: AtomicU64 = AtomicU64::new(0);
 
 #[derive(Clone, Copy)]
 pub struct VideoSpec {
@@ -39,7 +42,7 @@ impl FfmpegEncoder {
             .file_name()
             .context("output path must include a file name")?
             .to_string_lossy();
-        let temporary_output = output.with_file_name(format!(".{file_name}.kinograph-tmp.mp4"));
+        let temporary_output = temporary_output_path(output, &file_name);
         let temporary_output_string = temporary_output.to_string_lossy().into_owned();
         let mut arguments = [
             "-y",
@@ -177,6 +180,14 @@ impl FfmpegEncoder {
     }
 }
 
+fn temporary_output_path(output: &Path, file_name: &str) -> PathBuf {
+    let nonce = NEXT_TEMPORARY_OUTPUT.fetch_add(1, Ordering::Relaxed);
+    output.with_file_name(format!(
+        ".{file_name}.kinograph-tmp-{}-{nonce}.mp4",
+        std::process::id()
+    ))
+}
+
 fn audio_clip_filter(
     output_index: usize,
     input_index: usize,
@@ -207,7 +218,9 @@ impl Drop for FfmpegEncoder {
 
 #[cfg(test)]
 mod tests {
-    use super::audio_clip_filter;
+    use std::path::Path;
+
+    use super::{audio_clip_filter, temporary_output_path};
 
     #[test]
     fn audio_placement_uses_delay_instead_of_positive_pts_offsets() {
@@ -216,6 +229,16 @@ mod tests {
         assert_eq!(
             filter,
             "[3:a]atrim=start=0.250000000:end=0.750000000,volume=12.000dB,asetpts=PTS-STARTPTS,adelay=1234.500:all=1[a2]"
+        );
+    }
+
+    #[test]
+    fn concurrent_encoders_use_distinct_temporary_outputs() {
+        let output = Path::new("output/lesson.mp4");
+
+        assert_ne!(
+            temporary_output_path(output, "lesson.mp4"),
+            temporary_output_path(output, "lesson.mp4")
         );
     }
 }

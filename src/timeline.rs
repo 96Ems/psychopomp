@@ -274,20 +274,25 @@ impl Timeline {
         animation: &Animation,
     ) -> Result<Self> {
         animation.validate()?;
+        let mut tracks = HashMap::new();
+        for (property, value) in initial_values {
+            let id = property.as_str().to_owned();
+            if tracks
+                .insert(
+                    property,
+                    vec![Segment {
+                        start: 0.0,
+                        initial: MotionState::at(value),
+                        kind: SegmentKind::Set,
+                    }],
+                )
+                .is_some()
+            {
+                bail!("property '{id}' has more than one initial value");
+            }
+        }
         let mut timeline = Self {
-            tracks: initial_values
-                .into_iter()
-                .map(|(property, value)| {
-                    (
-                        property,
-                        vec![Segment {
-                            start: 0.0,
-                            initial: MotionState::at(value),
-                            kind: SegmentKind::Set,
-                        }],
-                    )
-                })
-                .collect(),
+            tracks,
             duration: animation.duration(),
         };
         let mut leaves = Vec::new();
@@ -404,6 +409,20 @@ mod tests {
 
         let error = Timeline::compile([], &animation).err().unwrap();
         assert!(error.to_string().contains("both write property 'panel.x'"));
+    }
+
+    #[test]
+    fn duplicate_initial_values_are_rejected() {
+        let x = PropertyId::new("panel.x");
+        let error = Timeline::compile([(x.clone(), 0.0), (x, 1.0)], &Animation::hold(1.0))
+            .err()
+            .unwrap();
+
+        assert!(
+            error
+                .to_string()
+                .contains("property 'panel.x' has more than one initial value")
+        );
     }
 
     #[test]

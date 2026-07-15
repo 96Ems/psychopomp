@@ -17,6 +17,11 @@ use super::{
 
 const QUOTE_WORDS: [&str; 8] = ["why", "would", "I", "ever", "want", "to", "use", "Effect?"];
 const NODE_SIZE: f32 = 128.0;
+const RUNNING_JITTER_MIN_INTERVAL: f32 = 0.055;
+const RUNNING_JITTER_MAX_INTERVAL: f32 = 0.14;
+const RUNNING_JITTER_LAMBDA: f32 = 28.0;
+const ENERGY_SPEED: f32 = 500.0;
+const ENERGY_SPACING: f32 = 122.0;
 
 #[derive(Clone, Copy)]
 pub struct QuoteFrame<'a> {
@@ -51,16 +56,29 @@ impl HeadlessRenderer {
         for pixel in pixels.chunks_exact_mut(4) {
             pixel.copy_from_slice(&[1, 2, 4, 255]);
         }
+        self.composite_task_scene(&mut pixels, frame)?;
+        Ok(pixels)
+    }
+
+    pub fn composite_task_scene(
+        &mut self,
+        pixels: &mut [u8],
+        frame: &TaskSceneFrame<'_>,
+    ) -> Result<()> {
+        let expected = self.spec.width as usize * self.spec.height as usize * 4;
+        if pixels.len() != expected {
+            anyhow::bail!("expected {expected} frame bytes, received {}", pixels.len());
+        }
         if let Some(quote) = frame.quote {
-            self.composite_quote(&mut pixels, quote);
+            self.composite_quote(pixels, quote);
         }
         for link in frame.links {
-            draw_task_link(&mut pixels, self.spec.width, self.spec.height, *link);
+            draw_task_link(pixels, self.spec.width, self.spec.height, *link);
         }
         for node in frame.nodes {
-            self.composite_task_node(&mut pixels, *node);
+            self.composite_task_node(pixels, *node);
         }
-        Ok(pixels)
+        Ok(())
     }
 
     fn composite_quote(&mut self, pixels: &mut [u8], frame: QuoteFrame<'_>) {
@@ -155,15 +173,17 @@ impl HeadlessRenderer {
             &mut blur_source,
             &mut blur_scratch,
         );
-        for y in bounds.min_y..=bounds.max_y {
-            for x in bounds.min_x..=bounds.max_x {
-                let index = (y * self.spec.width as usize + x) * 4;
-                let source = &layer[index..index + 4];
-                if source[3] > 0 {
-                    blend_pixel_linear(
-                        &mut pixels[index..index + 4],
-                        [source[0], source[1], source[2], source[3]],
-                    );
+        if let Some(bounds) = bounds {
+            for y in bounds.min_y..=bounds.max_y {
+                for x in bounds.min_x..=bounds.max_x {
+                    let index = (y * self.spec.width as usize + x) * 4;
+                    let source = &layer[index..index + 4];
+                    if source[3] > 0 {
+                        blend_pixel_linear(
+                            &mut pixels[index..index + 4],
+                            [source[0], source[1], source[2], source[3]],
+                        );
+                    }
                 }
             }
         }
@@ -215,11 +235,16 @@ impl HeadlessRenderer {
         scale *= exit;
         let mut offset = [0.0, 0.0];
         let mut rotation = 0.0;
+        let mut charge_energy = 0.0;
         let target_color = match node.state {
             TaskState::Hidden => task_state_color(node.previous_state),
             TaskState::Idle => [71, 85, 105],
             TaskState::Running => {
-                scale *= 1.0 + (node.state_age * std::f32::consts::TAU * 1.2).sin() * 0.008;
+                let jitter = running_jitter(node.id.as_str(), node.state_age);
+                offset = [jitter[0], jitter[1]];
+                rotation = jitter[2];
+                charge_energy =
+                    (jitter[0].abs() / 3.4 * 0.6 + jitter[1].abs() / 1.6 * 0.4).min(1.0);
                 [59, 130, 246]
             }
             TaskState::Succeeded(_) => [21, 128, 61],
@@ -261,7 +286,7 @@ impl HeadlessRenderer {
         height *= scale;
 
         if matches!(node.state, TaskState::Running) {
-            let glow = 0.2 + (0.5 + 0.5 * (node.state_age / 0.18).sin()) * 0.15;
+            let glow = 0.2 + charge_energy * 0.18;
             draw_soft_rect_glow(
                 pixels,
                 self.spec.width,
@@ -302,7 +327,7 @@ impl HeadlessRenderer {
                 [width, height],
                 rotation,
                 [130, 200, 255, 255],
-                0.4 + 0.6 * (0.5 + 0.5 * (node.state_age / 0.22).sin()),
+                0.45 + charge_energy * 0.5,
             );
         }
         if matches!(node.state, TaskState::Death(_)) {
@@ -741,13 +766,22 @@ fn blur_task_layer(
     strength: f32,
     source: &mut Vec<[f32; 4]>,
     scratch: &mut Vec<[f32; 4]>,
-) -> TaskLayerBounds {
+) -> Option<TaskLayerBounds> {
     let radius = strength.ceil().clamp(1.0, 6.0) as usize;
     let padding = radius as i32 + 2;
-    let min_x = (center[0] as i32 - 340 - padding).max(0) as usize;
-    let max_x = (center[0] as i32 + 340 + padding).min(canvas_width as i32 - 1) as usize;
-    let min_y = (center[1] as i32 - 260 - padding).max(0) as usize;
-    let max_y = (center[1] as i32 + 220 + padding).min(canvas_height as i32 - 1) as usize;
+    let min_x = (center[0] as i32 - 340 - padding).max(0);
+    let max_x = (center[0] as i32 + 340 + padding).min(canvas_width as i32 - 1);
+    let min_y = (center[1] as i32 - 260 - padding).max(0);
+    let max_y = (center[1] as i32 + 220 + padding).min(canvas_height as i32 - 1);
+    if min_x > max_x || min_y > max_y {
+        return None;
+    }
+    let (min_x, max_x, min_y, max_y) = (
+        min_x as usize,
+        max_x as usize,
+        min_y as usize,
+        max_y as usize,
+    );
     let width = max_x - min_x + 1;
     let height = max_y - min_y + 1;
     source.resize(width * height, [0.0; 4]);
@@ -786,12 +820,12 @@ fn blur_task_layer(
             pixels[canvas_index + 3] = (value[3] * 255.0).round() as u8;
         }
     }
-    TaskLayerBounds {
+    Some(TaskLayerBounds {
         min_x,
         max_x,
         min_y,
         max_y,
-    }
+    })
 }
 
 fn srgb_to_linear_lut() -> &'static [f32; 256] {
@@ -973,6 +1007,48 @@ fn failure_jitter(id: &str, age: f32, duration: f32) -> [f32; 3] {
     [x, primary * 0.6 * envelope, -x * 0.008]
 }
 
+fn running_jitter(id: &str, age: f32) -> [f32; 3] {
+    let age = age.max(0.0);
+    let amplitudes = [3.4, 1.6, 0.055];
+    let mut position = [0.0; 3];
+    let mut cursor = 0.0;
+    let mut segment = 0;
+
+    loop {
+        let interval = jitter_interval(id, segment);
+        let elapsed = (age - cursor).clamp(0.0, interval);
+        let decay = (-RUNNING_JITTER_LAMBDA * elapsed).exp();
+        for axis in 0..3 {
+            let target = jitter_target(id, segment, axis as u32) * amplitudes[axis];
+            position[axis] = target + (position[axis] - target) * decay;
+        }
+        if age <= cursor + interval {
+            return position;
+        }
+        cursor += interval;
+        segment += 1;
+    }
+}
+
+fn jitter_interval(id: &str, segment: u32) -> f32 {
+    let unit = jitter_target(id, segment, 3) * 0.5 + 0.5;
+    RUNNING_JITTER_MIN_INTERVAL + unit * (RUNNING_JITTER_MAX_INTERVAL - RUNNING_JITTER_MIN_INTERVAL)
+}
+
+fn jitter_target(id: &str, segment: u32, axis: u32) -> f32 {
+    let mut hash = 0xcbf2_9ce4_8422_2325_u64;
+    for byte in id
+        .bytes()
+        .chain(segment.to_le_bytes())
+        .chain(axis.to_le_bytes())
+    {
+        hash ^= u64::from(byte);
+        hash = hash.wrapping_mul(0x0000_0100_0000_01b3);
+    }
+    let unit = (hash >> 40) as f32 / ((1_u32 << 24) - 1) as f32;
+    unit * 2.0 - 1.0
+}
+
 #[allow(clippy::too_many_arguments)]
 fn draw_soft_rect_glow(
     pixels: &mut [u8],
@@ -1009,8 +1085,6 @@ fn draw_energy_sweep(
     time: f32,
 ) {
     let (sine, cosine) = rotation.sin_cos();
-    let travel = size[0] + 40.0 * 2.0 + 122.0 * 2.0;
-    let start = (time * 500.0) % travel - 40.0;
     let (min_x, max_x, min_y, max_y) = rotated_rect_bounds(center, size, rotation, 1.0);
     for y in min_y..=max_y {
         for x in min_x..=max_x {
@@ -1023,18 +1097,20 @@ fn draw_energy_sweep(
                 continue;
             }
             let position = local_x + size[0] * 0.5;
-            let mut band = 0.0_f32;
-            for index in 0..3 {
-                let distance = (position - (start - index as f32 * 122.0)).abs();
-                band = band.max(1.0 - smoothstep(((distance - 1.0) / 39.0).clamp(0.0, 1.0)));
-            }
-            let pulse = 0.85 + 0.15 * (time * 7.6).sin();
-            let alpha = band * pulse * 0.5 * coverage;
+            let distance = energy_band_distance(position, time);
+            let band = 1.0 - smoothstep(((distance - 1.0) / 39.0).clamp(0.0, 1.0));
+            let alpha = band * 0.5 * coverage;
             if alpha > 0.002 {
                 paint(pixels, width, height, x, y, [150, 215, 255, 255], alpha);
             }
         }
     }
+}
+
+fn energy_band_distance(position: f32, time: f32) -> f32 {
+    let phase = (time * ENERGY_SPEED).rem_euclid(ENERGY_SPACING);
+    ((position - phase + ENERGY_SPACING * 0.5).rem_euclid(ENERGY_SPACING) - ENERGY_SPACING * 0.5)
+        .abs()
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -1285,4 +1361,72 @@ fn paint(pixels: &mut [u8], width: u32, height: u32, x: i32, y: i32, color: [u8;
     }
     let index = (y as usize * width as usize + x as usize) * 4;
     blend_pixel(&mut pixels[index..index + 4], color, opacity);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{
+        ENERGY_SPACING, ENERGY_SPEED, blur_task_layer, energy_band_distance, jitter_interval,
+        running_jitter,
+    };
+
+    #[test]
+    fn running_jitter_is_deterministic_for_out_of_order_samples() {
+        let later = running_jitter("clock", 1.37);
+        let earlier = running_jitter("clock", 0.41);
+
+        assert_eq!(later, running_jitter("clock", 1.37));
+        assert_eq!(earlier, running_jitter("clock", 0.41));
+        assert_eq!(running_jitter("clock", 0.0), [0.0; 3]);
+        assert_ne!(jitter_interval("clock", 0), jitter_interval("clock", 1));
+    }
+
+    #[test]
+    fn running_energy_bands_arrive_at_equal_intervals() {
+        let interval = ENERGY_SPACING / ENERGY_SPEED;
+        let position = 64.0;
+        let first = position / ENERGY_SPEED;
+
+        for pulse in 0..6 {
+            let time = first + pulse as f32 * interval;
+            assert!(energy_band_distance(position, time) < 0.001);
+        }
+    }
+
+    #[test]
+    fn off_canvas_task_blur_has_no_bounds_or_allocation() {
+        let mut pixels = vec![0_u8; 16 * 16 * 4];
+        let mut source = Vec::new();
+        let mut scratch = Vec::new();
+
+        assert!(
+            blur_task_layer(
+                &mut pixels,
+                16,
+                16,
+                [10_000.0, 10_000.0],
+                4.0,
+                &mut source,
+                &mut scratch,
+            )
+            .is_none()
+        );
+        assert!(source.is_empty());
+        assert!(scratch.is_empty());
+
+        assert!(
+            blur_task_layer(
+                &mut pixels,
+                16,
+                16,
+                [-10_000.0, -10_000.0],
+                4.0,
+                &mut source,
+                &mut scratch,
+            )
+            .is_none()
+        );
+        assert!(source.is_empty());
+        assert!(scratch.is_empty());
+    }
 }

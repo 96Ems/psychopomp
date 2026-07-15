@@ -18,6 +18,7 @@ use crate::dsl::AnnotationFrame;
 mod effects;
 mod task;
 mod terminal;
+mod ui;
 
 pub use task::{QuoteFrame, TaskLinkFrame, TaskSceneFrame};
 pub use terminal::{CommandFileFrame, TerminalSceneFrame};
@@ -599,15 +600,30 @@ impl HeadlessRenderer {
                 .get(&placed.line.id)
                 .map(|(_, sprite)| sprite)
                 .expect("line sprite was populated above");
-            composite_sprite(
-                pixels,
-                self.spec.width,
-                self.spec.height,
-                sprite,
-                line_x.round() as i32,
-                line_y.round() as i32,
-                placed.opacity,
-            );
+            let line_blur = (1.0 - placed.opacity).clamp(0.0, 1.0) * 4.0;
+            if line_blur > 0.01 {
+                composite_sprite_clipped_blurred(
+                    pixels,
+                    self.spec.width,
+                    self.spec.height,
+                    sprite,
+                    line_x.round() as i32,
+                    line_y.round() as i32,
+                    sprite.advance,
+                    line_blur,
+                    placed.opacity,
+                );
+            } else {
+                composite_sprite(
+                    pixels,
+                    self.spec.width,
+                    self.spec.height,
+                    sprite,
+                    line_x.round() as i32,
+                    line_y.round() as i32,
+                    placed.opacity,
+                );
+            }
         }
         for squiggle in frame.squiggles {
             composite_squiggle(
@@ -672,6 +688,7 @@ impl HeadlessRenderer {
 
         let mut cursor_x = x;
         let y = y.round() as i32;
+        let line_blur = (1.0 - placed.opacity).clamp(0.0, 1.0) * 4.0;
         for (start, end, progress) in segments {
             let key = format!("{}:{start}:{end}", placed.line.id.as_str());
             let sprite = &self.part_sprites[&key].1;
@@ -685,20 +702,34 @@ impl HeadlessRenderer {
                     cursor_x.round() as i32,
                     y,
                     sprite.advance * progress,
-                    (1.0 - progress) * 4.0,
+                    ((1.0 - progress) * 4.0).max(line_blur),
                     placed.opacity * progress,
                 );
                 cursor_x += sprite.advance * progress;
             } else {
-                composite_sprite(
-                    pixels,
-                    self.spec.width,
-                    self.spec.height,
-                    sprite,
-                    cursor_x.round() as i32,
-                    y,
-                    placed.opacity,
-                );
+                if line_blur > 0.01 {
+                    composite_sprite_clipped_blurred(
+                        pixels,
+                        self.spec.width,
+                        self.spec.height,
+                        sprite,
+                        cursor_x.round() as i32,
+                        y,
+                        sprite.advance,
+                        line_blur,
+                        placed.opacity,
+                    );
+                } else {
+                    composite_sprite(
+                        pixels,
+                        self.spec.width,
+                        self.spec.height,
+                        sprite,
+                        cursor_x.round() as i32,
+                        y,
+                        placed.opacity,
+                    );
+                }
                 cursor_x += sprite.advance;
             }
         }

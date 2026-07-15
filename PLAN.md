@@ -318,7 +318,8 @@ kinograph/
     motion.rs            # analytic spring trajectories
     render.rs            # wgpu renderer and accumulation passes
     encode.rs            # FFmpeg subprocess boundary
-    main.rs              # benchmark choreography and application wiring
+    scenes/              # concrete benchmark choreography by scene
+    main.rs              # command parsing and scene dispatch
 ```
 
 Modules should become crates only after the implementation creates a real reuse or compilation boundary.

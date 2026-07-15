@@ -2,6 +2,7 @@ use std::collections::HashMap;
 
 use anyhow::{Context, Result};
 
+use crate::code::{CodeTransition, PlacedLine, TransitionProgress};
 use crate::composition::{
     Asset, AssetKind, Composition, CueId, Duration, MediaPlacement, TimeRange,
 };
@@ -676,6 +677,60 @@ pub struct Code {
     pub inline_reveal: PropertyId,
 }
 
+#[derive(Clone)]
+pub struct CodeEdit {
+    pub layout: PropertyId,
+    pub content: PropertyId,
+}
+
+impl CodeEdit {
+    fn new(id: &str) -> Self {
+        Self {
+            layout: PropertyId::new(format!("{id}.layout")),
+            content: PropertyId::new(format!("{id}.content")),
+        }
+    }
+
+    pub fn initial_values(&self) -> [(PropertyId, Scalar); 2] {
+        [
+            (self.layout.clone(), Scalar::Literal(0.0)),
+            (self.content.clone(), Scalar::Literal(0.0)),
+        ]
+    }
+
+    pub fn enter(&self, profile: SpringProfile) -> Motion {
+        self.animate_to(1.0, profile)
+    }
+
+    pub fn exit(&self, profile: SpringProfile) -> Motion {
+        self.animate_to(0.0, profile)
+    }
+
+    pub fn progress_at(&self, scene: &CompiledScene, seconds: f32) -> Option<TransitionProgress> {
+        Some(TransitionProgress {
+            layout: scene.timeline().sample(&self.layout, seconds)?.position,
+            content: scene.timeline().sample(&self.content, seconds)?.position,
+        })
+    }
+
+    pub fn sample_at<'a>(
+        &self,
+        scene: &CompiledScene,
+        transition: &'a CodeTransition,
+        seconds: f32,
+    ) -> Option<Vec<PlacedLine<'a>>> {
+        self.progress_at(scene, seconds)
+            .map(|progress| transition.sample(progress))
+    }
+
+    fn animate_to(&self, progress: f32, profile: SpringProfile) -> Motion {
+        Motion::parallel([
+            Motion::spring(self.layout.clone(), progress, profile),
+            Motion::spring(self.content.clone(), progress, profile),
+        ])
+    }
+}
+
 impl Code {
     pub fn new(id: &str) -> Self {
         Self {
@@ -699,6 +754,15 @@ impl Code {
 
     pub fn text(&self, line_id: impl Into<String>, text: impl Into<String>) -> TextTarget {
         TextTarget::new(line_id, text)
+    }
+
+    pub fn edit(&self, id: &str) -> CodeEdit {
+        let code_id = self
+            .panel_y
+            .as_str()
+            .strip_suffix(".panel_y")
+            .expect("Code panel property retains its generated suffix");
+        CodeEdit::new(&format!("{code_id}.edit.{id}"))
     }
 
     pub fn highlight(&self, target: TextTarget, profile: SpringProfile) -> Motion {
@@ -791,12 +855,71 @@ fn resolve_target(
 #[cfg(test)]
 mod tests {
     use super::{
-        Annotation, AnnotationEffect, Image, Motion, Pointer, Scalar, Scene, TargetGeometry, Task,
-        TaskState, TextTarget,
+        Annotation, AnnotationEffect, Code, Image, Motion, Pointer, Scalar, Scene, TargetGeometry,
+        Task, TaskState, TextTarget,
+    };
+    use crate::code::{
+        CodeDocument, CodeLayout, CodeLine, CodeSnapshot, CodeTransition, StyledSpan, SyntaxStyle,
     };
     use crate::composition::{Asset, Composition, Duration, MediaRole, Time, TimeRange};
     use crate::timeline::SpringProfile;
     use std::collections::HashMap;
+
+    #[test]
+    fn code_edit_coordinates_transition_tracks_and_sampling() {
+        let document = CodeDocument::new(vec![
+            CodeLine::new("a", vec![StyledSpan::new("a", SyntaxStyle::Plain)]),
+            CodeLine::new(
+                "inserted",
+                vec![StyledSpan::new("inserted", SyntaxStyle::Plain)],
+            ),
+        ])
+        .unwrap();
+        let transition = CodeTransition::compile(
+            &document,
+            &CodeSnapshot::new(["a"]),
+            &CodeSnapshot::new(["a", "inserted"]),
+            CodeLayout {
+                line_height: 44.0,
+                entering_offset_x: 96.0,
+            },
+        )
+        .unwrap();
+        let edit = Code::new("lesson.code").edit("insert");
+        let profile = SpringProfile::from_visual_duration(0.3, 0.0, 0.001, 0.001);
+        let scene = Scene::new(edit.initial_values(), edit.enter(profile));
+        let compiled = scene.compile(&HashMap::new()).unwrap();
+
+        let before = edit.sample_at(&compiled, &transition, 0.0).unwrap();
+        let after = edit.sample_at(&compiled, &transition, 1.0).unwrap();
+        let inserted_before = before
+            .iter()
+            .find(|line| line.line.id.as_str() == "inserted")
+            .unwrap();
+        let inserted_after = after
+            .iter()
+            .find(|line| line.line.id.as_str() == "inserted")
+            .unwrap();
+
+        assert_eq!(inserted_before.x, 96.0);
+        assert_eq!(inserted_before.opacity, 0.0);
+        assert!(inserted_after.x.abs() < 0.01);
+        assert!(inserted_after.opacity > 0.999);
+
+        let reversed = Scene::new(
+            edit.initial_values(),
+            Motion::sequence([edit.enter(profile), edit.exit(profile)]),
+        )
+        .compile(&HashMap::new())
+        .unwrap();
+        let after_exit = edit.sample_at(&reversed, &transition, 10.0).unwrap();
+        let inserted_after_exit = after_exit
+            .iter()
+            .find(|line| line.line.id.as_str() == "inserted")
+            .unwrap();
+        assert_eq!(inserted_after_exit.x, 96.0);
+        assert_eq!(inserted_after_exit.opacity, 0.0);
+    }
 
     #[test]
     fn task_state_changes_compile_as_composable_timeline_events() {

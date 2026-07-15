@@ -43,7 +43,7 @@ Still images remain stable scene actors rather than pretending to be time-based 
 
 ## Transcript Cues Drive Choreography
 
-`src/transcript.rs` ingests word timing sidecars and resolves exact word occurrences into cue ranges. The `effect-shows-errors` and `promises-only-happy-path` ports demonstrate the intended boundary: original narration is a script clip, while published word timings schedule ordinary code and pointer motions through `Composition::delay`.
+`src/transcript.rs` ingests word timing sidecars and resolves exact word occurrences into cue ranges. The `effect-shows-errors`, `promises-only-happy-path`, and `effect-is-a-description` ports demonstrate the intended seam: original narration is a script clip, while published word timings schedule ordinary code, Task, and pointer motions through `Cue::at` on the same composition clock.
 
 Transcript parsing does not understand code, actors, or rendering. It only connects semantic words to the shared media clock.
 
@@ -61,15 +61,17 @@ SVG sprites are rasterized at four times their display resolution and coverage-s
 
 Pointer translation uses mildly underdamped scalar property tracks; rotation is derived from sampled velocity and acceleration so the hand leans against acceleration and follows through while decelerating. The complete transform remains deterministic and participates in temporal accumulation.
 
-Stable code lines can be split into cached prefix, reveal, and suffix sprites. An inline reveal opens the inserted span's layout width while opacity rises and blur resolves; the suffix position is derived from the sampled width. This is the first concrete inline-identity seam and remains narrower than a general recursive slot AST.
+Stable code lines can be split into cached stable and variable sprites. An inline reveal opens or closes a variable span's layout width while opacity and blur resolve; every following stable or variable span derives its position from the sampled widths before it. Multiple non-overlapping reveals can exchange Effect and function alternatives horizontally while `const getTime`, ` = `, `getTime`, and `)` retain identity. This is the concrete maximum-stability seam demonstrated by Effect Institute ports and remains narrower than a general recursive slot AST.
 
 The lesson port extends the compositor to multiple non-overlapping reveals on one stable line. Focus ranges and token highlights carry independent vertical geometry, so cursor-only cues do not accidentally move or resize focus. Semantic annotations currently include a CPU-composited error squiggle and short celebration effects; both participate in temporal sampling.
 
 `src/render/effects/` owns the concrete pixel implementations for celebration annotations. Prismatic bloom and focus pulse share one small frame interface but keep their particle and halo recipes in separate files. `render.rs` only translates resolved target geometry into canvas coordinates and dispatches the selected closed recipe; adding another demonstrated built-in effect does not enlarge the renderer adapter or require a plugin interface.
 
-`src/render/task.rs` owns the concrete Effect Task visual recipe demonstrated by the `visual-effects` lesson: compressed running nodes, energy sweeps, state flashes, pulses, icons, error bubbles, and labels. The DSL and composition retain stable Task identity and semantic state changes; this renderer alone owns their current 128-pixel presentation. All moving pixel layers share one fractional transform, rounded signed-distance edge, and analytic coverage so the body, sweep, border, pulse, and glow remain one coherent material. A short container-level entrance blur applies to the assembled node while ordinary shutter sampling supplies motion blur from actual movement.
+`src/render/task.rs` owns the concrete Effect Task visual recipe demonstrated by the `visual-effects` lesson: compressed running nodes, energy sweeps, state flashes, pulses, icons, error bubbles, and labels. The DSL and composition retain stable Task identity and semantic state changes; this renderer alone owns their current 128-pixel presentation. The same recipe can render a complete Task scene or composite Task actors over existing editor pixels, as required by `effect-is-a-description`. All moving pixel layers share one fractional transform, rounded signed-distance edge, and analytic coverage so the body, sweep, border, pulse, and glow remain one coherent material. A short container-level entrance blur applies to the assembled node while ordinary shutter sampling supplies motion blur from actual movement.
 
 `src/render/terminal.rs` owns the concrete OpenCode terminal presentation: bilinear source sampling, one rounded panel material, a short split-screen command-file editor, and the missile payoff. The source recording supplies authentic TUI pixels; Kinograph supplies whole-card camera movement, the external file-write explanation, impact defocus and shake, and foreground effects. This is intentionally not a terminal emulator, ANSI parser, generic video layer, or particle plugin.
+
+`src/render/ui.rs` is a private, GPUI-inspired layout vocabulary for renderer-owned pixel interfaces. Immutable `Bounds` values split and inset into child regions, while `VerticalFlow` derives row placement from one line-height value. It intentionally stops before an element tree, flexbox engine, event model, retained widgets, or public UI framework; its current job is to prevent terminal chrome from accumulating unrelated absolute coordinates.
 
 The Adapter keeps these details private:
 
@@ -88,19 +90,21 @@ There is no renderer trait. One Adapter is a hypothetical seam; a second backend
 
 FFmpeg remains a subprocess because it avoids unsafe bindings and codec linkage while preserving access to the installed encoder set. A second encoder is not currently justified.
 
-## Main Owns Choreography
+## Scene Modules Own Choreography
 
-`src/main.rs` is intentionally visible orchestration. It selects named scenes, declares their code documents and snapshots, samples named motion profiles, evaluates eight shutter samples, averages them, and sends one frame to the encoder.
+`src/main.rs` parses the command, selects an output, and dispatches to one concrete Module under `src/scenes/`. Each scene Module keeps its assets, documents, snapshots, semantic targets, choreography, and sample rendering local behind one `render(output)` interface. `src/scenes/mod.rs` contains only mechanics shared by demonstrated scenes: delivery dimensions, temporal accumulation, semantic target measurement, pointer sampling, and styled-span construction.
 
-Choreography should move behind a scene compiler only after a second scene reveals repeated authoring operations. Moving it now would create a shallow pass-through Module.
+This is a locality seam, not a scene framework: there is no scene trait, registry, or generic lifecycle. Shared authoring operations should move into the DSL only when repeated usage reveals a deeper interface.
 
 ## The Rust DSL Produces Pure Values
 
 `src/dsl.rs` is the public authoring boundary exported through `src/lib.rs`. Authors compose property `Motion`, semantic `Annotation` values, Task state and pose changes, and media in a `Composition`. Typed actors such as `Pointer` return ordinary motion values rather than executing animation. An annotation owns a semantic target, a closed effect recipe, and a positive duration; composition schedules it while scene compilation resolves its target and produces deterministic arbitrary-time annotation frames. Tasks similarly return composable `idle`, `run`, `succeed`, `complete`, `fail`, `die`, `hide`, and `move_to` leaves rather than retaining mutable renderer state. Scene compilation lowers Task poses into independent x/y spring tracks, preserving velocity without treating layout as semantic feedback.
 
+`CodeEdit` is the first authoring operation extracted from repeated scene usage. It owns the layout/content tracks for one coordinated structural edit, supplies their initial values, returns enter/exit Motion, and samples a `CodeTransition` against a compiled Scene. It does not absorb `CodeTransition` or hide intentionally staggered tracks such as the hero's separate layout and content cues. `Cue::at` similarly centralizes exact cue-start placement for any composable leaf without teaching cues about Motion, Tasks, annotations, or media roles.
+
 Scalar targets may remain semantic while authoring. `TextTarget` identifies meaningful code content; `Scalar` expressions request its left edge, width, center, or attached offset. `Scene::compile` resolves measured target geometry once and lowers the complete tree into a `CompiledScene` containing the renderer-independent property `Timeline`, scheduled media placements, named cue ranges, and total duration.
 
-The current hero is the first client of this API. There is no JSON or TypeScript authoring boundary.
+The hero and lesson ports are concrete clients of this API. There is no JSON or TypeScript authoring boundary.
 
 ## Current Stack Decisions
 

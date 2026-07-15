@@ -6,7 +6,10 @@ use std::{
 use anyhow::{Result, bail};
 use cosmic_text::{Attrs, Color, Family, Metrics, Weight};
 
-use super::{HeadlessRenderer, TextSprite, blend_pixel, composite_sprite, make_sprite};
+use super::{
+    HeadlessRenderer, TextSprite, blend_pixel, composite_sprite, make_sprite,
+    ui::{Bounds, Edges, VerticalFlow},
+};
 
 const COMMAND_SOURCE: &str = include_str!("../../assets/opencode-hot-reload/fire-the-missiles.md");
 
@@ -116,14 +119,15 @@ impl HeadlessRenderer {
             1425.0 + (1.0 - enter) * 120.0 + offset[0],
             510.0 + (1.0 - enter) * 30.0 + offset[1],
         ];
-        let size = [800.0, 500.0];
+        let card = Bounds::from_center(center, [760.0, 260.0]);
+        let shadow = card.expand(9.0).translate([0.0, 14.0]);
         fill_rounded_rect(
             pixels,
             self.spec.width,
             self.spec.height,
-            [center[0], center[1] + 18.0],
-            [size[0] + 18.0, size[1] + 18.0],
-            28.0,
+            shadow.center(),
+            shadow.size,
+            22.0,
             [0, 0, 0, 255],
             opacity * 0.3,
         );
@@ -131,39 +135,54 @@ impl HeadlessRenderer {
             pixels,
             self.spec.width,
             self.spec.height,
-            center,
-            size,
-            24.0,
-            [10, 14, 20, 255],
+            card.center(),
+            card.size,
+            18.0,
+            [8, 12, 18, 255],
             opacity,
         );
         stroke_rounded_rect(
             pixels,
             self.spec.width,
             self.spec.height,
-            center,
-            size,
-            24.0,
-            [49, 61, 78, 255],
-            opacity * 0.42,
+            card.center(),
+            card.size,
+            18.0,
+            [71, 84, 104, 255],
+            opacity * 0.5,
         );
 
-        let top = center[1] - size[1] * 0.5;
-        let left = center[0] - size[0] * 0.5;
+        let (header, body) = card.split_top(54.0);
+        for (x, color) in [
+            (header.origin[0] + 24.0, [255, 104, 95, 255]),
+            (header.origin[0] + 42.0, [255, 189, 74, 255]),
+            (header.origin[0] + 60.0, [72, 199, 116, 255]),
+        ] {
+            fill_rounded_rect(
+                pixels,
+                self.spec.width,
+                self.spec.height,
+                [x, header.center()[1]],
+                [8.0, 8.0],
+                4.0,
+                color,
+                opacity * 0.86,
+            );
+        }
         self.composite_terminal_text(
             pixels,
             ".opencode/commands/fire-the-missiles.md",
-            [left + 28.0, top + 37.0],
-            16.0,
-            [169, 180, 195],
+            [header.origin[0] + 84.0, header.center()[1]],
+            13.0,
+            [213, 221, 231],
             opacity,
             TextAlign::Left,
         );
         self.composite_terminal_text(
             pixels,
-            if frame.saved { "SAVED" } else { "WRITING" },
-            [center[0] + size[0] * 0.5 - 57.0, top + 37.0],
-            14.0,
+            if frame.saved { "[saved]" } else { "[writing]" },
+            [header.right() - 34.0, header.center()[1]],
+            12.0,
             if frame.saved {
                 [112, 211, 160]
             } else {
@@ -172,90 +191,121 @@ impl HeadlessRenderer {
             opacity,
             TextAlign::Center,
         );
-
-        let tree_width = 244.0;
         fill_rounded_rect(
             pixels,
             self.spec.width,
             self.spec.height,
-            [left + tree_width * 0.5 + 8.0, center[1] + 35.0],
-            [tree_width, size[1] - 88.0],
-            16.0,
-            [12, 17, 24, 255],
-            opacity,
-        );
-        fill_rounded_rect(
-            pixels,
-            self.spec.width,
-            self.spec.height,
-            [left + tree_width + 16.0, center[1] + 35.0],
-            [1.0, size[1] - 116.0],
+            [card.center()[0], header.bottom()],
+            [card.size[0] - 2.0, 1.0],
             0.0,
-            [49, 60, 76, 255],
-            opacity * 0.7,
+            [86, 99, 119, 255],
+            opacity * 0.42,
         );
-        let tree_x = left + 30.0;
-        self.composite_terminal_text(
+
+        let visible_source =
+            reveal_text(COMMAND_SOURCE.trim_end(), frame.write_progress, 0.0, 0.96);
+        let visible_lines = visible_source.split('\n').collect::<Vec<_>>();
+        let current_line = visible_lines.len().saturating_sub(1);
+        let editor = body.inset(Edges::symmetric(22.0, 18.0));
+        let (gutter, content) = editor.split_left(38.0);
+        let content = content.inset(Edges {
+            left: 16.0,
+            ..Edges::default()
+        });
+        fill_rounded_rect(
             pixels,
-            ".opencode",
-            [tree_x, top + 112.0],
-            18.0,
-            [207, 215, 225],
-            opacity,
-            TextAlign::Left,
+            self.spec.width,
+            self.spec.height,
+            [gutter.right(), editor.center()[1]],
+            [1.0, editor.size[1]],
+            0.0,
+            [86, 99, 119, 255],
+            opacity * 0.22,
         );
-        self.composite_terminal_text(
-            pixels,
-            "  commands",
-            [tree_x, top + 157.0],
-            18.0,
-            [178, 188, 201],
-            opacity,
-            TextAlign::Left,
-        );
-        if frame.write_progress > 0.04 {
+
+        let mut rows = VerticalFlow::new(content, 30.0);
+        let mut caret = content.origin;
+        for (index, text) in visible_lines.iter().enumerate() {
+            let row = rows.next();
+            let baseline = row.center()[1];
+            self.composite_terminal_text(
+                pixels,
+                &(index + 1).to_string(),
+                [gutter.center()[0], baseline],
+                11.0,
+                if index == current_line {
+                    [148, 161, 179]
+                } else {
+                    [72, 84, 101]
+                },
+                opacity,
+                TextAlign::Center,
+            );
+            let advance = self.composite_markdown_source_line(
+                pixels,
+                index,
+                text,
+                [row.origin[0], baseline],
+                opacity,
+            );
+            if index == current_line {
+                caret = [row.origin[0] + advance + 2.0, baseline];
+            }
+        }
+        if !frame.saved {
             fill_rounded_rect(
                 pixels,
                 self.spec.width,
                 self.spec.height,
-                [left + tree_width * 0.5 + 8.0, top + 207.0],
-                [tree_width - 22.0, 38.0],
-                8.0,
-                [46, 36, 31, 255],
+                caret,
+                [2.0, 20.0],
+                0.0,
+                [238, 194, 137, 255],
                 opacity,
             );
-            self.composite_terminal_text(
+        }
+    }
+
+    fn composite_markdown_source_line(
+        &mut self,
+        pixels: &mut [u8],
+        line_index: usize,
+        visible_text: &str,
+        position: [f32; 2],
+        opacity: f32,
+    ) -> f32 {
+        let segments: &[(&str, [u8; 3])] = match line_index {
+            0 | 2 => &[("---", [106, 137, 175])],
+            1 => &[
+                ("description", [121, 192, 224]),
+                (":", [132, 147, 166]),
+                (" Turn up the heat", [214, 181, 129]),
+            ],
+            3 => &[
+                ("Reply with exactly:", [207, 216, 227]),
+                (" Everything is live.", [151, 210, 164]),
+            ],
+            _ => &[("", [207, 216, 227])],
+        };
+        let mut remaining = visible_text.chars().count();
+        let mut x = position[0];
+        for (text, color) in segments {
+            if remaining == 0 {
+                break;
+            }
+            let shown = reveal_characters(text, remaining.min(text.chars().count()));
+            x += self.composite_terminal_text(
                 pixels,
-                "  fire-the-missiles.md",
-                [tree_x, top + 207.0],
-                16.0,
-                [242, 181, 128],
+                shown,
+                [x, position[1]],
+                15.0,
+                *color,
                 opacity,
                 TextAlign::Left,
             );
+            remaining = remaining.saturating_sub(text.chars().count());
         }
-        let editor_x = left + tree_width + 48.0;
-        let editor_top = top + 112.0;
-        for (index, text) in COMMAND_SOURCE.trim_end().lines().enumerate() {
-            let (y, start, end, color) = match index {
-                0 => (editor_top, 0.02, 0.1, [112, 123, 139]),
-                1 => (editor_top + 58.0, 0.1, 0.48, [236, 240, 244]),
-                2 => (editor_top + 116.0, 0.48, 0.56, [112, 123, 139]),
-                _ => (editor_top + 194.0, 0.56, 0.96, [242, 181, 128]),
-            };
-            let revealed = reveal_text(text, frame.write_progress, start, end);
-            if !revealed.is_empty() {
-                self.composite_terminal_text(
-                    pixels,
-                    revealed,
-                    [editor_x, y],
-                    if index == 3 { 18.0 } else { 22.0 },
-                    color,
-                    opacity,
-                    TextAlign::Left,
-                );
-            }
-        }
+        x - position[0]
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -268,10 +318,11 @@ impl HeadlessRenderer {
         color: [u8; 3],
         opacity: f32,
         align: TextAlign,
-    ) {
+    ) -> f32 {
         let canvas_width = self.spec.width;
         let canvas_height = self.spec.height;
         let sprite = self.terminal_text_sprite(text, font_size, color);
+        let advance = sprite.advance;
         let x = match align {
             TextAlign::Left => position[0],
             TextAlign::Center => position[0] - sprite.advance * 0.5,
@@ -285,6 +336,7 @@ impl HeadlessRenderer {
             (position[1] - sprite.height as f32 * 0.5).round() as i32,
             opacity,
         );
+        advance
     }
 
     fn terminal_text_sprite(&mut self, text: &str, font_size: f32, color: [u8; 3]) -> &TextSprite {
@@ -803,6 +855,10 @@ fn paint(pixels: &mut [u8], width: u32, height: u32, x: i32, y: i32, color: [u8;
 fn reveal_text(text: &str, progress: f32, start: f32, end: f32) -> &str {
     let phase = ((progress - start) / (end - start)).clamp(0.0, 1.0);
     let characters = (text.chars().count() as f32 * phase).floor() as usize;
+    reveal_characters(text, characters)
+}
+
+fn reveal_characters(text: &str, characters: usize) -> &str {
     let byte = text
         .char_indices()
         .nth(characters)
@@ -817,7 +873,7 @@ fn smoothstep(value: f32) -> f32 {
 
 #[cfg(test)]
 mod tests {
-    use super::sample_bilinear;
+    use super::{COMMAND_SOURCE, reveal_text, sample_bilinear};
 
     #[test]
     fn terminal_video_sampling_interpolates_rgba_channels() {
@@ -827,5 +883,20 @@ mod tests {
 
         assert_eq!(sample_bilinear(&pixels, 2, 2, 0.5, 0.5), [50, 50, 0, 255]);
         assert_eq!(sample_bilinear(&pixels, 2, 2, -1.0, 3.0), [0, 100, 0, 255]);
+    }
+
+    #[test]
+    fn command_source_reveal_preserves_line_breaks() {
+        assert_eq!(reveal_text("one\n\ntwo", 0.5, 0.0, 1.0), "one\n");
+        assert_eq!(reveal_text("one\n\ntwo", 1.0, 0.0, 1.0), "one\n\ntwo");
+
+        let source = COMMAND_SOURCE.trim_end();
+        assert_eq!(reveal_text(source, 1.0, 0.0, 0.96), source);
+        assert_eq!(source.lines().count(), 4);
+        assert!(source.lines().nth(1).unwrap().starts_with("description:"));
+        assert_eq!(
+            source.lines().nth(3),
+            Some("Reply with exactly: Everything is live.")
+        );
     }
 }

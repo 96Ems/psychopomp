@@ -304,6 +304,12 @@ impl Cue {
     pub fn start_offset(&self) -> Duration {
         Duration(self.start().0)
     }
+
+    /// Places a composition at this cue's start relative to the containing
+    /// composition's origin.
+    pub fn at(&self, composition: impl Into<Composition>) -> Composition {
+        Composition::delay(self.start_offset(), composition)
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -562,7 +568,7 @@ mod tests {
         let pop = Asset::audio("pop", "assets/pop.wav")
             .clip(range(0.0, 0.4))
             .gain_db(12.0);
-        let composition = Composition::delay(cue.start_offset(), Composition::layer(pop));
+        let composition = cue.at(Composition::layer(pop));
 
         let lowered = composition.lower().unwrap();
 

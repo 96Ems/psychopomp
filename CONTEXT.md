@@ -16,6 +16,10 @@ A code line whose identity survives between snapshots. Its screen position may m
 
 The compiled relationship between two code snapshots. Sampling a code transition places every stable, entering, and exiting line at an arbitrary progress value.
 
+## Code Edit
+
+A renderer-independent actor for one coordinated structural change to code. A Code Edit owns layout and content progress tracks, supplies their zero-state initial values, enters or exits through one Motion, and samples a Code Transition from a compiled Scene. Scenes that deliberately stagger layout and content may still animate those tracks independently.
+
 ## Motion State
 
 The position and velocity of one animated scalar at a specific time. Carrying both values allows a later trajectory to preserve momentum.
@@ -54,7 +58,7 @@ Accompanying timed media such as music, sound effects, or B-roll. Layer clips sh
 
 ## Cue
 
-A named timeline range. Cues may be authored around a composition or imported from transcript word and phrase timing; their start and end can synchronize motion and media.
+A named timeline range. Cues may be authored around a composition or imported from transcript word and phrase timing; their start and end can synchronize motion and media. Scheduling a composition `at` a Cue places it at the Cue's start relative to the containing composition's origin, which is the shared media clock for root scene choreography.
 
 ## Transcript
 
@@ -74,7 +78,7 @@ A measured visual range resolved from meaningful content, such as a token inside
 
 ## Inline Reveal
 
-A transition that introduces authored spans inside a stable code line. The revealed spans animate width, opacity, and blur while stable suffix spans move to their new position without replacement.
+A transition that expands or collapses authored spans inside a Stable Line. Variable spans animate width, opacity, and blur while common prefix, infix, and suffix spans retain identity and move to their new positions without replacement. Opposing reveals can exchange slot alternatives horizontally while preserving maximum stability.
 
 ## Annotation
 
