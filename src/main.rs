@@ -378,8 +378,8 @@ async fn render_visual_effects(output: &Path) -> Result<()> {
         .clip(TimeRange::new(Time::ZERO, Time::seconds(0.14)))
         .gain_db(18.0);
     let success_sound = Asset::audio("task-success", asset_directory.join("task-success.wav"))
-        .clip(TimeRange::new(Time::ZERO, Time::seconds(0.75)))
-        .gain_db(18.0);
+        .clip(TimeRange::new(Time::ZERO, Time::seconds(0.42)))
+        .gain_db(12.0);
     let failure_sound = Asset::audio("task-failure", asset_directory.join("task-failure.wav"))
         .clip(TimeRange::new(Time::ZERO, Time::seconds(0.48)))
         .gain_db(16.0);

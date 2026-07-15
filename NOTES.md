@@ -76,6 +76,7 @@ The default artifact is `output/kinograph-prototype.mp4`.
 - Product motion guidance favors one dominant action per Task transition: compression and sweep for running, result resolution for success, a brief horizontal impact for failure, and loss of energy for death. Continuous running shake and multi-axis random failure noise made state meaning less clear despite adding more motion.
 - Positive `asetpts` offsets do not place delayed layer audio reliably through FFmpeg's `amix`; explicit `adelay` placement is required. A band-limited comparison against narration confirmed that the old path silently mixed task sounds at the wrong time even though the output contained an AAC stream.
 - Task entrance defocus reads coherently only when blur applies to the assembled node layer. Blurring the icon independently while leaving its body and label sharp separates one stable actor into unrelated optical planes; container blur plus temporal sampling keeps defocus and motion blur distinct.
+- Task success audio works better as a compact confirmation than a musical reward: a quiet two-tone interval with a short 420 ms decay leaves narration space and matches the brief result-resolution motion better than the earlier sustained triad.
 
 ## Next Question
 
