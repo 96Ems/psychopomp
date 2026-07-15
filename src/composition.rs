@@ -5,7 +5,7 @@ use std::{
 
 use anyhow::{Result, bail};
 
-use crate::dsl::Motion;
+use crate::dsl::{Annotation, Motion};
 
 const NANOS_PER_SECOND: u64 = 1_000_000_000;
 const MAX_SECONDS: f64 = u64::MAX as f64 / NANOS_PER_SECOND as f64;
@@ -292,6 +292,7 @@ impl Cue {
 #[derive(Clone, Debug)]
 pub enum Composition {
     Animate(Motion),
+    Annotate(Annotation),
     Play {
         clip: Clip,
         role: MediaRole,
@@ -312,6 +313,10 @@ pub enum Composition {
 impl Composition {
     pub fn animate(motion: Motion) -> Self {
         Self::Animate(motion)
+    }
+
+    pub fn annotate(annotation: Annotation) -> Self {
+        Self::Annotate(annotation)
     }
 
     pub fn script(clip: Clip) -> Self {
@@ -357,6 +362,7 @@ impl Composition {
     pub fn duration(&self) -> Duration {
         match self {
             Self::Animate(motion) => Duration::seconds(f64::from(motion.duration())),
+            Self::Annotate(annotation) => annotation.duration(),
             Self::Play { clip, .. } => clip.duration(),
             Self::Sequence(compositions) => Duration(
                 compositions
@@ -400,6 +406,7 @@ impl Composition {
             motion: Motion::parallel(motions),
             media: scheduled.media,
             cues: scheduled.cues,
+            annotations: scheduled.annotations,
             duration,
         })
     }
@@ -407,6 +414,9 @@ impl Composition {
     fn schedule(&self, start: Time, scheduled: &mut Scheduled) -> Result<()> {
         match self {
             Self::Animate(motion) => scheduled.motions.push((start, motion.clone())),
+            Self::Annotate(annotation) => {
+                scheduled.annotations.push((start, annotation.clone()));
+            }
             Self::Play { clip, role } => scheduled.media.push(MediaPlacement {
                 clip: clip.clone(),
                 role: *role,
@@ -447,17 +457,25 @@ impl From<Motion> for Composition {
     }
 }
 
+impl From<Annotation> for Composition {
+    fn from(value: Annotation) -> Self {
+        Self::annotate(value)
+    }
+}
+
 #[derive(Default)]
 struct Scheduled {
     motions: Vec<(Time, Motion)>,
     media: Vec<MediaPlacement>,
     cues: HashMap<CueId, TimeRange>,
+    annotations: Vec<(Time, Annotation)>,
 }
 
 pub(crate) struct LoweredComposition {
     pub motion: Motion,
     pub media: Vec<MediaPlacement>,
     pub cues: HashMap<CueId, TimeRange>,
+    pub annotations: Vec<(Time, Annotation)>,
     pub duration: Duration,
 }
 

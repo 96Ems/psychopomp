@@ -39,6 +39,63 @@ impl TargetGeometry {
     }
 }
 
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub enum AnnotationEffect {
+    #[default]
+    PrismaticBloom,
+    FocusPulse,
+}
+
+#[derive(Clone, Debug)]
+pub struct Annotation {
+    target: TextTarget,
+    effect: AnnotationEffect,
+    duration: Duration,
+}
+
+impl Annotation {
+    pub fn on(target: TextTarget) -> Self {
+        Self {
+            target,
+            effect: AnnotationEffect::default(),
+            duration: Duration::milliseconds(900.0),
+        }
+    }
+
+    pub fn effect(mut self, effect: AnnotationEffect) -> Self {
+        self.effect = effect;
+        self
+    }
+
+    pub fn over(mut self, duration: Duration) -> Self {
+        assert!(
+            duration > Duration::ZERO,
+            "annotation duration must be positive"
+        );
+        self.duration = duration;
+        self
+    }
+
+    pub(crate) fn target(&self) -> &TextTarget {
+        &self.target
+    }
+
+    pub(crate) fn selected_effect(&self) -> AnnotationEffect {
+        self.effect
+    }
+
+    pub(crate) fn duration(&self) -> Duration {
+        self.duration
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct AnnotationFrame {
+    pub target: TargetGeometry,
+    pub effect: AnnotationEffect,
+    pub phase: f32,
+}
+
 #[derive(Clone, Debug)]
 pub enum Scalar {
     Literal(f32),
@@ -200,6 +257,17 @@ impl Scene {
             cues: lowered.cues,
             duration: lowered.duration,
             images: self.images.clone(),
+            annotations: lowered
+                .annotations
+                .into_iter()
+                .map(|(start, annotation)| {
+                    Ok(CompiledAnnotation {
+                        target: resolve_target(annotation.target(), targets)?,
+                        effect: annotation.selected_effect(),
+                        range: TimeRange::new(start, start.after(annotation.duration())),
+                    })
+                })
+                .collect::<Result<Vec<_>>>()?,
         })
     }
 }
@@ -210,6 +278,13 @@ pub struct CompiledScene {
     cues: HashMap<CueId, TimeRange>,
     duration: Duration,
     images: Vec<Image>,
+    annotations: Vec<CompiledAnnotation>,
+}
+
+struct CompiledAnnotation {
+    target: TargetGeometry,
+    effect: AnnotationEffect,
+    range: TimeRange,
 }
 
 impl CompiledScene {
@@ -237,6 +312,20 @@ impl CompiledScene {
 
     pub fn images(&self) -> &[Image] {
         &self.images
+    }
+
+    pub fn annotations_at(&self, seconds: f32) -> impl Iterator<Item = AnnotationFrame> + '_ {
+        let seconds = f64::from(seconds.max(0.0));
+        self.annotations.iter().filter_map(move |annotation| {
+            let start = annotation.range.start().as_seconds();
+            let duration = annotation.range.duration().as_seconds();
+            let phase = (seconds - start) / duration;
+            (0.0..1.0).contains(&phase).then_some(AnnotationFrame {
+                target: annotation.target,
+                effect: annotation.effect,
+                phase: phase as f32,
+            })
+        })
     }
 }
 
@@ -381,29 +470,36 @@ impl Pointer {
 }
 
 fn resolve_scalar(scalar: &Scalar, targets: &HashMap<TextTarget, TargetGeometry>) -> Result<f32> {
-    let geometry = |target: &TextTarget| {
-        targets.get(target).copied().with_context(|| {
-            format!(
-                "semantic target '{}:{}' was not measured",
-                target.line_id, target.text
-            )
-        })
-    };
     Ok(match scalar {
         Scalar::Literal(value) => *value,
-        Scalar::TargetX(target) => geometry(target)?.x,
-        Scalar::TargetWidth(target) => geometry(target)?.width,
-        Scalar::TargetCenterX(target) => geometry(target)?.center_x(),
-        Scalar::TargetLineY(target) => geometry(target)?.line_y,
-        Scalar::TargetBelow { target, offset } => geometry(target)?.below(*offset),
+        Scalar::TargetX(target) => resolve_target(target, targets)?.x,
+        Scalar::TargetWidth(target) => resolve_target(target, targets)?.width,
+        Scalar::TargetCenterX(target) => resolve_target(target, targets)?.center_x(),
+        Scalar::TargetLineY(target) => resolve_target(target, targets)?.line_y,
+        Scalar::TargetBelow { target, offset } => resolve_target(target, targets)?.below(*offset),
         Scalar::Offset { value, amount } => resolve_scalar(value, targets)? + amount,
+    })
+}
+
+fn resolve_target(
+    target: &TextTarget,
+    targets: &HashMap<TextTarget, TargetGeometry>,
+) -> Result<TargetGeometry> {
+    targets.get(target).copied().with_context(|| {
+        format!(
+            "semantic target '{}:{}' was not measured",
+            target.line_id, target.text
+        )
     })
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{Image, Motion, Pointer, Scalar, Scene, TargetGeometry, TextTarget};
-    use crate::composition::{Asset, Composition, MediaRole, Time, TimeRange};
+    use super::{
+        Annotation, AnnotationEffect, Image, Motion, Pointer, Scalar, Scene, TargetGeometry,
+        TextTarget,
+    };
+    use crate::composition::{Asset, Composition, Duration, MediaRole, Time, TimeRange};
     use crate::timeline::SpringProfile;
     use std::collections::HashMap;
 
@@ -455,6 +551,38 @@ mod tests {
         assert_eq!(compiled.timeline().duration(), 2.0);
         assert_eq!(compiled.cue("title").unwrap().start(), Time::ZERO);
         assert!(compiled.timeline().sample(&opacity, 1.0).unwrap().position > 0.99);
+    }
+
+    #[test]
+    fn annotations_resolve_semantic_targets_and_sample_at_arbitrary_times() {
+        let target = TextTarget::new("signature", "VeryBadRoll");
+        assert_eq!(
+            Annotation::on(target.clone()).selected_effect(),
+            AnnotationEffect::PrismaticBloom
+        );
+        let geometry = TargetGeometry {
+            x: 120.0,
+            width: 84.0,
+            line_y: 44.0,
+        };
+        let scene = Scene::new(
+            [],
+            Composition::delay(
+                Duration::seconds(0.5),
+                Annotation::on(target.clone()).effect(AnnotationEffect::FocusPulse),
+            ),
+        );
+        let compiled = scene.compile(&HashMap::from([(target, geometry)])).unwrap();
+
+        assert!(compiled.annotations_at(0.49).next().is_none());
+        assert!(compiled.annotations_at(1.41).next().is_none());
+
+        let later = compiled.annotations_at(0.95).next().unwrap();
+        let earlier = compiled.annotations_at(0.5).next().unwrap();
+        assert_eq!(earlier.target.x, geometry.x);
+        assert_eq!(earlier.effect, AnnotationEffect::FocusPulse);
+        assert_eq!(earlier.phase, 0.0);
+        assert!((later.phase - 0.5).abs() < 0.0001);
     }
 
     #[test]

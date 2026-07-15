@@ -13,6 +13,9 @@ use cosmic_text::{
 use wgpu::util::DeviceExt;
 
 use crate::code::{CodeLine, LineId, PlacedLine, SyntaxStyle};
+use crate::dsl::AnnotationFrame;
+
+mod effects;
 
 const FORMAT: wgpu::TextureFormat = wgpu::TextureFormat::Rgba8UnormSrgb;
 const BYTES_PER_PIXEL: u32 = 4;
@@ -36,7 +39,7 @@ pub struct EditorFrame<'a> {
     pub pointer: PointerFrame,
     pub inline_reveals: &'a [InlineRevealFrame],
     pub squiggles: &'a [SquiggleFrame],
-    pub bursts: &'a [BurstFrame],
+    pub annotations: &'a [AnnotationFrame],
     pub lines: &'a [PlacedLine<'a>],
 }
 
@@ -71,13 +74,6 @@ pub struct SquiggleFrame {
     pub x: f32,
     pub y: f32,
     pub width: f32,
-    pub opacity: f32,
-}
-
-#[derive(Clone, Copy)]
-pub struct BurstFrame {
-    pub x: f32,
-    pub y: f32,
     pub opacity: f32,
 }
 
@@ -119,7 +115,6 @@ pub struct HeadlessRenderer {
     swash_cache: SwashCache,
     title_sprite: TextSprite,
     pointer_sprite: TextSprite,
-    burst_sprite: TextSprite,
     line_sprites: HashMap<LineId, (u64, TextSprite)>,
     part_sprites: HashMap<String, (u64, TextSprite)>,
 }
@@ -233,7 +228,6 @@ impl HeadlessRenderer {
         let mut swash_cache = SwashCache::new();
         let title_sprite = make_title_sprite(&mut font_system, &mut swash_cache, &spec.file_name);
         let pointer_sprite = make_pointer_sprite()?;
-        let burst_sprite = make_burst_sprite(&mut font_system, &mut swash_cache);
 
         Ok(Self {
             spec,
@@ -250,7 +244,6 @@ impl HeadlessRenderer {
             swash_cache,
             title_sprite,
             pointer_sprite,
-            burst_sprite,
             line_sprites: HashMap::new(),
             part_sprites: HashMap::new(),
         })
@@ -441,21 +434,14 @@ impl HeadlessRenderer {
                 squiggle.opacity,
             );
         }
-        for burst in frame.bursts {
-            let opacity = burst.opacity.clamp(0.0, 1.0);
-            let scale = 0.65 + opacity * 0.35;
-            composite_sprite_rotated(
+        for annotation in frame.annotations {
+            effects::composite(
                 pixels,
                 self.spec.width,
                 self.spec.height,
-                &self.burst_sprite,
-                56.0 * scale,
-                56.0 * scale,
-                self.spec.width as f32 * 0.145 + burst.x,
-                code_top + burst.y - 42.0 - opacity * 12.0,
-                -0.12 + opacity * 0.12,
-                (1.0 - opacity) * 2.0,
-                opacity,
+                [self.spec.width as f32 * 0.145, code_top],
+                LINE_HEIGHT,
+                *annotation,
             );
         }
         composite_sprite_rotated(
@@ -608,21 +594,6 @@ fn make_pointer_sprite() -> Result<TextSprite> {
     </svg>"##;
 
     rasterize_svg(SVG, SIZE, SIZE).context("rasterize Phosphor hand pointer")
-}
-
-fn make_burst_sprite(font_system: &mut FontSystem, swash_cache: &mut SwashCache) -> TextSprite {
-    let attrs = Attrs::new()
-        .family(Family::SansSerif)
-        .color(Color::rgb(250, 204, 21));
-    make_sprite(
-        font_system,
-        swash_cache,
-        vec![("🎉", attrs.clone())],
-        attrs,
-        Metrics::new(44.0, 56.0),
-        80,
-        64,
-    )
 }
 
 fn rasterize_svg(svg: &str, width: u32, height: u32) -> Result<TextSprite> {

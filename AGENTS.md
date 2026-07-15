@@ -38,6 +38,7 @@ Do not run the full render as routine validation when unit tests and static chec
 - `src/motion.rs`: deterministic arbitrary-time analytic spring sampling with position and velocity
 - `src/transcript.rs`: word timing ingestion and semantic cue lookup
 - `src/render.rs`: concrete headless `wgpu` renderer, sprite compositor, and code annotations
+- `src/render/effects/`: independent pixel recipes for interchangeable short annotation effects
 - `src/encode.rs`: concrete FFmpeg subprocess, raw RGBA protocol, and compiled audio placement
 - `src/main.rs`: visible prototype choreography and application wiring
 - `src/lib.rs`: public library module boundary used by the Rust authoring DSL

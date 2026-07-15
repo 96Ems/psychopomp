@@ -59,7 +59,9 @@ Pointer translation uses mildly underdamped scalar property tracks; rotation is 
 
 Stable code lines can be split into cached prefix, reveal, and suffix sprites. An inline reveal opens the inserted span's layout width while opacity rises and blur resolves; the suffix position is derived from the sampled width. This is the first concrete inline-identity seam and remains narrower than a general recursive slot AST.
 
-The lesson port extends the compositor to multiple non-overlapping reveals on one stable line. Focus ranges and token highlights carry independent vertical geometry, so cursor-only cues do not accidentally move or resize focus. Semantic annotations currently include a CPU-composited error squiggle and a cached celebration glyph; both participate in temporal sampling.
+The lesson port extends the compositor to multiple non-overlapping reveals on one stable line. Focus ranges and token highlights carry independent vertical geometry, so cursor-only cues do not accidentally move or resize focus. Semantic annotations currently include a CPU-composited error squiggle and short celebration effects; both participate in temporal sampling.
+
+`src/render/effects/` owns the concrete pixel implementations for celebration annotations. Prismatic bloom and focus pulse share one small frame interface but keep their particle and halo recipes in separate files. `render.rs` only translates resolved target geometry into canvas coordinates and dispatches the selected closed recipe; adding another demonstrated built-in effect does not enlarge the renderer adapter or require a plugin interface.
 
 The Adapter keeps these details private:
 
@@ -86,7 +88,7 @@ Choreography should move behind a scene compiler only after a second scene revea
 
 ## The Rust DSL Produces Pure Values
 
-`src/dsl.rs` is the public authoring boundary exported through `src/lib.rs`. Authors compose property `Motion`, then place it alongside media in a `Composition`. Typed actors such as `Pointer` return ordinary motion values rather than executing animation.
+`src/dsl.rs` is the public authoring boundary exported through `src/lib.rs`. Authors compose property `Motion`, semantic `Annotation` values, and media in a `Composition`. Typed actors such as `Pointer` return ordinary motion values rather than executing animation. An annotation owns a semantic target, a closed effect recipe, and a positive duration; composition schedules it while scene compilation resolves its target and produces deterministic arbitrary-time annotation frames.
 
 Scalar targets may remain semantic while authoring. `TextTarget` identifies meaningful code content; `Scalar` expressions request its left edge, width, center, or attached offset. `Scene::compile` resolves measured target geometry once and lowers the complete tree into a `CompiledScene` containing the renderer-independent property `Timeline`, scheduled media placements, named cue ranges, and total duration.
 

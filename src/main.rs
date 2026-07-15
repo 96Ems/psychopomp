@@ -15,11 +15,11 @@ use kinograph::{
         SyntaxStyle, TransitionProgress,
     },
     composition::{Asset, Composition, Time, TimeRange},
-    dsl::{Code, CompiledScene, Motion, Pointer, Scalar, Scene, TargetGeometry},
+    dsl::{Annotation, Code, CompiledScene, Motion, Pointer, Scalar, Scene, TargetGeometry},
     encode::{FfmpegEncoder, VideoSpec},
     render::{
-        BurstFrame, EditorFrame, HeadlessRenderer, InlineRevealFrame, PointerFrame, RenderSpec,
-        SquiggleFrame, TextRangeBounds, TokenHighlight,
+        EditorFrame, HeadlessRenderer, InlineRevealFrame, PointerFrame, RenderSpec, SquiggleFrame,
+        TextRangeBounds, TokenHighlight,
     },
     timeline::{PropertyId, SpringProfile},
     transcript::Transcript,
@@ -109,7 +109,7 @@ async fn render_hero(output: &Path) -> Result<()> {
             ) = sample_editor(&transition, &choreography, time);
             let inline_reveals = [inline_reveal];
             let squiggles = [];
-            let bursts = [];
+            let annotations = [];
             let frame = EditorFrame {
                 panel_offset_y,
                 focus_intensity,
@@ -119,7 +119,7 @@ async fn render_hero(output: &Path) -> Result<()> {
                 pointer,
                 inline_reveals: &inline_reveals,
                 squiggles: &squiggles,
-                bursts: &bursts,
+                annotations: &annotations,
                 lines: &lines,
             };
             renderer.render_editor(&frame)
@@ -305,9 +305,7 @@ struct EffectShowsErrorsChoreography {
     indent: PropertyId,
     ellipsis: PropertyId,
     squiggle: PropertyId,
-    burst: PropertyId,
     squiggle_target: CodeTarget,
-    burst_target: CodeTarget,
 }
 
 fn effect_shows_errors_choreography(
@@ -327,13 +325,11 @@ fn effect_shows_errors_choreography(
     let fail_content = PropertyId::new("lesson.code.fail_content");
     let ellipsis = PropertyId::new("lesson.code.ellipsis");
     let squiggle = PropertyId::new("lesson.code.squiggle");
-    let burst = PropertyId::new("lesson.code.burst");
     let focus_height = PropertyId::new("lesson.code.focus_height");
     let spotlight = SpringProfile::from_visual_duration(0.3, 0.0, 0.001, 0.001);
     let variable_part = SpringProfile::from_visual_duration(0.4, 0.0, 0.001, 0.001);
     let line_motion = SpringProfile::from_visual_duration(0.45, 0.0, 0.001, 0.001);
     let pointer_motion = SpringProfile::from_visual_duration(0.5, 0.35, 0.001, 0.001);
-    let burst_motion = SpringProfile::from_visual_duration(0.4, 0.2, 0.001, 0.001);
     let pointer_scale = 24.0 / 36.0;
 
     let effect = code.text("sig", "Effect.Effect<number");
@@ -357,6 +353,7 @@ fn effect_shows_errors_choreography(
         (bad_roll_type.clone(), measured.bad_roll_type.into()),
     ]);
     let reckon = transcript.word("reckon")?;
+    let success_annotation = Annotation::on(bad_roll_type.clone());
 
     let at = |cue: kinograph::composition::Cue, motion| {
         Composition::delay(cue.start_offset(), Composition::animate(motion))
@@ -385,6 +382,7 @@ fn effect_shows_errors_choreography(
     let composition = Composition::parallel([
         Composition::script(narration),
         Composition::delay(reckon.start_offset(), Composition::layer(success)),
+        Composition::delay(reckon.start_offset(), success_annotation),
         Composition::delay(
             kinograph::composition::Duration::milliseconds(80.0),
             Motion::spring(code.panel_y.clone(), 0.0, spotlight),
@@ -471,15 +469,10 @@ fn effect_shows_errors_choreography(
                 Motion::spring(error_comment.clone(), 0.0, variable_part),
                 Motion::spring(error_type.clone(), 1.0, variable_part),
                 Motion::spring(squiggle.clone(), 0.0, spotlight),
-                Motion::spring(burst.clone(), 1.0, burst_motion),
                 Motion::spring(code.focus.clone(), 0.0, spotlight),
                 code.highlight(bad_roll_type.clone(), spotlight),
                 pointer.move_to(bad_roll_type, 55.0, pointer_motion),
             ]),
-        ),
-        Composition::delay(
-            kinograph::composition::Duration::seconds(reckon.start().as_seconds() + 0.7),
-            Motion::spring(burst.clone(), 0.0, burst_motion),
         ),
         at(
             transcript.word("TypeScript.")?,
@@ -531,7 +524,6 @@ fn effect_shows_errors_choreography(
             (indent.clone(), Scalar::Literal(0.0)),
             (ellipsis.clone(), Scalar::Literal(1.0)),
             (squiggle.clone(), Scalar::Literal(0.0)),
-            (burst.clone(), Scalar::Literal(0.0)),
         ],
         composition,
     )
@@ -563,9 +555,7 @@ fn effect_shows_errors_choreography(
         indent,
         ellipsis,
         squiggle,
-        burst,
         squiggle_target: measured.effect,
-        burst_target: measured.bad_roll_type,
     })
 }
 
@@ -681,11 +671,7 @@ fn render_effect_shows_errors_sample(
         width: choreography.squiggle_target.bounds.width,
         opacity: sample(&choreography.squiggle),
     }];
-    let bursts = [BurstFrame {
-        x: choreography.burst_target.bounds.x + choreography.burst_target.bounds.width * 0.5,
-        y: choreography.burst_target.line_y,
-        opacity: sample(&choreography.burst),
-    }];
+    let annotations = choreography.scene.annotations_at(time).collect::<Vec<_>>();
     let frame = EditorFrame {
         panel_offset_y: sample(&choreography.panel_y),
         focus_intensity: sample(&choreography.focus).clamp(0.0, 1.0),
@@ -700,7 +686,7 @@ fn render_effect_shows_errors_sample(
         pointer,
         inline_reveals: &reveals,
         squiggles: &squiggles,
-        bursts: &bursts,
+        annotations: &annotations,
         lines: &lines,
     };
     renderer.render_editor(&frame)

@@ -78,7 +78,7 @@ A transition that introduces authored spans inside a stable code line. The revea
 
 ## Annotation
 
-A transient or persistent visual attached to a semantic target without changing the target's identity. The lesson port currently demonstrates a red error squiggle and a celebration burst.
+A transient or persistent visual attached to a semantic target without changing the target's identity. Short annotations are scheduled in a composition, resolve their semantic target during scene compilation, and sample a deterministic normalized phase at arbitrary media time. The lesson port demonstrates a persistent red error squiggle plus interchangeable prismatic-bloom and focus-pulse celebration effects.
 
 ## Pointer
 
