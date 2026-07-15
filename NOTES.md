@@ -63,6 +63,12 @@ The default artifact is `output/kinograph-prototype.mp4`.
 - Short semantic annotations can be first-class composition leaves: scheduling resolves their target once, arbitrary-time sampling derives normalized phase without retained particle state, and a closed recipe enum swaps prismatic bloom for focus pulse without exposing renderer plugins or drawing parameters.
 - Per-clip decibel gain lets a quiet sound effect remain an immutable source asset while cue-local parallel composition synchronizes it with a semantic annotation.
 - Mix level alone does not predict whether a sound effect reads under narration: the original narrow 1 kHz success tap remained masked after an 18 dB boost, while a quieter upward stereo chime with high-frequency transients stays distinct from speech.
+- The complete 31.1-second `promises-only-happy-path` lesson ports without a new renderer feature: two independent inline reveals on one stable call line model `???` being replaced by `throws SomeError`, while the original narration retimes focus, pointer motion, and the optional call line through semantic cues.
+- A semantic target after a hidden alternative on the same stable line needs its measured x-position adjusted by that alternative's sampled width. This is the same unresolved layout seam exposed by collapsing slots in `effect-shows-errors`, now reproduced by a second scene.
+- Semantic text targets must currently use unique text within their stable line: targeting `ship` selected the earlier substring in `shipment`, while `ship(payment)` resolves the intended call. Occurrence-aware targets remain a future DSL seam.
+- Applying one sampled translation, three-axis rotation, and scale to both shader geometry and the CPU-composited foreground produces a coherent 0.7-second perspective entrance whose temporal blur comes from scene motion rather than a post-process blur.
+- Extreme perspective entrances expose sampling quality quickly: a five-tap cross reads as repeated glyph copies, and eight shutter samples reveal ghost contours during a 150%-to-100% pullback. A depth-weighted 3x3 Gaussian kernel plus 16 entrance samples produces a smoother near-plane blur while settled frames retain the normal eight-sample cost.
+- Published narration bytes can still produce a different browser mix when a lesson flow schedules synthesized sounds separately. The Promise lesson's narration asset is byte-identical to production; its descending E5-to-C5 Tone.js cue must be represented as a cue-local layer clip.
 
 ## Next Question
 

@@ -21,6 +21,7 @@ const FORMAT: wgpu::TextureFormat = wgpu::TextureFormat::Rgba8UnormSrgb;
 const BYTES_PER_PIXEL: u32 = 4;
 const COPY_ROW_ALIGNMENT: u32 = 256;
 const LINE_HEIGHT: f32 = 44.0;
+const PANEL_CAMERA_DISTANCE: f32 = 1800.0;
 
 #[derive(Clone)]
 pub struct RenderSpec {
@@ -32,6 +33,11 @@ pub struct RenderSpec {
 
 pub struct EditorFrame<'a> {
     pub panel_offset_y: f32,
+    pub panel_rotation: f32,
+    pub panel_tilt_x: f32,
+    pub panel_tilt_y: f32,
+    pub panel_scale: f32,
+    pub panel_near_blur: f32,
     pub focus_intensity: f32,
     pub focus_line_y: f32,
     pub focus_height: f32,
@@ -89,8 +95,108 @@ struct SceneUniforms {
     resolution: [f32; 2],
     panel_offset_y: f32,
     _padding_0: f32,
+    panel_inverse_0: [f32; 4],
+    panel_inverse_1: [f32; 4],
+    panel_inverse_2: [f32; 4],
     focus: [f32; 4],
     token_highlight: [f32; 4],
+}
+
+#[derive(Clone, Copy)]
+struct PanelTransform {
+    forward: [[f32; 3]; 3],
+    inverse: [[f32; 3]; 3],
+    depth: [f32; 2],
+    max_near_depth: f32,
+}
+
+impl PanelTransform {
+    fn from_frame(frame: &EditorFrame<'_>, panel_half_size: [f32; 2]) -> Self {
+        let (sine_x, cosine_x) = frame.panel_tilt_x.sin_cos();
+        let (sine_y, cosine_y) = frame.panel_tilt_y.sin_cos();
+        let (sine_z, cosine_z) = frame.panel_rotation.sin_cos();
+        let a = cosine_z * cosine_y;
+        let b = cosine_z * sine_y * sine_x - sine_z * cosine_x;
+        let c = sine_z * cosine_y;
+        let d = sine_z * sine_y * sine_x + cosine_z * cosine_x;
+        let depth = [-sine_y, cosine_y * sine_x];
+        let scale = frame.panel_scale.max(0.001);
+        let forward = [
+            [scale * a, scale * b, 0.0],
+            [scale * c, scale * d, 0.0],
+            [
+                -depth[0] / PANEL_CAMERA_DISTANCE,
+                -depth[1] / PANEL_CAMERA_DISTANCE,
+                1.0,
+            ],
+        ];
+        let inverse = invert_matrix_3x3(forward);
+        let max_near_depth = panel_corners(panel_half_size)
+            .into_iter()
+            .map(|[x, y]| depth[0] * x + depth[1] * y)
+            .fold(0.0_f32, f32::max);
+        Self {
+            forward,
+            inverse,
+            depth,
+            max_near_depth,
+        }
+    }
+
+    fn project(&self, point: [f32; 2]) -> [f32; 2] {
+        let projected = multiply_matrix_point(self.forward, point);
+        [projected[0] / projected[2], projected[1] / projected[2]]
+    }
+
+    fn unproject(&self, point: [f32; 2]) -> [f32; 2] {
+        let local = multiply_matrix_point(self.inverse, point);
+        [local[0] / local[2], local[1] / local[2]]
+    }
+}
+
+fn panel_transform_active(frame: &EditorFrame<'_>) -> bool {
+    frame.panel_rotation.abs() > 0.0001
+        || frame.panel_tilt_x.abs() > 0.0001
+        || frame.panel_tilt_y.abs() > 0.0001
+        || (frame.panel_scale - 1.0).abs() > 0.0001
+}
+
+fn multiply_matrix_point(matrix: [[f32; 3]; 3], point: [f32; 2]) -> [f32; 3] {
+    let vector = [point[0], point[1], 1.0];
+    matrix.map(|row| row[0] * vector[0] + row[1] * vector[1] + row[2] * vector[2])
+}
+
+fn invert_matrix_3x3(matrix: [[f32; 3]; 3]) -> [[f32; 3]; 3] {
+    let [a, b, c] = matrix;
+    let determinant = a[0] * (b[1] * c[2] - b[2] * c[1]) - a[1] * (b[0] * c[2] - b[2] * c[0])
+        + a[2] * (b[0] * c[1] - b[1] * c[0]);
+    let inverse_determinant = determinant.recip();
+    [
+        [
+            (b[1] * c[2] - b[2] * c[1]) * inverse_determinant,
+            (a[2] * c[1] - a[1] * c[2]) * inverse_determinant,
+            (a[1] * b[2] - a[2] * b[1]) * inverse_determinant,
+        ],
+        [
+            (b[2] * c[0] - b[0] * c[2]) * inverse_determinant,
+            (a[0] * c[2] - a[2] * c[0]) * inverse_determinant,
+            (a[2] * b[0] - a[0] * b[2]) * inverse_determinant,
+        ],
+        [
+            (b[0] * c[1] - b[1] * c[0]) * inverse_determinant,
+            (a[1] * c[0] - a[0] * c[1]) * inverse_determinant,
+            (a[0] * b[1] - a[1] * b[0]) * inverse_determinant,
+        ],
+    ]
+}
+
+fn panel_corners([half_width, half_height]: [f32; 2]) -> [[f32; 2]; 4] {
+    [
+        [-half_width, -half_height],
+        [half_width, -half_height],
+        [half_width, half_height],
+        [-half_width, half_height],
+    ]
 }
 
 struct TextSprite {
@@ -102,6 +208,7 @@ struct TextSprite {
 
 pub struct HeadlessRenderer {
     spec: RenderSpec,
+    foreground_pixels: Vec<u8>,
     device: wgpu::Device,
     queue: wgpu::Queue,
     texture: wgpu::Texture,
@@ -201,6 +308,9 @@ impl HeadlessRenderer {
             resolution: [spec.width as f32, spec.height as f32],
             panel_offset_y: 0.0,
             _padding_0: 0.0,
+            panel_inverse_0: [1.0, 0.0, 0.0, 0.0],
+            panel_inverse_1: [0.0, 1.0, 0.0, 0.0],
+            panel_inverse_2: [0.0, 0.0, 1.0, 0.0],
             focus: [0.0, 0.0, LINE_HEIGHT, 0.0],
             token_highlight: [0.0; 4],
         };
@@ -229,8 +339,11 @@ impl HeadlessRenderer {
         let title_sprite = make_title_sprite(&mut font_system, &mut swash_cache, &spec.file_name);
         let pointer_sprite = make_pointer_sprite()?;
 
+        let foreground_pixels =
+            vec![0_u8; spec.width as usize * spec.height as usize * BYTES_PER_PIXEL as usize];
         Ok(Self {
             spec,
+            foreground_pixels,
             device,
             queue,
             texture,
@@ -254,10 +367,35 @@ impl HeadlessRenderer {
         let panel_top = self.spec.height as f32 * 0.17 + frame.panel_offset_y;
         let code_top = panel_top + 104.0;
         let focus_offset_y = code_top + frame.focus_line_y + LINE_HEIGHT * 0.5 - panel_center_y;
+        let transform = PanelTransform::from_frame(
+            frame,
+            [
+                self.spec.width as f32 * 0.39,
+                self.spec.height as f32 * 0.35,
+            ],
+        );
         let uniforms = SceneUniforms {
             resolution: [self.spec.width as f32, self.spec.height as f32],
             panel_offset_y: frame.panel_offset_y,
-            _padding_0: 0.0,
+            _padding_0: f32::from(panel_transform_active(frame)),
+            panel_inverse_0: [
+                transform.inverse[0][0],
+                transform.inverse[0][1],
+                transform.inverse[0][2],
+                0.0,
+            ],
+            panel_inverse_1: [
+                transform.inverse[1][0],
+                transform.inverse[1][1],
+                transform.inverse[1][2],
+                0.0,
+            ],
+            panel_inverse_2: [
+                transform.inverse[2][0],
+                transform.inverse[2][1],
+                transform.inverse[2][2],
+                0.0,
+            ],
             focus: [
                 frame.focus_intensity,
                 focus_offset_y,
@@ -363,6 +501,41 @@ impl HeadlessRenderer {
             bail!("expected {expected} frame bytes, received {}", pixels.len());
         }
 
+        if !panel_transform_active(frame) {
+            return self.composite_text_untransformed(pixels, frame);
+        }
+
+        let mut foreground = std::mem::take(&mut self.foreground_pixels);
+        foreground.fill(0);
+        self.composite_text_untransformed(&mut foreground, frame)?;
+        let transform = PanelTransform::from_frame(
+            frame,
+            [
+                self.spec.width as f32 * 0.39,
+                self.spec.height as f32 * 0.35,
+            ],
+        );
+        composite_layer_transformed(
+            pixels,
+            &foreground,
+            self.spec.width,
+            self.spec.height,
+            [
+                self.spec.width as f32 * 0.5,
+                self.spec.height as f32 * 0.52 + frame.panel_offset_y,
+            ],
+            transform,
+            frame.panel_near_blur,
+        );
+        self.foreground_pixels = foreground;
+        Ok(())
+    }
+
+    fn composite_text_untransformed(
+        &mut self,
+        pixels: &mut [u8],
+        frame: &EditorFrame<'_>,
+    ) -> Result<()> {
         for placed in frame.lines {
             let fingerprint = line_fingerprint(placed.line);
             let is_stale = self
@@ -960,6 +1133,157 @@ fn blend_pixel(destination: &mut [u8], source: [u8; 4], opacity: f32) {
     destination[3] = (output_alpha * 255.0).round() as u8;
 }
 
+fn composite_layer_transformed(
+    canvas: &mut [u8],
+    layer: &[u8],
+    width: u32,
+    height: u32,
+    center: [f32; 2],
+    transform: PanelTransform,
+    near_blur: f32,
+) {
+    let projected = panel_corners([width as f32 * 0.39, height as f32 * 0.35])
+        .map(|corner| transform.project(corner));
+    let min_x = projected
+        .iter()
+        .map(|point| center[0] + point[0])
+        .fold(f32::INFINITY, f32::min)
+        - 64.0;
+    let min_x = min_x.floor().max(0.0) as i32;
+    let max_x = projected
+        .iter()
+        .map(|point| center[0] + point[0])
+        .fold(f32::NEG_INFINITY, f32::max)
+        + 64.0;
+    let max_x = max_x.ceil().min(width as f32 - 1.0) as i32;
+    let min_y = projected
+        .iter()
+        .map(|point| center[1] + point[1])
+        .fold(f32::INFINITY, f32::min)
+        - 64.0;
+    let min_y = min_y.floor().max(0.0) as i32;
+    let max_y = projected
+        .iter()
+        .map(|point| center[1] + point[1])
+        .fold(f32::NEG_INFINITY, f32::max)
+        + 64.0;
+    let max_y = max_y.ceil().min(height as f32 - 1.0) as i32;
+
+    for target_y in min_y..=max_y {
+        for target_x in min_x..=max_x {
+            let delta_x = target_x as f32 + 0.5 - center[0];
+            let delta_y = target_y as f32 + 0.5 - center[1];
+            let local = transform.unproject([delta_x, delta_y]);
+            let source_x = local[0] + center[0] - 0.5;
+            let source_y = local[1] + center[1] - 0.5;
+            let depth = transform.depth[0] * local[0] + transform.depth[1] * local[1];
+            let proximity = if transform.max_near_depth > 0.001 {
+                (depth / transform.max_near_depth).clamp(0.0, 1.0)
+            } else {
+                0.0
+            };
+            let source = sample_layer_blurred(
+                layer,
+                width,
+                height,
+                source_x,
+                source_y,
+                near_blur.max(0.0) * proximity,
+            );
+            if source[3] == 0 {
+                continue;
+            }
+            let target_index =
+                (target_y as usize * width as usize + target_x as usize) * BYTES_PER_PIXEL as usize;
+            blend_pixel(&mut canvas[target_index..target_index + 4], source, 1.0);
+        }
+    }
+}
+
+fn sample_layer_blurred(
+    layer: &[u8],
+    width: u32,
+    height: u32,
+    x: f32,
+    y: f32,
+    blur: f32,
+) -> [u8; 4] {
+    let center = sample_layer_bilinear(layer, width, height, x, y);
+    if blur <= 0.2 {
+        return center;
+    }
+    let radius = blur * 0.72;
+    let edge_samples = [
+        sample_layer_bilinear(layer, width, height, x - radius, y),
+        sample_layer_bilinear(layer, width, height, x + radius, y),
+        sample_layer_bilinear(layer, width, height, x, y - radius),
+        sample_layer_bilinear(layer, width, height, x, y + radius),
+    ];
+    if center[3] == 0 && edge_samples.iter().all(|sample| sample[3] == 0) {
+        return [0; 4];
+    }
+    let axis = [-radius, 0.0, radius];
+    let weights = [1.0, 2.0, 1.0];
+    let mut alpha = 0.0;
+    let mut premultiplied = [0.0; 3];
+    for (offset_y, weight_y) in axis.into_iter().zip(weights) {
+        for (offset_x, weight_x) in axis.into_iter().zip(weights) {
+            let weight = weight_x * weight_y / 16.0;
+            let sample = sample_layer_bilinear(layer, width, height, x + offset_x, y + offset_y);
+            let sample_alpha = f32::from(sample[3]) / 255.0 * weight;
+            alpha += sample_alpha;
+            for channel in 0..3 {
+                premultiplied[channel] += f32::from(sample[channel]) / 255.0 * sample_alpha;
+            }
+        }
+    }
+    if alpha <= 0.0 {
+        return [0; 4];
+    }
+    [
+        (premultiplied[0] / alpha * 255.0).round() as u8,
+        (premultiplied[1] / alpha * 255.0).round() as u8,
+        (premultiplied[2] / alpha * 255.0).round() as u8,
+        (alpha * 255.0).round() as u8,
+    ]
+}
+
+fn sample_layer_bilinear(layer: &[u8], width: u32, height: u32, x: f32, y: f32) -> [u8; 4] {
+    let left = x.floor() as i32;
+    let top = y.floor() as i32;
+    let fraction_x = x - left as f32;
+    let fraction_y = y - top as f32;
+    let samples = [
+        (left, top, (1.0 - fraction_x) * (1.0 - fraction_y)),
+        (left + 1, top, fraction_x * (1.0 - fraction_y)),
+        (left, top + 1, (1.0 - fraction_x) * fraction_y),
+        (left + 1, top + 1, fraction_x * fraction_y),
+    ];
+    let mut alpha = 0.0;
+    let mut premultiplied = [0.0; 3];
+    for (sample_x, sample_y, weight) in samples {
+        if !(0..width as i32).contains(&sample_x) || !(0..height as i32).contains(&sample_y) {
+            continue;
+        }
+        let index =
+            (sample_y as usize * width as usize + sample_x as usize) * BYTES_PER_PIXEL as usize;
+        let sample_alpha = f32::from(layer[index + 3]) / 255.0 * weight;
+        alpha += sample_alpha;
+        for channel in 0..3 {
+            premultiplied[channel] += f32::from(layer[index + channel]) / 255.0 * sample_alpha;
+        }
+    }
+    if alpha <= 0.0 {
+        return [0; 4];
+    }
+    [
+        (premultiplied[0] / alpha * 255.0).round() as u8,
+        (premultiplied[1] / alpha * 255.0).round() as u8,
+        (premultiplied[2] / alpha * 255.0).round() as u8,
+        (alpha * 255.0).round() as u8,
+    ]
+}
+
 fn composite_squiggle(
     canvas: &mut [u8],
     canvas_width: u32,
@@ -1003,7 +1327,27 @@ fn attributes(base: Attrs<'static>, style: SyntaxStyle) -> Attrs<'static> {
 
 #[cfg(test)]
 mod tests {
-    use super::{InlineRevealFrame, inline_reveal_segments};
+    use super::{
+        InlineRevealFrame, inline_reveal_segments, invert_matrix_3x3, multiply_matrix_point,
+    };
+
+    #[test]
+    fn perspective_matrix_round_trips_points() {
+        let forward = [
+            [0.91, 0.14, 0.0],
+            [-0.08, 0.88, 0.0],
+            [0.0001, -0.00008, 1.0],
+        ];
+        let inverse = invert_matrix_3x3(forward);
+        let point = [340.0, -170.0];
+        let projected = multiply_matrix_point(forward, point);
+        let projected = [projected[0] / projected[2], projected[1] / projected[2]];
+        let restored = multiply_matrix_point(inverse, projected);
+        let restored = [restored[0] / restored[2], restored[1] / restored[2]];
+
+        assert!((restored[0] - point[0]).abs() < 0.001);
+        assert!((restored[1] - point[1]).abs() < 0.001);
+    }
 
     #[test]
     fn multiple_inline_reveals_partition_one_stable_line() {

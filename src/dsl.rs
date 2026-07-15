@@ -375,6 +375,11 @@ impl Image {
 #[derive(Clone)]
 pub struct Code {
     pub panel_y: PropertyId,
+    pub panel_rotation: PropertyId,
+    pub panel_tilt_x: PropertyId,
+    pub panel_tilt_y: PropertyId,
+    pub panel_scale: PropertyId,
+    pub panel_near_blur: PropertyId,
     pub layout: PropertyId,
     pub content: PropertyId,
     pub focus: PropertyId,
@@ -390,6 +395,11 @@ impl Code {
     pub fn new(id: &str) -> Self {
         Self {
             panel_y: PropertyId::new(format!("{id}.panel_y")),
+            panel_rotation: PropertyId::new(format!("{id}.panel_rotation")),
+            panel_tilt_x: PropertyId::new(format!("{id}.panel_tilt_x")),
+            panel_tilt_y: PropertyId::new(format!("{id}.panel_tilt_y")),
+            panel_scale: PropertyId::new(format!("{id}.panel_scale")),
+            panel_near_blur: PropertyId::new(format!("{id}.panel_near_blur")),
             layout: PropertyId::new(format!("{id}.layout")),
             content: PropertyId::new(format!("{id}.content")),
             focus: PropertyId::new(format!("{id}.focus")),

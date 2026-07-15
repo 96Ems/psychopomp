@@ -41,7 +41,7 @@ Still images remain stable scene actors rather than pretending to be time-based 
 
 ## Transcript Cues Drive Choreography
 
-`src/transcript.rs` ingests word timing sidecars and resolves exact word occurrences into cue ranges. The `effect-shows-errors` port demonstrates the intended boundary: the original narration is a script clip, while its published word timings schedule ordinary code and pointer motions through `Composition::delay`.
+`src/transcript.rs` ingests word timing sidecars and resolves exact word occurrences into cue ranges. The `effect-shows-errors` and `promises-only-happy-path` ports demonstrate the intended boundary: original narration is a script clip, while published word timings schedule ordinary code and pointer motions through `Composition::delay`.
 
 Transcript parsing does not understand code, actors, or rendering. It only connects semantic words to the shared media clock.
 
@@ -50,6 +50,8 @@ Transcript parsing does not understand code, actors, or rendering. It only conne
 `src/render.rs` is the concrete `wgpu` and `cosmic-text` Adapter. `HeadlessRenderer::render_shapes` renders scene geometry into tightly packed RGBA pixels. `HeadlessRenderer::composite_text` places cached stable-line sprites into every temporal sample before accumulation.
 
 The Adapter also resolves semantic token targets from `cosmic-text` glyph cluster hitboxes. Token highlights and the pointer consume those measured bounds; choreography does not estimate monospace character widths or hardcode target coordinates.
+
+Editor panel translation, three-axis rotation, and scale are sampled properties. A perspective matrix projects the panel plane; the shader inverse-transforms panel geometry, while the CPU compositor renders text, pointers, and annotations into a reusable transparent foreground layer and applies the same projection before compositing. Depth-weighted Gaussian sampling softens the near edge during the opening pose, while increased entrance shutter sampling keeps fast perspective motion continuous. The identity path avoids foreground projection after the panel settles.
 
 SVG assets are parsed and rasterized once into reusable cached sprites, then transformed and composited for each temporal sample. The pointer uses the exact filled Phosphor `HandPointingIcon` path selected by default in `effect-institute`; the same path supports future SVG actors without adding asset-specific shader geometry.
 
@@ -82,7 +84,7 @@ FFmpeg remains a subprocess because it avoids unsafe bindings and codec linkage 
 
 ## Main Owns Choreography
 
-`src/main.rs` is intentionally visible orchestration. It declares the hero code document and snapshots, samples named motion profiles, evaluates eight shutter samples, averages them, and sends one frame to the encoder.
+`src/main.rs` is intentionally visible orchestration. It selects named scenes, declares their code documents and snapshots, samples named motion profiles, evaluates eight shutter samples, averages them, and sends one frame to the encoder.
 
 Choreography should move behind a scene compiler only after a second scene reveals repeated authoring operations. Moving it now would create a shallow pass-through Module.
 

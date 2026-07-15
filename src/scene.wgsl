@@ -2,6 +2,9 @@ struct SceneUniforms {
     resolution: vec2<f32>,
     panel_offset_y: f32,
     _padding_0: f32,
+    panel_inverse_0: vec4<f32>,
+    panel_inverse_1: vec4<f32>,
+    panel_inverse_2: vec4<f32>,
     focus: vec4<f32>,
     token_highlight: vec4<f32>,
 }
@@ -53,10 +56,21 @@ fn fill_box(
 
 @fragment
 fn fragment_main(input: VertexOutput) -> @location(0) vec4<f32> {
-    let pixel = input.uv * scene.resolution;
+    let world_pixel = input.uv * scene.resolution;
     var color = vec3<f32>(0.0032, 0.0035, 0.0042);
 
     let panel_center = vec2<f32>(scene.resolution.x * 0.5, scene.resolution.y * 0.52 + scene.panel_offset_y);
+    var pixel = world_pixel;
+    if scene._padding_0 > 0.5 {
+        let delta = world_pixel - panel_center;
+        let world = vec3<f32>(delta, 1.0);
+        let local = vec3<f32>(
+            dot(scene.panel_inverse_0.xyz, world),
+            dot(scene.panel_inverse_1.xyz, world),
+            dot(scene.panel_inverse_2.xyz, world)
+        );
+        pixel = panel_center + local.xy / local.z;
+    }
     let panel_size = vec2<f32>(scene.resolution.x * 0.78, scene.resolution.y * 0.70);
 
     let border_distance = sd_rounded_box(pixel - panel_center, panel_size * 0.5 + vec2<f32>(1.0), 17.0);
