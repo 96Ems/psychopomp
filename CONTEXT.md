@@ -56,6 +56,10 @@ Accompanying timed media such as music, sound effects, or B-roll. Layer clips sh
 
 A named timeline range. Cues may be authored around a composition or imported from transcript word and phrase timing; their start and end can synchronize motion and media.
 
+## Transcript
+
+An ordered set of words with source start and end times. Looking up a word occurrence produces a cue range on the same exact media clock used by script clips.
+
 ## Media Placement
 
 A compiled relationship between a clip's immutable source range and its scheduled timeline range. Media placement time uses integer nanoseconds so edit boundaries remain exact across repeated composition.
@@ -71,6 +75,10 @@ A measured visual range resolved from meaningful content, such as a token inside
 ## Inline Reveal
 
 A transition that introduces authored spans inside a stable code line. The revealed spans animate width, opacity, and blur while stable suffix spans move to their new position without replacement.
+
+## Annotation
+
+A transient or persistent visual attached to a semantic target without changing the target's identity. The lesson port currently demonstrates a red error squiggle and a celebration burst.
 
 ## Pointer
 

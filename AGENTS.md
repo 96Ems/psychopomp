@@ -19,6 +19,7 @@ cargo test
 cargo fmt --check
 cargo clippy --all-targets --all-features -- -D warnings
 cargo run --release
+cargo run --release -- render effect-shows-errors
 ```
 
 `cargo run --release` renders `output/kinograph-prototype.mp4` by default. Pass an output path as the first argument to override it. A full render requires:
@@ -35,8 +36,9 @@ Do not run the full render as routine validation when unit tests and static chec
 - `src/composition.rs`: exact media time, immutable assets and clips, script/layer scheduling, cues, and cross-media composition
 - `src/dsl.rs`: public Rust scene values, semantic targets, actor helpers, and lowering into scalar tracks
 - `src/motion.rs`: deterministic arbitrary-time analytic spring sampling with position and velocity
-- `src/render.rs`: concrete headless `wgpu` renderer and `cosmic-text` sprite compositor
-- `src/encode.rs`: concrete FFmpeg subprocess and raw RGBA frame protocol
+- `src/transcript.rs`: word timing ingestion and semantic cue lookup
+- `src/render.rs`: concrete headless `wgpu` renderer, sprite compositor, and code annotations
+- `src/encode.rs`: concrete FFmpeg subprocess, raw RGBA protocol, and compiled audio placement
 - `src/main.rs`: visible prototype choreography and application wiring
 - `src/lib.rs`: public library module boundary used by the Rust authoring DSL
 - `src/scene.wgsl`: editor geometry and focus shader

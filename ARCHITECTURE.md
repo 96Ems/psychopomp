@@ -39,6 +39,12 @@ Media time is stored as integer nanoseconds. Conversion to floating-point second
 
 Still images remain stable scene actors rather than pretending to be time-based clips. A compiled scene retains each image asset and its transform property IDs; actual image composition remains renderer work for the first image-backed scene.
 
+## Transcript Cues Drive Choreography
+
+`src/transcript.rs` ingests word timing sidecars and resolves exact word occurrences into cue ranges. The `effect-shows-errors` port demonstrates the intended boundary: the original narration is a script clip, while its published word timings schedule ordinary code and pointer motions through `Composition::delay`.
+
+Transcript parsing does not understand code, actors, or rendering. It only connects semantic words to the shared media clock.
+
 ## Rendering Is One Concrete Adapter
 
 `src/render.rs` is the concrete `wgpu` and `cosmic-text` Adapter. `HeadlessRenderer::render_shapes` renders scene geometry into tightly packed RGBA pixels. `HeadlessRenderer::composite_text` places cached stable-line sprites into every temporal sample before accumulation.
@@ -53,6 +59,8 @@ Pointer translation uses mildly underdamped scalar property tracks; rotation is 
 
 Stable code lines can be split into cached prefix, reveal, and suffix sprites. An inline reveal opens the inserted span's layout width while opacity rises and blur resolves; the suffix position is derived from the sampled width. This is the first concrete inline-identity seam and remains narrower than a general recursive slot AST.
 
+The lesson port extends the compositor to multiple non-overlapping reveals on one stable line. Focus ranges and token highlights carry independent vertical geometry, so cursor-only cues do not accidentally move or resize focus. Semantic annotations currently include a CPU-composited error squiggle and a cached celebration glyph; both participate in temporal sampling.
+
 The Adapter keeps these details private:
 
 - headless Metal adapter and device creation
@@ -66,7 +74,7 @@ There is no renderer trait. One Adapter is a hypothetical seam; a second backend
 
 ## Encoding Is One Concrete Adapter
 
-`src/encode.rs` owns the FFmpeg process, raw-frame protocol, argument construction, and exit validation. The Interface accepts tightly packed RGBA frames of one declared size.
+`src/encode.rs` owns the FFmpeg process, raw-frame protocol, audio placement filters, argument construction, and exit validation. The Interface accepts tightly packed RGBA frames plus compiled audio media placements. FFmpeg trims immutable source ranges, shifts them onto the composition clock, mixes overlapping layers through a peak limiter, and encodes AAC beside H.264.
 
 FFmpeg remains a subprocess because it avoids unsafe bindings and codec linkage while preserving access to the installed encoder set. A second encoder is not currently justified.
 

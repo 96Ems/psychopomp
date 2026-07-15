@@ -55,7 +55,10 @@ The default artifact is `output/kinograph-prototype.mp4`.
 - Cross-media sequence, parallel, delay, and hold can schedule visual motion together with non-destructive audio or video clips.
 - Transcript-bearing script clips and accompanying layer clips require distinct roles even though they share the same composition clock.
 - Integer-nanosecond media time avoids source-range drift that appears immediately when decimal clip boundaries are repeatedly subtracted as floating-point values.
+- The complete 31.7-second Effect Institute `effect-shows-errors` lesson can use its original Opus narration and word timing sidecar to drive structural code changes, focus ranges, pointer motion, multiple inline reveals, an error squiggle, and a celebration burst.
+- FFmpeg can trim and place compiled audio clips on the composition clock while continuing to receive raw rendered video through stdin.
+- A separate success sound can be scheduled as a layer clip at the same transcript cue that clears the error and reveals `VeryBadRoll`.
 
 ## Next Question
 
-Can an edited narration track and transcript cues drive the existing visual DSL while FFmpeg assembles the compiled media placements into the final artifact?
+Can multiple recorded takes be transcribed and assembled into one non-destructive script edit whose changed word timing automatically retimes the same visual choreography?

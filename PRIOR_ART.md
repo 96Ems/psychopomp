@@ -4,7 +4,7 @@ Kinograph should not invent its authoring and timeline model without pressure-te
 
 ## Current Design Question
 
-The immediate question is how authors compose deterministic, time-driven motion. Narration cues, inline code identity, and a graphical timeline are not current requirements.
+The immediate question is how edited narration, transcript cues, and deterministic visual motion compose on one inspectable media clock. A graphical timeline remains deferred.
 
 The API should eventually support both:
 
@@ -164,7 +164,7 @@ Relevant ideas:
 - stable line and part identity prevents unrelated code from being replaced
 - focus and annotations target semantic content
 
-Kinograph should retain compatibility with these concepts, but should not let inline slots or narration cues determine the first general animation API. Code-state changes should eventually compile into the same actor properties and trajectories as every other scene operation.
+Kinograph retains these concepts in its first lesson port. The published `effect-shows-errors` narration and word timing sidecar now drive ordinary actor properties and trajectories; inline slots lower to independent reveal properties on stable code lines.
 
 ## Working Synthesis
 

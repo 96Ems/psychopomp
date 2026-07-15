@@ -7,20 +7,22 @@ use std::{
     time::Instant,
 };
 
-use anyhow::{Context, Result};
+use anyhow::{Context, Result, bail};
 
 use kinograph::{
     code::{
         CodeDocument, CodeLayout, CodeLine, CodeSnapshot, CodeTransition, PlacedLine, StyledSpan,
         SyntaxStyle, TransitionProgress,
     },
+    composition::{Asset, Composition, Time, TimeRange},
     dsl::{Code, CompiledScene, Motion, Pointer, Scalar, Scene, TargetGeometry},
     encode::{FfmpegEncoder, VideoSpec},
     render::{
-        EditorFrame, HeadlessRenderer, InlineRevealFrame, PointerFrame, RenderSpec,
-        TextRangeBounds, TokenHighlight,
+        BurstFrame, EditorFrame, HeadlessRenderer, InlineRevealFrame, PointerFrame, RenderSpec,
+        SquiggleFrame, TextRangeBounds, TokenHighlight,
     },
     timeline::{PropertyId, SpringProfile},
+    transcript::Transcript,
 };
 
 const WIDTH: u32 = 1920;
@@ -30,24 +32,44 @@ const TEMPORAL_SAMPLES: u32 = 8;
 const SHUTTER_ANGLE: f32 = 180.0;
 const FONT_PATH: &str = "/Users/kit/Library/Fonts/CommitMono-400-Regular.otf";
 const FOCUS_LINE_ID: &str = "find-effect";
+const LESSON_AUDIO_DURATION: f64 = 31.708;
 const _: () = assert!(TEMPORAL_SAMPLES > 0);
 
 fn main() -> Result<()> {
-    let output = std::env::args()
-        .nth(1)
-        .map(PathBuf::from)
-        .unwrap_or_else(|| PathBuf::from("output/kinograph-prototype.mp4"));
+    let arguments = std::env::args().skip(1).collect::<Vec<_>>();
+    let (lesson, output) = match arguments.as_slice() {
+        [] => (false, PathBuf::from("output/kinograph-prototype.mp4")),
+        [output] if output != "render" => (false, PathBuf::from(output)),
+        [command, scene] if command == "render" && scene == "hero" => {
+            (false, PathBuf::from("output/kinograph-prototype.mp4"))
+        }
+        [command, scene, output] if command == "render" && scene == "hero" => {
+            (false, PathBuf::from(output))
+        }
+        [command, scene] if command == "render" && scene == "effect-shows-errors" => {
+            (true, PathBuf::from("output/effect-shows-errors.mp4"))
+        }
+        [command, scene, output] if command == "render" && scene == "effect-shows-errors" => {
+            (true, PathBuf::from(output))
+        }
+        _ => bail!(
+            "usage: kinograph [output] | kinograph render <hero|effect-shows-errors> [output]"
+        ),
+    };
 
     if let Some(parent) = output.parent() {
         fs::create_dir_all(parent)
             .with_context(|| format!("create output directory {}", parent.display()))?;
     }
 
-    pollster::block_on(render_video(&output))
+    if lesson {
+        pollster::block_on(render_effect_shows_errors(&output))
+    } else {
+        pollster::block_on(render_hero(&output))
+    }
 }
 
-async fn render_video(output: &Path) -> Result<()> {
-    let started = Instant::now();
+async fn render_hero(output: &Path) -> Result<()> {
     let transition = hero_code_transition()?;
     let mut renderer = HeadlessRenderer::new(RenderSpec {
         width: WIDTH,
@@ -70,14 +92,59 @@ async fn render_video(output: &Path) -> Result<()> {
     let not_found = measure_target(&mut renderer, &settled_lines, FOCUS_LINE_ID, "NotFound")?;
     let context = measure_target(&mut renderer, &settled_lines, "class-open", "Context.Tag")?;
     let choreography = hero_choreography(effect, string, not_found, context)?;
-    let frame_count = choreography.scene.duration().frame_count(FPS);
-    let mut encoder = FfmpegEncoder::start(
+
+    encode_editor_video(
+        &mut renderer,
+        output,
+        &choreography.scene,
+        |renderer, time| {
+            let (
+                panel_offset_y,
+                focus_intensity,
+                focus_line_y,
+                token_highlight,
+                pointer,
+                inline_reveal,
+                lines,
+            ) = sample_editor(&transition, &choreography, time);
+            let inline_reveals = [inline_reveal];
+            let squiggles = [];
+            let bursts = [];
+            let frame = EditorFrame {
+                panel_offset_y,
+                focus_intensity,
+                focus_line_y,
+                focus_height: 44.0,
+                token_highlight,
+                pointer,
+                inline_reveals: &inline_reveals,
+                squiggles: &squiggles,
+                bursts: &bursts,
+                lines: &lines,
+            };
+            let mut pixels = renderer.render_shapes(&frame)?;
+            renderer.composite_text(&mut pixels, &frame)?;
+            Ok(pixels)
+        },
+    )
+}
+
+fn encode_editor_video(
+    renderer: &mut HeadlessRenderer,
+    output: &Path,
+    scene: &CompiledScene,
+    mut render_sample: impl FnMut(&mut HeadlessRenderer, f32) -> Result<Vec<u8>>,
+) -> Result<()> {
+    let started = Instant::now();
+    let frame_count = scene.duration().frame_count(FPS);
+    let mut encoder = FfmpegEncoder::start_with_media(
         output,
         VideoSpec {
             width: WIDTH,
             height: HEIGHT,
             fps: FPS,
         },
+        scene.media(),
     )?;
 
     let frame_byte_count = WIDTH as usize * HEIGHT as usize * 4;
@@ -92,26 +159,7 @@ async fn render_video(output: &Path) -> Result<()> {
         for sample in 0..TEMPORAL_SAMPLES {
             let sample_phase = (sample as f32 + 0.5) / TEMPORAL_SAMPLES as f32 - 0.5;
             let time = (center_time + sample_phase * shutter_duration).max(0.0);
-            let (
-                panel_offset_y,
-                focus_intensity,
-                focus_line_y,
-                token_highlight,
-                pointer,
-                inline_reveal,
-                lines,
-            ) = sample_editor(&transition, &choreography, time);
-            let sample_frame = EditorFrame {
-                panel_offset_y,
-                focus_intensity,
-                focus_line_y,
-                token_highlight,
-                pointer,
-                inline_reveal,
-                lines: &lines,
-            };
-            let mut pixels = renderer.render_shapes(&sample_frame)?;
-            renderer.composite_text(&mut pixels, &sample_frame)?;
+            let pixels = render_sample(renderer, time)?;
 
             for (sum, byte) in accumulation.iter_mut().zip(pixels) {
                 *sum += u32::from(byte);
@@ -140,6 +188,516 @@ async fn render_video(output: &Path) -> Result<()> {
         started.elapsed().as_secs_f32()
     );
     Ok(())
+}
+
+async fn render_effect_shows_errors(output: &Path) -> Result<()> {
+    let asset_directory = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("assets")
+        .join("effect-shows-errors");
+    let transcript = Transcript::load(&asset_directory.join("timings.json"))?;
+    let transitions = effect_shows_errors_transitions()?;
+    let mut renderer = HeadlessRenderer::new(RenderSpec {
+        width: WIDTH,
+        height: HEIGHT,
+        font_path: PathBuf::from(FONT_PATH),
+        file_name: "slow-die.ts".to_owned(),
+    })
+    .await?;
+    let initial_lines = transitions.split.sample(TransitionProgress {
+        layout: 0.0,
+        content: 0.0,
+    });
+    let settled_lines = transitions.fail.sample(TransitionProgress {
+        layout: 1.0,
+        content: 1.0,
+    });
+    let hidden_indent_width = measure_text_width(&mut renderer, "  ")?;
+    let closing_angle_width = measure_text_width(&mut renderer, ">")?;
+    let mut effect_target =
+        measure_target(&mut renderer, &initial_lines, "sig", "Effect.Effect<number")?;
+    effect_target.bounds.width += closing_angle_width;
+    let mut random_target = measure_target(
+        &mut renderer,
+        &initial_lines,
+        "random",
+        "Random.nextIntBetween",
+    )?;
+    random_target.bounds.x -= hidden_indent_width;
+    let mut sleep_target = measure_target(&mut renderer, &initial_lines, "sleep", "Effect.sleep")?;
+    sleep_target.bounds.x -= hidden_indent_width;
+    let targets = LessonTargets {
+        effect: effect_target,
+        slow_die: measure_target(&mut renderer, &initial_lines, "sig", "slowDie")?,
+        random: random_target,
+        sleep: sleep_target,
+        roll: measure_target(&mut renderer, &settled_lines, "fail", "(n === 4)")?,
+        bad_roll_fail: measure_target(&mut renderer, &settled_lines, "fail", "VeryBadRoll")?,
+        fail_call: measure_target(&mut renderer, &settled_lines, "fail", "Effect.fail")?,
+        error: measure_target(
+            &mut renderer,
+            &settled_lines,
+            "comment",
+            "VeryBadRoll is not assignable to never",
+        )?,
+        bad_roll_type: measure_target(&mut renderer, &settled_lines, "sig", "VeryBadRoll")?,
+    };
+    let narration = Asset::audio(
+        "effect-shows-errors",
+        asset_directory.join("narration.webm"),
+    )
+    .clip(TimeRange::new(
+        Time::ZERO,
+        Time::seconds(LESSON_AUDIO_DURATION),
+    ));
+    let success = Asset::audio("success", asset_directory.join("success.wav"))
+        .clip(TimeRange::new(Time::ZERO, Time::seconds(0.43)));
+    let choreography = effect_shows_errors_choreography(&transcript, targets, narration, success)?;
+
+    encode_editor_video(
+        &mut renderer,
+        output,
+        &choreography.scene,
+        |renderer, time| {
+            render_effect_shows_errors_sample(renderer, &transitions, &choreography, time)
+        },
+    )
+}
+
+#[derive(Clone, Copy)]
+struct LessonTargets {
+    effect: CodeTarget,
+    slow_die: CodeTarget,
+    random: CodeTarget,
+    sleep: CodeTarget,
+    roll: CodeTarget,
+    bad_roll_fail: CodeTarget,
+    fail_call: CodeTarget,
+    error: CodeTarget,
+    bad_roll_type: CodeTarget,
+}
+
+struct EffectShowsErrorsChoreography {
+    scene: CompiledScene,
+    panel_y: PropertyId,
+    code_layout: PropertyId,
+    code_content: PropertyId,
+    fail_layout: PropertyId,
+    fail_content: PropertyId,
+    focus: PropertyId,
+    focus_y: PropertyId,
+    focus_height: PropertyId,
+    token_x: PropertyId,
+    token_y: PropertyId,
+    token_width: PropertyId,
+    token_opacity: PropertyId,
+    pointer_x: PropertyId,
+    pointer_y: PropertyId,
+    pointer_opacity: PropertyId,
+    pointer_scale: PropertyId,
+    pointer_blur: PropertyId,
+    fail_action: PropertyId,
+    error_comment: PropertyId,
+    error_type: PropertyId,
+    inline_gen: PropertyId,
+    indent: PropertyId,
+    ellipsis: PropertyId,
+    squiggle: PropertyId,
+    burst: PropertyId,
+    squiggle_target: CodeTarget,
+    burst_target: CodeTarget,
+}
+
+fn effect_shows_errors_choreography(
+    transcript: &Transcript,
+    measured: LessonTargets,
+    narration: kinograph::composition::Clip,
+    success: kinograph::composition::Clip,
+) -> Result<EffectShowsErrorsChoreography> {
+    let code = Code::new("lesson.code");
+    let pointer = Pointer::new("lesson.pointer");
+    let fail_action = PropertyId::new("lesson.code.fail_action");
+    let error_comment = PropertyId::new("lesson.code.error_comment");
+    let error_type = PropertyId::new("lesson.code.error_type");
+    let inline_gen = PropertyId::new("lesson.code.inline_gen");
+    let indent = PropertyId::new("lesson.code.indent");
+    let fail_layout = PropertyId::new("lesson.code.fail_layout");
+    let fail_content = PropertyId::new("lesson.code.fail_content");
+    let ellipsis = PropertyId::new("lesson.code.ellipsis");
+    let squiggle = PropertyId::new("lesson.code.squiggle");
+    let burst = PropertyId::new("lesson.code.burst");
+    let focus_height = PropertyId::new("lesson.code.focus_height");
+    let product = SpringProfile::from_visual_duration(0.3, 0.0, 0.001, 0.001);
+    let pointer_motion = SpringProfile::from_visual_duration(0.42, 0.18, 0.001, 0.001);
+
+    let effect = code.text("sig", "Effect.Effect<number");
+    let slow_die = code.text("sig", "slowDie");
+    let random = code.text("random", "Random.nextIntBetween");
+    let sleep = code.text("sleep", "Effect.sleep");
+    let roll = code.text("fail", "(n === 4)");
+    let bad_roll_fail = code.text("fail", "VeryBadRoll");
+    let fail_call = code.text("fail", "Effect.fail");
+    let error = code.text("comment", "VeryBadRoll is not assignable to never");
+    let bad_roll_type = code.text("sig", "VeryBadRoll");
+    let targets = HashMap::from([
+        (effect.clone(), measured.effect.into()),
+        (slow_die.clone(), measured.slow_die.into()),
+        (random.clone(), measured.random.into()),
+        (sleep.clone(), measured.sleep.into()),
+        (roll.clone(), measured.roll.into()),
+        (bad_roll_fail.clone(), measured.bad_roll_fail.into()),
+        (fail_call.clone(), measured.fail_call.into()),
+        (error.clone(), measured.error.into()),
+        (bad_roll_type.clone(), measured.bad_roll_type.into()),
+    ]);
+    let reckon = transcript.word("reckon")?;
+
+    let at = |cue: kinograph::composition::Cue, motion| {
+        Composition::delay(cue.start_offset(), Composition::animate(motion))
+    };
+    let cursor_at = |target: kinograph::dsl::TextTarget, cue: kinograph::composition::Cue| {
+        at(
+            cue,
+            Motion::parallel([
+                code.highlight(target.clone(), product),
+                Motion::spring(pointer.opacity.clone(), 1.0, pointer_motion),
+                pointer.move_to(target, 55.0, pointer_motion),
+            ]),
+        )
+    };
+    let focus_cursor_at = |target: kinograph::dsl::TextTarget, cue: kinograph::composition::Cue| {
+        at(
+            cue,
+            Motion::parallel([
+                code.focus(target.clone(), product),
+                code.highlight(target.clone(), product),
+                Motion::spring(pointer.opacity.clone(), 1.0, pointer_motion),
+                pointer.move_to(target, 55.0, pointer_motion),
+            ]),
+        )
+    };
+    let composition = Composition::parallel([
+        Composition::script(narration),
+        Composition::delay(reckon.start_offset(), Composition::layer(success)),
+        Composition::delay(
+            kinograph::composition::Duration::milliseconds(80.0),
+            Motion::spring(code.panel_y.clone(), 0.0, product),
+        ),
+        at(
+            transcript.word("Effect")?,
+            Motion::parallel([
+                code.highlight(effect.clone(), product),
+                Motion::spring(pointer.opacity.clone(), 1.0, pointer_motion),
+                Motion::spring(pointer.scale.clone(), 1.0, pointer_motion),
+                Motion::spring(pointer.blur.clone(), 0.0, pointer_motion),
+                pointer.move_to(effect.clone(), 55.0, pointer_motion),
+            ]),
+        ),
+        cursor_at(slow_die, transcript.word("slowDie.")?),
+        focus_cursor_at(random, transcript.word("random")?),
+        focus_cursor_at(sleep, transcript.word("non-blocking,")?),
+        at(
+            transcript.word("result.")?,
+            Motion::parallel([
+                Motion::spring(code.focus.clone(), 0.0, product),
+                Motion::spring(code.highlight_opacity.clone(), 0.0, product),
+                Motion::spring(pointer.opacity.clone(), 0.0, product),
+            ]),
+        ),
+        at(
+            transcript.word("lethal.")?,
+            Motion::parallel([
+                Motion::spring(code.layout.clone(), 1.0, product),
+                Motion::spring(code.content.clone(), 1.0, product),
+                Motion::spring(inline_gen.clone(), 0.0, product),
+                Motion::spring(indent.clone(), 1.0, product),
+            ]),
+        ),
+        at(
+            transcript.word("roll")?,
+            Motion::parallel([
+                Motion::spring(fail_layout.clone(), 1.0, product),
+                Motion::spring(fail_content.clone(), 1.0, product),
+                Motion::spring(pointer.opacity.clone(), 1.0, pointer_motion),
+                code.focus(roll.clone(), product),
+                code.highlight(roll.clone(), product),
+                pointer.move_to(roll, 55.0, pointer_motion),
+            ]),
+        ),
+        at(
+            transcript.word("fail")?,
+            Motion::parallel([
+                Motion::spring(fail_action.clone(), 1.0, product),
+                Motion::spring(ellipsis.clone(), 0.0, product),
+                code.highlight(bad_roll_fail.clone(), product),
+                pointer.move_to(bad_roll_fail, 55.0, pointer_motion),
+            ]),
+        ),
+        at(
+            transcript.word("finally,")?,
+            Motion::parallel([
+                Motion::spring(error_comment.clone(), 1.0, product),
+                Motion::spring(squiggle.clone(), 1.0, product),
+                Motion::spring(code.focus.clone(), 1.0, product),
+                Motion::spring(
+                    code.focus_y.clone(),
+                    Scalar::TargetLineY(effect.clone()).offset(-22.0),
+                    product,
+                ),
+                Motion::spring(focus_height.clone(), 88.0, product),
+                Motion::spring(code.highlight_opacity.clone(), 0.0, product),
+                Motion::spring(pointer.opacity.clone(), 0.0, pointer_motion),
+            ]),
+        ),
+        Composition::parallel([
+            cursor_at(fail_call, transcript.word("propagates")?),
+            at(
+                transcript.word("propagates")?,
+                Motion::parallel([
+                    Motion::spring(code.focus.clone(), 0.0, product),
+                    Motion::spring(focus_height.clone(), 44.0, product),
+                ]),
+            ),
+        ]),
+        at(
+            reckon.clone(),
+            Motion::parallel([
+                Motion::spring(error_comment.clone(), 0.0, product),
+                Motion::spring(error_type.clone(), 1.0, product),
+                Motion::spring(squiggle.clone(), 0.0, product),
+                Motion::spring(burst.clone(), 1.0, product),
+                Motion::spring(code.focus.clone(), 0.0, product),
+                code.highlight(bad_roll_type.clone(), product),
+                pointer.move_to(bad_roll_type, 55.0, pointer_motion),
+            ]),
+        ),
+        Composition::delay(
+            kinograph::composition::Duration::seconds(reckon.start().as_seconds() + 0.7),
+            Motion::spring(burst.clone(), 0.0, product),
+        ),
+        at(
+            transcript.word("TypeScript.")?,
+            Motion::parallel([
+                Motion::spring(code.focus.clone(), 0.0, product),
+                Motion::spring(code.highlight_opacity.clone(), 0.0, product),
+                Motion::spring(pointer.opacity.clone(), 0.0, product),
+            ]),
+        ),
+    ]);
+    let scene = Scene::new(
+        [
+            (code.panel_y.clone(), Scalar::Literal(250.0)),
+            (code.layout.clone(), Scalar::Literal(0.0)),
+            (code.content.clone(), Scalar::Literal(0.0)),
+            (fail_layout.clone(), Scalar::Literal(0.0)),
+            (fail_content.clone(), Scalar::Literal(0.0)),
+            (code.focus.clone(), Scalar::Literal(0.0)),
+            (code.focus_y.clone(), Scalar::TargetLineY(effect.clone())),
+            (focus_height.clone(), Scalar::Literal(44.0)),
+            (code.highlight_x.clone(), Scalar::TargetX(effect.clone())),
+            (
+                code.highlight_y.clone(),
+                Scalar::TargetLineY(effect.clone()),
+            ),
+            (
+                code.highlight_width.clone(),
+                Scalar::TargetWidth(effect.clone()),
+            ),
+            (code.highlight_opacity.clone(), Scalar::Literal(0.0)),
+            (
+                pointer.x.clone(),
+                Scalar::TargetCenterX(effect.clone()).offset(40.0),
+            ),
+            (
+                pointer.y.clone(),
+                Scalar::TargetBelow {
+                    target: effect,
+                    offset: 85.0,
+                },
+            ),
+            (pointer.opacity.clone(), Scalar::Literal(0.0)),
+            (pointer.scale.clone(), Scalar::Literal(0.7)),
+            (pointer.blur.clone(), Scalar::Literal(4.0)),
+            (fail_action.clone(), Scalar::Literal(0.0)),
+            (error_comment.clone(), Scalar::Literal(0.0)),
+            (error_type.clone(), Scalar::Literal(0.0)),
+            (inline_gen.clone(), Scalar::Literal(1.0)),
+            (indent.clone(), Scalar::Literal(0.0)),
+            (ellipsis.clone(), Scalar::Literal(1.0)),
+            (squiggle.clone(), Scalar::Literal(0.0)),
+            (burst.clone(), Scalar::Literal(0.0)),
+        ],
+        composition,
+    )
+    .compile(&targets)?;
+
+    Ok(EffectShowsErrorsChoreography {
+        scene,
+        panel_y: code.panel_y,
+        code_layout: code.layout,
+        code_content: code.content,
+        fail_layout,
+        fail_content,
+        focus: code.focus,
+        focus_y: code.focus_y,
+        focus_height,
+        token_x: code.highlight_x,
+        token_y: code.highlight_y,
+        token_width: code.highlight_width,
+        token_opacity: code.highlight_opacity,
+        pointer_x: pointer.x,
+        pointer_y: pointer.y,
+        pointer_opacity: pointer.opacity,
+        pointer_scale: pointer.scale,
+        pointer_blur: pointer.blur,
+        fail_action,
+        error_comment,
+        error_type,
+        inline_gen,
+        indent,
+        ellipsis,
+        squiggle,
+        burst,
+        squiggle_target: measured.effect,
+        burst_target: measured.bad_roll_type,
+    })
+}
+
+fn render_effect_shows_errors_sample(
+    renderer: &mut HeadlessRenderer,
+    transitions: &LessonTransitions,
+    choreography: &EffectShowsErrorsChoreography,
+    time: f32,
+) -> Result<Vec<u8>> {
+    let timeline = choreography.scene.timeline();
+    let sample = |property| {
+        timeline
+            .sample(property, time)
+            .expect("lesson choreography property has an initial value")
+            .position
+    };
+    let sample_state = |property, sample_time| {
+        timeline
+            .sample(property, sample_time)
+            .expect("lesson choreography property has an initial value")
+    };
+    let pointer_x = sample_state(&choreography.pointer_x, time);
+    let pointer_y = sample_state(&choreography.pointer_y, time);
+    let derivative_step = 1.0 / 240.0;
+    let previous_time = (time - derivative_step).max(0.0);
+    let previous_x = sample_state(&choreography.pointer_x, previous_time);
+    let previous_y = sample_state(&choreography.pointer_y, previous_time);
+    let acceleration_x = (pointer_x.velocity - previous_x.velocity) / derivative_step;
+    let acceleration_y = (pointer_y.velocity - previous_y.velocity) / derivative_step;
+    let pointer = PointerFrame {
+        x: pointer_x.position,
+        y: pointer_y.position,
+        opacity: sample(&choreography.pointer_opacity).clamp(0.0, 1.0),
+        rotation: (pointer_x.velocity * 0.00012 + pointer_y.velocity * 0.00004
+            - acceleration_x * 0.000012
+            - acceleration_y * 0.000004)
+            .clamp(-0.30, 0.30),
+        scale: sample(&choreography.pointer_scale),
+        blur: sample(&choreography.pointer_blur).max(0.0),
+    };
+    let split_progress = TransitionProgress {
+        layout: sample(&choreography.code_layout),
+        content: sample(&choreography.code_content),
+    };
+    let lines = if split_progress.content < 0.999 {
+        transitions.split.sample(split_progress)
+    } else {
+        transitions.fail.sample(TransitionProgress {
+            layout: sample(&choreography.fail_layout),
+            content: sample(&choreography.fail_content),
+        })
+    };
+    let reveals = vec![
+        InlineRevealFrame {
+            line_id: "comment",
+            start_span: 0,
+            end_span: 1,
+            progress: sample(&choreography.error_comment),
+        },
+        InlineRevealFrame {
+            line_id: "sig",
+            start_span: 6,
+            end_span: 8,
+            progress: sample(&choreography.error_type),
+        },
+        InlineRevealFrame {
+            line_id: "sig",
+            start_span: 9,
+            end_span: 14,
+            progress: sample(&choreography.inline_gen),
+        },
+        InlineRevealFrame {
+            line_id: "fail",
+            start_span: 3,
+            end_span: 4,
+            progress: sample(&choreography.ellipsis),
+        },
+        InlineRevealFrame {
+            line_id: "fail",
+            start_span: 4,
+            end_span: 9,
+            progress: sample(&choreography.fail_action),
+        },
+        InlineRevealFrame {
+            line_id: "random",
+            start_span: 0,
+            end_span: 1,
+            progress: sample(&choreography.indent),
+        },
+        InlineRevealFrame {
+            line_id: "sleep",
+            start_span: 0,
+            end_span: 1,
+            progress: sample(&choreography.indent),
+        },
+        InlineRevealFrame {
+            line_id: "return",
+            start_span: 0,
+            end_span: 1,
+            progress: sample(&choreography.indent),
+        },
+        InlineRevealFrame {
+            line_id: "close",
+            start_span: 0,
+            end_span: 1,
+            progress: sample(&choreography.indent),
+        },
+    ];
+    let squiggles = [SquiggleFrame {
+        x: choreography.squiggle_target.bounds.x,
+        y: choreography.squiggle_target.line_y,
+        width: choreography.squiggle_target.bounds.width,
+        opacity: sample(&choreography.squiggle),
+    }];
+    let bursts = [BurstFrame {
+        x: choreography.burst_target.bounds.x + choreography.burst_target.bounds.width * 0.5,
+        y: choreography.burst_target.line_y,
+        opacity: sample(&choreography.burst),
+    }];
+    let frame = EditorFrame {
+        panel_offset_y: sample(&choreography.panel_y),
+        focus_intensity: sample(&choreography.focus).clamp(0.0, 1.0),
+        focus_line_y: sample(&choreography.focus_y),
+        focus_height: sample(&choreography.focus_height),
+        token_highlight: TokenHighlight {
+            x: sample(&choreography.token_x),
+            y: sample(&choreography.token_y),
+            width: sample(&choreography.token_width),
+            opacity: sample(&choreography.token_opacity).clamp(0.0, 1.0),
+        },
+        pointer,
+        inline_reveals: &reveals,
+        squiggles: &squiggles,
+        bursts: &bursts,
+        lines: &lines,
+    };
+    let mut pixels = renderer.render_shapes(&frame)?;
+    renderer.composite_text(&mut pixels, &frame)?;
+    Ok(pixels)
 }
 
 #[derive(Clone, Copy)]
@@ -174,6 +732,11 @@ fn measure_target(
     })
 }
 
+fn measure_text_width(renderer: &mut HeadlessRenderer, text: &str) -> Result<f32> {
+    let line = CodeLine::new("measurement", vec![span(text, SyntaxStyle::Plain)]);
+    Ok(renderer.measure_text_range(&line, text)?.width)
+}
+
 struct HeroChoreography {
     scene: CompiledScene,
     panel_y: PropertyId,
@@ -181,6 +744,7 @@ struct HeroChoreography {
     code_content: PropertyId,
     focus: PropertyId,
     token_x: PropertyId,
+    token_y: PropertyId,
     token_width: PropertyId,
     token_opacity: PropertyId,
     pointer_x: PropertyId,
@@ -203,6 +767,7 @@ fn hero_choreography(
     let code_content = code.content.clone();
     let focus = code.focus.clone();
     let token_x = code.highlight_x.clone();
+    let token_y = code.highlight_y.clone();
     let token_width = code.highlight_width.clone();
     let token_opacity = code.highlight_opacity.clone();
     let pointer = Pointer::new("pointer");
@@ -263,6 +828,7 @@ fn hero_choreography(
             (code_content.clone(), Scalar::Literal(0.0)),
             (focus.clone(), Scalar::Literal(0.0)),
             (token_x.clone(), Scalar::TargetX(effect_target.clone())),
+            (token_y.clone(), Scalar::TargetLineY(effect_target.clone())),
             (
                 token_width.clone(),
                 Scalar::TargetWidth(effect_target.clone()),
@@ -295,6 +861,7 @@ fn hero_choreography(
         code_content,
         focus,
         token_x,
+        token_y,
         token_width,
         token_opacity,
         pointer_x,
@@ -340,6 +907,7 @@ fn sample_editor<'a>(
     let focus_intensity = sample(&choreography.focus).clamp(0.0, 1.0);
     let token_highlight = TokenHighlight {
         x: sample(&choreography.token_x),
+        y: sample(&choreography.token_y),
         width: sample(&choreography.token_width),
         opacity: sample(&choreography.token_opacity).clamp(0.0, 1.0),
     };
@@ -385,6 +953,114 @@ fn sample_editor<'a>(
         inline_reveal,
         lines,
     )
+}
+
+struct LessonTransitions {
+    split: CodeTransition,
+    fail: CodeTransition,
+}
+
+fn effect_shows_errors_transitions() -> Result<LessonTransitions> {
+    use SyntaxStyle::{Accent, Keyword, Plain, String as StringStyle, Type};
+
+    let document = CodeDocument::new(vec![
+        CodeLine::new(
+            "comment",
+            vec![span("// > VeryBadRoll is not assignable to never", Accent)],
+        ),
+        CodeLine::new(
+            "sig",
+            vec![
+                span("const", Keyword),
+                span(" slowDie", Plain),
+                span(": ", Plain),
+                span("Effect.Effect", Accent),
+                span("<", Plain),
+                span("number", Type),
+                span(", ", Plain),
+                span("VeryBadRoll", Accent),
+                span("> =", Plain),
+                span(" ", Plain),
+                span("Effect.gen", Accent),
+                span("(", Plain),
+                span("function*", Keyword),
+                span(" () {", Plain),
+            ],
+        ),
+        CodeLine::new(
+            "gen",
+            vec![
+                span("  Effect.gen", Accent),
+                span("(", Plain),
+                span("function*", Keyword),
+                span(" () {", Plain),
+            ],
+        ),
+        CodeLine::new(
+            "random",
+            vec![
+                span("  ", Plain),
+                span("  ", Plain),
+                span("const", Keyword),
+                span(" n = ", Plain),
+                span("yield*", Keyword),
+                span(" Random.nextIntBetween", Accent),
+                span("(1, 7)", Plain),
+            ],
+        ),
+        CodeLine::new(
+            "sleep",
+            vec![
+                span("  ", Plain),
+                span("  ", Plain),
+                span("yield*", Keyword),
+                span(" Effect.sleep", Accent),
+                span("(", Plain),
+                span("\"1 second\"", StringStyle),
+                span(")", Plain),
+            ],
+        ),
+        CodeLine::new(
+            "fail",
+            vec![
+                span("    ", Plain),
+                span("if", Keyword),
+                span(" (n === 4) ", Plain),
+                span("...", Plain),
+                span("yield*", Keyword),
+                span(" Effect.fail", Accent),
+                span("(new ", Plain),
+                span("VeryBadRoll", Type),
+                span("())", Plain),
+            ],
+        ),
+        CodeLine::new(
+            "return",
+            vec![
+                span("  ", Plain),
+                span("  ", Plain),
+                span("return", Keyword),
+                span(" n", Plain),
+            ],
+        ),
+        CodeLine::new("close", vec![span("  ", Plain), span("})", Plain)]),
+    ])?;
+    let initial = CodeSnapshot::new(["comment", "sig", "random", "sleep", "return", "close"]);
+    let split = CodeSnapshot::new([
+        "comment", "sig", "gen", "random", "sleep", "return", "close",
+    ]);
+    let final_state = CodeSnapshot::new([
+        "comment", "sig", "gen", "random", "sleep", "fail", "return", "close",
+    ]);
+    let layout = CodeLayout {
+        line_height: 44.0,
+        entering_offset_x: 96.0,
+    };
+
+    Ok(LessonTransitions {
+        split: CodeTransition::compile(&document, &initial, &split, layout)?,
+        fail: CodeTransition::compile(&document, &split, &final_state, layout)?,
+    })
 }
 
 fn hero_code_transition() -> Result<CodeTransition> {

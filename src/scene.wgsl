@@ -2,8 +2,7 @@ struct SceneUniforms {
     resolution: vec2<f32>,
     panel_offset_y: f32,
     _padding_0: f32,
-    focus: vec2<f32>,
-    _padding_1: vec2<f32>,
+    focus: vec4<f32>,
     token_highlight: vec4<f32>,
 }
 
@@ -104,7 +103,7 @@ fn fragment_main(input: VertexOutput) -> @location(0) vec4<f32> {
     );
 
     let focus_center = panel_center + vec2<f32>(20.0, scene.focus.y);
-    let focus_size = vec2<f32>(panel_size.x - 64.0, 44.0);
+    let focus_size = vec2<f32>(panel_size.x - 64.0, scene.focus.z);
     color = fill_box(
         color,
         pixel,

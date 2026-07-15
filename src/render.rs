@@ -31,15 +31,19 @@ pub struct EditorFrame<'a> {
     pub panel_offset_y: f32,
     pub focus_intensity: f32,
     pub focus_line_y: f32,
+    pub focus_height: f32,
     pub token_highlight: TokenHighlight,
     pub pointer: PointerFrame,
-    pub inline_reveal: InlineRevealFrame,
+    pub inline_reveals: &'a [InlineRevealFrame],
+    pub squiggles: &'a [SquiggleFrame],
+    pub bursts: &'a [BurstFrame],
     pub lines: &'a [PlacedLine<'a>],
 }
 
 #[derive(Clone, Copy)]
 pub struct TokenHighlight {
     pub x: f32,
+    pub y: f32,
     pub width: f32,
     pub opacity: f32,
 }
@@ -62,6 +66,21 @@ pub struct InlineRevealFrame {
     pub progress: f32,
 }
 
+#[derive(Clone, Copy)]
+pub struct SquiggleFrame {
+    pub x: f32,
+    pub y: f32,
+    pub width: f32,
+    pub opacity: f32,
+}
+
+#[derive(Clone, Copy)]
+pub struct BurstFrame {
+    pub x: f32,
+    pub y: f32,
+    pub opacity: f32,
+}
+
 #[derive(Clone, Copy, Debug)]
 pub struct TextRangeBounds {
     pub x: f32,
@@ -74,8 +93,7 @@ struct SceneUniforms {
     resolution: [f32; 2],
     panel_offset_y: f32,
     _padding_0: f32,
-    focus: [f32; 2],
-    _padding_1: [f32; 2],
+    focus: [f32; 4],
     token_highlight: [f32; 4],
 }
 
@@ -101,6 +119,7 @@ pub struct HeadlessRenderer {
     swash_cache: SwashCache,
     title_sprite: TextSprite,
     pointer_sprite: TextSprite,
+    burst_sprite: TextSprite,
     line_sprites: HashMap<LineId, (u64, TextSprite)>,
     part_sprites: HashMap<String, (u64, TextSprite)>,
 }
@@ -187,8 +206,7 @@ impl HeadlessRenderer {
             resolution: [spec.width as f32, spec.height as f32],
             panel_offset_y: 0.0,
             _padding_0: 0.0,
-            focus: [0.0, 0.0],
-            _padding_1: [0.0; 2],
+            focus: [0.0, 0.0, LINE_HEIGHT, 0.0],
             token_highlight: [0.0; 4],
         };
         let uniform_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
@@ -215,6 +233,7 @@ impl HeadlessRenderer {
         let mut swash_cache = SwashCache::new();
         let title_sprite = make_title_sprite(&mut font_system, &mut swash_cache, &spec.file_name);
         let pointer_sprite = make_pointer_sprite()?;
+        let burst_sprite = make_burst_sprite(&mut font_system, &mut swash_cache);
 
         Ok(Self {
             spec,
@@ -231,6 +250,7 @@ impl HeadlessRenderer {
             swash_cache,
             title_sprite,
             pointer_sprite,
+            burst_sprite,
             line_sprites: HashMap::new(),
             part_sprites: HashMap::new(),
         })
@@ -245,11 +265,15 @@ impl HeadlessRenderer {
             resolution: [self.spec.width as f32, self.spec.height as f32],
             panel_offset_y: frame.panel_offset_y,
             _padding_0: 0.0,
-            focus: [frame.focus_intensity, focus_offset_y],
-            _padding_1: [0.0; 2],
+            focus: [
+                frame.focus_intensity,
+                focus_offset_y,
+                frame.focus_height,
+                0.0,
+            ],
             token_highlight: [
                 frame.token_highlight.x,
-                frame.focus_line_y,
+                frame.token_highlight.y,
                 frame.token_highlight.width,
                 frame.token_highlight.opacity,
             ],
@@ -371,8 +395,14 @@ impl HeadlessRenderer {
             }
             let line_x = self.spec.width as f32 * 0.145 + placed.x;
             let line_y = code_top + placed.y;
-            if placed.line.id.as_str() == frame.inline_reveal.line_id {
-                self.composite_inline_reveal(pixels, placed, frame, line_x, line_y)?;
+            let reveals = frame
+                .inline_reveals
+                .iter()
+                .filter(|reveal| placed.line.id.as_str() == reveal.line_id)
+                .copied()
+                .collect::<Vec<_>>();
+            if !reveals.is_empty() {
+                self.composite_inline_reveals(pixels, placed, &reveals, line_x, line_y)?;
                 continue;
             }
             let sprite = self
@@ -388,6 +418,34 @@ impl HeadlessRenderer {
                 line_x.round() as i32,
                 line_y.round() as i32,
                 placed.opacity,
+            );
+        }
+        for squiggle in frame.squiggles {
+            composite_squiggle(
+                pixels,
+                self.spec.width,
+                self.spec.height,
+                self.spec.width as f32 * 0.145 + squiggle.x,
+                code_top + squiggle.y + LINE_HEIGHT - 7.0,
+                squiggle.width,
+                squiggle.opacity,
+            );
+        }
+        for burst in frame.bursts {
+            let opacity = burst.opacity.clamp(0.0, 1.0);
+            let scale = 0.65 + opacity * 0.35;
+            composite_sprite_rotated(
+                pixels,
+                self.spec.width,
+                self.spec.height,
+                &self.burst_sprite,
+                56.0 * scale,
+                56.0 * scale,
+                self.spec.width as f32 * 0.145 + burst.x,
+                code_top + burst.y - 42.0 - opacity * 12.0,
+                -0.12 + opacity * 0.12,
+                (1.0 - opacity) * 2.0,
+                opacity,
             );
         }
         composite_sprite_rotated(
@@ -406,28 +464,19 @@ impl HeadlessRenderer {
         Ok(())
     }
 
-    fn composite_inline_reveal(
+    fn composite_inline_reveals(
         &mut self,
         pixels: &mut [u8],
         placed: &PlacedLine<'_>,
-        frame: &EditorFrame<'_>,
+        reveals: &[InlineRevealFrame],
         x: f32,
         y: f32,
     ) -> Result<()> {
-        let reveal = frame.inline_reveal;
-        if reveal.start_span > reveal.end_span || reveal.end_span > placed.line.spans.len() {
-            bail!("inline reveal span range is outside the code line");
-        }
-        let groups = [
-            ("prefix", &placed.line.spans[..reveal.start_span]),
-            (
-                "reveal",
-                &placed.line.spans[reveal.start_span..reveal.end_span],
-            ),
-            ("suffix", &placed.line.spans[reveal.end_span..]),
-        ];
-        for (name, spans) in groups {
-            let key = format!("{}:{name}", placed.line.id.as_str());
+        let segments = inline_reveal_segments(placed.line.spans.len(), reveals)?;
+
+        for (start, end, _) in &segments {
+            let spans = &placed.line.spans[*start..*end];
+            let key = format!("{}:{start}:{end}", placed.line.id.as_str());
             let fingerprint = spans_fingerprint(spans);
             let stale = self
                 .part_sprites
@@ -439,45 +488,38 @@ impl HeadlessRenderer {
             }
         }
 
-        let prefix_key = format!("{}:prefix", placed.line.id.as_str());
-        let reveal_key = format!("{}:reveal", placed.line.id.as_str());
-        let suffix_key = format!("{}:suffix", placed.line.id.as_str());
-        let prefix = &self.part_sprites[&prefix_key].1;
-        let reveal_sprite = &self.part_sprites[&reveal_key].1;
-        let suffix = &self.part_sprites[&suffix_key].1;
-        let progress = reveal.progress.clamp(0.0, 1.0);
-        let x = x.round() as i32;
+        let mut cursor_x = x;
         let y = y.round() as i32;
-
-        composite_sprite(
-            pixels,
-            self.spec.width,
-            self.spec.height,
-            prefix,
-            x,
-            y,
-            placed.opacity,
-        );
-        composite_sprite_clipped_blurred(
-            pixels,
-            self.spec.width,
-            self.spec.height,
-            reveal_sprite,
-            x + prefix.advance.round() as i32,
-            y,
-            reveal_sprite.advance * progress,
-            (1.0 - progress) * 4.0,
-            placed.opacity * progress,
-        );
-        composite_sprite(
-            pixels,
-            self.spec.width,
-            self.spec.height,
-            suffix,
-            x + (prefix.advance + reveal_sprite.advance * progress).round() as i32,
-            y,
-            placed.opacity,
-        );
+        for (start, end, progress) in segments {
+            let key = format!("{}:{start}:{end}", placed.line.id.as_str());
+            let sprite = &self.part_sprites[&key].1;
+            if let Some(progress) = progress {
+                let progress = progress.clamp(0.0, 1.0);
+                composite_sprite_clipped_blurred(
+                    pixels,
+                    self.spec.width,
+                    self.spec.height,
+                    sprite,
+                    cursor_x.round() as i32,
+                    y,
+                    sprite.advance * progress,
+                    (1.0 - progress) * 4.0,
+                    placed.opacity * progress,
+                );
+                cursor_x += sprite.advance * progress;
+            } else {
+                composite_sprite(
+                    pixels,
+                    self.spec.width,
+                    self.spec.height,
+                    sprite,
+                    cursor_x.round() as i32,
+                    y,
+                    placed.opacity,
+                );
+                cursor_x += sprite.advance;
+            }
+        }
         Ok(())
     }
 
@@ -520,6 +562,35 @@ impl HeadlessRenderer {
     }
 }
 
+type InlineSegment = (usize, usize, Option<f32>);
+
+fn inline_reveal_segments(
+    span_count: usize,
+    reveals: &[InlineRevealFrame],
+) -> Result<Vec<InlineSegment>> {
+    let mut reveals = reveals.to_vec();
+    reveals.sort_by_key(|reveal| reveal.start_span);
+    let mut segments = Vec::with_capacity(reveals.len() * 2 + 1);
+    let mut cursor = 0;
+    for reveal in reveals {
+        if reveal.start_span >= reveal.end_span || reveal.end_span > span_count {
+            bail!("inline reveal span range is outside the code line");
+        }
+        if reveal.start_span < cursor {
+            bail!("inline reveal span ranges overlap on the same code line");
+        }
+        if cursor < reveal.start_span {
+            segments.push((cursor, reveal.start_span, None));
+        }
+        segments.push((reveal.start_span, reveal.end_span, Some(reveal.progress)));
+        cursor = reveal.end_span;
+    }
+    if cursor < span_count {
+        segments.push((cursor, span_count, None));
+    }
+    Ok(segments)
+}
+
 fn make_pointer_sprite() -> Result<TextSprite> {
     const SIZE: u32 = 36 * 4;
     const SVG: &str = r##"<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 256 256">
@@ -527,6 +598,21 @@ fn make_pointer_sprite() -> Result<TextSprite> {
     </svg>"##;
 
     rasterize_svg(SVG, SIZE, SIZE).context("rasterize Phosphor hand pointer")
+}
+
+fn make_burst_sprite(font_system: &mut FontSystem, swash_cache: &mut SwashCache) -> TextSprite {
+    let attrs = Attrs::new()
+        .family(Family::SansSerif)
+        .color(Color::rgb(250, 204, 21));
+    make_sprite(
+        font_system,
+        swash_cache,
+        vec![("🎉", attrs.clone())],
+        attrs,
+        Metrics::new(44.0, 56.0),
+        80,
+        64,
+    )
 }
 
 fn rasterize_svg(svg: &str, width: u32, height: u32) -> Result<TextSprite> {
@@ -893,6 +979,34 @@ fn blend_pixel(destination: &mut [u8], source: [u8; 4], opacity: f32) {
     destination[3] = (output_alpha * 255.0).round() as u8;
 }
 
+fn composite_squiggle(
+    canvas: &mut [u8],
+    canvas_width: u32,
+    canvas_height: u32,
+    x: f32,
+    y: f32,
+    width: f32,
+    opacity: f32,
+) {
+    let opacity = opacity.clamp(0.0, 1.0);
+    for offset_x in 0..width.max(0.0).round() as i32 {
+        let wave_y = ((offset_x as f32 * 0.48).sin() * 2.0).round() as i32;
+        for thickness in 0..2 {
+            let target_x = x.round() as i32 + offset_x;
+            let target_y = y.round() as i32 + wave_y + thickness;
+            if target_x < 0
+                || target_y < 0
+                || target_x >= canvas_width as i32
+                || target_y >= canvas_height as i32
+            {
+                continue;
+            }
+            let index = (target_y as usize * canvas_width as usize + target_x as usize) * 4;
+            blend_pixel(&mut canvas[index..index + 4], [248, 113, 113, 255], opacity);
+        }
+    }
+}
+
 fn attributes(base: Attrs<'static>, style: SyntaxStyle) -> Attrs<'static> {
     match style {
         SyntaxStyle::Plain => base.color(Color::rgb(228, 228, 231)),
@@ -900,5 +1014,67 @@ fn attributes(base: Attrs<'static>, style: SyntaxStyle) -> Attrs<'static> {
         SyntaxStyle::Type => base.color(Color::rgb(125, 211, 252)),
         SyntaxStyle::String => base.color(Color::rgb(190, 242, 100)),
         SyntaxStyle::Accent => base.color(Color::rgb(110, 231, 183)),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{InlineRevealFrame, inline_reveal_segments};
+
+    #[test]
+    fn multiple_inline_reveals_partition_one_stable_line() {
+        let segments = inline_reveal_segments(
+            8,
+            &[
+                InlineRevealFrame {
+                    line_id: "line",
+                    start_span: 5,
+                    end_span: 7,
+                    progress: 0.25,
+                },
+                InlineRevealFrame {
+                    line_id: "line",
+                    start_span: 1,
+                    end_span: 3,
+                    progress: 0.75,
+                },
+            ],
+        )
+        .unwrap();
+
+        assert_eq!(
+            segments,
+            vec![
+                (0, 1, None),
+                (1, 3, Some(0.75)),
+                (3, 5, None),
+                (5, 7, Some(0.25)),
+                (7, 8, None),
+            ]
+        );
+    }
+
+    #[test]
+    fn overlapping_inline_reveals_are_rejected() {
+        let error = inline_reveal_segments(
+            5,
+            &[
+                InlineRevealFrame {
+                    line_id: "line",
+                    start_span: 1,
+                    end_span: 3,
+                    progress: 1.0,
+                },
+                InlineRevealFrame {
+                    line_id: "line",
+                    start_span: 2,
+                    end_span: 4,
+                    progress: 1.0,
+                },
+            ],
+        )
+        .unwrap_err();
+
+        assert!(error.to_string().contains("overlap"));
     }
 }

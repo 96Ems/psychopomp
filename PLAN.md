@@ -369,13 +369,12 @@ It fails if most effort goes into general layout, language syntax, codecs, edito
 
 ## Immediate Next Step
 
-Build one short narration-led scene using the composition algebra:
+The `effect-shows-errors` port completed the first narration-led scene:
 
-1. Import multiple immutable audio takes.
-2. Transcribe them with word-level source timing.
-3. Assemble selected script clips non-destructively.
-4. Derive phrase cue ranges from the edited script.
-5. Synchronize existing code motion and one sound-effect layer to those cues.
-6. Have FFmpeg assemble the compiled audio placements with the rendered frames.
+1. Import one immutable published narration asset as a script clip.
+2. Load its existing word-level timing sidecar.
+3. Resolve lesson flow words into cue ranges.
+4. Synchronize code structure, focus, pointer motion, and inline reveals to those cues.
+5. Have FFmpeg place the narration beside the rendered frames.
 
-This answers the next expensive question: whether transcript-led source edits and deterministic visual choreography can remain synchronized through an iterative, agent-controlled edit.
+This proves that transcript cues and deterministic visual choreography can remain synchronized in a rendered artifact. The next step is to replace the single published narration clip with multiple recorded takes and a non-destructive script edit, then verify that changing the edit retimes cue-driven visuals without manually changing animation timestamps.

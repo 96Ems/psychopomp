@@ -45,6 +45,7 @@ pub enum Scalar {
     TargetX(TextTarget),
     TargetWidth(TextTarget),
     TargetCenterX(TextTarget),
+    TargetLineY(TextTarget),
     TargetBelow { target: TextTarget, offset: f32 },
     Offset { value: Box<Scalar>, amount: f32 },
 }
@@ -288,7 +289,9 @@ pub struct Code {
     pub layout: PropertyId,
     pub content: PropertyId,
     pub focus: PropertyId,
+    pub focus_y: PropertyId,
     pub highlight_x: PropertyId,
+    pub highlight_y: PropertyId,
     pub highlight_width: PropertyId,
     pub highlight_opacity: PropertyId,
     pub inline_reveal: PropertyId,
@@ -301,7 +304,9 @@ impl Code {
             layout: PropertyId::new(format!("{id}.layout")),
             content: PropertyId::new(format!("{id}.content")),
             focus: PropertyId::new(format!("{id}.focus")),
+            focus_y: PropertyId::new(format!("{id}.focus_y")),
             highlight_x: PropertyId::new(format!("{id}.highlight.x")),
+            highlight_y: PropertyId::new(format!("{id}.highlight.y")),
             highlight_width: PropertyId::new(format!("{id}.highlight.width")),
             highlight_opacity: PropertyId::new(format!("{id}.highlight.opacity")),
             inline_reveal: PropertyId::new(format!("{id}.inline_reveal")),
@@ -320,11 +325,23 @@ impl Code {
                 profile,
             ),
             Motion::spring(
+                self.highlight_y.clone(),
+                Scalar::TargetLineY(target.clone()),
+                profile,
+            ),
+            Motion::spring(
                 self.highlight_width.clone(),
                 Scalar::TargetWidth(target),
                 profile,
             ),
             Motion::spring(self.highlight_opacity.clone(), 1.0, profile),
+        ])
+    }
+
+    pub fn focus(&self, target: TextTarget, profile: SpringProfile) -> Motion {
+        Motion::parallel([
+            Motion::spring(self.focus.clone(), 1.0, profile),
+            Motion::spring(self.focus_y.clone(), Scalar::TargetLineY(target), profile),
         ])
     }
 
@@ -377,6 +394,7 @@ fn resolve_scalar(scalar: &Scalar, targets: &HashMap<TextTarget, TargetGeometry>
         Scalar::TargetX(target) => geometry(target)?.x,
         Scalar::TargetWidth(target) => geometry(target)?.width,
         Scalar::TargetCenterX(target) => geometry(target)?.center_x(),
+        Scalar::TargetLineY(target) => geometry(target)?.line_y,
         Scalar::TargetBelow { target, offset } => geometry(target)?.below(*offset),
         Scalar::Offset { value, amount } => resolve_scalar(value, targets)? + amount,
     })
