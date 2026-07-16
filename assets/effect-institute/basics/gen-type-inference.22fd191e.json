@@ -1,0 +1,6104 @@
+{
+	"id": "gen-type-inference",
+	"text": "Here's another example. Given two effects, one to ask the user's name, and another their age, we want to write getUser. We'll call Effect.gen with a generator function, which is just like a normal function, only with a star for aesthetics. Next, we'll get the user's name, only we can't use askName directly because that's an Effect. We must tactically place a yield*. Again, this is semantically equivalent to awaiting a Promise. We do the same with askAge, and finally return a new object containing both properties. getUser is now an Effect of an object with a name that is a string and an age that is a number. Running this, askName succeeds with a string, askAge succeeds with a number, and getUser succeeds with their combination.",
+	"code": "const askName: Effect.Effect<string> = ...\nconst askAge: Effect.Effect<number> = ...\n",
+	"contentHash": "ej7xdy",
+	"wordTimings": [
+		{
+			"word": "Here's",
+			"start": 0.10000000000000003,
+			"end": 0.3400000000000001
+		},
+		{
+			"word": "another",
+			"start": 0.38,
+			"end": 0.5800000000000001
+		},
+		{
+			"word": "example.",
+			"start": 0.66,
+			"end": 1.08
+		},
+		{
+			"word": "Given",
+			"start": 1.98,
+			"end": 2.24
+		},
+		{
+			"word": "two",
+			"start": 2.36,
+			"end": 2.48
+		},
+		{
+			"word": "effects,",
+			"start": 2.54,
+			"end": 3.06
+		},
+		{
+			"word": "one",
+			"start": 3.4210000000000003,
+			"end": 3.56
+		},
+		{
+			"word": "to",
+			"start": 3.6,
+			"end": 3.681
+		},
+		{
+			"word": "ask",
+			"start": 3.7800000000000002,
+			"end": 3.9800000000000004
+		},
+		{
+			"word": "the",
+			"start": 4.041,
+			"end": 4.081
+		},
+		{
+			"word": "user's",
+			"start": 4.1610000000000005,
+			"end": 4.48
+		},
+		{
+			"word": "name,",
+			"start": 4.54,
+			"end": 4.84
+		},
+		{
+			"word": "and",
+			"start": 4.92,
+			"end": 5
+		},
+		{
+			"word": "another",
+			"start": 5.04,
+			"end": 5.34
+		},
+		{
+			"word": "their",
+			"start": 5.38,
+			"end": 5.5200000000000005
+		},
+		{
+			"word": "age,",
+			"start": 5.681,
+			"end": 5.96
+		},
+		{
+			"word": "we",
+			"start": 6.621,
+			"end": 6.7
+		},
+		{
+			"word": "want",
+			"start": 6.76,
+			"end": 6.88
+		},
+		{
+			"word": "to",
+			"start": 6.92,
+			"end": 6.98
+		},
+		{
+			"word": "write",
+			"start": 7.06,
+			"end": 7.24
+		},
+		{
+			"word": "getUser.",
+			"start": 7.42,
+			"end": 8.079999999999998,
+			"style": {
+				"code": true
+			}
+		},
+		{
+			"word": "We'll",
+			"start": 9.079999999999998,
+			"end": 9.219999999999999,
+			"paragraphBreak": true
+		},
+		{
+			"word": "call",
+			"start": 9.3,
+			"end": 9.54
+		},
+		{
+			"word": "Effect.gen",
+			"start": 9.600999999999999,
+			"end": 10.52,
+			"style": {
+				"code": true
+			}
+		},
+		{
+			"word": "with",
+			"start": 10.579999999999998,
+			"end": 10.719999999999999
+		},
+		{
+			"word": "a",
+			"start": 10.8,
+			"end": 10.84
+		},
+		{
+			"word": "generator",
+			"start": 10.96,
+			"end": 11.36
+		},
+		{
+			"word": "function,",
+			"start": 11.440000000000001,
+			"end": 11.82
+		},
+		{
+			"word": "which",
+			"start": 12.5,
+			"end": 12.620000000000001
+		},
+		{
+			"word": "is",
+			"start": 12.7,
+			"end": 12.821000000000002
+		},
+		{
+			"word": "just",
+			"start": 12.899999999999999,
+			"end": 13.100999999999999
+		},
+		{
+			"word": "like",
+			"start": 13.181000000000001,
+			"end": 13.34
+		},
+		{
+			"word": "a",
+			"start": 13.440000000000001,
+			"end": 13.46
+		},
+		{
+			"word": "normal",
+			"start": 13.579999999999998,
+			"end": 13.84
+		},
+		{
+			"word": "function,",
+			"start": 13.940000000000001,
+			"end": 14.280000000000001
+		},
+		{
+			"word": "only",
+			"start": 14.82,
+			"end": 14.98
+		},
+		{
+			"word": "with",
+			"start": 15.061,
+			"end": 15.2
+		},
+		{
+			"word": "a",
+			"start": 15.280000000000001,
+			"end": 15.34
+		},
+		{
+			"word": "star",
+			"start": 15.5,
+			"end": 15.900000000000002
+		},
+		{
+			"word": "for",
+			"start": 16.441000000000003,
+			"end": 16.601000000000003
+		},
+		{
+			"word": "aesthetics.",
+			"start": 16.64,
+			"end": 17.3
+		},
+		{
+			"word": "Next,",
+			"start": 18.26,
+			"end": 18.48
+		},
+		{
+			"word": "we'll",
+			"start": 18.560000000000002,
+			"end": 18.66
+		},
+		{
+			"word": "get",
+			"start": 18.701,
+			"end": 18.8
+		},
+		{
+			"word": "the",
+			"start": 18.861,
+			"end": 18.92
+		},
+		{
+			"word": "user's",
+			"start": 19,
+			"end": 19.3
+		},
+		{
+			"word": "name,",
+			"start": 19.361,
+			"end": 19.62
+		},
+		{
+			"word": "only",
+			"start": 20.441000000000003,
+			"end": 20.601000000000003
+		},
+		{
+			"word": "we",
+			"start": 20.66,
+			"end": 20.76
+		},
+		{
+			"word": "can't",
+			"start": 20.82,
+			"end": 21.201
+		},
+		{
+			"word": "use",
+			"start": 21.3,
+			"end": 21.400000000000002
+		},
+		{
+			"word": "askName",
+			"start": 21.580000000000002,
+			"end": 22.02,
+			"style": {
+				"code": true
+			}
+		},
+		{
+			"word": "directly",
+			"start": 22.080000000000002,
+			"end": 22.62
+		},
+		{
+			"word": "because",
+			"start": 22.7,
+			"end": 22.96
+		},
+		{
+			"word": "that's",
+			"start": 23.021,
+			"end": 23.380000000000003
+		},
+		{
+			"word": "an",
+			"start": 23.42,
+			"end": 23.48
+		},
+		{
+			"word": "Effect.",
+			"start": 23.560000000000002,
+			"end": 24,
+			"style": {
+				"code": true
+			}
+		},
+		{
+			"word": "We",
+			"start": 24.76,
+			"end": 24.861
+		},
+		{
+			"word": "must",
+			"start": 24.92,
+			"end": 25.26
+		},
+		{
+			"word": "tactically",
+			"start": 25.32,
+			"end": 25.8
+		},
+		{
+			"word": "place",
+			"start": 25.880000000000003,
+			"end": 26.16
+		},
+		{
+			"word": "a",
+			"start": 26.3,
+			"end": 26.32
+		},
+		{
+			"word": "yield*.",
+			"start": 26.5,
+			"end": 27,
+			"style": {
+				"code": true
+			}
+		},
+		{
+			"word": "Again,",
+			"start": 28.560000000000002,
+			"end": 28.86
+		},
+		{
+			"word": "this",
+			"start": 28.92,
+			"end": 29.060000000000002
+		},
+		{
+			"word": "is",
+			"start": 29.14,
+			"end": 29.26
+		},
+		{
+			"word": "semantically",
+			"start": 29.32,
+			"end": 29.86
+		},
+		{
+			"word": "equivalent",
+			"start": 29.98,
+			"end": 30.5
+		},
+		{
+			"word": "to",
+			"start": 30.560000000000002,
+			"end": 30.681
+		},
+		{
+			"word": "awaiting",
+			"start": 30.82,
+			"end": 31.28
+		},
+		{
+			"word": "a",
+			"start": 31.400000000000002,
+			"end": 31.42
+		},
+		{
+			"word": "Promise.",
+			"start": 31.601000000000003,
+			"end": 32.08,
+			"style": {
+				"code": true
+			}
+		},
+		{
+			"word": "We",
+			"start": 33.099999999999994,
+			"end": 33.181,
+			"paragraphBreak": true
+		},
+		{
+			"word": "do",
+			"start": 33.221,
+			"end": 33.279999999999994
+		},
+		{
+			"word": "the",
+			"start": 33.339999999999996,
+			"end": 33.46
+		},
+		{
+			"word": "same",
+			"start": 33.541,
+			"end": 33.8
+		},
+		{
+			"word": "with",
+			"start": 33.861,
+			"end": 33.98
+		},
+		{
+			"word": "askAge,",
+			"start": 34.14,
+			"end": 34.779999999999994,
+			"style": {
+				"code": true
+			}
+		},
+		{
+			"word": "and",
+			"start": 34.82,
+			"end": 34.96
+		},
+		{
+			"word": "finally",
+			"start": 35.041,
+			"end": 35.3
+		},
+		{
+			"word": "return",
+			"start": 35.339999999999996,
+			"end": 35.681
+		},
+		{
+			"word": "a",
+			"start": 35.76,
+			"end": 35.839999999999996
+		},
+		{
+			"word": "new",
+			"start": 35.9,
+			"end": 36
+		},
+		{
+			"word": "object",
+			"start": 36.12,
+			"end": 36.9
+		},
+		{
+			"word": "containing",
+			"start": 36.96,
+			"end": 37.381
+		},
+		{
+			"word": "both",
+			"start": 37.5,
+			"end": 37.779999999999994
+		},
+		{
+			"word": "properties.",
+			"start": 37.98,
+			"end": 38.5
+		},
+		{
+			"word": "getUser",
+			"start": 39.559999999999995,
+			"end": 40.14,
+			"style": {
+				"code": true
+			}
+		},
+		{
+			"word": "is",
+			"start": 40.201,
+			"end": 40.339999999999996
+		},
+		{
+			"word": "now",
+			"start": 40.4,
+			"end": 40.5
+		},
+		{
+			"word": "an",
+			"start": 40.541,
+			"end": 40.599999999999994
+		},
+		{
+			"word": "Effect",
+			"start": 40.739999999999995,
+			"end": 41.12,
+			"style": {
+				"code": true
+			}
+		},
+		{
+			"word": "of",
+			"start": 41.16,
+			"end": 41.241
+		},
+		{
+			"word": "an",
+			"start": 41.26,
+			"end": 41.32
+		},
+		{
+			"word": "object",
+			"start": 41.48,
+			"end": 41.779999999999994
+		},
+		{
+			"word": "with",
+			"start": 41.82,
+			"end": 41.919999999999995
+		},
+		{
+			"word": "a",
+			"start": 41.94,
+			"end": 42.021
+		},
+		{
+			"word": "name",
+			"start": 42.059999999999995,
+			"end": 42.3
+		},
+		{
+			"word": "that",
+			"start": 42.32,
+			"end": 42.400999999999996
+		},
+		{
+			"word": "is",
+			"start": 42.419999999999995,
+			"end": 42.521
+		},
+		{
+			"word": "a",
+			"start": 42.541,
+			"end": 42.559999999999995
+		},
+		{
+			"word": "string",
+			"start": 42.66,
+			"end": 43.08
+		},
+		{
+			"word": "and",
+			"start": 43.12,
+			"end": 43.221
+		},
+		{
+			"word": "an",
+			"start": 43.239999999999995,
+			"end": 43.339999999999996
+		},
+		{
+			"word": "age",
+			"start": 43.46,
+			"end": 43.64
+		},
+		{
+			"word": "that",
+			"start": 43.681,
+			"end": 43.76
+		},
+		{
+			"word": "is",
+			"start": 43.82,
+			"end": 43.919999999999995
+		},
+		{
+			"word": "a",
+			"start": 43.98,
+			"end": 44.059999999999995
+		},
+		{
+			"word": "number.",
+			"start": 44.099999999999994,
+			"end": 44.381
+		},
+		{
+			"word": "Running",
+			"start": 45.339999999999996,
+			"end": 45.599999999999994,
+			"paragraphBreak": true
+		},
+		{
+			"word": "this,",
+			"start": 45.66,
+			"end": 45.96
+		},
+		{
+			"word": "askName",
+			"start": 46.72,
+			"end": 47.4,
+			"style": {
+				"code": true
+			}
+		},
+		{
+			"word": "succeeds",
+			"start": 47.46,
+			"end": 48.22
+		},
+		{
+			"word": "with",
+			"start": 48.279999999999994,
+			"end": 48.400999999999996
+		},
+		{
+			"word": "a",
+			"start": 48.46,
+			"end": 48.48
+		},
+		{
+			"word": "string,",
+			"start": 48.66,
+			"end": 49.041
+		},
+		{
+			"word": "askAge",
+			"start": 49.701,
+			"end": 50.599999999999994,
+			"style": {
+				"code": true
+			}
+		},
+		{
+			"word": "succeeds",
+			"start": 50.701,
+			"end": 51.201
+		},
+		{
+			"word": "with",
+			"start": 51.239999999999995,
+			"end": 51.381
+		},
+		{
+			"word": "a",
+			"start": 51.44,
+			"end": 51.46
+		},
+		{
+			"word": "number,",
+			"start": 51.58,
+			"end": 52.361
+		},
+		{
+			"word": "and",
+			"start": 52.46,
+			"end": 52.599999999999994
+		},
+		{
+			"word": "getUser",
+			"start": 52.701,
+			"end": 53.379999999999995,
+			"style": {
+				"code": true
+			}
+		},
+		{
+			"word": "succeeds",
+			"start": 53.48,
+			"end": 54.021
+		},
+		{
+			"word": "with",
+			"start": 54.08,
+			"end": 54.3
+		},
+		{
+			"word": "their",
+			"start": 54.339999999999996,
+			"end": 54.64
+		},
+		{
+			"word": "combination.",
+			"start": 54.72,
+			"end": 55.379999999999995
+		}
+	],
+	"componentFlow": {
+		"name": "GetUserDemo",
+		"steps": [
+			{
+				"name": "start",
+				"at": "start"
+			},
+			{
+				"name": "Running",
+				"at": "Running"
+			},
+			{
+				"name": "this",
+				"at": "this",
+				"after": "Running"
+			},
+			{
+				"name": "succeeds",
+				"at": "succeeds"
+			},
+			{
+				"name": "succeeds",
+				"at": "succeeds",
+				"nth": 2
+			},
+			{
+				"name": "combination",
+				"at": "combination"
+			}
+		],
+		"snapshots": [
+			{
+				"visible": false,
+				"askName": "idle",
+				"askAge": "idle",
+				"getUser": "idle"
+			},
+			{
+				"visible": true,
+				"askName": "idle",
+				"askAge": "idle",
+				"getUser": "idle"
+			},
+			{
+				"visible": true,
+				"askName": "running",
+				"askAge": "idle",
+				"getUser": "running"
+			},
+			{
+				"visible": true,
+				"askName": "completed",
+				"askAge": "running",
+				"getUser": "running"
+			},
+			{
+				"visible": true,
+				"askName": "completed",
+				"askAge": "completed",
+				"getUser": "running"
+			},
+			{
+				"visible": true,
+				"askName": "completed",
+				"askAge": "completed",
+				"getUser": "completed"
+			}
+		]
+	},
+	"slideshowData": {
+		"template": {
+			"lines": {
+				"askName": {
+					"parts": {
+						"p0": {
+							"tokens": [
+								{
+									"text": "const",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "askName",
+									"type": "default",
+									"color": "#79B8FF"
+								},
+								{
+									"text": ":",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						},
+						"askNameThunk:*/0": {
+							"tokens": [
+								{
+									"text": "() ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "=>",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": true,
+							"versions": {
+								"() => ": [
+									{
+										"text": "() ",
+										"type": "default",
+										"color": "#E1E4E8"
+									},
+									{
+										"text": "=>",
+										"type": "default",
+										"color": "#F97583"
+									},
+									{
+										"text": " ",
+										"type": "default",
+										"color": "#E1E4E8"
+									}
+								],
+								"": []
+							}
+						},
+						"askNameType:*/0": {
+							"tokens": [
+								{
+									"text": "Effect",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": ".",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "Effect",
+									"type": "default",
+									"color": "#B392F0"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": true,
+							"versions": {
+								"Effect.Effect": [
+									{
+										"text": "Effect",
+										"type": "default",
+										"color": "#B392F0"
+									},
+									{
+										"text": ".",
+										"type": "default",
+										"color": "#E1E4E8"
+									},
+									{
+										"text": "Effect",
+										"type": "default",
+										"color": "#B392F0"
+									}
+								],
+								"Promise": [
+									{
+										"text": "Promise",
+										"type": "default",
+										"color": "#B392F0"
+									}
+								]
+							}
+						},
+						"p1": {
+							"tokens": [
+								{
+									"text": "<",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "string",
+									"type": "default",
+									"color": "#79B8FF"
+								},
+								{
+									"text": "> ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "=",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "...",
+									"type": "default",
+									"color": "#F97583"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"p0",
+						"askNameThunk:*/0",
+						"askNameType:*/0",
+						"p1"
+					]
+				},
+				"askAge": {
+					"parts": {
+						"p0": {
+							"tokens": [
+								{
+									"text": "const",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "askAge",
+									"type": "default",
+									"color": "#79B8FF"
+								},
+								{
+									"text": ":",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						},
+						"askAgeThunk:*/0": {
+							"tokens": [
+								{
+									"text": "() ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "=>",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": true,
+							"versions": {
+								"() => ": [
+									{
+										"text": "() ",
+										"type": "default",
+										"color": "#E1E4E8"
+									},
+									{
+										"text": "=>",
+										"type": "default",
+										"color": "#F97583"
+									},
+									{
+										"text": " ",
+										"type": "default",
+										"color": "#E1E4E8"
+									}
+								],
+								"": []
+							}
+						},
+						"askAgeType:*/0": {
+							"tokens": [
+								{
+									"text": "Effect",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": ".",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "Effect",
+									"type": "default",
+									"color": "#B392F0"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": true,
+							"versions": {
+								"Effect.Effect": [
+									{
+										"text": "Effect",
+										"type": "default",
+										"color": "#B392F0"
+									},
+									{
+										"text": ".",
+										"type": "default",
+										"color": "#E1E4E8"
+									},
+									{
+										"text": "Effect",
+										"type": "default",
+										"color": "#B392F0"
+									}
+								],
+								"Promise": [
+									{
+										"text": "Promise",
+										"type": "default",
+										"color": "#B392F0"
+									}
+								]
+							}
+						},
+						"p1": {
+							"tokens": [
+								{
+									"text": "<",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "number",
+									"type": "default",
+									"color": "#79B8FF"
+								},
+								{
+									"text": "> ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "=",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "...",
+									"type": "default",
+									"color": "#F97583"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"p0",
+						"askAgeThunk:*/0",
+						"askAgeType:*/0",
+						"p1"
+					]
+				},
+				"blank1": {
+					"parts": {
+						"blank1-empty": {
+							"tokens": [],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"blank1-empty"
+					]
+				},
+				"getUser": {
+					"parts": {
+						"p0": {
+							"tokens": [
+								{
+									"text": "const",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "getUser",
+									"type": "default",
+									"color": "#79B8FF"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						},
+						"getUserType:shown/0": {
+							"tokens": [
+								{
+									"text": ":",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": true,
+							"crossfade": false
+						},
+						"getUserType:shown/getUserTypeWrapper:effect/0": {
+							"tokens": [
+								{
+									"text": "Effect",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": ".",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "Effect",
+									"type": "default",
+									"color": "#B392F0"
+								}
+							],
+							"animateEntry": true,
+							"crossfade": false
+						},
+						"getUserType:shown/1": {
+							"tokens": [
+								{
+									"text": "<",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": true,
+							"crossfade": false
+						},
+						"getUserType:shown/objectOpen:shown/0": {
+							"tokens": [
+								{
+									"text": "{ ",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": true,
+							"crossfade": false
+						},
+						"getUserType:shown/nameLabel:shown/0": {
+							"tokens": [
+								{
+									"text": "name",
+									"type": "default",
+									"color": "#FFAB70"
+								},
+								{
+									"text": ":",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": true,
+							"crossfade": false
+						},
+						"getUserType:shown/nameType:*/0": {
+							"tokens": [
+								{
+									"text": "...",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": true,
+							"crossfade": true,
+							"versions": {
+								"...": [
+									{
+										"text": "...",
+										"type": "default",
+										"color": "#E1E4E8"
+									}
+								],
+								"string": [
+									{
+										"text": "string",
+										"type": "default",
+										"color": "#79B8FF"
+									}
+								]
+							}
+						},
+						"getUserType:shown/afterNameType:shown/0": {
+							"tokens": [
+								{
+									"text": "; ",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": true,
+							"crossfade": false
+						},
+						"getUserType:shown/ageLabel:shown/0": {
+							"tokens": [
+								{
+									"text": "age",
+									"type": "default",
+									"color": "#FFAB70"
+								},
+								{
+									"text": ":",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": true,
+							"crossfade": false
+						},
+						"getUserType:shown/ageType:*/0": {
+							"tokens": [
+								{
+									"text": "...",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": true,
+							"crossfade": true,
+							"versions": {
+								"...": [
+									{
+										"text": "...",
+										"type": "default",
+										"color": "#E1E4E8"
+									}
+								],
+								"": [],
+								"number": [
+									{
+										"text": "number",
+										"type": "default",
+										"color": "#79B8FF"
+									}
+								]
+							}
+						},
+						"getUserType:shown/objectClose:shown/0": {
+							"tokens": [
+								{
+									"text": " }",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": true,
+							"crossfade": false
+						},
+						"getUserType:shown/2": {
+							"tokens": [
+								{
+									"text": ">",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": true,
+							"crossfade": false
+						},
+						"p1": {
+							"tokens": [
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "=",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						},
+						"genOrAsync:*/0": {
+							"tokens": [
+								{
+									"text": "Effect.",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "gen",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": "(",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": true,
+							"versions": {
+								"Effect.gen(": [
+									{
+										"text": "Effect.",
+										"type": "default",
+										"color": "#E1E4E8"
+									},
+									{
+										"text": "gen",
+										"type": "default",
+										"color": "#B392F0"
+									},
+									{
+										"text": "(",
+										"type": "default",
+										"color": "#E1E4E8"
+									}
+								],
+								"async ": [
+									{
+										"text": "async",
+										"type": "default",
+										"color": "#F97583"
+									},
+									{
+										"text": " ",
+										"type": "default",
+										"color": "#E1E4E8"
+									}
+								]
+							}
+						},
+						"fnStar:*/0": {
+							"tokens": [
+								{
+									"text": "function*",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": true,
+							"versions": {
+								"function* ": [
+									{
+										"text": "function*",
+										"type": "default",
+										"color": "#F97583"
+									},
+									{
+										"text": " ",
+										"type": "default",
+										"color": "#E1E4E8"
+									}
+								],
+								"": []
+							}
+						},
+						"p2": {
+							"tokens": [
+								{
+									"text": "()",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						},
+						"arrowOrNot:*/0": {
+							"tokens": [
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "=>",
+									"type": "default",
+									"color": "#F97583"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": true,
+							"versions": {
+								" =>": [
+									{
+										"text": " ",
+										"type": "default",
+										"color": "#E1E4E8"
+									},
+									{
+										"text": "=>",
+										"type": "default",
+										"color": "#F97583"
+									}
+								],
+								"": []
+							}
+						},
+						"p3": {
+							"tokens": [
+								{
+									"text": " {",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"p0",
+						"getUserType:shown/0",
+						"getUserType:shown/getUserTypeWrapper:effect/0",
+						"getUserType:shown/1",
+						"getUserType:shown/objectOpen:shown/0",
+						"getUserType:shown/nameLabel:shown/0",
+						"getUserType:shown/nameType:*/0",
+						"getUserType:shown/afterNameType:shown/0",
+						"getUserType:shown/ageLabel:shown/0",
+						"getUserType:shown/ageType:*/0",
+						"getUserType:shown/objectClose:shown/0",
+						"getUserType:shown/2",
+						"p1",
+						"genOrAsync:*/0",
+						"fnStar:*/0",
+						"p2",
+						"arrowOrNot:*/0",
+						"p3"
+					]
+				},
+				"closeLine": {
+					"parts": {
+						"p0": {
+							"tokens": [
+								{
+									"text": "}",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						},
+						"closeExtra:*/0": {
+							"tokens": [
+								{
+									"text": ")",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": true,
+							"versions": {
+								")": [
+									{
+										"text": ")",
+										"type": "default",
+										"color": "#E1E4E8"
+									}
+								],
+								"": []
+							}
+						}
+					},
+					"partOrder": [
+						"p0",
+						"closeExtra:*/0"
+					]
+				},
+				"nameLine": {
+					"parts": {
+						"p0": {
+							"tokens": [
+								{
+									"text": "  ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "const",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "name",
+									"type": "default",
+									"color": "#79B8FF"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						},
+						"nameLineType:shown/0": {
+							"tokens": [
+								{
+									"text": ":",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						},
+						"nameLineType:shown/effectWrapper:shown/0": {
+							"tokens": [
+								{
+									"text": "Effect",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": ".",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "Effect",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": "<",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						},
+						"nameLineType:shown/1": {
+							"tokens": [
+								{
+									"text": "string",
+									"type": "default",
+									"color": "#79B8FF"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						},
+						"nameLineType:shown/effectWrapperClose:shown/0": {
+							"tokens": [
+								{
+									"text": ">",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						},
+						"p1": {
+							"tokens": [
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "=",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						},
+						"yieldOrAwait:*/0": {
+							"tokens": [
+								{
+									"text": "yield*",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": true,
+							"versions": {
+								"yield* ": [
+									{
+										"text": "yield*",
+										"type": "default",
+										"color": "#F97583"
+									},
+									{
+										"text": " ",
+										"type": "default",
+										"color": "#E1E4E8"
+									}
+								],
+								"await ": [
+									{
+										"text": "await",
+										"type": "default",
+										"color": "#F97583"
+									},
+									{
+										"text": " ",
+										"type": "default",
+										"color": "#E1E4E8"
+									}
+								]
+							}
+						},
+						"p2": {
+							"tokens": [
+								{
+									"text": "askName",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						},
+						"askNameCall:*/0": {
+							"tokens": [
+								{
+									"text": "()",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": true,
+							"versions": {
+								"()": [
+									{
+										"text": "()",
+										"type": "default",
+										"color": "#E1E4E8"
+									}
+								],
+								"": []
+							}
+						}
+					},
+					"partOrder": [
+						"p0",
+						"nameLineType:shown/0",
+						"nameLineType:shown/effectWrapper:shown/0",
+						"nameLineType:shown/1",
+						"nameLineType:shown/effectWrapperClose:shown/0",
+						"p1",
+						"yieldOrAwait:*/0",
+						"p2",
+						"askNameCall:*/0"
+					]
+				},
+				"ageLine": {
+					"parts": {
+						"p0": {
+							"tokens": [
+								{
+									"text": "  ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "const",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "age",
+									"type": "default",
+									"color": "#79B8FF"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "=",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						},
+						"yieldOrAwait2:effect/0": {
+							"tokens": [
+								{
+									"text": "yield*",
+									"type": "default",
+									"color": "#F97583"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						},
+						"p1": {
+							"tokens": [
+								{
+									"text": " askAge",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"p0",
+						"yieldOrAwait2:effect/0",
+						"p1"
+					]
+				},
+				"returnLine": {
+					"parts": {
+						"p0": {
+							"tokens": [
+								{
+									"text": "  ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "return",
+									"type": "default",
+									"color": "#F97583"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						},
+						"returnObject:shown/0": {
+							"tokens": [
+								{
+									"text": " {",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": true,
+							"crossfade": false
+						},
+						"returnObject:shown/returnName:shown/0": {
+							"tokens": [
+								{
+									"text": " name",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": true,
+							"crossfade": false
+						},
+						"returnObject:shown/returnAge:shown/0": {
+							"tokens": [
+								{
+									"text": ", age",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": true,
+							"crossfade": false
+						},
+						"returnObject:shown/1": {
+							"tokens": [
+								{
+									"text": " }",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": true,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"p0",
+						"returnObject:shown/0",
+						"returnObject:shown/returnName:shown/0",
+						"returnObject:shown/returnAge:shown/0",
+						"returnObject:shown/1"
+					]
+				}
+			}
+		},
+		"frames": [
+			{
+				"id": 0,
+				"lineOrder": [
+					"askName",
+					"askAge",
+					"blank1"
+				],
+				"state": {
+					"askName": {
+						"parts": {
+							"p0": true,
+							"askNameThunk:*/0": "",
+							"askNameType:*/0": "Effect.Effect",
+							"p1": true
+						},
+						"entering": true
+					},
+					"askAge": {
+						"parts": {
+							"p0": true,
+							"askAgeThunk:*/0": "",
+							"askAgeType:*/0": "Effect.Effect",
+							"p1": true
+						},
+						"entering": true
+					},
+					"blank1": {
+						"parts": {
+							"blank1-empty": true
+						},
+						"entering": true
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"status": {
+					"ranges": {},
+					"allRanges": {
+						"nameLine": [
+							{
+								"start": 15,
+								"end": 29
+							},
+							{
+								"start": 15,
+								"end": 29
+							},
+							{
+								"start": 15,
+								"end": 29
+							},
+							{
+								"start": 15,
+								"end": 29
+							}
+						],
+						"ageLine": [
+							{
+								"start": 14,
+								"end": 27
+							},
+							{
+								"start": 14,
+								"end": 27
+							},
+							{
+								"start": 14,
+								"end": 27
+							}
+						],
+						"returnLine": [
+							{
+								"start": 9,
+								"end": 22
+							},
+							{
+								"start": 9,
+								"end": 22
+							}
+						]
+					}
+				},
+				"bursts": []
+			},
+			{
+				"id": 1,
+				"lineOrder": [
+					"askName",
+					"askAge",
+					"blank1"
+				],
+				"state": {
+					"askName": {
+						"parts": {
+							"p0": true,
+							"askNameThunk:*/0": "",
+							"askNameType:*/0": "Effect.Effect",
+							"p1": true
+						}
+					},
+					"askAge": {
+						"parts": {
+							"p0": true,
+							"askAgeThunk:*/0": "",
+							"askAgeType:*/0": "Effect.Effect",
+							"p1": true
+						},
+						"dimmed": true
+					},
+					"blank1": {
+						"parts": {
+							"blank1-empty": true
+						},
+						"dimmed": true
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"status": {
+					"ranges": {},
+					"allRanges": {
+						"nameLine": [
+							{
+								"start": 15,
+								"end": 29
+							},
+							{
+								"start": 15,
+								"end": 29
+							},
+							{
+								"start": 15,
+								"end": 29
+							},
+							{
+								"start": 15,
+								"end": 29
+							}
+						],
+						"ageLine": [
+							{
+								"start": 14,
+								"end": 27
+							},
+							{
+								"start": 14,
+								"end": 27
+							},
+							{
+								"start": 14,
+								"end": 27
+							}
+						],
+						"returnLine": [
+							{
+								"start": 9,
+								"end": 22
+							},
+							{
+								"start": 9,
+								"end": 22
+							}
+						]
+					}
+				},
+				"cursor": {
+					"lineIndex": 0,
+					"charOffset": 6,
+					"textLength": 7,
+					"type": "hand"
+				},
+				"bursts": []
+			},
+			{
+				"id": 2,
+				"lineOrder": [
+					"askName",
+					"askAge",
+					"blank1"
+				],
+				"state": {
+					"askName": {
+						"parts": {
+							"p0": true,
+							"askNameThunk:*/0": "",
+							"askNameType:*/0": "Effect.Effect",
+							"p1": true
+						},
+						"dimmed": true
+					},
+					"askAge": {
+						"parts": {
+							"p0": true,
+							"askAgeThunk:*/0": "",
+							"askAgeType:*/0": "Effect.Effect",
+							"p1": true
+						}
+					},
+					"blank1": {
+						"parts": {
+							"blank1-empty": true
+						},
+						"dimmed": true
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"status": {
+					"ranges": {},
+					"allRanges": {
+						"nameLine": [
+							{
+								"start": 15,
+								"end": 29
+							},
+							{
+								"start": 15,
+								"end": 29
+							},
+							{
+								"start": 15,
+								"end": 29
+							},
+							{
+								"start": 15,
+								"end": 29
+							}
+						],
+						"ageLine": [
+							{
+								"start": 14,
+								"end": 27
+							},
+							{
+								"start": 14,
+								"end": 27
+							},
+							{
+								"start": 14,
+								"end": 27
+							}
+						],
+						"returnLine": [
+							{
+								"start": 9,
+								"end": 22
+							},
+							{
+								"start": 9,
+								"end": 22
+							}
+						]
+					}
+				},
+				"cursor": {
+					"lineIndex": 1,
+					"charOffset": 6,
+					"textLength": 6,
+					"type": "hand"
+				},
+				"bursts": []
+			},
+			{
+				"id": 3,
+				"lineOrder": [
+					"askName",
+					"askAge",
+					"blank1",
+					"getUser",
+					"closeLine"
+				],
+				"state": {
+					"askName": {
+						"parts": {
+							"p0": true,
+							"askNameThunk:*/0": "",
+							"askNameType:*/0": "Effect.Effect",
+							"p1": true
+						},
+						"dimmed": true
+					},
+					"askAge": {
+						"parts": {
+							"p0": true,
+							"askAgeThunk:*/0": "",
+							"askAgeType:*/0": "Effect.Effect",
+							"p1": true
+						},
+						"dimmed": true
+					},
+					"blank1": {
+						"parts": {
+							"blank1-empty": true
+						},
+						"dimmed": true
+					},
+					"getUser": {
+						"parts": {
+							"p0": true,
+							"getUserType:shown/0": false,
+							"getUserType:shown/getUserTypeWrapper:effect/0": false,
+							"getUserType:shown/1": false,
+							"getUserType:shown/objectOpen:shown/0": false,
+							"getUserType:shown/nameLabel:shown/0": false,
+							"getUserType:shown/nameType:*/0": false,
+							"getUserType:shown/afterNameType:shown/0": false,
+							"getUserType:shown/ageLabel:shown/0": false,
+							"getUserType:shown/ageType:*/0": false,
+							"getUserType:shown/objectClose:shown/0": false,
+							"getUserType:shown/2": false,
+							"p1": true,
+							"genOrAsync:*/0": "Effect.gen(",
+							"fnStar:*/0": "",
+							"p2": true,
+							"arrowOrNot:*/0": "",
+							"p3": true
+						},
+						"entering": true
+					},
+					"closeLine": {
+						"parts": {
+							"p0": true,
+							"closeExtra:*/0": ")"
+						},
+						"entering": true
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"status": {
+					"ranges": {},
+					"allRanges": {
+						"nameLine": [
+							{
+								"start": 15,
+								"end": 29
+							},
+							{
+								"start": 15,
+								"end": 29
+							},
+							{
+								"start": 15,
+								"end": 29
+							},
+							{
+								"start": 15,
+								"end": 29
+							}
+						],
+						"ageLine": [
+							{
+								"start": 14,
+								"end": 27
+							},
+							{
+								"start": 14,
+								"end": 27
+							},
+							{
+								"start": 14,
+								"end": 27
+							}
+						],
+						"returnLine": [
+							{
+								"start": 9,
+								"end": 22
+							},
+							{
+								"start": 9,
+								"end": 22
+							}
+						]
+					}
+				},
+				"cursor": {
+					"lineIndex": 3,
+					"charOffset": 6,
+					"textLength": 7,
+					"type": "hand"
+				},
+				"bursts": []
+			},
+			{
+				"id": 4,
+				"lineOrder": [
+					"askName",
+					"askAge",
+					"blank1",
+					"getUser",
+					"closeLine"
+				],
+				"state": {
+					"askName": {
+						"parts": {
+							"p0": true,
+							"askNameThunk:*/0": "",
+							"askNameType:*/0": "Effect.Effect",
+							"p1": true
+						}
+					},
+					"askAge": {
+						"parts": {
+							"p0": true,
+							"askAgeThunk:*/0": "",
+							"askAgeType:*/0": "Effect.Effect",
+							"p1": true
+						}
+					},
+					"blank1": {
+						"parts": {
+							"blank1-empty": true
+						}
+					},
+					"getUser": {
+						"parts": {
+							"p0": true,
+							"getUserType:shown/0": false,
+							"getUserType:shown/getUserTypeWrapper:effect/0": false,
+							"getUserType:shown/1": false,
+							"getUserType:shown/objectOpen:shown/0": false,
+							"getUserType:shown/nameLabel:shown/0": false,
+							"getUserType:shown/nameType:*/0": false,
+							"getUserType:shown/afterNameType:shown/0": false,
+							"getUserType:shown/ageLabel:shown/0": false,
+							"getUserType:shown/ageType:*/0": false,
+							"getUserType:shown/objectClose:shown/0": false,
+							"getUserType:shown/2": false,
+							"p1": true,
+							"genOrAsync:*/0": "Effect.gen(",
+							"fnStar:*/0": "",
+							"p2": true,
+							"arrowOrNot:*/0": "",
+							"p3": true
+						}
+					},
+					"closeLine": {
+						"parts": {
+							"p0": true,
+							"closeExtra:*/0": ")"
+						}
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"status": {
+					"ranges": {},
+					"allRanges": {
+						"nameLine": [
+							{
+								"start": 15,
+								"end": 29
+							},
+							{
+								"start": 15,
+								"end": 29
+							},
+							{
+								"start": 15,
+								"end": 29
+							},
+							{
+								"start": 15,
+								"end": 29
+							}
+						],
+						"ageLine": [
+							{
+								"start": 14,
+								"end": 27
+							},
+							{
+								"start": 14,
+								"end": 27
+							},
+							{
+								"start": 14,
+								"end": 27
+							}
+						],
+						"returnLine": [
+							{
+								"start": 9,
+								"end": 22
+							},
+							{
+								"start": 9,
+								"end": 22
+							}
+						]
+					}
+				},
+				"cursor": {
+					"lineIndex": 3,
+					"charOffset": 16,
+					"textLength": 10,
+					"type": "hand"
+				},
+				"bursts": []
+			},
+			{
+				"id": 5,
+				"lineOrder": [
+					"askName",
+					"askAge",
+					"blank1",
+					"getUser",
+					"closeLine"
+				],
+				"state": {
+					"askName": {
+						"parts": {
+							"p0": true,
+							"askNameThunk:*/0": "",
+							"askNameType:*/0": "Effect.Effect",
+							"p1": true
+						}
+					},
+					"askAge": {
+						"parts": {
+							"p0": true,
+							"askAgeThunk:*/0": "",
+							"askAgeType:*/0": "Effect.Effect",
+							"p1": true
+						}
+					},
+					"blank1": {
+						"parts": {
+							"blank1-empty": true
+						}
+					},
+					"getUser": {
+						"parts": {
+							"p0": true,
+							"getUserType:shown/0": false,
+							"getUserType:shown/getUserTypeWrapper:effect/0": false,
+							"getUserType:shown/1": false,
+							"getUserType:shown/objectOpen:shown/0": false,
+							"getUserType:shown/nameLabel:shown/0": false,
+							"getUserType:shown/nameType:*/0": false,
+							"getUserType:shown/afterNameType:shown/0": false,
+							"getUserType:shown/ageLabel:shown/0": false,
+							"getUserType:shown/ageType:*/0": false,
+							"getUserType:shown/objectClose:shown/0": false,
+							"getUserType:shown/2": false,
+							"p1": true,
+							"genOrAsync:*/0": "Effect.gen(",
+							"fnStar:*/0": "function* ",
+							"p2": true,
+							"arrowOrNot:*/0": "",
+							"p3": true
+						}
+					},
+					"closeLine": {
+						"parts": {
+							"p0": true,
+							"closeExtra:*/0": ")"
+						}
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"status": {
+					"ranges": {},
+					"allRanges": {
+						"nameLine": [
+							{
+								"start": 15,
+								"end": 29
+							},
+							{
+								"start": 15,
+								"end": 29
+							},
+							{
+								"start": 15,
+								"end": 29
+							},
+							{
+								"start": 15,
+								"end": 29
+							}
+						],
+						"ageLine": [
+							{
+								"start": 14,
+								"end": 27
+							},
+							{
+								"start": 14,
+								"end": 27
+							},
+							{
+								"start": 14,
+								"end": 27
+							}
+						],
+						"returnLine": [
+							{
+								"start": 9,
+								"end": 22
+							},
+							{
+								"start": 9,
+								"end": 22
+							}
+						]
+					}
+				},
+				"cursor": {
+					"lineIndex": 3,
+					"charOffset": 27,
+					"textLength": 9,
+					"type": "hand"
+				},
+				"bursts": []
+			},
+			{
+				"id": 6,
+				"lineOrder": [
+					"askName",
+					"askAge",
+					"blank1",
+					"getUser",
+					"closeLine"
+				],
+				"state": {
+					"askName": {
+						"parts": {
+							"p0": true,
+							"askNameThunk:*/0": "",
+							"askNameType:*/0": "Effect.Effect",
+							"p1": true
+						}
+					},
+					"askAge": {
+						"parts": {
+							"p0": true,
+							"askAgeThunk:*/0": "",
+							"askAgeType:*/0": "Effect.Effect",
+							"p1": true
+						}
+					},
+					"blank1": {
+						"parts": {
+							"blank1-empty": true
+						}
+					},
+					"getUser": {
+						"parts": {
+							"p0": true,
+							"getUserType:shown/0": false,
+							"getUserType:shown/getUserTypeWrapper:effect/0": false,
+							"getUserType:shown/1": false,
+							"getUserType:shown/objectOpen:shown/0": false,
+							"getUserType:shown/nameLabel:shown/0": false,
+							"getUserType:shown/nameType:*/0": false,
+							"getUserType:shown/afterNameType:shown/0": false,
+							"getUserType:shown/ageLabel:shown/0": false,
+							"getUserType:shown/ageType:*/0": false,
+							"getUserType:shown/objectClose:shown/0": false,
+							"getUserType:shown/2": false,
+							"p1": true,
+							"genOrAsync:*/0": "Effect.gen(",
+							"fnStar:*/0": "function* ",
+							"p2": true,
+							"arrowOrNot:*/0": "",
+							"p3": true
+						}
+					},
+					"closeLine": {
+						"parts": {
+							"p0": true,
+							"closeExtra:*/0": ")"
+						}
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [
+					{
+						"lineIndex": 3,
+						"start": 35,
+						"end": 36
+					}
+				],
+				"status": {
+					"ranges": {},
+					"allRanges": {
+						"nameLine": [
+							{
+								"start": 15,
+								"end": 29
+							},
+							{
+								"start": 15,
+								"end": 29
+							},
+							{
+								"start": 15,
+								"end": 29
+							},
+							{
+								"start": 15,
+								"end": 29
+							}
+						],
+						"ageLine": [
+							{
+								"start": 14,
+								"end": 27
+							},
+							{
+								"start": 14,
+								"end": 27
+							},
+							{
+								"start": 14,
+								"end": 27
+							}
+						],
+						"returnLine": [
+							{
+								"start": 9,
+								"end": 22
+							},
+							{
+								"start": 9,
+								"end": 22
+							}
+						]
+					}
+				},
+				"cursor": {
+					"lineIndex": 3,
+					"charOffset": 35,
+					"textLength": 1,
+					"type": "hand"
+				},
+				"bursts": [
+					{
+						"lineIndex": 3,
+						"charOffset": 35,
+						"textLength": 1,
+						"emoji": [
+							"⭐"
+						],
+						"count": 5
+					}
+				],
+				"sound": "ping1"
+			},
+			{
+				"id": 7,
+				"lineOrder": [
+					"askName",
+					"askAge",
+					"blank1",
+					"getUser",
+					"nameLine",
+					"closeLine"
+				],
+				"state": {
+					"askName": {
+						"parts": {
+							"p0": true,
+							"askNameThunk:*/0": "",
+							"askNameType:*/0": "Effect.Effect",
+							"p1": true
+						},
+						"dimmed": true
+					},
+					"askAge": {
+						"parts": {
+							"p0": true,
+							"askAgeThunk:*/0": "",
+							"askAgeType:*/0": "Effect.Effect",
+							"p1": true
+						},
+						"dimmed": true
+					},
+					"blank1": {
+						"parts": {
+							"blank1-empty": true
+						},
+						"dimmed": true
+					},
+					"getUser": {
+						"parts": {
+							"p0": true,
+							"getUserType:shown/0": false,
+							"getUserType:shown/getUserTypeWrapper:effect/0": false,
+							"getUserType:shown/1": false,
+							"getUserType:shown/objectOpen:shown/0": false,
+							"getUserType:shown/nameLabel:shown/0": false,
+							"getUserType:shown/nameType:*/0": false,
+							"getUserType:shown/afterNameType:shown/0": false,
+							"getUserType:shown/ageLabel:shown/0": false,
+							"getUserType:shown/ageType:*/0": false,
+							"getUserType:shown/objectClose:shown/0": false,
+							"getUserType:shown/2": false,
+							"p1": true,
+							"genOrAsync:*/0": "Effect.gen(",
+							"fnStar:*/0": "function* ",
+							"p2": true,
+							"arrowOrNot:*/0": "",
+							"p3": true
+						},
+						"dimmed": true
+					},
+					"nameLine": {
+						"parts": {
+							"p0": true,
+							"nameLineType:shown/0": true,
+							"nameLineType:shown/effectWrapper:shown/0": true,
+							"nameLineType:shown/1": true,
+							"nameLineType:shown/effectWrapperClose:shown/0": true,
+							"p1": true,
+							"yieldOrAwait:*/0": "",
+							"p2": true,
+							"askNameCall:*/0": ""
+						},
+						"entering": true
+					},
+					"closeLine": {
+						"parts": {
+							"p0": true,
+							"closeExtra:*/0": ")"
+						},
+						"dimmed": true
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"status": {
+					"ranges": {},
+					"allRanges": {
+						"nameLine": [
+							{
+								"start": 15,
+								"end": 29
+							},
+							{
+								"start": 15,
+								"end": 29
+							},
+							{
+								"start": 15,
+								"end": 29
+							},
+							{
+								"start": 15,
+								"end": 29
+							}
+						],
+						"ageLine": [
+							{
+								"start": 14,
+								"end": 27
+							},
+							{
+								"start": 14,
+								"end": 27
+							},
+							{
+								"start": 14,
+								"end": 27
+							}
+						],
+						"returnLine": [
+							{
+								"start": 9,
+								"end": 22
+							},
+							{
+								"start": 9,
+								"end": 22
+							}
+						]
+					}
+				},
+				"cursor": {
+					"lineIndex": 4,
+					"charOffset": 8,
+					"textLength": 4,
+					"type": "hand"
+				},
+				"bursts": []
+			},
+			{
+				"id": 8,
+				"lineOrder": [
+					"askName",
+					"askAge",
+					"blank1",
+					"getUser",
+					"nameLine",
+					"closeLine"
+				],
+				"state": {
+					"askName": {
+						"parts": {
+							"p0": true,
+							"askNameThunk:*/0": "",
+							"askNameType:*/0": "Effect.Effect",
+							"p1": true
+						},
+						"dimmed": true
+					},
+					"askAge": {
+						"parts": {
+							"p0": true,
+							"askAgeThunk:*/0": "",
+							"askAgeType:*/0": "Effect.Effect",
+							"p1": true
+						},
+						"dimmed": true
+					},
+					"blank1": {
+						"parts": {
+							"blank1-empty": true
+						},
+						"dimmed": true
+					},
+					"getUser": {
+						"parts": {
+							"p0": true,
+							"getUserType:shown/0": false,
+							"getUserType:shown/getUserTypeWrapper:effect/0": false,
+							"getUserType:shown/1": false,
+							"getUserType:shown/objectOpen:shown/0": false,
+							"getUserType:shown/nameLabel:shown/0": false,
+							"getUserType:shown/nameType:*/0": false,
+							"getUserType:shown/afterNameType:shown/0": false,
+							"getUserType:shown/ageLabel:shown/0": false,
+							"getUserType:shown/ageType:*/0": false,
+							"getUserType:shown/objectClose:shown/0": false,
+							"getUserType:shown/2": false,
+							"p1": true,
+							"genOrAsync:*/0": "Effect.gen(",
+							"fnStar:*/0": "function* ",
+							"p2": true,
+							"arrowOrNot:*/0": "",
+							"p3": true
+						},
+						"dimmed": true
+					},
+					"nameLine": {
+						"parts": {
+							"p0": true,
+							"nameLineType:shown/0": true,
+							"nameLineType:shown/effectWrapper:shown/0": true,
+							"nameLineType:shown/1": true,
+							"nameLineType:shown/effectWrapperClose:shown/0": true,
+							"p1": true,
+							"yieldOrAwait:*/0": "",
+							"p2": true,
+							"askNameCall:*/0": ""
+						}
+					},
+					"closeLine": {
+						"parts": {
+							"p0": true,
+							"closeExtra:*/0": ")"
+						},
+						"dimmed": true
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"status": {
+					"ranges": {},
+					"allRanges": {
+						"nameLine": [
+							{
+								"start": 15,
+								"end": 29
+							},
+							{
+								"start": 15,
+								"end": 29
+							},
+							{
+								"start": 15,
+								"end": 29
+							},
+							{
+								"start": 15,
+								"end": 29
+							}
+						],
+						"ageLine": [
+							{
+								"start": 14,
+								"end": 27
+							},
+							{
+								"start": 14,
+								"end": 27
+							},
+							{
+								"start": 14,
+								"end": 27
+							}
+						],
+						"returnLine": [
+							{
+								"start": 9,
+								"end": 22
+							},
+							{
+								"start": 9,
+								"end": 22
+							}
+						]
+					}
+				},
+				"cursor": {
+					"lineIndex": 4,
+					"charOffset": 38,
+					"textLength": 7,
+					"type": "hand"
+				},
+				"bursts": []
+			},
+			{
+				"id": 9,
+				"lineOrder": [
+					"askName",
+					"askAge",
+					"blank1",
+					"getUser",
+					"nameLine",
+					"closeLine"
+				],
+				"state": {
+					"askName": {
+						"parts": {
+							"p0": true,
+							"askNameThunk:*/0": "",
+							"askNameType:*/0": "Effect.Effect",
+							"p1": true
+						},
+						"dimmed": true
+					},
+					"askAge": {
+						"parts": {
+							"p0": true,
+							"askAgeThunk:*/0": "",
+							"askAgeType:*/0": "Effect.Effect",
+							"p1": true
+						},
+						"dimmed": true
+					},
+					"blank1": {
+						"parts": {
+							"blank1-empty": true
+						},
+						"dimmed": true
+					},
+					"getUser": {
+						"parts": {
+							"p0": true,
+							"getUserType:shown/0": false,
+							"getUserType:shown/getUserTypeWrapper:effect/0": false,
+							"getUserType:shown/1": false,
+							"getUserType:shown/objectOpen:shown/0": false,
+							"getUserType:shown/nameLabel:shown/0": false,
+							"getUserType:shown/nameType:*/0": false,
+							"getUserType:shown/afterNameType:shown/0": false,
+							"getUserType:shown/ageLabel:shown/0": false,
+							"getUserType:shown/ageType:*/0": false,
+							"getUserType:shown/objectClose:shown/0": false,
+							"getUserType:shown/2": false,
+							"p1": true,
+							"genOrAsync:*/0": "Effect.gen(",
+							"fnStar:*/0": "function* ",
+							"p2": true,
+							"arrowOrNot:*/0": "",
+							"p3": true
+						},
+						"dimmed": true
+					},
+					"nameLine": {
+						"parts": {
+							"p0": true,
+							"nameLineType:shown/0": true,
+							"nameLineType:shown/effectWrapper:shown/0": true,
+							"nameLineType:shown/1": true,
+							"nameLineType:shown/effectWrapperClose:shown/0": true,
+							"p1": true,
+							"yieldOrAwait:*/0": "",
+							"p2": true,
+							"askNameCall:*/0": ""
+						}
+					},
+					"closeLine": {
+						"parts": {
+							"p0": true,
+							"closeExtra:*/0": ")"
+						},
+						"dimmed": true
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"status": {
+					"ranges": {},
+					"allRanges": {
+						"nameLine": [
+							{
+								"start": 15,
+								"end": 29
+							},
+							{
+								"start": 15,
+								"end": 29
+							},
+							{
+								"start": 15,
+								"end": 29
+							},
+							{
+								"start": 15,
+								"end": 29
+							}
+						],
+						"ageLine": [
+							{
+								"start": 14,
+								"end": 27
+							},
+							{
+								"start": 14,
+								"end": 27
+							},
+							{
+								"start": 14,
+								"end": 27
+							}
+						],
+						"returnLine": [
+							{
+								"start": 9,
+								"end": 22
+							},
+							{
+								"start": 9,
+								"end": 22
+							}
+						]
+					}
+				},
+				"cursor": {
+					"lineIndex": 4,
+					"charOffset": 14,
+					"textLength": 21,
+					"type": "hand"
+				},
+				"bursts": []
+			},
+			{
+				"id": 10,
+				"lineOrder": [
+					"askName",
+					"askAge",
+					"blank1",
+					"getUser",
+					"nameLine",
+					"closeLine"
+				],
+				"state": {
+					"askName": {
+						"parts": {
+							"p0": true,
+							"askNameThunk:*/0": "",
+							"askNameType:*/0": "Effect.Effect",
+							"p1": true
+						},
+						"dimmed": true
+					},
+					"askAge": {
+						"parts": {
+							"p0": true,
+							"askAgeThunk:*/0": "",
+							"askAgeType:*/0": "Effect.Effect",
+							"p1": true
+						},
+						"dimmed": true
+					},
+					"blank1": {
+						"parts": {
+							"blank1-empty": true
+						},
+						"dimmed": true
+					},
+					"getUser": {
+						"parts": {
+							"p0": true,
+							"getUserType:shown/0": false,
+							"getUserType:shown/getUserTypeWrapper:effect/0": false,
+							"getUserType:shown/1": false,
+							"getUserType:shown/objectOpen:shown/0": false,
+							"getUserType:shown/nameLabel:shown/0": false,
+							"getUserType:shown/nameType:*/0": false,
+							"getUserType:shown/afterNameType:shown/0": false,
+							"getUserType:shown/ageLabel:shown/0": false,
+							"getUserType:shown/ageType:*/0": false,
+							"getUserType:shown/objectClose:shown/0": false,
+							"getUserType:shown/2": false,
+							"p1": true,
+							"genOrAsync:*/0": "Effect.gen(",
+							"fnStar:*/0": "function* ",
+							"p2": true,
+							"arrowOrNot:*/0": "",
+							"p3": true
+						},
+						"dimmed": true
+					},
+					"nameLine": {
+						"parts": {
+							"p0": true,
+							"nameLineType:shown/0": true,
+							"nameLineType:shown/effectWrapper:shown/0": false,
+							"nameLineType:shown/1": true,
+							"nameLineType:shown/effectWrapperClose:shown/0": false,
+							"p1": true,
+							"yieldOrAwait:*/0": "yield* ",
+							"p2": true,
+							"askNameCall:*/0": ""
+						}
+					},
+					"closeLine": {
+						"parts": {
+							"p0": true,
+							"closeExtra:*/0": ")"
+						},
+						"dimmed": true
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [
+					{
+						"lineIndex": 4,
+						"start": 23,
+						"end": 29
+					}
+				],
+				"status": {
+					"ranges": {},
+					"allRanges": {
+						"nameLine": [
+							{
+								"start": 15,
+								"end": 29
+							},
+							{
+								"start": 15,
+								"end": 29
+							},
+							{
+								"start": 15,
+								"end": 29
+							},
+							{
+								"start": 15,
+								"end": 29
+							}
+						],
+						"ageLine": [
+							{
+								"start": 14,
+								"end": 27
+							},
+							{
+								"start": 14,
+								"end": 27
+							},
+							{
+								"start": 14,
+								"end": 27
+							}
+						],
+						"returnLine": [
+							{
+								"start": 9,
+								"end": 22
+							},
+							{
+								"start": 9,
+								"end": 22
+							}
+						]
+					}
+				},
+				"cursor": {
+					"lineIndex": 4,
+					"charOffset": 23,
+					"textLength": 6,
+					"type": "hand"
+				},
+				"bursts": []
+			},
+			{
+				"id": 11,
+				"lineOrder": [
+					"askName",
+					"askAge",
+					"blank1",
+					"getUser",
+					"nameLine",
+					"closeLine"
+				],
+				"state": {
+					"askName": {
+						"parts": {
+							"p0": true,
+							"askNameThunk:*/0": "",
+							"askNameType:*/0": "Effect.Effect",
+							"p1": true
+						},
+						"dimmed": true
+					},
+					"askAge": {
+						"parts": {
+							"p0": true,
+							"askAgeThunk:*/0": "",
+							"askAgeType:*/0": "Effect.Effect",
+							"p1": true
+						},
+						"dimmed": true
+					},
+					"blank1": {
+						"parts": {
+							"blank1-empty": true
+						},
+						"dimmed": true
+					},
+					"getUser": {
+						"parts": {
+							"p0": true,
+							"getUserType:shown/0": false,
+							"getUserType:shown/getUserTypeWrapper:effect/0": false,
+							"getUserType:shown/1": false,
+							"getUserType:shown/objectOpen:shown/0": false,
+							"getUserType:shown/nameLabel:shown/0": false,
+							"getUserType:shown/nameType:*/0": false,
+							"getUserType:shown/afterNameType:shown/0": false,
+							"getUserType:shown/ageLabel:shown/0": false,
+							"getUserType:shown/ageType:*/0": false,
+							"getUserType:shown/objectClose:shown/0": false,
+							"getUserType:shown/2": false,
+							"p1": true,
+							"genOrAsync:*/0": "Effect.gen(",
+							"fnStar:*/0": "function* ",
+							"p2": true,
+							"arrowOrNot:*/0": "",
+							"p3": true
+						},
+						"dimmed": true
+					},
+					"nameLine": {
+						"parts": {
+							"p0": true,
+							"nameLineType:shown/0": true,
+							"nameLineType:shown/effectWrapper:shown/0": false,
+							"nameLineType:shown/1": true,
+							"nameLineType:shown/effectWrapperClose:shown/0": false,
+							"p1": true,
+							"yieldOrAwait:*/0": "yield* ",
+							"p2": true,
+							"askNameCall:*/0": ""
+						}
+					},
+					"closeLine": {
+						"parts": {
+							"p0": true,
+							"closeExtra:*/0": ")"
+						},
+						"dimmed": true
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"status": {
+					"ranges": {},
+					"allRanges": {
+						"nameLine": [
+							{
+								"start": 15,
+								"end": 29
+							},
+							{
+								"start": 15,
+								"end": 29
+							},
+							{
+								"start": 15,
+								"end": 29
+							},
+							{
+								"start": 15,
+								"end": 29
+							}
+						],
+						"ageLine": [
+							{
+								"start": 14,
+								"end": 27
+							},
+							{
+								"start": 14,
+								"end": 27
+							},
+							{
+								"start": 14,
+								"end": 27
+							}
+						],
+						"returnLine": [
+							{
+								"start": 9,
+								"end": 22
+							},
+							{
+								"start": 9,
+								"end": 22
+							}
+						]
+					}
+				},
+				"cursor": {
+					"lineIndex": 4,
+					"charOffset": 23,
+					"textLength": 6,
+					"type": "hand"
+				},
+				"bursts": []
+			},
+			{
+				"id": 12,
+				"lineOrder": [
+					"askName",
+					"askAge",
+					"blank1",
+					"getUser",
+					"nameLine",
+					"closeLine"
+				],
+				"state": {
+					"askName": {
+						"parts": {
+							"p0": true,
+							"askNameThunk:*/0": "() => ",
+							"askNameType:*/0": "Promise",
+							"p1": true
+						}
+					},
+					"askAge": {
+						"parts": {
+							"p0": true,
+							"askAgeThunk:*/0": "() => ",
+							"askAgeType:*/0": "Promise",
+							"p1": true
+						}
+					},
+					"blank1": {
+						"parts": {
+							"blank1-empty": true
+						},
+						"dimmed": true
+					},
+					"getUser": {
+						"parts": {
+							"p0": true,
+							"getUserType:shown/0": false,
+							"getUserType:shown/getUserTypeWrapper:effect/0": false,
+							"getUserType:shown/1": false,
+							"getUserType:shown/objectOpen:shown/0": false,
+							"getUserType:shown/nameLabel:shown/0": false,
+							"getUserType:shown/nameType:*/0": false,
+							"getUserType:shown/afterNameType:shown/0": false,
+							"getUserType:shown/ageLabel:shown/0": false,
+							"getUserType:shown/ageType:*/0": false,
+							"getUserType:shown/objectClose:shown/0": false,
+							"getUserType:shown/2": false,
+							"p1": true,
+							"genOrAsync:*/0": "async ",
+							"fnStar:*/0": "",
+							"p2": true,
+							"arrowOrNot:*/0": " =>",
+							"p3": true
+						}
+					},
+					"nameLine": {
+						"parts": {
+							"p0": true,
+							"nameLineType:shown/0": true,
+							"nameLineType:shown/effectWrapper:shown/0": false,
+							"nameLineType:shown/1": true,
+							"nameLineType:shown/effectWrapperClose:shown/0": false,
+							"p1": true,
+							"yieldOrAwait:*/0": "await ",
+							"p2": true,
+							"askNameCall:*/0": "()"
+						}
+					},
+					"closeLine": {
+						"parts": {
+							"p0": true,
+							"closeExtra:*/0": ""
+						}
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"status": {
+					"ranges": {},
+					"allRanges": {
+						"nameLine": [
+							{
+								"start": 15,
+								"end": 29
+							},
+							{
+								"start": 15,
+								"end": 29
+							},
+							{
+								"start": 15,
+								"end": 29
+							},
+							{
+								"start": 15,
+								"end": 29
+							}
+						],
+						"ageLine": [
+							{
+								"start": 14,
+								"end": 27
+							},
+							{
+								"start": 14,
+								"end": 27
+							},
+							{
+								"start": 14,
+								"end": 27
+							}
+						],
+						"returnLine": [
+							{
+								"start": 9,
+								"end": 22
+							},
+							{
+								"start": 9,
+								"end": 22
+							}
+						]
+					}
+				},
+				"cursor": {
+					"lineIndex": 4,
+					"charOffset": 23,
+					"textLength": 5,
+					"type": "hand"
+				},
+				"bursts": []
+			},
+			{
+				"id": 13,
+				"lineOrder": [
+					"askName",
+					"askAge",
+					"blank1",
+					"getUser",
+					"nameLine",
+					"closeLine"
+				],
+				"state": {
+					"askName": {
+						"parts": {
+							"p0": true,
+							"askNameThunk:*/0": "",
+							"askNameType:*/0": "Effect.Effect",
+							"p1": true
+						},
+						"dimmed": true
+					},
+					"askAge": {
+						"parts": {
+							"p0": true,
+							"askAgeThunk:*/0": "",
+							"askAgeType:*/0": "Effect.Effect",
+							"p1": true
+						},
+						"dimmed": true
+					},
+					"blank1": {
+						"parts": {
+							"blank1-empty": true
+						},
+						"dimmed": true
+					},
+					"getUser": {
+						"parts": {
+							"p0": true,
+							"getUserType:shown/0": false,
+							"getUserType:shown/getUserTypeWrapper:effect/0": false,
+							"getUserType:shown/1": false,
+							"getUserType:shown/objectOpen:shown/0": false,
+							"getUserType:shown/nameLabel:shown/0": false,
+							"getUserType:shown/nameType:*/0": false,
+							"getUserType:shown/afterNameType:shown/0": false,
+							"getUserType:shown/ageLabel:shown/0": false,
+							"getUserType:shown/ageType:*/0": false,
+							"getUserType:shown/objectClose:shown/0": false,
+							"getUserType:shown/2": false,
+							"p1": true,
+							"genOrAsync:*/0": "Effect.gen(",
+							"fnStar:*/0": "function* ",
+							"p2": true,
+							"arrowOrNot:*/0": "",
+							"p3": true
+						},
+						"dimmed": true
+					},
+					"nameLine": {
+						"parts": {
+							"p0": true,
+							"nameLineType:shown/0": false,
+							"nameLineType:shown/effectWrapper:shown/0": false,
+							"nameLineType:shown/1": false,
+							"nameLineType:shown/effectWrapperClose:shown/0": false,
+							"p1": true,
+							"yieldOrAwait:*/0": "yield* ",
+							"p2": true,
+							"askNameCall:*/0": ""
+						}
+					},
+					"closeLine": {
+						"parts": {
+							"p0": true,
+							"closeExtra:*/0": ")"
+						},
+						"dimmed": true
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"status": {
+					"ranges": {},
+					"allRanges": {
+						"nameLine": [
+							{
+								"start": 15,
+								"end": 29
+							},
+							{
+								"start": 15,
+								"end": 29
+							},
+							{
+								"start": 15,
+								"end": 29
+							},
+							{
+								"start": 15,
+								"end": 29
+							}
+						],
+						"ageLine": [
+							{
+								"start": 14,
+								"end": 27
+							},
+							{
+								"start": 14,
+								"end": 27
+							},
+							{
+								"start": 14,
+								"end": 27
+							}
+						],
+						"returnLine": [
+							{
+								"start": 9,
+								"end": 22
+							},
+							{
+								"start": 9,
+								"end": 22
+							}
+						]
+					}
+				},
+				"cursor": {
+					"lineIndex": 4,
+					"charOffset": 15,
+					"textLength": 6,
+					"type": "hand"
+				},
+				"bursts": []
+			},
+			{
+				"id": 14,
+				"lineOrder": [
+					"askName",
+					"askAge",
+					"blank1",
+					"getUser",
+					"nameLine",
+					"ageLine",
+					"closeLine"
+				],
+				"state": {
+					"askName": {
+						"parts": {
+							"p0": true,
+							"askNameThunk:*/0": "",
+							"askNameType:*/0": "Effect.Effect",
+							"p1": true
+						},
+						"dimmed": true
+					},
+					"askAge": {
+						"parts": {
+							"p0": true,
+							"askAgeThunk:*/0": "",
+							"askAgeType:*/0": "Effect.Effect",
+							"p1": true
+						},
+						"dimmed": true
+					},
+					"blank1": {
+						"parts": {
+							"blank1-empty": true
+						},
+						"dimmed": true
+					},
+					"getUser": {
+						"parts": {
+							"p0": true,
+							"getUserType:shown/0": false,
+							"getUserType:shown/getUserTypeWrapper:effect/0": false,
+							"getUserType:shown/1": false,
+							"getUserType:shown/objectOpen:shown/0": false,
+							"getUserType:shown/nameLabel:shown/0": false,
+							"getUserType:shown/nameType:*/0": false,
+							"getUserType:shown/afterNameType:shown/0": false,
+							"getUserType:shown/ageLabel:shown/0": false,
+							"getUserType:shown/ageType:*/0": false,
+							"getUserType:shown/objectClose:shown/0": false,
+							"getUserType:shown/2": false,
+							"p1": true,
+							"genOrAsync:*/0": "Effect.gen(",
+							"fnStar:*/0": "function* ",
+							"p2": true,
+							"arrowOrNot:*/0": "",
+							"p3": true
+						},
+						"dimmed": true
+					},
+					"nameLine": {
+						"parts": {
+							"p0": true,
+							"nameLineType:shown/0": false,
+							"nameLineType:shown/effectWrapper:shown/0": false,
+							"nameLineType:shown/1": false,
+							"nameLineType:shown/effectWrapperClose:shown/0": false,
+							"p1": true,
+							"yieldOrAwait:*/0": "yield* ",
+							"p2": true,
+							"askNameCall:*/0": ""
+						},
+						"dimmed": true
+					},
+					"ageLine": {
+						"parts": {
+							"p0": true,
+							"yieldOrAwait2:effect/0": true,
+							"p1": true
+						},
+						"entering": true
+					},
+					"closeLine": {
+						"parts": {
+							"p0": true,
+							"closeExtra:*/0": ")"
+						},
+						"dimmed": true
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"status": {
+					"ranges": {},
+					"allRanges": {
+						"nameLine": [
+							{
+								"start": 15,
+								"end": 29
+							},
+							{
+								"start": 15,
+								"end": 29
+							},
+							{
+								"start": 15,
+								"end": 29
+							},
+							{
+								"start": 15,
+								"end": 29
+							}
+						],
+						"ageLine": [
+							{
+								"start": 14,
+								"end": 27
+							},
+							{
+								"start": 14,
+								"end": 27
+							},
+							{
+								"start": 14,
+								"end": 27
+							}
+						],
+						"returnLine": [
+							{
+								"start": 9,
+								"end": 22
+							},
+							{
+								"start": 9,
+								"end": 22
+							}
+						]
+					}
+				},
+				"cursor": {
+					"lineIndex": 5,
+					"charOffset": 8,
+					"textLength": 3,
+					"type": "hand"
+				},
+				"bursts": []
+			},
+			{
+				"id": 15,
+				"lineOrder": [
+					"askName",
+					"askAge",
+					"blank1",
+					"getUser",
+					"nameLine",
+					"ageLine",
+					"returnLine",
+					"closeLine"
+				],
+				"state": {
+					"askName": {
+						"parts": {
+							"p0": true,
+							"askNameThunk:*/0": "",
+							"askNameType:*/0": "Effect.Effect",
+							"p1": true
+						},
+						"dimmed": true
+					},
+					"askAge": {
+						"parts": {
+							"p0": true,
+							"askAgeThunk:*/0": "",
+							"askAgeType:*/0": "Effect.Effect",
+							"p1": true
+						},
+						"dimmed": true
+					},
+					"blank1": {
+						"parts": {
+							"blank1-empty": true
+						},
+						"dimmed": true
+					},
+					"getUser": {
+						"parts": {
+							"p0": true,
+							"getUserType:shown/0": false,
+							"getUserType:shown/getUserTypeWrapper:effect/0": false,
+							"getUserType:shown/1": false,
+							"getUserType:shown/objectOpen:shown/0": false,
+							"getUserType:shown/nameLabel:shown/0": false,
+							"getUserType:shown/nameType:*/0": false,
+							"getUserType:shown/afterNameType:shown/0": false,
+							"getUserType:shown/ageLabel:shown/0": false,
+							"getUserType:shown/ageType:*/0": false,
+							"getUserType:shown/objectClose:shown/0": false,
+							"getUserType:shown/2": false,
+							"p1": true,
+							"genOrAsync:*/0": "Effect.gen(",
+							"fnStar:*/0": "function* ",
+							"p2": true,
+							"arrowOrNot:*/0": "",
+							"p3": true
+						},
+						"dimmed": true
+					},
+					"nameLine": {
+						"parts": {
+							"p0": true,
+							"nameLineType:shown/0": false,
+							"nameLineType:shown/effectWrapper:shown/0": false,
+							"nameLineType:shown/1": false,
+							"nameLineType:shown/effectWrapperClose:shown/0": false,
+							"p1": true,
+							"yieldOrAwait:*/0": "yield* ",
+							"p2": true,
+							"askNameCall:*/0": ""
+						},
+						"dimmed": true
+					},
+					"ageLine": {
+						"parts": {
+							"p0": true,
+							"yieldOrAwait2:effect/0": true,
+							"p1": true
+						},
+						"dimmed": true
+					},
+					"returnLine": {
+						"parts": {
+							"p0": true,
+							"returnObject:shown/0": false,
+							"returnObject:shown/returnName:shown/0": false,
+							"returnObject:shown/returnAge:shown/0": false,
+							"returnObject:shown/1": false
+						},
+						"entering": true
+					},
+					"closeLine": {
+						"parts": {
+							"p0": true,
+							"closeExtra:*/0": ")"
+						},
+						"dimmed": true
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"status": {
+					"ranges": {},
+					"allRanges": {
+						"nameLine": [
+							{
+								"start": 15,
+								"end": 29
+							},
+							{
+								"start": 15,
+								"end": 29
+							},
+							{
+								"start": 15,
+								"end": 29
+							},
+							{
+								"start": 15,
+								"end": 29
+							}
+						],
+						"ageLine": [
+							{
+								"start": 14,
+								"end": 27
+							},
+							{
+								"start": 14,
+								"end": 27
+							},
+							{
+								"start": 14,
+								"end": 27
+							}
+						],
+						"returnLine": [
+							{
+								"start": 9,
+								"end": 22
+							},
+							{
+								"start": 9,
+								"end": 22
+							}
+						]
+					}
+				},
+				"cursor": {
+					"lineIndex": 6,
+					"charOffset": 2,
+					"textLength": 6,
+					"type": "hand"
+				},
+				"bursts": []
+			},
+			{
+				"id": 16,
+				"lineOrder": [
+					"askName",
+					"askAge",
+					"blank1",
+					"getUser",
+					"nameLine",
+					"ageLine",
+					"returnLine",
+					"closeLine"
+				],
+				"state": {
+					"askName": {
+						"parts": {
+							"p0": true,
+							"askNameThunk:*/0": "",
+							"askNameType:*/0": "Effect.Effect",
+							"p1": true
+						}
+					},
+					"askAge": {
+						"parts": {
+							"p0": true,
+							"askAgeThunk:*/0": "",
+							"askAgeType:*/0": "Effect.Effect",
+							"p1": true
+						}
+					},
+					"blank1": {
+						"parts": {
+							"blank1-empty": true
+						}
+					},
+					"getUser": {
+						"parts": {
+							"p0": true,
+							"getUserType:shown/0": false,
+							"getUserType:shown/getUserTypeWrapper:effect/0": false,
+							"getUserType:shown/1": false,
+							"getUserType:shown/objectOpen:shown/0": false,
+							"getUserType:shown/nameLabel:shown/0": false,
+							"getUserType:shown/nameType:*/0": false,
+							"getUserType:shown/afterNameType:shown/0": false,
+							"getUserType:shown/ageLabel:shown/0": false,
+							"getUserType:shown/ageType:*/0": false,
+							"getUserType:shown/objectClose:shown/0": false,
+							"getUserType:shown/2": false,
+							"p1": true,
+							"genOrAsync:*/0": "Effect.gen(",
+							"fnStar:*/0": "function* ",
+							"p2": true,
+							"arrowOrNot:*/0": "",
+							"p3": true
+						}
+					},
+					"nameLine": {
+						"parts": {
+							"p0": true,
+							"nameLineType:shown/0": false,
+							"nameLineType:shown/effectWrapper:shown/0": false,
+							"nameLineType:shown/1": false,
+							"nameLineType:shown/effectWrapperClose:shown/0": false,
+							"p1": true,
+							"yieldOrAwait:*/0": "yield* ",
+							"p2": true,
+							"askNameCall:*/0": ""
+						}
+					},
+					"ageLine": {
+						"parts": {
+							"p0": true,
+							"yieldOrAwait2:effect/0": true,
+							"p1": true
+						}
+					},
+					"returnLine": {
+						"parts": {
+							"p0": true,
+							"returnObject:shown/0": true,
+							"returnObject:shown/returnName:shown/0": false,
+							"returnObject:shown/returnAge:shown/0": false,
+							"returnObject:shown/1": true
+						}
+					},
+					"closeLine": {
+						"parts": {
+							"p0": true,
+							"closeExtra:*/0": ")"
+						}
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"status": {
+					"ranges": {},
+					"allRanges": {
+						"nameLine": [
+							{
+								"start": 15,
+								"end": 29
+							},
+							{
+								"start": 15,
+								"end": 29
+							},
+							{
+								"start": 15,
+								"end": 29
+							},
+							{
+								"start": 15,
+								"end": 29
+							}
+						],
+						"ageLine": [
+							{
+								"start": 14,
+								"end": 27
+							},
+							{
+								"start": 14,
+								"end": 27
+							},
+							{
+								"start": 14,
+								"end": 27
+							}
+						],
+						"returnLine": [
+							{
+								"start": 9,
+								"end": 22
+							},
+							{
+								"start": 9,
+								"end": 22
+							}
+						]
+					}
+				},
+				"cursor": {
+					"lineIndex": 6,
+					"charOffset": 9,
+					"textLength": 1,
+					"type": "hand"
+				},
+				"bursts": []
+			},
+			{
+				"id": 17,
+				"lineOrder": [
+					"askName",
+					"askAge",
+					"blank1",
+					"getUser",
+					"nameLine",
+					"ageLine",
+					"returnLine",
+					"closeLine"
+				],
+				"state": {
+					"askName": {
+						"parts": {
+							"p0": true,
+							"askNameThunk:*/0": "",
+							"askNameType:*/0": "Effect.Effect",
+							"p1": true
+						}
+					},
+					"askAge": {
+						"parts": {
+							"p0": true,
+							"askAgeThunk:*/0": "",
+							"askAgeType:*/0": "Effect.Effect",
+							"p1": true
+						}
+					},
+					"blank1": {
+						"parts": {
+							"blank1-empty": true
+						}
+					},
+					"getUser": {
+						"parts": {
+							"p0": true,
+							"getUserType:shown/0": false,
+							"getUserType:shown/getUserTypeWrapper:effect/0": false,
+							"getUserType:shown/1": false,
+							"getUserType:shown/objectOpen:shown/0": false,
+							"getUserType:shown/nameLabel:shown/0": false,
+							"getUserType:shown/nameType:*/0": false,
+							"getUserType:shown/afterNameType:shown/0": false,
+							"getUserType:shown/ageLabel:shown/0": false,
+							"getUserType:shown/ageType:*/0": false,
+							"getUserType:shown/objectClose:shown/0": false,
+							"getUserType:shown/2": false,
+							"p1": true,
+							"genOrAsync:*/0": "Effect.gen(",
+							"fnStar:*/0": "function* ",
+							"p2": true,
+							"arrowOrNot:*/0": "",
+							"p3": true
+						}
+					},
+					"nameLine": {
+						"parts": {
+							"p0": true,
+							"nameLineType:shown/0": false,
+							"nameLineType:shown/effectWrapper:shown/0": false,
+							"nameLineType:shown/1": false,
+							"nameLineType:shown/effectWrapperClose:shown/0": false,
+							"p1": true,
+							"yieldOrAwait:*/0": "yield* ",
+							"p2": true,
+							"askNameCall:*/0": ""
+						}
+					},
+					"ageLine": {
+						"parts": {
+							"p0": true,
+							"yieldOrAwait2:effect/0": true,
+							"p1": true
+						}
+					},
+					"returnLine": {
+						"parts": {
+							"p0": true,
+							"returnObject:shown/0": true,
+							"returnObject:shown/returnName:shown/0": true,
+							"returnObject:shown/returnAge:shown/0": false,
+							"returnObject:shown/1": true
+						}
+					},
+					"closeLine": {
+						"parts": {
+							"p0": true,
+							"closeExtra:*/0": ")"
+						}
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"status": {
+					"ranges": {},
+					"allRanges": {
+						"nameLine": [
+							{
+								"start": 15,
+								"end": 29
+							},
+							{
+								"start": 15,
+								"end": 29
+							},
+							{
+								"start": 15,
+								"end": 29
+							},
+							{
+								"start": 15,
+								"end": 29
+							}
+						],
+						"ageLine": [
+							{
+								"start": 14,
+								"end": 27
+							},
+							{
+								"start": 14,
+								"end": 27
+							},
+							{
+								"start": 14,
+								"end": 27
+							}
+						],
+						"returnLine": [
+							{
+								"start": 9,
+								"end": 22
+							},
+							{
+								"start": 9,
+								"end": 22
+							}
+						]
+					}
+				},
+				"cursor": {
+					"lineIndex": 6,
+					"charOffset": 11,
+					"textLength": 4,
+					"type": "hand"
+				},
+				"bursts": []
+			},
+			{
+				"id": 18,
+				"lineOrder": [
+					"askName",
+					"askAge",
+					"blank1",
+					"getUser",
+					"nameLine",
+					"ageLine",
+					"returnLine",
+					"closeLine"
+				],
+				"state": {
+					"askName": {
+						"parts": {
+							"p0": true,
+							"askNameThunk:*/0": "",
+							"askNameType:*/0": "Effect.Effect",
+							"p1": true
+						}
+					},
+					"askAge": {
+						"parts": {
+							"p0": true,
+							"askAgeThunk:*/0": "",
+							"askAgeType:*/0": "Effect.Effect",
+							"p1": true
+						}
+					},
+					"blank1": {
+						"parts": {
+							"blank1-empty": true
+						}
+					},
+					"getUser": {
+						"parts": {
+							"p0": true,
+							"getUserType:shown/0": false,
+							"getUserType:shown/getUserTypeWrapper:effect/0": false,
+							"getUserType:shown/1": false,
+							"getUserType:shown/objectOpen:shown/0": false,
+							"getUserType:shown/nameLabel:shown/0": false,
+							"getUserType:shown/nameType:*/0": false,
+							"getUserType:shown/afterNameType:shown/0": false,
+							"getUserType:shown/ageLabel:shown/0": false,
+							"getUserType:shown/ageType:*/0": false,
+							"getUserType:shown/objectClose:shown/0": false,
+							"getUserType:shown/2": false,
+							"p1": true,
+							"genOrAsync:*/0": "Effect.gen(",
+							"fnStar:*/0": "function* ",
+							"p2": true,
+							"arrowOrNot:*/0": "",
+							"p3": true
+						}
+					},
+					"nameLine": {
+						"parts": {
+							"p0": true,
+							"nameLineType:shown/0": false,
+							"nameLineType:shown/effectWrapper:shown/0": false,
+							"nameLineType:shown/1": false,
+							"nameLineType:shown/effectWrapperClose:shown/0": false,
+							"p1": true,
+							"yieldOrAwait:*/0": "yield* ",
+							"p2": true,
+							"askNameCall:*/0": ""
+						}
+					},
+					"ageLine": {
+						"parts": {
+							"p0": true,
+							"yieldOrAwait2:effect/0": true,
+							"p1": true
+						}
+					},
+					"returnLine": {
+						"parts": {
+							"p0": true,
+							"returnObject:shown/0": true,
+							"returnObject:shown/returnName:shown/0": true,
+							"returnObject:shown/returnAge:shown/0": true,
+							"returnObject:shown/1": true
+						}
+					},
+					"closeLine": {
+						"parts": {
+							"p0": true,
+							"closeExtra:*/0": ")"
+						}
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"status": {
+					"ranges": {},
+					"allRanges": {
+						"nameLine": [
+							{
+								"start": 15,
+								"end": 29
+							},
+							{
+								"start": 15,
+								"end": 29
+							},
+							{
+								"start": 15,
+								"end": 29
+							},
+							{
+								"start": 15,
+								"end": 29
+							}
+						],
+						"ageLine": [
+							{
+								"start": 14,
+								"end": 27
+							},
+							{
+								"start": 14,
+								"end": 27
+							},
+							{
+								"start": 14,
+								"end": 27
+							}
+						],
+						"returnLine": [
+							{
+								"start": 9,
+								"end": 22
+							},
+							{
+								"start": 9,
+								"end": 22
+							}
+						]
+					}
+				},
+				"cursor": {
+					"lineIndex": 6,
+					"charOffset": 17,
+					"textLength": 3,
+					"type": "hand"
+				},
+				"bursts": []
+			},
+			{
+				"id": 19,
+				"lineOrder": [
+					"askName",
+					"askAge",
+					"blank1",
+					"getUser",
+					"nameLine",
+					"ageLine",
+					"returnLine",
+					"closeLine"
+				],
+				"state": {
+					"askName": {
+						"parts": {
+							"p0": true,
+							"askNameThunk:*/0": "",
+							"askNameType:*/0": "Effect.Effect",
+							"p1": true
+						},
+						"dimmed": true
+					},
+					"askAge": {
+						"parts": {
+							"p0": true,
+							"askAgeThunk:*/0": "",
+							"askAgeType:*/0": "Effect.Effect",
+							"p1": true
+						},
+						"dimmed": true
+					},
+					"blank1": {
+						"parts": {
+							"blank1-empty": true
+						},
+						"dimmed": true
+					},
+					"getUser": {
+						"parts": {
+							"p0": true,
+							"getUserType:shown/0": true,
+							"getUserType:shown/getUserTypeWrapper:effect/0": true,
+							"getUserType:shown/1": true,
+							"getUserType:shown/objectOpen:shown/0": false,
+							"getUserType:shown/nameLabel:shown/0": false,
+							"getUserType:shown/nameType:*/0": "",
+							"getUserType:shown/afterNameType:shown/0": false,
+							"getUserType:shown/ageLabel:shown/0": false,
+							"getUserType:shown/ageType:*/0": "...",
+							"getUserType:shown/objectClose:shown/0": false,
+							"getUserType:shown/2": true,
+							"p1": true,
+							"genOrAsync:*/0": "Effect.gen(",
+							"fnStar:*/0": "function* ",
+							"p2": true,
+							"arrowOrNot:*/0": "",
+							"p3": true
+						}
+					},
+					"nameLine": {
+						"parts": {
+							"p0": true,
+							"nameLineType:shown/0": false,
+							"nameLineType:shown/effectWrapper:shown/0": false,
+							"nameLineType:shown/1": false,
+							"nameLineType:shown/effectWrapperClose:shown/0": false,
+							"p1": true,
+							"yieldOrAwait:*/0": "yield* ",
+							"p2": true,
+							"askNameCall:*/0": ""
+						},
+						"dimmed": true
+					},
+					"ageLine": {
+						"parts": {
+							"p0": true,
+							"yieldOrAwait2:effect/0": true,
+							"p1": true
+						},
+						"dimmed": true
+					},
+					"returnLine": {
+						"parts": {
+							"p0": true,
+							"returnObject:shown/0": true,
+							"returnObject:shown/returnName:shown/0": true,
+							"returnObject:shown/returnAge:shown/0": true,
+							"returnObject:shown/1": true
+						},
+						"dimmed": true
+					},
+					"closeLine": {
+						"parts": {
+							"p0": true,
+							"closeExtra:*/0": ")"
+						},
+						"dimmed": true
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"status": {
+					"ranges": {},
+					"allRanges": {
+						"nameLine": [
+							{
+								"start": 15,
+								"end": 29
+							},
+							{
+								"start": 15,
+								"end": 29
+							},
+							{
+								"start": 15,
+								"end": 29
+							},
+							{
+								"start": 15,
+								"end": 29
+							}
+						],
+						"ageLine": [
+							{
+								"start": 14,
+								"end": 27
+							},
+							{
+								"start": 14,
+								"end": 27
+							},
+							{
+								"start": 14,
+								"end": 27
+							}
+						],
+						"returnLine": [
+							{
+								"start": 9,
+								"end": 22
+							},
+							{
+								"start": 9,
+								"end": 22
+							}
+						]
+					}
+				},
+				"cursor": {
+					"lineIndex": 3,
+					"charOffset": 29,
+					"textLength": 3,
+					"type": "hand"
+				},
+				"bursts": []
+			},
+			{
+				"id": 20,
+				"lineOrder": [
+					"askName",
+					"askAge",
+					"blank1",
+					"getUser",
+					"nameLine",
+					"ageLine",
+					"returnLine",
+					"closeLine"
+				],
+				"state": {
+					"askName": {
+						"parts": {
+							"p0": true,
+							"askNameThunk:*/0": "",
+							"askNameType:*/0": "Effect.Effect",
+							"p1": true
+						}
+					},
+					"askAge": {
+						"parts": {
+							"p0": true,
+							"askAgeThunk:*/0": "",
+							"askAgeType:*/0": "Effect.Effect",
+							"p1": true
+						}
+					},
+					"blank1": {
+						"parts": {
+							"blank1-empty": true
+						}
+					},
+					"getUser": {
+						"parts": {
+							"p0": true,
+							"getUserType:shown/0": true,
+							"getUserType:shown/getUserTypeWrapper:effect/0": true,
+							"getUserType:shown/1": true,
+							"getUserType:shown/objectOpen:shown/0": true,
+							"getUserType:shown/nameLabel:shown/0": false,
+							"getUserType:shown/nameType:*/0": "",
+							"getUserType:shown/afterNameType:shown/0": false,
+							"getUserType:shown/ageLabel:shown/0": false,
+							"getUserType:shown/ageType:*/0": "...",
+							"getUserType:shown/objectClose:shown/0": true,
+							"getUserType:shown/2": true,
+							"p1": true,
+							"genOrAsync:*/0": "Effect.gen(",
+							"fnStar:*/0": "function* ",
+							"p2": true,
+							"arrowOrNot:*/0": "",
+							"p3": true
+						}
+					},
+					"nameLine": {
+						"parts": {
+							"p0": true,
+							"nameLineType:shown/0": false,
+							"nameLineType:shown/effectWrapper:shown/0": false,
+							"nameLineType:shown/1": false,
+							"nameLineType:shown/effectWrapperClose:shown/0": false,
+							"p1": true,
+							"yieldOrAwait:*/0": "yield* ",
+							"p2": true,
+							"askNameCall:*/0": ""
+						}
+					},
+					"ageLine": {
+						"parts": {
+							"p0": true,
+							"yieldOrAwait2:effect/0": true,
+							"p1": true
+						}
+					},
+					"returnLine": {
+						"parts": {
+							"p0": true,
+							"returnObject:shown/0": true,
+							"returnObject:shown/returnName:shown/0": true,
+							"returnObject:shown/returnAge:shown/0": true,
+							"returnObject:shown/1": true
+						}
+					},
+					"closeLine": {
+						"parts": {
+							"p0": true,
+							"closeExtra:*/0": ")"
+						}
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"status": {
+					"ranges": {},
+					"allRanges": {
+						"nameLine": [
+							{
+								"start": 15,
+								"end": 29
+							},
+							{
+								"start": 15,
+								"end": 29
+							},
+							{
+								"start": 15,
+								"end": 29
+							},
+							{
+								"start": 15,
+								"end": 29
+							}
+						],
+						"ageLine": [
+							{
+								"start": 14,
+								"end": 27
+							},
+							{
+								"start": 14,
+								"end": 27
+							},
+							{
+								"start": 14,
+								"end": 27
+							}
+						],
+						"returnLine": [
+							{
+								"start": 9,
+								"end": 22
+							},
+							{
+								"start": 9,
+								"end": 22
+							}
+						]
+					}
+				},
+				"cursor": {
+					"lineIndex": 3,
+					"charOffset": 29,
+					"textLength": 1,
+					"type": "hand"
+				},
+				"bursts": []
+			},
+			{
+				"id": 21,
+				"lineOrder": [
+					"askName",
+					"askAge",
+					"blank1",
+					"getUser",
+					"nameLine",
+					"ageLine",
+					"returnLine",
+					"closeLine"
+				],
+				"state": {
+					"askName": {
+						"parts": {
+							"p0": true,
+							"askNameThunk:*/0": "",
+							"askNameType:*/0": "Effect.Effect",
+							"p1": true
+						}
+					},
+					"askAge": {
+						"parts": {
+							"p0": true,
+							"askAgeThunk:*/0": "",
+							"askAgeType:*/0": "Effect.Effect",
+							"p1": true
+						}
+					},
+					"blank1": {
+						"parts": {
+							"blank1-empty": true
+						}
+					},
+					"getUser": {
+						"parts": {
+							"p0": true,
+							"getUserType:shown/0": true,
+							"getUserType:shown/getUserTypeWrapper:effect/0": true,
+							"getUserType:shown/1": true,
+							"getUserType:shown/objectOpen:shown/0": true,
+							"getUserType:shown/nameLabel:shown/0": true,
+							"getUserType:shown/nameType:*/0": "...",
+							"getUserType:shown/afterNameType:shown/0": false,
+							"getUserType:shown/ageLabel:shown/0": false,
+							"getUserType:shown/ageType:*/0": "",
+							"getUserType:shown/objectClose:shown/0": true,
+							"getUserType:shown/2": true,
+							"p1": true,
+							"genOrAsync:*/0": "Effect.gen(",
+							"fnStar:*/0": "function* ",
+							"p2": true,
+							"arrowOrNot:*/0": "",
+							"p3": true
+						}
+					},
+					"nameLine": {
+						"parts": {
+							"p0": true,
+							"nameLineType:shown/0": false,
+							"nameLineType:shown/effectWrapper:shown/0": false,
+							"nameLineType:shown/1": false,
+							"nameLineType:shown/effectWrapperClose:shown/0": false,
+							"p1": true,
+							"yieldOrAwait:*/0": "yield* ",
+							"p2": true,
+							"askNameCall:*/0": ""
+						}
+					},
+					"ageLine": {
+						"parts": {
+							"p0": true,
+							"yieldOrAwait2:effect/0": true,
+							"p1": true
+						}
+					},
+					"returnLine": {
+						"parts": {
+							"p0": true,
+							"returnObject:shown/0": true,
+							"returnObject:shown/returnName:shown/0": true,
+							"returnObject:shown/returnAge:shown/0": true,
+							"returnObject:shown/1": true
+						}
+					},
+					"closeLine": {
+						"parts": {
+							"p0": true,
+							"closeExtra:*/0": ")"
+						}
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"status": {
+					"ranges": {},
+					"allRanges": {
+						"nameLine": [
+							{
+								"start": 15,
+								"end": 29
+							},
+							{
+								"start": 15,
+								"end": 29
+							},
+							{
+								"start": 15,
+								"end": 29
+							},
+							{
+								"start": 15,
+								"end": 29
+							}
+						],
+						"ageLine": [
+							{
+								"start": 14,
+								"end": 27
+							},
+							{
+								"start": 14,
+								"end": 27
+							},
+							{
+								"start": 14,
+								"end": 27
+							}
+						],
+						"returnLine": [
+							{
+								"start": 9,
+								"end": 22
+							},
+							{
+								"start": 9,
+								"end": 22
+							}
+						]
+					}
+				},
+				"cursor": {
+					"lineIndex": 3,
+					"charOffset": 31,
+					"textLength": 5,
+					"type": "hand"
+				},
+				"bursts": []
+			},
+			{
+				"id": 22,
+				"lineOrder": [
+					"askName",
+					"askAge",
+					"blank1",
+					"getUser",
+					"nameLine",
+					"ageLine",
+					"returnLine",
+					"closeLine"
+				],
+				"state": {
+					"askName": {
+						"parts": {
+							"p0": true,
+							"askNameThunk:*/0": "",
+							"askNameType:*/0": "Effect.Effect",
+							"p1": true
+						}
+					},
+					"askAge": {
+						"parts": {
+							"p0": true,
+							"askAgeThunk:*/0": "",
+							"askAgeType:*/0": "Effect.Effect",
+							"p1": true
+						}
+					},
+					"blank1": {
+						"parts": {
+							"blank1-empty": true
+						}
+					},
+					"getUser": {
+						"parts": {
+							"p0": true,
+							"getUserType:shown/0": true,
+							"getUserType:shown/getUserTypeWrapper:effect/0": true,
+							"getUserType:shown/1": true,
+							"getUserType:shown/objectOpen:shown/0": true,
+							"getUserType:shown/nameLabel:shown/0": true,
+							"getUserType:shown/nameType:*/0": "string",
+							"getUserType:shown/afterNameType:shown/0": true,
+							"getUserType:shown/ageLabel:shown/0": false,
+							"getUserType:shown/ageType:*/0": "...",
+							"getUserType:shown/objectClose:shown/0": true,
+							"getUserType:shown/2": true,
+							"p1": true,
+							"genOrAsync:*/0": "Effect.gen(",
+							"fnStar:*/0": "function* ",
+							"p2": true,
+							"arrowOrNot:*/0": "",
+							"p3": true
+						}
+					},
+					"nameLine": {
+						"parts": {
+							"p0": true,
+							"nameLineType:shown/0": false,
+							"nameLineType:shown/effectWrapper:shown/0": false,
+							"nameLineType:shown/1": false,
+							"nameLineType:shown/effectWrapperClose:shown/0": false,
+							"p1": true,
+							"yieldOrAwait:*/0": "yield* ",
+							"p2": true,
+							"askNameCall:*/0": ""
+						}
+					},
+					"ageLine": {
+						"parts": {
+							"p0": true,
+							"yieldOrAwait2:effect/0": true,
+							"p1": true
+						}
+					},
+					"returnLine": {
+						"parts": {
+							"p0": true,
+							"returnObject:shown/0": true,
+							"returnObject:shown/returnName:shown/0": true,
+							"returnObject:shown/returnAge:shown/0": true,
+							"returnObject:shown/1": true
+						}
+					},
+					"closeLine": {
+						"parts": {
+							"p0": true,
+							"closeExtra:*/0": ")"
+						}
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"status": {
+					"ranges": {},
+					"allRanges": {
+						"nameLine": [
+							{
+								"start": 15,
+								"end": 29
+							},
+							{
+								"start": 15,
+								"end": 29
+							},
+							{
+								"start": 15,
+								"end": 29
+							},
+							{
+								"start": 15,
+								"end": 29
+							}
+						],
+						"ageLine": [
+							{
+								"start": 14,
+								"end": 27
+							},
+							{
+								"start": 14,
+								"end": 27
+							},
+							{
+								"start": 14,
+								"end": 27
+							}
+						],
+						"returnLine": [
+							{
+								"start": 9,
+								"end": 22
+							},
+							{
+								"start": 9,
+								"end": 22
+							}
+						]
+					}
+				},
+				"cursor": {
+					"lineIndex": 3,
+					"charOffset": 37,
+					"textLength": 6,
+					"type": "hand"
+				},
+				"bursts": []
+			},
+			{
+				"id": 23,
+				"lineOrder": [
+					"askName",
+					"askAge",
+					"blank1",
+					"getUser",
+					"nameLine",
+					"ageLine",
+					"returnLine",
+					"closeLine"
+				],
+				"state": {
+					"askName": {
+						"parts": {
+							"p0": true,
+							"askNameThunk:*/0": "",
+							"askNameType:*/0": "Effect.Effect",
+							"p1": true
+						}
+					},
+					"askAge": {
+						"parts": {
+							"p0": true,
+							"askAgeThunk:*/0": "",
+							"askAgeType:*/0": "Effect.Effect",
+							"p1": true
+						}
+					},
+					"blank1": {
+						"parts": {
+							"blank1-empty": true
+						}
+					},
+					"getUser": {
+						"parts": {
+							"p0": true,
+							"getUserType:shown/0": true,
+							"getUserType:shown/getUserTypeWrapper:effect/0": true,
+							"getUserType:shown/1": true,
+							"getUserType:shown/objectOpen:shown/0": true,
+							"getUserType:shown/nameLabel:shown/0": true,
+							"getUserType:shown/nameType:*/0": "string",
+							"getUserType:shown/afterNameType:shown/0": true,
+							"getUserType:shown/ageLabel:shown/0": true,
+							"getUserType:shown/ageType:*/0": "...",
+							"getUserType:shown/objectClose:shown/0": true,
+							"getUserType:shown/2": true,
+							"p1": true,
+							"genOrAsync:*/0": "Effect.gen(",
+							"fnStar:*/0": "function* ",
+							"p2": true,
+							"arrowOrNot:*/0": "",
+							"p3": true
+						}
+					},
+					"nameLine": {
+						"parts": {
+							"p0": true,
+							"nameLineType:shown/0": false,
+							"nameLineType:shown/effectWrapper:shown/0": false,
+							"nameLineType:shown/1": false,
+							"nameLineType:shown/effectWrapperClose:shown/0": false,
+							"p1": true,
+							"yieldOrAwait:*/0": "yield* ",
+							"p2": true,
+							"askNameCall:*/0": ""
+						}
+					},
+					"ageLine": {
+						"parts": {
+							"p0": true,
+							"yieldOrAwait2:effect/0": true,
+							"p1": true
+						}
+					},
+					"returnLine": {
+						"parts": {
+							"p0": true,
+							"returnObject:shown/0": true,
+							"returnObject:shown/returnName:shown/0": true,
+							"returnObject:shown/returnAge:shown/0": true,
+							"returnObject:shown/1": true
+						}
+					},
+					"closeLine": {
+						"parts": {
+							"p0": true,
+							"closeExtra:*/0": ")"
+						}
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"status": {
+					"ranges": {},
+					"allRanges": {
+						"nameLine": [
+							{
+								"start": 15,
+								"end": 29
+							},
+							{
+								"start": 15,
+								"end": 29
+							},
+							{
+								"start": 15,
+								"end": 29
+							},
+							{
+								"start": 15,
+								"end": 29
+							}
+						],
+						"ageLine": [
+							{
+								"start": 14,
+								"end": 27
+							},
+							{
+								"start": 14,
+								"end": 27
+							},
+							{
+								"start": 14,
+								"end": 27
+							}
+						],
+						"returnLine": [
+							{
+								"start": 9,
+								"end": 22
+							},
+							{
+								"start": 9,
+								"end": 22
+							}
+						]
+					}
+				},
+				"cursor": {
+					"lineIndex": 3,
+					"charOffset": 45,
+					"textLength": 4,
+					"type": "hand"
+				},
+				"bursts": []
+			},
+			{
+				"id": 24,
+				"lineOrder": [
+					"askName",
+					"askAge",
+					"blank1",
+					"getUser",
+					"nameLine",
+					"ageLine",
+					"returnLine",
+					"closeLine"
+				],
+				"state": {
+					"askName": {
+						"parts": {
+							"p0": true,
+							"askNameThunk:*/0": "",
+							"askNameType:*/0": "Effect.Effect",
+							"p1": true
+						}
+					},
+					"askAge": {
+						"parts": {
+							"p0": true,
+							"askAgeThunk:*/0": "",
+							"askAgeType:*/0": "Effect.Effect",
+							"p1": true
+						}
+					},
+					"blank1": {
+						"parts": {
+							"blank1-empty": true
+						}
+					},
+					"getUser": {
+						"parts": {
+							"p0": true,
+							"getUserType:shown/0": true,
+							"getUserType:shown/getUserTypeWrapper:effect/0": true,
+							"getUserType:shown/1": true,
+							"getUserType:shown/objectOpen:shown/0": true,
+							"getUserType:shown/nameLabel:shown/0": true,
+							"getUserType:shown/nameType:*/0": "string",
+							"getUserType:shown/afterNameType:shown/0": true,
+							"getUserType:shown/ageLabel:shown/0": true,
+							"getUserType:shown/ageType:*/0": "number",
+							"getUserType:shown/objectClose:shown/0": true,
+							"getUserType:shown/2": true,
+							"p1": true,
+							"genOrAsync:*/0": "Effect.gen(",
+							"fnStar:*/0": "function* ",
+							"p2": true,
+							"arrowOrNot:*/0": "",
+							"p3": true
+						}
+					},
+					"nameLine": {
+						"parts": {
+							"p0": true,
+							"nameLineType:shown/0": false,
+							"nameLineType:shown/effectWrapper:shown/0": false,
+							"nameLineType:shown/1": false,
+							"nameLineType:shown/effectWrapperClose:shown/0": false,
+							"p1": true,
+							"yieldOrAwait:*/0": "yield* ",
+							"p2": true,
+							"askNameCall:*/0": ""
+						}
+					},
+					"ageLine": {
+						"parts": {
+							"p0": true,
+							"yieldOrAwait2:effect/0": true,
+							"p1": true
+						}
+					},
+					"returnLine": {
+						"parts": {
+							"p0": true,
+							"returnObject:shown/0": true,
+							"returnObject:shown/returnName:shown/0": true,
+							"returnObject:shown/returnAge:shown/0": true,
+							"returnObject:shown/1": true
+						}
+					},
+					"closeLine": {
+						"parts": {
+							"p0": true,
+							"closeExtra:*/0": ")"
+						}
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"status": {
+					"ranges": {},
+					"allRanges": {
+						"nameLine": [
+							{
+								"start": 15,
+								"end": 29
+							},
+							{
+								"start": 15,
+								"end": 29
+							},
+							{
+								"start": 15,
+								"end": 29
+							},
+							{
+								"start": 15,
+								"end": 29
+							}
+						],
+						"ageLine": [
+							{
+								"start": 14,
+								"end": 27
+							},
+							{
+								"start": 14,
+								"end": 27
+							},
+							{
+								"start": 14,
+								"end": 27
+							}
+						],
+						"returnLine": [
+							{
+								"start": 9,
+								"end": 22
+							},
+							{
+								"start": 9,
+								"end": 22
+							}
+						]
+					}
+				},
+				"cursor": {
+					"lineIndex": 3,
+					"charOffset": 50,
+					"textLength": 6,
+					"type": "hand"
+				},
+				"bursts": []
+			},
+			{
+				"id": 25,
+				"lineOrder": [
+					"askName",
+					"askAge",
+					"blank1",
+					"getUser",
+					"nameLine",
+					"ageLine",
+					"returnLine",
+					"closeLine"
+				],
+				"state": {
+					"askName": {
+						"parts": {
+							"p0": true,
+							"askNameThunk:*/0": "",
+							"askNameType:*/0": "Effect.Effect",
+							"p1": true
+						}
+					},
+					"askAge": {
+						"parts": {
+							"p0": true,
+							"askAgeThunk:*/0": "",
+							"askAgeType:*/0": "Effect.Effect",
+							"p1": true
+						}
+					},
+					"blank1": {
+						"parts": {
+							"blank1-empty": true
+						}
+					},
+					"getUser": {
+						"parts": {
+							"p0": true,
+							"getUserType:shown/0": true,
+							"getUserType:shown/getUserTypeWrapper:effect/0": true,
+							"getUserType:shown/1": true,
+							"getUserType:shown/objectOpen:shown/0": true,
+							"getUserType:shown/nameLabel:shown/0": true,
+							"getUserType:shown/nameType:*/0": "string",
+							"getUserType:shown/afterNameType:shown/0": true,
+							"getUserType:shown/ageLabel:shown/0": true,
+							"getUserType:shown/ageType:*/0": "number",
+							"getUserType:shown/objectClose:shown/0": true,
+							"getUserType:shown/2": true,
+							"p1": true,
+							"genOrAsync:*/0": "Effect.gen(",
+							"fnStar:*/0": "function* ",
+							"p2": true,
+							"arrowOrNot:*/0": "",
+							"p3": true
+						}
+					},
+					"nameLine": {
+						"parts": {
+							"p0": true,
+							"nameLineType:shown/0": false,
+							"nameLineType:shown/effectWrapper:shown/0": false,
+							"nameLineType:shown/1": false,
+							"nameLineType:shown/effectWrapperClose:shown/0": false,
+							"p1": true,
+							"yieldOrAwait:*/0": "yield* ",
+							"p2": true,
+							"askNameCall:*/0": ""
+						}
+					},
+					"ageLine": {
+						"parts": {
+							"p0": true,
+							"yieldOrAwait2:effect/0": true,
+							"p1": true
+						}
+					},
+					"returnLine": {
+						"parts": {
+							"p0": true,
+							"returnObject:shown/0": true,
+							"returnObject:shown/returnName:shown/0": true,
+							"returnObject:shown/returnAge:shown/0": true,
+							"returnObject:shown/1": true
+						}
+					},
+					"closeLine": {
+						"parts": {
+							"p0": true,
+							"closeExtra:*/0": ")"
+						}
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"status": {
+					"ranges": {
+						"4": [
+							{
+								"start": 15,
+								"end": 29,
+								"status": "running"
+							}
+						]
+					},
+					"allRanges": {
+						"nameLine": [
+							{
+								"start": 15,
+								"end": 29
+							},
+							{
+								"start": 15,
+								"end": 29
+							},
+							{
+								"start": 15,
+								"end": 29
+							},
+							{
+								"start": 15,
+								"end": 29
+							}
+						],
+						"ageLine": [
+							{
+								"start": 14,
+								"end": 27
+							},
+							{
+								"start": 14,
+								"end": 27
+							},
+							{
+								"start": 14,
+								"end": 27
+							}
+						],
+						"returnLine": [
+							{
+								"start": 9,
+								"end": 22
+							},
+							{
+								"start": 9,
+								"end": 22
+							}
+						]
+					}
+				},
+				"bursts": []
+			},
+			{
+				"id": 26,
+				"lineOrder": [
+					"askName",
+					"askAge",
+					"blank1",
+					"getUser",
+					"nameLine",
+					"ageLine",
+					"returnLine",
+					"closeLine"
+				],
+				"state": {
+					"askName": {
+						"parts": {
+							"p0": true,
+							"askNameThunk:*/0": "",
+							"askNameType:*/0": "Effect.Effect",
+							"p1": true
+						}
+					},
+					"askAge": {
+						"parts": {
+							"p0": true,
+							"askAgeThunk:*/0": "",
+							"askAgeType:*/0": "Effect.Effect",
+							"p1": true
+						}
+					},
+					"blank1": {
+						"parts": {
+							"blank1-empty": true
+						}
+					},
+					"getUser": {
+						"parts": {
+							"p0": true,
+							"getUserType:shown/0": true,
+							"getUserType:shown/getUserTypeWrapper:effect/0": true,
+							"getUserType:shown/1": true,
+							"getUserType:shown/objectOpen:shown/0": true,
+							"getUserType:shown/nameLabel:shown/0": true,
+							"getUserType:shown/nameType:*/0": "string",
+							"getUserType:shown/afterNameType:shown/0": true,
+							"getUserType:shown/ageLabel:shown/0": true,
+							"getUserType:shown/ageType:*/0": "number",
+							"getUserType:shown/objectClose:shown/0": true,
+							"getUserType:shown/2": true,
+							"p1": true,
+							"genOrAsync:*/0": "Effect.gen(",
+							"fnStar:*/0": "function* ",
+							"p2": true,
+							"arrowOrNot:*/0": "",
+							"p3": true
+						}
+					},
+					"nameLine": {
+						"parts": {
+							"p0": true,
+							"nameLineType:shown/0": false,
+							"nameLineType:shown/effectWrapper:shown/0": false,
+							"nameLineType:shown/1": false,
+							"nameLineType:shown/effectWrapperClose:shown/0": false,
+							"p1": true,
+							"yieldOrAwait:*/0": "yield* ",
+							"p2": true,
+							"askNameCall:*/0": ""
+						}
+					},
+					"ageLine": {
+						"parts": {
+							"p0": true,
+							"yieldOrAwait2:effect/0": true,
+							"p1": true
+						}
+					},
+					"returnLine": {
+						"parts": {
+							"p0": true,
+							"returnObject:shown/0": true,
+							"returnObject:shown/returnName:shown/0": true,
+							"returnObject:shown/returnAge:shown/0": true,
+							"returnObject:shown/1": true
+						}
+					},
+					"closeLine": {
+						"parts": {
+							"p0": true,
+							"closeExtra:*/0": ")"
+						}
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"status": {
+					"ranges": {
+						"4": [
+							{
+								"start": 15,
+								"end": 29,
+								"status": "success"
+							}
+						],
+						"5": [
+							{
+								"start": 14,
+								"end": 27,
+								"status": "running"
+							}
+						]
+					},
+					"allRanges": {
+						"nameLine": [
+							{
+								"start": 15,
+								"end": 29
+							},
+							{
+								"start": 15,
+								"end": 29
+							},
+							{
+								"start": 15,
+								"end": 29
+							},
+							{
+								"start": 15,
+								"end": 29
+							}
+						],
+						"ageLine": [
+							{
+								"start": 14,
+								"end": 27
+							},
+							{
+								"start": 14,
+								"end": 27
+							},
+							{
+								"start": 14,
+								"end": 27
+							}
+						],
+						"returnLine": [
+							{
+								"start": 9,
+								"end": 22
+							},
+							{
+								"start": 9,
+								"end": 22
+							}
+						]
+					}
+				},
+				"bursts": []
+			},
+			{
+				"id": 27,
+				"lineOrder": [
+					"askName",
+					"askAge",
+					"blank1",
+					"getUser",
+					"nameLine",
+					"ageLine",
+					"returnLine",
+					"closeLine"
+				],
+				"state": {
+					"askName": {
+						"parts": {
+							"p0": true,
+							"askNameThunk:*/0": "",
+							"askNameType:*/0": "Effect.Effect",
+							"p1": true
+						}
+					},
+					"askAge": {
+						"parts": {
+							"p0": true,
+							"askAgeThunk:*/0": "",
+							"askAgeType:*/0": "Effect.Effect",
+							"p1": true
+						}
+					},
+					"blank1": {
+						"parts": {
+							"blank1-empty": true
+						}
+					},
+					"getUser": {
+						"parts": {
+							"p0": true,
+							"getUserType:shown/0": true,
+							"getUserType:shown/getUserTypeWrapper:effect/0": true,
+							"getUserType:shown/1": true,
+							"getUserType:shown/objectOpen:shown/0": true,
+							"getUserType:shown/nameLabel:shown/0": true,
+							"getUserType:shown/nameType:*/0": "string",
+							"getUserType:shown/afterNameType:shown/0": true,
+							"getUserType:shown/ageLabel:shown/0": true,
+							"getUserType:shown/ageType:*/0": "number",
+							"getUserType:shown/objectClose:shown/0": true,
+							"getUserType:shown/2": true,
+							"p1": true,
+							"genOrAsync:*/0": "Effect.gen(",
+							"fnStar:*/0": "function* ",
+							"p2": true,
+							"arrowOrNot:*/0": "",
+							"p3": true
+						}
+					},
+					"nameLine": {
+						"parts": {
+							"p0": true,
+							"nameLineType:shown/0": false,
+							"nameLineType:shown/effectWrapper:shown/0": false,
+							"nameLineType:shown/1": false,
+							"nameLineType:shown/effectWrapperClose:shown/0": false,
+							"p1": true,
+							"yieldOrAwait:*/0": "yield* ",
+							"p2": true,
+							"askNameCall:*/0": ""
+						}
+					},
+					"ageLine": {
+						"parts": {
+							"p0": true,
+							"yieldOrAwait2:effect/0": true,
+							"p1": true
+						}
+					},
+					"returnLine": {
+						"parts": {
+							"p0": true,
+							"returnObject:shown/0": true,
+							"returnObject:shown/returnName:shown/0": true,
+							"returnObject:shown/returnAge:shown/0": true,
+							"returnObject:shown/1": true
+						}
+					},
+					"closeLine": {
+						"parts": {
+							"p0": true,
+							"closeExtra:*/0": ")"
+						}
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"status": {
+					"ranges": {
+						"4": [
+							{
+								"start": 15,
+								"end": 29,
+								"status": "success"
+							}
+						],
+						"5": [
+							{
+								"start": 14,
+								"end": 27,
+								"status": "success"
+							}
+						],
+						"6": [
+							{
+								"start": 9,
+								"end": 22,
+								"status": "running"
+							}
+						]
+					},
+					"allRanges": {
+						"nameLine": [
+							{
+								"start": 15,
+								"end": 29
+							},
+							{
+								"start": 15,
+								"end": 29
+							},
+							{
+								"start": 15,
+								"end": 29
+							},
+							{
+								"start": 15,
+								"end": 29
+							}
+						],
+						"ageLine": [
+							{
+								"start": 14,
+								"end": 27
+							},
+							{
+								"start": 14,
+								"end": 27
+							},
+							{
+								"start": 14,
+								"end": 27
+							}
+						],
+						"returnLine": [
+							{
+								"start": 9,
+								"end": 22
+							},
+							{
+								"start": 9,
+								"end": 22
+							}
+						]
+					}
+				},
+				"bursts": []
+			},
+			{
+				"id": 28,
+				"lineOrder": [
+					"askName",
+					"askAge",
+					"blank1",
+					"getUser",
+					"nameLine",
+					"ageLine",
+					"returnLine",
+					"closeLine"
+				],
+				"state": {
+					"askName": {
+						"parts": {
+							"p0": true,
+							"askNameThunk:*/0": "",
+							"askNameType:*/0": "Effect.Effect",
+							"p1": true
+						}
+					},
+					"askAge": {
+						"parts": {
+							"p0": true,
+							"askAgeThunk:*/0": "",
+							"askAgeType:*/0": "Effect.Effect",
+							"p1": true
+						}
+					},
+					"blank1": {
+						"parts": {
+							"blank1-empty": true
+						}
+					},
+					"getUser": {
+						"parts": {
+							"p0": true,
+							"getUserType:shown/0": true,
+							"getUserType:shown/getUserTypeWrapper:effect/0": true,
+							"getUserType:shown/1": true,
+							"getUserType:shown/objectOpen:shown/0": true,
+							"getUserType:shown/nameLabel:shown/0": true,
+							"getUserType:shown/nameType:*/0": "string",
+							"getUserType:shown/afterNameType:shown/0": true,
+							"getUserType:shown/ageLabel:shown/0": true,
+							"getUserType:shown/ageType:*/0": "number",
+							"getUserType:shown/objectClose:shown/0": true,
+							"getUserType:shown/2": true,
+							"p1": true,
+							"genOrAsync:*/0": "Effect.gen(",
+							"fnStar:*/0": "function* ",
+							"p2": true,
+							"arrowOrNot:*/0": "",
+							"p3": true
+						}
+					},
+					"nameLine": {
+						"parts": {
+							"p0": true,
+							"nameLineType:shown/0": false,
+							"nameLineType:shown/effectWrapper:shown/0": false,
+							"nameLineType:shown/1": false,
+							"nameLineType:shown/effectWrapperClose:shown/0": false,
+							"p1": true,
+							"yieldOrAwait:*/0": "yield* ",
+							"p2": true,
+							"askNameCall:*/0": ""
+						}
+					},
+					"ageLine": {
+						"parts": {
+							"p0": true,
+							"yieldOrAwait2:effect/0": true,
+							"p1": true
+						}
+					},
+					"returnLine": {
+						"parts": {
+							"p0": true,
+							"returnObject:shown/0": true,
+							"returnObject:shown/returnName:shown/0": true,
+							"returnObject:shown/returnAge:shown/0": true,
+							"returnObject:shown/1": true
+						}
+					},
+					"closeLine": {
+						"parts": {
+							"p0": true,
+							"closeExtra:*/0": ")"
+						}
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"status": {
+					"ranges": {
+						"4": [
+							{
+								"start": 15,
+								"end": 29,
+								"status": "success"
+							}
+						],
+						"5": [
+							{
+								"start": 14,
+								"end": 27,
+								"status": "success"
+							}
+						],
+						"6": [
+							{
+								"start": 9,
+								"end": 22,
+								"status": "success"
+							}
+						]
+					},
+					"allRanges": {
+						"nameLine": [
+							{
+								"start": 15,
+								"end": 29
+							},
+							{
+								"start": 15,
+								"end": 29
+							},
+							{
+								"start": 15,
+								"end": 29
+							},
+							{
+								"start": 15,
+								"end": 29
+							}
+						],
+						"ageLine": [
+							{
+								"start": 14,
+								"end": 27
+							},
+							{
+								"start": 14,
+								"end": 27
+							},
+							{
+								"start": 14,
+								"end": 27
+							}
+						],
+						"returnLine": [
+							{
+								"start": 9,
+								"end": 22
+							},
+							{
+								"start": 9,
+								"end": 22
+							}
+						]
+					}
+				},
+				"bursts": []
+			}
+		]
+	},
+	"steps": [
+		{
+			"name": "start",
+			"at": "start"
+		},
+		{
+			"name": "name,",
+			"at": "name,"
+		},
+		{
+			"name": "age,",
+			"at": "age,"
+		},
+		{
+			"name": "getUser",
+			"at": "getUser"
+		},
+		{
+			"name": "Effect.gen",
+			"at": "Effect.gen"
+		},
+		{
+			"name": "generator",
+			"at": "generator"
+		},
+		{
+			"name": "star",
+			"at": "star",
+			"after": "a"
+		},
+		{
+			"name": "name",
+			"at": "name",
+			"nth": 2
+		},
+		{
+			"name": "askName",
+			"at": "askName"
+		},
+		{
+			"name": "Effect",
+			"at": "Effect",
+			"after": "that's"
+		},
+		{
+			"name": "yield*",
+			"at": "yield*"
+		},
+		{
+			"name": "awaiting",
+			"at": "awaiting"
+		},
+		{
+			"name": "Promise",
+			"at": "Promise"
+		},
+		{
+			"name": "We",
+			"at": "We",
+			"after": "Promise"
+		},
+		{
+			"name": "askAge,",
+			"at": "askAge,"
+		},
+		{
+			"name": "return",
+			"at": "return"
+		},
+		{
+			"name": "object",
+			"at": "object"
+		},
+		{
+			"name": "both",
+			"at": "both"
+		},
+		{
+			"name": "properties",
+			"at": "properties"
+		},
+		{
+			"name": "now",
+			"at": "now"
+		},
+		{
+			"name": "object",
+			"at": "object",
+			"nth": 2
+		},
+		{
+			"name": "name",
+			"at": "name",
+			"nth": 3
+		},
+		{
+			"name": "string",
+			"at": "string"
+		},
+		{
+			"name": "age",
+			"at": "age",
+			"nth": 2
+		},
+		{
+			"name": "number",
+			"at": "number"
+		},
+		{
+			"name": "this",
+			"at": "this",
+			"after": "Running"
+		},
+		{
+			"name": "succeeds",
+			"at": "succeeds"
+		},
+		{
+			"name": "succeeds",
+			"at": "succeeds",
+			"nth": 2
+		},
+		{
+			"name": "combination",
+			"at": "combination"
+		}
+	],
+	"stepTimes": [
+		0,
+		4.39,
+		5.531,
+		7.27,
+		9.450999999999999,
+		10.81,
+		15.35,
+		19.211000000000002,
+		21.430000000000003,
+		23.410000000000004,
+		26.35,
+		30.67,
+		31.451000000000004,
+		32.949999999999996,
+		33.99,
+		35.19,
+		35.97,
+		37.35,
+		37.83,
+		40.25,
+		41.33,
+		41.91,
+		42.51,
+		43.31,
+		43.949999999999996,
+		45.51,
+		47.31,
+		50.551,
+		54.57
+	],
+	"componentStepTimes": [
+		0,
+		45.19,
+		45.51,
+		47.31,
+		50.551,
+		54.57
+	],
+	"_debug": {
+		"timingsStatus": "matched",
+		"dslWordCount": 127
+	},
+	"groupId": "composing",
+	"groupTitle": "Composing Effects",
+	"isFirstInGroup": false,
+	"audioFile": "gen-type-inference.8d8220fa.webm"
+}

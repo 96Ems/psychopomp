@@ -1,0 +1,113 @@
+{
+	"id": "basics",
+	"title": "Effect Basics",
+	"description": "Constructing, running, and composing basic Effects",
+	"sections": [
+		{
+			"id": "effect-is-a-description",
+			"file": "effect-is-a-description.1744eb1f.json"
+		},
+		{
+			"id": "types-capture-runtime",
+			"file": "types-capture-runtime.66c89099.json"
+		},
+		{
+			"id": "effect-succeed",
+			"file": "effect-succeed.340c6480.json"
+		},
+		{
+			"id": "running-effects",
+			"file": "running-effects.fb78a6be.json"
+		},
+		{
+			"id": "effect-fail",
+			"file": "effect-fail.9198a7af.json"
+		},
+		{
+			"id": "branch-type-merging",
+			"file": "branch-type-merging.8d35ebbd.json"
+		},
+		{
+			"id": "effect-sync",
+			"file": "effect-sync.ac56e550.json"
+		},
+		{
+			"id": "sync-vs-succeed",
+			"file": "sync-vs-succeed.ddd4c212.json"
+		},
+		{
+			"id": "effect-promise",
+			"file": "effect-promise.4d11a7f0.json"
+		},
+		{
+			"id": "promises-are-eager",
+			"file": "promises-are-eager.769dce4e.json"
+		},
+		{
+			"id": "effect-promise-fix",
+			"file": "effect-promise-fix.95688d5d.json"
+		},
+		{
+			"id": "why-compose",
+			"file": "why-compose.8a3f4ce6.json"
+		},
+		{
+			"id": "effect-gen-syntax",
+			"file": "effect-gen-syntax.5723179b.json"
+		},
+		{
+			"id": "generators-vs-promises",
+			"file": "generators-vs-promises.08793461.json"
+		},
+		{
+			"id": "gen-type-inference",
+			"file": "gen-type-inference.22fd191e.json"
+		},
+		{
+			"id": "errors-short-circuit",
+			"file": "errors-short-circuit.543418cc.json"
+		}
+	],
+	"groups": [
+		{
+			"id": "intro",
+			"title": "Intro",
+			"sectionIds": [
+				"effect-is-a-description",
+				"types-capture-runtime"
+			]
+		},
+		{
+			"id": "constructing",
+			"title": "Constructing Effects",
+			"sectionIds": [
+				"effect-succeed",
+				"running-effects",
+				"effect-fail",
+				"branch-type-merging",
+				"effect-sync",
+				"sync-vs-succeed"
+			]
+		},
+		{
+			"id": "wrapping-promises",
+			"title": "Wrapping Promises",
+			"sectionIds": [
+				"effect-promise",
+				"promises-are-eager",
+				"effect-promise-fix"
+			]
+		},
+		{
+			"id": "composing",
+			"title": "Composing Effects",
+			"sectionIds": [
+				"why-compose",
+				"effect-gen-syntax",
+				"generators-vs-promises",
+				"gen-type-inference",
+				"errors-short-circuit"
+			]
+		}
+	]
+}

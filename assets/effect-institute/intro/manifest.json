@@ -1,0 +1,118 @@
+{
+	"id": "intro",
+	"title": "Introduction to Effect",
+	"description": "Why Effect exists and the problems it solves",
+	"sections": [
+		{
+			"id": "welcome",
+			"file": "welcome.14b67512.json"
+		},
+		{
+			"id": "welcome-controls",
+			"file": "welcome-controls.6feb5640.json"
+		},
+		{
+			"id": "welcome-feedback",
+			"file": "welcome-feedback.0ffd70a1.json"
+		},
+		{
+			"id": "promises-only-happy-path",
+			"file": "promises-only-happy-path.80d764e5.json"
+		},
+		{
+			"id": "errors-are-invisible",
+			"file": "errors-are-invisible.d7bdc12f.json"
+		},
+		{
+			"id": "try-catch-gives-unknown",
+			"file": "try-catch-gives-unknown.56278d90.json"
+		},
+		{
+			"id": "catch-blocks-go-stale",
+			"file": "catch-blocks-go-stale.969fe6c3.json"
+		},
+		{
+			"id": "promise-hides-errors",
+			"file": "promise-hides-errors.1dd031f5.json"
+		},
+		{
+			"id": "effect-shows-errors",
+			"file": "effect-shows-errors.2eabe798.json"
+		},
+		{
+			"id": "errors-compose",
+			"file": "errors-compose.516fc4c5.json"
+		},
+		{
+			"id": "catching-errors",
+			"file": "catching-errors.d9df1f5b.json"
+		},
+		{
+			"id": "catch-tag",
+			"file": "catch-tag.1fe89ea7.json"
+		},
+		{
+			"id": "the-scenario",
+			"file": "the-scenario.927d60ac.json"
+		},
+		{
+			"id": "runaway-promises",
+			"file": "runaway-promises.96778dd5.json"
+		},
+		{
+			"id": "promise-abort-ceremony",
+			"file": "promise-abort-ceremony.faca4904.json"
+		},
+		{
+			"id": "abort-signal-infusion",
+			"file": "abort-signal-infusion.4700337f.json"
+		},
+		{
+			"id": "effect-structured-concurrency",
+			"file": "effect-structured-concurrency.92402dec.json"
+		}
+	],
+	"groups": [
+		{
+			"id": "welcome",
+			"title": "Welcome",
+			"sectionIds": [
+				"welcome",
+				"welcome-controls",
+				"welcome-feedback"
+			]
+		},
+		{
+			"id": "promise-problems",
+			"title": "Typed Errors — Broken Promises",
+			"sectionIds": [
+				"promises-only-happy-path",
+				"errors-are-invisible",
+				"try-catch-gives-unknown",
+				"catch-blocks-go-stale"
+			]
+		},
+		{
+			"id": "effect-solution",
+			"title": "Typed Errors — Failing Up",
+			"sectionIds": [
+				"promise-hides-errors",
+				"effect-shows-errors",
+				"errors-compose",
+				"catching-errors",
+				"catch-tag"
+			]
+		},
+		{
+			"id": "structured-concurrency",
+			"title": "Structured Concurrency",
+			"sectionIds": [
+				"the-scenario",
+				"runaway-promises",
+				"promise-abort-ceremony",
+				"abort-signal-infusion",
+				"effect-structured-concurrency"
+			]
+		}
+	]
+}

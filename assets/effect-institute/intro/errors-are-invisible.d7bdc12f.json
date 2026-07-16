@@ -1,0 +1,1849 @@
+{
+	"id": "errors-are-invisible",
+	"text": "This problem is fractal, of course. Our call to getCart, which presumably returns a Promise<Cart>, is just as opaque. To know how it might fail, we have to read its implementation. And then, we must recursively read any definitions it references, and so on. Perhaps we'd rather trust the docstring, if there is one, and pray it's up to date.",
+	"code": "async function checkout(cartId: string): Promise<Order> {\n  const cart = await getCart(cartId)\n  const payment = await charge(cart)\n  const shipment = await ship(payment)\n  return shipment\n}",
+	"contentHash": "xlo094",
+	"wordTimings": [
+		{
+			"word": "This",
+			"start": 0.09999999999999998,
+			"end": 0.42000000000000004
+		},
+		{
+			"word": "problem",
+			"start": 0.45999999999999996,
+			"end": 0.8200000000000001
+		},
+		{
+			"word": "is",
+			"start": 0.8799999999999999,
+			"end": 1.04
+		},
+		{
+			"word": "fractal,",
+			"start": 1.14,
+			"end": 1.58
+		},
+		{
+			"word": "of",
+			"start": 1.88,
+			"end": 1.96
+		},
+		{
+			"word": "course.",
+			"start": 2.04,
+			"end": 2.42
+		},
+		{
+			"word": "Our",
+			"start": 3.341,
+			"end": 3.5
+		},
+		{
+			"word": "call",
+			"start": 3.64,
+			"end": 3.9600000000000004
+		},
+		{
+			"word": "to",
+			"start": 4.021000000000001,
+			"end": 4.121
+		},
+		{
+			"word": "getCart,",
+			"start": 4.199999999999999,
+			"end": 4.74,
+			"style": {
+				"code": true
+			}
+		},
+		{
+			"word": "which",
+			"start": 4.82,
+			"end": 5.0809999999999995
+		},
+		{
+			"word": "presumably",
+			"start": 5.140000000000001,
+			"end": 5.720000000000001
+		},
+		{
+			"word": "returns",
+			"start": 5.779999999999999,
+			"end": 6.279999999999999
+		},
+		{
+			"word": "a",
+			"start": 6.359999999999999,
+			"end": 6.42
+		},
+		{
+			"word": "Promise<Cart>,",
+			"start": 6.699999999999999,
+			"end": 7.601000000000001,
+			"style": {
+				"code": true
+			}
+		},
+		{
+			"word": "is",
+			"start": 8.48,
+			"end": 8.721
+		},
+		{
+			"word": "just",
+			"start": 8.860000000000001,
+			"end": 9.121
+		},
+		{
+			"word": "as",
+			"start": 9.200000000000001,
+			"end": 9.32
+		},
+		{
+			"word": "opaque.",
+			"start": 9.421000000000001,
+			"end": 9.860000000000001
+		},
+		{
+			"word": "To",
+			"start": 10.9,
+			"end": 11.06,
+			"paragraphBreak": true
+		},
+		{
+			"word": "know",
+			"start": 11.1,
+			"end": 11.24
+		},
+		{
+			"word": "how",
+			"start": 11.3,
+			"end": 11.4
+		},
+		{
+			"word": "it",
+			"start": 11.440000000000001,
+			"end": 11.541
+		},
+		{
+			"word": "might",
+			"start": 11.56,
+			"end": 11.82
+		},
+		{
+			"word": "fail,",
+			"start": 11.88,
+			"end": 12.18
+		},
+		{
+			"word": "we",
+			"start": 12.3,
+			"end": 12.42
+		},
+		{
+			"word": "have",
+			"start": 12.48,
+			"end": 12.681000000000001
+		},
+		{
+			"word": "to",
+			"start": 12.700000000000001,
+			"end": 13.32
+		},
+		{
+			"word": "read",
+			"start": 13.38,
+			"end": 13.52
+		},
+		{
+			"word": "its",
+			"start": 13.56,
+			"end": 13.8
+		},
+		{
+			"word": "implementation.",
+			"start": 13.88,
+			"end": 14.72
+		},
+		{
+			"word": "And",
+			"start": 15.721000000000002,
+			"end": 15.860000000000001
+		},
+		{
+			"word": "then,",
+			"start": 15.961,
+			"end": 16.2
+		},
+		{
+			"word": "we",
+			"start": 16.279999999999998,
+			"end": 16.36
+		},
+		{
+			"word": "must",
+			"start": 16.439999999999998,
+			"end": 16.66
+		},
+		{
+			"word": "recursively",
+			"start": 16.7,
+			"end": 17.939999999999998
+		},
+		{
+			"word": "read",
+			"start": 18.061,
+			"end": 18.36
+		},
+		{
+			"word": "any",
+			"start": 18.439999999999998,
+			"end": 18.599999999999998
+		},
+		{
+			"word": "definitions",
+			"start": 18.68,
+			"end": 19.48
+		},
+		{
+			"word": "it",
+			"start": 19.541,
+			"end": 19.66
+		},
+		{
+			"word": "references,",
+			"start": 19.7,
+			"end": 20.439999999999998
+		},
+		{
+			"word": "and",
+			"start": 21.2,
+			"end": 21.419999999999998
+		},
+		{
+			"word": "so",
+			"start": 21.52,
+			"end": 21.66
+		},
+		{
+			"word": "on.",
+			"start": 21.759999999999998,
+			"end": 21.98
+		},
+		{
+			"word": "Perhaps",
+			"start": 23.099999999999998,
+			"end": 23.541,
+			"paragraphBreak": true
+		},
+		{
+			"word": "we'd",
+			"start": 23.599999999999998,
+			"end": 23.741
+		},
+		{
+			"word": "rather",
+			"start": 23.779999999999998,
+			"end": 24.121
+		},
+		{
+			"word": "trust",
+			"start": 24.18,
+			"end": 24.4
+		},
+		{
+			"word": "the",
+			"start": 24.461,
+			"end": 24.500999999999998
+		},
+		{
+			"word": "docstring,",
+			"start": 24.56,
+			"end": 25.16
+		},
+		{
+			"word": "if",
+			"start": 25.7,
+			"end": 25.801
+		},
+		{
+			"word": "there",
+			"start": 25.84,
+			"end": 25.961
+		},
+		{
+			"word": "is",
+			"start": 26,
+			"end": 26.121
+		},
+		{
+			"word": "one,",
+			"start": 26.22,
+			"end": 26.4
+		},
+		{
+			"word": "and",
+			"start": 27.2,
+			"end": 27.36
+		},
+		{
+			"word": "pray",
+			"start": 27.74,
+			"end": 28.02
+		},
+		{
+			"word": "it's",
+			"start": 28.08,
+			"end": 28.24
+		},
+		{
+			"word": "up",
+			"start": 28.301,
+			"end": 28.4
+		},
+		{
+			"word": "to",
+			"start": 28.439999999999998,
+			"end": 28.54
+		},
+		{
+			"word": "date.",
+			"start": 28.599999999999998,
+			"end": 28.88
+		}
+	],
+	"slideshowData": {
+		"template": {
+			"lines": {
+				"sig": {
+					"parts": {
+						"p0": {
+							"tokens": [
+								{
+									"text": "async",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "function",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "checkout",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": "(",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "cartId",
+									"type": "default",
+									"color": "#FFAB70"
+								},
+								{
+									"text": ":",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "string",
+									"type": "default",
+									"color": "#79B8FF"
+								},
+								{
+									"text": ")",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": ":",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "Promise",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": "<",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "Order",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": "> {",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"p0"
+					]
+				},
+				"cart": {
+					"parts": {
+						"p0": {
+							"tokens": [
+								{
+									"text": "  ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "const",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "cart",
+									"type": "default",
+									"color": "#79B8FF"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						},
+						"cartType:shown/0": {
+							"tokens": [
+								{
+									"text": ":",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "Cart",
+									"type": "default",
+									"color": "#B392F0"
+								}
+							],
+							"animateEntry": true,
+							"crossfade": false
+						},
+						"p1": {
+							"tokens": [
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "=",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "await",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "getCart",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": "(cartId)",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"p0",
+						"cartType:shown/0",
+						"p1"
+					]
+				},
+				"payment": {
+					"parts": {
+						"p0": {
+							"tokens": [
+								{
+									"text": "  ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "const",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "payment",
+									"type": "default",
+									"color": "#79B8FF"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "=",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "await",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "charge",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": "(cart)",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"p0"
+					]
+				},
+				"shipment": {
+					"parts": {
+						"p0": {
+							"tokens": [
+								{
+									"text": "  ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "const",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "shipment",
+									"type": "default",
+									"color": "#79B8FF"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "=",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "await",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "ship",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": "(payment)",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"p0"
+					]
+				},
+				"return": {
+					"parts": {
+						"p0": {
+							"tokens": [
+								{
+									"text": "  ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "return",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " shipment",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"p0"
+					]
+				},
+				"close": {
+					"parts": {
+						"p0": {
+							"tokens": [
+								{
+									"text": "}",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"p0"
+					]
+				},
+				"auto-line-0": {
+					"parts": {
+						"auto-line-0-empty": {
+							"tokens": [],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"auto-line-0-empty"
+					]
+				},
+				"getCartSig": {
+					"parts": {
+						"p0": {
+							"tokens": [
+								{
+									"text": "async",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "function",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "getCart",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": "(",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "id",
+									"type": "default",
+									"color": "#FFAB70"
+								},
+								{
+									"text": ":",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "string",
+									"type": "default",
+									"color": "#79B8FF"
+								},
+								{
+									"text": ")",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": ":",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "Promise",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": "<",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "Cart",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": "> {",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"p0"
+					]
+				},
+				"fetchCart": {
+					"parts": {
+						"p0": {
+							"tokens": [
+								{
+									"text": "  ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "const",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "data",
+									"type": "default",
+									"color": "#79B8FF"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "=",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "await",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "fetchCart",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": "(id)",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"p0"
+					]
+				},
+				"parseCart": {
+					"parts": {
+						"p0": {
+							"tokens": [
+								{
+									"text": "  ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "return",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "parseCart",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": "(data)",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"p0"
+					]
+				},
+				"getCartClose": {
+					"parts": {
+						"p0": {
+							"tokens": [
+								{
+									"text": "}",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"p0"
+					]
+				},
+				"fetchCartSig": {
+					"parts": {
+						"p0": {
+							"tokens": [
+								{
+									"text": "async",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "function",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "fetchCart",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": "(",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "id",
+									"type": "default",
+									"color": "#FFAB70"
+								},
+								{
+									"text": ":",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "string",
+									"type": "default",
+									"color": "#79B8FF"
+								},
+								{
+									"text": ")",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": ":",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "Promise",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": "<",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "RawCart",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": "> {",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"p0"
+					]
+				},
+				"fetchCartBody": {
+					"parts": {
+						"p0": {
+							"tokens": [
+								{
+									"text": "  ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "throw",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "new",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "Error",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": "(",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "\"Not implemented\"",
+									"type": "default",
+									"color": "#9ECBFF"
+								},
+								{
+									"text": ")",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"p0"
+					]
+				},
+				"fetchCartClose": {
+					"parts": {
+						"p0": {
+							"tokens": [
+								{
+									"text": "}",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"p0"
+					]
+				},
+				"docstring": {
+					"parts": {
+						"p0": {
+							"tokens": [
+								{
+									"text": "/** This never fails, I promise */",
+									"type": "default",
+									"color": "#6A737D"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"p0"
+					]
+				}
+			}
+		},
+		"frames": [
+			{
+				"id": 0,
+				"lineOrder": [
+					"sig",
+					"cart",
+					"payment",
+					"shipment",
+					"return",
+					"close"
+				],
+				"state": {
+					"sig": {
+						"parts": {
+							"p0": true
+						},
+						"entering": true
+					},
+					"cart": {
+						"parts": {
+							"p0": true,
+							"cartType:shown/0": false,
+							"p1": true
+						},
+						"entering": true
+					},
+					"payment": {
+						"parts": {
+							"p0": true
+						},
+						"entering": true
+					},
+					"shipment": {
+						"parts": {
+							"p0": true
+						},
+						"entering": true
+					},
+					"return": {
+						"parts": {
+							"p0": true
+						},
+						"entering": true
+					},
+					"close": {
+						"parts": {
+							"p0": true
+						},
+						"entering": true
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"bursts": []
+			},
+			{
+				"id": 1,
+				"lineOrder": [
+					"sig",
+					"cart",
+					"payment",
+					"shipment",
+					"return",
+					"close"
+				],
+				"state": {
+					"sig": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"cart": {
+						"parts": {
+							"p0": true,
+							"cartType:shown/0": false,
+							"p1": true
+						}
+					},
+					"payment": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"shipment": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"return": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"close": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"cursor": {
+					"lineIndex": 1,
+					"charOffset": 21,
+					"textLength": 7,
+					"type": "hand"
+				},
+				"bursts": []
+			},
+			{
+				"id": 2,
+				"lineOrder": [
+					"sig",
+					"cart",
+					"payment",
+					"shipment",
+					"return",
+					"close"
+				],
+				"state": {
+					"sig": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"cart": {
+						"parts": {
+							"p0": true,
+							"cartType:shown/0": true,
+							"p1": true
+						}
+					},
+					"payment": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"shipment": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"return": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"close": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"cursor": {
+					"lineIndex": 1,
+					"charOffset": 14,
+					"textLength": 4,
+					"type": "hand"
+				},
+				"bursts": []
+			},
+			{
+				"id": 3,
+				"lineOrder": [
+					"sig",
+					"cart",
+					"payment",
+					"shipment",
+					"return",
+					"close"
+				],
+				"state": {
+					"sig": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"cart": {
+						"parts": {
+							"p0": true,
+							"cartType:shown/0": true,
+							"p1": true
+						}
+					},
+					"payment": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"shipment": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"return": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"close": {
+						"parts": {
+							"p0": true
+						}
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"bursts": []
+			},
+			{
+				"id": 4,
+				"lineOrder": [
+					"sig",
+					"cart",
+					"payment",
+					"shipment",
+					"return",
+					"close"
+				],
+				"state": {
+					"sig": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"cart": {
+						"parts": {
+							"p0": true,
+							"cartType:shown/0": true,
+							"p1": true
+						}
+					},
+					"payment": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"shipment": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"return": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"close": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"bursts": []
+			},
+			{
+				"id": 5,
+				"lineOrder": [
+					"sig",
+					"cart",
+					"payment",
+					"shipment",
+					"return",
+					"close",
+					"auto-line-0",
+					"getCartSig",
+					"fetchCart",
+					"parseCart",
+					"getCartClose"
+				],
+				"state": {
+					"sig": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"cart": {
+						"parts": {
+							"p0": true,
+							"cartType:shown/0": true,
+							"p1": true
+						},
+						"dimmed": true
+					},
+					"payment": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"shipment": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"return": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"close": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"auto-line-0": {
+						"parts": {
+							"auto-line-0-empty": true
+						},
+						"entering": true,
+						"dimmed": true
+					},
+					"getCartSig": {
+						"parts": {
+							"p0": true
+						},
+						"entering": true
+					},
+					"fetchCart": {
+						"parts": {
+							"p0": true
+						},
+						"entering": true
+					},
+					"parseCart": {
+						"parts": {
+							"p0": true
+						},
+						"entering": true
+					},
+					"getCartClose": {
+						"parts": {
+							"p0": true
+						},
+						"entering": true
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"bursts": []
+			},
+			{
+				"id": 6,
+				"lineOrder": [
+					"sig",
+					"cart",
+					"payment",
+					"shipment",
+					"return",
+					"close",
+					"auto-line-0",
+					"getCartSig",
+					"fetchCart",
+					"parseCart",
+					"getCartClose"
+				],
+				"state": {
+					"sig": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"cart": {
+						"parts": {
+							"p0": true,
+							"cartType:shown/0": true,
+							"p1": true
+						},
+						"dimmed": true
+					},
+					"payment": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"shipment": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"return": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"close": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"auto-line-0": {
+						"parts": {
+							"auto-line-0-empty": true
+						},
+						"dimmed": true
+					},
+					"getCartSig": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"fetchCart": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"parseCart": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"getCartClose": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"bursts": []
+			},
+			{
+				"id": 7,
+				"lineOrder": [
+					"sig",
+					"cart",
+					"payment",
+					"shipment",
+					"return",
+					"close",
+					"auto-line-0",
+					"getCartSig",
+					"fetchCart",
+					"parseCart",
+					"getCartClose",
+					"auto-line-0",
+					"fetchCartSig",
+					"fetchCartBody",
+					"fetchCartClose"
+				],
+				"state": {
+					"sig": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"cart": {
+						"parts": {
+							"p0": true,
+							"cartType:shown/0": true,
+							"p1": true
+						},
+						"dimmed": true
+					},
+					"payment": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"shipment": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"return": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"close": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"auto-line-0": {
+						"parts": {
+							"auto-line-0-empty": true
+						},
+						"dimmed": true
+					},
+					"getCartSig": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"fetchCart": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"parseCart": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"getCartClose": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"fetchCartSig": {
+						"parts": {
+							"p0": true
+						},
+						"entering": true
+					},
+					"fetchCartBody": {
+						"parts": {
+							"p0": true
+						},
+						"entering": true
+					},
+					"fetchCartClose": {
+						"parts": {
+							"p0": true
+						},
+						"entering": true
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"bursts": []
+			},
+			{
+				"id": 8,
+				"lineOrder": [
+					"sig",
+					"cart",
+					"payment",
+					"shipment",
+					"return",
+					"close",
+					"auto-line-0",
+					"docstring",
+					"getCartSig",
+					"fetchCart",
+					"parseCart",
+					"getCartClose"
+				],
+				"state": {
+					"sig": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"cart": {
+						"parts": {
+							"p0": true,
+							"cartType:shown/0": true,
+							"p1": true
+						}
+					},
+					"payment": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"shipment": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"return": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"close": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"auto-line-0": {
+						"parts": {
+							"auto-line-0-empty": true
+						}
+					},
+					"docstring": {
+						"parts": {
+							"p0": true
+						},
+						"entering": true
+					},
+					"getCartSig": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"fetchCart": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"parseCart": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"getCartClose": {
+						"parts": {
+							"p0": true
+						}
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"bursts": []
+			}
+		]
+	},
+	"steps": [
+		{
+			"name": "start",
+			"at": "start"
+		},
+		{
+			"name": "getCart",
+			"at": "getCart"
+		},
+		{
+			"name": "promisecart",
+			"at": "promisecart"
+		},
+		{
+			"name": "opaque",
+			"at": "opaque"
+		},
+		{
+			"name": "its",
+			"at": "its"
+		},
+		{
+			"name": "implementation",
+			"at": "implementation"
+		},
+		{
+			"name": "any",
+			"at": "any"
+		},
+		{
+			"name": "definitions",
+			"at": "definitions"
+		},
+		{
+			"name": "docstring",
+			"at": "docstring"
+		}
+	],
+	"stepTimes": [
+		0,
+		4.049999999999999,
+		6.549999999999999,
+		9.271,
+		13.41,
+		13.73,
+		18.29,
+		18.53,
+		24.41
+	],
+	"_debug": {
+		"timingsStatus": "matched",
+		"dslWordCount": 60
+	},
+	"groupId": "promise-problems",
+	"groupTitle": "Typed Errors — Broken Promises",
+	"isFirstInGroup": false,
+	"audioFile": "errors-are-invisible.9b38a09a.webm"
+}

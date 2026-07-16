@@ -1,0 +1,3770 @@
+{
+	"id": "promise-abort-ceremony",
+	"text": "If we wanted to fix this, we'd first need an AbortController. Then we could wrap our logic in try/catch, aborting and rethrowing upon failure. ask would need to take an abort signal and pass it through to the AI SDK function it calls. Luckily, this library supports abort signals, otherwise we'd be sort of doomed. Finally, we'd thread our signal through each call site.",
+	"code": "function ask(role: string, ticker: string) {\n  return generateText({\n    model: anthropic('claude-opus-4-5'),\n    system: `You are a ${role}. Give stock advice.`,\n    prompt: ticker\n  })\n}\n\nasync function getStockAdvice(ticker: string) {\n  const [tree, star, beetle] = await Promise.all([\n    ask(\"tree\", ticker),\n    ask(\"Zubenelgenubi\", ticker),\n    ask(\"dung beetle\", ticker)\n  ])\n  return { tree, star, beetle }\n}",
+	"contentHash": "lzipgo",
+	"wordTimings": [
+		{
+			"word": "If",
+			"start": 0.1,
+			"end": 0.28
+		},
+		{
+			"word": "we",
+			"start": 0.32000000000000006,
+			"end": 0.42100000000000004
+		},
+		{
+			"word": "wanted",
+			"start": 0.481,
+			"end": 0.6799999999999999
+		},
+		{
+			"word": "to",
+			"start": 0.72,
+			"end": 0.78
+		},
+		{
+			"word": "fix",
+			"start": 0.8799999999999999,
+			"end": 1.1199999999999999
+		},
+		{
+			"word": "this,",
+			"start": 1.2,
+			"end": 1.46
+		},
+		{
+			"word": "we'd",
+			"start": 1.58,
+			"end": 1.78
+		},
+		{
+			"word": "first",
+			"start": 1.84,
+			"end": 2.1010000000000004
+		},
+		{
+			"word": "need",
+			"start": 2.2,
+			"end": 2.4200000000000004
+		},
+		{
+			"word": "an",
+			"start": 2.52,
+			"end": 2.5810000000000004
+		},
+		{
+			"word": "AbortController.",
+			"start": 2.62,
+			"end": 3.5,
+			"style": {
+				"code": true
+			}
+		},
+		{
+			"word": "Then",
+			"start": 4.281,
+			"end": 4.4399999999999995
+		},
+		{
+			"word": "we",
+			"start": 4.5,
+			"end": 4.54
+		},
+		{
+			"word": "could",
+			"start": 4.6,
+			"end": 4.72
+		},
+		{
+			"word": "wrap",
+			"start": 4.761,
+			"end": 5.06
+		},
+		{
+			"word": "our",
+			"start": 5.14,
+			"end": 5.281
+		},
+		{
+			"word": "logic",
+			"start": 5.38,
+			"end": 5.739999999999999
+		},
+		{
+			"word": "in",
+			"start": 5.781,
+			"end": 5.88
+		},
+		{
+			"word": "try/catch,",
+			"start": 6.02,
+			"end": 6.76
+		},
+		{
+			"word": "aborting",
+			"start": 7.4399999999999995,
+			"end": 8.040000000000001
+		},
+		{
+			"word": "and",
+			"start": 8.100000000000001,
+			"end": 8.281
+		},
+		{
+			"word": "rethrowing",
+			"start": 8.38,
+			"end": 8.92
+		},
+		{
+			"word": "upon",
+			"start": 8.96,
+			"end": 9.3
+		},
+		{
+			"word": "failure.",
+			"start": 9.46,
+			"end": 9.821000000000002
+		},
+		{
+			"word": "ask",
+			"start": 11.14,
+			"end": 11.4,
+			"style": {
+				"code": true
+			},
+			"paragraphBreak": true
+		},
+		{
+			"word": "would",
+			"start": 11.440000000000001,
+			"end": 11.56
+		},
+		{
+			"word": "need",
+			"start": 11.600000000000001,
+			"end": 11.701
+		},
+		{
+			"word": "to",
+			"start": 11.72,
+			"end": 11.861
+		},
+		{
+			"word": "take",
+			"start": 11.9,
+			"end": 12.14
+		},
+		{
+			"word": "an",
+			"start": 12.241000000000001,
+			"end": 12.281
+		},
+		{
+			"word": "abort",
+			"start": 12.38,
+			"end": 12.600000000000001
+		},
+		{
+			"word": "signal",
+			"start": 12.72,
+			"end": 13.040000000000001
+		},
+		{
+			"word": "and",
+			"start": 13.100000000000001,
+			"end": 13.261000000000001
+		},
+		{
+			"word": "pass",
+			"start": 13.3,
+			"end": 13.5
+		},
+		{
+			"word": "it",
+			"start": 13.540000000000001,
+			"end": 13.701
+		},
+		{
+			"word": "through",
+			"start": 13.72,
+			"end": 14
+		},
+		{
+			"word": "to",
+			"start": 14.020000000000001,
+			"end": 14.121
+		},
+		{
+			"word": "the",
+			"start": 14.14,
+			"end": 14.180000000000001
+		},
+		{
+			"word": "AI",
+			"start": 14.38,
+			"end": 14.620000000000001
+		},
+		{
+			"word": "SDK",
+			"start": 14.781,
+			"end": 15.280000000000001
+		},
+		{
+			"word": "function",
+			"start": 15.34,
+			"end": 15.700000000000001
+		},
+		{
+			"word": "it",
+			"start": 15.76,
+			"end": 15.961000000000002
+		},
+		{
+			"word": "calls.",
+			"start": 16.041,
+			"end": 16.52
+		},
+		{
+			"word": "Luckily,",
+			"start": 17.76,
+			"end": 18.121000000000002
+		},
+		{
+			"word": "this",
+			"start": 18.220000000000002,
+			"end": 18.381
+		},
+		{
+			"word": "library",
+			"start": 18.461000000000002,
+			"end": 18.981
+		},
+		{
+			"word": "supports",
+			"start": 19.060000000000002,
+			"end": 19.52
+		},
+		{
+			"word": "abort",
+			"start": 19.580000000000002,
+			"end": 19.861
+		},
+		{
+			"word": "signals,",
+			"start": 19.92,
+			"end": 20.34
+		},
+		{
+			"word": "otherwise",
+			"start": 21.060000000000002,
+			"end": 21.42
+		},
+		{
+			"word": "we'd",
+			"start": 21.461000000000002,
+			"end": 21.621000000000002
+		},
+		{
+			"word": "be",
+			"start": 21.64,
+			"end": 21.82
+		},
+		{
+			"word": "sort",
+			"start": 21.881,
+			"end": 22.02
+		},
+		{
+			"word": "of",
+			"start": 22.041,
+			"end": 22.220000000000002
+		},
+		{
+			"word": "doomed.",
+			"start": 22.281000000000002,
+			"end": 22.720000000000002
+		},
+		{
+			"word": "Finally,",
+			"start": 23.92,
+			"end": 24.34,
+			"paragraphBreak": true
+		},
+		{
+			"word": "we'd",
+			"start": 24.44,
+			"end": 24.740000000000002
+		},
+		{
+			"word": "thread",
+			"start": 24.76,
+			"end": 25
+		},
+		{
+			"word": "our",
+			"start": 25.080000000000002,
+			"end": 25.201
+		},
+		{
+			"word": "signal",
+			"start": 25.34,
+			"end": 25.801000000000002
+		},
+		{
+			"word": "through",
+			"start": 25.82,
+			"end": 26.14
+		},
+		{
+			"word": "each",
+			"start": 26.240000000000002,
+			"end": 26.46
+		},
+		{
+			"word": "call",
+			"start": 26.740000000000002,
+			"end": 26.98
+		},
+		{
+			"word": "site.",
+			"start": 27.080000000000002,
+			"end": 27.361
+		}
+	],
+	"slideshowData": {
+		"template": {
+			"lines": {
+				"askFn": {
+					"parts": {
+						"p0": {
+							"tokens": [
+								{
+									"text": "function",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "ask",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": "(",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "role",
+									"type": "default",
+									"color": "#FFAB70"
+								},
+								{
+									"text": ":",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "string",
+									"type": "default",
+									"color": "#79B8FF"
+								},
+								{
+									"text": ", ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "ticker",
+									"type": "default",
+									"color": "#FFAB70"
+								},
+								{
+									"text": ":",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "string",
+									"type": "default",
+									"color": "#79B8FF"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						},
+						"signalParam:shown/0": {
+							"tokens": [
+								{
+									"text": ", ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "signal",
+									"type": "default",
+									"color": "#FFAB70"
+								},
+								{
+									"text": ":",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "AbortSignal",
+									"type": "default",
+									"color": "#B392F0"
+								}
+							],
+							"animateEntry": true,
+							"crossfade": false
+						},
+						"p1": {
+							"tokens": [
+								{
+									"text": ") {",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"p0",
+						"signalParam:shown/0",
+						"p1"
+					]
+				},
+				"askBody1": {
+					"parts": {
+						"p0": {
+							"tokens": [
+								{
+									"text": "  ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "return",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "generateText",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": "({",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"p0"
+					]
+				},
+				"askBody2": {
+					"parts": {
+						"p0": {
+							"tokens": [
+								{
+									"text": "    ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "model",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": ": ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "anthropic",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": "(",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "'claude-opus-4-5'",
+									"type": "default",
+									"color": "#9ECBFF"
+								},
+								{
+									"text": "),",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"p0"
+					]
+				},
+				"askBody3": {
+					"parts": {
+						"p0": {
+							"tokens": [
+								{
+									"text": "    ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "system",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": ": ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "`You are a ${",
+									"type": "default",
+									"color": "#9ECBFF"
+								},
+								{
+									"text": "role",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "}. Give stock advice.`",
+									"type": "default",
+									"color": "#9ECBFF"
+								},
+								{
+									"text": ",",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"p0"
+					]
+				},
+				"askBody4": {
+					"parts": {
+						"p0": {
+							"tokens": [
+								{
+									"text": "    ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "prompt",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": ": ticker",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						},
+						"promptComma:shown/0": {
+							"tokens": [
+								{
+									"text": ",",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": true,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"p0",
+						"promptComma:shown/0"
+					]
+				},
+				"askBody5": {
+					"parts": {
+						"p0": {
+							"tokens": [
+								{
+									"text": "  })",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"p0"
+					]
+				},
+				"askEnd": {
+					"parts": {
+						"p0": {
+							"tokens": [
+								{
+									"text": "}",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"p0"
+					]
+				},
+				"blank": {
+					"parts": {
+						"blank-empty": {
+							"tokens": [],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"blank-empty"
+					]
+				},
+				"getFn": {
+					"parts": {
+						"p0": {
+							"tokens": [
+								{
+									"text": "async",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "function",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "getStockAdvice",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": "(",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "ticker",
+									"type": "default",
+									"color": "#FFAB70"
+								},
+								{
+									"text": ":",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "string",
+									"type": "default",
+									"color": "#79B8FF"
+								},
+								{
+									"text": ") {",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"p0"
+					]
+				},
+				"destructure": {
+					"parts": {
+						"i1:*/0": {
+							"tokens": [
+								{
+									"text": "  ",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": true,
+							"versions": {
+								"  ": [
+									{
+										"text": "  ",
+										"type": "default",
+										"color": "#E1E4E8"
+									}
+								],
+								"    ": [
+									{
+										"text": "    ",
+										"type": "default",
+										"color": "#E1E4E8"
+									}
+								]
+							}
+						},
+						"p0": {
+							"tokens": [
+								{
+									"text": "const",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " [",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "tree",
+									"type": "default",
+									"color": "#79B8FF"
+								},
+								{
+									"text": ", ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "star",
+									"type": "default",
+									"color": "#79B8FF"
+								},
+								{
+									"text": ", ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "beetle",
+									"type": "default",
+									"color": "#79B8FF"
+								},
+								{
+									"text": "] ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "=",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "await",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "Promise",
+									"type": "default",
+									"color": "#79B8FF"
+								},
+								{
+									"text": ".",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "all",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": "([",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"i1:*/0",
+						"p0"
+					]
+				},
+				"treeCall": {
+					"parts": {
+						"i2:*/0": {
+							"tokens": [
+								{
+									"text": "    ",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": true,
+							"versions": {
+								"    ": [
+									{
+										"text": "    ",
+										"type": "default",
+										"color": "#E1E4E8"
+									}
+								],
+								"      ": [
+									{
+										"text": "      ",
+										"type": "default",
+										"color": "#E1E4E8"
+									}
+								]
+							}
+						},
+						"p0": {
+							"tokens": [
+								{
+									"text": "ask",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": "(",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "\"tree\"",
+									"type": "default",
+									"color": "#9ECBFF"
+								},
+								{
+									"text": ", ticker",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						},
+						"treeSignal:shown/0": {
+							"tokens": [
+								{
+									"text": ", controller.signal",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": true,
+							"crossfade": false
+						},
+						"p1": {
+							"tokens": [
+								{
+									"text": "),",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"i2:*/0",
+						"p0",
+						"treeSignal:shown/0",
+						"p1"
+					]
+				},
+				"starCall": {
+					"parts": {
+						"i3:*/0": {
+							"tokens": [
+								{
+									"text": "    ",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": true,
+							"versions": {
+								"    ": [
+									{
+										"text": "    ",
+										"type": "default",
+										"color": "#E1E4E8"
+									}
+								],
+								"      ": [
+									{
+										"text": "      ",
+										"type": "default",
+										"color": "#E1E4E8"
+									}
+								]
+							}
+						},
+						"p0": {
+							"tokens": [
+								{
+									"text": "ask",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": "(",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "\"Zubenelgenubi\"",
+									"type": "default",
+									"color": "#9ECBFF"
+								},
+								{
+									"text": ", ticker",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						},
+						"starSignal:shown/0": {
+							"tokens": [
+								{
+									"text": ", controller.signal",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": true,
+							"crossfade": false
+						},
+						"p1": {
+							"tokens": [
+								{
+									"text": "),",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"i3:*/0",
+						"p0",
+						"starSignal:shown/0",
+						"p1"
+					]
+				},
+				"beetleCall": {
+					"parts": {
+						"i4:*/0": {
+							"tokens": [
+								{
+									"text": "    ",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": true,
+							"versions": {
+								"    ": [
+									{
+										"text": "    ",
+										"type": "default",
+										"color": "#E1E4E8"
+									}
+								],
+								"      ": [
+									{
+										"text": "      ",
+										"type": "default",
+										"color": "#E1E4E8"
+									}
+								]
+							}
+						},
+						"p0": {
+							"tokens": [
+								{
+									"text": "ask",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": "(",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "\"dung beetle\"",
+									"type": "default",
+									"color": "#9ECBFF"
+								},
+								{
+									"text": ", ticker",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						},
+						"beetleSignal:shown/0": {
+							"tokens": [
+								{
+									"text": ", controller.signal",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": true,
+							"crossfade": false
+						},
+						"p1": {
+							"tokens": [
+								{
+									"text": ")",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"i4:*/0",
+						"p0",
+						"beetleSignal:shown/0",
+						"p1"
+					]
+				},
+				"closeAll": {
+					"parts": {
+						"i5:*/0": {
+							"tokens": [
+								{
+									"text": "  ",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": true,
+							"versions": {
+								"  ": [
+									{
+										"text": "  ",
+										"type": "default",
+										"color": "#E1E4E8"
+									}
+								],
+								"    ": [
+									{
+										"text": "    ",
+										"type": "default",
+										"color": "#E1E4E8"
+									}
+								]
+							}
+						},
+						"p0": {
+							"tokens": [
+								{
+									"text": "])",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"i5:*/0",
+						"p0"
+					]
+				},
+				"return": {
+					"parts": {
+						"i6:*/0": {
+							"tokens": [
+								{
+									"text": "  ",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": true,
+							"versions": {
+								"  ": [
+									{
+										"text": "  ",
+										"type": "default",
+										"color": "#E1E4E8"
+									}
+								],
+								"    ": [
+									{
+										"text": "    ",
+										"type": "default",
+										"color": "#E1E4E8"
+									}
+								]
+							}
+						},
+						"p0": {
+							"tokens": [
+								{
+									"text": "return",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " { tree, star, beetle }",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"i6:*/0",
+						"p0"
+					]
+				},
+				"getEnd": {
+					"parts": {
+						"p0": {
+							"tokens": [
+								{
+									"text": "}",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"p0"
+					]
+				},
+				"controller": {
+					"parts": {
+						"p0": {
+							"tokens": [
+								{
+									"text": "  ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "const",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "controller",
+									"type": "default",
+									"color": "#79B8FF"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "=",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "new",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "AbortController",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": "()",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"p0"
+					]
+				},
+				"blank2": {
+					"parts": {
+						"blank2-empty": {
+							"tokens": [],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"blank2-empty"
+					]
+				},
+				"try": {
+					"parts": {
+						"p0": {
+							"tokens": [
+								{
+									"text": "  ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "try",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " {",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"p0"
+					]
+				},
+				"tryClose": {
+					"parts": {
+						"p0": {
+							"tokens": [
+								{
+									"text": "  }",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"p0"
+					]
+				},
+				"catch": {
+					"parts": {
+						"p0": {
+							"tokens": [
+								{
+									"text": "  } ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "catch",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " (e) {",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"p0"
+					]
+				},
+				"catchEnd": {
+					"parts": {
+						"p0": {
+							"tokens": [
+								{
+									"text": "  }",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"p0"
+					]
+				},
+				"abort": {
+					"parts": {
+						"p0": {
+							"tokens": [
+								{
+									"text": "    controller.",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "abort",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": "()",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"p0"
+					]
+				},
+				"throw": {
+					"parts": {
+						"p0": {
+							"tokens": [
+								{
+									"text": "    ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "throw",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " e",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"p0"
+					]
+				},
+				"abortSignal": {
+					"parts": {
+						"p0": {
+							"tokens": [
+								{
+									"text": "    ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "abortSignal",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": ": signal",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"p0"
+					]
+				}
+			}
+		},
+		"frames": [
+			{
+				"id": 0,
+				"lineOrder": [
+					"askFn",
+					"askBody1",
+					"askBody2",
+					"askBody3",
+					"askBody4",
+					"askBody5",
+					"askEnd",
+					"blank",
+					"getFn",
+					"destructure",
+					"treeCall",
+					"starCall",
+					"beetleCall",
+					"closeAll",
+					"return",
+					"getEnd"
+				],
+				"state": {
+					"askFn": {
+						"parts": {
+							"p0": true,
+							"signalParam:shown/0": false,
+							"p1": true
+						},
+						"entering": true
+					},
+					"askBody1": {
+						"parts": {
+							"p0": true
+						},
+						"entering": true
+					},
+					"askBody2": {
+						"parts": {
+							"p0": true
+						},
+						"entering": true
+					},
+					"askBody3": {
+						"parts": {
+							"p0": true
+						},
+						"entering": true
+					},
+					"askBody4": {
+						"parts": {
+							"p0": true,
+							"promptComma:shown/0": false
+						},
+						"entering": true
+					},
+					"askBody5": {
+						"parts": {
+							"p0": true
+						},
+						"entering": true
+					},
+					"askEnd": {
+						"parts": {
+							"p0": true
+						},
+						"entering": true
+					},
+					"blank": {
+						"parts": {
+							"blank-empty": true
+						},
+						"entering": true
+					},
+					"getFn": {
+						"parts": {
+							"p0": true
+						},
+						"entering": true
+					},
+					"destructure": {
+						"parts": {
+							"i1:*/0": "  ",
+							"p0": true
+						},
+						"entering": true
+					},
+					"treeCall": {
+						"parts": {
+							"i2:*/0": "    ",
+							"p0": true,
+							"treeSignal:shown/0": false,
+							"p1": true
+						},
+						"entering": true
+					},
+					"starCall": {
+						"parts": {
+							"i3:*/0": "    ",
+							"p0": true,
+							"starSignal:shown/0": false,
+							"p1": true
+						},
+						"entering": true
+					},
+					"beetleCall": {
+						"parts": {
+							"i4:*/0": "    ",
+							"p0": true,
+							"beetleSignal:shown/0": false,
+							"p1": true
+						},
+						"entering": true
+					},
+					"closeAll": {
+						"parts": {
+							"i5:*/0": "  ",
+							"p0": true
+						},
+						"entering": true
+					},
+					"return": {
+						"parts": {
+							"i6:*/0": "  ",
+							"p0": true
+						},
+						"entering": true
+					},
+					"getEnd": {
+						"parts": {
+							"p0": true
+						},
+						"entering": true
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"bursts": []
+			},
+			{
+				"id": 1,
+				"lineOrder": [
+					"askFn",
+					"askBody1",
+					"askBody2",
+					"askBody3",
+					"askBody4",
+					"askBody5",
+					"askEnd",
+					"blank",
+					"getFn",
+					"controller",
+					"blank2",
+					"destructure",
+					"treeCall",
+					"starCall",
+					"beetleCall",
+					"closeAll",
+					"return",
+					"getEnd"
+				],
+				"state": {
+					"askFn": {
+						"parts": {
+							"p0": true,
+							"signalParam:shown/0": false,
+							"p1": true
+						}
+					},
+					"askBody1": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"askBody2": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"askBody3": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"askBody4": {
+						"parts": {
+							"p0": true,
+							"promptComma:shown/0": false
+						}
+					},
+					"askBody5": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"askEnd": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"blank": {
+						"parts": {
+							"blank-empty": true
+						}
+					},
+					"getFn": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"controller": {
+						"parts": {
+							"p0": true
+						},
+						"entering": true
+					},
+					"blank2": {
+						"parts": {
+							"blank2-empty": true
+						},
+						"entering": true
+					},
+					"destructure": {
+						"parts": {
+							"i1:*/0": "  ",
+							"p0": true
+						}
+					},
+					"treeCall": {
+						"parts": {
+							"i2:*/0": "    ",
+							"p0": true,
+							"treeSignal:shown/0": false,
+							"p1": true
+						}
+					},
+					"starCall": {
+						"parts": {
+							"i3:*/0": "    ",
+							"p0": true,
+							"starSignal:shown/0": false,
+							"p1": true
+						}
+					},
+					"beetleCall": {
+						"parts": {
+							"i4:*/0": "    ",
+							"p0": true,
+							"beetleSignal:shown/0": false,
+							"p1": true
+						}
+					},
+					"closeAll": {
+						"parts": {
+							"i5:*/0": "  ",
+							"p0": true
+						}
+					},
+					"return": {
+						"parts": {
+							"i6:*/0": "  ",
+							"p0": true
+						}
+					},
+					"getEnd": {
+						"parts": {
+							"p0": true
+						}
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"cursor": {
+					"lineIndex": 9,
+					"charOffset": 21,
+					"textLength": 21,
+					"type": "hand"
+				},
+				"bursts": []
+			},
+			{
+				"id": 2,
+				"lineOrder": [
+					"askFn",
+					"askBody1",
+					"askBody2",
+					"askBody3",
+					"askBody4",
+					"askBody5",
+					"askEnd",
+					"blank",
+					"getFn",
+					"controller",
+					"blank2",
+					"try",
+					"destructure",
+					"treeCall",
+					"starCall",
+					"beetleCall",
+					"closeAll",
+					"return",
+					"tryClose",
+					"getEnd"
+				],
+				"state": {
+					"askFn": {
+						"parts": {
+							"p0": true,
+							"signalParam:shown/0": false,
+							"p1": true
+						}
+					},
+					"askBody1": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"askBody2": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"askBody3": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"askBody4": {
+						"parts": {
+							"p0": true,
+							"promptComma:shown/0": false
+						}
+					},
+					"askBody5": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"askEnd": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"blank": {
+						"parts": {
+							"blank-empty": true
+						}
+					},
+					"getFn": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"controller": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"blank2": {
+						"parts": {
+							"blank2-empty": true
+						}
+					},
+					"try": {
+						"parts": {
+							"p0": true
+						},
+						"entering": true
+					},
+					"destructure": {
+						"parts": {
+							"i1:*/0": "    ",
+							"p0": true
+						}
+					},
+					"treeCall": {
+						"parts": {
+							"i2:*/0": "      ",
+							"p0": true,
+							"treeSignal:shown/0": false,
+							"p1": true
+						}
+					},
+					"starCall": {
+						"parts": {
+							"i3:*/0": "      ",
+							"p0": true,
+							"starSignal:shown/0": false,
+							"p1": true
+						}
+					},
+					"beetleCall": {
+						"parts": {
+							"i4:*/0": "      ",
+							"p0": true,
+							"beetleSignal:shown/0": false,
+							"p1": true
+						}
+					},
+					"closeAll": {
+						"parts": {
+							"i5:*/0": "    ",
+							"p0": true
+						}
+					},
+					"return": {
+						"parts": {
+							"i6:*/0": "    ",
+							"p0": true
+						}
+					},
+					"tryClose": {
+						"parts": {
+							"p0": true
+						},
+						"entering": true
+					},
+					"getEnd": {
+						"parts": {
+							"p0": true
+						}
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"cursor": {
+					"lineIndex": 11,
+					"charOffset": 2,
+					"textLength": 3,
+					"type": "hand"
+				},
+				"bursts": []
+			},
+			{
+				"id": 3,
+				"lineOrder": [
+					"askFn",
+					"askBody1",
+					"askBody2",
+					"askBody3",
+					"askBody4",
+					"askBody5",
+					"askEnd",
+					"blank",
+					"getFn",
+					"controller",
+					"blank2",
+					"try",
+					"destructure",
+					"treeCall",
+					"starCall",
+					"beetleCall",
+					"closeAll",
+					"return",
+					"catch",
+					"catchEnd",
+					"getEnd"
+				],
+				"state": {
+					"askFn": {
+						"parts": {
+							"p0": true,
+							"signalParam:shown/0": false,
+							"p1": true
+						}
+					},
+					"askBody1": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"askBody2": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"askBody3": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"askBody4": {
+						"parts": {
+							"p0": true,
+							"promptComma:shown/0": false
+						}
+					},
+					"askBody5": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"askEnd": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"blank": {
+						"parts": {
+							"blank-empty": true
+						}
+					},
+					"getFn": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"controller": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"blank2": {
+						"parts": {
+							"blank2-empty": true
+						}
+					},
+					"try": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"destructure": {
+						"parts": {
+							"i1:*/0": "    ",
+							"p0": true
+						}
+					},
+					"treeCall": {
+						"parts": {
+							"i2:*/0": "      ",
+							"p0": true,
+							"treeSignal:shown/0": false,
+							"p1": true
+						}
+					},
+					"starCall": {
+						"parts": {
+							"i3:*/0": "      ",
+							"p0": true,
+							"starSignal:shown/0": false,
+							"p1": true
+						}
+					},
+					"beetleCall": {
+						"parts": {
+							"i4:*/0": "      ",
+							"p0": true,
+							"beetleSignal:shown/0": false,
+							"p1": true
+						}
+					},
+					"closeAll": {
+						"parts": {
+							"i5:*/0": "    ",
+							"p0": true
+						}
+					},
+					"return": {
+						"parts": {
+							"i6:*/0": "    ",
+							"p0": true
+						}
+					},
+					"catch": {
+						"parts": {
+							"p0": true
+						},
+						"entering": true
+					},
+					"catchEnd": {
+						"parts": {
+							"p0": true
+						},
+						"entering": true
+					},
+					"getEnd": {
+						"parts": {
+							"p0": true
+						}
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"cursor": {
+					"lineIndex": 18,
+					"charOffset": 4,
+					"textLength": 5,
+					"type": "hand"
+				},
+				"bursts": []
+			},
+			{
+				"id": 4,
+				"lineOrder": [
+					"askFn",
+					"askBody1",
+					"askBody2",
+					"askBody3",
+					"askBody4",
+					"askBody5",
+					"askEnd",
+					"blank",
+					"getFn",
+					"controller",
+					"blank2",
+					"try",
+					"destructure",
+					"treeCall",
+					"starCall",
+					"beetleCall",
+					"closeAll",
+					"return",
+					"catch",
+					"abort",
+					"catchEnd",
+					"getEnd"
+				],
+				"state": {
+					"askFn": {
+						"parts": {
+							"p0": true,
+							"signalParam:shown/0": false,
+							"p1": true
+						}
+					},
+					"askBody1": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"askBody2": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"askBody3": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"askBody4": {
+						"parts": {
+							"p0": true,
+							"promptComma:shown/0": false
+						}
+					},
+					"askBody5": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"askEnd": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"blank": {
+						"parts": {
+							"blank-empty": true
+						}
+					},
+					"getFn": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"controller": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"blank2": {
+						"parts": {
+							"blank2-empty": true
+						}
+					},
+					"try": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"destructure": {
+						"parts": {
+							"i1:*/0": "    ",
+							"p0": true
+						}
+					},
+					"treeCall": {
+						"parts": {
+							"i2:*/0": "      ",
+							"p0": true,
+							"treeSignal:shown/0": false,
+							"p1": true
+						}
+					},
+					"starCall": {
+						"parts": {
+							"i3:*/0": "      ",
+							"p0": true,
+							"starSignal:shown/0": false,
+							"p1": true
+						}
+					},
+					"beetleCall": {
+						"parts": {
+							"i4:*/0": "      ",
+							"p0": true,
+							"beetleSignal:shown/0": false,
+							"p1": true
+						}
+					},
+					"closeAll": {
+						"parts": {
+							"i5:*/0": "    ",
+							"p0": true
+						}
+					},
+					"return": {
+						"parts": {
+							"i6:*/0": "    ",
+							"p0": true
+						}
+					},
+					"catch": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"abort": {
+						"parts": {
+							"p0": true
+						},
+						"entering": true
+					},
+					"catchEnd": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"getEnd": {
+						"parts": {
+							"p0": true
+						}
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"cursor": {
+					"lineIndex": 19,
+					"charOffset": 4,
+					"textLength": 18,
+					"type": "hand"
+				},
+				"bursts": []
+			},
+			{
+				"id": 5,
+				"lineOrder": [
+					"askFn",
+					"askBody1",
+					"askBody2",
+					"askBody3",
+					"askBody4",
+					"askBody5",
+					"askEnd",
+					"blank",
+					"getFn",
+					"controller",
+					"blank2",
+					"try",
+					"destructure",
+					"treeCall",
+					"starCall",
+					"beetleCall",
+					"closeAll",
+					"return",
+					"catch",
+					"abort",
+					"throw",
+					"catchEnd",
+					"getEnd"
+				],
+				"state": {
+					"askFn": {
+						"parts": {
+							"p0": true,
+							"signalParam:shown/0": false,
+							"p1": true
+						}
+					},
+					"askBody1": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"askBody2": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"askBody3": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"askBody4": {
+						"parts": {
+							"p0": true,
+							"promptComma:shown/0": false
+						}
+					},
+					"askBody5": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"askEnd": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"blank": {
+						"parts": {
+							"blank-empty": true
+						}
+					},
+					"getFn": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"controller": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"blank2": {
+						"parts": {
+							"blank2-empty": true
+						}
+					},
+					"try": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"destructure": {
+						"parts": {
+							"i1:*/0": "    ",
+							"p0": true
+						}
+					},
+					"treeCall": {
+						"parts": {
+							"i2:*/0": "      ",
+							"p0": true,
+							"treeSignal:shown/0": false,
+							"p1": true
+						}
+					},
+					"starCall": {
+						"parts": {
+							"i3:*/0": "      ",
+							"p0": true,
+							"starSignal:shown/0": false,
+							"p1": true
+						}
+					},
+					"beetleCall": {
+						"parts": {
+							"i4:*/0": "      ",
+							"p0": true,
+							"beetleSignal:shown/0": false,
+							"p1": true
+						}
+					},
+					"closeAll": {
+						"parts": {
+							"i5:*/0": "    ",
+							"p0": true
+						}
+					},
+					"return": {
+						"parts": {
+							"i6:*/0": "    ",
+							"p0": true
+						}
+					},
+					"catch": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"abort": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"throw": {
+						"parts": {
+							"p0": true
+						},
+						"entering": true
+					},
+					"catchEnd": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"getEnd": {
+						"parts": {
+							"p0": true
+						}
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"cursor": {
+					"lineIndex": 20,
+					"charOffset": 4,
+					"textLength": 7,
+					"type": "hand"
+				},
+				"bursts": []
+			},
+			{
+				"id": 6,
+				"lineOrder": [
+					"askFn",
+					"askBody1",
+					"askBody2",
+					"askBody3",
+					"askBody4",
+					"askBody5",
+					"askEnd",
+					"blank",
+					"getFn",
+					"controller",
+					"blank2",
+					"try",
+					"destructure",
+					"treeCall",
+					"starCall",
+					"beetleCall",
+					"closeAll",
+					"return",
+					"catch",
+					"abort",
+					"throw",
+					"catchEnd",
+					"getEnd"
+				],
+				"state": {
+					"askFn": {
+						"parts": {
+							"p0": true,
+							"signalParam:shown/0": false,
+							"p1": true
+						}
+					},
+					"askBody1": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"askBody2": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"askBody3": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"askBody4": {
+						"parts": {
+							"p0": true,
+							"promptComma:shown/0": false
+						}
+					},
+					"askBody5": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"askEnd": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"blank": {
+						"parts": {
+							"blank-empty": true
+						},
+						"dimmed": true
+					},
+					"getFn": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"controller": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"blank2": {
+						"parts": {
+							"blank2-empty": true
+						},
+						"dimmed": true
+					},
+					"try": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"destructure": {
+						"parts": {
+							"i1:*/0": "    ",
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"treeCall": {
+						"parts": {
+							"i2:*/0": "      ",
+							"p0": true,
+							"treeSignal:shown/0": false,
+							"p1": true
+						},
+						"dimmed": true
+					},
+					"starCall": {
+						"parts": {
+							"i3:*/0": "      ",
+							"p0": true,
+							"starSignal:shown/0": false,
+							"p1": true
+						},
+						"dimmed": true
+					},
+					"beetleCall": {
+						"parts": {
+							"i4:*/0": "      ",
+							"p0": true,
+							"beetleSignal:shown/0": false,
+							"p1": true
+						},
+						"dimmed": true
+					},
+					"closeAll": {
+						"parts": {
+							"i5:*/0": "    ",
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"return": {
+						"parts": {
+							"i6:*/0": "    ",
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"catch": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"abort": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"throw": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"catchEnd": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"getEnd": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"cursor": {
+					"lineIndex": 0,
+					"charOffset": 0,
+					"textLength": 12,
+					"type": "hand"
+				},
+				"bursts": []
+			},
+			{
+				"id": 7,
+				"lineOrder": [
+					"askFn",
+					"askBody1",
+					"askBody2",
+					"askBody3",
+					"askBody4",
+					"askBody5",
+					"askEnd",
+					"blank",
+					"getFn",
+					"controller",
+					"blank2",
+					"try",
+					"destructure",
+					"treeCall",
+					"starCall",
+					"beetleCall",
+					"closeAll",
+					"return",
+					"catch",
+					"abort",
+					"throw",
+					"catchEnd",
+					"getEnd"
+				],
+				"state": {
+					"askFn": {
+						"parts": {
+							"p0": true,
+							"signalParam:shown/0": true,
+							"p1": true
+						}
+					},
+					"askBody1": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"askBody2": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"askBody3": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"askBody4": {
+						"parts": {
+							"p0": true,
+							"promptComma:shown/0": false
+						}
+					},
+					"askBody5": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"askEnd": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"blank": {
+						"parts": {
+							"blank-empty": true
+						}
+					},
+					"getFn": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"controller": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"blank2": {
+						"parts": {
+							"blank2-empty": true
+						}
+					},
+					"try": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"destructure": {
+						"parts": {
+							"i1:*/0": "    ",
+							"p0": true
+						}
+					},
+					"treeCall": {
+						"parts": {
+							"i2:*/0": "      ",
+							"p0": true,
+							"treeSignal:shown/0": false,
+							"p1": true
+						}
+					},
+					"starCall": {
+						"parts": {
+							"i3:*/0": "      ",
+							"p0": true,
+							"starSignal:shown/0": false,
+							"p1": true
+						}
+					},
+					"beetleCall": {
+						"parts": {
+							"i4:*/0": "      ",
+							"p0": true,
+							"beetleSignal:shown/0": false,
+							"p1": true
+						}
+					},
+					"closeAll": {
+						"parts": {
+							"i5:*/0": "    ",
+							"p0": true
+						}
+					},
+					"return": {
+						"parts": {
+							"i6:*/0": "    ",
+							"p0": true
+						}
+					},
+					"catch": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"abort": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"throw": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"catchEnd": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"getEnd": {
+						"parts": {
+							"p0": true
+						}
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"cursor": {
+					"lineIndex": 0,
+					"charOffset": 43,
+					"textLength": 19,
+					"type": "hand"
+				},
+				"bursts": []
+			},
+			{
+				"id": 8,
+				"lineOrder": [
+					"askFn",
+					"askBody1",
+					"askBody2",
+					"askBody3",
+					"askBody4",
+					"abortSignal",
+					"askBody5",
+					"askEnd",
+					"blank",
+					"getFn",
+					"controller",
+					"blank2",
+					"try",
+					"destructure",
+					"treeCall",
+					"starCall",
+					"beetleCall",
+					"closeAll",
+					"return",
+					"catch",
+					"abort",
+					"throw",
+					"catchEnd",
+					"getEnd"
+				],
+				"state": {
+					"askFn": {
+						"parts": {
+							"p0": true,
+							"signalParam:shown/0": true,
+							"p1": true
+						}
+					},
+					"askBody1": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"askBody2": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"askBody3": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"askBody4": {
+						"parts": {
+							"p0": true,
+							"promptComma:shown/0": true
+						}
+					},
+					"abortSignal": {
+						"parts": {
+							"p0": true
+						},
+						"entering": true
+					},
+					"askBody5": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"askEnd": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"blank": {
+						"parts": {
+							"blank-empty": true
+						}
+					},
+					"getFn": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"controller": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"blank2": {
+						"parts": {
+							"blank2-empty": true
+						}
+					},
+					"try": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"destructure": {
+						"parts": {
+							"i1:*/0": "    ",
+							"p0": true
+						}
+					},
+					"treeCall": {
+						"parts": {
+							"i2:*/0": "      ",
+							"p0": true,
+							"treeSignal:shown/0": false,
+							"p1": true
+						}
+					},
+					"starCall": {
+						"parts": {
+							"i3:*/0": "      ",
+							"p0": true,
+							"starSignal:shown/0": false,
+							"p1": true
+						}
+					},
+					"beetleCall": {
+						"parts": {
+							"i4:*/0": "      ",
+							"p0": true,
+							"beetleSignal:shown/0": false,
+							"p1": true
+						}
+					},
+					"closeAll": {
+						"parts": {
+							"i5:*/0": "    ",
+							"p0": true
+						}
+					},
+					"return": {
+						"parts": {
+							"i6:*/0": "    ",
+							"p0": true
+						}
+					},
+					"catch": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"abort": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"throw": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"catchEnd": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"getEnd": {
+						"parts": {
+							"p0": true
+						}
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"cursor": {
+					"lineIndex": 5,
+					"charOffset": 4,
+					"textLength": 19,
+					"type": "hand"
+				},
+				"bursts": []
+			},
+			{
+				"id": 9,
+				"lineOrder": [
+					"askFn",
+					"askBody1",
+					"askBody2",
+					"askBody3",
+					"askBody4",
+					"abortSignal",
+					"askBody5",
+					"askEnd",
+					"blank",
+					"getFn",
+					"controller",
+					"blank2",
+					"try",
+					"destructure",
+					"treeCall",
+					"starCall",
+					"beetleCall",
+					"closeAll",
+					"return",
+					"catch",
+					"abort",
+					"throw",
+					"catchEnd",
+					"getEnd"
+				],
+				"state": {
+					"askFn": {
+						"parts": {
+							"p0": true,
+							"signalParam:shown/0": true,
+							"p1": true
+						}
+					},
+					"askBody1": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"askBody2": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"askBody3": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"askBody4": {
+						"parts": {
+							"p0": true,
+							"promptComma:shown/0": true
+						}
+					},
+					"abortSignal": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"askBody5": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"askEnd": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"blank": {
+						"parts": {
+							"blank-empty": true
+						}
+					},
+					"getFn": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"controller": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"blank2": {
+						"parts": {
+							"blank2-empty": true
+						}
+					},
+					"try": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"destructure": {
+						"parts": {
+							"i1:*/0": "    ",
+							"p0": true
+						}
+					},
+					"treeCall": {
+						"parts": {
+							"i2:*/0": "      ",
+							"p0": true,
+							"treeSignal:shown/0": false,
+							"p1": true
+						}
+					},
+					"starCall": {
+						"parts": {
+							"i3:*/0": "      ",
+							"p0": true,
+							"starSignal:shown/0": false,
+							"p1": true
+						}
+					},
+					"beetleCall": {
+						"parts": {
+							"i4:*/0": "      ",
+							"p0": true,
+							"beetleSignal:shown/0": false,
+							"p1": true
+						}
+					},
+					"closeAll": {
+						"parts": {
+							"i5:*/0": "    ",
+							"p0": true
+						}
+					},
+					"return": {
+						"parts": {
+							"i6:*/0": "    ",
+							"p0": true
+						}
+					},
+					"catch": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"abort": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"throw": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"catchEnd": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"getEnd": {
+						"parts": {
+							"p0": true
+						}
+					}
+				},
+				"marks": [],
+				"glows": [
+					{
+						"lineIndex": 5,
+						"start": 4,
+						"end": 23,
+						"color": "blue"
+					}
+				],
+				"squiggles": [],
+				"brightRanges": [],
+				"cursor": {
+					"lineIndex": 5,
+					"charOffset": 4,
+					"textLength": 19,
+					"type": "hand"
+				},
+				"bursts": []
+			},
+			{
+				"id": 10,
+				"lineOrder": [
+					"askFn",
+					"askBody1",
+					"askBody2",
+					"askBody3",
+					"askBody4",
+					"abortSignal",
+					"askBody5",
+					"askEnd",
+					"blank",
+					"getFn",
+					"controller",
+					"blank2",
+					"try",
+					"destructure",
+					"treeCall",
+					"starCall",
+					"beetleCall",
+					"closeAll",
+					"return",
+					"catch",
+					"abort",
+					"throw",
+					"catchEnd",
+					"getEnd"
+				],
+				"state": {
+					"askFn": {
+						"parts": {
+							"p0": true,
+							"signalParam:shown/0": true,
+							"p1": true
+						}
+					},
+					"askBody1": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"askBody2": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"askBody3": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"askBody4": {
+						"parts": {
+							"p0": true,
+							"promptComma:shown/0": true
+						}
+					},
+					"abortSignal": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"askBody5": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"askEnd": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"blank": {
+						"parts": {
+							"blank-empty": true
+						}
+					},
+					"getFn": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"controller": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"blank2": {
+						"parts": {
+							"blank2-empty": true
+						}
+					},
+					"try": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"destructure": {
+						"parts": {
+							"i1:*/0": "    ",
+							"p0": true
+						}
+					},
+					"treeCall": {
+						"parts": {
+							"i2:*/0": "      ",
+							"p0": true,
+							"treeSignal:shown/0": true,
+							"p1": true
+						}
+					},
+					"starCall": {
+						"parts": {
+							"i3:*/0": "      ",
+							"p0": true,
+							"starSignal:shown/0": false,
+							"p1": true
+						}
+					},
+					"beetleCall": {
+						"parts": {
+							"i4:*/0": "      ",
+							"p0": true,
+							"beetleSignal:shown/0": false,
+							"p1": true
+						}
+					},
+					"closeAll": {
+						"parts": {
+							"i5:*/0": "    ",
+							"p0": true
+						}
+					},
+					"return": {
+						"parts": {
+							"i6:*/0": "    ",
+							"p0": true
+						}
+					},
+					"catch": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"abort": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"throw": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"catchEnd": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"getEnd": {
+						"parts": {
+							"p0": true
+						}
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"cursor": {
+					"lineIndex": 14,
+					"charOffset": 26,
+					"textLength": 17,
+					"type": "hand"
+				},
+				"bursts": []
+			},
+			{
+				"id": 11,
+				"lineOrder": [
+					"askFn",
+					"askBody1",
+					"askBody2",
+					"askBody3",
+					"askBody4",
+					"abortSignal",
+					"askBody5",
+					"askEnd",
+					"blank",
+					"getFn",
+					"controller",
+					"blank2",
+					"try",
+					"destructure",
+					"treeCall",
+					"starCall",
+					"beetleCall",
+					"closeAll",
+					"return",
+					"catch",
+					"abort",
+					"throw",
+					"catchEnd",
+					"getEnd"
+				],
+				"state": {
+					"askFn": {
+						"parts": {
+							"p0": true,
+							"signalParam:shown/0": true,
+							"p1": true
+						}
+					},
+					"askBody1": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"askBody2": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"askBody3": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"askBody4": {
+						"parts": {
+							"p0": true,
+							"promptComma:shown/0": true
+						}
+					},
+					"abortSignal": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"askBody5": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"askEnd": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"blank": {
+						"parts": {
+							"blank-empty": true
+						}
+					},
+					"getFn": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"controller": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"blank2": {
+						"parts": {
+							"blank2-empty": true
+						}
+					},
+					"try": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"destructure": {
+						"parts": {
+							"i1:*/0": "    ",
+							"p0": true
+						}
+					},
+					"treeCall": {
+						"parts": {
+							"i2:*/0": "      ",
+							"p0": true,
+							"treeSignal:shown/0": true,
+							"p1": true
+						}
+					},
+					"starCall": {
+						"parts": {
+							"i3:*/0": "      ",
+							"p0": true,
+							"starSignal:shown/0": true,
+							"p1": true
+						}
+					},
+					"beetleCall": {
+						"parts": {
+							"i4:*/0": "      ",
+							"p0": true,
+							"beetleSignal:shown/0": false,
+							"p1": true
+						}
+					},
+					"closeAll": {
+						"parts": {
+							"i5:*/0": "    ",
+							"p0": true
+						}
+					},
+					"return": {
+						"parts": {
+							"i6:*/0": "    ",
+							"p0": true
+						}
+					},
+					"catch": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"abort": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"throw": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"catchEnd": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"getEnd": {
+						"parts": {
+							"p0": true
+						}
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"cursor": {
+					"lineIndex": 15,
+					"charOffset": 35,
+					"textLength": 17,
+					"type": "hand"
+				},
+				"bursts": []
+			},
+			{
+				"id": 12,
+				"lineOrder": [
+					"askFn",
+					"askBody1",
+					"askBody2",
+					"askBody3",
+					"askBody4",
+					"abortSignal",
+					"askBody5",
+					"askEnd",
+					"blank",
+					"getFn",
+					"controller",
+					"blank2",
+					"try",
+					"destructure",
+					"treeCall",
+					"starCall",
+					"beetleCall",
+					"closeAll",
+					"return",
+					"catch",
+					"abort",
+					"throw",
+					"catchEnd",
+					"getEnd"
+				],
+				"state": {
+					"askFn": {
+						"parts": {
+							"p0": true,
+							"signalParam:shown/0": true,
+							"p1": true
+						}
+					},
+					"askBody1": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"askBody2": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"askBody3": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"askBody4": {
+						"parts": {
+							"p0": true,
+							"promptComma:shown/0": true
+						}
+					},
+					"abortSignal": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"askBody5": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"askEnd": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"blank": {
+						"parts": {
+							"blank-empty": true
+						}
+					},
+					"getFn": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"controller": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"blank2": {
+						"parts": {
+							"blank2-empty": true
+						}
+					},
+					"try": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"destructure": {
+						"parts": {
+							"i1:*/0": "    ",
+							"p0": true
+						}
+					},
+					"treeCall": {
+						"parts": {
+							"i2:*/0": "      ",
+							"p0": true,
+							"treeSignal:shown/0": true,
+							"p1": true
+						}
+					},
+					"starCall": {
+						"parts": {
+							"i3:*/0": "      ",
+							"p0": true,
+							"starSignal:shown/0": true,
+							"p1": true
+						}
+					},
+					"beetleCall": {
+						"parts": {
+							"i4:*/0": "      ",
+							"p0": true,
+							"beetleSignal:shown/0": true,
+							"p1": true
+						}
+					},
+					"closeAll": {
+						"parts": {
+							"i5:*/0": "    ",
+							"p0": true
+						}
+					},
+					"return": {
+						"parts": {
+							"i6:*/0": "    ",
+							"p0": true
+						}
+					},
+					"catch": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"abort": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"throw": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"catchEnd": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"getEnd": {
+						"parts": {
+							"p0": true
+						}
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"cursor": {
+					"lineIndex": 16,
+					"charOffset": 33,
+					"textLength": 17,
+					"type": "hand"
+				},
+				"bursts": []
+			}
+		]
+	},
+	"steps": [
+		{
+			"name": "start",
+			"at": "start"
+		},
+		{
+			"name": "AbortController",
+			"at": "AbortController"
+		},
+		{
+			"name": "wrap",
+			"at": "wrap"
+		},
+		{
+			"name": "try/catch",
+			"at": "try/catch"
+		},
+		{
+			"name": "aborting",
+			"at": "aborting"
+		},
+		{
+			"name": "rethrowing",
+			"at": "rethrowing"
+		},
+		{
+			"name": "ask",
+			"at": "ask",
+			"after": "rethrowing"
+		},
+		{
+			"name": "abort",
+			"at": "abort",
+			"after": "ask"
+		},
+		{
+			"name": "pass",
+			"at": "pass"
+		},
+		{
+			"name": "supports",
+			"at": "supports"
+		},
+		{
+			"name": "thread",
+			"at": "thread"
+		},
+		{
+			"name": "signal",
+			"at": "signal",
+			"after": "thread"
+		},
+		{
+			"name": "each",
+			"at": "each"
+		}
+	],
+	"stepTimes": [
+		0,
+		2.47,
+		4.611,
+		5.869999999999999,
+		7.289999999999999,
+		8.23,
+		10.99,
+		12.23,
+		13.15,
+		18.910000000000004,
+		24.610000000000003,
+		25.19,
+		26.090000000000003
+	],
+	"_debug": {
+		"timingsStatus": "matched",
+		"dslWordCount": 64
+	},
+	"groupId": "structured-concurrency",
+	"groupTitle": "Structured Concurrency",
+	"isFirstInGroup": false,
+	"audioFile": "promise-abort-ceremony.4bfbb248.webm"
+}

@@ -1,0 +1,2048 @@
+{
+	"id": "effect-fail",
+	"text": "What good is success without the failure of others? Effect.fail creates an effect that will always fail with the given value. Here, we'll give it the string \"too chonky,\" an adjective which entirely bypassed my grandmother's lexicon. Now, boom is an Effect that can never succeed, and always fails with our awful string. If we run it with Effect.runSync, it throws. If we add a delay and run it with Effect.runPromise, we, after two glorious seconds, see our promise rejected.",
+	"code": "import { Effect } from \"effect\"\n\nconst boom = ...",
+	"contentHash": "-o80ziu",
+	"wordTimings": [
+		{
+			"word": "What",
+			"start": 0.09999999999999998,
+			"end": 0.32099999999999995
+		},
+		{
+			"word": "good",
+			"start": 0.36,
+			"end": 0.5999999999999999
+		},
+		{
+			"word": "is",
+			"start": 0.76,
+			"end": 0.8799999999999999
+		},
+		{
+			"word": "success",
+			"start": 0.96,
+			"end": 1.7000000000000002
+		},
+		{
+			"word": "without",
+			"start": 1.88,
+			"end": 2.14
+		},
+		{
+			"word": "the",
+			"start": 2.2,
+			"end": 2.26
+		},
+		{
+			"word": "failure",
+			"start": 2.38,
+			"end": 2.88
+		},
+		{
+			"word": "of",
+			"start": 2.94,
+			"end": 3.041
+		},
+		{
+			"word": "others?",
+			"start": 3.14,
+			"end": 3.561
+		},
+		{
+			"word": "Effect.fail",
+			"start": 4.880000000000001,
+			"end": 5.880000000000001,
+			"style": {
+				"code": true
+			}
+		},
+		{
+			"word": "creates",
+			"start": 6.041,
+			"end": 6.300000000000001
+		},
+		{
+			"word": "an",
+			"start": 6.34,
+			"end": 6.4
+		},
+		{
+			"word": "effect",
+			"start": 6.459999999999999,
+			"end": 6.82
+		},
+		{
+			"word": "that",
+			"start": 6.92,
+			"end": 7.061
+		},
+		{
+			"word": "will",
+			"start": 7.1,
+			"end": 7.32
+		},
+		{
+			"word": "always",
+			"start": 7.5809999999999995,
+			"end": 8.1
+		},
+		{
+			"word": "fail",
+			"start": 8.381,
+			"end": 8.66
+		},
+		{
+			"word": "with",
+			"start": 8.841,
+			"end": 9.001
+		},
+		{
+			"word": "the",
+			"start": 9.041,
+			"end": 9.1
+		},
+		{
+			"word": "given",
+			"start": 9.16,
+			"end": 9.36
+		},
+		{
+			"word": "value.",
+			"start": 9.461,
+			"end": 9.799999999999999
+		},
+		{
+			"word": "Here,",
+			"start": 11.1,
+			"end": 11.299999999999999
+		},
+		{
+			"word": "we'll",
+			"start": 11.36,
+			"end": 11.479999999999999
+		},
+		{
+			"word": "give",
+			"start": 11.541,
+			"end": 11.62
+		},
+		{
+			"word": "it",
+			"start": 11.639999999999999,
+			"end": 11.719999999999999
+		},
+		{
+			"word": "the",
+			"start": 11.76,
+			"end": 11.841
+		},
+		{
+			"word": "string",
+			"start": 11.921,
+			"end": 12.299999999999999
+		},
+		{
+			"word": "\"too",
+			"start": 12.799999999999999,
+			"end": 13.26
+		},
+		{
+			"word": "chonky,\"",
+			"start": 13.4,
+			"end": 13.799999999999999
+		},
+		{
+			"word": "an",
+			"start": 14.7,
+			"end": 14.799999999999999
+		},
+		{
+			"word": "adjective",
+			"start": 14.9,
+			"end": 15.52
+		},
+		{
+			"word": "which",
+			"start": 15.8,
+			"end": 16.001
+		},
+		{
+			"word": "entirely",
+			"start": 16.06,
+			"end": 16.56
+		},
+		{
+			"word": "bypassed",
+			"start": 16.66,
+			"end": 17.261
+		},
+		{
+			"word": "my",
+			"start": 17.32,
+			"end": 17.52
+		},
+		{
+			"word": "grandmother's",
+			"start": 17.581,
+			"end": 18.181
+		},
+		{
+			"word": "lexicon.",
+			"start": 18.261,
+			"end": 18.78
+		},
+		{
+			"word": "Now,",
+			"start": 20.28,
+			"end": 20.599999999999998,
+			"paragraphBreak": true
+		},
+		{
+			"word": "boom",
+			"start": 21.32,
+			"end": 21.8,
+			"style": {
+				"code": true
+			}
+		},
+		{
+			"word": "is",
+			"start": 21.86,
+			"end": 22.04
+		},
+		{
+			"word": "an",
+			"start": 22.081,
+			"end": 22.12
+		},
+		{
+			"word": "Effect",
+			"start": 22.28,
+			"end": 22.601
+		},
+		{
+			"word": "that",
+			"start": 22.72,
+			"end": 22.9
+		},
+		{
+			"word": "can",
+			"start": 22.98,
+			"end": 23.18
+		},
+		{
+			"word": "never",
+			"start": 23.22,
+			"end": 23.48
+		},
+		{
+			"word": "succeed,",
+			"start": 23.54,
+			"end": 24.099999999999998
+		},
+		{
+			"word": "and",
+			"start": 24.88,
+			"end": 25.06
+		},
+		{
+			"word": "always",
+			"start": 25.261,
+			"end": 25.82
+		},
+		{
+			"word": "fails",
+			"start": 25.94,
+			"end": 26.261
+		},
+		{
+			"word": "with",
+			"start": 26.32,
+			"end": 26.421
+		},
+		{
+			"word": "our",
+			"start": 26.48,
+			"end": 26.64
+		},
+		{
+			"word": "awful",
+			"start": 26.7,
+			"end": 27.02
+		},
+		{
+			"word": "string.",
+			"start": 27.081,
+			"end": 27.46
+		},
+		{
+			"word": "If",
+			"start": 28.64,
+			"end": 28.78,
+			"paragraphBreak": true
+		},
+		{
+			"word": "we",
+			"start": 28.82,
+			"end": 28.88
+		},
+		{
+			"word": "run",
+			"start": 29.001,
+			"end": 29.12
+		},
+		{
+			"word": "it",
+			"start": 29.16,
+			"end": 29.419999999999998
+		},
+		{
+			"word": "with",
+			"start": 29.48,
+			"end": 29.599999999999998
+		},
+		{
+			"word": "Effect.runSync,",
+			"start": 29.68,
+			"end": 31.18,
+			"style": {
+				"code": true
+			}
+		},
+		{
+			"word": "it",
+			"start": 31.761,
+			"end": 31.900000000000002
+		},
+		{
+			"word": "throws.",
+			"start": 31.961000000000002,
+			"end": 32.480000000000004
+		},
+		{
+			"word": "If",
+			"start": 33.601000000000006,
+			"end": 33.781000000000006
+		},
+		{
+			"word": "we",
+			"start": 33.84,
+			"end": 34.040000000000006
+		},
+		{
+			"word": "add",
+			"start": 34.101000000000006,
+			"end": 34.261
+		},
+		{
+			"word": "a",
+			"start": 34.34,
+			"end": 34.36000000000001
+		},
+		{
+			"word": "delay",
+			"start": 34.480000000000004,
+			"end": 34.900000000000006
+		},
+		{
+			"word": "and",
+			"start": 34.980000000000004,
+			"end": 35.101000000000006
+		},
+		{
+			"word": "run",
+			"start": 35.14,
+			"end": 35.24
+		},
+		{
+			"word": "it",
+			"start": 35.281000000000006,
+			"end": 35.36000000000001
+		},
+		{
+			"word": "with",
+			"start": 35.400000000000006,
+			"end": 35.52
+		},
+		{
+			"word": "Effect.runPromise,",
+			"start": 35.581,
+			"end": 37,
+			"style": {
+				"code": true
+			}
+		},
+		{
+			"word": "we,",
+			"start": 37.601000000000006,
+			"end": 37.96
+		},
+		{
+			"word": "after",
+			"start": 38.06,
+			"end": 38.52
+		},
+		{
+			"word": "two",
+			"start": 38.581,
+			"end": 38.88
+		},
+		{
+			"word": "glorious",
+			"start": 38.941,
+			"end": 39.400000000000006
+		},
+		{
+			"word": "seconds,",
+			"start": 39.46,
+			"end": 39.96
+		},
+		{
+			"word": "see",
+			"start": 40.900000000000006,
+			"end": 41.081
+		},
+		{
+			"word": "our",
+			"start": 41.14,
+			"end": 41.300000000000004
+		},
+		{
+			"word": "promise",
+			"start": 41.38,
+			"end": 41.88
+		},
+		{
+			"word": "rejected.",
+			"start": 42.101000000000006,
+			"end": 42.78
+		}
+	],
+	"componentFlow": {
+		"name": "EffectFailDemo",
+		"steps": [
+			{
+				"name": "start",
+				"at": "start"
+			},
+			{
+				"name": "Effect.runSync",
+				"at": "Effect.runSync"
+			},
+			{
+				"name": "throws",
+				"at": "throws"
+			},
+			{
+				"name": "delay",
+				"at": "delay"
+			},
+			{
+				"name": "after",
+				"at": "after"
+			},
+			{
+				"name": "rejected",
+				"at": "rejected"
+			}
+		],
+		"snapshots": [
+			{
+				"show": false,
+				"mode": "sync",
+				"syncState": "idle",
+				"asyncState": "idle"
+			},
+			{
+				"show": true,
+				"mode": "sync",
+				"syncState": "idle",
+				"asyncState": "idle"
+			},
+			{
+				"show": true,
+				"mode": "sync",
+				"syncState": "failed",
+				"asyncState": "idle"
+			},
+			{
+				"show": true,
+				"mode": "async",
+				"syncState": "failed",
+				"asyncState": "idle"
+			},
+			{
+				"show": true,
+				"mode": "async",
+				"syncState": "failed",
+				"asyncState": "running"
+			},
+			{
+				"show": true,
+				"mode": "async",
+				"syncState": "failed",
+				"asyncState": "failed"
+			}
+		]
+	},
+	"slideshowData": {
+		"template": {
+			"lines": {
+				"import": {
+					"parts": {
+						"p0": {
+							"tokens": [
+								{
+									"text": "import",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " { Effect } ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "from",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "\"effect\"",
+									"type": "default",
+									"color": "#9ECBFF"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"p0"
+					]
+				},
+				"blank": {
+					"parts": {
+						"blank-empty": {
+							"tokens": [],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"blank-empty"
+					]
+				},
+				"error": {
+					"parts": {
+						"p0": {
+							"tokens": [
+								{
+									"text": "const",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						},
+						"varName:*/0": {
+							"tokens": [
+								{
+									"text": "boom",
+									"type": "default",
+									"color": "#79B8FF"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": true,
+							"versions": {
+								"boom": [
+									{
+										"text": "boom",
+										"type": "default",
+										"color": "#79B8FF"
+									}
+								],
+								"slowBoom": [
+									{
+										"text": "slowBoom",
+										"type": "default",
+										"color": "#79B8FF"
+									}
+								]
+							}
+						},
+						"typeAnnotation:shown/0": {
+							"tokens": [
+								{
+									"text": ":",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "Effect",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": ".",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "Effect",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": "<",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": true,
+							"crossfade": false
+						},
+						"typeAnnotation:shown/successType:*/0": {
+							"tokens": [
+								{
+									"text": "?",
+									"type": "default",
+									"color": "#F97583"
+								}
+							],
+							"animateEntry": true,
+							"crossfade": true,
+							"versions": {
+								"?": [
+									{
+										"text": "?",
+										"type": "default",
+										"color": "#F97583"
+									}
+								],
+								"never": [
+									{
+										"text": "never",
+										"type": "default",
+										"color": "#79B8FF"
+									}
+								]
+							}
+						},
+						"typeAnnotation:shown/errorType:shown/0": {
+							"tokens": [
+								{
+									"text": ", ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "string",
+									"type": "default",
+									"color": "#79B8FF"
+								}
+							],
+							"animateEntry": true,
+							"crossfade": false
+						},
+						"typeAnnotation:shown/1": {
+							"tokens": [
+								{
+									"text": ">",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": true,
+							"crossfade": false
+						},
+						"p1": {
+							"tokens": [
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "=",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						},
+						"effectFail:shown/0": {
+							"tokens": [
+								{
+									"text": "Effect.",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "fail",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": "(",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": true,
+							"crossfade": false
+						},
+						"value:*/0": {
+							"tokens": [
+								{
+									"text": "...",
+									"type": "default",
+									"color": "#F97583"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": true,
+							"versions": {
+								"...": [
+									{
+										"text": "...",
+										"type": "default",
+										"color": "#F97583"
+									}
+								],
+								"\"too chonky\"": [
+									{
+										"text": "\"too chonky\"",
+										"type": "default",
+										"color": "#9ECBFF"
+									}
+								]
+							}
+						},
+						"closeParen:shown/0": {
+							"tokens": [
+								{
+									"text": ")",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": true,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"p0",
+						"varName:*/0",
+						"typeAnnotation:shown/0",
+						"typeAnnotation:shown/successType:*/0",
+						"typeAnnotation:shown/errorType:shown/0",
+						"typeAnnotation:shown/1",
+						"p1",
+						"effectFail:shown/0",
+						"value:*/0",
+						"closeParen:shown/0"
+					]
+				},
+				"runBlank": {
+					"parts": {
+						"runBlank-empty": {
+							"tokens": [],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"runBlank-empty"
+					]
+				},
+				"run": {
+					"parts": {
+						"await:shown/0": {
+							"tokens": [
+								{
+									"text": "await",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": true,
+							"crossfade": false
+						},
+						"p0": {
+							"tokens": [
+								{
+									"text": "Effect.",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "run",
+									"type": "default",
+									"color": "#B392F0"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						},
+						"runnerSuffix:*/0": {
+							"tokens": [
+								{
+									"text": "Sync",
+									"type": "default",
+									"color": "#B392F0"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": true,
+							"versions": {
+								"Sync": [
+									{
+										"text": "Sync",
+										"type": "default",
+										"color": "#B392F0"
+									}
+								],
+								"Promise": [
+									{
+										"text": "Promise",
+										"type": "default",
+										"color": "#B392F0"
+									}
+								]
+							}
+						},
+						"p1": {
+							"tokens": [
+								{
+									"text": "(",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						},
+						"refName:*/0": {
+							"tokens": [
+								{
+									"text": "boom",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": true,
+							"versions": {
+								"boom": [
+									{
+										"text": "boom",
+										"type": "default",
+										"color": "#E1E4E8"
+									}
+								],
+								"slowBoom": [
+									{
+										"text": "slowBoom",
+										"type": "default",
+										"color": "#E1E4E8"
+									}
+								]
+							}
+						},
+						"p2": {
+							"tokens": [
+								{
+									"text": ")",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"await:shown/0",
+						"p0",
+						"runnerSuffix:*/0",
+						"p1",
+						"refName:*/0",
+						"p2"
+					]
+				},
+				"delay": {
+					"parts": {
+						"p0": {
+							"tokens": [
+								{
+									"text": "  .",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "pipe",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": "(Effect.",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "delay",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": "(",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "\"2 seconds\"",
+									"type": "default",
+									"color": "#9ECBFF"
+								},
+								{
+									"text": "))",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"p0"
+					]
+				}
+			}
+		},
+		"frames": [
+			{
+				"id": 0,
+				"lineOrder": [
+					"import",
+					"blank",
+					"error"
+				],
+				"state": {
+					"import": {
+						"parts": {
+							"p0": true
+						},
+						"entering": true
+					},
+					"blank": {
+						"parts": {
+							"blank-empty": true
+						},
+						"entering": true
+					},
+					"error": {
+						"parts": {
+							"p0": true,
+							"varName:*/0": "boom",
+							"typeAnnotation:shown/0": false,
+							"typeAnnotation:shown/successType:*/0": false,
+							"typeAnnotation:shown/errorType:shown/0": false,
+							"typeAnnotation:shown/1": false,
+							"p1": true,
+							"effectFail:shown/0": false,
+							"value:*/0": "...",
+							"closeParen:shown/0": false
+						},
+						"entering": true
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"status": {
+					"ranges": {},
+					"allRanges": {
+						"run": [
+							{
+								"start": 0,
+								"end": 20
+							},
+							{
+								"start": 6,
+								"end": 33
+							},
+							{
+								"start": 6,
+								"end": 33
+							}
+						]
+					}
+				},
+				"bursts": []
+			},
+			{
+				"id": 1,
+				"lineOrder": [
+					"import",
+					"blank",
+					"error"
+				],
+				"state": {
+					"import": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"blank": {
+						"parts": {
+							"blank-empty": true
+						}
+					},
+					"error": {
+						"parts": {
+							"p0": true,
+							"varName:*/0": "boom",
+							"typeAnnotation:shown/0": false,
+							"typeAnnotation:shown/successType:*/0": false,
+							"typeAnnotation:shown/errorType:shown/0": false,
+							"typeAnnotation:shown/1": false,
+							"p1": true,
+							"effectFail:shown/0": true,
+							"value:*/0": "...",
+							"closeParen:shown/0": true
+						}
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [
+					{
+						"lineIndex": 2,
+						"start": 20,
+						"end": 24
+					}
+				],
+				"status": {
+					"ranges": {},
+					"allRanges": {
+						"run": [
+							{
+								"start": 0,
+								"end": 20
+							},
+							{
+								"start": 6,
+								"end": 33
+							},
+							{
+								"start": 6,
+								"end": 33
+							}
+						]
+					}
+				},
+				"cursor": {
+					"lineIndex": 2,
+					"charOffset": 20,
+					"textLength": 4,
+					"type": "hand"
+				},
+				"bursts": []
+			},
+			{
+				"id": 2,
+				"lineOrder": [
+					"import",
+					"blank",
+					"error"
+				],
+				"state": {
+					"import": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"blank": {
+						"parts": {
+							"blank-empty": true
+						}
+					},
+					"error": {
+						"parts": {
+							"p0": true,
+							"varName:*/0": "boom",
+							"typeAnnotation:shown/0": false,
+							"typeAnnotation:shown/successType:*/0": false,
+							"typeAnnotation:shown/errorType:shown/0": false,
+							"typeAnnotation:shown/1": false,
+							"p1": true,
+							"effectFail:shown/0": true,
+							"value:*/0": "\"too chonky\"",
+							"closeParen:shown/0": true
+						}
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"status": {
+					"ranges": {},
+					"allRanges": {
+						"run": [
+							{
+								"start": 0,
+								"end": 20
+							},
+							{
+								"start": 6,
+								"end": 33
+							},
+							{
+								"start": 6,
+								"end": 33
+							}
+						]
+					}
+				},
+				"cursor": {
+					"lineIndex": 2,
+					"charOffset": 26,
+					"textLength": 10,
+					"type": "hand"
+				},
+				"bursts": []
+			},
+			{
+				"id": 3,
+				"lineOrder": [
+					"import",
+					"blank",
+					"error"
+				],
+				"state": {
+					"import": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"blank": {
+						"parts": {
+							"blank-empty": true
+						}
+					},
+					"error": {
+						"parts": {
+							"p0": true,
+							"varName:*/0": "boom",
+							"typeAnnotation:shown/0": true,
+							"typeAnnotation:shown/successType:*/0": "?",
+							"typeAnnotation:shown/errorType:shown/0": false,
+							"typeAnnotation:shown/1": true,
+							"p1": true,
+							"effectFail:shown/0": true,
+							"value:*/0": "\"too chonky\"",
+							"closeParen:shown/0": true
+						}
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"status": {
+					"ranges": {},
+					"allRanges": {
+						"run": [
+							{
+								"start": 0,
+								"end": 20
+							},
+							{
+								"start": 6,
+								"end": 33
+							},
+							{
+								"start": 6,
+								"end": 33
+							}
+						]
+					}
+				},
+				"cursor": {
+					"lineIndex": 2,
+					"charOffset": 6,
+					"textLength": 4,
+					"type": "hand"
+				},
+				"bursts": []
+			},
+			{
+				"id": 4,
+				"lineOrder": [
+					"import",
+					"blank",
+					"error"
+				],
+				"state": {
+					"import": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"blank": {
+						"parts": {
+							"blank-empty": true
+						}
+					},
+					"error": {
+						"parts": {
+							"p0": true,
+							"varName:*/0": "boom",
+							"typeAnnotation:shown/0": true,
+							"typeAnnotation:shown/successType:*/0": "?",
+							"typeAnnotation:shown/errorType:shown/0": false,
+							"typeAnnotation:shown/1": true,
+							"p1": true,
+							"effectFail:shown/0": true,
+							"value:*/0": "\"too chonky\"",
+							"closeParen:shown/0": true
+						}
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"status": {
+					"ranges": {},
+					"allRanges": {
+						"run": [
+							{
+								"start": 0,
+								"end": 20
+							},
+							{
+								"start": 6,
+								"end": 33
+							},
+							{
+								"start": 6,
+								"end": 33
+							}
+						]
+					}
+				},
+				"cursor": {
+					"lineIndex": 2,
+					"charOffset": 12,
+					"textLength": 16,
+					"type": "hand"
+				},
+				"bursts": []
+			},
+			{
+				"id": 5,
+				"lineOrder": [
+					"import",
+					"blank",
+					"error"
+				],
+				"state": {
+					"import": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"blank": {
+						"parts": {
+							"blank-empty": true
+						}
+					},
+					"error": {
+						"parts": {
+							"p0": true,
+							"varName:*/0": "boom",
+							"typeAnnotation:shown/0": true,
+							"typeAnnotation:shown/successType:*/0": "never",
+							"typeAnnotation:shown/errorType:shown/0": false,
+							"typeAnnotation:shown/1": true,
+							"p1": true,
+							"effectFail:shown/0": true,
+							"value:*/0": "\"too chonky\"",
+							"closeParen:shown/0": true
+						}
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"status": {
+					"ranges": {},
+					"allRanges": {
+						"run": [
+							{
+								"start": 0,
+								"end": 20
+							},
+							{
+								"start": 6,
+								"end": 33
+							},
+							{
+								"start": 6,
+								"end": 33
+							}
+						]
+					}
+				},
+				"cursor": {
+					"lineIndex": 2,
+					"charOffset": 26,
+					"textLength": 5,
+					"type": "hand"
+				},
+				"bursts": []
+			},
+			{
+				"id": 6,
+				"lineOrder": [
+					"import",
+					"blank",
+					"error"
+				],
+				"state": {
+					"import": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"blank": {
+						"parts": {
+							"blank-empty": true
+						}
+					},
+					"error": {
+						"parts": {
+							"p0": true,
+							"varName:*/0": "boom",
+							"typeAnnotation:shown/0": true,
+							"typeAnnotation:shown/successType:*/0": "never",
+							"typeAnnotation:shown/errorType:shown/0": true,
+							"typeAnnotation:shown/1": true,
+							"p1": true,
+							"effectFail:shown/0": true,
+							"value:*/0": "\"too chonky\"",
+							"closeParen:shown/0": true
+						}
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"status": {
+					"ranges": {},
+					"allRanges": {
+						"run": [
+							{
+								"start": 0,
+								"end": 20
+							},
+							{
+								"start": 6,
+								"end": 33
+							},
+							{
+								"start": 6,
+								"end": 33
+							}
+						]
+					}
+				},
+				"cursor": {
+					"lineIndex": 2,
+					"charOffset": 33,
+					"textLength": 6,
+					"type": "hand"
+				},
+				"bursts": []
+			},
+			{
+				"id": 7,
+				"lineOrder": [
+					"import",
+					"blank",
+					"error",
+					"runBlank",
+					"run"
+				],
+				"state": {
+					"import": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"blank": {
+						"parts": {
+							"blank-empty": true
+						}
+					},
+					"error": {
+						"parts": {
+							"p0": true,
+							"varName:*/0": "boom",
+							"typeAnnotation:shown/0": true,
+							"typeAnnotation:shown/successType:*/0": "never",
+							"typeAnnotation:shown/errorType:shown/0": true,
+							"typeAnnotation:shown/1": true,
+							"p1": true,
+							"effectFail:shown/0": true,
+							"value:*/0": "\"too chonky\"",
+							"closeParen:shown/0": true
+						}
+					},
+					"runBlank": {
+						"parts": {
+							"runBlank-empty": true
+						},
+						"entering": true
+					},
+					"run": {
+						"parts": {
+							"await:shown/0": false,
+							"p0": true,
+							"runnerSuffix:*/0": "Sync",
+							"p1": true,
+							"refName:*/0": "boom",
+							"p2": true
+						},
+						"entering": true
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [
+					{
+						"lineIndex": 4,
+						"start": 7,
+						"end": 14
+					}
+				],
+				"status": {
+					"ranges": {},
+					"allRanges": {
+						"run": [
+							{
+								"start": 0,
+								"end": 20
+							},
+							{
+								"start": 6,
+								"end": 33
+							},
+							{
+								"start": 6,
+								"end": 33
+							}
+						]
+					}
+				},
+				"cursor": {
+					"lineIndex": 4,
+					"charOffset": 7,
+					"textLength": 7,
+					"type": "hand"
+				},
+				"bursts": []
+			},
+			{
+				"id": 8,
+				"lineOrder": [
+					"import",
+					"blank",
+					"error",
+					"runBlank",
+					"run"
+				],
+				"state": {
+					"import": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"blank": {
+						"parts": {
+							"blank-empty": true
+						}
+					},
+					"error": {
+						"parts": {
+							"p0": true,
+							"varName:*/0": "boom",
+							"typeAnnotation:shown/0": true,
+							"typeAnnotation:shown/successType:*/0": "never",
+							"typeAnnotation:shown/errorType:shown/0": true,
+							"typeAnnotation:shown/1": true,
+							"p1": true,
+							"effectFail:shown/0": true,
+							"value:*/0": "\"too chonky\"",
+							"closeParen:shown/0": true
+						}
+					},
+					"runBlank": {
+						"parts": {
+							"runBlank-empty": true
+						}
+					},
+					"run": {
+						"parts": {
+							"await:shown/0": false,
+							"p0": true,
+							"runnerSuffix:*/0": "Sync",
+							"p1": true,
+							"refName:*/0": "boom",
+							"p2": true
+						}
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"status": {
+					"ranges": {
+						"4": [
+							{
+								"start": 0,
+								"end": 20,
+								"status": "error"
+							}
+						]
+					},
+					"allRanges": {
+						"run": [
+							{
+								"start": 0,
+								"end": 20
+							},
+							{
+								"start": 6,
+								"end": 33
+							},
+							{
+								"start": 6,
+								"end": 33
+							}
+						]
+					}
+				},
+				"cursor": {
+					"lineIndex": 4,
+					"charOffset": 7,
+					"textLength": 7,
+					"type": "hand"
+				},
+				"bursts": []
+			},
+			{
+				"id": 9,
+				"lineOrder": [
+					"import",
+					"blank",
+					"error",
+					"delay",
+					"runBlank",
+					"run"
+				],
+				"state": {
+					"import": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"blank": {
+						"parts": {
+							"blank-empty": true
+						}
+					},
+					"error": {
+						"parts": {
+							"p0": true,
+							"varName:*/0": "slowBoom",
+							"typeAnnotation:shown/0": true,
+							"typeAnnotation:shown/successType:*/0": "never",
+							"typeAnnotation:shown/errorType:shown/0": true,
+							"typeAnnotation:shown/1": true,
+							"p1": true,
+							"effectFail:shown/0": true,
+							"value:*/0": "\"too chonky\"",
+							"closeParen:shown/0": true
+						}
+					},
+					"delay": {
+						"parts": {
+							"p0": true
+						},
+						"entering": true
+					},
+					"runBlank": {
+						"parts": {
+							"runBlank-empty": true
+						}
+					},
+					"run": {
+						"parts": {
+							"await:shown/0": false,
+							"p0": true,
+							"runnerSuffix:*/0": "Sync",
+							"p1": true,
+							"refName:*/0": "slowBoom",
+							"p2": true
+						}
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [
+					{
+						"lineIndex": 3,
+						"start": 15,
+						"end": 20
+					}
+				],
+				"status": {
+					"ranges": {},
+					"allRanges": {
+						"run": [
+							{
+								"start": 0,
+								"end": 20
+							},
+							{
+								"start": 6,
+								"end": 33
+							},
+							{
+								"start": 6,
+								"end": 33
+							}
+						]
+					}
+				},
+				"cursor": {
+					"lineIndex": 3,
+					"charOffset": 15,
+					"textLength": 5,
+					"type": "hand"
+				},
+				"bursts": []
+			},
+			{
+				"id": 10,
+				"lineOrder": [
+					"import",
+					"blank",
+					"error",
+					"delay",
+					"runBlank",
+					"run"
+				],
+				"state": {
+					"import": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"blank": {
+						"parts": {
+							"blank-empty": true
+						}
+					},
+					"error": {
+						"parts": {
+							"p0": true,
+							"varName:*/0": "slowBoom",
+							"typeAnnotation:shown/0": true,
+							"typeAnnotation:shown/successType:*/0": "never",
+							"typeAnnotation:shown/errorType:shown/0": true,
+							"typeAnnotation:shown/1": true,
+							"p1": true,
+							"effectFail:shown/0": true,
+							"value:*/0": "\"too chonky\"",
+							"closeParen:shown/0": true
+						}
+					},
+					"delay": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"runBlank": {
+						"parts": {
+							"runBlank-empty": true
+						}
+					},
+					"run": {
+						"parts": {
+							"await:shown/0": true,
+							"p0": true,
+							"runnerSuffix:*/0": "Promise",
+							"p1": true,
+							"refName:*/0": "slowBoom",
+							"p2": true
+						}
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [
+					{
+						"lineIndex": 5,
+						"start": 13,
+						"end": 23
+					}
+				],
+				"status": {
+					"ranges": {},
+					"allRanges": {
+						"run": [
+							{
+								"start": 0,
+								"end": 20
+							},
+							{
+								"start": 6,
+								"end": 33
+							},
+							{
+								"start": 6,
+								"end": 33
+							}
+						]
+					}
+				},
+				"cursor": {
+					"lineIndex": 5,
+					"charOffset": 13,
+					"textLength": 10,
+					"type": "hand"
+				},
+				"bursts": []
+			},
+			{
+				"id": 11,
+				"lineOrder": [
+					"import",
+					"blank",
+					"error",
+					"delay",
+					"runBlank",
+					"run"
+				],
+				"state": {
+					"import": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"blank": {
+						"parts": {
+							"blank-empty": true
+						}
+					},
+					"error": {
+						"parts": {
+							"p0": true,
+							"varName:*/0": "slowBoom",
+							"typeAnnotation:shown/0": true,
+							"typeAnnotation:shown/successType:*/0": "never",
+							"typeAnnotation:shown/errorType:shown/0": true,
+							"typeAnnotation:shown/1": true,
+							"p1": true,
+							"effectFail:shown/0": true,
+							"value:*/0": "\"too chonky\"",
+							"closeParen:shown/0": true
+						}
+					},
+					"delay": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"runBlank": {
+						"parts": {
+							"runBlank-empty": true
+						}
+					},
+					"run": {
+						"parts": {
+							"await:shown/0": true,
+							"p0": true,
+							"runnerSuffix:*/0": "Promise",
+							"p1": true,
+							"refName:*/0": "slowBoom",
+							"p2": true
+						}
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"status": {
+					"ranges": {
+						"5": [
+							{
+								"start": 6,
+								"end": 33,
+								"status": "running"
+							}
+						]
+					},
+					"allRanges": {
+						"run": [
+							{
+								"start": 0,
+								"end": 20
+							},
+							{
+								"start": 6,
+								"end": 33
+							},
+							{
+								"start": 6,
+								"end": 33
+							}
+						]
+					}
+				},
+				"cursor": {
+					"lineIndex": 5,
+					"charOffset": 13,
+					"textLength": 10,
+					"type": "hand"
+				},
+				"bursts": []
+			},
+			{
+				"id": 12,
+				"lineOrder": [
+					"import",
+					"blank",
+					"error",
+					"delay",
+					"runBlank",
+					"run"
+				],
+				"state": {
+					"import": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"blank": {
+						"parts": {
+							"blank-empty": true
+						}
+					},
+					"error": {
+						"parts": {
+							"p0": true,
+							"varName:*/0": "slowBoom",
+							"typeAnnotation:shown/0": true,
+							"typeAnnotation:shown/successType:*/0": "never",
+							"typeAnnotation:shown/errorType:shown/0": true,
+							"typeAnnotation:shown/1": true,
+							"p1": true,
+							"effectFail:shown/0": true,
+							"value:*/0": "\"too chonky\"",
+							"closeParen:shown/0": true
+						}
+					},
+					"delay": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"runBlank": {
+						"parts": {
+							"runBlank-empty": true
+						}
+					},
+					"run": {
+						"parts": {
+							"await:shown/0": true,
+							"p0": true,
+							"runnerSuffix:*/0": "Promise",
+							"p1": true,
+							"refName:*/0": "slowBoom",
+							"p2": true
+						}
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"status": {
+					"ranges": {
+						"5": [
+							{
+								"start": 6,
+								"end": 33,
+								"status": "error"
+							}
+						]
+					},
+					"allRanges": {
+						"run": [
+							{
+								"start": 0,
+								"end": 20
+							},
+							{
+								"start": 6,
+								"end": 33
+							},
+							{
+								"start": 6,
+								"end": 33
+							}
+						]
+					}
+				},
+				"cursor": {
+					"lineIndex": 5,
+					"charOffset": 13,
+					"textLength": 10,
+					"type": "hand"
+				},
+				"bursts": []
+			}
+		]
+	},
+	"steps": [
+		{
+			"name": "start",
+			"at": "start"
+		},
+		{
+			"name": "Effect.fail",
+			"at": "Effect.fail"
+		},
+		{
+			"name": "chonky",
+			"at": "chonky"
+		},
+		{
+			"name": "boom",
+			"at": "boom"
+		},
+		{
+			"name": "Effect",
+			"at": "Effect",
+			"after": "boom"
+		},
+		{
+			"name": "never",
+			"at": "never"
+		},
+		{
+			"name": "fails",
+			"at": "fails"
+		},
+		{
+			"name": "Effect.runSync",
+			"at": "Effect.runSync"
+		},
+		{
+			"name": "throws",
+			"at": "throws"
+		},
+		{
+			"name": "delay",
+			"at": "delay"
+		},
+		{
+			"name": "Effect.runPromise",
+			"at": "Effect.runPromise"
+		},
+		{
+			"name": "after",
+			"at": "after"
+		},
+		{
+			"name": "rejected",
+			"at": "rejected"
+		}
+	],
+	"stepTimes": [
+		0,
+		4.73,
+		13.25,
+		21.17,
+		22.130000000000003,
+		23.07,
+		25.790000000000003,
+		29.53,
+		31.811000000000003,
+		34.330000000000005,
+		35.431000000000004,
+		37.910000000000004,
+		41.95100000000001
+	],
+	"componentStepTimes": [
+		0,
+		29.53,
+		31.811000000000003,
+		34.330000000000005,
+		37.910000000000004,
+		41.95100000000001
+	],
+	"_debug": {
+		"timingsStatus": "matched",
+		"dslWordCount": 80
+	},
+	"groupId": "constructing",
+	"groupTitle": "Constructing Effects",
+	"isFirstInGroup": false,
+	"audioFile": "effect-fail.5e13373c.webm"
+}

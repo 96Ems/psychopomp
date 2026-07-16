@@ -1,0 +1,1522 @@
+{
+	"id": "promise-hides-errors",
+	"text": "To see how Effect helps, we'll write the same function twice, beginning with the Promise version. slowDie rolls a die, waits for no reason, and then returns the result. We will then outlaw 4, and pronounce its rolling to be punishable by death. If that accursed numeral has appeared, we will throw a VeryBadRoll error. Nevertheless, it continues to type-check. TypeScript doesn't care. Our feeble human mind is solely responsible for tracking this.",
+	"code": "async function slowDie(): Promise<number> {\n  const n = Math.ceil(Math.random() * 6)\n  await sleep(1000)\n  return n\n}",
+	"contentHash": "fnxgs0",
+	"wordTimings": [
+		{
+			"word": "To",
+			"start": 0.10000000000000003,
+			"end": 0.4
+		},
+		{
+			"word": "see",
+			"start": 0.45999999999999996,
+			"end": 0.6
+		},
+		{
+			"word": "how",
+			"start": 0.641,
+			"end": 0.7410000000000001
+		},
+		{
+			"word": "Effect",
+			"start": 0.8,
+			"end": 1.16
+		},
+		{
+			"word": "helps,",
+			"start": 1.2610000000000001,
+			"end": 1.7400000000000002
+		},
+		{
+			"word": "we'll",
+			"start": 1.9,
+			"end": 2.06
+		},
+		{
+			"word": "write",
+			"start": 2.141,
+			"end": 2.3
+		},
+		{
+			"word": "the",
+			"start": 2.361,
+			"end": 2.42
+		},
+		{
+			"word": "same",
+			"start": 2.52,
+			"end": 2.78
+		},
+		{
+			"word": "function",
+			"start": 2.96,
+			"end": 3.34
+		},
+		{
+			"word": "twice,",
+			"start": 3.48,
+			"end": 3.9000000000000004
+		},
+		{
+			"word": "beginning",
+			"start": 4.5,
+			"end": 4.88
+		},
+		{
+			"word": "with",
+			"start": 4.92,
+			"end": 5.041
+		},
+		{
+			"word": "the",
+			"start": 5.081,
+			"end": 5.141
+		},
+		{
+			"word": "Promise",
+			"start": 5.3,
+			"end": 5.7
+		},
+		{
+			"word": "version.",
+			"start": 5.88,
+			"end": 6.24
+		},
+		{
+			"word": "slowDie",
+			"start": 7.581,
+			"end": 8.42,
+			"style": {
+				"code": true
+			}
+		},
+		{
+			"word": "rolls",
+			"start": 8.561,
+			"end": 8.78
+		},
+		{
+			"word": "a",
+			"start": 8.82,
+			"end": 8.88
+		},
+		{
+			"word": "die,",
+			"start": 8.941,
+			"end": 9.26
+		},
+		{
+			"word": "waits",
+			"start": 9.88,
+			"end": 10.36
+		},
+		{
+			"word": "for",
+			"start": 10.521,
+			"end": 10.7
+		},
+		{
+			"word": "no",
+			"start": 10.84,
+			"end": 10.981
+		},
+		{
+			"word": "reason,",
+			"start": 11.101,
+			"end": 11.5
+		},
+		{
+			"word": "and",
+			"start": 12.24,
+			"end": 12.361
+		},
+		{
+			"word": "then",
+			"start": 12.4,
+			"end": 12.54
+		},
+		{
+			"word": "returns",
+			"start": 12.58,
+			"end": 13.141
+		},
+		{
+			"word": "the",
+			"start": 13.2,
+			"end": 13.26
+		},
+		{
+			"word": "result.",
+			"start": 13.3,
+			"end": 13.72
+		},
+		{
+			"word": "We",
+			"start": 15.32,
+			"end": 15.4,
+			"paragraphBreak": true
+		},
+		{
+			"word": "will",
+			"start": 15.44,
+			"end": 15.581
+		},
+		{
+			"word": "then",
+			"start": 15.62,
+			"end": 15.799999999999999
+		},
+		{
+			"word": "outlaw",
+			"start": 15.981,
+			"end": 16.46
+		},
+		{
+			"word": "4,",
+			"start": 16.901000000000003,
+			"end": 16.92
+		},
+		{
+			"word": "and",
+			"start": 17.36,
+			"end": 17.54
+		},
+		{
+			"word": "pronounce",
+			"start": 17.581000000000003,
+			"end": 18.04
+		},
+		{
+			"word": "its",
+			"start": 18.119999999999997,
+			"end": 18.299999999999997
+		},
+		{
+			"word": "rolling",
+			"start": 18.380000000000003,
+			"end": 18.741
+		},
+		{
+			"word": "to",
+			"start": 18.820999999999998,
+			"end": 18.880000000000003
+		},
+		{
+			"word": "be",
+			"start": 18.92,
+			"end": 19.1
+		},
+		{
+			"word": "punishable",
+			"start": 19.161,
+			"end": 19.700000000000003
+		},
+		{
+			"word": "by",
+			"start": 19.759999999999998,
+			"end": 19.86
+		},
+		{
+			"word": "death.",
+			"start": 20.04,
+			"end": 20.340000000000003
+		},
+		{
+			"word": "If",
+			"start": 21.42,
+			"end": 21.759999999999998
+		},
+		{
+			"word": "that",
+			"start": 21.840000000000003,
+			"end": 21.96
+		},
+		{
+			"word": "accursed",
+			"start": 22.020000000000003,
+			"end": 22.481
+		},
+		{
+			"word": "numeral",
+			"start": 22.58,
+			"end": 22.92
+		},
+		{
+			"word": "has",
+			"start": 22.981,
+			"end": 23.1
+		},
+		{
+			"word": "appeared,",
+			"start": 23.22,
+			"end": 23.641
+		},
+		{
+			"word": "we",
+			"start": 24.28,
+			"end": 24.36
+		},
+		{
+			"word": "will",
+			"start": 24.401000000000003,
+			"end": 24.581000000000003
+		},
+		{
+			"word": "throw",
+			"start": 24.619999999999997,
+			"end": 24.96
+		},
+		{
+			"word": "a",
+			"start": 25.020000000000003,
+			"end": 25.119999999999997
+		},
+		{
+			"word": "VeryBadRoll",
+			"start": 25.18,
+			"end": 26.020000000000003,
+			"style": {
+				"code": true
+			}
+		},
+		{
+			"word": "error.",
+			"start": 26.119999999999997,
+			"end": 26.42
+		},
+		{
+			"word": "Nevertheless,",
+			"start": 27.92,
+			"end": 28.520000000000003,
+			"paragraphBreak": true
+		},
+		{
+			"word": "it",
+			"start": 28.6,
+			"end": 28.700000000000003
+		},
+		{
+			"word": "continues",
+			"start": 28.740000000000002,
+			"end": 29.200000000000003
+		},
+		{
+			"word": "to",
+			"start": 29.22,
+			"end": 29.340000000000003
+		},
+		{
+			"word": "type-check.",
+			"start": 29.401000000000003,
+			"end": 29.939999999999998
+		},
+		{
+			"word": "TypeScript",
+			"start": 30.901000000000003,
+			"end": 31.641
+		},
+		{
+			"word": "doesn't",
+			"start": 31.680999999999997,
+			"end": 32.12
+		},
+		{
+			"word": "care.",
+			"start": 32.181,
+			"end": 32.54
+		},
+		{
+			"word": "Our",
+			"start": 33.62,
+			"end": 33.78
+		},
+		{
+			"word": "feeble",
+			"start": 33.96,
+			"end": 34.3
+		},
+		{
+			"word": "human",
+			"start": 34.641,
+			"end": 35.021
+		},
+		{
+			"word": "mind",
+			"start": 35.1,
+			"end": 35.661
+		},
+		{
+			"word": "is",
+			"start": 35.739999999999995,
+			"end": 36.3
+		},
+		{
+			"word": "solely",
+			"start": 36.36,
+			"end": 36.641
+		},
+		{
+			"word": "responsible",
+			"start": 36.699999999999996,
+			"end": 37.3
+		},
+		{
+			"word": "for",
+			"start": 37.379999999999995,
+			"end": 37.501
+		},
+		{
+			"word": "tracking",
+			"start": 37.559999999999995,
+			"end": 37.92
+		},
+		{
+			"word": "this.",
+			"start": 37.96,
+			"end": 38.199999999999996
+		}
+	],
+	"slideshowData": {
+		"template": {
+			"lines": {
+				"sig": {
+					"parts": {
+						"p0": {
+							"tokens": [
+								{
+									"text": "async",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "function",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "slowDie",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": "()",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": ":",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						},
+						"returnType:base/0": {
+							"tokens": [
+								{
+									"text": "Promise",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": "<",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "number",
+									"type": "default",
+									"color": "#79B8FF"
+								},
+								{
+									"text": ">",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						},
+						"p1": {
+							"tokens": [
+								{
+									"text": " {",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"p0",
+						"returnType:base/0",
+						"p1"
+					]
+				},
+				"random": {
+					"parts": {
+						"p0": {
+							"tokens": [
+								{
+									"text": "  ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "const",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "n",
+									"type": "default",
+									"color": "#79B8FF"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "=",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " Math.",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "ceil",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": "(Math.",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "random",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": "() ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "*",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "6",
+									"type": "default",
+									"color": "#79B8FF"
+								},
+								{
+									"text": ")",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"p0"
+					]
+				},
+				"sleep": {
+					"parts": {
+						"p0": {
+							"tokens": [
+								{
+									"text": "  ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "await",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "sleep",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": "(",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "1000",
+									"type": "default",
+									"color": "#79B8FF"
+								},
+								{
+									"text": ")",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"p0"
+					]
+				},
+				"return": {
+					"parts": {
+						"p0": {
+							"tokens": [
+								{
+									"text": "  ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "return",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " n",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"p0"
+					]
+				},
+				"close": {
+					"parts": {
+						"p0": {
+							"tokens": [
+								{
+									"text": "}",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"p0"
+					]
+				},
+				"throw": {
+					"parts": {
+						"p0": {
+							"tokens": [
+								{
+									"text": "  ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "if",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " (n ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "===",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "4",
+									"type": "default",
+									"color": "#79B8FF"
+								},
+								{
+									"text": ")",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						},
+						"throwAction:*/0": {
+							"tokens": [
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "...",
+									"type": "default",
+									"color": "#F97583"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": true,
+							"versions": {
+								" ...": [
+									{
+										"text": " ",
+										"type": "default",
+										"color": "#E1E4E8"
+									},
+									{
+										"text": "...",
+										"type": "default",
+										"color": "#F97583"
+									}
+								],
+								" throw new VeryBadRoll()": [
+									{
+										"text": " ",
+										"type": "default",
+										"color": "#E1E4E8"
+									},
+									{
+										"text": "throw",
+										"type": "default",
+										"color": "#F97583"
+									},
+									{
+										"text": " ",
+										"type": "default",
+										"color": "#E1E4E8"
+									},
+									{
+										"text": "new",
+										"type": "default",
+										"color": "#F97583"
+									},
+									{
+										"text": " ",
+										"type": "default",
+										"color": "#E1E4E8"
+									},
+									{
+										"text": "VeryBadRoll",
+										"type": "default",
+										"color": "#B392F0"
+									},
+									{
+										"text": "()",
+										"type": "default",
+										"color": "#E1E4E8"
+									}
+								]
+							}
+						}
+					},
+					"partOrder": [
+						"p0",
+						"throwAction:*/0"
+					]
+				}
+			}
+		},
+		"frames": [
+			{
+				"id": 0,
+				"lineOrder": [
+					"sig",
+					"random",
+					"sleep",
+					"return",
+					"close"
+				],
+				"state": {
+					"sig": {
+						"parts": {
+							"p0": true,
+							"returnType:base/0": true,
+							"p1": true
+						},
+						"entering": true
+					},
+					"random": {
+						"parts": {
+							"p0": true
+						},
+						"entering": true
+					},
+					"sleep": {
+						"parts": {
+							"p0": true
+						},
+						"entering": true
+					},
+					"return": {
+						"parts": {
+							"p0": true
+						},
+						"entering": true
+					},
+					"close": {
+						"parts": {
+							"p0": true
+						},
+						"entering": true
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"spotlight": {
+					"ranges": {},
+					"allRanges": {
+						"sig": [
+							{
+								"start": 15,
+								"end": 22
+							}
+						]
+					},
+					"dim": 0.4,
+					"glow": false
+				},
+				"bursts": []
+			},
+			{
+				"id": 1,
+				"lineOrder": [
+					"sig",
+					"random",
+					"sleep",
+					"return",
+					"close"
+				],
+				"state": {
+					"sig": {
+						"parts": {
+							"p0": true,
+							"returnType:base/0": true,
+							"p1": true
+						}
+					},
+					"random": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"sleep": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"return": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"close": {
+						"parts": {
+							"p0": true
+						}
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"spotlight": {
+					"ranges": {
+						"0": [
+							{
+								"start": 15,
+								"end": 22
+							}
+						]
+					},
+					"allRanges": {
+						"sig": [
+							{
+								"start": 15,
+								"end": 22
+							}
+						]
+					},
+					"dim": 0.4,
+					"glow": false
+				},
+				"cursor": {
+					"lineIndex": 0,
+					"charOffset": 15,
+					"textLength": 7,
+					"type": "hand"
+				},
+				"bursts": []
+			},
+			{
+				"id": 2,
+				"lineOrder": [
+					"sig",
+					"random",
+					"sleep",
+					"return",
+					"close"
+				],
+				"state": {
+					"sig": {
+						"parts": {
+							"p0": true,
+							"returnType:base/0": true,
+							"p1": true
+						},
+						"dimmed": true
+					},
+					"random": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"sleep": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"return": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"close": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"spotlight": {
+					"ranges": {},
+					"allRanges": {
+						"sig": [
+							{
+								"start": 15,
+								"end": 22
+							}
+						]
+					},
+					"dim": 0.4,
+					"glow": false
+				},
+				"cursor": {
+					"lineIndex": 1,
+					"charOffset": 22,
+					"textLength": 11,
+					"type": "hand"
+				},
+				"bursts": []
+			},
+			{
+				"id": 3,
+				"lineOrder": [
+					"sig",
+					"random",
+					"sleep",
+					"return",
+					"close"
+				],
+				"state": {
+					"sig": {
+						"parts": {
+							"p0": true,
+							"returnType:base/0": true,
+							"p1": true
+						},
+						"dimmed": true
+					},
+					"random": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"sleep": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"return": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"close": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"spotlight": {
+					"ranges": {},
+					"allRanges": {
+						"sig": [
+							{
+								"start": 15,
+								"end": 22
+							}
+						]
+					},
+					"dim": 0.4,
+					"glow": false
+				},
+				"cursor": {
+					"lineIndex": 2,
+					"charOffset": 8,
+					"textLength": 5,
+					"type": "hand"
+				},
+				"bursts": []
+			},
+			{
+				"id": 4,
+				"lineOrder": [
+					"sig",
+					"random",
+					"sleep",
+					"return",
+					"close"
+				],
+				"state": {
+					"sig": {
+						"parts": {
+							"p0": true,
+							"returnType:base/0": true,
+							"p1": true
+						},
+						"dimmed": true
+					},
+					"random": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"sleep": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"return": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"close": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"spotlight": {
+					"ranges": {},
+					"allRanges": {
+						"sig": [
+							{
+								"start": 15,
+								"end": 22
+							}
+						]
+					},
+					"dim": 0.4,
+					"glow": false
+				},
+				"cursor": {
+					"lineIndex": 3,
+					"charOffset": 2,
+					"textLength": 8,
+					"type": "hand"
+				},
+				"bursts": []
+			},
+			{
+				"id": 5,
+				"lineOrder": [
+					"sig",
+					"random",
+					"sleep",
+					"return",
+					"close"
+				],
+				"state": {
+					"sig": {
+						"parts": {
+							"p0": true,
+							"returnType:base/0": true,
+							"p1": true
+						}
+					},
+					"random": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"sleep": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"return": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"close": {
+						"parts": {
+							"p0": true
+						}
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"spotlight": {
+					"ranges": {},
+					"allRanges": {
+						"sig": [
+							{
+								"start": 15,
+								"end": 22
+							}
+						]
+					},
+					"dim": 0.4,
+					"glow": false
+				},
+				"bursts": []
+			},
+			{
+				"id": 6,
+				"lineOrder": [
+					"sig",
+					"random",
+					"sleep",
+					"throw",
+					"return",
+					"close"
+				],
+				"state": {
+					"sig": {
+						"parts": {
+							"p0": true,
+							"returnType:base/0": true,
+							"p1": true
+						},
+						"dimmed": true
+					},
+					"random": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"sleep": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"throw": {
+						"parts": {
+							"p0": true,
+							"throwAction:*/0": " ..."
+						},
+						"entering": true
+					},
+					"return": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"close": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"spotlight": {
+					"ranges": {},
+					"allRanges": {
+						"sig": [
+							{
+								"start": 15,
+								"end": 22
+							}
+						]
+					},
+					"dim": 0.4,
+					"glow": false
+				},
+				"cursor": {
+					"lineIndex": 3,
+					"charOffset": 5,
+					"textLength": 9,
+					"type": "hand"
+				},
+				"bursts": []
+			},
+			{
+				"id": 7,
+				"lineOrder": [
+					"sig",
+					"random",
+					"sleep",
+					"throw",
+					"return",
+					"close"
+				],
+				"state": {
+					"sig": {
+						"parts": {
+							"p0": true,
+							"returnType:base/0": true,
+							"p1": true
+						},
+						"dimmed": true
+					},
+					"random": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"sleep": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"throw": {
+						"parts": {
+							"p0": true,
+							"throwAction:*/0": " throw new VeryBadRoll()"
+						}
+					},
+					"return": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"close": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"spotlight": {
+					"ranges": {},
+					"allRanges": {
+						"sig": [
+							{
+								"start": 15,
+								"end": 22
+							}
+						]
+					},
+					"dim": 0.4,
+					"glow": false
+				},
+				"cursor": {
+					"lineIndex": 3,
+					"charOffset": 25,
+					"textLength": 11,
+					"type": "hand"
+				},
+				"bursts": []
+			},
+			{
+				"id": 8,
+				"lineOrder": [
+					"sig",
+					"random",
+					"sleep",
+					"throw",
+					"return",
+					"close"
+				],
+				"state": {
+					"sig": {
+						"parts": {
+							"p0": true,
+							"returnType:base/0": true,
+							"p1": true
+						}
+					},
+					"random": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"sleep": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"throw": {
+						"parts": {
+							"p0": true,
+							"throwAction:*/0": " throw new VeryBadRoll()"
+						}
+					},
+					"return": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"close": {
+						"parts": {
+							"p0": true
+						}
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"spotlight": {
+					"ranges": {},
+					"allRanges": {
+						"sig": [
+							{
+								"start": 15,
+								"end": 22
+							}
+						]
+					},
+					"dim": 0.4,
+					"glow": false
+				},
+				"bursts": []
+			},
+			{
+				"id": 9,
+				"lineOrder": [
+					"sig",
+					"random",
+					"sleep",
+					"throw",
+					"return",
+					"close"
+				],
+				"state": {
+					"sig": {
+						"parts": {
+							"p0": true,
+							"returnType:base/0": true,
+							"p1": true
+						}
+					},
+					"random": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"sleep": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"throw": {
+						"parts": {
+							"p0": true,
+							"throwAction:*/0": " throw new VeryBadRoll()"
+						}
+					},
+					"return": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"close": {
+						"parts": {
+							"p0": true
+						}
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"spotlight": {
+					"ranges": {},
+					"allRanges": {
+						"sig": [
+							{
+								"start": 15,
+								"end": 22
+							}
+						]
+					},
+					"dim": 0.4,
+					"glow": false
+				},
+				"bursts": [
+					{
+						"lineIndex": 0,
+						"charOffset": 26,
+						"textLength": 15,
+						"emoji": [
+							"✅"
+						],
+						"count": 5
+					}
+				],
+				"sound": "success"
+			}
+		]
+	},
+	"steps": [
+		{
+			"name": "start",
+			"at": "start"
+		},
+		{
+			"name": "slowDie",
+			"at": "slowDie"
+		},
+		{
+			"name": "rolls",
+			"at": "rolls"
+		},
+		{
+			"name": "waits",
+			"at": "waits"
+		},
+		{
+			"name": "returns",
+			"at": "returns"
+		},
+		{
+			"name": "outlaw",
+			"at": "outlaw"
+		},
+		{
+			"name": "If",
+			"at": "If"
+		},
+		{
+			"name": "VeryBadRoll",
+			"at": "VeryBadRoll",
+			"after": "throw"
+		},
+		{
+			"name": "continues",
+			"at": "continues"
+		},
+		{
+			"name": "type-check",
+			"at": "type-check"
+		}
+	],
+	"stepTimes": [
+		0,
+		7.431,
+		8.411,
+		9.73,
+		12.43,
+		15.831,
+		21.270000000000003,
+		25.03,
+		28.590000000000003,
+		29.251000000000005
+	],
+	"_debug": {
+		"timingsStatus": "matched",
+		"dslWordCount": 73
+	},
+	"groupId": "effect-solution",
+	"groupTitle": "Typed Errors — Failing Up",
+	"isFirstInGroup": true,
+	"audioFile": "promise-hides-errors.3175e602.webm"
+}

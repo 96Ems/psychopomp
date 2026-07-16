@@ -1,0 +1,8 @@
+{
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@opencode-ai/plugin": "0.0.0-next-15649",
+    "effect": "4.0.0-beta.83"
+  }
+}

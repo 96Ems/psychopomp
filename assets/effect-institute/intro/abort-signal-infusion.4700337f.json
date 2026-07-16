@@ -1,0 +1,7255 @@
+{
+	"id": "abort-signal-infusion",
+	"text": "Now when the dung beetle is crushed mid-reply, the error is caught and the controller is aborted, signaling generateText to stop itself. As Promise doesn't natively support cancellation, we must do this verbose wiring ourselves. Furthermore, your dependencies won't always work with abort signals, or do so uniformly. Most production TypeScript backends simply ignore this problem, tolerating, perhaps unwittingly, the monetary and computational costs of leaking everything everywhere, all of the time.",
+	"code": "function ask(role: string, ticker: string, signal: AbortSignal) {\n  return generateText({\n    model: anthropic('claude-opus-4-5'),\n    system: `You are a ${role}. Give stock advice.`,\n    prompt: ticker,\n    abortSignal: signal\n  })\n}\n\nasync function getStockAdvice(ticker: string) {\n  const controller = new AbortController()\n  try {\n    const [tree, star, beetle] = await Promise.all([\n      ask(\"tree\", ticker, controller.signal),\n      ask(\"Zubenelgenubi\", ticker, controller.signal),\n      ask(\"dung beetle\", ticker, controller.signal)\n    ])\n    return { tree, star, beetle }\n  } catch (e) {\n    controller.abort()\n    throw e\n  }\n}",
+	"contentHash": "m5swym",
+	"wordTimings": [
+		{
+			"word": "Now",
+			"start": 0.1,
+			"end": 0.44000000000000006
+		},
+		{
+			"word": "when",
+			"start": 0.7,
+			"end": 0.86
+		},
+		{
+			"word": "the",
+			"start": 0.9199999999999999,
+			"end": 0.96
+		},
+		{
+			"word": "dung",
+			"start": 1.04,
+			"end": 1.201
+		},
+		{
+			"word": "beetle",
+			"start": 1.28,
+			"end": 1.56
+		},
+		{
+			"word": "is",
+			"start": 1.6400000000000001,
+			"end": 1.78
+		},
+		{
+			"word": "crushed",
+			"start": 1.9400000000000002,
+			"end": 2.36
+		},
+		{
+			"word": "mid-reply,",
+			"start": 2.6399999999999997,
+			"end": 3.4
+		},
+		{
+			"word": "the",
+			"start": 4.06,
+			"end": 4.12
+		},
+		{
+			"word": "error",
+			"start": 4.24,
+			"end": 4.54
+		},
+		{
+			"word": "is",
+			"start": 4.6,
+			"end": 4.7
+		},
+		{
+			"word": "caught",
+			"start": 4.82,
+			"end": 5.16
+		},
+		{
+			"word": "and",
+			"start": 5.62,
+			"end": 5.7
+		},
+		{
+			"word": "the",
+			"start": 5.74,
+			"end": 5.78
+		},
+		{
+			"word": "controller",
+			"start": 5.84,
+			"end": 6.401
+		},
+		{
+			"word": "is",
+			"start": 6.481,
+			"end": 6.64
+		},
+		{
+			"word": "aborted,",
+			"start": 6.7,
+			"end": 7.22
+		},
+		{
+			"word": "signaling",
+			"start": 8,
+			"end": 8.481
+		},
+		{
+			"word": "generateText",
+			"start": 8.62,
+			"end": 9.52,
+			"style": {
+				"code": true
+			}
+		},
+		{
+			"word": "to",
+			"start": 9.6,
+			"end": 9.72
+		},
+		{
+			"word": "stop",
+			"start": 9.879999999999999,
+			"end": 10.06
+		},
+		{
+			"word": "itself.",
+			"start": 10.12,
+			"end": 10.6
+		},
+		{
+			"word": "As",
+			"start": 11.84,
+			"end": 11.941,
+			"paragraphBreak": true
+		},
+		{
+			"word": "Promise",
+			"start": 12.06,
+			"end": 12.459999999999999,
+			"style": {
+				"code": true
+			}
+		},
+		{
+			"word": "doesn't",
+			"start": 12.58,
+			"end": 12.879999999999999
+		},
+		{
+			"word": "natively",
+			"start": 12.959999999999999,
+			"end": 13.34
+		},
+		{
+			"word": "support",
+			"start": 13.379999999999999,
+			"end": 13.8
+		},
+		{
+			"word": "cancellation,",
+			"start": 13.861,
+			"end": 14.6
+		},
+		{
+			"word": "we",
+			"start": 15.26,
+			"end": 15.361
+		},
+		{
+			"word": "must",
+			"start": 15.401,
+			"end": 15.76
+		},
+		{
+			"word": "do",
+			"start": 15.82,
+			"end": 15.92
+		},
+		{
+			"word": "this",
+			"start": 15.981,
+			"end": 16.12
+		},
+		{
+			"word": "verbose",
+			"start": 16.220000000000002,
+			"end": 16.6
+		},
+		{
+			"word": "wiring",
+			"start": 16.700000000000003,
+			"end": 17.040000000000003
+		},
+		{
+			"word": "ourselves.",
+			"start": 17.12,
+			"end": 17.921000000000003
+		},
+		{
+			"word": "Furthermore,",
+			"start": 19.001,
+			"end": 19.540000000000003
+		},
+		{
+			"word": "your",
+			"start": 19.78,
+			"end": 19.901000000000003
+		},
+		{
+			"word": "dependencies",
+			"start": 19.94,
+			"end": 20.62
+		},
+		{
+			"word": "won't",
+			"start": 20.680000000000003,
+			"end": 20.96
+		},
+		{
+			"word": "always",
+			"start": 21.020000000000003,
+			"end": 21.380000000000003
+		},
+		{
+			"word": "work",
+			"start": 21.481,
+			"end": 21.64
+		},
+		{
+			"word": "with",
+			"start": 21.700000000000003,
+			"end": 21.8
+		},
+		{
+			"word": "abort",
+			"start": 21.821,
+			"end": 22.12
+		},
+		{
+			"word": "signals,",
+			"start": 22.180000000000003,
+			"end": 22.62
+		},
+		{
+			"word": "or",
+			"start": 23.380000000000003,
+			"end": 23.560000000000002
+		},
+		{
+			"word": "do",
+			"start": 23.8,
+			"end": 23.901000000000003
+		},
+		{
+			"word": "so",
+			"start": 24.040000000000003,
+			"end": 24.14
+		},
+		{
+			"word": "uniformly.",
+			"start": 24.241000000000003,
+			"end": 24.901000000000003
+		},
+		{
+			"word": "Most",
+			"start": 26.161,
+			"end": 26.44,
+			"paragraphBreak": true
+		},
+		{
+			"word": "production",
+			"start": 26.560000000000002,
+			"end": 27.240000000000002
+		},
+		{
+			"word": "TypeScript",
+			"start": 27.321,
+			"end": 27.821
+		},
+		{
+			"word": "backends",
+			"start": 27.92,
+			"end": 28.981
+		},
+		{
+			"word": "simply",
+			"start": 29.12,
+			"end": 29.520000000000003
+		},
+		{
+			"word": "ignore",
+			"start": 29.6,
+			"end": 30.200000000000003
+		},
+		{
+			"word": "this",
+			"start": 30.28,
+			"end": 30.421000000000003
+		},
+		{
+			"word": "problem,",
+			"start": 30.520000000000003,
+			"end": 30.94
+		},
+		{
+			"word": "tolerating,",
+			"start": 31.741000000000003,
+			"end": 32.300000000000004
+		},
+		{
+			"word": "perhaps",
+			"start": 32.940000000000005,
+			"end": 33.4
+		},
+		{
+			"word": "unwittingly,",
+			"start": 33.481,
+			"end": 34.1
+		},
+		{
+			"word": "the",
+			"start": 34.760000000000005,
+			"end": 34.800000000000004
+		},
+		{
+			"word": "monetary",
+			"start": 34.88,
+			"end": 35.481
+		},
+		{
+			"word": "and",
+			"start": 35.501000000000005,
+			"end": 35.6
+		},
+		{
+			"word": "computational",
+			"start": 35.7,
+			"end": 36.480000000000004
+		},
+		{
+			"word": "costs",
+			"start": 36.54,
+			"end": 37.14
+		},
+		{
+			"word": "of",
+			"start": 37.2,
+			"end": 37.341
+		},
+		{
+			"word": "leaking",
+			"start": 37.46,
+			"end": 37.86
+		},
+		{
+			"word": "everything",
+			"start": 38.481,
+			"end": 39.04
+		},
+		{
+			"word": "everywhere,",
+			"start": 39.521,
+			"end": 40.041000000000004
+		},
+		{
+			"word": "all",
+			"start": 40.64,
+			"end": 40.74
+		},
+		{
+			"word": "of",
+			"start": 40.760000000000005,
+			"end": 40.861000000000004
+		},
+		{
+			"word": "the",
+			"start": 40.88,
+			"end": 41.001000000000005
+		},
+		{
+			"word": "time.",
+			"start": 41.06,
+			"end": 41.440000000000005
+		}
+	],
+	"slideshowData": {
+		"template": {
+			"lines": {
+				"askFn": {
+					"parts": {
+						"p0": {
+							"tokens": [
+								{
+									"text": "function",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "ask",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": "(",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "role",
+									"type": "default",
+									"color": "#FFAB70"
+								},
+								{
+									"text": ":",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "string",
+									"type": "default",
+									"color": "#79B8FF"
+								},
+								{
+									"text": ", ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "ticker",
+									"type": "default",
+									"color": "#FFAB70"
+								},
+								{
+									"text": ":",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "string",
+									"type": "default",
+									"color": "#79B8FF"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						},
+						"signalParam:shown/0": {
+							"tokens": [
+								{
+									"text": ", ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "signal",
+									"type": "default",
+									"color": "#FFAB70"
+								},
+								{
+									"text": ":",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "AbortSignal",
+									"type": "default",
+									"color": "#B392F0"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						},
+						"p1": {
+							"tokens": [
+								{
+									"text": ") {",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"p0",
+						"signalParam:shown/0",
+						"p1"
+					]
+				},
+				"askBody1": {
+					"parts": {
+						"p0": {
+							"tokens": [
+								{
+									"text": "  ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "return",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "generateText",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": "({",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"p0"
+					]
+				},
+				"askBody2": {
+					"parts": {
+						"p0": {
+							"tokens": [
+								{
+									"text": "    ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "model",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": ": ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "anthropic",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": "(",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "'claude-opus-4-5'",
+									"type": "default",
+									"color": "#9ECBFF"
+								},
+								{
+									"text": "),",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"p0"
+					]
+				},
+				"askBody3": {
+					"parts": {
+						"p0": {
+							"tokens": [
+								{
+									"text": "    ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "system",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": ": ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "`You are a ${",
+									"type": "default",
+									"color": "#9ECBFF"
+								},
+								{
+									"text": "role",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "}. Give stock advice.`",
+									"type": "default",
+									"color": "#9ECBFF"
+								},
+								{
+									"text": ",",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"p0"
+					]
+				},
+				"askBody4": {
+					"parts": {
+						"p0": {
+							"tokens": [
+								{
+									"text": "    ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "prompt",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": ": ticker",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						},
+						"promptComma:shown/0": {
+							"tokens": [
+								{
+									"text": ",",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"p0",
+						"promptComma:shown/0"
+					]
+				},
+				"abortSignal": {
+					"parts": {
+						"p0": {
+							"tokens": [
+								{
+									"text": "    ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "abortSignal",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": ": signal",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"p0"
+					]
+				},
+				"askBody5": {
+					"parts": {
+						"p0": {
+							"tokens": [
+								{
+									"text": "  })",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"p0"
+					]
+				},
+				"askEnd": {
+					"parts": {
+						"p0": {
+							"tokens": [
+								{
+									"text": "}",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"p0"
+					]
+				},
+				"blank": {
+					"parts": {
+						"blank-empty": {
+							"tokens": [],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"blank-empty"
+					]
+				},
+				"getFn": {
+					"parts": {
+						"p0": {
+							"tokens": [
+								{
+									"text": "async",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "function",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "getStockAdvice",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": "(",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "ticker",
+									"type": "default",
+									"color": "#FFAB70"
+								},
+								{
+									"text": ":",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "string",
+									"type": "default",
+									"color": "#79B8FF"
+								},
+								{
+									"text": ") {",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"p0"
+					]
+				},
+				"controller": {
+					"parts": {
+						"p0": {
+							"tokens": [
+								{
+									"text": "  ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "const",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "controller",
+									"type": "default",
+									"color": "#79B8FF"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "=",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "new",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "AbortController",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": "()",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"p0"
+					]
+				},
+				"blank2": {
+					"parts": {
+						"blank2-empty": {
+							"tokens": [],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"blank2-empty"
+					]
+				},
+				"try": {
+					"parts": {
+						"p0": {
+							"tokens": [
+								{
+									"text": "  ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "try",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " {",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"p0"
+					]
+				},
+				"destructure": {
+					"parts": {
+						"i1:*/0": {
+							"tokens": [
+								{
+									"text": "    ",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": true,
+							"versions": {
+								"    ": [
+									{
+										"text": "    ",
+										"type": "default",
+										"color": "#E1E4E8"
+									}
+								],
+								"  ": [
+									{
+										"text": "  ",
+										"type": "default",
+										"color": "#E1E4E8"
+									}
+								]
+							}
+						},
+						"p0": {
+							"tokens": [
+								{
+									"text": "const",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " [",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "tree",
+									"type": "default",
+									"color": "#79B8FF"
+								},
+								{
+									"text": ", ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "star",
+									"type": "default",
+									"color": "#79B8FF"
+								},
+								{
+									"text": ", ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "beetle",
+									"type": "default",
+									"color": "#79B8FF"
+								},
+								{
+									"text": "] ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "=",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "await",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "Promise",
+									"type": "default",
+									"color": "#79B8FF"
+								},
+								{
+									"text": ".",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "all",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": "([",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"i1:*/0",
+						"p0"
+					]
+				},
+				"treeCall": {
+					"parts": {
+						"i2:*/0": {
+							"tokens": [
+								{
+									"text": "      ",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": true,
+							"versions": {
+								"      ": [
+									{
+										"text": "      ",
+										"type": "default",
+										"color": "#E1E4E8"
+									}
+								],
+								"    ": [
+									{
+										"text": "    ",
+										"type": "default",
+										"color": "#E1E4E8"
+									}
+								]
+							}
+						},
+						"p0": {
+							"tokens": [
+								{
+									"text": "ask",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": "(",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "\"tree\"",
+									"type": "default",
+									"color": "#9ECBFF"
+								},
+								{
+									"text": ", ticker",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						},
+						"treeSignal:shown/0": {
+							"tokens": [
+								{
+									"text": ", controller.signal",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						},
+						"p1": {
+							"tokens": [
+								{
+									"text": "),",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"i2:*/0",
+						"p0",
+						"treeSignal:shown/0",
+						"p1"
+					]
+				},
+				"starCall": {
+					"parts": {
+						"i3:*/0": {
+							"tokens": [
+								{
+									"text": "      ",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": true,
+							"versions": {
+								"      ": [
+									{
+										"text": "      ",
+										"type": "default",
+										"color": "#E1E4E8"
+									}
+								],
+								"    ": [
+									{
+										"text": "    ",
+										"type": "default",
+										"color": "#E1E4E8"
+									}
+								]
+							}
+						},
+						"p0": {
+							"tokens": [
+								{
+									"text": "ask",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": "(",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "\"Zubenelgenubi\"",
+									"type": "default",
+									"color": "#9ECBFF"
+								},
+								{
+									"text": ", ticker",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						},
+						"starSignal:shown/0": {
+							"tokens": [
+								{
+									"text": ", controller.signal",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						},
+						"p1": {
+							"tokens": [
+								{
+									"text": "),",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"i3:*/0",
+						"p0",
+						"starSignal:shown/0",
+						"p1"
+					]
+				},
+				"beetleCall": {
+					"parts": {
+						"i4:*/0": {
+							"tokens": [
+								{
+									"text": "      ",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": true,
+							"versions": {
+								"      ": [
+									{
+										"text": "      ",
+										"type": "default",
+										"color": "#E1E4E8"
+									}
+								],
+								"    ": [
+									{
+										"text": "    ",
+										"type": "default",
+										"color": "#E1E4E8"
+									}
+								]
+							}
+						},
+						"p0": {
+							"tokens": [
+								{
+									"text": "ask",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": "(",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "\"dung beetle\"",
+									"type": "default",
+									"color": "#9ECBFF"
+								},
+								{
+									"text": ", ticker",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						},
+						"beetleSignal:shown/0": {
+							"tokens": [
+								{
+									"text": ", controller.signal",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						},
+						"p1": {
+							"tokens": [
+								{
+									"text": ")",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"i4:*/0",
+						"p0",
+						"beetleSignal:shown/0",
+						"p1"
+					]
+				},
+				"closeAll": {
+					"parts": {
+						"i5:*/0": {
+							"tokens": [
+								{
+									"text": "    ",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": true,
+							"versions": {
+								"    ": [
+									{
+										"text": "    ",
+										"type": "default",
+										"color": "#E1E4E8"
+									}
+								],
+								"  ": [
+									{
+										"text": "  ",
+										"type": "default",
+										"color": "#E1E4E8"
+									}
+								]
+							}
+						},
+						"p0": {
+							"tokens": [
+								{
+									"text": "])",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"i5:*/0",
+						"p0"
+					]
+				},
+				"return": {
+					"parts": {
+						"i6:*/0": {
+							"tokens": [
+								{
+									"text": "    ",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": true,
+							"versions": {
+								"    ": [
+									{
+										"text": "    ",
+										"type": "default",
+										"color": "#E1E4E8"
+									}
+								],
+								"  ": [
+									{
+										"text": "  ",
+										"type": "default",
+										"color": "#E1E4E8"
+									}
+								]
+							}
+						},
+						"p0": {
+							"tokens": [
+								{
+									"text": "return",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " { tree, star, beetle }",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"i6:*/0",
+						"p0"
+					]
+				},
+				"catch": {
+					"parts": {
+						"p0": {
+							"tokens": [
+								{
+									"text": "  } ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "catch",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " (e) {",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"p0"
+					]
+				},
+				"abort": {
+					"parts": {
+						"p0": {
+							"tokens": [
+								{
+									"text": "    controller.",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "abort",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": "()",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"p0"
+					]
+				},
+				"throw": {
+					"parts": {
+						"p0": {
+							"tokens": [
+								{
+									"text": "    ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "throw",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " e",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"p0"
+					]
+				},
+				"catchEnd": {
+					"parts": {
+						"p0": {
+							"tokens": [
+								{
+									"text": "  }",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"p0"
+					]
+				},
+				"getEnd": {
+					"parts": {
+						"p0": {
+							"tokens": [
+								{
+									"text": "}",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"p0"
+					]
+				}
+			}
+		},
+		"frames": [
+			{
+				"id": 0,
+				"lineOrder": [
+					"askFn",
+					"askBody1",
+					"askBody2",
+					"askBody3",
+					"askBody4",
+					"abortSignal",
+					"askBody5",
+					"askEnd",
+					"blank",
+					"getFn",
+					"controller",
+					"blank2",
+					"try",
+					"destructure",
+					"treeCall",
+					"starCall",
+					"beetleCall",
+					"closeAll",
+					"return",
+					"catch",
+					"abort",
+					"throw",
+					"catchEnd",
+					"getEnd"
+				],
+				"state": {
+					"askFn": {
+						"parts": {
+							"p0": true,
+							"signalParam:shown/0": true,
+							"p1": true
+						},
+						"entering": true
+					},
+					"askBody1": {
+						"parts": {
+							"p0": true
+						},
+						"entering": true
+					},
+					"askBody2": {
+						"parts": {
+							"p0": true
+						},
+						"entering": true
+					},
+					"askBody3": {
+						"parts": {
+							"p0": true
+						},
+						"entering": true
+					},
+					"askBody4": {
+						"parts": {
+							"p0": true,
+							"promptComma:shown/0": true
+						},
+						"entering": true
+					},
+					"abortSignal": {
+						"parts": {
+							"p0": true
+						},
+						"entering": true
+					},
+					"askBody5": {
+						"parts": {
+							"p0": true
+						},
+						"entering": true
+					},
+					"askEnd": {
+						"parts": {
+							"p0": true
+						},
+						"entering": true
+					},
+					"blank": {
+						"parts": {
+							"blank-empty": true
+						},
+						"entering": true
+					},
+					"getFn": {
+						"parts": {
+							"p0": true
+						},
+						"entering": true
+					},
+					"controller": {
+						"parts": {
+							"p0": true
+						},
+						"entering": true
+					},
+					"blank2": {
+						"parts": {
+							"blank2-empty": true
+						},
+						"entering": true
+					},
+					"try": {
+						"parts": {
+							"p0": true
+						},
+						"entering": true
+					},
+					"destructure": {
+						"parts": {
+							"i1:*/0": "    ",
+							"p0": true
+						},
+						"entering": true
+					},
+					"treeCall": {
+						"parts": {
+							"i2:*/0": "      ",
+							"p0": true,
+							"treeSignal:shown/0": true,
+							"p1": true
+						},
+						"entering": true
+					},
+					"starCall": {
+						"parts": {
+							"i3:*/0": "      ",
+							"p0": true,
+							"starSignal:shown/0": true,
+							"p1": true
+						},
+						"entering": true
+					},
+					"beetleCall": {
+						"parts": {
+							"i4:*/0": "      ",
+							"p0": true,
+							"beetleSignal:shown/0": true,
+							"p1": true
+						},
+						"entering": true
+					},
+					"closeAll": {
+						"parts": {
+							"i5:*/0": "    ",
+							"p0": true
+						},
+						"entering": true
+					},
+					"return": {
+						"parts": {
+							"i6:*/0": "    ",
+							"p0": true
+						},
+						"entering": true
+					},
+					"catch": {
+						"parts": {
+							"p0": true
+						},
+						"entering": true
+					},
+					"abort": {
+						"parts": {
+							"p0": true
+						},
+						"entering": true
+					},
+					"throw": {
+						"parts": {
+							"p0": true
+						},
+						"entering": true
+					},
+					"catchEnd": {
+						"parts": {
+							"p0": true
+						},
+						"entering": true
+					},
+					"getEnd": {
+						"parts": {
+							"p0": true
+						},
+						"entering": true
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"status": {
+					"ranges": {},
+					"allRanges": {
+						"treeCall": [
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 4,
+								"end": 23
+							},
+							{
+								"start": 4,
+								"end": 23
+							},
+							{
+								"start": 4,
+								"end": 23
+							}
+						],
+						"starCall": [
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 4,
+								"end": 32
+							},
+							{
+								"start": 4,
+								"end": 32
+							},
+							{
+								"start": 4,
+								"end": 32
+							}
+						],
+						"beetleCall": [
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 4,
+								"end": 30
+							},
+							{
+								"start": 4,
+								"end": 30
+							},
+							{
+								"start": 4,
+								"end": 30
+							}
+						]
+					}
+				},
+				"bursts": []
+			},
+			{
+				"id": 1,
+				"lineOrder": [
+					"askFn",
+					"askBody1",
+					"askBody2",
+					"askBody3",
+					"askBody4",
+					"abortSignal",
+					"askBody5",
+					"askEnd",
+					"blank",
+					"getFn",
+					"controller",
+					"blank2",
+					"try",
+					"destructure",
+					"treeCall",
+					"starCall",
+					"beetleCall",
+					"closeAll",
+					"return",
+					"catch",
+					"abort",
+					"throw",
+					"catchEnd",
+					"getEnd"
+				],
+				"state": {
+					"askFn": {
+						"parts": {
+							"p0": true,
+							"signalParam:shown/0": true,
+							"p1": true
+						}
+					},
+					"askBody1": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"askBody2": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"askBody3": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"askBody4": {
+						"parts": {
+							"p0": true,
+							"promptComma:shown/0": true
+						}
+					},
+					"abortSignal": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"askBody5": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"askEnd": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"blank": {
+						"parts": {
+							"blank-empty": true
+						}
+					},
+					"getFn": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"controller": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"blank2": {
+						"parts": {
+							"blank2-empty": true
+						}
+					},
+					"try": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"destructure": {
+						"parts": {
+							"i1:*/0": "    ",
+							"p0": true
+						}
+					},
+					"treeCall": {
+						"parts": {
+							"i2:*/0": "      ",
+							"p0": true,
+							"treeSignal:shown/0": true,
+							"p1": true
+						}
+					},
+					"starCall": {
+						"parts": {
+							"i3:*/0": "      ",
+							"p0": true,
+							"starSignal:shown/0": true,
+							"p1": true
+						}
+					},
+					"beetleCall": {
+						"parts": {
+							"i4:*/0": "      ",
+							"p0": true,
+							"beetleSignal:shown/0": true,
+							"p1": true
+						}
+					},
+					"closeAll": {
+						"parts": {
+							"i5:*/0": "    ",
+							"p0": true
+						}
+					},
+					"return": {
+						"parts": {
+							"i6:*/0": "    ",
+							"p0": true
+						}
+					},
+					"catch": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"abort": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"throw": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"catchEnd": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"getEnd": {
+						"parts": {
+							"p0": true
+						}
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"status": {
+					"ranges": {
+						"14": [
+							{
+								"start": 6,
+								"end": 44,
+								"status": "running"
+							}
+						],
+						"15": [
+							{
+								"start": 6,
+								"end": 53,
+								"status": "running"
+							}
+						],
+						"16": [
+							{
+								"start": 6,
+								"end": 51,
+								"status": "running"
+							}
+						]
+					},
+					"allRanges": {
+						"treeCall": [
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 4,
+								"end": 23
+							},
+							{
+								"start": 4,
+								"end": 23
+							},
+							{
+								"start": 4,
+								"end": 23
+							}
+						],
+						"starCall": [
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 4,
+								"end": 32
+							},
+							{
+								"start": 4,
+								"end": 32
+							},
+							{
+								"start": 4,
+								"end": 32
+							}
+						],
+						"beetleCall": [
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 4,
+								"end": 30
+							},
+							{
+								"start": 4,
+								"end": 30
+							},
+							{
+								"start": 4,
+								"end": 30
+							}
+						]
+					}
+				},
+				"bursts": [],
+				"sound": "whoosh"
+			},
+			{
+				"id": 2,
+				"lineOrder": [
+					"askFn",
+					"askBody1",
+					"askBody2",
+					"askBody3",
+					"askBody4",
+					"abortSignal",
+					"askBody5",
+					"askEnd",
+					"blank",
+					"getFn",
+					"controller",
+					"blank2",
+					"try",
+					"destructure",
+					"treeCall",
+					"starCall",
+					"beetleCall",
+					"closeAll",
+					"return",
+					"catch",
+					"abort",
+					"throw",
+					"catchEnd",
+					"getEnd"
+				],
+				"state": {
+					"askFn": {
+						"parts": {
+							"p0": true,
+							"signalParam:shown/0": true,
+							"p1": true
+						},
+						"dimmed": true
+					},
+					"askBody1": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"askBody2": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"askBody3": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"askBody4": {
+						"parts": {
+							"p0": true,
+							"promptComma:shown/0": true
+						},
+						"dimmed": true
+					},
+					"abortSignal": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"askBody5": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"askEnd": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"blank": {
+						"parts": {
+							"blank-empty": true
+						},
+						"dimmed": true
+					},
+					"getFn": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"controller": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"blank2": {
+						"parts": {
+							"blank2-empty": true
+						},
+						"dimmed": true
+					},
+					"try": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"destructure": {
+						"parts": {
+							"i1:*/0": "    ",
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"treeCall": {
+						"parts": {
+							"i2:*/0": "      ",
+							"p0": true,
+							"treeSignal:shown/0": true,
+							"p1": true
+						},
+						"dimmed": true
+					},
+					"starCall": {
+						"parts": {
+							"i3:*/0": "      ",
+							"p0": true,
+							"starSignal:shown/0": true,
+							"p1": true
+						},
+						"dimmed": true
+					},
+					"beetleCall": {
+						"parts": {
+							"i4:*/0": "      ",
+							"p0": true,
+							"beetleSignal:shown/0": true,
+							"p1": true
+						}
+					},
+					"closeAll": {
+						"parts": {
+							"i5:*/0": "    ",
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"return": {
+						"parts": {
+							"i6:*/0": "    ",
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"catch": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"abort": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"throw": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"catchEnd": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"getEnd": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"status": {
+					"ranges": {
+						"14": [
+							{
+								"start": 6,
+								"end": 44,
+								"status": "running"
+							}
+						],
+						"15": [
+							{
+								"start": 6,
+								"end": 53,
+								"status": "running"
+							}
+						],
+						"16": [
+							{
+								"start": 6,
+								"end": 51,
+								"status": "running"
+							}
+						]
+					},
+					"allRanges": {
+						"treeCall": [
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 4,
+								"end": 23
+							},
+							{
+								"start": 4,
+								"end": 23
+							},
+							{
+								"start": 4,
+								"end": 23
+							}
+						],
+						"starCall": [
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 4,
+								"end": 32
+							},
+							{
+								"start": 4,
+								"end": 32
+							},
+							{
+								"start": 4,
+								"end": 32
+							}
+						],
+						"beetleCall": [
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 4,
+								"end": 30
+							},
+							{
+								"start": 4,
+								"end": 30
+							},
+							{
+								"start": 4,
+								"end": 30
+							}
+						]
+					}
+				},
+				"cursor": {
+					"lineIndex": 16,
+					"charOffset": 10,
+					"textLength": 13,
+					"type": "hand"
+				},
+				"bursts": []
+			},
+			{
+				"id": 3,
+				"lineOrder": [
+					"askFn",
+					"askBody1",
+					"askBody2",
+					"askBody3",
+					"askBody4",
+					"abortSignal",
+					"askBody5",
+					"askEnd",
+					"blank",
+					"getFn",
+					"controller",
+					"blank2",
+					"try",
+					"destructure",
+					"treeCall",
+					"starCall",
+					"beetleCall",
+					"closeAll",
+					"return",
+					"catch",
+					"abort",
+					"throw",
+					"catchEnd",
+					"getEnd"
+				],
+				"state": {
+					"askFn": {
+						"parts": {
+							"p0": true,
+							"signalParam:shown/0": true,
+							"p1": true
+						},
+						"dimmed": true
+					},
+					"askBody1": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"askBody2": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"askBody3": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"askBody4": {
+						"parts": {
+							"p0": true,
+							"promptComma:shown/0": true
+						},
+						"dimmed": true
+					},
+					"abortSignal": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"askBody5": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"askEnd": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"blank": {
+						"parts": {
+							"blank-empty": true
+						},
+						"dimmed": true
+					},
+					"getFn": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"controller": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"blank2": {
+						"parts": {
+							"blank2-empty": true
+						},
+						"dimmed": true
+					},
+					"try": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"destructure": {
+						"parts": {
+							"i1:*/0": "    ",
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"treeCall": {
+						"parts": {
+							"i2:*/0": "      ",
+							"p0": true,
+							"treeSignal:shown/0": true,
+							"p1": true
+						},
+						"dimmed": true
+					},
+					"starCall": {
+						"parts": {
+							"i3:*/0": "      ",
+							"p0": true,
+							"starSignal:shown/0": true,
+							"p1": true
+						},
+						"dimmed": true
+					},
+					"beetleCall": {
+						"parts": {
+							"i4:*/0": "      ",
+							"p0": true,
+							"beetleSignal:shown/0": true,
+							"p1": true
+						}
+					},
+					"closeAll": {
+						"parts": {
+							"i5:*/0": "    ",
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"return": {
+						"parts": {
+							"i6:*/0": "    ",
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"catch": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"abort": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"throw": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"catchEnd": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"getEnd": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"status": {
+					"ranges": {
+						"14": [
+							{
+								"start": 6,
+								"end": 44,
+								"status": "running"
+							}
+						],
+						"15": [
+							{
+								"start": 6,
+								"end": 53,
+								"status": "running"
+							}
+						],
+						"16": [
+							{
+								"start": 6,
+								"end": 51,
+								"status": "error"
+							}
+						]
+					},
+					"allRanges": {
+						"treeCall": [
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 4,
+								"end": 23
+							},
+							{
+								"start": 4,
+								"end": 23
+							},
+							{
+								"start": 4,
+								"end": 23
+							}
+						],
+						"starCall": [
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 4,
+								"end": 32
+							},
+							{
+								"start": 4,
+								"end": 32
+							},
+							{
+								"start": 4,
+								"end": 32
+							}
+						],
+						"beetleCall": [
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 4,
+								"end": 30
+							},
+							{
+								"start": 4,
+								"end": 30
+							},
+							{
+								"start": 4,
+								"end": 30
+							}
+						]
+					}
+				},
+				"cursor": {
+					"lineIndex": 16,
+					"charOffset": 10,
+					"textLength": 13,
+					"type": "hand"
+				},
+				"bursts": [],
+				"sound": "fail"
+			},
+			{
+				"id": 4,
+				"lineOrder": [
+					"askFn",
+					"askBody1",
+					"askBody2",
+					"askBody3",
+					"askBody4",
+					"abortSignal",
+					"askBody5",
+					"askEnd",
+					"blank",
+					"getFn",
+					"controller",
+					"blank2",
+					"try",
+					"destructure",
+					"treeCall",
+					"starCall",
+					"beetleCall",
+					"closeAll",
+					"return",
+					"catch",
+					"abort",
+					"throw",
+					"catchEnd",
+					"getEnd"
+				],
+				"state": {
+					"askFn": {
+						"parts": {
+							"p0": true,
+							"signalParam:shown/0": true,
+							"p1": true
+						},
+						"dimmed": true
+					},
+					"askBody1": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"askBody2": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"askBody3": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"askBody4": {
+						"parts": {
+							"p0": true,
+							"promptComma:shown/0": true
+						},
+						"dimmed": true
+					},
+					"abortSignal": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"askBody5": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"askEnd": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"blank": {
+						"parts": {
+							"blank-empty": true
+						},
+						"dimmed": true
+					},
+					"getFn": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"controller": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"blank2": {
+						"parts": {
+							"blank2-empty": true
+						},
+						"dimmed": true
+					},
+					"try": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"destructure": {
+						"parts": {
+							"i1:*/0": "    ",
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"treeCall": {
+						"parts": {
+							"i2:*/0": "      ",
+							"p0": true,
+							"treeSignal:shown/0": true,
+							"p1": true
+						},
+						"dimmed": true
+					},
+					"starCall": {
+						"parts": {
+							"i3:*/0": "      ",
+							"p0": true,
+							"starSignal:shown/0": true,
+							"p1": true
+						},
+						"dimmed": true
+					},
+					"beetleCall": {
+						"parts": {
+							"i4:*/0": "      ",
+							"p0": true,
+							"beetleSignal:shown/0": true,
+							"p1": true
+						},
+						"dimmed": true
+					},
+					"closeAll": {
+						"parts": {
+							"i5:*/0": "    ",
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"return": {
+						"parts": {
+							"i6:*/0": "    ",
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"catch": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"abort": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"throw": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"catchEnd": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"getEnd": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"status": {
+					"ranges": {
+						"14": [
+							{
+								"start": 6,
+								"end": 44,
+								"status": "running"
+							}
+						],
+						"15": [
+							{
+								"start": 6,
+								"end": 53,
+								"status": "running"
+							}
+						],
+						"16": [
+							{
+								"start": 6,
+								"end": 51,
+								"status": "error"
+							}
+						]
+					},
+					"allRanges": {
+						"treeCall": [
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 4,
+								"end": 23
+							},
+							{
+								"start": 4,
+								"end": 23
+							},
+							{
+								"start": 4,
+								"end": 23
+							}
+						],
+						"starCall": [
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 4,
+								"end": 32
+							},
+							{
+								"start": 4,
+								"end": 32
+							},
+							{
+								"start": 4,
+								"end": 32
+							}
+						],
+						"beetleCall": [
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 4,
+								"end": 30
+							},
+							{
+								"start": 4,
+								"end": 30
+							},
+							{
+								"start": 4,
+								"end": 30
+							}
+						]
+					}
+				},
+				"cursor": {
+					"lineIndex": 19,
+					"charOffset": 4,
+					"textLength": 9,
+					"type": "hand"
+				},
+				"bursts": []
+			},
+			{
+				"id": 5,
+				"lineOrder": [
+					"askFn",
+					"askBody1",
+					"askBody2",
+					"askBody3",
+					"askBody4",
+					"abortSignal",
+					"askBody5",
+					"askEnd",
+					"blank",
+					"getFn",
+					"controller",
+					"blank2",
+					"try",
+					"destructure",
+					"treeCall",
+					"starCall",
+					"beetleCall",
+					"closeAll",
+					"return",
+					"catch",
+					"abort",
+					"throw",
+					"catchEnd",
+					"getEnd"
+				],
+				"state": {
+					"askFn": {
+						"parts": {
+							"p0": true,
+							"signalParam:shown/0": true,
+							"p1": true
+						},
+						"dimmed": true
+					},
+					"askBody1": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"askBody2": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"askBody3": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"askBody4": {
+						"parts": {
+							"p0": true,
+							"promptComma:shown/0": true
+						},
+						"dimmed": true
+					},
+					"abortSignal": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"askBody5": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"askEnd": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"blank": {
+						"parts": {
+							"blank-empty": true
+						},
+						"dimmed": true
+					},
+					"getFn": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"controller": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"blank2": {
+						"parts": {
+							"blank2-empty": true
+						},
+						"dimmed": true
+					},
+					"try": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"destructure": {
+						"parts": {
+							"i1:*/0": "    ",
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"treeCall": {
+						"parts": {
+							"i2:*/0": "      ",
+							"p0": true,
+							"treeSignal:shown/0": true,
+							"p1": true
+						},
+						"dimmed": true
+					},
+					"starCall": {
+						"parts": {
+							"i3:*/0": "      ",
+							"p0": true,
+							"starSignal:shown/0": true,
+							"p1": true
+						},
+						"dimmed": true
+					},
+					"beetleCall": {
+						"parts": {
+							"i4:*/0": "      ",
+							"p0": true,
+							"beetleSignal:shown/0": true,
+							"p1": true
+						},
+						"dimmed": true
+					},
+					"closeAll": {
+						"parts": {
+							"i5:*/0": "    ",
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"return": {
+						"parts": {
+							"i6:*/0": "    ",
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"catch": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"abort": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"throw": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"catchEnd": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"getEnd": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"status": {
+					"ranges": {
+						"14": [
+							{
+								"start": 6,
+								"end": 44,
+								"status": "running"
+							}
+						],
+						"15": [
+							{
+								"start": 6,
+								"end": 53,
+								"status": "running"
+							}
+						],
+						"16": [
+							{
+								"start": 6,
+								"end": 51,
+								"status": "error"
+							}
+						]
+					},
+					"allRanges": {
+						"treeCall": [
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 4,
+								"end": 23
+							},
+							{
+								"start": 4,
+								"end": 23
+							},
+							{
+								"start": 4,
+								"end": 23
+							}
+						],
+						"starCall": [
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 4,
+								"end": 32
+							},
+							{
+								"start": 4,
+								"end": 32
+							},
+							{
+								"start": 4,
+								"end": 32
+							}
+						],
+						"beetleCall": [
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 4,
+								"end": 30
+							},
+							{
+								"start": 4,
+								"end": 30
+							},
+							{
+								"start": 4,
+								"end": 30
+							}
+						]
+					}
+				},
+				"cursor": {
+					"lineIndex": 20,
+					"charOffset": 4,
+					"textLength": 18,
+					"type": "hand"
+				},
+				"bursts": []
+			},
+			{
+				"id": 6,
+				"lineOrder": [
+					"askFn",
+					"askBody1",
+					"askBody2",
+					"askBody3",
+					"askBody4",
+					"abortSignal",
+					"askBody5",
+					"askEnd",
+					"blank",
+					"getFn",
+					"controller",
+					"blank2",
+					"try",
+					"destructure",
+					"treeCall",
+					"starCall",
+					"beetleCall",
+					"closeAll",
+					"return",
+					"catch",
+					"abort",
+					"throw",
+					"catchEnd",
+					"getEnd"
+				],
+				"state": {
+					"askFn": {
+						"parts": {
+							"p0": true,
+							"signalParam:shown/0": true,
+							"p1": true
+						},
+						"dimmed": true
+					},
+					"askBody1": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"askBody2": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"askBody3": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"askBody4": {
+						"parts": {
+							"p0": true,
+							"promptComma:shown/0": true
+						},
+						"dimmed": true
+					},
+					"abortSignal": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"askBody5": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"askEnd": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"blank": {
+						"parts": {
+							"blank-empty": true
+						},
+						"dimmed": true
+					},
+					"getFn": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"controller": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"blank2": {
+						"parts": {
+							"blank2-empty": true
+						},
+						"dimmed": true
+					},
+					"try": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"destructure": {
+						"parts": {
+							"i1:*/0": "    ",
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"treeCall": {
+						"parts": {
+							"i2:*/0": "      ",
+							"p0": true,
+							"treeSignal:shown/0": true,
+							"p1": true
+						},
+						"dimmed": true
+					},
+					"starCall": {
+						"parts": {
+							"i3:*/0": "      ",
+							"p0": true,
+							"starSignal:shown/0": true,
+							"p1": true
+						},
+						"dimmed": true
+					},
+					"beetleCall": {
+						"parts": {
+							"i4:*/0": "      ",
+							"p0": true,
+							"beetleSignal:shown/0": true,
+							"p1": true
+						},
+						"dimmed": true
+					},
+					"closeAll": {
+						"parts": {
+							"i5:*/0": "    ",
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"return": {
+						"parts": {
+							"i6:*/0": "    ",
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"catch": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"abort": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"throw": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"catchEnd": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"getEnd": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"status": {
+					"ranges": {
+						"14": [
+							{
+								"start": 6,
+								"end": 44,
+								"status": "running"
+							}
+						],
+						"15": [
+							{
+								"start": 6,
+								"end": 53,
+								"status": "running"
+							}
+						],
+						"16": [
+							{
+								"start": 6,
+								"end": 51,
+								"status": "error"
+							}
+						]
+					},
+					"allRanges": {
+						"treeCall": [
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 4,
+								"end": 23
+							},
+							{
+								"start": 4,
+								"end": 23
+							},
+							{
+								"start": 4,
+								"end": 23
+							}
+						],
+						"starCall": [
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 4,
+								"end": 32
+							},
+							{
+								"start": 4,
+								"end": 32
+							},
+							{
+								"start": 4,
+								"end": 32
+							}
+						],
+						"beetleCall": [
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 4,
+								"end": 30
+							},
+							{
+								"start": 4,
+								"end": 30
+							},
+							{
+								"start": 4,
+								"end": 30
+							}
+						]
+					}
+				},
+				"cursor": {
+					"lineIndex": 5,
+					"charOffset": 4,
+					"textLength": 19,
+					"type": "hand"
+				},
+				"bursts": []
+			},
+			{
+				"id": 7,
+				"lineOrder": [
+					"askFn",
+					"askBody1",
+					"askBody2",
+					"askBody3",
+					"askBody4",
+					"abortSignal",
+					"askBody5",
+					"askEnd",
+					"blank",
+					"getFn",
+					"controller",
+					"blank2",
+					"try",
+					"destructure",
+					"treeCall",
+					"starCall",
+					"beetleCall",
+					"closeAll",
+					"return",
+					"catch",
+					"abort",
+					"throw",
+					"catchEnd",
+					"getEnd"
+				],
+				"state": {
+					"askFn": {
+						"parts": {
+							"p0": true,
+							"signalParam:shown/0": true,
+							"p1": true
+						},
+						"dimmed": true
+					},
+					"askBody1": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"askBody2": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"askBody3": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"askBody4": {
+						"parts": {
+							"p0": true,
+							"promptComma:shown/0": true
+						},
+						"dimmed": true
+					},
+					"abortSignal": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"askBody5": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"askEnd": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"blank": {
+						"parts": {
+							"blank-empty": true
+						},
+						"dimmed": true
+					},
+					"getFn": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"controller": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"blank2": {
+						"parts": {
+							"blank2-empty": true
+						},
+						"dimmed": true
+					},
+					"try": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"destructure": {
+						"parts": {
+							"i1:*/0": "    ",
+							"p0": true
+						}
+					},
+					"treeCall": {
+						"parts": {
+							"i2:*/0": "      ",
+							"p0": true,
+							"treeSignal:shown/0": true,
+							"p1": true
+						}
+					},
+					"starCall": {
+						"parts": {
+							"i3:*/0": "      ",
+							"p0": true,
+							"starSignal:shown/0": true,
+							"p1": true
+						}
+					},
+					"beetleCall": {
+						"parts": {
+							"i4:*/0": "      ",
+							"p0": true,
+							"beetleSignal:shown/0": true,
+							"p1": true
+						}
+					},
+					"closeAll": {
+						"parts": {
+							"i5:*/0": "    ",
+							"p0": true
+						}
+					},
+					"return": {
+						"parts": {
+							"i6:*/0": "    ",
+							"p0": true
+						}
+					},
+					"catch": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"abort": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"throw": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"catchEnd": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"getEnd": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"status": {
+					"ranges": {
+						"14": [
+							{
+								"start": 6,
+								"end": 44,
+								"status": "error"
+							}
+						],
+						"15": [
+							{
+								"start": 6,
+								"end": 53,
+								"status": "error"
+							}
+						],
+						"16": [
+							{
+								"start": 6,
+								"end": 51,
+								"status": "error"
+							}
+						]
+					},
+					"allRanges": {
+						"treeCall": [
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 4,
+								"end": 23
+							},
+							{
+								"start": 4,
+								"end": 23
+							},
+							{
+								"start": 4,
+								"end": 23
+							}
+						],
+						"starCall": [
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 4,
+								"end": 32
+							},
+							{
+								"start": 4,
+								"end": 32
+							},
+							{
+								"start": 4,
+								"end": 32
+							}
+						],
+						"beetleCall": [
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 4,
+								"end": 30
+							},
+							{
+								"start": 4,
+								"end": 30
+							},
+							{
+								"start": 4,
+								"end": 30
+							}
+						]
+					}
+				},
+				"cursor": {
+					"lineIndex": 15,
+					"charOffset": 35,
+					"textLength": 17,
+					"type": "hand"
+				},
+				"bursts": [],
+				"sound": "fail"
+			},
+			{
+				"id": 8,
+				"lineOrder": [
+					"askFn",
+					"askBody1",
+					"askBody2",
+					"askBody3",
+					"askBody4",
+					"abortSignal",
+					"askBody5",
+					"askEnd",
+					"blank",
+					"getFn",
+					"controller",
+					"blank2",
+					"try",
+					"destructure",
+					"treeCall",
+					"starCall",
+					"beetleCall",
+					"closeAll",
+					"return",
+					"catch",
+					"abort",
+					"throw",
+					"catchEnd",
+					"getEnd"
+				],
+				"state": {
+					"askFn": {
+						"parts": {
+							"p0": true,
+							"signalParam:shown/0": true,
+							"p1": true
+						}
+					},
+					"askBody1": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"askBody2": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"askBody3": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"askBody4": {
+						"parts": {
+							"p0": true,
+							"promptComma:shown/0": true
+						}
+					},
+					"abortSignal": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"askBody5": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"askEnd": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"blank": {
+						"parts": {
+							"blank-empty": true
+						}
+					},
+					"getFn": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"controller": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"blank2": {
+						"parts": {
+							"blank2-empty": true
+						}
+					},
+					"try": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"destructure": {
+						"parts": {
+							"i1:*/0": "    ",
+							"p0": true
+						}
+					},
+					"treeCall": {
+						"parts": {
+							"i2:*/0": "      ",
+							"p0": true,
+							"treeSignal:shown/0": true,
+							"p1": true
+						}
+					},
+					"starCall": {
+						"parts": {
+							"i3:*/0": "      ",
+							"p0": true,
+							"starSignal:shown/0": true,
+							"p1": true
+						}
+					},
+					"beetleCall": {
+						"parts": {
+							"i4:*/0": "      ",
+							"p0": true,
+							"beetleSignal:shown/0": true,
+							"p1": true
+						}
+					},
+					"closeAll": {
+						"parts": {
+							"i5:*/0": "    ",
+							"p0": true
+						}
+					},
+					"return": {
+						"parts": {
+							"i6:*/0": "    ",
+							"p0": true
+						}
+					},
+					"catch": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"abort": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"throw": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"catchEnd": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"getEnd": {
+						"parts": {
+							"p0": true
+						}
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"status": {
+					"ranges": {
+						"14": [
+							{
+								"start": 6,
+								"end": 44,
+								"status": "error"
+							}
+						],
+						"15": [
+							{
+								"start": 6,
+								"end": 53,
+								"status": "error"
+							}
+						],
+						"16": [
+							{
+								"start": 6,
+								"end": 51,
+								"status": "error"
+							}
+						]
+					},
+					"allRanges": {
+						"treeCall": [
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 4,
+								"end": 23
+							},
+							{
+								"start": 4,
+								"end": 23
+							},
+							{
+								"start": 4,
+								"end": 23
+							}
+						],
+						"starCall": [
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 4,
+								"end": 32
+							},
+							{
+								"start": 4,
+								"end": 32
+							},
+							{
+								"start": 4,
+								"end": 32
+							}
+						],
+						"beetleCall": [
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 4,
+								"end": 30
+							},
+							{
+								"start": 4,
+								"end": 30
+							},
+							{
+								"start": 4,
+								"end": 30
+							}
+						]
+					}
+				},
+				"bursts": []
+			},
+			{
+				"id": 9,
+				"lineOrder": [
+					"askFn",
+					"askBody1",
+					"askBody2",
+					"askBody3",
+					"askBody4",
+					"abortSignal",
+					"askBody5",
+					"askEnd",
+					"blank",
+					"getFn",
+					"controller",
+					"blank2",
+					"try",
+					"destructure",
+					"treeCall",
+					"starCall",
+					"beetleCall",
+					"closeAll",
+					"return",
+					"catch",
+					"abort",
+					"throw",
+					"catchEnd",
+					"getEnd"
+				],
+				"state": {
+					"askFn": {
+						"parts": {
+							"p0": true,
+							"signalParam:shown/0": true,
+							"p1": true
+						}
+					},
+					"askBody1": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"askBody2": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"askBody3": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"askBody4": {
+						"parts": {
+							"p0": true,
+							"promptComma:shown/0": true
+						},
+						"dimmed": true
+					},
+					"abortSignal": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"askBody5": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"askEnd": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"blank": {
+						"parts": {
+							"blank-empty": true
+						},
+						"dimmed": true
+					},
+					"getFn": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"controller": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"blank2": {
+						"parts": {
+							"blank2-empty": true
+						},
+						"dimmed": true
+					},
+					"try": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"destructure": {
+						"parts": {
+							"i1:*/0": "    ",
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"treeCall": {
+						"parts": {
+							"i2:*/0": "      ",
+							"p0": true,
+							"treeSignal:shown/0": true,
+							"p1": true
+						}
+					},
+					"starCall": {
+						"parts": {
+							"i3:*/0": "      ",
+							"p0": true,
+							"starSignal:shown/0": true,
+							"p1": true
+						}
+					},
+					"beetleCall": {
+						"parts": {
+							"i4:*/0": "      ",
+							"p0": true,
+							"beetleSignal:shown/0": true,
+							"p1": true
+						}
+					},
+					"closeAll": {
+						"parts": {
+							"i5:*/0": "    ",
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"return": {
+						"parts": {
+							"i6:*/0": "    ",
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"catch": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"abort": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"throw": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"catchEnd": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"getEnd": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"status": {
+					"ranges": {
+						"14": [
+							{
+								"start": 6,
+								"end": 44,
+								"status": "error"
+							}
+						],
+						"15": [
+							{
+								"start": 6,
+								"end": 53,
+								"status": "error"
+							}
+						],
+						"16": [
+							{
+								"start": 6,
+								"end": 51,
+								"status": "error"
+							}
+						]
+					},
+					"allRanges": {
+						"treeCall": [
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 4,
+								"end": 23
+							},
+							{
+								"start": 4,
+								"end": 23
+							},
+							{
+								"start": 4,
+								"end": 23
+							}
+						],
+						"starCall": [
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 4,
+								"end": 32
+							},
+							{
+								"start": 4,
+								"end": 32
+							},
+							{
+								"start": 4,
+								"end": 32
+							}
+						],
+						"beetleCall": [
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 4,
+								"end": 30
+							},
+							{
+								"start": 4,
+								"end": 30
+							},
+							{
+								"start": 4,
+								"end": 30
+							}
+						]
+					}
+				},
+				"bursts": []
+			},
+			{
+				"id": 10,
+				"lineOrder": [
+					"askFn",
+					"askBody1",
+					"askBody2",
+					"askBody3",
+					"askBody4",
+					"abortSignal",
+					"askBody5",
+					"askEnd",
+					"blank",
+					"getFn",
+					"controller",
+					"blank2",
+					"try",
+					"destructure",
+					"treeCall",
+					"starCall",
+					"beetleCall",
+					"closeAll",
+					"return",
+					"catch",
+					"abort",
+					"throw",
+					"catchEnd",
+					"getEnd"
+				],
+				"state": {
+					"askFn": {
+						"parts": {
+							"p0": true,
+							"signalParam:shown/0": true,
+							"p1": true
+						},
+						"dimmed": true
+					},
+					"askBody1": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"askBody2": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"askBody3": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"askBody4": {
+						"parts": {
+							"p0": true,
+							"promptComma:shown/0": true
+						}
+					},
+					"abortSignal": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"askBody5": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"askEnd": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"blank": {
+						"parts": {
+							"blank-empty": true
+						},
+						"dimmed": true
+					},
+					"getFn": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"controller": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"blank2": {
+						"parts": {
+							"blank2-empty": true
+						},
+						"dimmed": true
+					},
+					"try": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"destructure": {
+						"parts": {
+							"i1:*/0": "    ",
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"treeCall": {
+						"parts": {
+							"i2:*/0": "      ",
+							"p0": true,
+							"treeSignal:shown/0": true,
+							"p1": true
+						},
+						"dimmed": true
+					},
+					"starCall": {
+						"parts": {
+							"i3:*/0": "      ",
+							"p0": true,
+							"starSignal:shown/0": true,
+							"p1": true
+						},
+						"dimmed": true
+					},
+					"beetleCall": {
+						"parts": {
+							"i4:*/0": "      ",
+							"p0": true,
+							"beetleSignal:shown/0": true,
+							"p1": true
+						},
+						"dimmed": true
+					},
+					"closeAll": {
+						"parts": {
+							"i5:*/0": "    ",
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"return": {
+						"parts": {
+							"i6:*/0": "    ",
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"catch": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"abort": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"throw": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"catchEnd": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"getEnd": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"status": {
+					"ranges": {
+						"14": [
+							{
+								"start": 6,
+								"end": 44,
+								"status": "error"
+							}
+						],
+						"15": [
+							{
+								"start": 6,
+								"end": 53,
+								"status": "error"
+							}
+						],
+						"16": [
+							{
+								"start": 6,
+								"end": 51,
+								"status": "error"
+							}
+						]
+					},
+					"allRanges": {
+						"treeCall": [
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 4,
+								"end": 23
+							},
+							{
+								"start": 4,
+								"end": 23
+							},
+							{
+								"start": 4,
+								"end": 23
+							}
+						],
+						"starCall": [
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 4,
+								"end": 32
+							},
+							{
+								"start": 4,
+								"end": 32
+							},
+							{
+								"start": 4,
+								"end": 32
+							}
+						],
+						"beetleCall": [
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 4,
+								"end": 30
+							},
+							{
+								"start": 4,
+								"end": 30
+							},
+							{
+								"start": 4,
+								"end": 30
+							}
+						]
+					}
+				},
+				"cursor": {
+					"lineIndex": 5,
+					"charOffset": 4,
+					"textLength": 19,
+					"type": "hand"
+				},
+				"bursts": []
+			},
+			{
+				"id": 11,
+				"lineOrder": [
+					"askFn",
+					"askBody1",
+					"askBody2",
+					"askBody3",
+					"askBody4",
+					"abortSignal",
+					"askBody5",
+					"askEnd",
+					"blank",
+					"getFn",
+					"controller",
+					"blank2",
+					"try",
+					"destructure",
+					"treeCall",
+					"starCall",
+					"beetleCall",
+					"closeAll",
+					"return",
+					"catch",
+					"abort",
+					"throw",
+					"catchEnd",
+					"getEnd"
+				],
+				"state": {
+					"askFn": {
+						"parts": {
+							"p0": true,
+							"signalParam:shown/0": true,
+							"p1": true
+						}
+					},
+					"askBody1": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"askBody2": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"askBody3": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"askBody4": {
+						"parts": {
+							"p0": true,
+							"promptComma:shown/0": true
+						}
+					},
+					"abortSignal": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"askBody5": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"askEnd": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"blank": {
+						"parts": {
+							"blank-empty": true
+						}
+					},
+					"getFn": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"controller": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"blank2": {
+						"parts": {
+							"blank2-empty": true
+						}
+					},
+					"try": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"destructure": {
+						"parts": {
+							"i1:*/0": "    ",
+							"p0": true
+						}
+					},
+					"treeCall": {
+						"parts": {
+							"i2:*/0": "      ",
+							"p0": true,
+							"treeSignal:shown/0": true,
+							"p1": true
+						}
+					},
+					"starCall": {
+						"parts": {
+							"i3:*/0": "      ",
+							"p0": true,
+							"starSignal:shown/0": true,
+							"p1": true
+						}
+					},
+					"beetleCall": {
+						"parts": {
+							"i4:*/0": "      ",
+							"p0": true,
+							"beetleSignal:shown/0": true,
+							"p1": true
+						}
+					},
+					"closeAll": {
+						"parts": {
+							"i5:*/0": "    ",
+							"p0": true
+						}
+					},
+					"return": {
+						"parts": {
+							"i6:*/0": "    ",
+							"p0": true
+						}
+					},
+					"catch": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"abort": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"throw": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"catchEnd": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"getEnd": {
+						"parts": {
+							"p0": true
+						}
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"status": {
+					"ranges": {
+						"14": [
+							{
+								"start": 6,
+								"end": 44,
+								"status": "error"
+							}
+						],
+						"15": [
+							{
+								"start": 6,
+								"end": 53,
+								"status": "error"
+							}
+						],
+						"16": [
+							{
+								"start": 6,
+								"end": 51,
+								"status": "error"
+							}
+						]
+					},
+					"allRanges": {
+						"treeCall": [
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 4,
+								"end": 23
+							},
+							{
+								"start": 4,
+								"end": 23
+							},
+							{
+								"start": 4,
+								"end": 23
+							}
+						],
+						"starCall": [
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 4,
+								"end": 32
+							},
+							{
+								"start": 4,
+								"end": 32
+							},
+							{
+								"start": 4,
+								"end": 32
+							}
+						],
+						"beetleCall": [
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 4,
+								"end": 30
+							},
+							{
+								"start": 4,
+								"end": 30
+							},
+							{
+								"start": 4,
+								"end": 30
+							}
+						]
+					}
+				},
+				"bursts": []
+			},
+			{
+				"id": 12,
+				"lineOrder": [
+					"askFn",
+					"askBody1",
+					"askBody2",
+					"askBody3",
+					"askBody4",
+					"askBody5",
+					"askEnd",
+					"blank",
+					"getFn",
+					"destructure",
+					"treeCall",
+					"starCall",
+					"beetleCall",
+					"closeAll",
+					"return",
+					"getEnd"
+				],
+				"state": {
+					"askFn": {
+						"parts": {
+							"p0": true,
+							"signalParam:shown/0": false,
+							"p1": true
+						}
+					},
+					"askBody1": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"askBody2": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"askBody3": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"askBody4": {
+						"parts": {
+							"p0": true,
+							"promptComma:shown/0": false
+						}
+					},
+					"askBody5": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"askEnd": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"blank": {
+						"parts": {
+							"blank-empty": true
+						}
+					},
+					"getFn": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"destructure": {
+						"parts": {
+							"i1:*/0": "  ",
+							"p0": true
+						}
+					},
+					"treeCall": {
+						"parts": {
+							"i2:*/0": "    ",
+							"p0": true,
+							"treeSignal:shown/0": false,
+							"p1": true
+						}
+					},
+					"starCall": {
+						"parts": {
+							"i3:*/0": "    ",
+							"p0": true,
+							"starSignal:shown/0": false,
+							"p1": true
+						}
+					},
+					"beetleCall": {
+						"parts": {
+							"i4:*/0": "    ",
+							"p0": true,
+							"beetleSignal:shown/0": false,
+							"p1": true
+						}
+					},
+					"closeAll": {
+						"parts": {
+							"i5:*/0": "  ",
+							"p0": true
+						}
+					},
+					"return": {
+						"parts": {
+							"i6:*/0": "  ",
+							"p0": true
+						}
+					},
+					"getEnd": {
+						"parts": {
+							"p0": true
+						}
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"status": {
+					"ranges": {
+						"10": [
+							{
+								"start": 4,
+								"end": 23,
+								"status": "error"
+							}
+						],
+						"11": [
+							{
+								"start": 4,
+								"end": 32,
+								"status": "error"
+							}
+						],
+						"12": [
+							{
+								"start": 4,
+								"end": 30,
+								"status": "error"
+							}
+						]
+					},
+					"allRanges": {
+						"treeCall": [
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 4,
+								"end": 23
+							},
+							{
+								"start": 4,
+								"end": 23
+							},
+							{
+								"start": 4,
+								"end": 23
+							}
+						],
+						"starCall": [
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 4,
+								"end": 32
+							},
+							{
+								"start": 4,
+								"end": 32
+							},
+							{
+								"start": 4,
+								"end": 32
+							}
+						],
+						"beetleCall": [
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 4,
+								"end": 30
+							},
+							{
+								"start": 4,
+								"end": 30
+							},
+							{
+								"start": 4,
+								"end": 30
+							}
+						]
+					}
+				},
+				"bursts": []
+			},
+			{
+				"id": 13,
+				"lineOrder": [
+					"askFn",
+					"askBody1",
+					"askBody2",
+					"askBody3",
+					"askBody4",
+					"askBody5",
+					"askEnd",
+					"blank",
+					"getFn",
+					"destructure",
+					"treeCall",
+					"starCall",
+					"beetleCall",
+					"closeAll",
+					"return",
+					"getEnd"
+				],
+				"state": {
+					"askFn": {
+						"parts": {
+							"p0": true,
+							"signalParam:shown/0": false,
+							"p1": true
+						}
+					},
+					"askBody1": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"askBody2": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"askBody3": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"askBody4": {
+						"parts": {
+							"p0": true,
+							"promptComma:shown/0": false
+						}
+					},
+					"askBody5": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"askEnd": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"blank": {
+						"parts": {
+							"blank-empty": true
+						}
+					},
+					"getFn": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"destructure": {
+						"parts": {
+							"i1:*/0": "  ",
+							"p0": true
+						}
+					},
+					"treeCall": {
+						"parts": {
+							"i2:*/0": "    ",
+							"p0": true,
+							"treeSignal:shown/0": false,
+							"p1": true
+						}
+					},
+					"starCall": {
+						"parts": {
+							"i3:*/0": "    ",
+							"p0": true,
+							"starSignal:shown/0": false,
+							"p1": true
+						}
+					},
+					"beetleCall": {
+						"parts": {
+							"i4:*/0": "    ",
+							"p0": true,
+							"beetleSignal:shown/0": false,
+							"p1": true
+						}
+					},
+					"closeAll": {
+						"parts": {
+							"i5:*/0": "  ",
+							"p0": true
+						}
+					},
+					"return": {
+						"parts": {
+							"i6:*/0": "  ",
+							"p0": true
+						}
+					},
+					"getEnd": {
+						"parts": {
+							"p0": true
+						}
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"status": {
+					"ranges": {
+						"10": [
+							{
+								"start": 4,
+								"end": 23,
+								"status": "running"
+							}
+						],
+						"11": [
+							{
+								"start": 4,
+								"end": 32,
+								"status": "running"
+							}
+						],
+						"12": [
+							{
+								"start": 4,
+								"end": 30,
+								"status": "running"
+							}
+						]
+					},
+					"allRanges": {
+						"treeCall": [
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 4,
+								"end": 23
+							},
+							{
+								"start": 4,
+								"end": 23
+							},
+							{
+								"start": 4,
+								"end": 23
+							}
+						],
+						"starCall": [
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 4,
+								"end": 32
+							},
+							{
+								"start": 4,
+								"end": 32
+							},
+							{
+								"start": 4,
+								"end": 32
+							}
+						],
+						"beetleCall": [
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 4,
+								"end": 30
+							},
+							{
+								"start": 4,
+								"end": 30
+							},
+							{
+								"start": 4,
+								"end": 30
+							}
+						]
+					}
+				},
+				"bursts": [],
+				"sound": "whoosh"
+			},
+			{
+				"id": 14,
+				"lineOrder": [
+					"askFn",
+					"askBody1",
+					"askBody2",
+					"askBody3",
+					"askBody4",
+					"askBody5",
+					"askEnd",
+					"blank",
+					"getFn",
+					"destructure",
+					"treeCall",
+					"starCall",
+					"beetleCall",
+					"closeAll",
+					"return",
+					"getEnd"
+				],
+				"state": {
+					"askFn": {
+						"parts": {
+							"p0": true,
+							"signalParam:shown/0": false,
+							"p1": true
+						}
+					},
+					"askBody1": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"askBody2": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"askBody3": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"askBody4": {
+						"parts": {
+							"p0": true,
+							"promptComma:shown/0": false
+						}
+					},
+					"askBody5": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"askEnd": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"blank": {
+						"parts": {
+							"blank-empty": true
+						}
+					},
+					"getFn": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"destructure": {
+						"parts": {
+							"i1:*/0": "  ",
+							"p0": true
+						}
+					},
+					"treeCall": {
+						"parts": {
+							"i2:*/0": "    ",
+							"p0": true,
+							"treeSignal:shown/0": false,
+							"p1": true
+						}
+					},
+					"starCall": {
+						"parts": {
+							"i3:*/0": "    ",
+							"p0": true,
+							"starSignal:shown/0": false,
+							"p1": true
+						}
+					},
+					"beetleCall": {
+						"parts": {
+							"i4:*/0": "    ",
+							"p0": true,
+							"beetleSignal:shown/0": false,
+							"p1": true
+						}
+					},
+					"closeAll": {
+						"parts": {
+							"i5:*/0": "  ",
+							"p0": true
+						}
+					},
+					"return": {
+						"parts": {
+							"i6:*/0": "  ",
+							"p0": true
+						}
+					},
+					"getEnd": {
+						"parts": {
+							"p0": true
+						}
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"status": {
+					"ranges": {
+						"10": [
+							{
+								"start": 4,
+								"end": 23,
+								"status": "running"
+							}
+						],
+						"11": [
+							{
+								"start": 4,
+								"end": 32,
+								"status": "error"
+							}
+						],
+						"12": [
+							{
+								"start": 4,
+								"end": 30,
+								"status": "running"
+							}
+						]
+					},
+					"allRanges": {
+						"treeCall": [
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 6,
+								"end": 44
+							},
+							{
+								"start": 4,
+								"end": 23
+							},
+							{
+								"start": 4,
+								"end": 23
+							},
+							{
+								"start": 4,
+								"end": 23
+							}
+						],
+						"starCall": [
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 6,
+								"end": 53
+							},
+							{
+								"start": 4,
+								"end": 32
+							},
+							{
+								"start": 4,
+								"end": 32
+							},
+							{
+								"start": 4,
+								"end": 32
+							}
+						],
+						"beetleCall": [
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 6,
+								"end": 51
+							},
+							{
+								"start": 4,
+								"end": 30
+							},
+							{
+								"start": 4,
+								"end": 30
+							},
+							{
+								"start": 4,
+								"end": 30
+							}
+						]
+					}
+				},
+				"bursts": [],
+				"sound": "fail"
+			}
+		]
+	},
+	"steps": [
+		{
+			"name": "start",
+			"at": "start"
+		},
+		{
+			"name": "Now",
+			"at": "Now"
+		},
+		{
+			"name": "beetle",
+			"at": "beetle"
+		},
+		{
+			"name": "crushed",
+			"at": "crushed"
+		},
+		{
+			"name": "caught",
+			"at": "caught"
+		},
+		{
+			"name": "controller",
+			"at": "controller"
+		},
+		{
+			"name": "signaling",
+			"at": "signaling"
+		},
+		{
+			"name": "stop",
+			"at": "stop"
+		},
+		{
+			"name": "as",
+			"at": "as"
+		},
+		{
+			"name": "verbose",
+			"at": "verbose"
+		},
+		{
+			"name": "dependencies",
+			"at": "dependencies"
+		},
+		{
+			"name": "Most",
+			"at": "Most"
+		},
+		{
+			"name": "ignore",
+			"at": "ignore"
+		},
+		{
+			"name": "tolerating",
+			"at": "tolerating"
+		},
+		{
+			"name": "leaking",
+			"at": "leaking"
+		}
+	],
+	"stepTimes": [
+		0,
+		0,
+		1.1300000000000001,
+		1.7900000000000003,
+		4.67,
+		5.6899999999999995,
+		7.85,
+		9.729999999999999,
+		11.69,
+		16.070000000000004,
+		19.790000000000003,
+		26.011000000000003,
+		29.450000000000003,
+		31.591000000000005,
+		37.31
+	],
+	"_debug": {
+		"timingsStatus": "matched",
+		"dslWordCount": 72
+	},
+	"groupId": "structured-concurrency",
+	"groupTitle": "Structured Concurrency",
+	"isFirstInGroup": false,
+	"audioFile": "abort-signal-infusion.93dc8581.webm"
+}

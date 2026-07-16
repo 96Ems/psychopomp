@@ -1,0 +1,1526 @@
+{
+	"id": "why-compose",
+	"text": "Now that we can create and run a few primitive Effects, it's time to compose them into larger and more meaningful programs. In the preceding lessons, I've hacked my way around this by running one Effect and then separately running another. If Effect has anything to offer us, it's not down this path. We want to combine our effects without forfeiting their blueprintness. Ideally, our entire program will be composed into a single Effect that is run once at the very top of our application.",
+	"code": "import { Effect } from \"effect\"\n\nconst sensorData = Effect.promise(() => fetch(\"/api/sensors\").then(r => r.json()))\nconst shout = (msg: string) => Effect.sync(() => console.log(msg))\n",
+	"contentHash": "-hsfuw6",
+	"wordTimings": [
+		{
+			"word": "Now",
+			"start": 0.10000000000000003,
+			"end": 0.30100000000000005
+		},
+		{
+			"word": "that",
+			"start": 0.3400000000000001,
+			"end": 0.42100000000000004
+		},
+		{
+			"word": "we",
+			"start": 0.4800000000000001,
+			"end": 0.5800000000000001
+		},
+		{
+			"word": "can",
+			"start": 0.62,
+			"end": 0.8010000000000002
+		},
+		{
+			"word": "create",
+			"start": 0.8600000000000001,
+			"end": 1.181
+		},
+		{
+			"word": "and",
+			"start": 1.22,
+			"end": 1.32
+		},
+		{
+			"word": "run",
+			"start": 1.3800000000000001,
+			"end": 1.52
+		},
+		{
+			"word": "a",
+			"start": 1.56,
+			"end": 1.62
+		},
+		{
+			"word": "few",
+			"start": 1.681,
+			"end": 1.8199999999999998
+		},
+		{
+			"word": "primitive",
+			"start": 1.8810000000000002,
+			"end": 2.2
+		},
+		{
+			"word": "Effects,",
+			"start": 2.2600000000000002,
+			"end": 2.82
+		},
+		{
+			"word": "it's",
+			"start": 3.4010000000000002,
+			"end": 3.56
+		},
+		{
+			"word": "time",
+			"start": 3.64,
+			"end": 3.8600000000000003
+		},
+		{
+			"word": "to",
+			"start": 3.9000000000000004,
+			"end": 3.96
+		},
+		{
+			"word": "compose",
+			"start": 4,
+			"end": 4.44
+		},
+		{
+			"word": "them",
+			"start": 4.5,
+			"end": 4.6610000000000005
+		},
+		{
+			"word": "into",
+			"start": 4.7,
+			"end": 4.96
+		},
+		{
+			"word": "larger",
+			"start": 5.081,
+			"end": 5.48
+		},
+		{
+			"word": "and",
+			"start": 5.54,
+			"end": 5.641
+		},
+		{
+			"word": "more",
+			"start": 5.72,
+			"end": 5.84
+		},
+		{
+			"word": "meaningful",
+			"start": 5.94,
+			"end": 6.32
+		},
+		{
+			"word": "programs.",
+			"start": 6.46,
+			"end": 7.06
+		},
+		{
+			"word": "In",
+			"start": 7.901000000000001,
+			"end": 7.981000000000001,
+			"paragraphBreak": true
+		},
+		{
+			"word": "the",
+			"start": 8,
+			"end": 8.061
+		},
+		{
+			"word": "preceding",
+			"start": 8.120000000000001,
+			"end": 8.561
+		},
+		{
+			"word": "lessons,",
+			"start": 8.620000000000001,
+			"end": 9.021
+		},
+		{
+			"word": "I've",
+			"start": 9.120000000000001,
+			"end": 9.280999999999999
+		},
+		{
+			"word": "hacked",
+			"start": 9.3,
+			"end": 9.54
+		},
+		{
+			"word": "my",
+			"start": 9.600999999999999,
+			"end": 9.719999999999999
+		},
+		{
+			"word": "way",
+			"start": 9.739999999999998,
+			"end": 9.861
+		},
+		{
+			"word": "around",
+			"start": 9.940999999999999,
+			"end": 10.181000000000001
+		},
+		{
+			"word": "this",
+			"start": 10.260000000000002,
+			"end": 10.46
+		},
+		{
+			"word": "by",
+			"start": 10.521,
+			"end": 10.620999999999999
+		},
+		{
+			"word": "running",
+			"start": 10.7,
+			"end": 10.96
+		},
+		{
+			"word": "one",
+			"start": 11.440000000000001,
+			"end": 11.54
+		},
+		{
+			"word": "Effect",
+			"start": 11.600999999999999,
+			"end": 12.021
+		},
+		{
+			"word": "and",
+			"start": 12.600999999999999,
+			"end": 12.701
+		},
+		{
+			"word": "then",
+			"start": 12.739999999999998,
+			"end": 12.879999999999999
+		},
+		{
+			"word": "separately",
+			"start": 13.04,
+			"end": 13.48
+		},
+		{
+			"word": "running",
+			"start": 13.561,
+			"end": 13.879999999999999
+		},
+		{
+			"word": "another.",
+			"start": 13.940000000000001,
+			"end": 14.32
+		},
+		{
+			"word": "If",
+			"start": 15.420000000000002,
+			"end": 15.521
+		},
+		{
+			"word": "Effect",
+			"start": 15.561,
+			"end": 15.920000000000002
+		},
+		{
+			"word": "has",
+			"start": 15.98,
+			"end": 16.240000000000002
+		},
+		{
+			"word": "anything",
+			"start": 16.3,
+			"end": 16.601000000000003
+		},
+		{
+			"word": "to",
+			"start": 16.64,
+			"end": 16.76
+		},
+		{
+			"word": "offer",
+			"start": 16.82,
+			"end": 17.040000000000003
+		},
+		{
+			"word": "us,",
+			"start": 17.14,
+			"end": 17.380000000000003
+		},
+		{
+			"word": "it's",
+			"start": 17.92,
+			"end": 18.141000000000002
+		},
+		{
+			"word": "not",
+			"start": 18.220000000000002,
+			"end": 18.521
+		},
+		{
+			"word": "down",
+			"start": 18.560000000000002,
+			"end": 18.861
+		},
+		{
+			"word": "this",
+			"start": 18.92,
+			"end": 19.12
+		},
+		{
+			"word": "path.",
+			"start": 19.181,
+			"end": 19.5
+		},
+		{
+			"word": "We",
+			"start": 20.42,
+			"end": 20.541,
+			"paragraphBreak": true
+		},
+		{
+			"word": "want",
+			"start": 20.560000000000002,
+			"end": 20.701
+		},
+		{
+			"word": "to",
+			"start": 20.720000000000002,
+			"end": 20.84
+		},
+		{
+			"word": "combine",
+			"start": 20.861,
+			"end": 21.42
+		},
+		{
+			"word": "our",
+			"start": 21.521,
+			"end": 21.66
+		},
+		{
+			"word": "effects",
+			"start": 21.82,
+			"end": 22.181
+		},
+		{
+			"word": "without",
+			"start": 22.220000000000002,
+			"end": 22.48
+		},
+		{
+			"word": "forfeiting",
+			"start": 22.64,
+			"end": 23.201
+		},
+		{
+			"word": "their",
+			"start": 23.240000000000002,
+			"end": 23.880000000000003
+		},
+		{
+			"word": "blueprintness.",
+			"start": 24,
+			"end": 25.040000000000003,
+			"style": {
+				"italic": true
+			}
+		},
+		{
+			"word": "Ideally,",
+			"start": 26.040000000000003,
+			"end": 26.441000000000003
+		},
+		{
+			"word": "our",
+			"start": 26.560000000000002,
+			"end": 26.681
+		},
+		{
+			"word": "entire",
+			"start": 26.720000000000002,
+			"end": 27.240000000000002
+		},
+		{
+			"word": "program",
+			"start": 27.32,
+			"end": 27.78
+		},
+		{
+			"word": "will",
+			"start": 27.82,
+			"end": 27.941000000000003
+		},
+		{
+			"word": "be",
+			"start": 27.96,
+			"end": 28.080000000000002
+		},
+		{
+			"word": "composed",
+			"start": 28.12,
+			"end": 28.681
+		},
+		{
+			"word": "into",
+			"start": 28.720000000000002,
+			"end": 28.961000000000002
+		},
+		{
+			"word": "a",
+			"start": 29.021,
+			"end": 29.14
+		},
+		{
+			"word": "single",
+			"start": 29.181,
+			"end": 29.48
+		},
+		{
+			"word": "Effect",
+			"start": 29.66,
+			"end": 30.601000000000003
+		},
+		{
+			"word": "that",
+			"start": 30.64,
+			"end": 30.740000000000002
+		},
+		{
+			"word": "is",
+			"start": 30.78,
+			"end": 30.880000000000003
+		},
+		{
+			"word": "run",
+			"start": 30.96,
+			"end": 31.181
+		},
+		{
+			"word": "once",
+			"start": 31.3,
+			"end": 31.721
+		},
+		{
+			"word": "at",
+			"start": 31.76,
+			"end": 31.861
+		},
+		{
+			"word": "the",
+			"start": 31.900000000000002,
+			"end": 32
+		},
+		{
+			"word": "very",
+			"start": 32.061,
+			"end": 32.32
+		},
+		{
+			"word": "top",
+			"start": 32.381,
+			"end": 32.58
+		},
+		{
+			"word": "of",
+			"start": 32.62,
+			"end": 32.721
+		},
+		{
+			"word": "our",
+			"start": 32.76,
+			"end": 32.881
+		},
+		{
+			"word": "application.",
+			"start": 32.94,
+			"end": 33.599999999999994
+		}
+	],
+	"componentFlow": {
+		"name": "WhyComposeDemo",
+		"steps": [
+			{
+				"name": "start",
+				"at": "start"
+			},
+			{
+				"name": "hacked",
+				"at": "hacked"
+			},
+			{
+				"name": "running",
+				"at": "running"
+			},
+			{
+				"name": "running",
+				"at": "running",
+				"offset": 0.5
+			},
+			{
+				"name": "separately",
+				"at": "separately"
+			},
+			{
+				"name": "If",
+				"at": "If",
+				"after": "another"
+			},
+			{
+				"name": "We",
+				"at": "We",
+				"after": "path"
+			},
+			{
+				"name": "entire",
+				"at": "entire"
+			},
+			{
+				"name": "single",
+				"at": "single"
+			},
+			{
+				"name": "that",
+				"at": "that",
+				"after": "single"
+			},
+			{
+				"name": "run",
+				"at": "run",
+				"after": "single"
+			},
+			{
+				"name": "application",
+				"at": "application"
+			}
+		],
+		"snapshots": [
+			{
+				"show": false,
+				"state1": "idle",
+				"state2": "idle",
+				"showLog2": false,
+				"showContainer": false,
+				"combined": false,
+				"showProgramNode": false,
+				"hideBackground": false,
+				"programState": "idle",
+				"showProgramLog": false
+			},
+			{
+				"show": true,
+				"state1": "idle",
+				"state2": "idle",
+				"showLog2": false,
+				"showContainer": false,
+				"combined": false,
+				"showProgramNode": false,
+				"hideBackground": false,
+				"programState": "idle",
+				"showProgramLog": false
+			},
+			{
+				"show": true,
+				"state1": "running",
+				"state2": "idle",
+				"showLog2": false,
+				"showContainer": false,
+				"combined": false,
+				"showProgramNode": false,
+				"hideBackground": false,
+				"programState": "idle",
+				"showProgramLog": false
+			},
+			{
+				"show": true,
+				"state1": "completed",
+				"state2": "idle",
+				"showLog2": false,
+				"showContainer": false,
+				"combined": false,
+				"showProgramNode": false,
+				"hideBackground": false,
+				"programState": "idle",
+				"showProgramLog": false
+			},
+			{
+				"show": true,
+				"state1": "completed",
+				"state2": "running",
+				"showLog2": true,
+				"showContainer": false,
+				"combined": false,
+				"showProgramNode": false,
+				"hideBackground": false,
+				"programState": "idle",
+				"showProgramLog": false
+			},
+			{
+				"show": true,
+				"state1": "completed",
+				"state2": "completed",
+				"showLog2": false,
+				"showContainer": false,
+				"combined": false,
+				"showProgramNode": false,
+				"hideBackground": false,
+				"programState": "idle",
+				"showProgramLog": false
+			},
+			{
+				"show": true,
+				"state1": "idle",
+				"state2": "idle",
+				"showLog2": false,
+				"showContainer": false,
+				"combined": false,
+				"showProgramNode": false,
+				"hideBackground": false,
+				"programState": "idle",
+				"showProgramLog": false
+			},
+			{
+				"show": true,
+				"state1": "idle",
+				"state2": "idle",
+				"showLog2": false,
+				"showContainer": true,
+				"combined": false,
+				"showProgramNode": false,
+				"hideBackground": false,
+				"programState": "idle",
+				"showProgramLog": false
+			},
+			{
+				"show": true,
+				"state1": "idle",
+				"state2": "idle",
+				"showLog2": false,
+				"showContainer": true,
+				"combined": true,
+				"showProgramNode": true,
+				"hideBackground": false,
+				"programState": "idle",
+				"showProgramLog": false
+			},
+			{
+				"show": true,
+				"state1": "idle",
+				"state2": "idle",
+				"showLog2": false,
+				"showContainer": true,
+				"combined": true,
+				"showProgramNode": true,
+				"hideBackground": true,
+				"programState": "idle",
+				"showProgramLog": false
+			},
+			{
+				"show": true,
+				"state1": "idle",
+				"state2": "idle",
+				"showLog2": false,
+				"showContainer": true,
+				"combined": true,
+				"showProgramNode": true,
+				"hideBackground": true,
+				"programState": "running",
+				"showProgramLog": true
+			},
+			{
+				"show": true,
+				"state1": "idle",
+				"state2": "idle",
+				"showLog2": false,
+				"showContainer": true,
+				"combined": true,
+				"showProgramNode": true,
+				"hideBackground": true,
+				"programState": "completed",
+				"showProgramLog": false
+			}
+		]
+	},
+	"slideshowData": {
+		"template": {
+			"lines": {
+				"import": {
+					"parts": {
+						"p0": {
+							"tokens": [
+								{
+									"text": "import",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " { Effect } ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "from",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "\"effect\"",
+									"type": "default",
+									"color": "#9ECBFF"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"p0"
+					]
+				},
+				"blank1": {
+					"parts": {
+						"blank1-empty": {
+							"tokens": [],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"blank1-empty"
+					]
+				},
+				"getSensor": {
+					"parts": {
+						"p0": {
+							"tokens": [
+								{
+									"text": "const",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "sensorData",
+									"type": "default",
+									"color": "#79B8FF"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "=",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " Effect.",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "promise",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": "(() ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "=>",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "fetch",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": "(",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "\"/api/sensors\"",
+									"type": "default",
+									"color": "#9ECBFF"
+								},
+								{
+									"text": ").",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "then",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": "(",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "r",
+									"type": "default",
+									"color": "#FFAB70"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "=>",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " r.",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "json",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": "()))",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"p0"
+					]
+				},
+				"shout": {
+					"parts": {
+						"p0": {
+							"tokens": [
+								{
+									"text": "const",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "shout",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "=",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " (",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "msg",
+									"type": "default",
+									"color": "#FFAB70"
+								},
+								{
+									"text": ":",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "string",
+									"type": "default",
+									"color": "#79B8FF"
+								},
+								{
+									"text": ") ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "=>",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " Effect.",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "sync",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": "(() ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "=>",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " console.",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "log",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": "(msg))",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"p0"
+					]
+				},
+				"blank2": {
+					"parts": {
+						"blank2-empty": {
+							"tokens": [],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"blank2-empty"
+					]
+				},
+				"runSensor": {
+					"parts": {
+						"p0": {
+							"tokens": [
+								{
+									"text": "const",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " { ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "mSv",
+									"type": "default",
+									"color": "#79B8FF"
+								},
+								{
+									"text": " } ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "=",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "await",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " Effect.",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "runPromise",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": "(sensorData)",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"p0"
+					]
+				},
+				"runShout": {
+					"parts": {
+						"p0": {
+							"tokens": [
+								{
+									"text": "await",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " Effect.",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "runPromise",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": "(",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "shout",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": "(mSv ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "<",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "1",
+									"type": "default",
+									"color": "#79B8FF"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "?",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "\"ALL CLEAR!\"",
+									"type": "default",
+									"color": "#9ECBFF"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": ":",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "\"EVACUATE!\"",
+									"type": "default",
+									"color": "#9ECBFF"
+								},
+								{
+									"text": "))",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"p0"
+					]
+				}
+			}
+		},
+		"frames": [
+			{
+				"id": 0,
+				"lineOrder": [
+					"import",
+					"blank1",
+					"getSensor",
+					"shout",
+					"blank2"
+				],
+				"state": {
+					"import": {
+						"parts": {
+							"p0": true
+						},
+						"entering": true
+					},
+					"blank1": {
+						"parts": {
+							"blank1-empty": true
+						},
+						"entering": true
+					},
+					"getSensor": {
+						"parts": {
+							"p0": true
+						},
+						"entering": true
+					},
+					"shout": {
+						"parts": {
+							"p0": true
+						},
+						"entering": true
+					},
+					"blank2": {
+						"parts": {
+							"blank2-empty": true
+						},
+						"entering": true
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"bursts": []
+			},
+			{
+				"id": 1,
+				"lineOrder": [
+					"import",
+					"blank1",
+					"getSensor",
+					"shout",
+					"blank2",
+					"runSensor",
+					"runShout"
+				],
+				"state": {
+					"import": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"blank1": {
+						"parts": {
+							"blank1-empty": true
+						}
+					},
+					"getSensor": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"shout": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"blank2": {
+						"parts": {
+							"blank2-empty": true
+						}
+					},
+					"runSensor": {
+						"parts": {
+							"p0": true
+						},
+						"entering": true
+					},
+					"runShout": {
+						"parts": {
+							"p0": true
+						},
+						"entering": true
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"bursts": []
+			},
+			{
+				"id": 2,
+				"lineOrder": [
+					"import",
+					"blank1",
+					"getSensor",
+					"shout",
+					"blank2",
+					"runSensor",
+					"runShout"
+				],
+				"state": {
+					"import": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"blank1": {
+						"parts": {
+							"blank1-empty": true
+						},
+						"dimmed": true
+					},
+					"getSensor": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"shout": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"blank2": {
+						"parts": {
+							"blank2-empty": true
+						},
+						"dimmed": true
+					},
+					"runSensor": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"runShout": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"cursor": {
+					"lineIndex": 5,
+					"charOffset": 29,
+					"textLength": 10,
+					"type": "hand"
+				},
+				"bursts": []
+			},
+			{
+				"id": 3,
+				"lineOrder": [
+					"import",
+					"blank1",
+					"getSensor",
+					"shout",
+					"blank2",
+					"runSensor",
+					"runShout"
+				],
+				"state": {
+					"import": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"blank1": {
+						"parts": {
+							"blank1-empty": true
+						},
+						"dimmed": true
+					},
+					"getSensor": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"shout": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"blank2": {
+						"parts": {
+							"blank2-empty": true
+						},
+						"dimmed": true
+					},
+					"runSensor": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"runShout": {
+						"parts": {
+							"p0": true
+						}
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"cursor": {
+					"lineIndex": 6,
+					"charOffset": 13,
+					"textLength": 10,
+					"type": "hand"
+				},
+				"bursts": []
+			},
+			{
+				"id": 4,
+				"lineOrder": [
+					"import",
+					"blank1",
+					"getSensor",
+					"shout",
+					"blank2",
+					"runSensor",
+					"runShout"
+				],
+				"state": {
+					"import": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"blank1": {
+						"parts": {
+							"blank1-empty": true
+						}
+					},
+					"getSensor": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"shout": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"blank2": {
+						"parts": {
+							"blank2-empty": true
+						}
+					},
+					"runSensor": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"runShout": {
+						"parts": {
+							"p0": true
+						}
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"bursts": []
+			},
+			{
+				"id": 5,
+				"lineOrder": [
+					"import",
+					"blank1",
+					"getSensor",
+					"shout",
+					"blank2",
+					"runSensor",
+					"runShout"
+				],
+				"state": {
+					"import": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"blank1": {
+						"parts": {
+							"blank1-empty": true
+						}
+					},
+					"getSensor": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"shout": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"blank2": {
+						"parts": {
+							"blank2-empty": true
+						}
+					},
+					"runSensor": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"runShout": {
+						"parts": {
+							"p0": true
+						}
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"bursts": [],
+				"sound": "sad"
+			},
+			{
+				"id": 6,
+				"lineOrder": [],
+				"state": {},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"bursts": []
+			}
+		]
+	},
+	"steps": [
+		{
+			"name": "start",
+			"at": "start"
+		},
+		{
+			"name": "hacked",
+			"at": "hacked"
+		},
+		{
+			"name": "running",
+			"at": "running"
+		},
+		{
+			"name": "separately",
+			"at": "separately"
+		},
+		{
+			"name": "If",
+			"at": "If",
+			"after": "another"
+		},
+		{
+			"name": "path",
+			"at": "path"
+		},
+		{
+			"name": "We",
+			"at": "We",
+			"after": "path"
+		}
+	],
+	"stepTimes": [
+		0,
+		9.15,
+		10.549999999999999,
+		12.889999999999999,
+		15.270000000000001,
+		19.031000000000002,
+		20.270000000000003
+	],
+	"componentStepTimes": [
+		0,
+		9.15,
+		10.549999999999999,
+		11.049999999999999,
+		12.889999999999999,
+		15.270000000000001,
+		20.270000000000003,
+		26.570000000000004,
+		29.031000000000002,
+		30.490000000000002,
+		30.810000000000002,
+		32.79
+	],
+	"_debug": {
+		"timingsStatus": "matched",
+		"dslWordCount": 85
+	},
+	"groupId": "composing",
+	"groupTitle": "Composing Effects",
+	"isFirstInGroup": true,
+	"audioFile": "why-compose.3b7adbe9.webm"
+}

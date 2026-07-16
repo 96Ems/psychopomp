@@ -1,0 +1,1091 @@
+{
+	"id": "effect-succeed",
+	"text": "Now let's take a look at a few rudimentary Effect constructors. We'll begin with Effect.succeed, which describes a computation that succeeds with the given value. Here we'll give it the string \"pismire\", which was my grandmother's favorite word. This is an Effect<string>. It succeeds with a string, it can never fail, and it has no requirements. Luckily, we can elide trailing nevers, leaving us with a much more readable type ascription.",
+	"code": "import { Effect } from \"effect\"\n\nconst magicWord = ...",
+	"contentHash": "-mb1rbo",
+	"wordTimings": [
+		{
+			"word": "Now",
+			"start": 0.09999999999999998,
+			"end": 0.21999999999999997
+		},
+		{
+			"word": "let's",
+			"start": 0.2599999999999999,
+			"end": 0.44099999999999995
+		},
+		{
+			"word": "take",
+			"start": 0.47999999999999987,
+			"end": 0.62
+		},
+		{
+			"word": "a",
+			"start": 0.6609999999999999,
+			"end": 0.6809999999999999
+		},
+		{
+			"word": "look",
+			"start": 0.7599999999999999,
+			"end": 0.9599999999999999
+		},
+		{
+			"word": "at",
+			"start": 1.1400000000000001,
+			"end": 1.1999999999999997
+		},
+		{
+			"word": "a",
+			"start": 1.2799999999999998,
+			"end": 1.4
+		},
+		{
+			"word": "few",
+			"start": 1.46,
+			"end": 1.7999999999999998
+		},
+		{
+			"word": "rudimentary",
+			"start": 2.04,
+			"end": 2.7199999999999998
+		},
+		{
+			"word": "Effect",
+			"start": 2.86,
+			"end": 3.2399999999999998
+		},
+		{
+			"word": "constructors.",
+			"start": 3.32,
+			"end": 4.12
+		},
+		{
+			"word": "We'll",
+			"start": 5.12,
+			"end": 5.22,
+			"paragraphBreak": true
+		},
+		{
+			"word": "begin",
+			"start": 5.28,
+			"end": 5.54
+		},
+		{
+			"word": "with",
+			"start": 5.62,
+			"end": 5.819999999999999
+		},
+		{
+			"word": "Effect.succeed,",
+			"start": 6,
+			"end": 7.54,
+			"style": {
+				"code": true
+			}
+		},
+		{
+			"word": "which",
+			"start": 8.241000000000001,
+			"end": 8.441
+		},
+		{
+			"word": "describes",
+			"start": 8.520000000000001,
+			"end": 8.98
+		},
+		{
+			"word": "a",
+			"start": 9.06,
+			"end": 9.100000000000001
+		},
+		{
+			"word": "computation",
+			"start": 9.16,
+			"end": 9.8
+		},
+		{
+			"word": "that",
+			"start": 9.861,
+			"end": 10.08
+		},
+		{
+			"word": "succeeds",
+			"start": 10.201,
+			"end": 10.861
+		},
+		{
+			"word": "with",
+			"start": 11.16,
+			"end": 11.301
+		},
+		{
+			"word": "the",
+			"start": 11.321000000000002,
+			"end": 11.38
+		},
+		{
+			"word": "given",
+			"start": 11.441,
+			"end": 11.64
+		},
+		{
+			"word": "value.",
+			"start": 11.741000000000001,
+			"end": 12.120000000000001
+		},
+		{
+			"word": "Here",
+			"start": 13.38,
+			"end": 13.5
+		},
+		{
+			"word": "we'll",
+			"start": 13.56,
+			"end": 13.661000000000001
+		},
+		{
+			"word": "give",
+			"start": 13.700000000000001,
+			"end": 13.821000000000002
+		},
+		{
+			"word": "it",
+			"start": 13.84,
+			"end": 13.921000000000001
+		},
+		{
+			"word": "the",
+			"start": 13.96,
+			"end": 14.06
+		},
+		{
+			"word": "string",
+			"start": 14.14,
+			"end": 14.48
+		},
+		{
+			"word": "\"pismire\",",
+			"start": 15.08,
+			"end": 15.76,
+			"definition": "An ant. Archaic."
+		},
+		{
+			"word": "which",
+			"start": 16.441,
+			"end": 16.641
+		},
+		{
+			"word": "was",
+			"start": 16.701,
+			"end": 16.941
+		},
+		{
+			"word": "my",
+			"start": 17.02,
+			"end": 17.361
+		},
+		{
+			"word": "grandmother's",
+			"start": 17.441,
+			"end": 18.06
+		},
+		{
+			"word": "favorite",
+			"start": 18.099999999999998,
+			"end": 18.4
+		},
+		{
+			"word": "word.",
+			"start": 18.461,
+			"end": 18.72
+		},
+		{
+			"word": "This",
+			"start": 20.041,
+			"end": 20.441,
+			"paragraphBreak": true
+		},
+		{
+			"word": "is",
+			"start": 20.5,
+			"end": 20.621
+		},
+		{
+			"word": "an",
+			"start": 20.64,
+			"end": 20.701
+		},
+		{
+			"word": "Effect<string>.",
+			"start": 20.84,
+			"end": 22.121,
+			"style": {
+				"code": true
+			}
+		},
+		{
+			"word": "It",
+			"start": 23.099999999999998,
+			"end": 23.18
+		},
+		{
+			"word": "succeeds",
+			"start": 23.24,
+			"end": 23.781
+		},
+		{
+			"word": "with",
+			"start": 23.84,
+			"end": 23.941
+		},
+		{
+			"word": "a",
+			"start": 23.98,
+			"end": 24
+		},
+		{
+			"word": "string,",
+			"start": 24.099999999999998,
+			"end": 24.419999999999998
+		},
+		{
+			"word": "it",
+			"start": 25.121,
+			"end": 25.221
+		},
+		{
+			"word": "can",
+			"start": 25.32,
+			"end": 25.52
+		},
+		{
+			"word": "never",
+			"start": 25.54,
+			"end": 25.72
+		},
+		{
+			"word": "fail,",
+			"start": 25.9,
+			"end": 26.201
+		},
+		{
+			"word": "and",
+			"start": 26.759999999999998,
+			"end": 26.84
+		},
+		{
+			"word": "it",
+			"start": 26.88,
+			"end": 26.98
+		},
+		{
+			"word": "has",
+			"start": 27.099999999999998,
+			"end": 27.54
+		},
+		{
+			"word": "no",
+			"start": 27.66,
+			"end": 27.8
+		},
+		{
+			"word": "requirements.",
+			"start": 27.9,
+			"end": 28.64
+		},
+		{
+			"word": "Luckily,",
+			"start": 30,
+			"end": 30.34
+		},
+		{
+			"word": "we",
+			"start": 30.441,
+			"end": 30.541
+		},
+		{
+			"word": "can",
+			"start": 30.56,
+			"end": 30.66
+		},
+		{
+			"word": "elide",
+			"start": 30.701,
+			"end": 31.14
+		},
+		{
+			"word": "trailing",
+			"start": 31.34,
+			"end": 31.679999999999996
+		},
+		{
+			"word": "nevers,",
+			"start": 31.720000000000002,
+			"end": 32.160000000000004
+		},
+		{
+			"word": "leaving",
+			"start": 32.68,
+			"end": 32.941
+		},
+		{
+			"word": "us",
+			"start": 33,
+			"end": 33.160000000000004
+		},
+		{
+			"word": "with",
+			"start": 33.24,
+			"end": 33.38
+		},
+		{
+			"word": "a",
+			"start": 33.461000000000006,
+			"end": 33.481
+		},
+		{
+			"word": "much",
+			"start": 33.68,
+			"end": 33.88
+		},
+		{
+			"word": "more",
+			"start": 33.941,
+			"end": 34.080000000000005
+		},
+		{
+			"word": "readable",
+			"start": 34.121,
+			"end": 34.781000000000006
+		},
+		{
+			"word": "type",
+			"start": 34.84,
+			"end": 35
+		},
+		{
+			"word": "ascription.",
+			"start": 35.06,
+			"end": 35.580000000000005
+		}
+	],
+	"slideshowData": {
+		"template": {
+			"lines": {
+				"import": {
+					"parts": {
+						"p0": {
+							"tokens": [
+								{
+									"text": "import",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " { Effect } ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "from",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "\"effect\"",
+									"type": "default",
+									"color": "#9ECBFF"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"p0"
+					]
+				},
+				"blank": {
+					"parts": {
+						"blank-empty": {
+							"tokens": [],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"blank-empty"
+					]
+				},
+				"magicWord": {
+					"parts": {
+						"p0": {
+							"tokens": [
+								{
+									"text": "const",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "magicWord",
+									"type": "default",
+									"color": "#79B8FF"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						},
+						"typeAnnotation:shown/0": {
+							"tokens": [
+								{
+									"text": ":",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "Effect",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": ".",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "Effect",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": "<",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "string",
+									"type": "default",
+									"color": "#79B8FF"
+								}
+							],
+							"animateEntry": true,
+							"crossfade": false
+						},
+						"typeAnnotation:shown/errorNever:shown/0": {
+							"tokens": [
+								{
+									"text": ", ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "never",
+									"type": "default",
+									"color": "#79B8FF"
+								}
+							],
+							"animateEntry": true,
+							"crossfade": false
+						},
+						"typeAnnotation:shown/reqNever:shown/0": {
+							"tokens": [
+								{
+									"text": ", ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "never",
+									"type": "default",
+									"color": "#79B8FF"
+								}
+							],
+							"animateEntry": true,
+							"crossfade": false
+						},
+						"typeAnnotation:shown/1": {
+							"tokens": [
+								{
+									"text": ">",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": true,
+							"crossfade": false
+						},
+						"p1": {
+							"tokens": [
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "=",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						},
+						"effectSucceed:shown/0": {
+							"tokens": [
+								{
+									"text": "Effect.",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "succeed",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": "(",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": true,
+							"crossfade": false
+						},
+						"value:*/0": {
+							"tokens": [
+								{
+									"text": "...",
+									"type": "default",
+									"color": "#F97583"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": true,
+							"versions": {
+								"...": [
+									{
+										"text": "...",
+										"type": "default",
+										"color": "#F97583"
+									}
+								],
+								"\"pismire\"": [
+									{
+										"text": "\"pismire\"",
+										"type": "default",
+										"color": "#9ECBFF"
+									}
+								]
+							}
+						},
+						"closeParen:shown/0": {
+							"tokens": [
+								{
+									"text": ")",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": true,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"p0",
+						"typeAnnotation:shown/0",
+						"typeAnnotation:shown/errorNever:shown/0",
+						"typeAnnotation:shown/reqNever:shown/0",
+						"typeAnnotation:shown/1",
+						"p1",
+						"effectSucceed:shown/0",
+						"value:*/0",
+						"closeParen:shown/0"
+					]
+				}
+			}
+		},
+		"frames": [
+			{
+				"id": 0,
+				"lineOrder": [
+					"import",
+					"blank",
+					"magicWord"
+				],
+				"state": {
+					"import": {
+						"parts": {
+							"p0": true
+						},
+						"entering": true
+					},
+					"blank": {
+						"parts": {
+							"blank-empty": true
+						},
+						"entering": true
+					},
+					"magicWord": {
+						"parts": {
+							"p0": true,
+							"typeAnnotation:shown/0": false,
+							"typeAnnotation:shown/errorNever:shown/0": false,
+							"typeAnnotation:shown/reqNever:shown/0": false,
+							"typeAnnotation:shown/1": false,
+							"p1": true,
+							"effectSucceed:shown/0": false,
+							"value:*/0": "...",
+							"closeParen:shown/0": false
+						},
+						"entering": true
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"bursts": []
+			},
+			{
+				"id": 1,
+				"lineOrder": [
+					"import",
+					"blank",
+					"magicWord"
+				],
+				"state": {
+					"import": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"blank": {
+						"parts": {
+							"blank-empty": true
+						}
+					},
+					"magicWord": {
+						"parts": {
+							"p0": true,
+							"typeAnnotation:shown/0": false,
+							"typeAnnotation:shown/errorNever:shown/0": false,
+							"typeAnnotation:shown/reqNever:shown/0": false,
+							"typeAnnotation:shown/1": false,
+							"p1": true,
+							"effectSucceed:shown/0": true,
+							"value:*/0": "...",
+							"closeParen:shown/0": true
+						}
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [
+					{
+						"lineIndex": 2,
+						"start": 25,
+						"end": 32
+					}
+				],
+				"cursor": {
+					"lineIndex": 2,
+					"charOffset": 25,
+					"textLength": 7,
+					"type": "hand"
+				},
+				"bursts": []
+			},
+			{
+				"id": 2,
+				"lineOrder": [
+					"import",
+					"blank",
+					"magicWord"
+				],
+				"state": {
+					"import": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"blank": {
+						"parts": {
+							"blank-empty": true
+						}
+					},
+					"magicWord": {
+						"parts": {
+							"p0": true,
+							"typeAnnotation:shown/0": false,
+							"typeAnnotation:shown/errorNever:shown/0": false,
+							"typeAnnotation:shown/reqNever:shown/0": false,
+							"typeAnnotation:shown/1": false,
+							"p1": true,
+							"effectSucceed:shown/0": true,
+							"value:*/0": "\"pismire\"",
+							"closeParen:shown/0": true
+						}
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"cursor": {
+					"lineIndex": 2,
+					"charOffset": 34,
+					"textLength": 7,
+					"type": "hand"
+				},
+				"bursts": []
+			},
+			{
+				"id": 3,
+				"lineOrder": [
+					"import",
+					"blank",
+					"magicWord"
+				],
+				"state": {
+					"import": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"blank": {
+						"parts": {
+							"blank-empty": true
+						}
+					},
+					"magicWord": {
+						"parts": {
+							"p0": true,
+							"typeAnnotation:shown/0": true,
+							"typeAnnotation:shown/errorNever:shown/0": false,
+							"typeAnnotation:shown/reqNever:shown/0": false,
+							"typeAnnotation:shown/1": true,
+							"p1": true,
+							"effectSucceed:shown/0": true,
+							"value:*/0": "\"pismire\"",
+							"closeParen:shown/0": true
+						}
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"cursor": {
+					"lineIndex": 2,
+					"charOffset": 17,
+					"textLength": 21,
+					"type": "hand"
+				},
+				"bursts": []
+			},
+			{
+				"id": 4,
+				"lineOrder": [
+					"import",
+					"blank",
+					"magicWord"
+				],
+				"state": {
+					"import": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"blank": {
+						"parts": {
+							"blank-empty": true
+						}
+					},
+					"magicWord": {
+						"parts": {
+							"p0": true,
+							"typeAnnotation:shown/0": true,
+							"typeAnnotation:shown/errorNever:shown/0": false,
+							"typeAnnotation:shown/reqNever:shown/0": false,
+							"typeAnnotation:shown/1": true,
+							"p1": true,
+							"effectSucceed:shown/0": true,
+							"value:*/0": "\"pismire\"",
+							"closeParen:shown/0": true
+						}
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"cursor": {
+					"lineIndex": 2,
+					"charOffset": 31,
+					"textLength": 6,
+					"type": "hand"
+				},
+				"bursts": []
+			},
+			{
+				"id": 5,
+				"lineOrder": [
+					"import",
+					"blank",
+					"magicWord"
+				],
+				"state": {
+					"import": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"blank": {
+						"parts": {
+							"blank-empty": true
+						}
+					},
+					"magicWord": {
+						"parts": {
+							"p0": true,
+							"typeAnnotation:shown/0": true,
+							"typeAnnotation:shown/errorNever:shown/0": true,
+							"typeAnnotation:shown/reqNever:shown/0": false,
+							"typeAnnotation:shown/1": true,
+							"p1": true,
+							"effectSucceed:shown/0": true,
+							"value:*/0": "\"pismire\"",
+							"closeParen:shown/0": true
+						}
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"cursor": {
+					"lineIndex": 2,
+					"charOffset": 39,
+					"textLength": 5,
+					"type": "hand"
+				},
+				"bursts": []
+			},
+			{
+				"id": 6,
+				"lineOrder": [
+					"import",
+					"blank",
+					"magicWord"
+				],
+				"state": {
+					"import": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"blank": {
+						"parts": {
+							"blank-empty": true
+						}
+					},
+					"magicWord": {
+						"parts": {
+							"p0": true,
+							"typeAnnotation:shown/0": true,
+							"typeAnnotation:shown/errorNever:shown/0": true,
+							"typeAnnotation:shown/reqNever:shown/0": true,
+							"typeAnnotation:shown/1": true,
+							"p1": true,
+							"effectSucceed:shown/0": true,
+							"value:*/0": "\"pismire\"",
+							"closeParen:shown/0": true
+						}
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"cursor": {
+					"lineIndex": 2,
+					"charOffset": 46,
+					"textLength": 5,
+					"type": "hand"
+				},
+				"bursts": []
+			},
+			{
+				"id": 7,
+				"lineOrder": [
+					"import",
+					"blank",
+					"magicWord"
+				],
+				"state": {
+					"import": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"blank": {
+						"parts": {
+							"blank-empty": true
+						}
+					},
+					"magicWord": {
+						"parts": {
+							"p0": true,
+							"typeAnnotation:shown/0": true,
+							"typeAnnotation:shown/errorNever:shown/0": false,
+							"typeAnnotation:shown/reqNever:shown/0": false,
+							"typeAnnotation:shown/1": true,
+							"p1": true,
+							"effectSucceed:shown/0": true,
+							"value:*/0": "\"pismire\"",
+							"closeParen:shown/0": true
+						}
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"cursor": {
+					"lineIndex": 2,
+					"charOffset": 17,
+					"textLength": 21,
+					"type": "hand"
+				},
+				"bursts": []
+			},
+			{
+				"id": 8,
+				"lineOrder": [
+					"import",
+					"blank",
+					"magicWord"
+				],
+				"state": {
+					"import": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"blank": {
+						"parts": {
+							"blank-empty": true
+						}
+					},
+					"magicWord": {
+						"parts": {
+							"p0": true,
+							"typeAnnotation:shown/0": true,
+							"typeAnnotation:shown/errorNever:shown/0": false,
+							"typeAnnotation:shown/reqNever:shown/0": false,
+							"typeAnnotation:shown/1": true,
+							"p1": true,
+							"effectSucceed:shown/0": true,
+							"value:*/0": "\"pismire\"",
+							"closeParen:shown/0": true
+						}
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"bursts": [
+					{
+						"lineIndex": 2,
+						"charOffset": 17,
+						"textLength": 21,
+						"emoji": [
+							"✅"
+						],
+						"count": 5
+					}
+				]
+			}
+		]
+	},
+	"steps": [
+		{
+			"name": "start",
+			"at": "start"
+		},
+		{
+			"name": "Effect.succeed",
+			"at": "Effect.succeed"
+		},
+		{
+			"name": "\"pismire\"",
+			"at": "\"pismire\""
+		},
+		{
+			"name": "Effect<string>",
+			"at": "Effect<string>"
+		},
+		{
+			"name": "string",
+			"at": "string",
+			"nth": 2
+		},
+		{
+			"name": "never",
+			"at": "never"
+		},
+		{
+			"name": "no",
+			"at": "no"
+		},
+		{
+			"name": "elide",
+			"at": "elide"
+		},
+		{
+			"name": "readable",
+			"at": "readable"
+		}
+	],
+	"stepTimes": [
+		0,
+		5.85,
+		14.93,
+		20.69,
+		23.95,
+		25.39,
+		27.51,
+		30.551000000000002,
+		33.971000000000004
+	],
+	"_debug": {
+		"timingsStatus": "matched",
+		"dslWordCount": 71
+	},
+	"groupId": "constructing",
+	"groupTitle": "Constructing Effects",
+	"isFirstInGroup": true,
+	"audioFile": "effect-succeed.bea75cdb.webm"
+}

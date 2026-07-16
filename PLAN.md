@@ -74,9 +74,9 @@ export default video("effect-service", {
 
 This syntax remains prior design evidence rather than the selected authoring language. The prototype discovered its public API by producing the hero scene in Rust.
 
-## Rust Owns Authoring And Execution
+## Rust Owns Authoring And Plan Compilation
 
-The renderer, motion engine, and public authoring DSL are Rust. Scene programs construct pure typed values and compile them directly; there is no user-authored JSON or TypeScript execution boundary.
+The renderer, motion engine, and public authoring DSL are Rust. A lightweight Rust Scene Program constructs typed values and emits a versioned Scene Plan. The plan is compiled output, not a user-authored JSON language; ordinary source retains Rust imports, calculations, loops, helpers, and type checking.
 
 The Rust API carries forward the important domain lessons from `effect-institute`:
 
@@ -89,28 +89,30 @@ The Rust API carries forward the important domain lessons from `effect-institute
 - stability analysis catches unnecessarily replaced text.
 
 ```text
-Rust scene values
+Rust Scene Program
        |
-Composition: motion + script clips + layer clips + cues
+Scene Plan: actors + continuous channels + state channels + exact media and cues
        |
-CompiledScene: property tracks + media placements
+persistent kinograph-render process
        |
-scene sampled at time t
+scene sampled at global time t
        |
 wgpu pixels + FFmpeg media assembly
 ```
 
-## The Scene IR Preserves Identity
+Published Effect Institute chapters may enter through a private artifact adapter when the compiled corpus retains stable identity and exact timing. This is a delivery path for pinned first-party lessons, not a public JSON authoring boundary; ordinary authored scenes continue to use Rust values directly.
 
-The IR should represent intent rather than flattened drawing commands. Its first version needs five concepts.
+## The Scene Plan Preserves Identity
+
+The Scene Plan represents timed intent rather than flattened drawing commands. Its first version has five concepts.
 
 ### Actors
 
-An actor is a stable visual object such as a code block, panel, label, callout, or camera. Every actor has an ID, visual content, local transform, and parent.
+An actor is a stable visual object such as a code block, panel, label, callout, or camera. Every actor has an ID, a renderer recipe, and recipe-owned data. The core does not interpret that data.
 
 ### Code Structure
 
-A code block contains stable lines and stable inline spans. Slot changes replace only the spans authored as variable. This carries the `effect-institute` stability principle into rendering.
+A code adapter contains stable lines and flat stable inline parts. Slot changes replace only parts authored as variable. This carries the `effect-institute` stability principle into rendering without teaching the general plan core about editors.
 
 Identity should initially be authored rather than inferred:
 
@@ -120,9 +122,9 @@ code block -> line -> span -> glyph
 
 Automatic token matching between arbitrary source files is a later feature. Authored slots provide better results with much less complexity.
 
-### Poses
+### Channels
 
-A pose is a target state for an actor: transform, opacity, crop, style, or content state. Poses contain no easing and no frame numbers.
+A continuous channel is one scalar actor property with ordered set and spring events. A state channel is one discrete actor property with ordered values. Both use explicit media time and preserve equal-time source order.
 
 ### Cues
 
@@ -130,7 +132,7 @@ A cue names a range on the timeline. Cues can wrap an authored composition or co
 
 ### Transitions
 
-A transition connects an actor's current state to a target pose. It includes a motion profile and composition rule such as sequence or parallel. The compiled transition is a trajectory that can be sampled at any time.
+A continuous transition retargets one property with a motion profile. The renderer compiles these events into analytic trajectories carrying position and velocity. A state transition retains previous value, previous duration, transition time, and age without frame history.
 
 ## Motion Is a Core Domain, Not an Easing Function
 
@@ -230,7 +232,7 @@ Change:
 - give every visual part a stable render identity
 - make motion profiles explicit and shared
 - make camera choreography first-class
-- render text, highlights, and annotations through one scene graph
+- render text, highlights, and annotations through one sampled renderer contract
 - evaluate the result at arbitrary timestamps
 
 Defer:
@@ -296,11 +298,12 @@ Exit criteria:
 
 ### Milestone 6: Tighten the Authoring Loop
 
-Add file watching, composition validation, low-resolution preview rendering, and frame or time-range selection.
+Add Scene Plan validation and inspection, a persistent renderer process, deterministic plan diffs, single-frame rendering, cue and time-range selection, then file watching and low-resolution preview profiles.
 
 Exit criteria:
 
-- Saving the scene rerenders a selected preview range.
+- A lightweight Scene Program recompiles without rebuilding the renderer.
+- Saving the scene can rerender a selected preview range through the persistent process.
 - Compiler errors identify the actor, cue, slot, or target involved.
 - The author can inspect a textual list of cues and resolved timestamps.
 
@@ -309,20 +312,16 @@ Exit criteria:
 ```text
 kinograph/
   PLAN.md
+  SCENE_PLANS.md
   Cargo.toml
-  src/
-    lib.rs               # public Rust library boundary
-    dsl.rs               # scene values, semantic targets, and actors
-    composition.rs       # media clips, cues, and cross-media timing
-    timeline.rs          # scalar property-track compiler
-    motion.rs            # analytic spring trajectories
-    render.rs            # wgpu renderer and accumulation passes
-    encode.rs            # FFmpeg subprocess boundary
-    scenes/              # concrete benchmark choreography by scene
-    main.rs              # command parsing and scene dispatch
+  crates/
+    kinograph/           # lightweight authoring, plans, tracks, and validation
+    kinograph-render/    # wgpu, typography, FFmpeg, recipes, server, and CLI
+  scenes/
+    agent-demo/          # lightweight Rust Scene Program
 ```
 
-Modules should become crates only after the implementation creates a real reuse or compilation boundary.
+The two packages reflect one measured compilation and process boundary. Modules should become additional crates only after another real reuse, versioning, or deployment boundary appears.
 
 ## Scope Cuts Protect the Experiment
 
@@ -370,12 +369,8 @@ It fails if most effort goes into general layout, language syntax, codecs, edito
 
 ## Immediate Next Step
 
-The `effect-shows-errors` port completed the first narration-led scene:
+The lightweight `agent-demo` proves the generic process workflow, and the canonical hero proves a real editor-heavy Rust Scene Program can cross Scene Plan v2 through stable inline parts, logical Semantic Targets, renderer-assisted measurement, continuous pointer/highlight channels, and a concrete editor recipe. Its generated plan and Rust source are checked for byte equality, and the complete 300-frame encoded artifact matched the deleted direct implementation exactly.
 
-1. Import one immutable published narration asset as a script clip.
-2. Load its existing word-level timing sidecar.
-3. Resolve lesson flow words into cue ranges.
-4. Synchronize code structure, focus, pointer motion, and inline reveals to those cues.
-5. Have FFmpeg place the narration beside the rendered frames.
+The `opencode-session-tool` lesson now proves the narration-rich media seam. One inspectable plan owns an authentic live session creating and hot-reloading a plugin tool, ElevenLabs voiceover, layered SFX, continuous card motion, discrete recording and explanatory-text state, and named cues. The renderer accepts video only when the concrete terminal recipe consumes its media ID, while script and layer audio continue through exact composition and FFmpeg placement.
 
-This proves that transcript cues and deterministic visual choreography can remain synchronized in a rendered artifact. The next step is to replace the single published narration clip with multiple recorded takes and a non-destructive script edit, then verify that changing the edit retimes cue-driven visuals without manually changing animation timestamps.
+The next authoring-loop proof is file watching plus a low-resolution preview profile in the persistent renderer. It should rebuild a lightweight Scene Program, validate and diff the generated plan, and render a selected cue without restarting GPU or font state. Raw plan patching remains experimental until that measured loop shows whether whole-plan regeneration is insufficient.

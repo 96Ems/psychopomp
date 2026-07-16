@@ -1,0 +1,1785 @@
+{
+	"id": "try-catch-gives-unknown",
+	"text": "So how do you deal with exploding Promises? You wrap your code in a try/catch block. Tragically, the error you catch is always of type unknown, which is of little help. To handle it, you must pattern match, guided by what you've learned through your prior code spelunking. Alas, the type checker will not warn you if your assumptions were wrong, or if they change in the future.",
+	"code": "async function checkout(cartId: string): Promise<Order> {\n  const cart = await getCart(cartId)\n  const payment = await charge(cart)\n  const shipment = await ship(payment)\n  return shipment\n}",
+	"contentHash": "9lk6es",
+	"wordTimings": [
+		{
+			"word": "So",
+			"start": 0.10000000000000003,
+			"end": 0.30000000000000004
+		},
+		{
+			"word": "how",
+			"start": 0.38,
+			"end": 0.6
+		},
+		{
+			"word": "do",
+			"start": 0.7610000000000001,
+			"end": 0.9199999999999999
+		},
+		{
+			"word": "you",
+			"start": 1,
+			"end": 1.04
+		},
+		{
+			"word": "deal",
+			"start": 1.141,
+			"end": 1.2810000000000001
+		},
+		{
+			"word": "with",
+			"start": 1.36,
+			"end": 1.46
+		},
+		{
+			"word": "exploding",
+			"start": 1.54,
+			"end": 1.94
+		},
+		{
+			"word": "Promises?",
+			"start": 2.04,
+			"end": 2.6
+		},
+		{
+			"word": "You",
+			"start": 3.661,
+			"end": 3.72
+		},
+		{
+			"word": "wrap",
+			"start": 3.7600000000000002,
+			"end": 3.9600000000000004
+		},
+		{
+			"word": "your",
+			"start": 4,
+			"end": 4.121
+		},
+		{
+			"word": "code",
+			"start": 4.161,
+			"end": 4.380000000000001
+		},
+		{
+			"word": "in",
+			"start": 4.42,
+			"end": 4.5
+		},
+		{
+			"word": "a",
+			"start": 4.5809999999999995,
+			"end": 4.601000000000001
+		},
+		{
+			"word": "try/catch",
+			"start": 4.720000000000001,
+			"end": 5.42
+		},
+		{
+			"word": "block.",
+			"start": 5.52,
+			"end": 5.82
+		},
+		{
+			"word": "Tragically,",
+			"start": 6.880000000000001,
+			"end": 7.460000000000001,
+			"paragraphBreak": true
+		},
+		{
+			"word": "the",
+			"start": 7.58,
+			"end": 7.661
+		},
+		{
+			"word": "error",
+			"start": 7.799999999999999,
+			"end": 8.001
+		},
+		{
+			"word": "you",
+			"start": 8.081,
+			"end": 8.161
+		},
+		{
+			"word": "catch",
+			"start": 8.219999999999999,
+			"end": 8.559999999999999
+		},
+		{
+			"word": "is",
+			"start": 8.621,
+			"end": 8.78
+		},
+		{
+			"word": "always",
+			"start": 8.881,
+			"end": 9.121
+		},
+		{
+			"word": "of",
+			"start": 9.139999999999999,
+			"end": 9.221
+		},
+		{
+			"word": "type",
+			"start": 9.32,
+			"end": 9.581
+		},
+		{
+			"word": "unknown,",
+			"start": 9.86,
+			"end": 10.4,
+			"style": {
+				"code": true
+			}
+		},
+		{
+			"word": "which",
+			"start": 11.081,
+			"end": 11.24
+		},
+		{
+			"word": "is",
+			"start": 11.28,
+			"end": 11.4
+		},
+		{
+			"word": "of",
+			"start": 11.44,
+			"end": 11.561
+		},
+		{
+			"word": "little",
+			"start": 11.639999999999999,
+			"end": 11.82
+		},
+		{
+			"word": "help.",
+			"start": 11.92,
+			"end": 12.219999999999999
+		},
+		{
+			"word": "To",
+			"start": 13.28,
+			"end": 13.559999999999999
+		},
+		{
+			"word": "handle",
+			"start": 13.6,
+			"end": 13.9
+		},
+		{
+			"word": "it,",
+			"start": 13.94,
+			"end": 14.059999999999999
+		},
+		{
+			"word": "you",
+			"start": 14.139999999999999,
+			"end": 14.24
+		},
+		{
+			"word": "must",
+			"start": 14.28,
+			"end": 14.541
+		},
+		{
+			"word": "pattern",
+			"start": 14.719999999999999,
+			"end": 15.001
+		},
+		{
+			"word": "match,",
+			"start": 15.059999999999999,
+			"end": 15.379999999999999
+		},
+		{
+			"word": "guided",
+			"start": 16.32,
+			"end": 16.701
+		},
+		{
+			"word": "by",
+			"start": 16.720000000000002,
+			"end": 16.861
+		},
+		{
+			"word": "what",
+			"start": 16.880000000000003,
+			"end": 17.021
+		},
+		{
+			"word": "you've",
+			"start": 17.040000000000003,
+			"end": 17.240000000000002
+		},
+		{
+			"word": "learned",
+			"start": 17.261000000000003,
+			"end": 17.681
+		},
+		{
+			"word": "through",
+			"start": 17.740000000000002,
+			"end": 17.921000000000003
+		},
+		{
+			"word": "your",
+			"start": 17.98,
+			"end": 18.200000000000003
+		},
+		{
+			"word": "prior",
+			"start": 18.28,
+			"end": 18.681
+		},
+		{
+			"word": "code",
+			"start": 18.761000000000003,
+			"end": 18.96
+		},
+		{
+			"word": "spelunking.",
+			"start": 19.001,
+			"end": 19.64
+		},
+		{
+			"word": "Alas,",
+			"start": 20.82,
+			"end": 21.32,
+			"paragraphBreak": true
+		},
+		{
+			"word": "the",
+			"start": 21.82,
+			"end": 21.921000000000003
+		},
+		{
+			"word": "type",
+			"start": 21.98,
+			"end": 22.14
+		},
+		{
+			"word": "checker",
+			"start": 22.240000000000002,
+			"end": 22.540000000000003
+		},
+		{
+			"word": "will",
+			"start": 22.581000000000003,
+			"end": 22.720000000000002
+		},
+		{
+			"word": "not",
+			"start": 22.740000000000002,
+			"end": 22.900000000000002
+		},
+		{
+			"word": "warn",
+			"start": 22.98,
+			"end": 23.18
+		},
+		{
+			"word": "you",
+			"start": 23.240000000000002,
+			"end": 23.32
+		},
+		{
+			"word": "if",
+			"start": 23.360000000000003,
+			"end": 23.48
+		},
+		{
+			"word": "your",
+			"start": 23.520000000000003,
+			"end": 23.62
+		},
+		{
+			"word": "assumptions",
+			"start": 23.64,
+			"end": 24.181
+		},
+		{
+			"word": "were",
+			"start": 24.200000000000003,
+			"end": 24.341
+		},
+		{
+			"word": "wrong,",
+			"start": 24.380000000000003,
+			"end": 24.720000000000002
+		},
+		{
+			"word": "or",
+			"start": 25.581000000000003,
+			"end": 25.740000000000002
+		},
+		{
+			"word": "if",
+			"start": 25.78,
+			"end": 25.921000000000003
+		},
+		{
+			"word": "they",
+			"start": 25.94,
+			"end": 26.14
+		},
+		{
+			"word": "change",
+			"start": 26.200000000000003,
+			"end": 26.581000000000003
+		},
+		{
+			"word": "in",
+			"start": 26.64,
+			"end": 26.720000000000002
+		},
+		{
+			"word": "the",
+			"start": 26.740000000000002,
+			"end": 26.781000000000002
+		},
+		{
+			"word": "future.",
+			"start": 26.880000000000003,
+			"end": 27.28
+		}
+	],
+	"slideshowData": {
+		"template": {
+			"lines": {
+				"fn": {
+					"parts": {
+						"p0": {
+							"tokens": [
+								{
+									"text": "async",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "function",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "checkout",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": "(",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "cartId",
+									"type": "default",
+									"color": "#FFAB70"
+								},
+								{
+									"text": ":",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "string",
+									"type": "default",
+									"color": "#79B8FF"
+								},
+								{
+									"text": ")",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": ":",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "Promise",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": "<",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "Order",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": "> {",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"p0"
+					]
+				},
+				"cart": {
+					"parts": {
+						"cartIndent:*/0": {
+							"tokens": [
+								{
+									"text": "  ",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": true,
+							"versions": {
+								"  ": [
+									{
+										"text": "  ",
+										"type": "default",
+										"color": "#E1E4E8"
+									}
+								],
+								"    ": [
+									{
+										"text": "    ",
+										"type": "default",
+										"color": "#E1E4E8"
+									}
+								]
+							}
+						},
+						"p0": {
+							"tokens": [
+								{
+									"text": "const",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "cart",
+									"type": "default",
+									"color": "#79B8FF"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "=",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "await",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "getCart",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": "(cartId)",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"cartIndent:*/0",
+						"p0"
+					]
+				},
+				"payment": {
+					"parts": {
+						"p0": {
+							"tokens": [
+								{
+									"text": "  ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "const",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "payment",
+									"type": "default",
+									"color": "#79B8FF"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "=",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "await",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "charge",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": "(cart)",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"p0"
+					]
+				},
+				"shipment": {
+					"parts": {
+						"p0": {
+							"tokens": [
+								{
+									"text": "  ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "const",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "shipment",
+									"type": "default",
+									"color": "#79B8FF"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "=",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "await",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "ship",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": "(payment)",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"p0"
+					]
+				},
+				"return": {
+					"parts": {
+						"p0": {
+							"tokens": [
+								{
+									"text": "  ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "return",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " shipment",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"p0"
+					]
+				},
+				"fnClose": {
+					"parts": {
+						"p0": {
+							"tokens": [
+								{
+									"text": "}",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"p0"
+					]
+				},
+				"try": {
+					"parts": {
+						"p0": {
+							"tokens": [
+								{
+									"text": "  ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "try",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " {",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"p0"
+					]
+				},
+				"catch": {
+					"parts": {
+						"p0": {
+							"tokens": [
+								{
+									"text": "  } ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "catch",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " (e",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						},
+						"annotation:shown/0": {
+							"tokens": [
+								{
+									"text": ":",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "unknown",
+									"type": "default",
+									"color": "#79B8FF"
+								}
+							],
+							"animateEntry": true,
+							"crossfade": false
+						},
+						"p1": {
+							"tokens": [
+								{
+									"text": ") {",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"p0",
+						"annotation:shown/0",
+						"p1"
+					]
+				},
+				"dots": {
+					"parts": {
+						"p0": {
+							"tokens": [
+								{
+									"text": "    ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "// ...",
+									"type": "default",
+									"color": "#6A737D"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"p0"
+					]
+				},
+				"catchClose": {
+					"parts": {
+						"p0": {
+							"tokens": [
+								{
+									"text": "  }",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"p0"
+					]
+				},
+				"err1": {
+					"parts": {
+						"p0": {
+							"tokens": [
+								{
+									"text": "    ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "if",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " (e ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "instanceof",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "CartNotFoundError",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": ") { ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "/* 404 */",
+									"type": "default",
+									"color": "#6A737D"
+								},
+								{
+									"text": " }",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"p0"
+					]
+				},
+				"err2": {
+					"parts": {
+						"p0": {
+							"tokens": [
+								{
+									"text": "    ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "else",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "if",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " (e ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "instanceof",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "NetworkTimeoutError",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": ") { ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "/* retry */",
+									"type": "default",
+									"color": "#6A737D"
+								},
+								{
+									"text": " }",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"p0"
+					]
+				},
+				"err3": {
+					"parts": {
+						"p0": {
+							"tokens": [
+								{
+									"text": "    ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "else",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "if",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " (e ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "instanceof",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "RateLimitError",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": ") { ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "/* wait */",
+									"type": "default",
+									"color": "#6A737D"
+								},
+								{
+									"text": " }",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"p0"
+					]
+				},
+				"else": {
+					"parts": {
+						"p0": {
+							"tokens": [
+								{
+									"text": "    ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "else",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " { ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "throw",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " e }",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"p0"
+					]
+				}
+			}
+		},
+		"frames": [
+			{
+				"id": 0,
+				"lineOrder": [
+					"fn",
+					"cart",
+					"payment",
+					"shipment",
+					"return",
+					"fnClose"
+				],
+				"state": {
+					"fn": {
+						"parts": {
+							"p0": true
+						},
+						"entering": true
+					},
+					"cart": {
+						"parts": {
+							"cartIndent:*/0": "  ",
+							"p0": true
+						},
+						"entering": true
+					},
+					"payment": {
+						"parts": {
+							"p0": true
+						},
+						"entering": true
+					},
+					"shipment": {
+						"parts": {
+							"p0": true
+						},
+						"entering": true
+					},
+					"return": {
+						"parts": {
+							"p0": true
+						},
+						"entering": true
+					},
+					"fnClose": {
+						"parts": {
+							"p0": true
+						},
+						"entering": true
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"spotlight": {
+					"ranges": {},
+					"allRanges": {
+						"catch": [
+							{
+								"start": 10,
+								"end": 22
+							}
+						]
+					},
+					"dim": 0.4,
+					"glow": false
+				},
+				"bursts": []
+			},
+			{
+				"id": 1,
+				"lineOrder": [
+					"fn",
+					"cart",
+					"payment",
+					"shipment",
+					"return",
+					"fnClose"
+				],
+				"state": {
+					"fn": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"cart": {
+						"parts": {
+							"cartIndent:*/0": "  ",
+							"p0": true
+						}
+					},
+					"payment": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"shipment": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"return": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"fnClose": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"spotlight": {
+					"ranges": {},
+					"allRanges": {
+						"catch": [
+							{
+								"start": 10,
+								"end": 22
+							}
+						]
+					},
+					"dim": 0.4,
+					"glow": false
+				},
+				"bursts": []
+			},
+			{
+				"id": 2,
+				"lineOrder": [
+					"fn",
+					"try",
+					"cart",
+					"catch",
+					"dots",
+					"catchClose",
+					"payment",
+					"shipment",
+					"return",
+					"fnClose"
+				],
+				"state": {
+					"fn": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"try": {
+						"parts": {
+							"p0": true
+						},
+						"entering": true
+					},
+					"cart": {
+						"parts": {
+							"cartIndent:*/0": "    ",
+							"p0": true
+						}
+					},
+					"catch": {
+						"parts": {
+							"p0": true,
+							"annotation:shown/0": false,
+							"p1": true
+						},
+						"entering": true
+					},
+					"dots": {
+						"parts": {
+							"p0": true
+						},
+						"entering": true
+					},
+					"catchClose": {
+						"parts": {
+							"p0": true
+						},
+						"entering": true
+					},
+					"payment": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"shipment": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"return": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"fnClose": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"spotlight": {
+					"ranges": {},
+					"allRanges": {
+						"catch": [
+							{
+								"start": 10,
+								"end": 22
+							}
+						]
+					},
+					"dim": 0.4,
+					"glow": false
+				},
+				"bursts": []
+			},
+			{
+				"id": 3,
+				"lineOrder": [
+					"fn",
+					"try",
+					"cart",
+					"catch",
+					"dots",
+					"catchClose",
+					"payment",
+					"shipment",
+					"return",
+					"fnClose"
+				],
+				"state": {
+					"fn": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"try": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"cart": {
+						"parts": {
+							"cartIndent:*/0": "    ",
+							"p0": true
+						}
+					},
+					"catch": {
+						"parts": {
+							"p0": true,
+							"annotation:shown/0": true,
+							"p1": true
+						}
+					},
+					"dots": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"catchClose": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"payment": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"shipment": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"return": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"fnClose": {
+						"parts": {
+							"p0": true
+						}
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"spotlight": {
+					"ranges": {
+						"3": [
+							{
+								"start": 10,
+								"end": 22
+							}
+						]
+					},
+					"allRanges": {
+						"catch": [
+							{
+								"start": 10,
+								"end": 22
+							}
+						]
+					},
+					"dim": 0.4,
+					"glow": false
+				},
+				"cursor": {
+					"lineIndex": 3,
+					"charOffset": 14,
+					"textLength": 7,
+					"type": "hand"
+				},
+				"bursts": []
+			},
+			{
+				"id": 4,
+				"lineOrder": [
+					"fn",
+					"try",
+					"cart",
+					"catch",
+					"err1",
+					"catchClose",
+					"payment",
+					"shipment",
+					"return",
+					"fnClose"
+				],
+				"state": {
+					"fn": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"try": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"cart": {
+						"parts": {
+							"cartIndent:*/0": "    ",
+							"p0": true
+						}
+					},
+					"catch": {
+						"parts": {
+							"p0": true,
+							"annotation:shown/0": true,
+							"p1": true
+						}
+					},
+					"err1": {
+						"parts": {
+							"p0": true
+						},
+						"entering": true
+					},
+					"catchClose": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"payment": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"shipment": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"return": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"fnClose": {
+						"parts": {
+							"p0": true
+						}
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"spotlight": {
+					"ranges": {},
+					"allRanges": {
+						"catch": [
+							{
+								"start": 10,
+								"end": 22
+							}
+						]
+					},
+					"dim": 0.4,
+					"glow": false
+				},
+				"cursor": {
+					"lineIndex": 4,
+					"charOffset": 21,
+					"textLength": 17,
+					"type": "hand"
+				},
+				"bursts": []
+			},
+			{
+				"id": 5,
+				"lineOrder": [
+					"fn",
+					"try",
+					"cart",
+					"catch",
+					"err1",
+					"err2",
+					"catchClose",
+					"payment",
+					"shipment",
+					"return",
+					"fnClose"
+				],
+				"state": {
+					"fn": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"try": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"cart": {
+						"parts": {
+							"cartIndent:*/0": "    ",
+							"p0": true
+						}
+					},
+					"catch": {
+						"parts": {
+							"p0": true,
+							"annotation:shown/0": true,
+							"p1": true
+						}
+					},
+					"err1": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"err2": {
+						"parts": {
+							"p0": true
+						},
+						"entering": true
+					},
+					"catchClose": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"payment": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"shipment": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"return": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"fnClose": {
+						"parts": {
+							"p0": true
+						}
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"spotlight": {
+					"ranges": {},
+					"allRanges": {
+						"catch": [
+							{
+								"start": 10,
+								"end": 22
+							}
+						]
+					},
+					"dim": 0.4,
+					"glow": false
+				},
+				"cursor": {
+					"lineIndex": 5,
+					"charOffset": 26,
+					"textLength": 19,
+					"type": "hand"
+				},
+				"bursts": []
+			},
+			{
+				"id": 6,
+				"lineOrder": [
+					"fn",
+					"try",
+					"cart",
+					"catch",
+					"err1",
+					"err2",
+					"err3",
+					"else",
+					"catchClose",
+					"payment",
+					"shipment",
+					"return",
+					"fnClose"
+				],
+				"state": {
+					"fn": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"try": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"cart": {
+						"parts": {
+							"cartIndent:*/0": "    ",
+							"p0": true
+						}
+					},
+					"catch": {
+						"parts": {
+							"p0": true,
+							"annotation:shown/0": true,
+							"p1": true
+						}
+					},
+					"err1": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"err2": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"err3": {
+						"parts": {
+							"p0": true
+						},
+						"entering": true
+					},
+					"else": {
+						"parts": {
+							"p0": true
+						},
+						"entering": true
+					},
+					"catchClose": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"payment": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"shipment": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"return": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"fnClose": {
+						"parts": {
+							"p0": true
+						}
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"spotlight": {
+					"ranges": {},
+					"allRanges": {
+						"catch": [
+							{
+								"start": 10,
+								"end": 22
+							}
+						]
+					},
+					"dim": 0.4,
+					"glow": false
+				},
+				"cursor": {
+					"lineIndex": 6,
+					"charOffset": 26,
+					"textLength": 14,
+					"type": "hand"
+				},
+				"bursts": []
+			}
+		]
+	},
+	"steps": [
+		{
+			"name": "start",
+			"at": "start"
+		},
+		{
+			"name": "focus-cart",
+			"at": "exploding"
+		},
+		{
+			"name": "try/catch",
+			"at": "try/catch"
+		},
+		{
+			"name": "unknown",
+			"at": "unknown"
+		},
+		{
+			"name": "match1",
+			"at": "pattern"
+		},
+		{
+			"name": "match2",
+			"at": "guided"
+		},
+		{
+			"name": "match3",
+			"at": "spelunking"
+		}
+	],
+	"stepTimes": [
+		0,
+		1.3900000000000001,
+		4.57,
+		9.709999999999999,
+		14.569999999999999,
+		16.17,
+		18.851000000000003
+	],
+	"_debug": {
+		"timingsStatus": "matched",
+		"dslWordCount": 68
+	},
+	"groupId": "promise-problems",
+	"groupTitle": "Typed Errors — Broken Promises",
+	"isFirstInGroup": false,
+	"audioFile": "try-catch-gives-unknown.83deca91.webm"
+}

@@ -1,0 +1,2115 @@
+{
+	"id": "effect-promise",
+	"text": "Before we move on, we should look at one last constructor. This concerns my arch enemy abstraction, the loathsome Promise. Here is a Promise that fetches your sensor data. You run it each morning before exiting your bunker. Today the air is clear, so you crank open the airlock and spend your day frolicking and collecting meat. The next morning you run it again. The exact same reading as yesterday! What providence! So you hurriedly crank open the airlock and proceed to die a slow and agonizing death.",
+	"code": "const sensorData = fetch(\"/api/sensors\")\n  .then(r => r.json())\n",
+	"contentHash": "bu908z",
+	"wordTimings": [
+		{
+			"word": "Before",
+			"start": 0.09999999999999998,
+			"end": 0.41999999999999993
+		},
+		{
+			"word": "we",
+			"start": 0.48,
+			"end": 0.5999999999999999
+		},
+		{
+			"word": "move",
+			"start": 0.661,
+			"end": 0.8599999999999999
+		},
+		{
+			"word": "on,",
+			"start": 0.94,
+			"end": 1.14
+		},
+		{
+			"word": "we",
+			"start": 1.26,
+			"end": 1.301
+		},
+		{
+			"word": "should",
+			"start": 1.4,
+			"end": 1.561
+		},
+		{
+			"word": "look",
+			"start": 1.6,
+			"end": 1.7199999999999998
+		},
+		{
+			"word": "at",
+			"start": 1.7810000000000001,
+			"end": 1.96
+		},
+		{
+			"word": "one",
+			"start": 2.041,
+			"end": 2.34
+		},
+		{
+			"word": "last",
+			"start": 2.6,
+			"end": 2.9
+		},
+		{
+			"word": "constructor.",
+			"start": 2.94,
+			"end": 3.52
+		},
+		{
+			"word": "This",
+			"start": 4.481,
+			"end": 4.66
+		},
+		{
+			"word": "concerns",
+			"start": 4.7,
+			"end": 5.24
+		},
+		{
+			"word": "my",
+			"start": 5.34,
+			"end": 5.64
+		},
+		{
+			"word": "arch",
+			"start": 5.74,
+			"end": 5.96
+		},
+		{
+			"word": "enemy",
+			"start": 6.061,
+			"end": 6.38
+		},
+		{
+			"word": "abstraction,",
+			"start": 6.521,
+			"end": 7.16
+		},
+		{
+			"word": "the",
+			"start": 7.800000000000001,
+			"end": 7.861000000000001
+		},
+		{
+			"word": "loathsome",
+			"start": 7.941000000000001,
+			"end": 8.521
+		},
+		{
+			"word": "Promise.",
+			"start": 8.72,
+			"end": 9.3,
+			"style": {
+				"code": true
+			}
+		},
+		{
+			"word": "Here",
+			"start": 10.22,
+			"end": 10.42,
+			"paragraphBreak": true
+		},
+		{
+			"word": "is",
+			"start": 10.5,
+			"end": 10.62
+		},
+		{
+			"word": "a",
+			"start": 10.72,
+			"end": 10.941
+		},
+		{
+			"word": "Promise",
+			"start": 11,
+			"end": 11.401,
+			"style": {
+				"code": true
+			}
+		},
+		{
+			"word": "that",
+			"start": 11.521,
+			"end": 11.68
+		},
+		{
+			"word": "fetches",
+			"start": 11.8,
+			"end": 12.18
+		},
+		{
+			"word": "your",
+			"start": 12.24,
+			"end": 12.36
+		},
+		{
+			"word": "sensor",
+			"start": 12.481,
+			"end": 12.78
+		},
+		{
+			"word": "data.",
+			"start": 12.86,
+			"end": 13.12
+		},
+		{
+			"word": "You",
+			"start": 14,
+			"end": 14.061
+		},
+		{
+			"word": "run",
+			"start": 14.12,
+			"end": 14.24
+		},
+		{
+			"word": "it",
+			"start": 14.3,
+			"end": 14.481
+		},
+		{
+			"word": "each",
+			"start": 14.561,
+			"end": 14.76
+		},
+		{
+			"word": "morning",
+			"start": 14.86,
+			"end": 15.12
+		},
+		{
+			"word": "before",
+			"start": 15.18,
+			"end": 15.481
+		},
+		{
+			"word": "exiting",
+			"start": 15.54,
+			"end": 15.921
+		},
+		{
+			"word": "your",
+			"start": 15.96,
+			"end": 16.101
+		},
+		{
+			"word": "bunker.",
+			"start": 16.14,
+			"end": 16.501
+		},
+		{
+			"word": "Today",
+			"start": 17.36,
+			"end": 17.72
+		},
+		{
+			"word": "the",
+			"start": 17.78,
+			"end": 17.841
+		},
+		{
+			"word": "air",
+			"start": 17.96,
+			"end": 18.081
+		},
+		{
+			"word": "is",
+			"start": 18.12,
+			"end": 18.3
+		},
+		{
+			"word": "clear,",
+			"start": 18.38,
+			"end": 18.72
+		},
+		{
+			"word": "so",
+			"start": 19.28,
+			"end": 19.36
+		},
+		{
+			"word": "you",
+			"start": 19.42,
+			"end": 19.561
+		},
+		{
+			"word": "crank",
+			"start": 19.62,
+			"end": 19.86
+		},
+		{
+			"word": "open",
+			"start": 19.94,
+			"end": 20.1
+		},
+		{
+			"word": "the",
+			"start": 20.14,
+			"end": 20.22
+		},
+		{
+			"word": "airlock",
+			"start": 20.26,
+			"end": 20.661
+		},
+		{
+			"word": "and",
+			"start": 20.72,
+			"end": 20.8
+		},
+		{
+			"word": "spend",
+			"start": 20.901,
+			"end": 21.12
+		},
+		{
+			"word": "your",
+			"start": 21.161,
+			"end": 21.3
+		},
+		{
+			"word": "day",
+			"start": 21.34,
+			"end": 21.54
+		},
+		{
+			"word": "frolicking",
+			"start": 21.7,
+			"end": 22.321
+		},
+		{
+			"word": "and",
+			"start": 22.36,
+			"end": 22.54
+		},
+		{
+			"word": "collecting",
+			"start": 22.6,
+			"end": 23.1
+		},
+		{
+			"word": "meat.",
+			"start": 23.161,
+			"end": 23.42
+		},
+		{
+			"word": "The",
+			"start": 24.561,
+			"end": 24.601,
+			"paragraphBreak": true
+		},
+		{
+			"word": "next",
+			"start": 24.68,
+			"end": 24.901
+		},
+		{
+			"word": "morning",
+			"start": 24.981,
+			"end": 25.22
+		},
+		{
+			"word": "you",
+			"start": 25.28,
+			"end": 25.36
+		},
+		{
+			"word": "run",
+			"start": 25.401,
+			"end": 25.52
+		},
+		{
+			"word": "it",
+			"start": 25.58,
+			"end": 25.661
+		},
+		{
+			"word": "again.",
+			"start": 25.741,
+			"end": 26.061
+		},
+		{
+			"word": "The",
+			"start": 26.92,
+			"end": 26.981
+		},
+		{
+			"word": "exact",
+			"start": 27.08,
+			"end": 27.42
+		},
+		{
+			"word": "same",
+			"start": 27.54,
+			"end": 27.741
+		},
+		{
+			"word": "reading",
+			"start": 27.8,
+			"end": 28.02
+		},
+		{
+			"word": "as",
+			"start": 28.061,
+			"end": 28.18
+		},
+		{
+			"word": "yesterday!",
+			"start": 28.22,
+			"end": 28.72
+		},
+		{
+			"word": "What",
+			"start": 29.28,
+			"end": 29.401
+		},
+		{
+			"word": "providence!",
+			"start": 29.52,
+			"end": 30.22
+		},
+		{
+			"word": "So",
+			"start": 31.02,
+			"end": 31.14
+		},
+		{
+			"word": "you",
+			"start": 31.22,
+			"end": 31.36
+		},
+		{
+			"word": "hurriedly",
+			"start": 31.38,
+			"end": 31.979999999999997
+		},
+		{
+			"word": "crank",
+			"start": 32.04,
+			"end": 32.3
+		},
+		{
+			"word": "open",
+			"start": 32.38,
+			"end": 32.581
+		},
+		{
+			"word": "the",
+			"start": 32.62,
+			"end": 32.68
+		},
+		{
+			"word": "airlock",
+			"start": 32.761,
+			"end": 33.261
+		},
+		{
+			"word": "and",
+			"start": 33.32,
+			"end": 33.48
+		},
+		{
+			"word": "proceed",
+			"start": 33.5,
+			"end": 33.82
+		},
+		{
+			"word": "to",
+			"start": 33.86,
+			"end": 34.02
+		},
+		{
+			"word": "die",
+			"start": 34.081,
+			"end": 34.421
+		},
+		{
+			"word": "a",
+			"start": 34.48,
+			"end": 34.64
+		},
+		{
+			"word": "slow",
+			"start": 34.72,
+			"end": 35.101
+		},
+		{
+			"word": "and",
+			"start": 35.16,
+			"end": 35.46
+		},
+		{
+			"word": "agonizing",
+			"start": 35.601,
+			"end": 36.32
+		},
+		{
+			"word": "death.",
+			"start": 36.38,
+			"end": 36.64
+		}
+	],
+	"slideshowData": {
+		"template": {
+			"lines": {
+				"def1": {
+					"parts": {
+						"p0": {
+							"tokens": [
+								{
+									"text": "const",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "sensorData",
+									"type": "default",
+									"color": "#79B8FF"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						},
+						"type:shown/0": {
+							"tokens": [
+								{
+									"text": ":",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "Promise",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": "<",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "any",
+									"type": "default",
+									"color": "#79B8FF"
+								},
+								{
+									"text": ">",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": true,
+							"crossfade": false
+						},
+						"p1": {
+							"tokens": [
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "=",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "fetch",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": "(",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "\"/api/sensors\"",
+									"type": "default",
+									"color": "#9ECBFF"
+								},
+								{
+									"text": ")",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"p0",
+						"type:shown/0",
+						"p1"
+					]
+				},
+				"def2": {
+					"parts": {
+						"p0": {
+							"tokens": [
+								{
+									"text": "  .",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "then",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": "(",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "r",
+									"type": "default",
+									"color": "#FFAB70"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "=>",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " r.",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "json",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": "())",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"p0"
+					]
+				},
+				"blank1": {
+					"parts": {
+						"blank1-empty": {
+							"tokens": [],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"blank1-empty"
+					]
+				},
+				"assign1": {
+					"parts": {
+						"p0": {
+							"tokens": [
+								{
+									"text": "const",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "today",
+									"type": "default",
+									"color": "#79B8FF"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "=",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "await",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " sensorData",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"p0"
+					]
+				},
+				"log1": {
+					"parts": {
+						"p0": {
+							"tokens": [
+								{
+									"text": "console.",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "log",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": "(today)",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						},
+						"result1:shown/0": {
+							"tokens": [
+								{
+									"text": "{ ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "mSv",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": ": ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "0.3",
+									"type": "default",
+									"color": "#79B8FF"
+								},
+								{
+									"text": " }",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": true,
+							"crossfade": false,
+							"inline": "output"
+						}
+					},
+					"partOrder": [
+						"p0",
+						"result1:shown/0"
+					]
+				},
+				"blank2": {
+					"parts": {
+						"blank2-empty": {
+							"tokens": [],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"blank2-empty"
+					]
+				},
+				"sleepLine": {
+					"parts": {
+						"p0": {
+							"tokens": [
+								{
+									"text": "await",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "new",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "Promise",
+									"type": "default",
+									"color": "#79B8FF"
+								},
+								{
+									"text": "(",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "r",
+									"type": "default",
+									"color": "#FFAB70"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "=>",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "setTimeout",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": "(r, ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "86_400_000",
+									"type": "default",
+									"color": "#79B8FF"
+								},
+								{
+									"text": "))",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"p0"
+					]
+				},
+				"blank3": {
+					"parts": {
+						"blank3-empty": {
+							"tokens": [],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"blank3-empty"
+					]
+				},
+				"assign2": {
+					"parts": {
+						"p0": {
+							"tokens": [
+								{
+									"text": "const",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "tomorrow",
+									"type": "default",
+									"color": "#79B8FF"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "=",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "await",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " sensorData",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"p0"
+					]
+				},
+				"log2": {
+					"parts": {
+						"p0": {
+							"tokens": [
+								{
+									"text": "console.",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "log",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": "(tomorrow)",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						},
+						"result2:shown/0": {
+							"tokens": [
+								{
+									"text": "{ ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "mSv",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": ": ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "0.3",
+									"type": "default",
+									"color": "#79B8FF"
+								},
+								{
+									"text": " }",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": true,
+							"crossfade": false,
+							"inline": "output"
+						}
+					},
+					"partOrder": [
+						"p0",
+						"result2:shown/0"
+					]
+				}
+			}
+		},
+		"frames": [
+			{
+				"id": 0,
+				"lineOrder": [
+					"def1",
+					"def2",
+					"blank1"
+				],
+				"state": {
+					"def1": {
+						"parts": {
+							"p0": true,
+							"type:shown/0": false,
+							"p1": true
+						},
+						"entering": true
+					},
+					"def2": {
+						"parts": {
+							"p0": true
+						},
+						"entering": true
+					},
+					"blank1": {
+						"parts": {
+							"blank1-empty": true
+						},
+						"entering": true
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"status": {
+					"ranges": {},
+					"allRanges": {
+						"assign1": [
+							{
+								"start": 14,
+								"end": 30
+							},
+							{
+								"start": 14,
+								"end": 30
+							},
+							{
+								"start": 14,
+								"end": 30
+							}
+						],
+						"assign2": [
+							{
+								"start": 17,
+								"end": 33
+							},
+							{
+								"start": 17,
+								"end": 33
+							},
+							{
+								"start": 17,
+								"end": 33
+							}
+						]
+					}
+				},
+				"bursts": []
+			},
+			{
+				"id": 1,
+				"lineOrder": [
+					"def1",
+					"def2",
+					"blank1"
+				],
+				"state": {
+					"def1": {
+						"parts": {
+							"p0": true,
+							"type:shown/0": true,
+							"p1": true
+						}
+					},
+					"def2": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"blank1": {
+						"parts": {
+							"blank1-empty": true
+						}
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"status": {
+					"ranges": {},
+					"allRanges": {
+						"assign1": [
+							{
+								"start": 14,
+								"end": 30
+							},
+							{
+								"start": 14,
+								"end": 30
+							},
+							{
+								"start": 14,
+								"end": 30
+							}
+						],
+						"assign2": [
+							{
+								"start": 17,
+								"end": 33
+							},
+							{
+								"start": 17,
+								"end": 33
+							},
+							{
+								"start": 17,
+								"end": 33
+							}
+						]
+					}
+				},
+				"cursor": {
+					"lineIndex": 0,
+					"charOffset": 18,
+					"textLength": 12,
+					"type": "hand"
+				},
+				"bursts": []
+			},
+			{
+				"id": 2,
+				"lineOrder": [
+					"def1",
+					"def2",
+					"blank1"
+				],
+				"state": {
+					"def1": {
+						"parts": {
+							"p0": true,
+							"type:shown/0": true,
+							"p1": true
+						}
+					},
+					"def2": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"blank1": {
+						"parts": {
+							"blank1-empty": true
+						}
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"status": {
+					"ranges": {},
+					"allRanges": {
+						"assign1": [
+							{
+								"start": 14,
+								"end": 30
+							},
+							{
+								"start": 14,
+								"end": 30
+							},
+							{
+								"start": 14,
+								"end": 30
+							}
+						],
+						"assign2": [
+							{
+								"start": 17,
+								"end": 33
+							},
+							{
+								"start": 17,
+								"end": 33
+							},
+							{
+								"start": 17,
+								"end": 33
+							}
+						]
+					}
+				},
+				"cursor": {
+					"lineIndex": 0,
+					"charOffset": 6,
+					"textLength": 10,
+					"type": "hand"
+				},
+				"bursts": []
+			},
+			{
+				"id": 3,
+				"lineOrder": [
+					"def1",
+					"def2",
+					"blank1",
+					"assign1",
+					"log1"
+				],
+				"state": {
+					"def1": {
+						"parts": {
+							"p0": true,
+							"type:shown/0": true,
+							"p1": true
+						},
+						"dimmed": true
+					},
+					"def2": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"blank1": {
+						"parts": {
+							"blank1-empty": true
+						},
+						"dimmed": true
+					},
+					"assign1": {
+						"parts": {
+							"p0": true
+						},
+						"entering": true
+					},
+					"log1": {
+						"parts": {
+							"p0": true,
+							"result1:shown/0": false
+						},
+						"entering": true,
+						"dimmed": true
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"status": {
+					"ranges": {},
+					"allRanges": {
+						"assign1": [
+							{
+								"start": 14,
+								"end": 30
+							},
+							{
+								"start": 14,
+								"end": 30
+							},
+							{
+								"start": 14,
+								"end": 30
+							}
+						],
+						"assign2": [
+							{
+								"start": 17,
+								"end": 33
+							},
+							{
+								"start": 17,
+								"end": 33
+							},
+							{
+								"start": 17,
+								"end": 33
+							}
+						]
+					}
+				},
+				"cursor": {
+					"lineIndex": 3,
+					"charOffset": 20,
+					"textLength": 10,
+					"type": "hand"
+				},
+				"bursts": []
+			},
+			{
+				"id": 4,
+				"lineOrder": [
+					"def1",
+					"def2",
+					"blank1",
+					"assign1",
+					"log1"
+				],
+				"state": {
+					"def1": {
+						"parts": {
+							"p0": true,
+							"type:shown/0": true,
+							"p1": true
+						}
+					},
+					"def2": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"blank1": {
+						"parts": {
+							"blank1-empty": true
+						}
+					},
+					"assign1": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"log1": {
+						"parts": {
+							"p0": true,
+							"result1:shown/0": false
+						}
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"status": {
+					"ranges": {
+						"3": [
+							{
+								"start": 14,
+								"end": 30,
+								"status": "running"
+							}
+						]
+					},
+					"allRanges": {
+						"assign1": [
+							{
+								"start": 14,
+								"end": 30
+							},
+							{
+								"start": 14,
+								"end": 30
+							},
+							{
+								"start": 14,
+								"end": 30
+							}
+						],
+						"assign2": [
+							{
+								"start": 17,
+								"end": 33
+							},
+							{
+								"start": 17,
+								"end": 33
+							},
+							{
+								"start": 17,
+								"end": 33
+							}
+						]
+					}
+				},
+				"cursor": {
+					"lineIndex": 3,
+					"charOffset": 20,
+					"textLength": 10,
+					"type": "hand"
+				},
+				"bursts": []
+			},
+			{
+				"id": 5,
+				"lineOrder": [
+					"def1",
+					"def2",
+					"blank1",
+					"assign1",
+					"log1"
+				],
+				"state": {
+					"def1": {
+						"parts": {
+							"p0": true,
+							"type:shown/0": true,
+							"p1": true
+						}
+					},
+					"def2": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"blank1": {
+						"parts": {
+							"blank1-empty": true
+						}
+					},
+					"assign1": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"log1": {
+						"parts": {
+							"p0": true,
+							"result1:shown/0": false
+						}
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"status": {
+					"ranges": {
+						"3": [
+							{
+								"start": 14,
+								"end": 30,
+								"status": "success"
+							}
+						]
+					},
+					"allRanges": {
+						"assign1": [
+							{
+								"start": 14,
+								"end": 30
+							},
+							{
+								"start": 14,
+								"end": 30
+							},
+							{
+								"start": 14,
+								"end": 30
+							}
+						],
+						"assign2": [
+							{
+								"start": 17,
+								"end": 33
+							},
+							{
+								"start": 17,
+								"end": 33
+							},
+							{
+								"start": 17,
+								"end": 33
+							}
+						]
+					}
+				},
+				"cursor": {
+					"lineIndex": 3,
+					"charOffset": 20,
+					"textLength": 10,
+					"type": "hand"
+				},
+				"bursts": []
+			},
+			{
+				"id": 6,
+				"lineOrder": [
+					"def1",
+					"def2",
+					"blank1",
+					"assign1",
+					"log1"
+				],
+				"state": {
+					"def1": {
+						"parts": {
+							"p0": true,
+							"type:shown/0": true,
+							"p1": true
+						},
+						"dimmed": true
+					},
+					"def2": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"blank1": {
+						"parts": {
+							"blank1-empty": true
+						},
+						"dimmed": true
+					},
+					"assign1": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"log1": {
+						"parts": {
+							"p0": true,
+							"result1:shown/0": true
+						}
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"status": {
+					"ranges": {
+						"3": [
+							{
+								"start": 14,
+								"end": 30,
+								"status": "success"
+							}
+						]
+					},
+					"allRanges": {
+						"assign1": [
+							{
+								"start": 14,
+								"end": 30
+							},
+							{
+								"start": 14,
+								"end": 30
+							},
+							{
+								"start": 14,
+								"end": 30
+							}
+						],
+						"assign2": [
+							{
+								"start": 17,
+								"end": 33
+							},
+							{
+								"start": 17,
+								"end": 33
+							},
+							{
+								"start": 17,
+								"end": 33
+							}
+						]
+					}
+				},
+				"cursor": {
+					"lineIndex": 4,
+					"charOffset": 25,
+					"textLength": 3,
+					"type": "hand"
+				},
+				"bursts": []
+			},
+			{
+				"id": 7,
+				"lineOrder": [
+					"def1",
+					"def2",
+					"blank1",
+					"assign1",
+					"log1",
+					"blank2",
+					"sleepLine"
+				],
+				"state": {
+					"def1": {
+						"parts": {
+							"p0": true,
+							"type:shown/0": true,
+							"p1": true
+						},
+						"dimmed": true
+					},
+					"def2": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"blank1": {
+						"parts": {
+							"blank1-empty": true
+						},
+						"dimmed": true
+					},
+					"assign1": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"log1": {
+						"parts": {
+							"p0": true,
+							"result1:shown/0": true
+						},
+						"dimmed": true
+					},
+					"blank2": {
+						"parts": {
+							"blank2-empty": true
+						},
+						"entering": true,
+						"dimmed": true
+					},
+					"sleepLine": {
+						"parts": {
+							"p0": true
+						},
+						"entering": true
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"status": {
+					"ranges": {},
+					"allRanges": {
+						"assign1": [
+							{
+								"start": 14,
+								"end": 30
+							},
+							{
+								"start": 14,
+								"end": 30
+							},
+							{
+								"start": 14,
+								"end": 30
+							}
+						],
+						"assign2": [
+							{
+								"start": 17,
+								"end": 33
+							},
+							{
+								"start": 17,
+								"end": 33
+							},
+							{
+								"start": 17,
+								"end": 33
+							}
+						]
+					}
+				},
+				"cursor": {
+					"lineIndex": 6,
+					"charOffset": 23,
+					"textLength": 10,
+					"type": "hand"
+				},
+				"bursts": []
+			},
+			{
+				"id": 8,
+				"lineOrder": [
+					"def1",
+					"def2",
+					"blank1",
+					"assign1",
+					"log1",
+					"blank2",
+					"sleepLine",
+					"blank3",
+					"assign2",
+					"log2"
+				],
+				"state": {
+					"def1": {
+						"parts": {
+							"p0": true,
+							"type:shown/0": true,
+							"p1": true
+						},
+						"dimmed": true
+					},
+					"def2": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"blank1": {
+						"parts": {
+							"blank1-empty": true
+						},
+						"dimmed": true
+					},
+					"assign1": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"log1": {
+						"parts": {
+							"p0": true,
+							"result1:shown/0": true
+						},
+						"dimmed": true
+					},
+					"blank2": {
+						"parts": {
+							"blank2-empty": true
+						},
+						"dimmed": true
+					},
+					"sleepLine": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"blank3": {
+						"parts": {
+							"blank3-empty": true
+						},
+						"entering": true,
+						"dimmed": true
+					},
+					"assign2": {
+						"parts": {
+							"p0": true
+						},
+						"entering": true
+					},
+					"log2": {
+						"parts": {
+							"p0": true,
+							"result2:shown/0": false
+						},
+						"entering": true,
+						"dimmed": true
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"status": {
+					"ranges": {
+						"8": [
+							{
+								"start": 17,
+								"end": 33,
+								"status": "success"
+							}
+						]
+					},
+					"allRanges": {
+						"assign1": [
+							{
+								"start": 14,
+								"end": 30
+							},
+							{
+								"start": 14,
+								"end": 30
+							},
+							{
+								"start": 14,
+								"end": 30
+							}
+						],
+						"assign2": [
+							{
+								"start": 17,
+								"end": 33
+							},
+							{
+								"start": 17,
+								"end": 33
+							},
+							{
+								"start": 17,
+								"end": 33
+							}
+						]
+					}
+				},
+				"cursor": {
+					"lineIndex": 8,
+					"charOffset": 23,
+					"textLength": 10,
+					"type": "hand"
+				},
+				"bursts": []
+			},
+			{
+				"id": 9,
+				"lineOrder": [
+					"def1",
+					"def2",
+					"blank1",
+					"assign1",
+					"log1",
+					"blank2",
+					"sleepLine",
+					"blank3",
+					"assign2",
+					"log2"
+				],
+				"state": {
+					"def1": {
+						"parts": {
+							"p0": true,
+							"type:shown/0": true,
+							"p1": true
+						},
+						"dimmed": true
+					},
+					"def2": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"blank1": {
+						"parts": {
+							"blank1-empty": true
+						},
+						"dimmed": true
+					},
+					"assign1": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"log1": {
+						"parts": {
+							"p0": true,
+							"result1:shown/0": true
+						},
+						"dimmed": true
+					},
+					"blank2": {
+						"parts": {
+							"blank2-empty": true
+						},
+						"dimmed": true
+					},
+					"sleepLine": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"blank3": {
+						"parts": {
+							"blank3-empty": true
+						},
+						"dimmed": true
+					},
+					"assign2": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"log2": {
+						"parts": {
+							"p0": true,
+							"result2:shown/0": true
+						}
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"status": {
+					"ranges": {
+						"8": [
+							{
+								"start": 17,
+								"end": 33,
+								"status": "success"
+							}
+						]
+					},
+					"allRanges": {
+						"assign1": [
+							{
+								"start": 14,
+								"end": 30
+							},
+							{
+								"start": 14,
+								"end": 30
+							},
+							{
+								"start": 14,
+								"end": 30
+							}
+						],
+						"assign2": [
+							{
+								"start": 17,
+								"end": 33
+							},
+							{
+								"start": 17,
+								"end": 33
+							},
+							{
+								"start": 17,
+								"end": 33
+							}
+						]
+					}
+				},
+				"cursor": {
+					"lineIndex": 9,
+					"charOffset": 28,
+					"textLength": 3,
+					"type": "hand"
+				},
+				"bursts": []
+			},
+			{
+				"id": 10,
+				"lineOrder": [
+					"def1",
+					"def2",
+					"blank1",
+					"assign1",
+					"log1",
+					"blank2",
+					"sleepLine",
+					"blank3",
+					"assign2",
+					"log2"
+				],
+				"state": {
+					"def1": {
+						"parts": {
+							"p0": true,
+							"type:shown/0": true,
+							"p1": true
+						}
+					},
+					"def2": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"blank1": {
+						"parts": {
+							"blank1-empty": true
+						}
+					},
+					"assign1": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"log1": {
+						"parts": {
+							"p0": true,
+							"result1:shown/0": true
+						}
+					},
+					"blank2": {
+						"parts": {
+							"blank2-empty": true
+						}
+					},
+					"sleepLine": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"blank3": {
+						"parts": {
+							"blank3-empty": true
+						}
+					},
+					"assign2": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"log2": {
+						"parts": {
+							"p0": true,
+							"result2:shown/0": true
+						}
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"status": {
+					"ranges": {
+						"8": [
+							{
+								"start": 17,
+								"end": 33,
+								"status": "success"
+							}
+						]
+					},
+					"allRanges": {
+						"assign1": [
+							{
+								"start": 14,
+								"end": 30
+							},
+							{
+								"start": 14,
+								"end": 30
+							},
+							{
+								"start": 14,
+								"end": 30
+							}
+						],
+						"assign2": [
+							{
+								"start": 17,
+								"end": 33
+							},
+							{
+								"start": 17,
+								"end": 33
+							},
+							{
+								"start": 17,
+								"end": 33
+							}
+						]
+					}
+				},
+				"bursts": [],
+				"sound": "sad"
+			}
+		]
+	},
+	"steps": [
+		{
+			"name": "start",
+			"at": "start"
+		},
+		{
+			"name": "Promise",
+			"at": "Promise",
+			"after": "loathsome"
+		},
+		{
+			"name": "sensor",
+			"at": "sensor"
+		},
+		{
+			"name": "run",
+			"at": "run"
+		},
+		{
+			"name": "morning",
+			"at": "morning"
+		},
+		{
+			"name": "Today",
+			"at": "Today"
+		},
+		{
+			"name": "clear",
+			"at": "clear"
+		},
+		{
+			"name": "next",
+			"at": "next"
+		},
+		{
+			"name": "run",
+			"at": "run",
+			"after": "next"
+		},
+		{
+			"name": "The",
+			"at": "The",
+			"after": "again"
+		},
+		{
+			"name": "die",
+			"at": "die"
+		}
+	],
+	"stepTimes": [
+		0,
+		8.57,
+		12.331,
+		13.969999999999999,
+		14.709999999999999,
+		17.21,
+		18.23,
+		24.53,
+		25.251,
+		26.770000000000003,
+		33.931000000000004
+	],
+	"_debug": {
+		"timingsStatus": "matched",
+		"dslWordCount": 88
+	},
+	"groupId": "wrapping-promises",
+	"groupTitle": "Wrapping Promises",
+	"isFirstInGroup": true,
+	"audioFile": "effect-promise.e1e3b777.webm"
+}

@@ -1,0 +1,4231 @@
+{
+	"id": "effect-structured-concurrency",
+	"text": "How will Effect save us this time? First let's revert the Promise solution. Then we can switch ask over to Effect's AI library. We'll migrate getStockAdvice over to Effect, swapping out Promise.all for Effect.all. And... that's it. Our text generation requests will run in parallel, and if one fails, the others are automatically interrupted. This property of structured concurrency is built into Effect.",
+	"code": "function ask(role: string, ticker: string, signal: AbortSignal) {\n  return generateText({\n    model: anthropic('claude-opus-4-5'),\n    system: `You are a ${role}. Give stock advice.`,\n    prompt: ticker,\n    abortSignal: signal\n  })\n}\n\nasync function getStockAdvice(ticker: string) {\n  const controller = new AbortController()\n  try {\n    const [tree, star, beetle] = await Promise.all([\n      ask(\"tree\", ticker, controller.signal),\n      ask(\"Zubenelgenubi\", ticker, controller.signal),\n      ask(\"dung beetle\", ticker, controller.signal)\n    ])\n    return { tree, star, beetle }\n  } catch (e) {\n    controller.abort()\n    throw e\n  }\n}",
+	"contentHash": "-zbvv6s",
+	"wordTimings": [
+		{
+			"word": "How",
+			"start": 0.079,
+			"end": 0.199
+		},
+		{
+			"word": "will",
+			"start": 0.219,
+			"end": 0.319
+		},
+		{
+			"word": "Effect",
+			"start": 0.359,
+			"end": 0.779
+		},
+		{
+			"word": "save",
+			"start": 1.22,
+			"end": 1.419
+		},
+		{
+			"word": "us",
+			"start": 1.5,
+			"end": 1.719
+		},
+		{
+			"word": "this",
+			"start": 1.86,
+			"end": 2.019
+		},
+		{
+			"word": "time?",
+			"start": 2.099,
+			"end": 2.359
+		},
+		{
+			"word": "First",
+			"start": 3.759,
+			"end": 4.139,
+			"paragraphBreak": true
+		},
+		{
+			"word": "let's",
+			"start": 4.38,
+			"end": 4.559
+		},
+		{
+			"word": "revert",
+			"start": 4.619,
+			"end": 4.9
+		},
+		{
+			"word": "the",
+			"start": 4.92,
+			"end": 5
+		},
+		{
+			"word": "Promise",
+			"start": 5.079,
+			"end": 5.5
+		},
+		{
+			"word": "solution.",
+			"start": 5.659,
+			"end": 6.119
+		},
+		{
+			"word": "Then",
+			"start": 7.179,
+			"end": 7.499
+		},
+		{
+			"word": "we",
+			"start": 7.699,
+			"end": 7.799
+		},
+		{
+			"word": "can",
+			"start": 7.859,
+			"end": 7.96
+		},
+		{
+			"word": "switch",
+			"start": 8.099,
+			"end": 8.34
+		},
+		{
+			"word": "ask",
+			"start": 8.539,
+			"end": 8.88,
+			"style": {
+				"code": true
+			}
+		},
+		{
+			"word": "over",
+			"start": 8.96,
+			"end": 9.099
+		},
+		{
+			"word": "to",
+			"start": 9.199,
+			"end": 9.34
+		},
+		{
+			"word": "Effect's",
+			"start": 9.42,
+			"end": 10.019
+		},
+		{
+			"word": "AI",
+			"start": 10.119,
+			"end": 10.319
+		},
+		{
+			"word": "library.",
+			"start": 10.42,
+			"end": 10.92
+		},
+		{
+			"word": "We'll",
+			"start": 11.979,
+			"end": 12.119
+		},
+		{
+			"word": "migrate",
+			"start": 12.159,
+			"end": 12.679
+		},
+		{
+			"word": "getStockAdvice",
+			"start": 12.84,
+			"end": 13.92,
+			"style": {
+				"code": true
+			}
+		},
+		{
+			"word": "over",
+			"start": 14.019,
+			"end": 14.179
+		},
+		{
+			"word": "to",
+			"start": 14.219,
+			"end": 14.319
+		},
+		{
+			"word": "Effect,",
+			"start": 14.38,
+			"end": 14.759
+		},
+		{
+			"word": "swapping",
+			"start": 15.699,
+			"end": 16.1
+		},
+		{
+			"word": "out",
+			"start": 16.159,
+			"end": 16.319
+		},
+		{
+			"word": "Promise.all",
+			"start": 16.479,
+			"end": 17.44,
+			"style": {
+				"code": true
+			}
+		},
+		{
+			"word": "for",
+			"start": 17.52,
+			"end": 17.739
+		},
+		{
+			"word": "Effect.all.",
+			"start": 17.92,
+			"end": 18.879,
+			"style": {
+				"code": true
+			}
+		},
+		{
+			"word": "And...",
+			"start": 20.34,
+			"end": 20.779,
+			"paragraphBreak": true
+		},
+		{
+			"word": "that's",
+			"start": 20.859,
+			"end": 21.379
+		},
+		{
+			"word": "it.",
+			"start": 21.52,
+			"end": 21.739
+		},
+		{
+			"word": "Our",
+			"start": 22.859,
+			"end": 23
+		},
+		{
+			"word": "text",
+			"start": 23.1,
+			"end": 23.299
+		},
+		{
+			"word": "generation",
+			"start": 23.399,
+			"end": 23.84
+		},
+		{
+			"word": "requests",
+			"start": 23.899,
+			"end": 24.719
+		},
+		{
+			"word": "will",
+			"start": 24.779,
+			"end": 24.94
+		},
+		{
+			"word": "run",
+			"start": 24.959,
+			"end": 25.079
+		},
+		{
+			"word": "in",
+			"start": 25.119,
+			"end": 25.26
+		},
+		{
+			"word": "parallel,",
+			"start": 25.299,
+			"end": 25.76
+		},
+		{
+			"word": "and",
+			"start": 26.559,
+			"end": 26.719
+		},
+		{
+			"word": "if",
+			"start": 26.76,
+			"end": 26.879
+		},
+		{
+			"word": "one",
+			"start": 27.019,
+			"end": 27.279
+		},
+		{
+			"word": "fails,",
+			"start": 27.359,
+			"end": 27.779
+		},
+		{
+			"word": "the",
+			"start": 28.439,
+			"end": 28.519
+		},
+		{
+			"word": "others",
+			"start": 28.599,
+			"end": 28.899
+		},
+		{
+			"word": "are",
+			"start": 28.979,
+			"end": 29.199
+		},
+		{
+			"word": "automatically",
+			"start": 29.299,
+			"end": 30.019
+		},
+		{
+			"word": "interrupted.",
+			"start": 30.079,
+			"end": 30.679
+		},
+		{
+			"word": "This",
+			"start": 31.76,
+			"end": 31.94,
+			"paragraphBreak": true
+		},
+		{
+			"word": "property",
+			"start": 32.079,
+			"end": 32.56
+		},
+		{
+			"word": "of",
+			"start": 32.599,
+			"end": 32.739
+		},
+		{
+			"word": "structured",
+			"start": 32.84,
+			"end": 33.299
+		},
+		{
+			"word": "concurrency",
+			"start": 33.34,
+			"end": 34.159
+		},
+		{
+			"word": "is",
+			"start": 34.239,
+			"end": 34.559
+		},
+		{
+			"word": "built",
+			"start": 34.619,
+			"end": 34.919
+		},
+		{
+			"word": "into",
+			"start": 35.04,
+			"end": 35.619
+		},
+		{
+			"word": "Effect.",
+			"start": 35.779,
+			"end": 36.139
+		}
+	],
+	"componentFlow": {
+		"name": "StructuredConcurrencyDemo",
+		"steps": [
+			{
+				"name": "start",
+				"at": "start"
+			},
+			{
+				"name": "Our",
+				"at": "Our"
+			},
+			{
+				"name": "run",
+				"at": "run"
+			},
+			{
+				"name": "fails",
+				"at": "fails"
+			},
+			{
+				"name": "interrupted",
+				"at": "interrupted"
+			}
+		],
+		"snapshots": [
+			{
+				"visible": false,
+				"tree": "idle",
+				"star": "idle",
+				"beetle": "idle"
+			},
+			{
+				"visible": true,
+				"tree": "idle",
+				"star": "idle",
+				"beetle": "idle"
+			},
+			{
+				"visible": true,
+				"tree": "running",
+				"star": "running",
+				"beetle": "running"
+			},
+			{
+				"visible": true,
+				"tree": "running",
+				"star": "failed",
+				"beetle": "running"
+			},
+			{
+				"visible": true,
+				"tree": "interrupted",
+				"star": "failed",
+				"beetle": "interrupted"
+			}
+		]
+	},
+	"slideshowData": {
+		"template": {
+			"lines": {
+				"askFn": {
+					"parts": {
+						"fnKw:*/0": {
+							"tokens": [
+								{
+									"text": "function",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": true,
+							"versions": {
+								"function ": [
+									{
+										"text": "function",
+										"type": "default",
+										"color": "#F97583"
+									},
+									{
+										"text": " ",
+										"type": "default",
+										"color": "#E1E4E8"
+									}
+								],
+								"const ": [
+									{
+										"text": "const",
+										"type": "default",
+										"color": "#F97583"
+									},
+									{
+										"text": " ",
+										"type": "default",
+										"color": "#E1E4E8"
+									}
+								]
+							}
+						},
+						"p0": {
+							"tokens": [
+								{
+									"text": "ask",
+									"type": "default",
+									"color": "#B392F0"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						},
+						"fnEq:shown/0": {
+							"tokens": [
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "=",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": true,
+							"crossfade": false
+						},
+						"p1": {
+							"tokens": [
+								{
+									"text": "(",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "role",
+									"type": "default",
+									"color": "#FFAB70"
+								},
+								{
+									"text": ":",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "string",
+									"type": "default",
+									"color": "#79B8FF"
+								},
+								{
+									"text": ", ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "ticker",
+									"type": "default",
+									"color": "#FFAB70"
+								},
+								{
+									"text": ":",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "string",
+									"type": "default",
+									"color": "#79B8FF"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						},
+						"signalParam:shown/0": {
+							"tokens": [
+								{
+									"text": ", ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "signal",
+									"type": "default",
+									"color": "#FFAB70"
+								},
+								{
+									"text": ":",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "AbortSignal",
+									"type": "default",
+									"color": "#B392F0"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						},
+						"p2": {
+							"tokens": [
+								{
+									"text": ")",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						},
+						"fnEnd:*/0": {
+							"tokens": [
+								{
+									"text": " {",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": true,
+							"versions": {
+								" {": [
+									{
+										"text": " {",
+										"type": "default",
+										"color": "#E1E4E8"
+									}
+								],
+								" =>": [
+									{
+										"text": " ",
+										"type": "default",
+										"color": "#E1E4E8"
+									},
+									{
+										"text": "=>",
+										"type": "default",
+										"color": "#F97583"
+									}
+								]
+							}
+						}
+					},
+					"partOrder": [
+						"fnKw:*/0",
+						"p0",
+						"fnEq:shown/0",
+						"p1",
+						"signalParam:shown/0",
+						"p2",
+						"fnEnd:*/0"
+					]
+				},
+				"askBody1": {
+					"parts": {
+						"retKw:*/0": {
+							"tokens": [
+								{
+									"text": "  ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "return",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": true,
+							"versions": {
+								"  return ": [
+									{
+										"text": "  ",
+										"type": "default",
+										"color": "#E1E4E8"
+									},
+									{
+										"text": "return",
+										"type": "default",
+										"color": "#F97583"
+									},
+									{
+										"text": " ",
+										"type": "default",
+										"color": "#E1E4E8"
+									}
+								],
+								"  ": [
+									{
+										"text": "  ",
+										"type": "default",
+										"color": "#E1E4E8"
+									}
+								]
+							}
+						},
+						"langModelPrefix:shown/0": {
+							"tokens": [
+								{
+									"text": "LanguageModel.",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": true,
+							"crossfade": false
+						},
+						"p0": {
+							"tokens": [
+								{
+									"text": "generateText",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": "({",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"retKw:*/0",
+						"langModelPrefix:shown/0",
+						"p0"
+					]
+				},
+				"askBody2": {
+					"parts": {
+						"p0": {
+							"tokens": [
+								{
+									"text": "    ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "model",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": ": ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "anthropic",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": "(",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "'claude-opus-4-5'",
+									"type": "default",
+									"color": "#9ECBFF"
+								},
+								{
+									"text": "),",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"p0"
+					]
+				},
+				"askBody3": {
+					"parts": {
+						"p0": {
+							"tokens": [
+								{
+									"text": "    ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "system",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": ": ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "`You are a ${",
+									"type": "default",
+									"color": "#9ECBFF"
+								},
+								{
+									"text": "role",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "}. Give stock advice.`",
+									"type": "default",
+									"color": "#9ECBFF"
+								},
+								{
+									"text": ",",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"p0"
+					]
+				},
+				"askBody4": {
+					"parts": {
+						"p0": {
+							"tokens": [
+								{
+									"text": "    ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "prompt",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": ": ticker",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						},
+						"promptComma:shown/0": {
+							"tokens": [
+								{
+									"text": ",",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"p0",
+						"promptComma:shown/0"
+					]
+				},
+				"abortSignal": {
+					"parts": {
+						"p0": {
+							"tokens": [
+								{
+									"text": "    ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "abortSignal",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": ": signal",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"p0"
+					]
+				},
+				"askBody5": {
+					"parts": {
+						"p0": {
+							"tokens": [
+								{
+									"text": "  })",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"p0"
+					]
+				},
+				"askEnd": {
+					"parts": {
+						"p0": {
+							"tokens": [
+								{
+									"text": "}",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"p0"
+					]
+				},
+				"blank": {
+					"parts": {
+						"blank-empty": {
+							"tokens": [],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"blank-empty"
+					]
+				},
+				"getFn": {
+					"parts": {
+						"getFnKw:*/0": {
+							"tokens": [
+								{
+									"text": "async",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "function",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": true,
+							"versions": {
+								"async function ": [
+									{
+										"text": "async",
+										"type": "default",
+										"color": "#F97583"
+									},
+									{
+										"text": " ",
+										"type": "default",
+										"color": "#E1E4E8"
+									},
+									{
+										"text": "function",
+										"type": "default",
+										"color": "#F97583"
+									},
+									{
+										"text": " ",
+										"type": "default",
+										"color": "#E1E4E8"
+									}
+								],
+								"const ": [
+									{
+										"text": "const",
+										"type": "default",
+										"color": "#F97583"
+									},
+									{
+										"text": " ",
+										"type": "default",
+										"color": "#E1E4E8"
+									}
+								]
+							}
+						},
+						"p0": {
+							"tokens": [
+								{
+									"text": "getStockAdvice",
+									"type": "default",
+									"color": "#B392F0"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						},
+						"getFnMiddle:*/0": {
+							"tokens": [
+								{
+									"text": "(",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": true,
+							"versions": {
+								"(": [
+									{
+										"text": "(",
+										"type": "default",
+										"color": "#E1E4E8"
+									}
+								],
+								" = Effect.fn(function* (": [
+									{
+										"text": " ",
+										"type": "default",
+										"color": "#E1E4E8"
+									},
+									{
+										"text": "=",
+										"type": "default",
+										"color": "#F97583"
+									},
+									{
+										"text": " Effect.",
+										"type": "default",
+										"color": "#E1E4E8"
+									},
+									{
+										"text": "fn",
+										"type": "default",
+										"color": "#B392F0"
+									},
+									{
+										"text": "(",
+										"type": "default",
+										"color": "#E1E4E8"
+									},
+									{
+										"text": "function*",
+										"type": "default",
+										"color": "#F97583"
+									},
+									{
+										"text": " (",
+										"type": "default",
+										"color": "#E1E4E8"
+									}
+								]
+							}
+						},
+						"p1": {
+							"tokens": [
+								{
+									"text": "ticker",
+									"type": "default",
+									"color": "#FFAB70"
+								},
+								{
+									"text": ":",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "string",
+									"type": "default",
+									"color": "#79B8FF"
+								},
+								{
+									"text": ") {",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"getFnKw:*/0",
+						"p0",
+						"getFnMiddle:*/0",
+						"p1"
+					]
+				},
+				"controller": {
+					"parts": {
+						"p0": {
+							"tokens": [
+								{
+									"text": "  ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "const",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "controller",
+									"type": "default",
+									"color": "#79B8FF"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "=",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "new",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "AbortController",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": "()",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"p0"
+					]
+				},
+				"blank2": {
+					"parts": {
+						"blank2-empty": {
+							"tokens": [],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"blank2-empty"
+					]
+				},
+				"try": {
+					"parts": {
+						"p0": {
+							"tokens": [
+								{
+									"text": "  ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "try",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " {",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"p0"
+					]
+				},
+				"destructure": {
+					"parts": {
+						"destIndent:*/0": {
+							"tokens": [
+								{
+									"text": "    ",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": true,
+							"versions": {
+								"    ": [
+									{
+										"text": "    ",
+										"type": "default",
+										"color": "#E1E4E8"
+									}
+								],
+								"  ": [
+									{
+										"text": "  ",
+										"type": "default",
+										"color": "#E1E4E8"
+									}
+								]
+							}
+						},
+						"p0": {
+							"tokens": [
+								{
+									"text": "const",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " [",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "tree",
+									"type": "default",
+									"color": "#79B8FF"
+								},
+								{
+									"text": ", ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "star",
+									"type": "default",
+									"color": "#79B8FF"
+								},
+								{
+									"text": ", ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "beetle",
+									"type": "default",
+									"color": "#79B8FF"
+								},
+								{
+									"text": "] ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "=",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						},
+						"awaitCombinator:*/0": {
+							"tokens": [
+								{
+									"text": "await",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "Promise",
+									"type": "default",
+									"color": "#79B8FF"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": true,
+							"versions": {
+								"await Promise": [
+									{
+										"text": "await",
+										"type": "default",
+										"color": "#F97583"
+									},
+									{
+										"text": " ",
+										"type": "default",
+										"color": "#E1E4E8"
+									},
+									{
+										"text": "Promise",
+										"type": "default",
+										"color": "#79B8FF"
+									}
+								],
+								"yield* Effect": [
+									{
+										"text": "yield*",
+										"type": "default",
+										"color": "#F97583"
+									},
+									{
+										"text": " Effect",
+										"type": "default",
+										"color": "#E1E4E8"
+									}
+								]
+							}
+						},
+						"p1": {
+							"tokens": [
+								{
+									"text": ".",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "all",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": "([",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"destIndent:*/0",
+						"p0",
+						"awaitCombinator:*/0",
+						"p1"
+					]
+				},
+				"treeCall": {
+					"parts": {
+						"callIndent:*/0": {
+							"tokens": [
+								{
+									"text": "      ",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": true,
+							"versions": {
+								"      ": [
+									{
+										"text": "      ",
+										"type": "default",
+										"color": "#E1E4E8"
+									}
+								],
+								"    ": [
+									{
+										"text": "    ",
+										"type": "default",
+										"color": "#E1E4E8"
+									}
+								]
+							}
+						},
+						"p0": {
+							"tokens": [
+								{
+									"text": "ask",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": "(",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "\"tree\"",
+									"type": "default",
+									"color": "#9ECBFF"
+								},
+								{
+									"text": ", ticker",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						},
+						"treeSignal:shown/0": {
+							"tokens": [
+								{
+									"text": ", controller.signal",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						},
+						"p1": {
+							"tokens": [
+								{
+									"text": "),",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"callIndent:*/0",
+						"p0",
+						"treeSignal:shown/0",
+						"p1"
+					]
+				},
+				"starCall": {
+					"parts": {
+						"callIndent2:*/0": {
+							"tokens": [
+								{
+									"text": "      ",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": true,
+							"versions": {
+								"      ": [
+									{
+										"text": "      ",
+										"type": "default",
+										"color": "#E1E4E8"
+									}
+								],
+								"    ": [
+									{
+										"text": "    ",
+										"type": "default",
+										"color": "#E1E4E8"
+									}
+								]
+							}
+						},
+						"p0": {
+							"tokens": [
+								{
+									"text": "ask",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": "(",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "\"Zubenelgenubi\"",
+									"type": "default",
+									"color": "#9ECBFF"
+								},
+								{
+									"text": ", ticker",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						},
+						"starSignal:shown/0": {
+							"tokens": [
+								{
+									"text": ", controller.signal",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						},
+						"p1": {
+							"tokens": [
+								{
+									"text": "),",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"callIndent2:*/0",
+						"p0",
+						"starSignal:shown/0",
+						"p1"
+					]
+				},
+				"beetleCall": {
+					"parts": {
+						"callIndent3:*/0": {
+							"tokens": [
+								{
+									"text": "      ",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": true,
+							"versions": {
+								"      ": [
+									{
+										"text": "      ",
+										"type": "default",
+										"color": "#E1E4E8"
+									}
+								],
+								"    ": [
+									{
+										"text": "    ",
+										"type": "default",
+										"color": "#E1E4E8"
+									}
+								]
+							}
+						},
+						"p0": {
+							"tokens": [
+								{
+									"text": "ask",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": "(",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "\"dung beetle\"",
+									"type": "default",
+									"color": "#9ECBFF"
+								},
+								{
+									"text": ", ticker",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						},
+						"beetleSignal:shown/0": {
+							"tokens": [
+								{
+									"text": ", controller.signal",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						},
+						"p1": {
+							"tokens": [
+								{
+									"text": ")",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"callIndent3:*/0",
+						"p0",
+						"beetleSignal:shown/0",
+						"p1"
+					]
+				},
+				"closeAll": {
+					"parts": {
+						"closeIndent:*/0": {
+							"tokens": [
+								{
+									"text": "    ",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": true,
+							"versions": {
+								"    ": [
+									{
+										"text": "    ",
+										"type": "default",
+										"color": "#E1E4E8"
+									}
+								],
+								"  ": [
+									{
+										"text": "  ",
+										"type": "default",
+										"color": "#E1E4E8"
+									}
+								]
+							}
+						},
+						"p0": {
+							"tokens": [
+								{
+									"text": "]",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						},
+						"concurrencyOpt:shown/0": {
+							"tokens": [
+								{
+									"text": ", { concurrency: ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "\"unbounded\"",
+									"type": "default",
+									"color": "#9ECBFF"
+								},
+								{
+									"text": " }",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": true,
+							"crossfade": false
+						},
+						"p1": {
+							"tokens": [
+								{
+									"text": ")",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"closeIndent:*/0",
+						"p0",
+						"concurrencyOpt:shown/0",
+						"p1"
+					]
+				},
+				"return": {
+					"parts": {
+						"returnIndent:*/0": {
+							"tokens": [
+								{
+									"text": "    ",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": true,
+							"versions": {
+								"    ": [
+									{
+										"text": "    ",
+										"type": "default",
+										"color": "#E1E4E8"
+									}
+								],
+								"  ": [
+									{
+										"text": "  ",
+										"type": "default",
+										"color": "#E1E4E8"
+									}
+								]
+							}
+						},
+						"p0": {
+							"tokens": [
+								{
+									"text": "return",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " { tree, star, beetle }",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"returnIndent:*/0",
+						"p0"
+					]
+				},
+				"catch": {
+					"parts": {
+						"p0": {
+							"tokens": [
+								{
+									"text": "  } ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "catch",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " (e) {",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"p0"
+					]
+				},
+				"abort": {
+					"parts": {
+						"p0": {
+							"tokens": [
+								{
+									"text": "    controller.",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "abort",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": "()",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"p0"
+					]
+				},
+				"throw": {
+					"parts": {
+						"p0": {
+							"tokens": [
+								{
+									"text": "    ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "throw",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " e",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"p0"
+					]
+				},
+				"catchEnd": {
+					"parts": {
+						"p0": {
+							"tokens": [
+								{
+									"text": "  }",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"p0"
+					]
+				},
+				"getEnd": {
+					"parts": {
+						"p0": {
+							"tokens": [
+								{
+									"text": "}",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						},
+						"effectCloseParen:shown/0": {
+							"tokens": [
+								{
+									"text": ")",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": true,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"p0",
+						"effectCloseParen:shown/0"
+					]
+				}
+			}
+		},
+		"frames": [
+			{
+				"id": 0,
+				"lineOrder": [
+					"askFn",
+					"askBody1",
+					"askBody2",
+					"askBody3",
+					"askBody4",
+					"abortSignal",
+					"askBody5",
+					"askEnd",
+					"blank",
+					"getFn",
+					"controller",
+					"blank2",
+					"try",
+					"destructure",
+					"treeCall",
+					"starCall",
+					"beetleCall",
+					"closeAll",
+					"return",
+					"catch",
+					"abort",
+					"throw",
+					"catchEnd",
+					"getEnd"
+				],
+				"state": {
+					"askFn": {
+						"parts": {
+							"fnKw:*/0": "function ",
+							"p0": true,
+							"fnEq:shown/0": false,
+							"p1": true,
+							"signalParam:shown/0": true,
+							"p2": true,
+							"fnEnd:*/0": " {"
+						},
+						"entering": true
+					},
+					"askBody1": {
+						"parts": {
+							"retKw:*/0": "  return ",
+							"langModelPrefix:shown/0": false,
+							"p0": true
+						},
+						"entering": true
+					},
+					"askBody2": {
+						"parts": {
+							"p0": true
+						},
+						"entering": true
+					},
+					"askBody3": {
+						"parts": {
+							"p0": true
+						},
+						"entering": true
+					},
+					"askBody4": {
+						"parts": {
+							"p0": true,
+							"promptComma:shown/0": true
+						},
+						"entering": true
+					},
+					"abortSignal": {
+						"parts": {
+							"p0": true
+						},
+						"entering": true
+					},
+					"askBody5": {
+						"parts": {
+							"p0": true
+						},
+						"entering": true
+					},
+					"askEnd": {
+						"parts": {
+							"p0": true
+						},
+						"entering": true
+					},
+					"blank": {
+						"parts": {
+							"blank-empty": true
+						},
+						"entering": true
+					},
+					"getFn": {
+						"parts": {
+							"getFnKw:*/0": "async function ",
+							"p0": true,
+							"getFnMiddle:*/0": "(",
+							"p1": true
+						},
+						"entering": true
+					},
+					"controller": {
+						"parts": {
+							"p0": true
+						},
+						"entering": true
+					},
+					"blank2": {
+						"parts": {
+							"blank2-empty": true
+						},
+						"entering": true
+					},
+					"try": {
+						"parts": {
+							"p0": true
+						},
+						"entering": true
+					},
+					"destructure": {
+						"parts": {
+							"destIndent:*/0": "    ",
+							"p0": true,
+							"awaitCombinator:*/0": "await Promise",
+							"p1": true
+						},
+						"entering": true
+					},
+					"treeCall": {
+						"parts": {
+							"callIndent:*/0": "      ",
+							"p0": true,
+							"treeSignal:shown/0": true,
+							"p1": true
+						},
+						"entering": true
+					},
+					"starCall": {
+						"parts": {
+							"callIndent2:*/0": "      ",
+							"p0": true,
+							"starSignal:shown/0": true,
+							"p1": true
+						},
+						"entering": true
+					},
+					"beetleCall": {
+						"parts": {
+							"callIndent3:*/0": "      ",
+							"p0": true,
+							"beetleSignal:shown/0": true,
+							"p1": true
+						},
+						"entering": true
+					},
+					"closeAll": {
+						"parts": {
+							"closeIndent:*/0": "    ",
+							"p0": true,
+							"concurrencyOpt:shown/0": false,
+							"p1": true
+						},
+						"entering": true
+					},
+					"return": {
+						"parts": {
+							"returnIndent:*/0": "    ",
+							"p0": true
+						},
+						"entering": true
+					},
+					"catch": {
+						"parts": {
+							"p0": true
+						},
+						"entering": true
+					},
+					"abort": {
+						"parts": {
+							"p0": true
+						},
+						"entering": true
+					},
+					"throw": {
+						"parts": {
+							"p0": true
+						},
+						"entering": true
+					},
+					"catchEnd": {
+						"parts": {
+							"p0": true
+						},
+						"entering": true
+					},
+					"getEnd": {
+						"parts": {
+							"p0": true,
+							"effectCloseParen:shown/0": false
+						},
+						"entering": true
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"status": {
+					"ranges": {},
+					"allRanges": {
+						"treeCall": [
+							{
+								"start": 4,
+								"end": 23
+							},
+							{
+								"start": 4,
+								"end": 23
+							},
+							{
+								"start": 4,
+								"end": 23
+							},
+							{
+								"start": 4,
+								"end": 23
+							}
+						],
+						"starCall": [
+							{
+								"start": 4,
+								"end": 32
+							},
+							{
+								"start": 4,
+								"end": 32
+							},
+							{
+								"start": 4,
+								"end": 32
+							},
+							{
+								"start": 4,
+								"end": 32
+							}
+						],
+						"beetleCall": [
+							{
+								"start": 4,
+								"end": 30
+							},
+							{
+								"start": 4,
+								"end": 30
+							},
+							{
+								"start": 4,
+								"end": 30
+							},
+							{
+								"start": 4,
+								"end": 30
+							}
+						]
+					}
+				},
+				"bursts": []
+			},
+			{
+				"id": 1,
+				"lineOrder": [
+					"askFn",
+					"askBody1",
+					"askBody2",
+					"askBody3",
+					"askBody4",
+					"askBody5",
+					"askEnd",
+					"blank",
+					"getFn",
+					"destructure",
+					"treeCall",
+					"starCall",
+					"beetleCall",
+					"closeAll",
+					"return",
+					"getEnd"
+				],
+				"state": {
+					"askFn": {
+						"parts": {
+							"fnKw:*/0": "function ",
+							"p0": true,
+							"fnEq:shown/0": false,
+							"p1": true,
+							"signalParam:shown/0": false,
+							"p2": true,
+							"fnEnd:*/0": " {"
+						}
+					},
+					"askBody1": {
+						"parts": {
+							"retKw:*/0": "  return ",
+							"langModelPrefix:shown/0": false,
+							"p0": true
+						}
+					},
+					"askBody2": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"askBody3": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"askBody4": {
+						"parts": {
+							"p0": true,
+							"promptComma:shown/0": false
+						}
+					},
+					"askBody5": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"askEnd": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"blank": {
+						"parts": {
+							"blank-empty": true
+						}
+					},
+					"getFn": {
+						"parts": {
+							"getFnKw:*/0": "async function ",
+							"p0": true,
+							"getFnMiddle:*/0": "(",
+							"p1": true
+						}
+					},
+					"destructure": {
+						"parts": {
+							"destIndent:*/0": "  ",
+							"p0": true,
+							"awaitCombinator:*/0": "await Promise",
+							"p1": true
+						}
+					},
+					"treeCall": {
+						"parts": {
+							"callIndent:*/0": "    ",
+							"p0": true,
+							"treeSignal:shown/0": false,
+							"p1": true
+						}
+					},
+					"starCall": {
+						"parts": {
+							"callIndent2:*/0": "    ",
+							"p0": true,
+							"starSignal:shown/0": false,
+							"p1": true
+						}
+					},
+					"beetleCall": {
+						"parts": {
+							"callIndent3:*/0": "    ",
+							"p0": true,
+							"beetleSignal:shown/0": false,
+							"p1": true
+						}
+					},
+					"closeAll": {
+						"parts": {
+							"closeIndent:*/0": "  ",
+							"p0": true,
+							"concurrencyOpt:shown/0": false,
+							"p1": true
+						}
+					},
+					"return": {
+						"parts": {
+							"returnIndent:*/0": "  ",
+							"p0": true
+						}
+					},
+					"getEnd": {
+						"parts": {
+							"p0": true,
+							"effectCloseParen:shown/0": false
+						}
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"status": {
+					"ranges": {},
+					"allRanges": {
+						"treeCall": [
+							{
+								"start": 4,
+								"end": 23
+							},
+							{
+								"start": 4,
+								"end": 23
+							},
+							{
+								"start": 4,
+								"end": 23
+							},
+							{
+								"start": 4,
+								"end": 23
+							}
+						],
+						"starCall": [
+							{
+								"start": 4,
+								"end": 32
+							},
+							{
+								"start": 4,
+								"end": 32
+							},
+							{
+								"start": 4,
+								"end": 32
+							},
+							{
+								"start": 4,
+								"end": 32
+							}
+						],
+						"beetleCall": [
+							{
+								"start": 4,
+								"end": 30
+							},
+							{
+								"start": 4,
+								"end": 30
+							},
+							{
+								"start": 4,
+								"end": 30
+							},
+							{
+								"start": 4,
+								"end": 30
+							}
+						]
+					}
+				},
+				"bursts": []
+			},
+			{
+				"id": 2,
+				"lineOrder": [
+					"askFn",
+					"askBody1",
+					"askBody3",
+					"askBody4",
+					"askBody5",
+					"blank",
+					"getFn",
+					"destructure",
+					"treeCall",
+					"starCall",
+					"beetleCall",
+					"closeAll",
+					"return",
+					"getEnd"
+				],
+				"state": {
+					"askFn": {
+						"parts": {
+							"fnKw:*/0": "const ",
+							"p0": true,
+							"fnEq:shown/0": true,
+							"p1": true,
+							"signalParam:shown/0": false,
+							"p2": true,
+							"fnEnd:*/0": " =>"
+						}
+					},
+					"askBody1": {
+						"parts": {
+							"retKw:*/0": "  ",
+							"langModelPrefix:shown/0": true,
+							"p0": true
+						}
+					},
+					"askBody3": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"askBody4": {
+						"parts": {
+							"p0": true,
+							"promptComma:shown/0": false
+						}
+					},
+					"askBody5": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"blank": {
+						"parts": {
+							"blank-empty": true
+						},
+						"dimmed": true
+					},
+					"getFn": {
+						"parts": {
+							"getFnKw:*/0": "async function ",
+							"p0": true,
+							"getFnMiddle:*/0": "(",
+							"p1": true
+						},
+						"dimmed": true
+					},
+					"destructure": {
+						"parts": {
+							"destIndent:*/0": "  ",
+							"p0": true,
+							"awaitCombinator:*/0": "await Promise",
+							"p1": true
+						},
+						"dimmed": true
+					},
+					"treeCall": {
+						"parts": {
+							"callIndent:*/0": "    ",
+							"p0": true,
+							"treeSignal:shown/0": false,
+							"p1": true
+						},
+						"dimmed": true
+					},
+					"starCall": {
+						"parts": {
+							"callIndent2:*/0": "    ",
+							"p0": true,
+							"starSignal:shown/0": false,
+							"p1": true
+						},
+						"dimmed": true
+					},
+					"beetleCall": {
+						"parts": {
+							"callIndent3:*/0": "    ",
+							"p0": true,
+							"beetleSignal:shown/0": false,
+							"p1": true
+						},
+						"dimmed": true
+					},
+					"closeAll": {
+						"parts": {
+							"closeIndent:*/0": "  ",
+							"p0": true,
+							"concurrencyOpt:shown/0": false,
+							"p1": true
+						},
+						"dimmed": true
+					},
+					"return": {
+						"parts": {
+							"returnIndent:*/0": "  ",
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"getEnd": {
+						"parts": {
+							"p0": true,
+							"effectCloseParen:shown/0": false
+						},
+						"dimmed": true
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"status": {
+					"ranges": {},
+					"allRanges": {
+						"treeCall": [
+							{
+								"start": 4,
+								"end": 23
+							},
+							{
+								"start": 4,
+								"end": 23
+							},
+							{
+								"start": 4,
+								"end": 23
+							},
+							{
+								"start": 4,
+								"end": 23
+							}
+						],
+						"starCall": [
+							{
+								"start": 4,
+								"end": 32
+							},
+							{
+								"start": 4,
+								"end": 32
+							},
+							{
+								"start": 4,
+								"end": 32
+							},
+							{
+								"start": 4,
+								"end": 32
+							}
+						],
+						"beetleCall": [
+							{
+								"start": 4,
+								"end": 30
+							},
+							{
+								"start": 4,
+								"end": 30
+							},
+							{
+								"start": 4,
+								"end": 30
+							},
+							{
+								"start": 4,
+								"end": 30
+							}
+						]
+					}
+				},
+				"cursor": {
+					"lineIndex": 1,
+					"charOffset": 2,
+					"textLength": 26,
+					"type": "hand"
+				},
+				"bursts": []
+			},
+			{
+				"id": 3,
+				"lineOrder": [
+					"askFn",
+					"askBody1",
+					"askBody3",
+					"askBody4",
+					"askBody5",
+					"blank",
+					"getFn",
+					"destructure",
+					"treeCall",
+					"starCall",
+					"beetleCall",
+					"closeAll",
+					"return",
+					"getEnd"
+				],
+				"state": {
+					"askFn": {
+						"parts": {
+							"fnKw:*/0": "const ",
+							"p0": true,
+							"fnEq:shown/0": true,
+							"p1": true,
+							"signalParam:shown/0": false,
+							"p2": true,
+							"fnEnd:*/0": " =>"
+						}
+					},
+					"askBody1": {
+						"parts": {
+							"retKw:*/0": "  ",
+							"langModelPrefix:shown/0": true,
+							"p0": true
+						}
+					},
+					"askBody3": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"askBody4": {
+						"parts": {
+							"p0": true,
+							"promptComma:shown/0": false
+						}
+					},
+					"askBody5": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"blank": {
+						"parts": {
+							"blank-empty": true
+						}
+					},
+					"getFn": {
+						"parts": {
+							"getFnKw:*/0": "async function ",
+							"p0": true,
+							"getFnMiddle:*/0": "(",
+							"p1": true
+						}
+					},
+					"destructure": {
+						"parts": {
+							"destIndent:*/0": "  ",
+							"p0": true,
+							"awaitCombinator:*/0": "await Promise",
+							"p1": true
+						}
+					},
+					"treeCall": {
+						"parts": {
+							"callIndent:*/0": "    ",
+							"p0": true,
+							"treeSignal:shown/0": false,
+							"p1": true
+						}
+					},
+					"starCall": {
+						"parts": {
+							"callIndent2:*/0": "    ",
+							"p0": true,
+							"starSignal:shown/0": false,
+							"p1": true
+						}
+					},
+					"beetleCall": {
+						"parts": {
+							"callIndent3:*/0": "    ",
+							"p0": true,
+							"beetleSignal:shown/0": false,
+							"p1": true
+						}
+					},
+					"closeAll": {
+						"parts": {
+							"closeIndent:*/0": "  ",
+							"p0": true,
+							"concurrencyOpt:shown/0": false,
+							"p1": true
+						}
+					},
+					"return": {
+						"parts": {
+							"returnIndent:*/0": "  ",
+							"p0": true
+						}
+					},
+					"getEnd": {
+						"parts": {
+							"p0": true,
+							"effectCloseParen:shown/0": false
+						}
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"status": {
+					"ranges": {},
+					"allRanges": {
+						"treeCall": [
+							{
+								"start": 4,
+								"end": 23
+							},
+							{
+								"start": 4,
+								"end": 23
+							},
+							{
+								"start": 4,
+								"end": 23
+							},
+							{
+								"start": 4,
+								"end": 23
+							}
+						],
+						"starCall": [
+							{
+								"start": 4,
+								"end": 32
+							},
+							{
+								"start": 4,
+								"end": 32
+							},
+							{
+								"start": 4,
+								"end": 32
+							},
+							{
+								"start": 4,
+								"end": 32
+							}
+						],
+						"beetleCall": [
+							{
+								"start": 4,
+								"end": 30
+							},
+							{
+								"start": 4,
+								"end": 30
+							},
+							{
+								"start": 4,
+								"end": 30
+							},
+							{
+								"start": 4,
+								"end": 30
+							}
+						]
+					}
+				},
+				"cursor": {
+					"lineIndex": 6,
+					"charOffset": 15,
+					"textLength": 14,
+					"type": "hand"
+				},
+				"bursts": []
+			},
+			{
+				"id": 4,
+				"lineOrder": [
+					"askFn",
+					"askBody1",
+					"askBody3",
+					"askBody4",
+					"askBody5",
+					"blank",
+					"getFn",
+					"destructure",
+					"treeCall",
+					"starCall",
+					"beetleCall",
+					"closeAll",
+					"return",
+					"getEnd"
+				],
+				"state": {
+					"askFn": {
+						"parts": {
+							"fnKw:*/0": "const ",
+							"p0": true,
+							"fnEq:shown/0": true,
+							"p1": true,
+							"signalParam:shown/0": false,
+							"p2": true,
+							"fnEnd:*/0": " =>"
+						}
+					},
+					"askBody1": {
+						"parts": {
+							"retKw:*/0": "  ",
+							"langModelPrefix:shown/0": true,
+							"p0": true
+						}
+					},
+					"askBody3": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"askBody4": {
+						"parts": {
+							"p0": true,
+							"promptComma:shown/0": false
+						}
+					},
+					"askBody5": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"blank": {
+						"parts": {
+							"blank-empty": true
+						}
+					},
+					"getFn": {
+						"parts": {
+							"getFnKw:*/0": "const ",
+							"p0": true,
+							"getFnMiddle:*/0": " = Effect.fn(function* (",
+							"p1": true
+						}
+					},
+					"destructure": {
+						"parts": {
+							"destIndent:*/0": "  ",
+							"p0": true,
+							"awaitCombinator:*/0": "await Promise",
+							"p1": true
+						}
+					},
+					"treeCall": {
+						"parts": {
+							"callIndent:*/0": "    ",
+							"p0": true,
+							"treeSignal:shown/0": false,
+							"p1": true
+						}
+					},
+					"starCall": {
+						"parts": {
+							"callIndent2:*/0": "    ",
+							"p0": true,
+							"starSignal:shown/0": false,
+							"p1": true
+						}
+					},
+					"beetleCall": {
+						"parts": {
+							"callIndent3:*/0": "    ",
+							"p0": true,
+							"beetleSignal:shown/0": false,
+							"p1": true
+						}
+					},
+					"closeAll": {
+						"parts": {
+							"closeIndent:*/0": "  ",
+							"p0": true,
+							"concurrencyOpt:shown/0": false,
+							"p1": true
+						}
+					},
+					"return": {
+						"parts": {
+							"returnIndent:*/0": "  ",
+							"p0": true
+						}
+					},
+					"getEnd": {
+						"parts": {
+							"p0": true,
+							"effectCloseParen:shown/0": true
+						}
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"status": {
+					"ranges": {},
+					"allRanges": {
+						"treeCall": [
+							{
+								"start": 4,
+								"end": 23
+							},
+							{
+								"start": 4,
+								"end": 23
+							},
+							{
+								"start": 4,
+								"end": 23
+							},
+							{
+								"start": 4,
+								"end": 23
+							}
+						],
+						"starCall": [
+							{
+								"start": 4,
+								"end": 32
+							},
+							{
+								"start": 4,
+								"end": 32
+							},
+							{
+								"start": 4,
+								"end": 32
+							},
+							{
+								"start": 4,
+								"end": 32
+							}
+						],
+						"beetleCall": [
+							{
+								"start": 4,
+								"end": 30
+							},
+							{
+								"start": 4,
+								"end": 30
+							},
+							{
+								"start": 4,
+								"end": 30
+							},
+							{
+								"start": 4,
+								"end": 30
+							}
+						]
+					}
+				},
+				"cursor": {
+					"lineIndex": 6,
+					"charOffset": 23,
+					"textLength": 9,
+					"type": "hand"
+				},
+				"bursts": []
+			},
+			{
+				"id": 5,
+				"lineOrder": [
+					"askFn",
+					"askBody1",
+					"askBody3",
+					"askBody4",
+					"askBody5",
+					"blank",
+					"getFn",
+					"destructure",
+					"treeCall",
+					"starCall",
+					"beetleCall",
+					"closeAll",
+					"return",
+					"getEnd"
+				],
+				"state": {
+					"askFn": {
+						"parts": {
+							"fnKw:*/0": "const ",
+							"p0": true,
+							"fnEq:shown/0": true,
+							"p1": true,
+							"signalParam:shown/0": false,
+							"p2": true,
+							"fnEnd:*/0": " =>"
+						}
+					},
+					"askBody1": {
+						"parts": {
+							"retKw:*/0": "  ",
+							"langModelPrefix:shown/0": true,
+							"p0": true
+						}
+					},
+					"askBody3": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"askBody4": {
+						"parts": {
+							"p0": true,
+							"promptComma:shown/0": false
+						}
+					},
+					"askBody5": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"blank": {
+						"parts": {
+							"blank-empty": true
+						}
+					},
+					"getFn": {
+						"parts": {
+							"getFnKw:*/0": "const ",
+							"p0": true,
+							"getFnMiddle:*/0": " = Effect.fn(function* (",
+							"p1": true
+						}
+					},
+					"destructure": {
+						"parts": {
+							"destIndent:*/0": "  ",
+							"p0": true,
+							"awaitCombinator:*/0": "await Promise",
+							"p1": true
+						}
+					},
+					"treeCall": {
+						"parts": {
+							"callIndent:*/0": "    ",
+							"p0": true,
+							"treeSignal:shown/0": false,
+							"p1": true
+						}
+					},
+					"starCall": {
+						"parts": {
+							"callIndent2:*/0": "    ",
+							"p0": true,
+							"starSignal:shown/0": false,
+							"p1": true
+						}
+					},
+					"beetleCall": {
+						"parts": {
+							"callIndent3:*/0": "    ",
+							"p0": true,
+							"beetleSignal:shown/0": false,
+							"p1": true
+						}
+					},
+					"closeAll": {
+						"parts": {
+							"closeIndent:*/0": "  ",
+							"p0": true,
+							"concurrencyOpt:shown/0": false,
+							"p1": true
+						}
+					},
+					"return": {
+						"parts": {
+							"returnIndent:*/0": "  ",
+							"p0": true
+						}
+					},
+					"getEnd": {
+						"parts": {
+							"p0": true,
+							"effectCloseParen:shown/0": true
+						}
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"status": {
+					"ranges": {},
+					"allRanges": {
+						"treeCall": [
+							{
+								"start": 4,
+								"end": 23
+							},
+							{
+								"start": 4,
+								"end": 23
+							},
+							{
+								"start": 4,
+								"end": 23
+							},
+							{
+								"start": 4,
+								"end": 23
+							}
+						],
+						"starCall": [
+							{
+								"start": 4,
+								"end": 32
+							},
+							{
+								"start": 4,
+								"end": 32
+							},
+							{
+								"start": 4,
+								"end": 32
+							},
+							{
+								"start": 4,
+								"end": 32
+							}
+						],
+						"beetleCall": [
+							{
+								"start": 4,
+								"end": 30
+							},
+							{
+								"start": 4,
+								"end": 30
+							},
+							{
+								"start": 4,
+								"end": 30
+							},
+							{
+								"start": 4,
+								"end": 30
+							}
+						]
+					}
+				},
+				"cursor": {
+					"lineIndex": 7,
+					"charOffset": 37,
+					"textLength": 11,
+					"type": "hand"
+				},
+				"bursts": []
+			},
+			{
+				"id": 6,
+				"lineOrder": [
+					"askFn",
+					"askBody1",
+					"askBody3",
+					"askBody4",
+					"askBody5",
+					"blank",
+					"getFn",
+					"destructure",
+					"treeCall",
+					"starCall",
+					"beetleCall",
+					"closeAll",
+					"return",
+					"getEnd"
+				],
+				"state": {
+					"askFn": {
+						"parts": {
+							"fnKw:*/0": "const ",
+							"p0": true,
+							"fnEq:shown/0": true,
+							"p1": true,
+							"signalParam:shown/0": false,
+							"p2": true,
+							"fnEnd:*/0": " =>"
+						}
+					},
+					"askBody1": {
+						"parts": {
+							"retKw:*/0": "  ",
+							"langModelPrefix:shown/0": true,
+							"p0": true
+						}
+					},
+					"askBody3": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"askBody4": {
+						"parts": {
+							"p0": true,
+							"promptComma:shown/0": false
+						}
+					},
+					"askBody5": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"blank": {
+						"parts": {
+							"blank-empty": true
+						}
+					},
+					"getFn": {
+						"parts": {
+							"getFnKw:*/0": "const ",
+							"p0": true,
+							"getFnMiddle:*/0": " = Effect.fn(function* (",
+							"p1": true
+						}
+					},
+					"destructure": {
+						"parts": {
+							"destIndent:*/0": "  ",
+							"p0": true,
+							"awaitCombinator:*/0": "yield* Effect",
+							"p1": true
+						}
+					},
+					"treeCall": {
+						"parts": {
+							"callIndent:*/0": "    ",
+							"p0": true,
+							"treeSignal:shown/0": false,
+							"p1": true
+						}
+					},
+					"starCall": {
+						"parts": {
+							"callIndent2:*/0": "    ",
+							"p0": true,
+							"starSignal:shown/0": false,
+							"p1": true
+						}
+					},
+					"beetleCall": {
+						"parts": {
+							"callIndent3:*/0": "    ",
+							"p0": true,
+							"beetleSignal:shown/0": false,
+							"p1": true
+						}
+					},
+					"closeAll": {
+						"parts": {
+							"closeIndent:*/0": "  ",
+							"p0": true,
+							"concurrencyOpt:shown/0": true,
+							"p1": true
+						}
+					},
+					"return": {
+						"parts": {
+							"returnIndent:*/0": "  ",
+							"p0": true
+						}
+					},
+					"getEnd": {
+						"parts": {
+							"p0": true,
+							"effectCloseParen:shown/0": true
+						}
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"status": {
+					"ranges": {},
+					"allRanges": {
+						"treeCall": [
+							{
+								"start": 4,
+								"end": 23
+							},
+							{
+								"start": 4,
+								"end": 23
+							},
+							{
+								"start": 4,
+								"end": 23
+							},
+							{
+								"start": 4,
+								"end": 23
+							}
+						],
+						"starCall": [
+							{
+								"start": 4,
+								"end": 32
+							},
+							{
+								"start": 4,
+								"end": 32
+							},
+							{
+								"start": 4,
+								"end": 32
+							},
+							{
+								"start": 4,
+								"end": 32
+							}
+						],
+						"beetleCall": [
+							{
+								"start": 4,
+								"end": 30
+							},
+							{
+								"start": 4,
+								"end": 30
+							},
+							{
+								"start": 4,
+								"end": 30
+							},
+							{
+								"start": 4,
+								"end": 30
+							}
+						]
+					}
+				},
+				"cursor": {
+					"lineIndex": 7,
+					"charOffset": 38,
+					"textLength": 10,
+					"type": "hand"
+				},
+				"bursts": []
+			},
+			{
+				"id": 7,
+				"lineOrder": [
+					"askFn",
+					"askBody1",
+					"askBody3",
+					"askBody4",
+					"askBody5",
+					"blank",
+					"getFn",
+					"destructure",
+					"treeCall",
+					"starCall",
+					"beetleCall",
+					"closeAll",
+					"return",
+					"getEnd"
+				],
+				"state": {
+					"askFn": {
+						"parts": {
+							"fnKw:*/0": "const ",
+							"p0": true,
+							"fnEq:shown/0": true,
+							"p1": true,
+							"signalParam:shown/0": false,
+							"p2": true,
+							"fnEnd:*/0": " =>"
+						}
+					},
+					"askBody1": {
+						"parts": {
+							"retKw:*/0": "  ",
+							"langModelPrefix:shown/0": true,
+							"p0": true
+						}
+					},
+					"askBody3": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"askBody4": {
+						"parts": {
+							"p0": true,
+							"promptComma:shown/0": false
+						}
+					},
+					"askBody5": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"blank": {
+						"parts": {
+							"blank-empty": true
+						}
+					},
+					"getFn": {
+						"parts": {
+							"getFnKw:*/0": "const ",
+							"p0": true,
+							"getFnMiddle:*/0": " = Effect.fn(function* (",
+							"p1": true
+						}
+					},
+					"destructure": {
+						"parts": {
+							"destIndent:*/0": "  ",
+							"p0": true,
+							"awaitCombinator:*/0": "yield* Effect",
+							"p1": true
+						}
+					},
+					"treeCall": {
+						"parts": {
+							"callIndent:*/0": "    ",
+							"p0": true,
+							"treeSignal:shown/0": false,
+							"p1": true
+						}
+					},
+					"starCall": {
+						"parts": {
+							"callIndent2:*/0": "    ",
+							"p0": true,
+							"starSignal:shown/0": false,
+							"p1": true
+						}
+					},
+					"beetleCall": {
+						"parts": {
+							"callIndent3:*/0": "    ",
+							"p0": true,
+							"beetleSignal:shown/0": false,
+							"p1": true
+						}
+					},
+					"closeAll": {
+						"parts": {
+							"closeIndent:*/0": "  ",
+							"p0": true,
+							"concurrencyOpt:shown/0": true,
+							"p1": true
+						}
+					},
+					"return": {
+						"parts": {
+							"returnIndent:*/0": "  ",
+							"p0": true
+						}
+					},
+					"getEnd": {
+						"parts": {
+							"p0": true,
+							"effectCloseParen:shown/0": true
+						}
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"status": {
+					"ranges": {
+						"8": [
+							{
+								"start": 4,
+								"end": 23,
+								"status": "running"
+							}
+						],
+						"9": [
+							{
+								"start": 4,
+								"end": 32,
+								"status": "running"
+							}
+						],
+						"10": [
+							{
+								"start": 4,
+								"end": 30,
+								"status": "running"
+							}
+						]
+					},
+					"allRanges": {
+						"treeCall": [
+							{
+								"start": 4,
+								"end": 23
+							},
+							{
+								"start": 4,
+								"end": 23
+							},
+							{
+								"start": 4,
+								"end": 23
+							},
+							{
+								"start": 4,
+								"end": 23
+							}
+						],
+						"starCall": [
+							{
+								"start": 4,
+								"end": 32
+							},
+							{
+								"start": 4,
+								"end": 32
+							},
+							{
+								"start": 4,
+								"end": 32
+							},
+							{
+								"start": 4,
+								"end": 32
+							}
+						],
+						"beetleCall": [
+							{
+								"start": 4,
+								"end": 30
+							},
+							{
+								"start": 4,
+								"end": 30
+							},
+							{
+								"start": 4,
+								"end": 30
+							},
+							{
+								"start": 4,
+								"end": 30
+							}
+						]
+					}
+				},
+				"cursor": {
+					"lineIndex": 10,
+					"charOffset": 8,
+					"textLength": 13,
+					"type": "hand"
+				},
+				"bursts": [],
+				"sound": "whoosh"
+			},
+			{
+				"id": 8,
+				"lineOrder": [
+					"askFn",
+					"askBody1",
+					"askBody3",
+					"askBody4",
+					"askBody5",
+					"blank",
+					"getFn",
+					"destructure",
+					"treeCall",
+					"starCall",
+					"beetleCall",
+					"closeAll",
+					"return",
+					"getEnd"
+				],
+				"state": {
+					"askFn": {
+						"parts": {
+							"fnKw:*/0": "const ",
+							"p0": true,
+							"fnEq:shown/0": true,
+							"p1": true,
+							"signalParam:shown/0": false,
+							"p2": true,
+							"fnEnd:*/0": " =>"
+						}
+					},
+					"askBody1": {
+						"parts": {
+							"retKw:*/0": "  ",
+							"langModelPrefix:shown/0": true,
+							"p0": true
+						}
+					},
+					"askBody3": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"askBody4": {
+						"parts": {
+							"p0": true,
+							"promptComma:shown/0": false
+						}
+					},
+					"askBody5": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"blank": {
+						"parts": {
+							"blank-empty": true
+						}
+					},
+					"getFn": {
+						"parts": {
+							"getFnKw:*/0": "const ",
+							"p0": true,
+							"getFnMiddle:*/0": " = Effect.fn(function* (",
+							"p1": true
+						}
+					},
+					"destructure": {
+						"parts": {
+							"destIndent:*/0": "  ",
+							"p0": true,
+							"awaitCombinator:*/0": "yield* Effect",
+							"p1": true
+						}
+					},
+					"treeCall": {
+						"parts": {
+							"callIndent:*/0": "    ",
+							"p0": true,
+							"treeSignal:shown/0": false,
+							"p1": true
+						}
+					},
+					"starCall": {
+						"parts": {
+							"callIndent2:*/0": "    ",
+							"p0": true,
+							"starSignal:shown/0": false,
+							"p1": true
+						}
+					},
+					"beetleCall": {
+						"parts": {
+							"callIndent3:*/0": "    ",
+							"p0": true,
+							"beetleSignal:shown/0": false,
+							"p1": true
+						}
+					},
+					"closeAll": {
+						"parts": {
+							"closeIndent:*/0": "  ",
+							"p0": true,
+							"concurrencyOpt:shown/0": true,
+							"p1": true
+						}
+					},
+					"return": {
+						"parts": {
+							"returnIndent:*/0": "  ",
+							"p0": true
+						}
+					},
+					"getEnd": {
+						"parts": {
+							"p0": true,
+							"effectCloseParen:shown/0": true
+						}
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"status": {
+					"ranges": {
+						"8": [
+							{
+								"start": 4,
+								"end": 23,
+								"status": "running"
+							}
+						],
+						"9": [
+							{
+								"start": 4,
+								"end": 32,
+								"status": "error"
+							}
+						],
+						"10": [
+							{
+								"start": 4,
+								"end": 30,
+								"status": "running"
+							}
+						]
+					},
+					"allRanges": {
+						"treeCall": [
+							{
+								"start": 4,
+								"end": 23
+							},
+							{
+								"start": 4,
+								"end": 23
+							},
+							{
+								"start": 4,
+								"end": 23
+							},
+							{
+								"start": 4,
+								"end": 23
+							}
+						],
+						"starCall": [
+							{
+								"start": 4,
+								"end": 32
+							},
+							{
+								"start": 4,
+								"end": 32
+							},
+							{
+								"start": 4,
+								"end": 32
+							},
+							{
+								"start": 4,
+								"end": 32
+							}
+						],
+						"beetleCall": [
+							{
+								"start": 4,
+								"end": 30
+							},
+							{
+								"start": 4,
+								"end": 30
+							},
+							{
+								"start": 4,
+								"end": 30
+							},
+							{
+								"start": 4,
+								"end": 30
+							}
+						]
+					}
+				},
+				"cursor": {
+					"lineIndex": 9,
+					"charOffset": 8,
+					"textLength": 15,
+					"type": "hand"
+				},
+				"bursts": [],
+				"sound": "fail"
+			},
+			{
+				"id": 9,
+				"lineOrder": [
+					"askFn",
+					"askBody1",
+					"askBody3",
+					"askBody4",
+					"askBody5",
+					"blank",
+					"getFn",
+					"destructure",
+					"treeCall",
+					"starCall",
+					"beetleCall",
+					"closeAll",
+					"return",
+					"getEnd"
+				],
+				"state": {
+					"askFn": {
+						"parts": {
+							"fnKw:*/0": "const ",
+							"p0": true,
+							"fnEq:shown/0": true,
+							"p1": true,
+							"signalParam:shown/0": false,
+							"p2": true,
+							"fnEnd:*/0": " =>"
+						}
+					},
+					"askBody1": {
+						"parts": {
+							"retKw:*/0": "  ",
+							"langModelPrefix:shown/0": true,
+							"p0": true
+						}
+					},
+					"askBody3": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"askBody4": {
+						"parts": {
+							"p0": true,
+							"promptComma:shown/0": false
+						}
+					},
+					"askBody5": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"blank": {
+						"parts": {
+							"blank-empty": true
+						}
+					},
+					"getFn": {
+						"parts": {
+							"getFnKw:*/0": "const ",
+							"p0": true,
+							"getFnMiddle:*/0": " = Effect.fn(function* (",
+							"p1": true
+						}
+					},
+					"destructure": {
+						"parts": {
+							"destIndent:*/0": "  ",
+							"p0": true,
+							"awaitCombinator:*/0": "yield* Effect",
+							"p1": true
+						}
+					},
+					"treeCall": {
+						"parts": {
+							"callIndent:*/0": "    ",
+							"p0": true,
+							"treeSignal:shown/0": false,
+							"p1": true
+						}
+					},
+					"starCall": {
+						"parts": {
+							"callIndent2:*/0": "    ",
+							"p0": true,
+							"starSignal:shown/0": false,
+							"p1": true
+						}
+					},
+					"beetleCall": {
+						"parts": {
+							"callIndent3:*/0": "    ",
+							"p0": true,
+							"beetleSignal:shown/0": false,
+							"p1": true
+						}
+					},
+					"closeAll": {
+						"parts": {
+							"closeIndent:*/0": "  ",
+							"p0": true,
+							"concurrencyOpt:shown/0": true,
+							"p1": true
+						}
+					},
+					"return": {
+						"parts": {
+							"returnIndent:*/0": "  ",
+							"p0": true
+						}
+					},
+					"getEnd": {
+						"parts": {
+							"p0": true,
+							"effectCloseParen:shown/0": true
+						}
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"status": {
+					"ranges": {
+						"8": [
+							{
+								"start": 4,
+								"end": 23,
+								"status": "interrupted"
+							}
+						],
+						"9": [
+							{
+								"start": 4,
+								"end": 32,
+								"status": "error"
+							}
+						],
+						"10": [
+							{
+								"start": 4,
+								"end": 30,
+								"status": "interrupted"
+							}
+						]
+					},
+					"allRanges": {
+						"treeCall": [
+							{
+								"start": 4,
+								"end": 23
+							},
+							{
+								"start": 4,
+								"end": 23
+							},
+							{
+								"start": 4,
+								"end": 23
+							},
+							{
+								"start": 4,
+								"end": 23
+							}
+						],
+						"starCall": [
+							{
+								"start": 4,
+								"end": 32
+							},
+							{
+								"start": 4,
+								"end": 32
+							},
+							{
+								"start": 4,
+								"end": 32
+							},
+							{
+								"start": 4,
+								"end": 32
+							}
+						],
+						"beetleCall": [
+							{
+								"start": 4,
+								"end": 30
+							},
+							{
+								"start": 4,
+								"end": 30
+							},
+							{
+								"start": 4,
+								"end": 30
+							},
+							{
+								"start": 4,
+								"end": 30
+							}
+						]
+					}
+				},
+				"cursor": {
+					"lineIndex": 8,
+					"charOffset": 8,
+					"textLength": 6,
+					"type": "hand"
+				},
+				"bursts": []
+			},
+			{
+				"id": 10,
+				"lineOrder": [
+					"askFn",
+					"askBody1",
+					"askBody3",
+					"askBody4",
+					"askBody5",
+					"blank",
+					"getFn",
+					"destructure",
+					"treeCall",
+					"starCall",
+					"beetleCall",
+					"closeAll",
+					"return",
+					"getEnd"
+				],
+				"state": {
+					"askFn": {
+						"parts": {
+							"fnKw:*/0": "const ",
+							"p0": true,
+							"fnEq:shown/0": true,
+							"p1": true,
+							"signalParam:shown/0": false,
+							"p2": true,
+							"fnEnd:*/0": " =>"
+						}
+					},
+					"askBody1": {
+						"parts": {
+							"retKw:*/0": "  ",
+							"langModelPrefix:shown/0": true,
+							"p0": true
+						}
+					},
+					"askBody3": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"askBody4": {
+						"parts": {
+							"p0": true,
+							"promptComma:shown/0": false
+						}
+					},
+					"askBody5": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"blank": {
+						"parts": {
+							"blank-empty": true
+						}
+					},
+					"getFn": {
+						"parts": {
+							"getFnKw:*/0": "const ",
+							"p0": true,
+							"getFnMiddle:*/0": " = Effect.fn(function* (",
+							"p1": true
+						}
+					},
+					"destructure": {
+						"parts": {
+							"destIndent:*/0": "  ",
+							"p0": true,
+							"awaitCombinator:*/0": "yield* Effect",
+							"p1": true
+						}
+					},
+					"treeCall": {
+						"parts": {
+							"callIndent:*/0": "    ",
+							"p0": true,
+							"treeSignal:shown/0": false,
+							"p1": true
+						}
+					},
+					"starCall": {
+						"parts": {
+							"callIndent2:*/0": "    ",
+							"p0": true,
+							"starSignal:shown/0": false,
+							"p1": true
+						}
+					},
+					"beetleCall": {
+						"parts": {
+							"callIndent3:*/0": "    ",
+							"p0": true,
+							"beetleSignal:shown/0": false,
+							"p1": true
+						}
+					},
+					"closeAll": {
+						"parts": {
+							"closeIndent:*/0": "  ",
+							"p0": true,
+							"concurrencyOpt:shown/0": true,
+							"p1": true
+						}
+					},
+					"return": {
+						"parts": {
+							"returnIndent:*/0": "  ",
+							"p0": true
+						}
+					},
+					"getEnd": {
+						"parts": {
+							"p0": true,
+							"effectCloseParen:shown/0": true
+						}
+					}
+				},
+				"marks": [],
+				"glows": [
+					{
+						"lineIndex": 7,
+						"start": 38,
+						"end": 48,
+						"color": "green"
+					}
+				],
+				"squiggles": [],
+				"brightRanges": [],
+				"status": {
+					"ranges": {
+						"8": [
+							{
+								"start": 4,
+								"end": 23,
+								"status": "interrupted"
+							}
+						],
+						"9": [
+							{
+								"start": 4,
+								"end": 32,
+								"status": "error"
+							}
+						],
+						"10": [
+							{
+								"start": 4,
+								"end": 30,
+								"status": "interrupted"
+							}
+						]
+					},
+					"allRanges": {
+						"treeCall": [
+							{
+								"start": 4,
+								"end": 23
+							},
+							{
+								"start": 4,
+								"end": 23
+							},
+							{
+								"start": 4,
+								"end": 23
+							},
+							{
+								"start": 4,
+								"end": 23
+							}
+						],
+						"starCall": [
+							{
+								"start": 4,
+								"end": 32
+							},
+							{
+								"start": 4,
+								"end": 32
+							},
+							{
+								"start": 4,
+								"end": 32
+							},
+							{
+								"start": 4,
+								"end": 32
+							}
+						],
+						"beetleCall": [
+							{
+								"start": 4,
+								"end": 30
+							},
+							{
+								"start": 4,
+								"end": 30
+							},
+							{
+								"start": 4,
+								"end": 30
+							},
+							{
+								"start": 4,
+								"end": 30
+							}
+						]
+					}
+				},
+				"bursts": []
+			}
+		]
+	},
+	"steps": [
+		{
+			"name": "start",
+			"at": "start"
+		},
+		{
+			"name": "revert",
+			"at": "revert"
+		},
+		{
+			"name": "ask",
+			"at": "ask",
+			"after": "revert"
+		},
+		{
+			"name": "migrate",
+			"at": "migrate"
+		},
+		{
+			"name": "Effect",
+			"at": "Effect",
+			"nth": 3
+		},
+		{
+			"name": "Promise",
+			"at": "Promise",
+			"after": "out"
+		},
+		{
+			"name": "Effect",
+			"at": "Effect",
+			"after": "for"
+		},
+		{
+			"name": "run",
+			"at": "run"
+		},
+		{
+			"name": "fails",
+			"at": "fails"
+		},
+		{
+			"name": "interrupted",
+			"at": "interrupted"
+		},
+		{
+			"name": "structured",
+			"at": "structured",
+			"after": "interrupted"
+		}
+	],
+	"stepTimes": [
+		0,
+		4.468999999999999,
+		8.389,
+		12.009,
+		14.23,
+		16.329,
+		17.770000000000003,
+		24.809,
+		27.209000000000003,
+		29.929000000000002,
+		32.690000000000005
+	],
+	"componentStepTimes": [
+		0,
+		22.709000000000003,
+		24.809,
+		27.209000000000003,
+		29.929000000000002
+	],
+	"_debug": {
+		"timingsStatus": "matched",
+		"dslWordCount": 63
+	},
+	"groupId": "structured-concurrency",
+	"groupTitle": "Structured Concurrency",
+	"isFirstInGroup": false,
+	"audioFile": "effect-structured-concurrency.b9fc790a.webm"
+}

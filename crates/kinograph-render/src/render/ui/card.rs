@@ -1,0 +1,1101 @@
+use anyhow::{Result, bail};
+
+use super::Bounds;
+
+const CAMERA_DISTANCE: f32 = 1_800.0;
+const BYTES_PER_PIXEL: usize = 4;
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) struct UiColor([u8; 4]);
+
+impl UiColor {
+    pub const fn srgb8(red: u8, green: u8, blue: u8, alpha: u8) -> Self {
+        Self([red, green, blue, alpha])
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
+pub(crate) enum Fill {
+    Solid(UiColor),
+    Linear {
+        from: [f32; 2],
+        to: [f32; 2],
+        start: UiColor,
+        end: UiColor,
+    },
+    Radial {
+        center: [f32; 2],
+        radius: f32,
+        inner: UiColor,
+        outer: UiColor,
+    },
+}
+
+#[derive(Clone, Copy, Debug)]
+pub(crate) struct CardProjection {
+    pub scale: f32,
+    pub rotation_z: f32,
+    pub tilt_x: f32,
+    pub tilt_y: f32,
+    pub surface_blur: f32,
+    pub near_edge_blur: f32,
+}
+
+impl Default for CardProjection {
+    fn default() -> Self {
+        Self {
+            scale: 1.0,
+            rotation_z: 0.0,
+            tilt_x: 0.0,
+            tilt_y: 0.0,
+            surface_blur: 0.0,
+            near_edge_blur: 0.0,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
+pub(crate) struct CardStyle {
+    pub material: Fill,
+    pub corner_radius: f32,
+    pub border_width: f32,
+    pub border_color: UiColor,
+    pub shadow_offset: [f32; 2],
+    pub shadow_blur: f32,
+    pub shadow_opacity: f32,
+}
+
+impl CardStyle {
+    pub const fn standard() -> Self {
+        Self {
+            material: Fill::Linear {
+                from: [0.0, 0.0],
+                to: [0.0, 760.0],
+                start: UiColor::srgb8(14, 14, 17, 255),
+                end: UiColor::srgb8(7, 7, 9, 255),
+            },
+            corner_radius: 28.0,
+            border_width: 1.5,
+            border_color: UiColor::srgb8(104, 104, 112, 220),
+            shadow_offset: [0.0, 16.0],
+            shadow_blur: 28.0,
+            shadow_opacity: 0.5,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
+pub(crate) struct CardFrame {
+    pub bounds: Bounds,
+    pub style: CardStyle,
+    pub projection: CardProjection,
+    pub opacity: f32,
+}
+
+#[derive(Clone, Copy, Debug)]
+pub(crate) struct Clip {
+    pub bounds: Bounds,
+    pub corner_radius: f32,
+}
+
+impl Clip {
+    pub fn rounded(bounds: Bounds, corner_radius: f32) -> Self {
+        Self {
+            bounds,
+            corner_radius,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
+pub(crate) enum ContentFit {
+    Fill,
+    Contain,
+}
+
+#[derive(Clone, Copy)]
+pub(crate) struct RgbaSource<'a> {
+    pixels: &'a [u8],
+    size: [u32; 2],
+    bytes_per_row: usize,
+    origin: [u32; 2],
+}
+
+impl<'a> RgbaSource<'a> {
+    pub fn packed(pixels: &'a [u8], size: [u32; 2]) -> Result<Self> {
+        Self::strided_region(
+            pixels,
+            size,
+            size[0] as usize * BYTES_PER_PIXEL,
+            [0, 0],
+            size,
+        )
+    }
+
+    pub fn strided_region(
+        pixels: &'a [u8],
+        surface_size: [u32; 2],
+        bytes_per_row: usize,
+        origin: [u32; 2],
+        size: [u32; 2],
+    ) -> Result<Self> {
+        if size[0] == 0 || size[1] == 0 {
+            bail!("RGBA source dimensions must be non-zero");
+        }
+        if origin[0] + size[0] > surface_size[0] || origin[1] + size[1] > surface_size[1] {
+            bail!("RGBA source region exceeds its surface");
+        }
+        let minimum_stride = surface_size[0] as usize * BYTES_PER_PIXEL;
+        if bytes_per_row < minimum_stride {
+            bail!("RGBA source stride is smaller than its surface width");
+        }
+        let required = bytes_per_row * surface_size[1] as usize;
+        if pixels.len() < required {
+            bail!(
+                "RGBA source requires {required} bytes, received {}",
+                pixels.len()
+            );
+        }
+        Ok(Self {
+            pixels,
+            size,
+            bytes_per_row,
+            origin,
+        })
+    }
+
+    fn sample(self, x: f32, y: f32) -> [u8; 4] {
+        let x = x.clamp(0.0, self.size[0] as f32 - 1.0);
+        let y = y.clamp(0.0, self.size[1] as f32 - 1.0);
+        let left = x.floor() as i32;
+        let top = y.floor() as i32;
+        let fraction_x = x - left as f32;
+        let fraction_y = y - top as f32;
+        let samples = [
+            (left, top, (1.0 - fraction_x) * (1.0 - fraction_y)),
+            (left + 1, top, fraction_x * (1.0 - fraction_y)),
+            (left, top + 1, (1.0 - fraction_x) * fraction_y),
+            (left + 1, top + 1, fraction_x * fraction_y),
+        ];
+        let mut alpha = 0.0;
+        let mut premultiplied = [0.0; 3];
+        for (sample_x, sample_y, weight) in samples {
+            if !(0..self.size[0] as i32).contains(&sample_x)
+                || !(0..self.size[1] as i32).contains(&sample_y)
+            {
+                continue;
+            }
+            let source_x = self.origin[0] as usize + sample_x as usize;
+            let source_y = self.origin[1] as usize + sample_y as usize;
+            let index = source_y * self.bytes_per_row + source_x * BYTES_PER_PIXEL;
+            let sample_alpha = f32::from(self.pixels[index + 3]) / 255.0 * weight;
+            alpha += sample_alpha;
+            for (channel, sum) in premultiplied.iter_mut().enumerate() {
+                *sum += f32::from(self.pixels[index + channel]) / 255.0 * sample_alpha;
+            }
+        }
+        if alpha <= 0.0 {
+            return [0; 4];
+        }
+        [
+            (premultiplied[0] / alpha * 255.0).round() as u8,
+            (premultiplied[1] / alpha * 255.0).round() as u8,
+            (premultiplied[2] / alpha * 255.0).round() as u8,
+            (alpha * 255.0).round() as u8,
+        ]
+    }
+}
+
+pub(crate) struct UiCanvas<'a> {
+    pixels: &'a mut [u8],
+    size: [u32; 2],
+    clips: Vec<Clip>,
+}
+
+impl<'a> UiCanvas<'a> {
+    fn new(pixels: &'a mut [u8], size: [u32; 2]) -> Self {
+        Self {
+            pixels,
+            size,
+            clips: Vec::new(),
+        }
+    }
+
+    pub fn bounds(&self) -> Bounds {
+        Bounds {
+            origin: [0.0, 0.0],
+            size: [self.size[0] as f32, self.size[1] as f32],
+        }
+    }
+
+    pub fn clipped<R>(
+        &mut self,
+        clip: Clip,
+        draw: impl FnOnce(&mut Self) -> Result<R>,
+    ) -> Result<R> {
+        self.clips.push(clip);
+        let result = draw(self);
+        self.clips.pop();
+        result
+    }
+
+    pub fn fill(&mut self, bounds: Bounds, corner_radius: f32, fill: Fill, opacity: f32) {
+        let min_x = bounds.origin[0].floor().max(0.0) as i32;
+        let max_x = bounds.right().ceil().min(self.size[0] as f32) as i32;
+        let min_y = bounds.origin[1].floor().max(0.0) as i32;
+        let max_y = bounds.bottom().ceil().min(self.size[1] as f32) as i32;
+        for y in min_y..max_y {
+            for x in min_x..max_x {
+                let point = [x as f32 + 0.5, y as f32 + 0.5];
+                let coverage = rounded_coverage(point, bounds, corner_radius)
+                    * self.clip_coverage(point)
+                    * opacity.clamp(0.0, 1.0);
+                if coverage <= 0.0 {
+                    continue;
+                }
+                let color = fill.sample(point, bounds);
+                let index = (y as usize * self.size[0] as usize + x as usize) * BYTES_PER_PIXEL;
+                blend_pixel(&mut self.pixels[index..index + 4], color.0, coverage);
+            }
+        }
+    }
+
+    pub fn stroke(
+        &mut self,
+        bounds: Bounds,
+        corner_radius: f32,
+        width: f32,
+        color: UiColor,
+        opacity: f32,
+    ) {
+        if width <= 0.0 {
+            return;
+        }
+        let outer = bounds;
+        let inner = bounds.inset(super::Edges::all(width));
+        let min_x = outer.origin[0].floor().max(0.0) as i32;
+        let max_x = outer.right().ceil().min(self.size[0] as f32) as i32;
+        let min_y = outer.origin[1].floor().max(0.0) as i32;
+        let max_y = outer.bottom().ceil().min(self.size[1] as f32) as i32;
+        for y in min_y..max_y {
+            for x in min_x..max_x {
+                let point = [x as f32 + 0.5, y as f32 + 0.5];
+                let coverage = (rounded_coverage(point, outer, corner_radius)
+                    - rounded_coverage(point, inner, (corner_radius - width).max(0.0)))
+                .clamp(0.0, 1.0)
+                    * self.clip_coverage(point)
+                    * opacity.clamp(0.0, 1.0);
+                if coverage <= 0.0 {
+                    continue;
+                }
+                let index = (y as usize * self.size[0] as usize + x as usize) * BYTES_PER_PIXEL;
+                blend_pixel(&mut self.pixels[index..index + 4], color.0, coverage);
+            }
+        }
+    }
+
+    pub fn rgba(&mut self, bounds: Bounds, source: RgbaSource<'_>, fit: ContentFit, opacity: f32) {
+        let source_size = [source.size[0] as f32, source.size[1] as f32];
+        let scale = match fit {
+            ContentFit::Fill => [
+                bounds.size[0] / source_size[0],
+                bounds.size[1] / source_size[1],
+            ],
+            ContentFit::Contain => {
+                let value = (bounds.size[0] / source_size[0]).min(bounds.size[1] / source_size[1]);
+                [value, value]
+            }
+        };
+        let display_size = [source_size[0] * scale[0], source_size[1] * scale[1]];
+        let display = Bounds::from_center(bounds.center(), display_size);
+        let min_x = bounds.origin[0].floor().max(0.0) as i32;
+        let max_x = bounds.right().ceil().min(self.size[0] as f32) as i32;
+        let min_y = bounds.origin[1].floor().max(0.0) as i32;
+        let max_y = bounds.bottom().ceil().min(self.size[1] as f32) as i32;
+        for y in min_y..max_y {
+            for x in min_x..max_x {
+                let point = [x as f32 + 0.5, y as f32 + 0.5];
+                if point[0] < display.origin[0]
+                    || point[1] < display.origin[1]
+                    || point[0] >= display.right()
+                    || point[1] >= display.bottom()
+                {
+                    continue;
+                }
+                let coverage = self.clip_coverage(point) * opacity.clamp(0.0, 1.0);
+                if coverage <= 0.0 {
+                    continue;
+                }
+                let source_x =
+                    (point[0] - display.origin[0]) / display.size[0] * source_size[0] - 0.5;
+                let source_y =
+                    (point[1] - display.origin[1]) / display.size[1] * source_size[1] - 0.5;
+                let color = source.sample(source_x, source_y);
+                let index = (y as usize * self.size[0] as usize + x as usize) * BYTES_PER_PIXEL;
+                blend_pixel(&mut self.pixels[index..index + 4], color, coverage);
+            }
+        }
+    }
+
+    fn clip_coverage(&self, point: [f32; 2]) -> f32 {
+        self.clips.iter().fold(1.0, |coverage, clip| {
+            coverage * rounded_coverage(point, clip.bounds, clip.corner_radius)
+        })
+    }
+}
+
+impl Fill {
+    fn sample(self, point: [f32; 2], bounds: Bounds) -> UiColor {
+        match self {
+            Self::Solid(color) => color,
+            Self::Linear {
+                from,
+                to,
+                start,
+                end,
+            } => {
+                let direction = [to[0] - from[0], to[1] - from[1]];
+                let length_squared = direction[0] * direction[0] + direction[1] * direction[1];
+                let offset = [point[0] - from[0], point[1] - from[1]];
+                let progress = if length_squared <= f32::EPSILON {
+                    0.0
+                } else {
+                    ((offset[0] * direction[0] + offset[1] * direction[1]) / length_squared)
+                        .clamp(0.0, 1.0)
+                };
+                mix_color(start, end, progress)
+            }
+            Self::Radial {
+                center,
+                radius,
+                inner,
+                outer,
+            } => {
+                let center = [bounds.origin[0] + center[0], bounds.origin[1] + center[1]];
+                let distance = (point[0] - center[0]).hypot(point[1] - center[1]);
+                mix_color(inner, outer, (distance / radius.max(0.001)).clamp(0.0, 1.0))
+            }
+        }
+    }
+}
+
+fn mix_color(start: UiColor, end: UiColor, progress: f32) -> UiColor {
+    UiColor(std::array::from_fn(|channel| {
+        (f32::from(start.0[channel])
+            + (f32::from(end.0[channel]) - f32::from(start.0[channel])) * progress)
+            .round() as u8
+    }))
+}
+
+pub(crate) struct CardUi<'a> {
+    content: UiCanvas<'a>,
+    overlay: UiCanvas<'a>,
+}
+
+impl CardUi<'_> {
+    pub fn content<R>(&mut self, draw: impl FnOnce(&mut UiCanvas<'_>) -> Result<R>) -> Result<R> {
+        draw(&mut self.content)
+    }
+
+    pub fn overlay<R>(&mut self, draw: impl FnOnce(&mut UiCanvas<'_>) -> Result<R>) -> Result<R> {
+        draw(&mut self.overlay)
+    }
+}
+
+pub(crate) struct FrameUi<'a> {
+    canvas: UiCanvas<'a>,
+    card_pixels: &'a mut Vec<u8>,
+    overlay_pixels: &'a mut Vec<u8>,
+}
+
+impl<'a> FrameUi<'a> {
+    pub fn new(
+        pixels: &'a mut [u8],
+        size: [u32; 2],
+        card_pixels: &'a mut Vec<u8>,
+        overlay_pixels: &'a mut Vec<u8>,
+    ) -> Result<Self> {
+        let expected = size[0] as usize * size[1] as usize * BYTES_PER_PIXEL;
+        if pixels.len() != expected {
+            bail!(
+                "UI frame requires {expected} bytes, received {}",
+                pixels.len()
+            );
+        }
+        Ok(Self {
+            canvas: UiCanvas::new(pixels, size),
+            card_pixels,
+            overlay_pixels,
+        })
+    }
+
+    pub fn paint<R>(&mut self, draw: impl FnOnce(&mut UiCanvas<'_>) -> Result<R>) -> Result<R> {
+        draw(&mut self.canvas)
+    }
+
+    pub fn card_source(
+        &mut self,
+        frame: CardFrame,
+        source: RgbaSource<'_>,
+        fit: ContentFit,
+    ) -> Result<()> {
+        validate_card(frame)?;
+        composite_card_source(self.canvas.pixels, self.canvas.size, source, fit, frame);
+        Ok(())
+    }
+
+    pub fn card<R>(
+        &mut self,
+        frame: CardFrame,
+        draw: impl FnOnce(&mut CardUi<'_>) -> Result<R>,
+    ) -> Result<R> {
+        validate_card(frame)?;
+        let local_size = [
+            frame.bounds.size[0].ceil().max(1.0) as u32,
+            frame.bounds.size[1].ceil().max(1.0) as u32,
+        ];
+        let required = local_size[0] as usize * local_size[1] as usize * BYTES_PER_PIXEL;
+        self.card_pixels.resize(required, 0);
+        self.card_pixels.fill(0);
+        self.overlay_pixels.resize(required, 0);
+        self.overlay_pixels.fill(0);
+        let result = {
+            let mut card = CardUi {
+                content: UiCanvas::new(self.card_pixels, local_size),
+                overlay: UiCanvas::new(self.overlay_pixels, local_size),
+            };
+            card.content.fill(
+                card.content.bounds(),
+                frame.style.corner_radius,
+                frame.style.material,
+                1.0,
+            );
+            draw(&mut card)
+        }?;
+        composite_card_layer(
+            self.canvas.pixels,
+            self.canvas.size,
+            self.card_pixels,
+            local_size,
+            frame,
+            true,
+        );
+        composite_card_layer(
+            self.canvas.pixels,
+            self.canvas.size,
+            self.overlay_pixels,
+            local_size,
+            frame,
+            false,
+        );
+        Ok(result)
+    }
+}
+
+fn validate_card(frame: CardFrame) -> Result<()> {
+    let values = [
+        frame.bounds.origin[0],
+        frame.bounds.origin[1],
+        frame.bounds.size[0],
+        frame.bounds.size[1],
+        frame.projection.scale,
+        frame.projection.rotation_z,
+        frame.projection.tilt_x,
+        frame.projection.tilt_y,
+        frame.projection.surface_blur,
+        frame.projection.near_edge_blur,
+        frame.opacity,
+    ];
+    if values.into_iter().any(|value| !value.is_finite()) {
+        bail!("card values must be finite");
+    }
+    if frame.bounds.size[0] <= 0.0 || frame.bounds.size[1] <= 0.0 {
+        bail!("card dimensions must be positive");
+    }
+    if frame.projection.scale <= 0.0 {
+        bail!("card scale must be positive");
+    }
+    Ok(())
+}
+
+#[derive(Clone, Copy)]
+struct CardTransform {
+    forward: [[f32; 3]; 3],
+    inverse: [[f32; 3]; 3],
+    depth: [f32; 2],
+    max_near_depth: f32,
+}
+
+impl CardTransform {
+    fn new(projection: CardProjection, half_size: [f32; 2]) -> Self {
+        let (sine_x, cosine_x) = projection.tilt_x.sin_cos();
+        let (sine_y, cosine_y) = projection.tilt_y.sin_cos();
+        let (sine_z, cosine_z) = projection.rotation_z.sin_cos();
+        let a = cosine_z * cosine_y;
+        let b = cosine_z * sine_y * sine_x - sine_z * cosine_x;
+        let c = sine_z * cosine_y;
+        let d = sine_z * sine_y * sine_x + cosine_z * cosine_x;
+        let depth = [-sine_y, cosine_y * sine_x];
+        let forward = [
+            [projection.scale * a, projection.scale * b, 0.0],
+            [projection.scale * c, projection.scale * d, 0.0],
+            [
+                -depth[0] / CAMERA_DISTANCE,
+                -depth[1] / CAMERA_DISTANCE,
+                1.0,
+            ],
+        ];
+        let inverse = invert_matrix_3x3(forward);
+        let max_near_depth = card_corners(half_size)
+            .into_iter()
+            .map(|[x, y]| depth[0] * x + depth[1] * y)
+            .fold(0.0_f32, f32::max);
+        Self {
+            forward,
+            inverse,
+            depth,
+            max_near_depth,
+        }
+    }
+
+    fn project(self, point: [f32; 2]) -> [f32; 2] {
+        let projected = multiply_matrix_point(self.forward, point);
+        [projected[0] / projected[2], projected[1] / projected[2]]
+    }
+
+    fn unproject(self, point: [f32; 2]) -> [f32; 2] {
+        let local = multiply_matrix_point(self.inverse, point);
+        [local[0] / local[2], local[1] / local[2]]
+    }
+}
+
+fn composite_card_layer(
+    destination: &mut [u8],
+    destination_size: [u32; 2],
+    source: &[u8],
+    source_size: [u32; 2],
+    frame: CardFrame,
+    shell: bool,
+) {
+    let center = frame.bounds.center();
+    let half_size = [frame.bounds.size[0] * 0.5, frame.bounds.size[1] * 0.5];
+    let transform = CardTransform::new(frame.projection, half_size);
+    let projected = card_corners(half_size).map(|corner| transform.project(corner));
+    let padding = if shell {
+        frame.style.shadow_blur * 3.0
+            + frame.style.shadow_offset[0]
+                .abs()
+                .max(frame.style.shadow_offset[1].abs())
+    } else {
+        2.0
+    };
+    let min_x = projected
+        .iter()
+        .map(|point| center[0] + point[0])
+        .fold(f32::INFINITY, f32::min)
+        - padding;
+    let max_x = projected
+        .iter()
+        .map(|point| center[0] + point[0])
+        .fold(f32::NEG_INFINITY, f32::max)
+        + padding;
+    let min_y = projected
+        .iter()
+        .map(|point| center[1] + point[1])
+        .fold(f32::INFINITY, f32::min)
+        - padding;
+    let max_y = projected
+        .iter()
+        .map(|point| center[1] + point[1])
+        .fold(f32::NEG_INFINITY, f32::max)
+        + padding;
+    for target_y in
+        min_y.floor().max(0.0) as i32..=max_y.ceil().min(destination_size[1] as f32 - 1.0) as i32
+    {
+        for target_x in min_x.floor().max(0.0) as i32
+            ..=max_x.ceil().min(destination_size[0] as f32 - 1.0) as i32
+        {
+            let point = [
+                target_x as f32 + 0.5 - center[0],
+                target_y as f32 + 0.5 - center[1],
+            ];
+            let local = transform.unproject(point);
+            let distance =
+                rounded_rect_distance(local, frame.bounds.size, frame.style.corner_radius);
+            let target = (target_y as usize * destination_size[0] as usize + target_x as usize)
+                * BYTES_PER_PIXEL;
+            if shell && distance > 0.0 {
+                let shadow_local = transform.unproject([
+                    point[0] - frame.style.shadow_offset[0],
+                    point[1] - frame.style.shadow_offset[1],
+                ]);
+                let shadow_distance = rounded_rect_distance(
+                    shadow_local,
+                    frame.bounds.size,
+                    frame.style.corner_radius,
+                );
+                if shadow_distance < frame.style.shadow_blur * 3.0 {
+                    let shadow = (-shadow_distance.max(0.0).powi(2)
+                        / (2.0 * frame.style.shadow_blur.max(0.001).powi(2)))
+                    .exp()
+                        * frame.style.shadow_opacity;
+                    blend_pixel(
+                        &mut destination[target..target + 4],
+                        [0, 0, 0, 255],
+                        shadow * frame.opacity,
+                    );
+                }
+                continue;
+            }
+            let outside = if shell {
+                distance > 0.0
+            } else {
+                local[0].abs() > half_size[0] || local[1].abs() > half_size[1]
+            };
+            if outside {
+                continue;
+            }
+            let source_x = (local[0] / frame.bounds.size[0] + 0.5) * source_size[0] as f32 - 0.5;
+            let source_y = (local[1] / frame.bounds.size[1] + 0.5) * source_size[1] as f32 - 0.5;
+            let depth = transform.depth[0] * local[0] + transform.depth[1] * local[1];
+            let proximity = if transform.max_near_depth > 0.001 {
+                (depth / transform.max_near_depth).clamp(0.0, 1.0)
+            } else {
+                0.0
+            };
+            let blur = frame.projection.surface_blur.max(0.0)
+                + frame.projection.near_edge_blur.max(0.0) * proximity;
+            let color = sample_layer_blurred(source, source_size, source_x, source_y, blur);
+            let coverage = if shell {
+                (-distance).clamp(0.0, 1.0)
+            } else {
+                1.0
+            };
+            blend_pixel(
+                &mut destination[target..target + 4],
+                color,
+                coverage * frame.opacity,
+            );
+            if shell && -distance <= frame.style.border_width {
+                blend_pixel(
+                    &mut destination[target..target + 4],
+                    frame.style.border_color.0,
+                    frame.opacity,
+                );
+            }
+        }
+    }
+}
+
+fn composite_card_source(
+    destination: &mut [u8],
+    destination_size: [u32; 2],
+    source: RgbaSource<'_>,
+    fit: ContentFit,
+    frame: CardFrame,
+) {
+    let center = frame.bounds.center();
+    let half_size = [frame.bounds.size[0] * 0.5, frame.bounds.size[1] * 0.5];
+    let transform = CardTransform::new(frame.projection, half_size);
+    let projected = card_corners(half_size).map(|corner| transform.project(corner));
+    let padding = frame.style.shadow_blur * 3.0
+        + frame.style.shadow_offset[0]
+            .abs()
+            .max(frame.style.shadow_offset[1].abs());
+    let min_x = projected
+        .iter()
+        .map(|point| center[0] + point[0])
+        .fold(f32::INFINITY, f32::min)
+        - padding;
+    let max_x = projected
+        .iter()
+        .map(|point| center[0] + point[0])
+        .fold(f32::NEG_INFINITY, f32::max)
+        + padding;
+    let min_y = projected
+        .iter()
+        .map(|point| center[1] + point[1])
+        .fold(f32::INFINITY, f32::min)
+        - padding;
+    let max_y = projected
+        .iter()
+        .map(|point| center[1] + point[1])
+        .fold(f32::NEG_INFINITY, f32::max)
+        + padding;
+    let local_bounds = Bounds {
+        origin: [0.0, 0.0],
+        size: frame.bounds.size,
+    };
+    for target_y in
+        min_y.floor().max(0.0) as i32..=max_y.ceil().min(destination_size[1] as f32 - 1.0) as i32
+    {
+        for target_x in min_x.floor().max(0.0) as i32
+            ..=max_x.ceil().min(destination_size[0] as f32 - 1.0) as i32
+        {
+            let point = [
+                target_x as f32 + 0.5 - center[0],
+                target_y as f32 + 0.5 - center[1],
+            ];
+            let local = transform.unproject(point);
+            let distance =
+                rounded_rect_distance(local, frame.bounds.size, frame.style.corner_radius);
+            let target = (target_y as usize * destination_size[0] as usize + target_x as usize)
+                * BYTES_PER_PIXEL;
+            if distance > 0.0 {
+                composite_card_shadow(destination, target, transform, point, frame);
+                continue;
+            }
+            let depth = transform.depth[0] * local[0] + transform.depth[1] * local[1];
+            let proximity = if transform.max_near_depth > 0.001 {
+                (depth / transform.max_near_depth).clamp(0.0, 1.0)
+            } else {
+                0.0
+            };
+            let blur = frame.projection.surface_blur.max(0.0)
+                + frame.projection.near_edge_blur.max(0.0) * proximity;
+            let source_color = source_coordinates(local, frame.bounds.size, source.size, fit).map(
+                |[source_x, source_y]| sample_source_blurred(source, source_x, source_y, blur),
+            );
+            let color = match source_color {
+                Some(color) if color[3] == 255 => color,
+                source_color => {
+                    let material_point = [local[0] + half_size[0], local[1] + half_size[1]];
+                    let material = frame.style.material.sample(material_point, local_bounds).0;
+                    source_color.map_or(material, |color| over_pixel(material, color))
+                }
+            };
+            blend_pixel(
+                &mut destination[target..target + 4],
+                color,
+                (-distance).clamp(0.0, 1.0) * frame.opacity,
+            );
+            if -distance <= frame.style.border_width {
+                blend_pixel(
+                    &mut destination[target..target + 4],
+                    frame.style.border_color.0,
+                    frame.opacity,
+                );
+            }
+        }
+    }
+}
+
+fn composite_card_shadow(
+    destination: &mut [u8],
+    target: usize,
+    transform: CardTransform,
+    point: [f32; 2],
+    frame: CardFrame,
+) {
+    let shadow_local = transform.unproject([
+        point[0] - frame.style.shadow_offset[0],
+        point[1] - frame.style.shadow_offset[1],
+    ]);
+    let shadow_distance =
+        rounded_rect_distance(shadow_local, frame.bounds.size, frame.style.corner_radius);
+    if shadow_distance >= frame.style.shadow_blur * 3.0 {
+        return;
+    }
+    let shadow = (-shadow_distance.max(0.0).powi(2)
+        / (2.0 * frame.style.shadow_blur.max(0.001).powi(2)))
+    .exp()
+        * frame.style.shadow_opacity;
+    blend_pixel(
+        &mut destination[target..target + 4],
+        [0, 0, 0, 255],
+        shadow * frame.opacity,
+    );
+}
+
+fn source_coordinates(
+    local: [f32; 2],
+    card_size: [f32; 2],
+    source_size: [u32; 2],
+    fit: ContentFit,
+) -> Option<[f32; 2]> {
+    let source_size = [source_size[0] as f32, source_size[1] as f32];
+    let scale = match fit {
+        ContentFit::Fill => [card_size[0] / source_size[0], card_size[1] / source_size[1]],
+        ContentFit::Contain => {
+            let value = (card_size[0] / source_size[0]).min(card_size[1] / source_size[1]);
+            [value, value]
+        }
+    };
+    let display_size = [source_size[0] * scale[0], source_size[1] * scale[1]];
+    if local[0].abs() > display_size[0] * 0.5 || local[1].abs() > display_size[1] * 0.5 {
+        return None;
+    }
+    Some([
+        (local[0] / display_size[0] + 0.5) * source_size[0] - 0.5,
+        (local[1] / display_size[1] + 0.5) * source_size[1] - 0.5,
+    ])
+}
+
+fn sample_source_blurred(source: RgbaSource<'_>, x: f32, y: f32, blur: f32) -> [u8; 4] {
+    if blur <= 0.2 {
+        return source.sample(x, y);
+    }
+    let radius = blur * 0.72;
+    let axis = [-radius, 0.0, radius];
+    let weights = [1.0, 2.0, 1.0];
+    let mut alpha = 0.0;
+    let mut premultiplied = [0.0; 3];
+    for (offset_y, weight_y) in axis.into_iter().zip(weights) {
+        for (offset_x, weight_x) in axis.into_iter().zip(weights) {
+            let weight = weight_x * weight_y / 16.0;
+            let sample = source.sample(x + offset_x, y + offset_y);
+            let sample_alpha = f32::from(sample[3]) / 255.0 * weight;
+            alpha += sample_alpha;
+            for (channel, sum) in premultiplied.iter_mut().enumerate() {
+                *sum += f32::from(sample[channel]) / 255.0 * sample_alpha;
+            }
+        }
+    }
+    if alpha <= 0.0 {
+        return [0; 4];
+    }
+    [
+        (premultiplied[0] / alpha * 255.0).round() as u8,
+        (premultiplied[1] / alpha * 255.0).round() as u8,
+        (premultiplied[2] / alpha * 255.0).round() as u8,
+        (alpha * 255.0).round() as u8,
+    ]
+}
+
+fn over_pixel(background: [u8; 4], foreground: [u8; 4]) -> [u8; 4] {
+    let foreground_alpha = f32::from(foreground[3]) / 255.0;
+    let background_alpha = f32::from(background[3]) / 255.0;
+    let output_alpha = foreground_alpha + background_alpha * (1.0 - foreground_alpha);
+    if output_alpha <= 0.0 {
+        return [0; 4];
+    }
+    let mut output = [0; 4];
+    for channel in 0..3 {
+        output[channel] = ((f32::from(foreground[channel]) / 255.0 * foreground_alpha
+            + f32::from(background[channel]) / 255.0 * background_alpha * (1.0 - foreground_alpha))
+            / output_alpha
+            * 255.0)
+            .round() as u8;
+    }
+    output[3] = (output_alpha * 255.0).round() as u8;
+    output
+}
+
+fn sample_layer_blurred(pixels: &[u8], size: [u32; 2], x: f32, y: f32, blur: f32) -> [u8; 4] {
+    let source = RgbaSource {
+        pixels,
+        size,
+        bytes_per_row: size[0] as usize * BYTES_PER_PIXEL,
+        origin: [0, 0],
+    };
+    if blur <= 0.2 {
+        return source.sample(x, y);
+    }
+    let radius = blur * 0.72;
+    let axis = [-radius, 0.0, radius];
+    let weights = [1.0, 2.0, 1.0];
+    let mut alpha = 0.0;
+    let mut premultiplied = [0.0; 3];
+    for (offset_y, weight_y) in axis.into_iter().zip(weights) {
+        for (offset_x, weight_x) in axis.into_iter().zip(weights) {
+            let weight = weight_x * weight_y / 16.0;
+            let sample = source.sample(x + offset_x, y + offset_y);
+            let sample_alpha = f32::from(sample[3]) / 255.0 * weight;
+            alpha += sample_alpha;
+            for channel in 0..3 {
+                premultiplied[channel] += f32::from(sample[channel]) / 255.0 * sample_alpha;
+            }
+        }
+    }
+    if alpha <= 0.0 {
+        return [0; 4];
+    }
+    [
+        (premultiplied[0] / alpha * 255.0).round() as u8,
+        (premultiplied[1] / alpha * 255.0).round() as u8,
+        (premultiplied[2] / alpha * 255.0).round() as u8,
+        (alpha * 255.0).round() as u8,
+    ]
+}
+
+fn rounded_coverage(point: [f32; 2], bounds: Bounds, radius: f32) -> f32 {
+    let local = [point[0] - bounds.center()[0], point[1] - bounds.center()[1]];
+    (0.75 - rounded_rect_distance(local, bounds.size, radius)).clamp(0.0, 1.0)
+}
+
+fn rounded_rect_distance(local: [f32; 2], size: [f32; 2], radius: f32) -> f32 {
+    let radius = radius.min(size[0].min(size[1]) * 0.5);
+    let dx = local[0].abs() - (size[0] * 0.5 - radius);
+    let dy = local[1].abs() - (size[1] * 0.5 - radius);
+    dx.max(0.0).hypot(dy.max(0.0)) + dx.max(dy).min(0.0) - radius
+}
+
+fn blend_pixel(destination: &mut [u8], source: [u8; 4], opacity: f32) {
+    let source_alpha = f32::from(source[3]) / 255.0 * opacity.clamp(0.0, 1.0);
+    if source_alpha <= 0.0 {
+        return;
+    }
+    let destination_alpha = f32::from(destination[3]) / 255.0;
+    let output_alpha = source_alpha + destination_alpha * (1.0 - source_alpha);
+    for channel in 0..3 {
+        let source_channel = f32::from(source[channel]) / 255.0;
+        let destination_channel = f32::from(destination[channel]) / 255.0;
+        let output = (source_channel * source_alpha
+            + destination_channel * destination_alpha * (1.0 - source_alpha))
+            / output_alpha;
+        destination[channel] = (output * 255.0).round() as u8;
+    }
+    destination[3] = (output_alpha * 255.0).round() as u8;
+}
+
+fn card_corners([half_width, half_height]: [f32; 2]) -> [[f32; 2]; 4] {
+    [
+        [-half_width, -half_height],
+        [half_width, -half_height],
+        [half_width, half_height],
+        [-half_width, half_height],
+    ]
+}
+
+fn multiply_matrix_point(matrix: [[f32; 3]; 3], point: [f32; 2]) -> [f32; 3] {
+    let vector = [point[0], point[1], 1.0];
+    matrix.map(|row| row[0] * vector[0] + row[1] * vector[1] + row[2] * vector[2])
+}
+
+fn invert_matrix_3x3(matrix: [[f32; 3]; 3]) -> [[f32; 3]; 3] {
+    let [a, b, c] = matrix;
+    let determinant = a[0] * (b[1] * c[2] - b[2] * c[1]) - a[1] * (b[0] * c[2] - b[2] * c[0])
+        + a[2] * (b[0] * c[1] - b[1] * c[0]);
+    let inverse_determinant = determinant.recip();
+    [
+        [
+            (b[1] * c[2] - b[2] * c[1]) * inverse_determinant,
+            (a[2] * c[1] - a[1] * c[2]) * inverse_determinant,
+            (a[1] * b[2] - a[2] * b[1]) * inverse_determinant,
+        ],
+        [
+            (b[2] * c[0] - b[0] * c[2]) * inverse_determinant,
+            (a[0] * c[2] - a[2] * c[0]) * inverse_determinant,
+            (a[2] * b[0] - a[0] * b[2]) * inverse_determinant,
+        ],
+        [
+            (b[0] * c[1] - b[1] * c[0]) * inverse_determinant,
+            (a[1] * c[0] - a[0] * c[1]) * inverse_determinant,
+            (a[0] * b[1] - a[1] * b[0]) * inverse_determinant,
+        ],
+    ]
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{
+        Bounds, CardFrame, CardProjection, CardStyle, Clip, ContentFit, FrameUi, RgbaSource,
+        UiColor,
+    };
+
+    #[test]
+    fn nested_clips_constrain_composed_rgba_content() {
+        let mut output = vec![0; 8 * 8 * 4];
+        let mut card = Vec::new();
+        let mut overlay = Vec::new();
+        let source = [255, 255, 255, 255];
+        let source = RgbaSource::packed(&source, [1, 1]).unwrap();
+        let mut frame = FrameUi::new(&mut output, [8, 8], &mut card, &mut overlay).unwrap();
+        frame
+            .paint(|ui| {
+                ui.clipped(
+                    Clip::rounded(Bounds::from_center([4.0, 4.0], [4.0, 4.0]), 0.0),
+                    |ui| {
+                        ui.rgba(ui.bounds(), source, ContentFit::Fill, 1.0);
+                        Ok(())
+                    },
+                )
+            })
+            .unwrap();
+
+        assert_eq!(&output[(4 * 8 + 4) * 4..(4 * 8 + 4) * 4 + 4], &[255; 4]);
+        assert_eq!(&output[0..4], &[0; 4]);
+    }
+
+    #[test]
+    fn projected_card_composes_material_content_border_and_shadow() {
+        let mut output = vec![0; 32 * 24 * 4];
+        let mut card = Vec::new();
+        let mut overlay = Vec::new();
+        let source = [180, 90, 30, 255];
+        let source = RgbaSource::packed(&source, [1, 1]).unwrap();
+        let mut frame = FrameUi::new(&mut output, [32, 24], &mut card, &mut overlay).unwrap();
+        frame
+            .card(
+                CardFrame {
+                    bounds: Bounds::from_center([16.0, 11.0], [16.0, 10.0]),
+                    style: CardStyle::standard(),
+                    projection: CardProjection {
+                        scale: 0.9,
+                        rotation_z: -0.08,
+                        tilt_x: -0.12,
+                        tilt_y: 0.16,
+                        surface_blur: 0.0,
+                        near_edge_blur: 1.5,
+                    },
+                    opacity: 1.0,
+                },
+                |card| {
+                    card.content(|ui| {
+                        ui.rgba(ui.bounds(), source, ContentFit::Fill, 1.0);
+                        Ok(())
+                    })
+                },
+            )
+            .unwrap();
+
+        assert!(output.chunks_exact(4).any(|pixel| pixel[0] > 80));
+        assert!(output.chunks_exact(4).any(|pixel| pixel[3] > 0));
+        let _ = UiColor::srgb8(1, 2, 3, 4);
+    }
+
+    #[test]
+    fn borrowed_card_source_samples_a_strided_region() {
+        let mut output = vec![0; 16 * 16 * 4];
+        let mut card = Vec::new();
+        let mut overlay = Vec::new();
+        let mut surface = vec![0; 4 * 2 * 4];
+        for y in 0..2 {
+            for x in 0..4 {
+                let index = (y * 4 + x) * 4;
+                surface[index..index + 4].copy_from_slice(if x < 2 {
+                    &[220, 20, 20, 255]
+                } else {
+                    &[20, 220, 20, 255]
+                });
+            }
+        }
+        let source = RgbaSource::strided_region(&surface, [4, 2], 16, [2, 0], [2, 2]).unwrap();
+        let mut frame = FrameUi::new(&mut output, [16, 16], &mut card, &mut overlay).unwrap();
+        frame
+            .card_source(
+                CardFrame {
+                    bounds: Bounds::from_center([8.0, 8.0], [8.0, 8.0]),
+                    style: CardStyle {
+                        material: super::Fill::Solid(UiColor::srgb8(0, 0, 0, 0)),
+                        corner_radius: 0.0,
+                        border_width: 0.0,
+                        border_color: UiColor::srgb8(0, 0, 0, 0),
+                        shadow_offset: [0.0, 0.0],
+                        shadow_blur: 0.0,
+                        shadow_opacity: 0.0,
+                    },
+                    projection: CardProjection::default(),
+                    opacity: 1.0,
+                },
+                source,
+                ContentFit::Fill,
+            )
+            .unwrap();
+
+        assert_eq!(
+            &output[(8 * 16 + 8) * 4..(8 * 16 + 8) * 4 + 4],
+            &[20, 220, 20, 255]
+        );
+    }
+}

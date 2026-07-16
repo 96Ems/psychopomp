@@ -1,0 +1,856 @@
+{
+  "version": 2,
+  "id": "hero",
+  "durationNanos": 5000000000,
+  "actors": [
+    {
+      "id": "editor",
+      "recipe": "editor",
+      "data": {
+        "enteringOffsetX": 96.0,
+        "fileName": "service.ts",
+        "finalLineIds": [
+          "import",
+          "spacer",
+          "class-open",
+          "service-self",
+          "shape-open",
+          "find-signature",
+          "find-effect",
+          "shape-close",
+          "close"
+        ],
+        "focusHeight": 44.0,
+        "focusLineId": "find-effect",
+        "initialLineIds": [
+          "import",
+          "spacer",
+          "class-open",
+          "service-self",
+          "shape-open",
+          "shape-close",
+          "close"
+        ],
+        "inlineReveal": {
+          "lineId": "find-effect",
+          "rangeId": "error-slot"
+        },
+        "lineHeight": 44.0,
+        "lines": [
+          {
+            "id": "import",
+            "parts": [
+              {
+                "id": "span-0",
+                "spans": [
+                  {
+                    "style": "keyword",
+                    "text": "import"
+                  }
+                ]
+              },
+              {
+                "id": "span-1",
+                "spans": [
+                  {
+                    "style": "plain",
+                    "text": " { Context, Effect } "
+                  }
+                ]
+              },
+              {
+                "id": "span-2",
+                "spans": [
+                  {
+                    "style": "keyword",
+                    "text": "from"
+                  }
+                ]
+              },
+              {
+                "id": "span-3",
+                "spans": [
+                  {
+                    "style": "string",
+                    "text": " \"effect\""
+                  }
+                ]
+              }
+            ],
+            "semanticRanges": []
+          },
+          {
+            "id": "spacer",
+            "parts": [],
+            "semanticRanges": []
+          },
+          {
+            "id": "class-open",
+            "parts": [
+              {
+                "id": "keyword",
+                "spans": [
+                  {
+                    "style": "keyword",
+                    "text": "class"
+                  }
+                ]
+              },
+              {
+                "id": "service",
+                "spans": [
+                  {
+                    "style": "type",
+                    "text": " UserService "
+                  }
+                ]
+              },
+              {
+                "id": "extends",
+                "spans": [
+                  {
+                    "style": "keyword",
+                    "text": "extends"
+                  }
+                ]
+              },
+              {
+                "id": "context-space",
+                "spans": [
+                  {
+                    "style": "plain",
+                    "text": " "
+                  }
+                ]
+              },
+              {
+                "id": "context-tag",
+                "spans": [
+                  {
+                    "style": "plain",
+                    "text": "Context.Tag"
+                  }
+                ]
+              },
+              {
+                "id": "context-open",
+                "spans": [
+                  {
+                    "style": "plain",
+                    "text": "("
+                  }
+                ]
+              },
+              {
+                "id": "tag-name",
+                "spans": [
+                  {
+                    "style": "string",
+                    "text": "\"UserService\""
+                  }
+                ]
+              },
+              {
+                "id": "suffix",
+                "spans": [
+                  {
+                    "style": "plain",
+                    "text": ")<"
+                  }
+                ]
+              }
+            ],
+            "semanticRanges": [
+              {
+                "firstPartId": "context-tag",
+                "id": "context-tag",
+                "lastPartId": "context-tag"
+              }
+            ]
+          },
+          {
+            "id": "service-self",
+            "parts": [
+              {
+                "id": "span-0",
+                "spans": [
+                  {
+                    "style": "plain",
+                    "text": "  "
+                  }
+                ]
+              },
+              {
+                "id": "span-1",
+                "spans": [
+                  {
+                    "style": "type",
+                    "text": "UserService"
+                  }
+                ]
+              },
+              {
+                "id": "span-2",
+                "spans": [
+                  {
+                    "style": "plain",
+                    "text": ","
+                  }
+                ]
+              }
+            ],
+            "semanticRanges": []
+          },
+          {
+            "id": "shape-open",
+            "parts": [
+              {
+                "id": "span-0",
+                "spans": [
+                  {
+                    "style": "plain",
+                    "text": "  {"
+                  }
+                ]
+              }
+            ],
+            "semanticRanges": []
+          },
+          {
+            "id": "find-signature",
+            "parts": [
+              {
+                "id": "indent",
+                "spans": [
+                  {
+                    "style": "plain",
+                    "text": "    "
+                  }
+                ]
+              },
+              {
+                "id": "readonly",
+                "spans": [
+                  {
+                    "style": "keyword",
+                    "text": "readonly"
+                  }
+                ]
+              },
+              {
+                "id": "signature",
+                "spans": [
+                  {
+                    "style": "plain",
+                    "text": " find: (id: "
+                  }
+                ]
+              },
+              {
+                "id": "string-type",
+                "spans": [
+                  {
+                    "style": "type",
+                    "text": "string"
+                  }
+                ]
+              },
+              {
+                "id": "suffix",
+                "spans": [
+                  {
+                    "style": "plain",
+                    "text": ") =>"
+                  }
+                ]
+              }
+            ],
+            "semanticRanges": [
+              {
+                "firstPartId": "string-type",
+                "id": "string-type",
+                "lastPartId": "string-type"
+              }
+            ]
+          },
+          {
+            "id": "find-effect",
+            "parts": [
+              {
+                "id": "indent",
+                "spans": [
+                  {
+                    "style": "plain",
+                    "text": "      "
+                  }
+                ]
+              },
+              {
+                "id": "effect-type",
+                "spans": [
+                  {
+                    "style": "accent",
+                    "text": "Effect.Effect"
+                  }
+                ]
+              },
+              {
+                "id": "open",
+                "spans": [
+                  {
+                    "style": "plain",
+                    "text": "<"
+                  }
+                ]
+              },
+              {
+                "id": "success-type",
+                "spans": [
+                  {
+                    "style": "type",
+                    "text": "User"
+                  }
+                ]
+              },
+              {
+                "id": "error-separator",
+                "spans": [
+                  {
+                    "style": "plain",
+                    "text": ", "
+                  }
+                ]
+              },
+              {
+                "id": "not-found-type",
+                "spans": [
+                  {
+                    "style": "accent",
+                    "text": "NotFound"
+                  }
+                ]
+              },
+              {
+                "id": "close",
+                "spans": [
+                  {
+                    "style": "plain",
+                    "text": ">"
+                  }
+                ]
+              }
+            ],
+            "semanticRanges": [
+              {
+                "firstPartId": "effect-type",
+                "id": "effect-type",
+                "lastPartId": "effect-type"
+              },
+              {
+                "firstPartId": "not-found-type",
+                "id": "not-found-type",
+                "lastPartId": "not-found-type"
+              },
+              {
+                "firstPartId": "error-separator",
+                "id": "error-slot",
+                "lastPartId": "not-found-type"
+              }
+            ]
+          },
+          {
+            "id": "shape-close",
+            "parts": [
+              {
+                "id": "span-0",
+                "spans": [
+                  {
+                    "style": "plain",
+                    "text": "  }"
+                  }
+                ]
+              }
+            ],
+            "semanticRanges": []
+          },
+          {
+            "id": "close",
+            "parts": [
+              {
+                "id": "span-0",
+                "spans": [
+                  {
+                    "style": "plain",
+                    "text": ">() {}"
+                  }
+                ]
+              }
+            ],
+            "semanticRanges": []
+          }
+        ]
+      }
+    },
+    {
+      "id": "pointer",
+      "recipe": "pointer",
+      "data": {
+        "editorId": "editor"
+      }
+    }
+  ],
+  "semanticTargets": [
+    {
+      "id": "effect-type",
+      "actorId": "editor",
+      "selector": {
+        "lineId": "find-effect",
+        "rangeId": "effect-type"
+      }
+    },
+    {
+      "id": "string-type",
+      "actorId": "editor",
+      "selector": {
+        "lineId": "find-signature",
+        "rangeId": "string-type"
+      }
+    },
+    {
+      "id": "not-found-type",
+      "actorId": "editor",
+      "selector": {
+        "lineId": "find-effect",
+        "rangeId": "not-found-type"
+      }
+    },
+    {
+      "id": "context-tag",
+      "actorId": "editor",
+      "selector": {
+        "lineId": "class-open",
+        "rangeId": "context-tag"
+      }
+    }
+  ],
+  "continuousChannels": [
+    {
+      "id": "editor.panel-y",
+      "actorId": "editor",
+      "property": "panel-y",
+      "initial": 250.0,
+      "events": [
+        {
+          "operation": "spring",
+          "atNanos": 80000000,
+          "target": 0.0,
+          "responseSeconds": 0.36,
+          "dampingRatio": 1.0,
+          "positionThreshold": 0.001,
+          "velocityThreshold": 0.001
+        }
+      ]
+    },
+    {
+      "id": "editor.layout",
+      "actorId": "editor",
+      "property": "layout",
+      "initial": 0.0,
+      "events": [
+        {
+          "operation": "spring",
+          "atNanos": 880000000,
+          "target": 1.0,
+          "responseSeconds": 0.36,
+          "dampingRatio": 1.0,
+          "positionThreshold": 0.001,
+          "velocityThreshold": 0.001
+        }
+      ]
+    },
+    {
+      "id": "editor.content",
+      "actorId": "editor",
+      "property": "content",
+      "initial": 0.0,
+      "events": [
+        {
+          "operation": "spring",
+          "atNanos": 1120000000,
+          "target": 1.0,
+          "responseSeconds": 0.36,
+          "dampingRatio": 1.0,
+          "positionThreshold": 0.001,
+          "velocityThreshold": 0.001
+        }
+      ]
+    },
+    {
+      "id": "editor.focus",
+      "actorId": "editor",
+      "property": "focus",
+      "initial": 0.0,
+      "events": [
+        {
+          "operation": "spring",
+          "atNanos": 1550000000,
+          "target": 1.0,
+          "responseSeconds": 0.36,
+          "dampingRatio": 1.0,
+          "positionThreshold": 0.001,
+          "velocityThreshold": 0.001
+        }
+      ]
+    },
+    {
+      "id": "editor.highlight-x",
+      "actorId": "editor",
+      "property": "highlight-x",
+      "initial": {
+        "targetId": "effect-type",
+        "component": "x",
+        "offset": 0.0
+      },
+      "events": [
+        {
+          "operation": "spring",
+          "atNanos": 1720000000,
+          "target": {
+            "targetId": "effect-type",
+            "component": "x",
+            "offset": 0.0
+          },
+          "responseSeconds": 0.36,
+          "dampingRatio": 1.0,
+          "positionThreshold": 0.001,
+          "velocityThreshold": 0.001
+        },
+        {
+          "operation": "spring",
+          "atNanos": 3150000000,
+          "target": {
+            "targetId": "not-found-type",
+            "component": "x",
+            "offset": 0.0
+          },
+          "responseSeconds": 0.36,
+          "dampingRatio": 1.0,
+          "positionThreshold": 0.001,
+          "velocityThreshold": 0.001
+        }
+      ]
+    },
+    {
+      "id": "editor.highlight-y",
+      "actorId": "editor",
+      "property": "highlight-y",
+      "initial": {
+        "targetId": "effect-type",
+        "component": "line-y",
+        "offset": 0.0
+      },
+      "events": [
+        {
+          "operation": "spring",
+          "atNanos": 1720000000,
+          "target": {
+            "targetId": "effect-type",
+            "component": "line-y",
+            "offset": 0.0
+          },
+          "responseSeconds": 0.36,
+          "dampingRatio": 1.0,
+          "positionThreshold": 0.001,
+          "velocityThreshold": 0.001
+        },
+        {
+          "operation": "spring",
+          "atNanos": 3150000000,
+          "target": {
+            "targetId": "not-found-type",
+            "component": "line-y",
+            "offset": 0.0
+          },
+          "responseSeconds": 0.36,
+          "dampingRatio": 1.0,
+          "positionThreshold": 0.001,
+          "velocityThreshold": 0.001
+        }
+      ]
+    },
+    {
+      "id": "editor.highlight-width",
+      "actorId": "editor",
+      "property": "highlight-width",
+      "initial": {
+        "targetId": "effect-type",
+        "component": "width",
+        "offset": 0.0
+      },
+      "events": [
+        {
+          "operation": "spring",
+          "atNanos": 1720000000,
+          "target": {
+            "targetId": "effect-type",
+            "component": "width",
+            "offset": 0.0
+          },
+          "responseSeconds": 0.36,
+          "dampingRatio": 1.0,
+          "positionThreshold": 0.001,
+          "velocityThreshold": 0.001
+        },
+        {
+          "operation": "spring",
+          "atNanos": 3150000000,
+          "target": {
+            "targetId": "not-found-type",
+            "component": "width",
+            "offset": 0.0
+          },
+          "responseSeconds": 0.36,
+          "dampingRatio": 1.0,
+          "positionThreshold": 0.001,
+          "velocityThreshold": 0.001
+        }
+      ]
+    },
+    {
+      "id": "editor.highlight-opacity",
+      "actorId": "editor",
+      "property": "highlight-opacity",
+      "initial": 0.0,
+      "events": [
+        {
+          "operation": "spring",
+          "atNanos": 1720000000,
+          "target": 1.0,
+          "responseSeconds": 0.36,
+          "dampingRatio": 1.0,
+          "positionThreshold": 0.001,
+          "velocityThreshold": 0.001
+        },
+        {
+          "operation": "spring",
+          "atNanos": 3150000000,
+          "target": 1.0,
+          "responseSeconds": 0.36,
+          "dampingRatio": 1.0,
+          "positionThreshold": 0.001,
+          "velocityThreshold": 0.001
+        }
+      ]
+    },
+    {
+      "id": "editor.inline-reveal",
+      "actorId": "editor",
+      "property": "inline-reveal",
+      "initial": 0.0,
+      "events": [
+        {
+          "operation": "spring",
+          "atNanos": 2720000000,
+          "target": 1.0,
+          "responseSeconds": 0.36,
+          "dampingRatio": 1.0,
+          "positionThreshold": 0.001,
+          "velocityThreshold": 0.001
+        }
+      ]
+    },
+    {
+      "id": "pointer.x",
+      "actorId": "pointer",
+      "property": "x",
+      "initial": {
+        "targetId": "effect-type",
+        "component": "center-x",
+        "offset": 40.0
+      },
+      "events": [
+        {
+          "operation": "spring",
+          "atNanos": 1720000000,
+          "target": {
+            "targetId": "effect-type",
+            "component": "center-x",
+            "offset": 0.0
+          },
+          "responseSeconds": 0.504,
+          "dampingRatio": 0.82,
+          "positionThreshold": 0.001,
+          "velocityThreshold": 0.001
+        },
+        {
+          "operation": "spring",
+          "atNanos": 2350000000,
+          "target": {
+            "targetId": "string-type",
+            "component": "center-x",
+            "offset": 0.0
+          },
+          "responseSeconds": 0.504,
+          "dampingRatio": 0.82,
+          "positionThreshold": 0.001,
+          "velocityThreshold": 0.001
+        },
+        {
+          "operation": "spring",
+          "atNanos": 3150000000,
+          "target": {
+            "targetId": "not-found-type",
+            "component": "center-x",
+            "offset": 0.0
+          },
+          "responseSeconds": 0.504,
+          "dampingRatio": 0.82,
+          "positionThreshold": 0.001,
+          "velocityThreshold": 0.001
+        },
+        {
+          "operation": "spring",
+          "atNanos": 4050000000,
+          "target": {
+            "targetId": "context-tag",
+            "component": "center-x",
+            "offset": 0.0
+          },
+          "responseSeconds": 0.504,
+          "dampingRatio": 0.82,
+          "positionThreshold": 0.001,
+          "velocityThreshold": 0.001
+        }
+      ]
+    },
+    {
+      "id": "pointer.y",
+      "actorId": "pointer",
+      "property": "y",
+      "initial": {
+        "targetId": "effect-type",
+        "component": "line-y",
+        "offset": 85.0
+      },
+      "events": [
+        {
+          "operation": "spring",
+          "atNanos": 1720000000,
+          "target": {
+            "targetId": "effect-type",
+            "component": "line-y",
+            "offset": 55.0
+          },
+          "responseSeconds": 0.504,
+          "dampingRatio": 0.82,
+          "positionThreshold": 0.001,
+          "velocityThreshold": 0.001
+        },
+        {
+          "operation": "spring",
+          "atNanos": 2350000000,
+          "target": {
+            "targetId": "string-type",
+            "component": "line-y",
+            "offset": 55.0
+          },
+          "responseSeconds": 0.504,
+          "dampingRatio": 0.82,
+          "positionThreshold": 0.001,
+          "velocityThreshold": 0.001
+        },
+        {
+          "operation": "spring",
+          "atNanos": 3150000000,
+          "target": {
+            "targetId": "not-found-type",
+            "component": "line-y",
+            "offset": 55.0
+          },
+          "responseSeconds": 0.504,
+          "dampingRatio": 0.82,
+          "positionThreshold": 0.001,
+          "velocityThreshold": 0.001
+        },
+        {
+          "operation": "spring",
+          "atNanos": 4050000000,
+          "target": {
+            "targetId": "context-tag",
+            "component": "line-y",
+            "offset": 55.0
+          },
+          "responseSeconds": 0.504,
+          "dampingRatio": 0.82,
+          "positionThreshold": 0.001,
+          "velocityThreshold": 0.001
+        }
+      ]
+    },
+    {
+      "id": "pointer.opacity",
+      "actorId": "pointer",
+      "property": "opacity",
+      "initial": 0.0,
+      "events": [
+        {
+          "operation": "spring",
+          "atNanos": 1720000000,
+          "target": 1.0,
+          "responseSeconds": 0.504,
+          "dampingRatio": 0.82,
+          "positionThreshold": 0.001,
+          "velocityThreshold": 0.001
+        }
+      ]
+    },
+    {
+      "id": "pointer.scale",
+      "actorId": "pointer",
+      "property": "scale",
+      "initial": 0.7,
+      "events": [
+        {
+          "operation": "spring",
+          "atNanos": 1720000000,
+          "target": 1.0,
+          "responseSeconds": 0.504,
+          "dampingRatio": 0.82,
+          "positionThreshold": 0.001,
+          "velocityThreshold": 0.001
+        }
+      ]
+    },
+    {
+      "id": "pointer.blur",
+      "actorId": "pointer",
+      "property": "blur",
+      "initial": 4.0,
+      "events": [
+        {
+          "operation": "spring",
+          "atNanos": 1720000000,
+          "target": 0.0,
+          "responseSeconds": 0.504,
+          "dampingRatio": 0.82,
+          "positionThreshold": 0.001,
+          "velocityThreshold": 0.001
+        }
+      ]
+    }
+  ],
+  "stateChannels": [],
+  "cues": [
+    {
+      "id": "code-entry",
+      "startNanos": 880000000,
+      "endNanos": 1550000000
+    },
+    {
+      "id": "semantic-tour",
+      "startNanos": 1720000000,
+      "endNanos": 5000000000
+    }
+  ],
+  "media": []
+}

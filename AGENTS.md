@@ -7,6 +7,7 @@ Kinograph is an early Rust prototype for deterministic, code-first motion graphi
 - `CONTEXT.md` defines the domain language. Use its terms in code and documentation.
 - `ARCHITECTURE.md` describes the current module boundaries and intentional non-abstractions.
 - `PLAN.md` defines the product direction, milestones, scope cuts, and success criteria.
+- `SCENE_PLANS.md` documents the lightweight Scene Program and persistent renderer workflow.
 - `NOTES.md` records what the prototype has and has not proved.
 - `PRIOR_ART.md` records the animation systems that should inform timeline and authoring API work.
 
@@ -15,40 +16,56 @@ Keep these documents accurate when a change alters a domain term, architectural 
 ## Commands
 
 ```bash
-cargo test
+cargo test --workspace
 cargo fmt --check
-cargo clippy --all-targets --all-features -- -D warnings
+cargo clippy --workspace --all-targets --all-features -- -D warnings
 cargo run --release
 cargo run --release -- render effect-shows-errors
+cargo run --release -- render chapter intro
+cargo run --release -- render chapter basics
 ```
 
 `cargo run --release` renders `output/kinograph-prototype.mp4` by default. Pass an output path as the first argument to override it. A full render requires:
 
 - a working headless `wgpu` adapter
 - `ffmpeg` with `libx264` on `PATH`
-- CommitMono at the path currently declared in `src/scenes/mod.rs`; rendering falls back to the system monospace font if it is unavailable
+- CommitMono at the path currently declared in `crates/kinograph-render/src/scenes/mod.rs`; rendering falls back to the system monospace font if it is unavailable
 
 Do not run the full render as routine validation when unit tests and static checks cover the change. Run it when changing rendering, typography, choreography, temporal sampling, readback, or encoding behavior.
 
 ## Architecture
 
-- `src/code.rs`: stable line identity, code documents and snapshots, validation, and sampled line placement
-- `src/composition.rs`: exact media time, immutable assets and clips, script/layer scheduling, cues, and cross-media composition
-- `src/dsl.rs`: public Rust scene values, semantic targets, actor helpers, and lowering into scalar tracks
-- `src/motion.rs`: deterministic arbitrary-time analytic spring sampling with position and velocity
-- `src/transcript.rs`: word timing ingestion and semantic cue lookup
-- `src/render.rs`: concrete headless `wgpu` renderer, sprite compositor, and code annotations
-- `src/render/effects/`: independent pixel recipes for interchangeable short annotation effects
-- `src/render/task.rs`: concrete Effect Task recipe and compositing
-- `src/render/terminal.rs`: concrete terminal recording and command-file presentation
-- `src/render/ui.rs`: private bounds, inset, split, and flow layout primitives for pixel UI
-- `src/encode.rs`: concrete FFmpeg subprocess, raw RGBA protocol, and compiled audio placement
-- `src/scenes/`: one concrete choreography Module per renderable scene plus shared sampling and encoding mechanics
-- `src/main.rs`: command parsing, output selection, and scene dispatch
-- `src/lib.rs`: public library module boundary used by the Rust authoring DSL
-- `src/scene.wgsl`: editor geometry and focus shader
+- `crates/kinograph/src/code.rs`: stable line identity, code documents and snapshots, validation, and sampled line placement
+- `crates/kinograph/src/composition.rs`: exact media time, immutable assets and clips, script/layer scheduling, cues, and cross-media composition
+- `crates/kinograph/src/dsl.rs`: public Rust scene values, semantic targets, actor helpers, and lowering into scalar tracks
+- `crates/kinograph/src/editor.rs`: typed editor recipe data lowering stable inline parts and logical ranges into Code Transitions
+- `crates/kinograph/src/author.rs`: typed Scene Plan builder and stable actor/channel handles for lightweight Scene Programs
+- `crates/kinograph/src/plan.rs`: versioned renderer-independent Scene Plan values and structured validation
+- `crates/kinograph/src/state.rs`: deterministic arbitrary-time discrete State Tracks
+- `crates/kinograph/src/terminal.rs`: lightweight terminal-recording recipe values for planned video media
+- `crates/kinograph/src/timeline.rs`: relative Animation and explicit-time continuous Property Track compilation
+- `crates/kinograph/src/motion.rs`: deterministic arbitrary-time analytic spring sampling with position and velocity
+- `crates/kinograph/src/transcript.rs`: word timing ingestion and semantic cue lookup
+- `crates/kinograph-render/src/render.rs`: concrete headless `wgpu` renderer, sprite compositor, and code annotations
+- `crates/kinograph-render/src/render/effects/`: independent pixel recipes for interchangeable short annotation effects
+- `crates/kinograph-render/src/render/task.rs`: concrete Effect Task recipe and compositing
+- `crates/kinograph-render/src/render/terminal.rs`: concrete terminal recording and command-file presentation
+- `crates/kinograph-render/src/render/ui.rs`: private bounds, inset, split, and flow layout primitives for pixel UI
+- `crates/kinograph-render/src/render/ui/card.rs`: shared immediate-mode RGBA composition and projected card presentation used by editor and recorded-video producers
+- `crates/kinograph-render/src/encode.rs`: concrete FFmpeg subprocess, raw RGBA protocol, and compiled audio placement
+- `crates/kinograph-render/src/scenes/`: one concrete choreography Module per renderable scene plus shared sampling and encoding mechanics
+- `crates/kinograph-render/src/scenes/effect_institute.rs`: private adapter from pinned published lesson artifacts into stable code, Task overlays, and stitched chapter schedules
+- `crates/kinograph-render/src/main.rs`: command parsing, output selection, and scene dispatch
+- `crates/kinograph/src/lib.rs`: lightweight public library boundary used by Rust Scene Programs
+- `crates/kinograph-render/src/plan_runtime.rs`: Scene Plan inspection, validation, rendering, and persistent JSON server
+- `crates/kinograph-render/src/plan_runtime/editor.rs`: concrete editor and attached pointer Scene Plan recipe
+- `crates/kinograph-render/src/plan_runtime/terminal.rs`: concrete planned terminal-recording recipe and video source-time mapping
+- `scenes/`: lightweight Rust Scene Programs that emit Scene Plans
+- `scenes/hero/`: canonical editor-heavy Scene Program and generated plan used by the default render command
+- `scenes/opencode-session-tool/`: narration-rich OpenCode v2 plugin lesson using planned terminal video, audio, text, and discrete state
+- `crates/kinograph-render/src/scene.wgsl`: editor geometry and focus shader
 
-Preserve these boundaries unless a concrete scene or second implementation demonstrates a better seam. In particular, do not introduce a generic scene graph, renderer or encoder traits, plugins, extra crates, or a speculative authoring DSL merely for future flexibility.
+Preserve these boundaries unless a concrete scene or second implementation demonstrates a better seam. The lightweight `kinograph` and heavyweight `kinograph-render` crates are a demonstrated process and compilation seam. Do not introduce a generic scene graph, renderer or encoder traits, plugins, or additional crate splits merely for future flexibility.
 
 ## Engineering Rules
 
@@ -78,4 +95,4 @@ Preserve these boundaries unless a concrete scene or second implementation demon
 - For renderer or encoder changes, supplement automated checks with a targeted artifact render and inspect the result at full scale.
 - When performance changes, compare the same resolution, frame count, temporal sample count, and build profile before claiming an improvement.
 
-Before finishing a code change, run `cargo test`, `cargo fmt --check`, and strict Clippy. State explicitly if GPU, font, or FFmpeg constraints prevented artifact-level verification.
+Before finishing a code change, run `cargo test --workspace`, `cargo fmt --check`, and strict workspace Clippy. State explicitly if GPU, font, or FFmpeg constraints prevented artifact-level verification.

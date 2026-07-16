@@ -1,0 +1,5 @@
+00:00.500  This session starts without session greeting.
+00:03.400  OpenCode creates the plugin inside this live conversation.
+00:07.000  The watcher loads it immediately. The session never restarts.
+00:10.400  Now that same session calls the new tool.
+00:12.400  Hot reload worked. Hello, Ada. That's the proof.

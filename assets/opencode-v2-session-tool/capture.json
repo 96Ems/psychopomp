@@ -1,0 +1,29 @@
+{
+  "opencodeDrive": {
+    "path": "/Users/kit/code/open-source/opencode-drive",
+    "version": "0.5.0",
+    "commit": "5f2df7ec3e536e393c48814e874f9a3a23c4f192"
+  },
+  "opencodeVersion": "0.0.0-next-15652",
+  "raw": {
+    "path": "live-hot-reload-raw.mp4",
+    "width": 1120,
+    "height": 640,
+    "fps": 25,
+    "durationNanos": 3080000000,
+    "frames": 62
+  },
+  "presentation": {
+    "path": "live-hot-reload.mp4",
+    "fps": 25,
+    "durationNanos": 12280000000,
+    "eventfulPlaybackSpeed": 0.16666666666666666,
+    "omittedRawRanges": [
+      {
+        "startNanos": 1666667000,
+        "endNanos": 2680000000,
+        "reason": "unchanged model wait"
+      }
+    ]
+  }
+}

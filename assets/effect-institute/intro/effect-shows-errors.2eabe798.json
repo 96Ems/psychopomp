@@ -1,0 +1,1940 @@
+{
+	"id": "effect-shows-errors",
+	"text": "Here is the Effect version of slowDie. It still gets a random number, takes a non-blocking, 1 second nap, and then returns the result. Let's make it lethal. If the roll is 4, we will fail with our trusty VeryBadRoll. And finally, we have a type error! The error type propagates from Effect.fail to the surrounding effect. We are forced to reckon with it. Welcome to TypeScript.",
+	"code": "\nconst slowDie: Effect.Effect<number> = Effect.gen(function* () {\n  const n = yield* Random.nextIntBetween(1, 7)\n  yield* Effect.sleep(\"1 second\")\n  return n\n})",
+	"contentHash": "-6a5y6s",
+	"wordTimings": [
+		{
+			"word": "Here",
+			"start": 0.1,
+			"end": 0.38
+		},
+		{
+			"word": "is",
+			"start": 0.44000000000000006,
+			"end": 0.541
+		},
+		{
+			"word": "the",
+			"start": 0.6000000000000001,
+			"end": 0.661
+		},
+		{
+			"word": "Effect",
+			"start": 0.7000000000000001,
+			"end": 1.0599999999999998,
+			"style": {
+				"bold": true
+			}
+		},
+		{
+			"word": "version",
+			"start": 1.161,
+			"end": 1.68
+		},
+		{
+			"word": "of",
+			"start": 1.74,
+			"end": 1.82
+		},
+		{
+			"word": "slowDie.",
+			"start": 1.9599999999999997,
+			"end": 2.64,
+			"style": {
+				"code": true
+			}
+		},
+		{
+			"word": "It",
+			"start": 3.5410000000000004,
+			"end": 3.66
+		},
+		{
+			"word": "still",
+			"start": 3.7,
+			"end": 3.9800000000000004
+		},
+		{
+			"word": "gets",
+			"start": 4.04,
+			"end": 4.221
+		},
+		{
+			"word": "a",
+			"start": 4.261,
+			"end": 4.301
+		},
+		{
+			"word": "random",
+			"start": 4.36,
+			"end": 4.640000000000001
+		},
+		{
+			"word": "number,",
+			"start": 4.7410000000000005,
+			"end": 5.04
+		},
+		{
+			"word": "takes",
+			"start": 5.761,
+			"end": 6.08
+		},
+		{
+			"word": "a",
+			"start": 6.221,
+			"end": 6.2410000000000005
+		},
+		{
+			"word": "non-blocking,",
+			"start": 6.36,
+			"end": 7.12
+		},
+		{
+			"word": "1",
+			"start": 7.44,
+			"end": 7.48
+		},
+		{
+			"word": "second",
+			"start": 7.62,
+			"end": 7.98
+		},
+		{
+			"word": "nap,",
+			"start": 8.141,
+			"end": 8.4
+		},
+		{
+			"word": "and",
+			"start": 9.16,
+			"end": 9.24
+		},
+		{
+			"word": "then",
+			"start": 9.28,
+			"end": 9.38
+		},
+		{
+			"word": "returns",
+			"start": 9.42,
+			"end": 9.861
+		},
+		{
+			"word": "the",
+			"start": 9.9,
+			"end": 9.96
+		},
+		{
+			"word": "result.",
+			"start": 10,
+			"end": 10.4
+		},
+		{
+			"word": "Let's",
+			"start": 11.48,
+			"end": 11.78,
+			"paragraphBreak": true
+		},
+		{
+			"word": "make",
+			"start": 11.86,
+			"end": 12
+		},
+		{
+			"word": "it",
+			"start": 12.040000000000001,
+			"end": 12.120000000000001
+		},
+		{
+			"word": "lethal.",
+			"start": 12.221,
+			"end": 12.6
+		},
+		{
+			"word": "If",
+			"start": 13.92,
+			"end": 14.061
+		},
+		{
+			"word": "the",
+			"start": 14.08,
+			"end": 14.141
+		},
+		{
+			"word": "roll",
+			"start": 14.181000000000001,
+			"end": 14.36
+		},
+		{
+			"word": "is",
+			"start": 14.42,
+			"end": 14.56
+		},
+		{
+			"word": "4,",
+			"start": 14.98,
+			"end": 15.06
+		},
+		{
+			"word": "we",
+			"start": 15.36,
+			"end": 15.44
+		},
+		{
+			"word": "will",
+			"start": 15.48,
+			"end": 15.701
+		},
+		{
+			"word": "fail",
+			"start": 15.74,
+			"end": 15.981
+		},
+		{
+			"word": "with",
+			"start": 16.02,
+			"end": 16.16
+		},
+		{
+			"word": "our",
+			"start": 16.241,
+			"end": 16.38
+		},
+		{
+			"word": "trusty",
+			"start": 16.52,
+			"end": 17.02
+		},
+		{
+			"word": "VeryBadRoll.",
+			"start": 17.221,
+			"end": 18.221,
+			"style": {
+				"code": true
+			}
+		},
+		{
+			"word": "And",
+			"start": 19.54,
+			"end": 19.820999999999998,
+			"paragraphBreak": true
+		},
+		{
+			"word": "finally,",
+			"start": 19.901,
+			"end": 20.320999999999998
+		},
+		{
+			"word": "we",
+			"start": 20.939999999999998,
+			"end": 21.081
+		},
+		{
+			"word": "have",
+			"start": 21.18,
+			"end": 21.320999999999998
+		},
+		{
+			"word": "a",
+			"start": 21.38,
+			"end": 21.439999999999998
+		},
+		{
+			"word": "type",
+			"start": 21.52,
+			"end": 21.721
+		},
+		{
+			"word": "error!",
+			"start": 21.801,
+			"end": 22.02
+		},
+		{
+			"word": "The",
+			"start": 23.141,
+			"end": 23.2
+		},
+		{
+			"word": "error",
+			"start": 23.319999999999997,
+			"end": 23.480999999999998
+		},
+		{
+			"word": "type",
+			"start": 23.58,
+			"end": 23.919999999999998
+		},
+		{
+			"word": "propagates",
+			"start": 23.959999999999997,
+			"end": 24.58
+		},
+		{
+			"word": "from",
+			"start": 24.641,
+			"end": 24.74
+		},
+		{
+			"word": "Effect.fail",
+			"start": 24.88,
+			"end": 25.801,
+			"style": {
+				"code": true
+			}
+		},
+		{
+			"word": "to",
+			"start": 25.86,
+			"end": 26.061
+		},
+		{
+			"word": "the",
+			"start": 26.099999999999998,
+			"end": 26.141
+		},
+		{
+			"word": "surrounding",
+			"start": 26.24,
+			"end": 26.619999999999997
+		},
+		{
+			"word": "effect.",
+			"start": 26.66,
+			"end": 27.08
+		},
+		{
+			"word": "We",
+			"start": 27.801,
+			"end": 27.88
+		},
+		{
+			"word": "are",
+			"start": 27.9,
+			"end": 28.081
+		},
+		{
+			"word": "forced",
+			"start": 28.141,
+			"end": 28.58
+		},
+		{
+			"word": "to",
+			"start": 28.641,
+			"end": 28.779999999999998
+		},
+		{
+			"word": "reckon",
+			"start": 28.819999999999997,
+			"end": 29.061
+		},
+		{
+			"word": "with",
+			"start": 29.119999999999997,
+			"end": 29.259999999999998
+		},
+		{
+			"word": "it.",
+			"start": 29.319999999999997,
+			"end": 29.479999999999997
+		},
+		{
+			"word": "Welcome",
+			"start": 30.4,
+			"end": 30.721,
+			"paragraphBreak": true
+		},
+		{
+			"word": "to",
+			"start": 30.801,
+			"end": 30.86
+		},
+		{
+			"word": "TypeScript.",
+			"start": 30.979999999999997,
+			"end": 31.599999999999998
+		}
+	],
+	"slideshowData": {
+		"template": {
+			"lines": {
+				"comment": {
+					"parts": {
+						"commentText:error/0": {
+							"tokens": [
+								{
+									"text": "// > VeryBadRoll is not assignable to never",
+									"type": "default",
+									"color": "#6A737D"
+								}
+							],
+							"animateEntry": true,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"commentText:error/0"
+					]
+				},
+				"sig": {
+					"parts": {
+						"p0": {
+							"tokens": [
+								{
+									"text": "const",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "slowDie",
+									"type": "default",
+									"color": "#79B8FF"
+								},
+								{
+									"text": ":",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "Effect",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": ".",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "Effect",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": "<",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "number",
+									"type": "default",
+									"color": "#79B8FF"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						},
+						"errorType:shown/0": {
+							"tokens": [
+								{
+									"text": ", ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "VeryBadRoll",
+									"type": "default",
+									"color": "#B392F0"
+								}
+							],
+							"animateEntry": true,
+							"crossfade": false
+						},
+						"p1": {
+							"tokens": [
+								{
+									"text": "> ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "=",
+									"type": "default",
+									"color": "#F97583"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						},
+						"genInline:inline/0": {
+							"tokens": [
+								{
+									"text": " Effect.",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "gen",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": "(",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "function*",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " () {",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"p0",
+						"errorType:shown/0",
+						"p1",
+						"genInline:inline/0"
+					]
+				},
+				"random": {
+					"parts": {
+						"indent:*/0": {
+							"tokens": [
+								{
+									"text": "  ",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": true,
+							"versions": {
+								"  ": [
+									{
+										"text": "  ",
+										"type": "default",
+										"color": "#E1E4E8"
+									}
+								],
+								"    ": [
+									{
+										"text": "    ",
+										"type": "default",
+										"color": "#E1E4E8"
+									}
+								]
+							}
+						},
+						"p0": {
+							"tokens": [
+								{
+									"text": "const",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "n",
+									"type": "default",
+									"color": "#79B8FF"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "=",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "yield*",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " Random.",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "nextIntBetween",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": "(",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "1",
+									"type": "default",
+									"color": "#79B8FF"
+								},
+								{
+									"text": ", ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "7",
+									"type": "default",
+									"color": "#79B8FF"
+								},
+								{
+									"text": ")",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"indent:*/0",
+						"p0"
+					]
+				},
+				"sleep": {
+					"parts": {
+						"indent:*/0": {
+							"tokens": [
+								{
+									"text": "  ",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": true,
+							"versions": {
+								"  ": [
+									{
+										"text": "  ",
+										"type": "default",
+										"color": "#E1E4E8"
+									}
+								],
+								"    ": [
+									{
+										"text": "    ",
+										"type": "default",
+										"color": "#E1E4E8"
+									}
+								]
+							}
+						},
+						"p0": {
+							"tokens": [
+								{
+									"text": "yield*",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " Effect.",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "sleep",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": "(",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "\"1 second\"",
+									"type": "default",
+									"color": "#9ECBFF"
+								},
+								{
+									"text": ")",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"indent:*/0",
+						"p0"
+					]
+				},
+				"return": {
+					"parts": {
+						"indent:*/0": {
+							"tokens": [
+								{
+									"text": "  ",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": true,
+							"versions": {
+								"  ": [
+									{
+										"text": "  ",
+										"type": "default",
+										"color": "#E1E4E8"
+									}
+								],
+								"    ": [
+									{
+										"text": "    ",
+										"type": "default",
+										"color": "#E1E4E8"
+									}
+								]
+							}
+						},
+						"p0": {
+							"tokens": [
+								{
+									"text": "return",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " n",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"indent:*/0",
+						"p0"
+					]
+				},
+				"close": {
+					"parts": {
+						"closeIndent:indented/0": {
+							"tokens": [
+								{
+									"text": "  ",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": true,
+							"crossfade": false
+						},
+						"p0": {
+							"tokens": [
+								{
+									"text": "})",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"closeIndent:indented/0",
+						"p0"
+					]
+				},
+				"gen": {
+					"parts": {
+						"p0": {
+							"tokens": [
+								{
+									"text": "  Effect.",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "gen",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": "(",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "function*",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " () {",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"p0"
+					]
+				},
+				"fail": {
+					"parts": {
+						"indent:indented/0": {
+							"tokens": [
+								{
+									"text": "    ",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						},
+						"p0": {
+							"tokens": [
+								{
+									"text": "if",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " (n ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "===",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "4",
+									"type": "default",
+									"color": "#79B8FF"
+								},
+								{
+									"text": ")",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						},
+						"failAction:*/0": {
+							"tokens": [
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "...",
+									"type": "default",
+									"color": "#F97583"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": true,
+							"versions": {
+								" ...": [
+									{
+										"text": " ",
+										"type": "default",
+										"color": "#E1E4E8"
+									},
+									{
+										"text": "...",
+										"type": "default",
+										"color": "#F97583"
+									}
+								],
+								" yield* Effect.fail(new VeryBadRoll())": [
+									{
+										"text": " ",
+										"type": "default",
+										"color": "#E1E4E8"
+									},
+									{
+										"text": "yield*",
+										"type": "default",
+										"color": "#F97583"
+									},
+									{
+										"text": " Effect.",
+										"type": "default",
+										"color": "#E1E4E8"
+									},
+									{
+										"text": "fail",
+										"type": "default",
+										"color": "#B392F0"
+									},
+									{
+										"text": "(",
+										"type": "default",
+										"color": "#E1E4E8"
+									},
+									{
+										"text": "new",
+										"type": "default",
+										"color": "#F97583"
+									},
+									{
+										"text": " ",
+										"type": "default",
+										"color": "#E1E4E8"
+									},
+									{
+										"text": "VeryBadRoll",
+										"type": "default",
+										"color": "#B392F0"
+									},
+									{
+										"text": "())",
+										"type": "default",
+										"color": "#E1E4E8"
+									}
+								]
+							}
+						}
+					},
+					"partOrder": [
+						"indent:indented/0",
+						"p0",
+						"failAction:*/0"
+					]
+				}
+			}
+		},
+		"frames": [
+			{
+				"id": 0,
+				"lineOrder": [
+					"comment",
+					"sig",
+					"random",
+					"sleep",
+					"return",
+					"close"
+				],
+				"state": {
+					"comment": {
+						"parts": {
+							"commentText:error/0": false
+						},
+						"entering": true
+					},
+					"sig": {
+						"parts": {
+							"p0": true,
+							"errorType:shown/0": false,
+							"p1": true,
+							"genInline:inline/0": true
+						},
+						"entering": true
+					},
+					"random": {
+						"parts": {
+							"indent:*/0": "  ",
+							"p0": true
+						},
+						"entering": true
+					},
+					"sleep": {
+						"parts": {
+							"indent:*/0": "  ",
+							"p0": true
+						},
+						"entering": true
+					},
+					"return": {
+						"parts": {
+							"indent:*/0": "  ",
+							"p0": true
+						},
+						"entering": true
+					},
+					"close": {
+						"parts": {
+							"closeIndent:indented/0": false,
+							"p0": true
+						},
+						"entering": true
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"bursts": []
+			},
+			{
+				"id": 1,
+				"lineOrder": [
+					"comment",
+					"sig",
+					"random",
+					"sleep",
+					"return",
+					"close"
+				],
+				"state": {
+					"comment": {
+						"parts": {
+							"commentText:error/0": false
+						}
+					},
+					"sig": {
+						"parts": {
+							"p0": true,
+							"errorType:shown/0": false,
+							"p1": true,
+							"genInline:inline/0": true
+						}
+					},
+					"random": {
+						"parts": {
+							"indent:*/0": "  ",
+							"p0": true
+						}
+					},
+					"sleep": {
+						"parts": {
+							"indent:*/0": "  ",
+							"p0": true
+						}
+					},
+					"return": {
+						"parts": {
+							"indent:*/0": "  ",
+							"p0": true
+						}
+					},
+					"close": {
+						"parts": {
+							"closeIndent:indented/0": false,
+							"p0": true
+						}
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"cursor": {
+					"lineIndex": 1,
+					"charOffset": 15,
+					"textLength": 21,
+					"type": "hand"
+				},
+				"bursts": []
+			},
+			{
+				"id": 2,
+				"lineOrder": [
+					"comment",
+					"sig",
+					"random",
+					"sleep",
+					"return",
+					"close"
+				],
+				"state": {
+					"comment": {
+						"parts": {
+							"commentText:error/0": false
+						}
+					},
+					"sig": {
+						"parts": {
+							"p0": true,
+							"errorType:shown/0": false,
+							"p1": true,
+							"genInline:inline/0": true
+						}
+					},
+					"random": {
+						"parts": {
+							"indent:*/0": "  ",
+							"p0": true
+						}
+					},
+					"sleep": {
+						"parts": {
+							"indent:*/0": "  ",
+							"p0": true
+						}
+					},
+					"return": {
+						"parts": {
+							"indent:*/0": "  ",
+							"p0": true
+						}
+					},
+					"close": {
+						"parts": {
+							"closeIndent:indented/0": false,
+							"p0": true
+						}
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"cursor": {
+					"lineIndex": 1,
+					"charOffset": 6,
+					"textLength": 7,
+					"type": "hand"
+				},
+				"bursts": []
+			},
+			{
+				"id": 3,
+				"lineOrder": [
+					"comment",
+					"sig",
+					"random",
+					"sleep",
+					"return",
+					"close"
+				],
+				"state": {
+					"comment": {
+						"parts": {
+							"commentText:error/0": false
+						},
+						"dimmed": true
+					},
+					"sig": {
+						"parts": {
+							"p0": true,
+							"errorType:shown/0": false,
+							"p1": true,
+							"genInline:inline/0": true
+						},
+						"dimmed": true
+					},
+					"random": {
+						"parts": {
+							"indent:*/0": "  ",
+							"p0": true
+						}
+					},
+					"sleep": {
+						"parts": {
+							"indent:*/0": "  ",
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"return": {
+						"parts": {
+							"indent:*/0": "  ",
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"close": {
+						"parts": {
+							"closeIndent:indented/0": false,
+							"p0": true
+						},
+						"dimmed": true
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"cursor": {
+					"lineIndex": 2,
+					"charOffset": 19,
+					"textLength": 21,
+					"type": "hand"
+				},
+				"bursts": []
+			},
+			{
+				"id": 4,
+				"lineOrder": [
+					"comment",
+					"sig",
+					"random",
+					"sleep",
+					"return",
+					"close"
+				],
+				"state": {
+					"comment": {
+						"parts": {
+							"commentText:error/0": false
+						},
+						"dimmed": true
+					},
+					"sig": {
+						"parts": {
+							"p0": true,
+							"errorType:shown/0": false,
+							"p1": true,
+							"genInline:inline/0": true
+						},
+						"dimmed": true
+					},
+					"random": {
+						"parts": {
+							"indent:*/0": "  ",
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"sleep": {
+						"parts": {
+							"indent:*/0": "  ",
+							"p0": true
+						}
+					},
+					"return": {
+						"parts": {
+							"indent:*/0": "  ",
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"close": {
+						"parts": {
+							"closeIndent:indented/0": false,
+							"p0": true
+						},
+						"dimmed": true
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"cursor": {
+					"lineIndex": 3,
+					"charOffset": 9,
+					"textLength": 12,
+					"type": "hand"
+				},
+				"bursts": []
+			},
+			{
+				"id": 5,
+				"lineOrder": [
+					"comment",
+					"sig",
+					"random",
+					"sleep",
+					"return",
+					"close"
+				],
+				"state": {
+					"comment": {
+						"parts": {
+							"commentText:error/0": false
+						}
+					},
+					"sig": {
+						"parts": {
+							"p0": true,
+							"errorType:shown/0": false,
+							"p1": true,
+							"genInline:inline/0": true
+						}
+					},
+					"random": {
+						"parts": {
+							"indent:*/0": "  ",
+							"p0": true
+						}
+					},
+					"sleep": {
+						"parts": {
+							"indent:*/0": "  ",
+							"p0": true
+						}
+					},
+					"return": {
+						"parts": {
+							"indent:*/0": "  ",
+							"p0": true
+						}
+					},
+					"close": {
+						"parts": {
+							"closeIndent:indented/0": false,
+							"p0": true
+						}
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"bursts": []
+			},
+			{
+				"id": 6,
+				"lineOrder": [
+					"comment",
+					"sig",
+					"gen",
+					"random",
+					"sleep",
+					"return",
+					"close"
+				],
+				"state": {
+					"comment": {
+						"parts": {
+							"commentText:error/0": false
+						}
+					},
+					"sig": {
+						"parts": {
+							"p0": true,
+							"errorType:shown/0": false,
+							"p1": true,
+							"genInline:inline/0": false
+						}
+					},
+					"gen": {
+						"parts": {
+							"p0": true
+						},
+						"entering": true
+					},
+					"random": {
+						"parts": {
+							"indent:*/0": "    ",
+							"p0": true
+						}
+					},
+					"sleep": {
+						"parts": {
+							"indent:*/0": "    ",
+							"p0": true
+						}
+					},
+					"return": {
+						"parts": {
+							"indent:*/0": "    ",
+							"p0": true
+						}
+					},
+					"close": {
+						"parts": {
+							"closeIndent:indented/0": true,
+							"p0": true
+						}
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"bursts": []
+			},
+			{
+				"id": 7,
+				"lineOrder": [
+					"comment",
+					"sig",
+					"gen",
+					"random",
+					"sleep",
+					"fail",
+					"return",
+					"close"
+				],
+				"state": {
+					"comment": {
+						"parts": {
+							"commentText:error/0": false
+						},
+						"dimmed": true
+					},
+					"sig": {
+						"parts": {
+							"p0": true,
+							"errorType:shown/0": false,
+							"p1": true,
+							"genInline:inline/0": false
+						},
+						"dimmed": true
+					},
+					"gen": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"random": {
+						"parts": {
+							"indent:*/0": "    ",
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"sleep": {
+						"parts": {
+							"indent:*/0": "    ",
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"fail": {
+						"parts": {
+							"indent:indented/0": true,
+							"p0": true,
+							"failAction:*/0": " ..."
+						},
+						"entering": true
+					},
+					"return": {
+						"parts": {
+							"indent:*/0": "    ",
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"close": {
+						"parts": {
+							"closeIndent:indented/0": true,
+							"p0": true
+						},
+						"dimmed": true
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"cursor": {
+					"lineIndex": 5,
+					"charOffset": 7,
+					"textLength": 9,
+					"type": "hand"
+				},
+				"bursts": []
+			},
+			{
+				"id": 8,
+				"lineOrder": [
+					"comment",
+					"sig",
+					"gen",
+					"random",
+					"sleep",
+					"fail",
+					"return",
+					"close"
+				],
+				"state": {
+					"comment": {
+						"parts": {
+							"commentText:error/0": false
+						},
+						"dimmed": true
+					},
+					"sig": {
+						"parts": {
+							"p0": true,
+							"errorType:shown/0": false,
+							"p1": true,
+							"genInline:inline/0": false
+						},
+						"dimmed": true
+					},
+					"gen": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"random": {
+						"parts": {
+							"indent:*/0": "    ",
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"sleep": {
+						"parts": {
+							"indent:*/0": "    ",
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"fail": {
+						"parts": {
+							"indent:indented/0": true,
+							"p0": true,
+							"failAction:*/0": " yield* Effect.fail(new VeryBadRoll())"
+						}
+					},
+					"return": {
+						"parts": {
+							"indent:*/0": "    ",
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"close": {
+						"parts": {
+							"closeIndent:indented/0": true,
+							"p0": true
+						},
+						"dimmed": true
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"cursor": {
+					"lineIndex": 5,
+					"charOffset": 40,
+					"textLength": 11,
+					"type": "hand"
+				},
+				"bursts": []
+			},
+			{
+				"id": 9,
+				"lineOrder": [
+					"comment",
+					"sig",
+					"gen",
+					"random",
+					"sleep",
+					"fail",
+					"return",
+					"close"
+				],
+				"state": {
+					"comment": {
+						"parts": {
+							"commentText:error/0": true
+						}
+					},
+					"sig": {
+						"parts": {
+							"p0": true,
+							"errorType:shown/0": false,
+							"p1": true,
+							"genInline:inline/0": false
+						}
+					},
+					"gen": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"random": {
+						"parts": {
+							"indent:*/0": "    ",
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"sleep": {
+						"parts": {
+							"indent:*/0": "    ",
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"fail": {
+						"parts": {
+							"indent:indented/0": true,
+							"p0": true,
+							"failAction:*/0": " yield* Effect.fail(new VeryBadRoll())"
+						},
+						"dimmed": true
+					},
+					"return": {
+						"parts": {
+							"indent:*/0": "    ",
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"close": {
+						"parts": {
+							"closeIndent:indented/0": true,
+							"p0": true
+						},
+						"dimmed": true
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [
+					{
+						"lineIndex": 1,
+						"start": 15,
+						"end": 36,
+						"color": "red"
+					}
+				],
+				"brightRanges": [],
+				"bursts": []
+			},
+			{
+				"id": 10,
+				"lineOrder": [
+					"comment",
+					"sig",
+					"gen",
+					"random",
+					"sleep",
+					"fail",
+					"return",
+					"close"
+				],
+				"state": {
+					"comment": {
+						"parts": {
+							"commentText:error/0": true
+						}
+					},
+					"sig": {
+						"parts": {
+							"p0": true,
+							"errorType:shown/0": false,
+							"p1": true,
+							"genInline:inline/0": false
+						}
+					},
+					"gen": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"random": {
+						"parts": {
+							"indent:*/0": "    ",
+							"p0": true
+						}
+					},
+					"sleep": {
+						"parts": {
+							"indent:*/0": "    ",
+							"p0": true
+						}
+					},
+					"fail": {
+						"parts": {
+							"indent:indented/0": true,
+							"p0": true,
+							"failAction:*/0": " yield* Effect.fail(new VeryBadRoll())"
+						}
+					},
+					"return": {
+						"parts": {
+							"indent:*/0": "    ",
+							"p0": true
+						}
+					},
+					"close": {
+						"parts": {
+							"closeIndent:indented/0": true,
+							"p0": true
+						}
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [
+					{
+						"lineIndex": 1,
+						"start": 15,
+						"end": 36,
+						"color": "red"
+					}
+				],
+				"brightRanges": [],
+				"cursor": {
+					"lineIndex": 5,
+					"charOffset": 24,
+					"textLength": 11,
+					"type": "hand"
+				},
+				"bursts": []
+			},
+			{
+				"id": 11,
+				"lineOrder": [
+					"comment",
+					"sig",
+					"gen",
+					"random",
+					"sleep",
+					"fail",
+					"return",
+					"close"
+				],
+				"state": {
+					"comment": {
+						"parts": {
+							"commentText:error/0": false
+						}
+					},
+					"sig": {
+						"parts": {
+							"p0": true,
+							"errorType:shown/0": true,
+							"p1": true,
+							"genInline:inline/0": false
+						}
+					},
+					"gen": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"random": {
+						"parts": {
+							"indent:*/0": "    ",
+							"p0": true
+						}
+					},
+					"sleep": {
+						"parts": {
+							"indent:*/0": "    ",
+							"p0": true
+						}
+					},
+					"fail": {
+						"parts": {
+							"indent:indented/0": true,
+							"p0": true,
+							"failAction:*/0": " yield* Effect.fail(new VeryBadRoll())"
+						}
+					},
+					"return": {
+						"parts": {
+							"indent:*/0": "    ",
+							"p0": true
+						}
+					},
+					"close": {
+						"parts": {
+							"closeIndent:indented/0": true,
+							"p0": true
+						}
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"cursor": {
+					"lineIndex": 1,
+					"charOffset": 37,
+					"textLength": 11,
+					"type": "hand"
+				},
+				"bursts": [
+					{
+						"lineIndex": 1,
+						"charOffset": 37,
+						"textLength": 11,
+						"emoji": [
+							"🎉"
+						],
+						"count": 5
+					}
+				],
+				"sound": "success"
+			},
+			{
+				"id": 12,
+				"lineOrder": [
+					"comment",
+					"sig",
+					"gen",
+					"random",
+					"sleep",
+					"fail",
+					"return",
+					"close"
+				],
+				"state": {
+					"comment": {
+						"parts": {
+							"commentText:error/0": false
+						}
+					},
+					"sig": {
+						"parts": {
+							"p0": true,
+							"errorType:shown/0": true,
+							"p1": true,
+							"genInline:inline/0": false
+						}
+					},
+					"gen": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"random": {
+						"parts": {
+							"indent:*/0": "    ",
+							"p0": true
+						}
+					},
+					"sleep": {
+						"parts": {
+							"indent:*/0": "    ",
+							"p0": true
+						}
+					},
+					"fail": {
+						"parts": {
+							"indent:indented/0": true,
+							"p0": true,
+							"failAction:*/0": " yield* Effect.fail(new VeryBadRoll())"
+						}
+					},
+					"return": {
+						"parts": {
+							"indent:*/0": "    ",
+							"p0": true
+						}
+					},
+					"close": {
+						"parts": {
+							"closeIndent:indented/0": true,
+							"p0": true
+						}
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"bursts": []
+			}
+		]
+	},
+	"steps": [
+		{
+			"name": "start",
+			"at": "start"
+		},
+		{
+			"name": "Effect",
+			"at": "Effect"
+		},
+		{
+			"name": "slowDie",
+			"at": "slowDie"
+		},
+		{
+			"name": "random",
+			"at": "random"
+		},
+		{
+			"name": "non-blocking",
+			"at": "non-blocking"
+		},
+		{
+			"name": "result",
+			"at": "result"
+		},
+		{
+			"name": "lethal",
+			"at": "lethal"
+		},
+		{
+			"name": "roll",
+			"at": "roll"
+		},
+		{
+			"name": "fail",
+			"at": "fail"
+		},
+		{
+			"name": "finally",
+			"at": "finally"
+		},
+		{
+			"name": "propagates",
+			"at": "propagates"
+		},
+		{
+			"name": "reckon",
+			"at": "reckon"
+		},
+		{
+			"name": "TypeScript",
+			"at": "TypeScript"
+		}
+	],
+	"stepTimes": [
+		0,
+		0.55,
+		1.8099999999999998,
+		4.21,
+		6.21,
+		9.85,
+		12.071,
+		14.031,
+		15.59,
+		19.751,
+		23.81,
+		28.669999999999998,
+		30.83
+	],
+	"_debug": {
+		"timingsStatus": "matched",
+		"dslWordCount": 67
+	},
+	"groupId": "effect-solution",
+	"groupTitle": "Typed Errors — Failing Up",
+	"isFirstInGroup": false,
+	"audioFile": "effect-shows-errors.18373af5.webm"
+}

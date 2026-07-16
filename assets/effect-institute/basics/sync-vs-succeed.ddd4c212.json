@@ -1,0 +1,3656 @@
+{
+	"id": "sync-vs-succeed",
+	"text": "It's worth clarifying a subtle distinction between Effect.succeed and Effect.sync. With succeed, the value is captured when the effect is first created. If we pass in new Date(), it will once and forever return that exact Date. When we run it, we'll get the original Date. Try again later, same Date. Tomorrow? That same God-forsaken Date. With sync, the computation is suspended within a thunk. When we run it, the thunk is called, and we get a brand new Date. When we run it again, it's re-executed, and we get another pristine Date.",
+	"code": "import { Effect } from \"effect\"\n\nconst getDate = Effect.succeed(new Date())",
+	"contentHash": "9y4ik8",
+	"wordTimings": [
+		{
+			"word": "It's",
+			"start": 0.09999999999999998,
+			"end": 0.33999999999999997
+		},
+		{
+			"word": "worth",
+			"start": 0.4,
+			"end": 0.64
+		},
+		{
+			"word": "clarifying",
+			"start": 0.741,
+			"end": 1.42
+		},
+		{
+			"word": "a",
+			"start": 1.5,
+			"end": 1.6600000000000001
+		},
+		{
+			"word": "subtle",
+			"start": 1.7200000000000002,
+			"end": 1.9810000000000003
+		},
+		{
+			"word": "distinction",
+			"start": 2.04,
+			"end": 2.741
+		},
+		{
+			"word": "between",
+			"start": 2.7800000000000002,
+			"end": 3.18
+		},
+		{
+			"word": "Effect.succeed",
+			"start": 3.3000000000000003,
+			"end": 4.54,
+			"style": {
+				"code": true
+			}
+		},
+		{
+			"word": "and",
+			"start": 4.6209999999999996,
+			"end": 4.741
+		},
+		{
+			"word": "Effect.sync.",
+			"start": 4.9399999999999995,
+			"end": 6.06,
+			"style": {
+				"code": true
+			}
+		},
+		{
+			"word": "With",
+			"start": 7.26,
+			"end": 7.38,
+			"paragraphBreak": true
+		},
+		{
+			"word": "succeed,",
+			"start": 7.4799999999999995,
+			"end": 8.001,
+			"style": {
+				"code": true
+			}
+		},
+		{
+			"word": "the",
+			"start": 8.581,
+			"end": 8.661
+		},
+		{
+			"word": "value",
+			"start": 8.741,
+			"end": 9.02
+		},
+		{
+			"word": "is",
+			"start": 9.06,
+			"end": 9.241
+		},
+		{
+			"word": "captured",
+			"start": 9.299999999999999,
+			"end": 9.84
+		},
+		{
+			"word": "when",
+			"start": 9.879999999999999,
+			"end": 10.001
+		},
+		{
+			"word": "the",
+			"start": 10.02,
+			"end": 10.081
+		},
+		{
+			"word": "effect",
+			"start": 10.139999999999999,
+			"end": 10.48
+		},
+		{
+			"word": "is",
+			"start": 10.52,
+			"end": 10.661
+		},
+		{
+			"word": "first",
+			"start": 10.741,
+			"end": 11.02
+		},
+		{
+			"word": "created.",
+			"start": 11.201,
+			"end": 11.76
+		},
+		{
+			"word": "If",
+			"start": 12.54,
+			"end": 12.639999999999999
+		},
+		{
+			"word": "we",
+			"start": 12.701,
+			"end": 12.82
+		},
+		{
+			"word": "pass",
+			"start": 12.9,
+			"end": 13.18
+		},
+		{
+			"word": "in",
+			"start": 13.28,
+			"end": 13.5
+		},
+		{
+			"word": "new Date(),",
+			"start": 14,
+			"end": 14.639999999999999,
+			"style": {
+				"code": true
+			}
+		},
+		{
+			"word": "it",
+			"start": 15.32,
+			"end": 15.4
+		},
+		{
+			"word": "will",
+			"start": 15.459999999999999,
+			"end": 15.58
+		},
+		{
+			"word": "once",
+			"start": 15.661,
+			"end": 16.06
+		},
+		{
+			"word": "and",
+			"start": 16.12,
+			"end": 16.261
+		},
+		{
+			"word": "forever",
+			"start": 16.36,
+			"end": 16.86
+		},
+		{
+			"word": "return",
+			"start": 17.261,
+			"end": 17.82
+		},
+		{
+			"word": "that",
+			"start": 17.88,
+			"end": 18.06
+		},
+		{
+			"word": "exact",
+			"start": 18.22,
+			"end": 18.7
+		},
+		{
+			"word": "Date.",
+			"start": 18.94,
+			"end": 19.22,
+			"style": {
+				"code": true
+			}
+		},
+		{
+			"word": "When",
+			"start": 20.161,
+			"end": 20.261
+		},
+		{
+			"word": "we",
+			"start": 20.32,
+			"end": 20.4
+		},
+		{
+			"word": "run",
+			"start": 20.501,
+			"end": 20.62
+		},
+		{
+			"word": "it,",
+			"start": 20.661,
+			"end": 20.82
+		},
+		{
+			"word": "we'll",
+			"start": 21.501,
+			"end": 21.64
+		},
+		{
+			"word": "get",
+			"start": 21.7,
+			"end": 21.82
+		},
+		{
+			"word": "the",
+			"start": 21.88,
+			"end": 21.941
+		},
+		{
+			"word": "original",
+			"start": 22.001,
+			"end": 22.38
+		},
+		{
+			"word": "Date.",
+			"start": 22.501,
+			"end": 22.8,
+			"style": {
+				"code": true
+			}
+		},
+		{
+			"word": "Try",
+			"start": 23.661,
+			"end": 23.82
+		},
+		{
+			"word": "again",
+			"start": 23.86,
+			"end": 24.14
+		},
+		{
+			"word": "later,",
+			"start": 24.241,
+			"end": 24.6
+		},
+		{
+			"word": "same",
+			"start": 25.48,
+			"end": 25.82
+		},
+		{
+			"word": "Date.",
+			"start": 26.001,
+			"end": 26.32,
+			"style": {
+				"code": true
+			}
+		},
+		{
+			"word": "Tomorrow?",
+			"start": 27.32,
+			"end": 28.06
+		},
+		{
+			"word": "That",
+			"start": 28.88,
+			"end": 29.04
+		},
+		{
+			"word": "same",
+			"start": 29.18,
+			"end": 29.6
+		},
+		{
+			"word": "God-forsaken",
+			"start": 30.06,
+			"end": 31.06
+		},
+		{
+			"word": "Date.",
+			"start": 31.781,
+			"end": 32.16,
+			"style": {
+				"code": true
+			}
+		},
+		{
+			"word": "With",
+			"start": 33.54,
+			"end": 33.68,
+			"paragraphBreak": true
+		},
+		{
+			"word": "sync,",
+			"start": 33.88,
+			"end": 34.22,
+			"style": {
+				"code": true
+			}
+		},
+		{
+			"word": "the",
+			"start": 34.921,
+			"end": 35
+		},
+		{
+			"word": "computation",
+			"start": 35.081,
+			"end": 35.72
+		},
+		{
+			"word": "is",
+			"start": 35.761,
+			"end": 35.88
+		},
+		{
+			"word": "suspended",
+			"start": 35.921,
+			"end": 36.581
+		},
+		{
+			"word": "within",
+			"start": 36.621,
+			"end": 37
+		},
+		{
+			"word": "a",
+			"start": 37.101,
+			"end": 37.121
+		},
+		{
+			"word": "thunk.",
+			"start": 37.261,
+			"end": 37.581
+		},
+		{
+			"word": "When",
+			"start": 38.421,
+			"end": 38.52
+		},
+		{
+			"word": "we",
+			"start": 38.54,
+			"end": 38.64
+		},
+		{
+			"word": "run",
+			"start": 38.7,
+			"end": 38.88
+		},
+		{
+			"word": "it,",
+			"start": 39,
+			"end": 39.18
+		},
+		{
+			"word": "the",
+			"start": 39.839999999999996,
+			"end": 39.941
+		},
+		{
+			"word": "thunk",
+			"start": 39.98,
+			"end": 40.18
+		},
+		{
+			"word": "is",
+			"start": 40.22,
+			"end": 40.36
+		},
+		{
+			"word": "called,",
+			"start": 40.441,
+			"end": 40.781
+		},
+		{
+			"word": "and",
+			"start": 41.441,
+			"end": 41.56
+		},
+		{
+			"word": "we",
+			"start": 41.601,
+			"end": 41.7
+		},
+		{
+			"word": "get",
+			"start": 41.741,
+			"end": 41.839999999999996
+		},
+		{
+			"word": "a",
+			"start": 41.9,
+			"end": 41.98
+		},
+		{
+			"word": "brand",
+			"start": 42.04,
+			"end": 42.46
+		},
+		{
+			"word": "new",
+			"start": 42.56,
+			"end": 42.74
+		},
+		{
+			"word": "Date.",
+			"start": 42.8,
+			"end": 43.081,
+			"style": {
+				"code": true
+			}
+		},
+		{
+			"word": "When",
+			"start": 44.2,
+			"end": 44.3
+		},
+		{
+			"word": "we",
+			"start": 44.32,
+			"end": 44.421
+		},
+		{
+			"word": "run",
+			"start": 44.46,
+			"end": 44.56
+		},
+		{
+			"word": "it",
+			"start": 44.601,
+			"end": 44.7
+		},
+		{
+			"word": "again,",
+			"start": 44.839999999999996,
+			"end": 45.22
+		},
+		{
+			"word": "it's",
+			"start": 45.741,
+			"end": 45.96
+		},
+		{
+			"word": "re-executed,",
+			"start": 46.081,
+			"end": 46.921
+		},
+		{
+			"word": "and",
+			"start": 47.421,
+			"end": 47.5
+		},
+		{
+			"word": "we",
+			"start": 47.54,
+			"end": 47.62
+		},
+		{
+			"word": "get",
+			"start": 47.68,
+			"end": 47.82
+		},
+		{
+			"word": "another",
+			"start": 47.88,
+			"end": 48.36
+		},
+		{
+			"word": "pristine",
+			"start": 48.761,
+			"end": 49.64
+		},
+		{
+			"word": "Date.",
+			"start": 49.72,
+			"end": 50.04,
+			"style": {
+				"code": true
+			}
+		}
+	],
+	"componentFlow": {
+		"name": "SyncVsSucceedDemo",
+		"steps": [
+			{
+				"name": "start",
+				"at": "start"
+			},
+			{
+				"name": "run",
+				"at": "run"
+			},
+			{
+				"name": "original",
+				"at": "original"
+			},
+			{
+				"name": "again",
+				"at": "again"
+			},
+			{
+				"name": "same",
+				"at": "same"
+			},
+			{
+				"name": "Tomorrow?",
+				"at": "Tomorrow?"
+			},
+			{
+				"name": "Date.",
+				"at": "Date.",
+				"nth": 4
+			},
+			{
+				"name": "sync,",
+				"at": "sync,"
+			},
+			{
+				"name": "run",
+				"at": "run",
+				"nth": 2
+			},
+			{
+				"name": "called,",
+				"at": "called,"
+			},
+			{
+				"name": "again",
+				"at": "again",
+				"nth": 2
+			},
+			{
+				"name": "Date.",
+				"at": "Date.",
+				"nth": 6
+			}
+		],
+		"snapshots": [
+			{
+				"mode": "succeed",
+				"run1State": "idle",
+				"run2State": "idle",
+				"run3State": "idle"
+			},
+			{
+				"mode": "succeed",
+				"run1State": "running",
+				"run2State": "idle",
+				"run3State": "idle"
+			},
+			{
+				"mode": "succeed",
+				"run1State": "completed",
+				"run2State": "idle",
+				"run3State": "idle"
+			},
+			{
+				"mode": "succeed",
+				"run1State": "completed",
+				"run2State": "running",
+				"run3State": "idle"
+			},
+			{
+				"mode": "succeed",
+				"run1State": "completed",
+				"run2State": "completed",
+				"run3State": "idle"
+			},
+			{
+				"mode": "succeed",
+				"run1State": "completed",
+				"run2State": "completed",
+				"run3State": "running"
+			},
+			{
+				"mode": "succeed",
+				"run1State": "completed",
+				"run2State": "completed",
+				"run3State": "completed"
+			},
+			{
+				"mode": "sync",
+				"run1State": "idle",
+				"run2State": "idle",
+				"run3State": "idle"
+			},
+			{
+				"mode": "sync",
+				"run1State": "running",
+				"run2State": "idle",
+				"run3State": "idle"
+			},
+			{
+				"mode": "sync",
+				"run1State": "completed",
+				"run2State": "idle",
+				"run3State": "idle"
+			},
+			{
+				"mode": "sync",
+				"run1State": "completed",
+				"run2State": "running",
+				"run3State": "idle"
+			},
+			{
+				"mode": "sync",
+				"run1State": "completed",
+				"run2State": "completed",
+				"run3State": "idle"
+			}
+		]
+	},
+	"slideshowData": {
+		"template": {
+			"lines": {
+				"import": {
+					"parts": {
+						"p0": {
+							"tokens": [
+								{
+									"text": "import",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " { Effect } ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "from",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "\"effect\"",
+									"type": "default",
+									"color": "#9ECBFF"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"p0"
+					]
+				},
+				"blank": {
+					"parts": {
+						"blank-empty": {
+							"tokens": [],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"blank-empty"
+					]
+				},
+				"effect": {
+					"parts": {
+						"p0": {
+							"tokens": [
+								{
+									"text": "const",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "getDate",
+									"type": "default",
+									"color": "#79B8FF"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "=",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " Effect.",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						},
+						"method:*/0": {
+							"tokens": [
+								{
+									"text": "succeed",
+									"type": "default",
+									"color": "#B392F0"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": true,
+							"versions": {
+								"succeed": [
+									{
+										"text": "succeed",
+										"type": "default",
+										"color": "#B392F0"
+									}
+								],
+								"sync": [
+									{
+										"text": "sync",
+										"type": "default",
+										"color": "#B392F0"
+									}
+								]
+							}
+						},
+						"p1": {
+							"tokens": [
+								{
+									"text": "(",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						},
+						"thunk:shown/0": {
+							"tokens": [
+								{
+									"text": "() ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "=>",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": true,
+							"crossfade": false
+						},
+						"p2": {
+							"tokens": [
+								{
+									"text": "new",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "Date",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": "())",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"p0",
+						"method:*/0",
+						"p1",
+						"thunk:shown/0",
+						"p2"
+					]
+				},
+				"blank2": {
+					"parts": {
+						"blank2-empty": {
+							"tokens": [],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"blank2-empty"
+					]
+				},
+				"run1": {
+					"parts": {
+						"p0": {
+							"tokens": [
+								{
+									"text": "const",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "now",
+									"type": "default",
+									"color": "#79B8FF"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "=",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "await",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " Effect.",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "runPromise",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": "(getDate)",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"p0"
+					]
+				},
+				"run2": {
+					"parts": {
+						"p0": {
+							"tokens": [
+								{
+									"text": "const",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "later",
+									"type": "default",
+									"color": "#79B8FF"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "=",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "await",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " Effect.",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "runPromise",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": "(getDate)",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"p0"
+					]
+				},
+				"sleep": {
+					"parts": {
+						"p0": {
+							"tokens": [
+								{
+									"text": "await",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "new",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "Promise",
+									"type": "default",
+									"color": "#79B8FF"
+								},
+								{
+									"text": "(",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "r",
+									"type": "default",
+									"color": "#FFAB70"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "=>",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "setTimeout",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": "(r, ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "86_400_000",
+									"type": "default",
+									"color": "#79B8FF"
+								},
+								{
+									"text": "))",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"p0"
+					]
+				},
+				"run3": {
+					"parts": {
+						"p0": {
+							"tokens": [
+								{
+									"text": "const",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "tomorrow",
+									"type": "default",
+									"color": "#79B8FF"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "=",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " ",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "await",
+									"type": "default",
+									"color": "#F97583"
+								},
+								{
+									"text": " Effect.",
+									"type": "default",
+									"color": "#E1E4E8"
+								},
+								{
+									"text": "runPromise",
+									"type": "default",
+									"color": "#B392F0"
+								},
+								{
+									"text": "(getDate)",
+									"type": "default",
+									"color": "#E1E4E8"
+								}
+							],
+							"animateEntry": false,
+							"crossfade": false
+						}
+					},
+					"partOrder": [
+						"p0"
+					]
+				}
+			}
+		},
+		"frames": [
+			{
+				"id": 0,
+				"lineOrder": [
+					"import",
+					"blank",
+					"effect"
+				],
+				"state": {
+					"import": {
+						"parts": {
+							"p0": true
+						},
+						"entering": true
+					},
+					"blank": {
+						"parts": {
+							"blank-empty": true
+						},
+						"entering": true
+					},
+					"effect": {
+						"parts": {
+							"p0": true,
+							"method:*/0": "succeed",
+							"p1": true,
+							"thunk:shown/0": false,
+							"p2": true
+						},
+						"entering": true
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"spotlight": {
+					"ranges": {},
+					"allRanges": {
+						"effect": [
+							{
+								"start": 28,
+								"end": 44
+							}
+						]
+					},
+					"dim": 0.4,
+					"glow": false
+				},
+				"status": {
+					"ranges": {},
+					"allRanges": {
+						"run1": [
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							}
+						],
+						"run2": [
+							{
+								"start": 20,
+								"end": 46
+							},
+							{
+								"start": 20,
+								"end": 46
+							},
+							{
+								"start": 20,
+								"end": 46
+							},
+							{
+								"start": 20,
+								"end": 46
+							},
+							{
+								"start": 20,
+								"end": 46
+							},
+							{
+								"start": 20,
+								"end": 46
+							}
+						],
+						"run3": [
+							{
+								"start": 23,
+								"end": 49
+							},
+							{
+								"start": 23,
+								"end": 49
+							}
+						]
+					}
+				},
+				"bursts": []
+			},
+			{
+				"id": 1,
+				"lineOrder": [
+					"import",
+					"blank",
+					"effect"
+				],
+				"state": {
+					"import": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"blank": {
+						"parts": {
+							"blank-empty": true
+						}
+					},
+					"effect": {
+						"parts": {
+							"p0": true,
+							"method:*/0": "succeed",
+							"p1": true,
+							"thunk:shown/0": false,
+							"p2": true
+						}
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [
+					{
+						"lineIndex": 2,
+						"start": 23,
+						"end": 30
+					}
+				],
+				"spotlight": {
+					"ranges": {},
+					"allRanges": {
+						"effect": [
+							{
+								"start": 28,
+								"end": 44
+							}
+						]
+					},
+					"dim": 0.4,
+					"glow": false
+				},
+				"status": {
+					"ranges": {},
+					"allRanges": {
+						"run1": [
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							}
+						],
+						"run2": [
+							{
+								"start": 20,
+								"end": 46
+							},
+							{
+								"start": 20,
+								"end": 46
+							},
+							{
+								"start": 20,
+								"end": 46
+							},
+							{
+								"start": 20,
+								"end": 46
+							},
+							{
+								"start": 20,
+								"end": 46
+							},
+							{
+								"start": 20,
+								"end": 46
+							}
+						],
+						"run3": [
+							{
+								"start": 23,
+								"end": 49
+							},
+							{
+								"start": 23,
+								"end": 49
+							}
+						]
+					}
+				},
+				"cursor": {
+					"lineIndex": 2,
+					"charOffset": 23,
+					"textLength": 7,
+					"type": "hand"
+				},
+				"bursts": []
+			},
+			{
+				"id": 2,
+				"lineOrder": [
+					"import",
+					"blank",
+					"effect"
+				],
+				"state": {
+					"import": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"blank": {
+						"parts": {
+							"blank-empty": true
+						}
+					},
+					"effect": {
+						"parts": {
+							"p0": true,
+							"method:*/0": "succeed",
+							"p1": true,
+							"thunk:shown/0": false,
+							"p2": true
+						}
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [
+					{
+						"lineIndex": 2,
+						"start": 31,
+						"end": 41
+					}
+				],
+				"spotlight": {
+					"ranges": {},
+					"allRanges": {
+						"effect": [
+							{
+								"start": 28,
+								"end": 44
+							}
+						]
+					},
+					"dim": 0.4,
+					"glow": false
+				},
+				"status": {
+					"ranges": {},
+					"allRanges": {
+						"run1": [
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							}
+						],
+						"run2": [
+							{
+								"start": 20,
+								"end": 46
+							},
+							{
+								"start": 20,
+								"end": 46
+							},
+							{
+								"start": 20,
+								"end": 46
+							},
+							{
+								"start": 20,
+								"end": 46
+							},
+							{
+								"start": 20,
+								"end": 46
+							},
+							{
+								"start": 20,
+								"end": 46
+							}
+						],
+						"run3": [
+							{
+								"start": 23,
+								"end": 49
+							},
+							{
+								"start": 23,
+								"end": 49
+							}
+						]
+					}
+				},
+				"cursor": {
+					"lineIndex": 2,
+					"charOffset": 31,
+					"textLength": 10,
+					"type": "hand"
+				},
+				"bursts": []
+			},
+			{
+				"id": 3,
+				"lineOrder": [
+					"import",
+					"blank",
+					"effect",
+					"blank2",
+					"run1"
+				],
+				"state": {
+					"import": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"blank": {
+						"parts": {
+							"blank-empty": true
+						},
+						"dimmed": true
+					},
+					"effect": {
+						"parts": {
+							"p0": true,
+							"method:*/0": "succeed",
+							"p1": true,
+							"thunk:shown/0": false,
+							"p2": true
+						},
+						"dimmed": true
+					},
+					"blank2": {
+						"parts": {
+							"blank2-empty": true
+						},
+						"entering": true,
+						"dimmed": true
+					},
+					"run1": {
+						"parts": {
+							"p0": true
+						},
+						"entering": true
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [
+					{
+						"lineIndex": 4,
+						"start": 25,
+						"end": 35
+					}
+				],
+				"spotlight": {
+					"ranges": {},
+					"allRanges": {
+						"effect": [
+							{
+								"start": 28,
+								"end": 44
+							}
+						]
+					},
+					"dim": 0.4,
+					"glow": false
+				},
+				"status": {
+					"ranges": {
+						"4": [
+							{
+								"start": 18,
+								"end": 44,
+								"status": "running"
+							}
+						]
+					},
+					"allRanges": {
+						"run1": [
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							}
+						],
+						"run2": [
+							{
+								"start": 20,
+								"end": 46
+							},
+							{
+								"start": 20,
+								"end": 46
+							},
+							{
+								"start": 20,
+								"end": 46
+							},
+							{
+								"start": 20,
+								"end": 46
+							},
+							{
+								"start": 20,
+								"end": 46
+							},
+							{
+								"start": 20,
+								"end": 46
+							}
+						],
+						"run3": [
+							{
+								"start": 23,
+								"end": 49
+							},
+							{
+								"start": 23,
+								"end": 49
+							}
+						]
+					}
+				},
+				"cursor": {
+					"lineIndex": 4,
+					"charOffset": 25,
+					"textLength": 10,
+					"type": "hand"
+				},
+				"bursts": []
+			},
+			{
+				"id": 4,
+				"lineOrder": [
+					"import",
+					"blank",
+					"effect",
+					"blank2",
+					"run1"
+				],
+				"state": {
+					"import": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"blank": {
+						"parts": {
+							"blank-empty": true
+						}
+					},
+					"effect": {
+						"parts": {
+							"p0": true,
+							"method:*/0": "succeed",
+							"p1": true,
+							"thunk:shown/0": false,
+							"p2": true
+						}
+					},
+					"blank2": {
+						"parts": {
+							"blank2-empty": true
+						}
+					},
+					"run1": {
+						"parts": {
+							"p0": true
+						}
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"spotlight": {
+					"ranges": {},
+					"allRanges": {
+						"effect": [
+							{
+								"start": 28,
+								"end": 44
+							}
+						]
+					},
+					"dim": 0.4,
+					"glow": false
+				},
+				"status": {
+					"ranges": {
+						"4": [
+							{
+								"start": 18,
+								"end": 44,
+								"status": "success"
+							}
+						]
+					},
+					"allRanges": {
+						"run1": [
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							}
+						],
+						"run2": [
+							{
+								"start": 20,
+								"end": 46
+							},
+							{
+								"start": 20,
+								"end": 46
+							},
+							{
+								"start": 20,
+								"end": 46
+							},
+							{
+								"start": 20,
+								"end": 46
+							},
+							{
+								"start": 20,
+								"end": 46
+							},
+							{
+								"start": 20,
+								"end": 46
+							}
+						],
+						"run3": [
+							{
+								"start": 23,
+								"end": 49
+							},
+							{
+								"start": 23,
+								"end": 49
+							}
+						]
+					}
+				},
+				"cursor": {
+					"lineIndex": 4,
+					"charOffset": 25,
+					"textLength": 10,
+					"type": "hand"
+				},
+				"bursts": []
+			},
+			{
+				"id": 5,
+				"lineOrder": [
+					"import",
+					"blank",
+					"effect",
+					"blank2",
+					"run1",
+					"run2"
+				],
+				"state": {
+					"import": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"blank": {
+						"parts": {
+							"blank-empty": true
+						},
+						"dimmed": true
+					},
+					"effect": {
+						"parts": {
+							"p0": true,
+							"method:*/0": "succeed",
+							"p1": true,
+							"thunk:shown/0": false,
+							"p2": true
+						},
+						"dimmed": true
+					},
+					"blank2": {
+						"parts": {
+							"blank2-empty": true
+						},
+						"dimmed": true
+					},
+					"run1": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"run2": {
+						"parts": {
+							"p0": true
+						},
+						"entering": true
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"spotlight": {
+					"ranges": {},
+					"allRanges": {
+						"effect": [
+							{
+								"start": 28,
+								"end": 44
+							}
+						]
+					},
+					"dim": 0.4,
+					"glow": false
+				},
+				"status": {
+					"ranges": {
+						"4": [
+							{
+								"start": 18,
+								"end": 44,
+								"status": "success"
+							}
+						],
+						"5": [
+							{
+								"start": 20,
+								"end": 46,
+								"status": "running"
+							}
+						]
+					},
+					"allRanges": {
+						"run1": [
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							}
+						],
+						"run2": [
+							{
+								"start": 20,
+								"end": 46
+							},
+							{
+								"start": 20,
+								"end": 46
+							},
+							{
+								"start": 20,
+								"end": 46
+							},
+							{
+								"start": 20,
+								"end": 46
+							},
+							{
+								"start": 20,
+								"end": 46
+							},
+							{
+								"start": 20,
+								"end": 46
+							}
+						],
+						"run3": [
+							{
+								"start": 23,
+								"end": 49
+							},
+							{
+								"start": 23,
+								"end": 49
+							}
+						]
+					}
+				},
+				"cursor": {
+					"lineIndex": 5,
+					"charOffset": 27,
+					"textLength": 10,
+					"type": "hand"
+				},
+				"bursts": []
+			},
+			{
+				"id": 6,
+				"lineOrder": [
+					"import",
+					"blank",
+					"effect",
+					"blank2",
+					"run1",
+					"run2"
+				],
+				"state": {
+					"import": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"blank": {
+						"parts": {
+							"blank-empty": true
+						}
+					},
+					"effect": {
+						"parts": {
+							"p0": true,
+							"method:*/0": "succeed",
+							"p1": true,
+							"thunk:shown/0": false,
+							"p2": true
+						}
+					},
+					"blank2": {
+						"parts": {
+							"blank2-empty": true
+						}
+					},
+					"run1": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"run2": {
+						"parts": {
+							"p0": true
+						}
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"spotlight": {
+					"ranges": {},
+					"allRanges": {
+						"effect": [
+							{
+								"start": 28,
+								"end": 44
+							}
+						]
+					},
+					"dim": 0.4,
+					"glow": false
+				},
+				"status": {
+					"ranges": {
+						"4": [
+							{
+								"start": 18,
+								"end": 44,
+								"status": "success"
+							}
+						],
+						"5": [
+							{
+								"start": 20,
+								"end": 46,
+								"status": "success"
+							}
+						]
+					},
+					"allRanges": {
+						"run1": [
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							}
+						],
+						"run2": [
+							{
+								"start": 20,
+								"end": 46
+							},
+							{
+								"start": 20,
+								"end": 46
+							},
+							{
+								"start": 20,
+								"end": 46
+							},
+							{
+								"start": 20,
+								"end": 46
+							},
+							{
+								"start": 20,
+								"end": 46
+							},
+							{
+								"start": 20,
+								"end": 46
+							}
+						],
+						"run3": [
+							{
+								"start": 23,
+								"end": 49
+							},
+							{
+								"start": 23,
+								"end": 49
+							}
+						]
+					}
+				},
+				"cursor": {
+					"lineIndex": 5,
+					"charOffset": 27,
+					"textLength": 10,
+					"type": "hand"
+				},
+				"bursts": []
+			},
+			{
+				"id": 7,
+				"lineOrder": [
+					"import",
+					"blank",
+					"effect",
+					"blank2",
+					"run1",
+					"run2",
+					"sleep",
+					"run3"
+				],
+				"state": {
+					"import": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"blank": {
+						"parts": {
+							"blank-empty": true
+						},
+						"dimmed": true
+					},
+					"effect": {
+						"parts": {
+							"p0": true,
+							"method:*/0": "succeed",
+							"p1": true,
+							"thunk:shown/0": false,
+							"p2": true
+						},
+						"dimmed": true
+					},
+					"blank2": {
+						"parts": {
+							"blank2-empty": true
+						},
+						"dimmed": true
+					},
+					"run1": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"run2": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"sleep": {
+						"parts": {
+							"p0": true
+						},
+						"entering": true,
+						"dimmed": true
+					},
+					"run3": {
+						"parts": {
+							"p0": true
+						},
+						"entering": true
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"spotlight": {
+					"ranges": {},
+					"allRanges": {
+						"effect": [
+							{
+								"start": 28,
+								"end": 44
+							}
+						]
+					},
+					"dim": 0.4,
+					"glow": false
+				},
+				"status": {
+					"ranges": {
+						"4": [
+							{
+								"start": 18,
+								"end": 44,
+								"status": "success"
+							}
+						],
+						"5": [
+							{
+								"start": 20,
+								"end": 46,
+								"status": "success"
+							}
+						],
+						"7": [
+							{
+								"start": 23,
+								"end": 49,
+								"status": "running"
+							}
+						]
+					},
+					"allRanges": {
+						"run1": [
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							}
+						],
+						"run2": [
+							{
+								"start": 20,
+								"end": 46
+							},
+							{
+								"start": 20,
+								"end": 46
+							},
+							{
+								"start": 20,
+								"end": 46
+							},
+							{
+								"start": 20,
+								"end": 46
+							},
+							{
+								"start": 20,
+								"end": 46
+							},
+							{
+								"start": 20,
+								"end": 46
+							}
+						],
+						"run3": [
+							{
+								"start": 23,
+								"end": 49
+							},
+							{
+								"start": 23,
+								"end": 49
+							}
+						]
+					}
+				},
+				"cursor": {
+					"lineIndex": 7,
+					"charOffset": 30,
+					"textLength": 10,
+					"type": "hand"
+				},
+				"bursts": []
+			},
+			{
+				"id": 8,
+				"lineOrder": [
+					"import",
+					"blank",
+					"effect",
+					"blank2",
+					"run1",
+					"run2",
+					"sleep",
+					"run3"
+				],
+				"state": {
+					"import": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"blank": {
+						"parts": {
+							"blank-empty": true
+						}
+					},
+					"effect": {
+						"parts": {
+							"p0": true,
+							"method:*/0": "succeed",
+							"p1": true,
+							"thunk:shown/0": false,
+							"p2": true
+						}
+					},
+					"blank2": {
+						"parts": {
+							"blank2-empty": true
+						}
+					},
+					"run1": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"run2": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"sleep": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"run3": {
+						"parts": {
+							"p0": true
+						}
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"spotlight": {
+					"ranges": {},
+					"allRanges": {
+						"effect": [
+							{
+								"start": 28,
+								"end": 44
+							}
+						]
+					},
+					"dim": 0.4,
+					"glow": false
+				},
+				"status": {
+					"ranges": {
+						"4": [
+							{
+								"start": 18,
+								"end": 44,
+								"status": "success"
+							}
+						],
+						"5": [
+							{
+								"start": 20,
+								"end": 46,
+								"status": "success"
+							}
+						],
+						"7": [
+							{
+								"start": 23,
+								"end": 49,
+								"status": "success"
+							}
+						]
+					},
+					"allRanges": {
+						"run1": [
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							}
+						],
+						"run2": [
+							{
+								"start": 20,
+								"end": 46
+							},
+							{
+								"start": 20,
+								"end": 46
+							},
+							{
+								"start": 20,
+								"end": 46
+							},
+							{
+								"start": 20,
+								"end": 46
+							},
+							{
+								"start": 20,
+								"end": 46
+							},
+							{
+								"start": 20,
+								"end": 46
+							}
+						],
+						"run3": [
+							{
+								"start": 23,
+								"end": 49
+							},
+							{
+								"start": 23,
+								"end": 49
+							}
+						]
+					}
+				},
+				"cursor": {
+					"lineIndex": 7,
+					"charOffset": 30,
+					"textLength": 10,
+					"type": "hand"
+				},
+				"bursts": []
+			},
+			{
+				"id": 9,
+				"lineOrder": [
+					"import",
+					"blank",
+					"effect",
+					"blank2",
+					"run1"
+				],
+				"state": {
+					"import": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"blank": {
+						"parts": {
+							"blank-empty": true
+						},
+						"dimmed": true
+					},
+					"effect": {
+						"parts": {
+							"p0": true,
+							"method:*/0": "sync",
+							"p1": true,
+							"thunk:shown/0": true,
+							"p2": true
+						}
+					},
+					"blank2": {
+						"parts": {
+							"blank2-empty": true
+						},
+						"dimmed": true
+					},
+					"run1": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [
+					{
+						"lineIndex": 2,
+						"start": 23,
+						"end": 27
+					}
+				],
+				"spotlight": {
+					"ranges": {},
+					"allRanges": {
+						"effect": [
+							{
+								"start": 28,
+								"end": 44
+							}
+						]
+					},
+					"dim": 0.4,
+					"glow": false
+				},
+				"status": {
+					"ranges": {},
+					"allRanges": {
+						"run1": [
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							}
+						],
+						"run2": [
+							{
+								"start": 20,
+								"end": 46
+							},
+							{
+								"start": 20,
+								"end": 46
+							},
+							{
+								"start": 20,
+								"end": 46
+							},
+							{
+								"start": 20,
+								"end": 46
+							},
+							{
+								"start": 20,
+								"end": 46
+							},
+							{
+								"start": 20,
+								"end": 46
+							}
+						],
+						"run3": [
+							{
+								"start": 23,
+								"end": 49
+							},
+							{
+								"start": 23,
+								"end": 49
+							}
+						]
+					}
+				},
+				"cursor": {
+					"lineIndex": 2,
+					"charOffset": 23,
+					"textLength": 4,
+					"type": "hand"
+				},
+				"bursts": []
+			},
+			{
+				"id": 10,
+				"lineOrder": [
+					"import",
+					"blank",
+					"effect",
+					"blank2",
+					"run1"
+				],
+				"state": {
+					"import": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"blank": {
+						"parts": {
+							"blank-empty": true
+						}
+					},
+					"effect": {
+						"parts": {
+							"p0": true,
+							"method:*/0": "sync",
+							"p1": true,
+							"thunk:shown/0": true,
+							"p2": true
+						}
+					},
+					"blank2": {
+						"parts": {
+							"blank2-empty": true
+						}
+					},
+					"run1": {
+						"parts": {
+							"p0": true
+						}
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"spotlight": {
+					"ranges": {
+						"2": [
+							{
+								"start": 28,
+								"end": 44
+							}
+						]
+					},
+					"allRanges": {
+						"effect": [
+							{
+								"start": 28,
+								"end": 44
+							}
+						]
+					},
+					"dim": 0.4,
+					"glow": false
+				},
+				"status": {
+					"ranges": {},
+					"allRanges": {
+						"run1": [
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							}
+						],
+						"run2": [
+							{
+								"start": 20,
+								"end": 46
+							},
+							{
+								"start": 20,
+								"end": 46
+							},
+							{
+								"start": 20,
+								"end": 46
+							},
+							{
+								"start": 20,
+								"end": 46
+							},
+							{
+								"start": 20,
+								"end": 46
+							},
+							{
+								"start": 20,
+								"end": 46
+							}
+						],
+						"run3": [
+							{
+								"start": 23,
+								"end": 49
+							},
+							{
+								"start": 23,
+								"end": 49
+							}
+						]
+					}
+				},
+				"cursor": {
+					"lineIndex": 2,
+					"charOffset": 28,
+					"textLength": 16,
+					"type": "hand"
+				},
+				"bursts": []
+			},
+			{
+				"id": 11,
+				"lineOrder": [
+					"import",
+					"blank",
+					"effect",
+					"blank2",
+					"run1"
+				],
+				"state": {
+					"import": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"blank": {
+						"parts": {
+							"blank-empty": true
+						},
+						"dimmed": true
+					},
+					"effect": {
+						"parts": {
+							"p0": true,
+							"method:*/0": "sync",
+							"p1": true,
+							"thunk:shown/0": true,
+							"p2": true
+						},
+						"dimmed": true
+					},
+					"blank2": {
+						"parts": {
+							"blank2-empty": true
+						},
+						"dimmed": true
+					},
+					"run1": {
+						"parts": {
+							"p0": true
+						}
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"spotlight": {
+					"ranges": {},
+					"allRanges": {
+						"effect": [
+							{
+								"start": 28,
+								"end": 44
+							}
+						]
+					},
+					"dim": 0.4,
+					"glow": false
+				},
+				"status": {
+					"ranges": {
+						"4": [
+							{
+								"start": 18,
+								"end": 44,
+								"status": "running"
+							}
+						]
+					},
+					"allRanges": {
+						"run1": [
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							}
+						],
+						"run2": [
+							{
+								"start": 20,
+								"end": 46
+							},
+							{
+								"start": 20,
+								"end": 46
+							},
+							{
+								"start": 20,
+								"end": 46
+							},
+							{
+								"start": 20,
+								"end": 46
+							},
+							{
+								"start": 20,
+								"end": 46
+							},
+							{
+								"start": 20,
+								"end": 46
+							}
+						],
+						"run3": [
+							{
+								"start": 23,
+								"end": 49
+							},
+							{
+								"start": 23,
+								"end": 49
+							}
+						]
+					}
+				},
+				"cursor": {
+					"lineIndex": 4,
+					"charOffset": 25,
+					"textLength": 10,
+					"type": "hand"
+				},
+				"bursts": []
+			},
+			{
+				"id": 12,
+				"lineOrder": [
+					"import",
+					"blank",
+					"effect",
+					"blank2",
+					"run1"
+				],
+				"state": {
+					"import": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"blank": {
+						"parts": {
+							"blank-empty": true
+						}
+					},
+					"effect": {
+						"parts": {
+							"p0": true,
+							"method:*/0": "sync",
+							"p1": true,
+							"thunk:shown/0": true,
+							"p2": true
+						}
+					},
+					"blank2": {
+						"parts": {
+							"blank2-empty": true
+						}
+					},
+					"run1": {
+						"parts": {
+							"p0": true
+						}
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"spotlight": {
+					"ranges": {},
+					"allRanges": {
+						"effect": [
+							{
+								"start": 28,
+								"end": 44
+							}
+						]
+					},
+					"dim": 0.4,
+					"glow": false
+				},
+				"status": {
+					"ranges": {
+						"4": [
+							{
+								"start": 18,
+								"end": 44,
+								"status": "success"
+							}
+						]
+					},
+					"allRanges": {
+						"run1": [
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							}
+						],
+						"run2": [
+							{
+								"start": 20,
+								"end": 46
+							},
+							{
+								"start": 20,
+								"end": 46
+							},
+							{
+								"start": 20,
+								"end": 46
+							},
+							{
+								"start": 20,
+								"end": 46
+							},
+							{
+								"start": 20,
+								"end": 46
+							},
+							{
+								"start": 20,
+								"end": 46
+							}
+						],
+						"run3": [
+							{
+								"start": 23,
+								"end": 49
+							},
+							{
+								"start": 23,
+								"end": 49
+							}
+						]
+					}
+				},
+				"cursor": {
+					"lineIndex": 4,
+					"charOffset": 25,
+					"textLength": 10,
+					"type": "hand"
+				},
+				"bursts": []
+			},
+			{
+				"id": 13,
+				"lineOrder": [
+					"import",
+					"blank",
+					"effect",
+					"blank2",
+					"run1",
+					"run2"
+				],
+				"state": {
+					"import": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"blank": {
+						"parts": {
+							"blank-empty": true
+						},
+						"dimmed": true
+					},
+					"effect": {
+						"parts": {
+							"p0": true,
+							"method:*/0": "sync",
+							"p1": true,
+							"thunk:shown/0": true,
+							"p2": true
+						},
+						"dimmed": true
+					},
+					"blank2": {
+						"parts": {
+							"blank2-empty": true
+						},
+						"dimmed": true
+					},
+					"run1": {
+						"parts": {
+							"p0": true
+						},
+						"dimmed": true
+					},
+					"run2": {
+						"parts": {
+							"p0": true
+						},
+						"entering": true
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"spotlight": {
+					"ranges": {},
+					"allRanges": {
+						"effect": [
+							{
+								"start": 28,
+								"end": 44
+							}
+						]
+					},
+					"dim": 0.4,
+					"glow": false
+				},
+				"status": {
+					"ranges": {
+						"4": [
+							{
+								"start": 18,
+								"end": 44,
+								"status": "success"
+							}
+						],
+						"5": [
+							{
+								"start": 20,
+								"end": 46,
+								"status": "running"
+							}
+						]
+					},
+					"allRanges": {
+						"run1": [
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							}
+						],
+						"run2": [
+							{
+								"start": 20,
+								"end": 46
+							},
+							{
+								"start": 20,
+								"end": 46
+							},
+							{
+								"start": 20,
+								"end": 46
+							},
+							{
+								"start": 20,
+								"end": 46
+							},
+							{
+								"start": 20,
+								"end": 46
+							},
+							{
+								"start": 20,
+								"end": 46
+							}
+						],
+						"run3": [
+							{
+								"start": 23,
+								"end": 49
+							},
+							{
+								"start": 23,
+								"end": 49
+							}
+						]
+					}
+				},
+				"cursor": {
+					"lineIndex": 5,
+					"charOffset": 27,
+					"textLength": 10,
+					"type": "hand"
+				},
+				"bursts": []
+			},
+			{
+				"id": 14,
+				"lineOrder": [
+					"import",
+					"blank",
+					"effect",
+					"blank2",
+					"run1",
+					"run2"
+				],
+				"state": {
+					"import": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"blank": {
+						"parts": {
+							"blank-empty": true
+						}
+					},
+					"effect": {
+						"parts": {
+							"p0": true,
+							"method:*/0": "sync",
+							"p1": true,
+							"thunk:shown/0": true,
+							"p2": true
+						}
+					},
+					"blank2": {
+						"parts": {
+							"blank2-empty": true
+						}
+					},
+					"run1": {
+						"parts": {
+							"p0": true
+						}
+					},
+					"run2": {
+						"parts": {
+							"p0": true
+						}
+					}
+				},
+				"marks": [],
+				"glows": [],
+				"squiggles": [],
+				"brightRanges": [],
+				"spotlight": {
+					"ranges": {},
+					"allRanges": {
+						"effect": [
+							{
+								"start": 28,
+								"end": 44
+							}
+						]
+					},
+					"dim": 0.4,
+					"glow": false
+				},
+				"status": {
+					"ranges": {
+						"4": [
+							{
+								"start": 18,
+								"end": 44,
+								"status": "success"
+							}
+						],
+						"5": [
+							{
+								"start": 20,
+								"end": 46,
+								"status": "success"
+							}
+						]
+					},
+					"allRanges": {
+						"run1": [
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							},
+							{
+								"start": 18,
+								"end": 44
+							}
+						],
+						"run2": [
+							{
+								"start": 20,
+								"end": 46
+							},
+							{
+								"start": 20,
+								"end": 46
+							},
+							{
+								"start": 20,
+								"end": 46
+							},
+							{
+								"start": 20,
+								"end": 46
+							},
+							{
+								"start": 20,
+								"end": 46
+							},
+							{
+								"start": 20,
+								"end": 46
+							}
+						],
+						"run3": [
+							{
+								"start": 23,
+								"end": 49
+							},
+							{
+								"start": 23,
+								"end": 49
+							}
+						]
+					}
+				},
+				"cursor": {
+					"lineIndex": 5,
+					"charOffset": 27,
+					"textLength": 10,
+					"type": "hand"
+				},
+				"bursts": []
+			}
+		]
+	},
+	"steps": [
+		{
+			"name": "start",
+			"at": "start"
+		},
+		{
+			"name": "succeed,",
+			"at": "succeed,"
+		},
+		{
+			"name": "new Date(),",
+			"at": "new Date(),"
+		},
+		{
+			"name": "run",
+			"at": "run"
+		},
+		{
+			"name": "original",
+			"at": "original"
+		},
+		{
+			"name": "again",
+			"at": "again"
+		},
+		{
+			"name": "same",
+			"at": "same"
+		},
+		{
+			"name": "Tomorrow?",
+			"at": "Tomorrow?"
+		},
+		{
+			"name": "Date.",
+			"at": "Date.",
+			"nth": 4
+		},
+		{
+			"name": "sync,",
+			"at": "sync,"
+		},
+		{
+			"name": "thunk.",
+			"at": "thunk."
+		},
+		{
+			"name": "run",
+			"at": "run",
+			"nth": 2
+		},
+		{
+			"name": "called,",
+			"at": "called,"
+		},
+		{
+			"name": "again",
+			"at": "again",
+			"nth": 2
+		},
+		{
+			"name": "Date.",
+			"at": "Date.",
+			"nth": 6
+		}
+	],
+	"stepTimes": [
+		0,
+		7.329999999999999,
+		13.85,
+		20.351000000000003,
+		21.851000000000003,
+		23.71,
+		25.330000000000002,
+		27.17,
+		31.631,
+		33.730000000000004,
+		37.111000000000004,
+		38.550000000000004,
+		40.291000000000004,
+		44.69,
+		49.57
+	],
+	"componentStepTimes": [
+		0,
+		20.351000000000003,
+		21.851000000000003,
+		23.71,
+		25.330000000000002,
+		27.17,
+		31.631,
+		33.730000000000004,
+		38.550000000000004,
+		40.291000000000004,
+		44.69,
+		49.57
+	],
+	"_debug": {
+		"timingsStatus": "matched",
+		"dslWordCount": 92
+	},
+	"groupId": "constructing",
+	"groupTitle": "Constructing Effects",
+	"isFirstInGroup": false,
+	"audioFile": "sync-vs-succeed.8e581b44.webm"
+}

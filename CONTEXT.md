@@ -32,6 +32,34 @@ A pure value describing a property change or the composition of other animations
 
 A pure Rust value containing initial property expressions and a composition. Compiling a scene resolves semantic targets and produces deterministic property tracks plus scheduled media placements and cue ranges.
 
+## Scene Program
+
+A lightweight Rust executable that may perform arbitrary calculations, imports, data loading, and control flow before emitting one Scene Plan. A Scene Program is durable authoring source; its emitted plan is compiled output.
+
+## Scene Plan
+
+A versioned, renderer-independent value containing stable actor declarations, continuous channels, state channels, exact cues, and media placements. Agents may inspect, validate, diff, and render a Scene Plan without recompiling or restarting the renderer.
+
+## Scalar Plan
+
+One compiled scalar source in a Scene Plan. It is either a finite literal or a reference to one component of a stable Semantic Target plus an offset. Renderer preparation resolves target references before the ordinary numeric Property Track is compiled.
+
+## Continuous Channel
+
+One named scalar property of a stable actor. Ordered set and spring events compile into a deterministic Property Track while preserving equal-time source order.
+
+## State Channel
+
+One named discrete property of a stable actor. Its compiled State Track retains the previous and current value, completed previous duration, transition time, and current age without depending on frame history.
+
+## Renderer Recipe
+
+A concrete rendering adapter selected by an actor declaration. Recipe payloads and pixels remain renderer-owned; the Scene Plan core validates identity and timing without understanding their visual implementation.
+
+## Render Window
+
+A positive exact range on the global scene clock selected for delivery. Output begins at time zero, intersecting media is trimmed and rebased, and visual sampling retains global time so ongoing trajectories do not restart.
+
 ## Composition
 
 A pure, time-bearing value that arranges visual motion and media with sequence, parallel, delay, and hold. Composition owns cross-media timing; Motion remains responsible for visual property trajectories.
@@ -74,7 +102,7 @@ The compiled trajectory of one scalar actor property. A later spring on the same
 
 ## Semantic Target
 
-A measured visual range resolved from meaningful content, such as a token inside a stable code line. Highlights and pointers attach to semantic targets rather than authored screen coordinates.
+A stable named selection owned by an actor recipe, such as a logical range inside a stable code line. The plan core preserves identity and validates references; the renderer recipe measures concrete geometry. Highlights and pointers attach to Semantic Targets rather than authored screen coordinates.
 
 ## Inline Reveal
 
@@ -111,3 +139,11 @@ One evaluation of the complete scene within an output frame's shutter interval. 
 ## Editor Frame
 
 The renderer-neutral description of one sampled editor scene: panel position, focus state, and placed code lines.
+
+## Published Lesson
+
+An immutable Effect Institute section artifact containing canonical narration, word timing, stable code template identities, step frames, and optional component snapshots. A Published Lesson is imported into ordinary Kinograph tracks and renderer recipes; it is not a second authoring language.
+
+## Chapter Reel
+
+One encoded video that arranges Published Lessons in manifest order with chapter and group title intervals. Every section retains its own local media clock and actor namespace while narration clips are placed exactly on the chapter clock.

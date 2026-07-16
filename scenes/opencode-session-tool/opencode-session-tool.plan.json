@@ -1,0 +1,647 @@
+{
+  "version": 2,
+  "id": "opencode-v2-session-tool",
+  "durationNanos": 15500000000,
+  "actors": [
+    {
+      "id": "terminal",
+      "recipe": "terminal-recording",
+      "data": {
+        "fileName": "OpenCode v2",
+        "recordings": [
+          {
+            "fps": 25,
+            "height": 640,
+            "mediaId": "live-hot-reload",
+            "width": 1120
+          }
+        ]
+      }
+    },
+    {
+      "id": "heading-before-tool",
+      "recipe": "text",
+      "data": {
+        "center": [
+          960,
+          82
+        ],
+        "color": [
+          235,
+          240,
+          246
+        ],
+        "fontSize": 34,
+        "text": "THE TOOL DOES NOT EXIST YET"
+      }
+    },
+    {
+      "id": "detail-before-tool",
+      "recipe": "text",
+      "data": {
+        "center": [
+          960,
+          1020
+        ],
+        "color": [
+          139,
+          166,
+          199
+        ],
+        "fontSize": 22,
+        "text": "provider tools before patch  /  session_greeting absent"
+      }
+    },
+    {
+      "id": "heading-create-plugin",
+      "recipe": "text",
+      "data": {
+        "center": [
+          960,
+          82
+        ],
+        "color": [
+          235,
+          240,
+          246
+        ],
+        "fontSize": 34,
+        "text": "THE SESSION CREATES A V2 PLUGIN"
+      }
+    },
+    {
+      "id": "detail-create-plugin",
+      "recipe": "text",
+      "data": {
+        "center": [
+          960,
+          1020
+        ],
+        "color": [
+          139,
+          166,
+          199
+        ],
+        "fontSize": 22,
+        "text": "patch creates .opencode/plugins/session-tool.ts inside the live conversation"
+      }
+    },
+    {
+      "id": "heading-hot-reload",
+      "recipe": "text",
+      "data": {
+        "center": [
+          960,
+          82
+        ],
+        "color": [
+          235,
+          240,
+          246
+        ],
+        "fontSize": 34,
+        "text": "THE WATCHER LOADS IT. NO RESTART."
+      }
+    },
+    {
+      "id": "detail-hot-reload",
+      "recipe": "text",
+      "data": {
+        "center": [
+          960,
+          1020
+        ],
+        "color": [
+          139,
+          166,
+          199
+        ],
+        "fontSize": 22,
+        "text": "config.updated  /  plugin loaded  /  the TUI and session stay alive"
+      }
+    },
+    {
+      "id": "heading-same-session-call",
+      "recipe": "text",
+      "data": {
+        "center": [
+          960,
+          82
+        ],
+        "color": [
+          235,
+          240,
+          246
+        ],
+        "fontSize": 34,
+        "text": "THE SAME SESSION CALLS session_greeting"
+      }
+    },
+    {
+      "id": "detail-same-session-call",
+      "recipe": "text",
+      "data": {
+        "center": [
+          960,
+          1020
+        ],
+        "color": [
+          139,
+          166,
+          199
+        ],
+        "fontSize": 22,
+        "text": "same session ID  /  session.tool.called  /  session.tool.success"
+      }
+    },
+    {
+      "id": "heading-proof",
+      "recipe": "text",
+      "data": {
+        "center": [
+          960,
+          82
+        ],
+        "color": [
+          235,
+          240,
+          246
+        ],
+        "fontSize": 34,
+        "text": "HOT RELOAD WORKED. HELLO, ADA."
+      }
+    },
+    {
+      "id": "detail-proof",
+      "recipe": "text",
+      "data": {
+        "center": [
+          960,
+          1020
+        ],
+        "color": [
+          139,
+          166,
+          199
+        ],
+        "fontSize": 22,
+        "text": "one interactive session  /  one live reload  /  real tool result"
+      }
+    }
+  ],
+  "semanticTargets": [],
+  "continuousChannels": [
+    {
+      "id": "terminal.panel-y",
+      "actorId": "terminal",
+      "property": "panel-y",
+      "initial": 500.0,
+      "events": [
+        {
+          "operation": "spring",
+          "atNanos": 0,
+          "target": 560.0,
+          "responseSeconds": 0.84000003,
+          "dampingRatio": 1.0,
+          "positionThreshold": 0.001,
+          "velocityThreshold": 0.001
+        }
+      ]
+    },
+    {
+      "id": "terminal.panel-scale",
+      "actorId": "terminal",
+      "property": "panel-scale",
+      "initial": 1.18,
+      "events": [
+        {
+          "operation": "spring",
+          "atNanos": 0,
+          "target": 0.86,
+          "responseSeconds": 0.84000003,
+          "dampingRatio": 1.0,
+          "positionThreshold": 0.001,
+          "velocityThreshold": 0.001
+        }
+      ]
+    },
+    {
+      "id": "terminal.panel-rotation",
+      "actorId": "terminal",
+      "property": "panel-rotation",
+      "initial": -0.06,
+      "events": [
+        {
+          "operation": "spring",
+          "atNanos": 0,
+          "target": 0.0,
+          "responseSeconds": 0.84000003,
+          "dampingRatio": 1.0,
+          "positionThreshold": 0.001,
+          "velocityThreshold": 0.001
+        }
+      ]
+    },
+    {
+      "id": "terminal.panel-tilt-x",
+      "actorId": "terminal",
+      "property": "panel-tilt-x",
+      "initial": -0.24,
+      "events": [
+        {
+          "operation": "spring",
+          "atNanos": 0,
+          "target": 0.0,
+          "responseSeconds": 0.84000003,
+          "dampingRatio": 1.0,
+          "positionThreshold": 0.001,
+          "velocityThreshold": 0.001
+        }
+      ]
+    },
+    {
+      "id": "terminal.panel-tilt-y",
+      "actorId": "terminal",
+      "property": "panel-tilt-y",
+      "initial": 0.34,
+      "events": [
+        {
+          "operation": "spring",
+          "atNanos": 0,
+          "target": 0.0,
+          "responseSeconds": 0.84000003,
+          "dampingRatio": 1.0,
+          "positionThreshold": 0.001,
+          "velocityThreshold": 0.001
+        }
+      ]
+    },
+    {
+      "id": "terminal.panel-near-blur",
+      "actorId": "terminal",
+      "property": "panel-near-blur",
+      "initial": 11.0,
+      "events": [
+        {
+          "operation": "spring",
+          "atNanos": 0,
+          "target": 0.0,
+          "responseSeconds": 0.84000003,
+          "dampingRatio": 1.0,
+          "positionThreshold": 0.001,
+          "velocityThreshold": 0.001
+        }
+      ]
+    },
+    {
+      "id": "heading-before-tool.opacity",
+      "actorId": "heading-before-tool",
+      "property": "opacity",
+      "initial": 1.0,
+      "events": [
+        {
+          "operation": "spring",
+          "atNanos": 3400000000,
+          "target": 0.0,
+          "responseSeconds": 0.384,
+          "dampingRatio": 1.0,
+          "positionThreshold": 0.001,
+          "velocityThreshold": 0.001
+        }
+      ]
+    },
+    {
+      "id": "detail-before-tool.opacity",
+      "actorId": "detail-before-tool",
+      "property": "opacity",
+      "initial": 1.0,
+      "events": [
+        {
+          "operation": "spring",
+          "atNanos": 3400000000,
+          "target": 0.0,
+          "responseSeconds": 0.384,
+          "dampingRatio": 1.0,
+          "positionThreshold": 0.001,
+          "velocityThreshold": 0.001
+        }
+      ]
+    },
+    {
+      "id": "heading-create-plugin.opacity",
+      "actorId": "heading-create-plugin",
+      "property": "opacity",
+      "initial": 0.0,
+      "events": [
+        {
+          "operation": "spring",
+          "atNanos": 3400000000,
+          "target": 1.0,
+          "responseSeconds": 0.384,
+          "dampingRatio": 1.0,
+          "positionThreshold": 0.001,
+          "velocityThreshold": 0.001
+        },
+        {
+          "operation": "spring",
+          "atNanos": 7000000000,
+          "target": 0.0,
+          "responseSeconds": 0.384,
+          "dampingRatio": 1.0,
+          "positionThreshold": 0.001,
+          "velocityThreshold": 0.001
+        }
+      ]
+    },
+    {
+      "id": "detail-create-plugin.opacity",
+      "actorId": "detail-create-plugin",
+      "property": "opacity",
+      "initial": 0.0,
+      "events": [
+        {
+          "operation": "spring",
+          "atNanos": 3400000000,
+          "target": 1.0,
+          "responseSeconds": 0.384,
+          "dampingRatio": 1.0,
+          "positionThreshold": 0.001,
+          "velocityThreshold": 0.001
+        },
+        {
+          "operation": "spring",
+          "atNanos": 7000000000,
+          "target": 0.0,
+          "responseSeconds": 0.384,
+          "dampingRatio": 1.0,
+          "positionThreshold": 0.001,
+          "velocityThreshold": 0.001
+        }
+      ]
+    },
+    {
+      "id": "heading-hot-reload.opacity",
+      "actorId": "heading-hot-reload",
+      "property": "opacity",
+      "initial": 0.0,
+      "events": [
+        {
+          "operation": "spring",
+          "atNanos": 7000000000,
+          "target": 1.0,
+          "responseSeconds": 0.384,
+          "dampingRatio": 1.0,
+          "positionThreshold": 0.001,
+          "velocityThreshold": 0.001
+        },
+        {
+          "operation": "spring",
+          "atNanos": 10400000000,
+          "target": 0.0,
+          "responseSeconds": 0.384,
+          "dampingRatio": 1.0,
+          "positionThreshold": 0.001,
+          "velocityThreshold": 0.001
+        }
+      ]
+    },
+    {
+      "id": "detail-hot-reload.opacity",
+      "actorId": "detail-hot-reload",
+      "property": "opacity",
+      "initial": 0.0,
+      "events": [
+        {
+          "operation": "spring",
+          "atNanos": 7000000000,
+          "target": 1.0,
+          "responseSeconds": 0.384,
+          "dampingRatio": 1.0,
+          "positionThreshold": 0.001,
+          "velocityThreshold": 0.001
+        },
+        {
+          "operation": "spring",
+          "atNanos": 10400000000,
+          "target": 0.0,
+          "responseSeconds": 0.384,
+          "dampingRatio": 1.0,
+          "positionThreshold": 0.001,
+          "velocityThreshold": 0.001
+        }
+      ]
+    },
+    {
+      "id": "heading-same-session-call.opacity",
+      "actorId": "heading-same-session-call",
+      "property": "opacity",
+      "initial": 0.0,
+      "events": [
+        {
+          "operation": "spring",
+          "atNanos": 10400000000,
+          "target": 1.0,
+          "responseSeconds": 0.384,
+          "dampingRatio": 1.0,
+          "positionThreshold": 0.001,
+          "velocityThreshold": 0.001
+        },
+        {
+          "operation": "spring",
+          "atNanos": 12400000000,
+          "target": 0.0,
+          "responseSeconds": 0.384,
+          "dampingRatio": 1.0,
+          "positionThreshold": 0.001,
+          "velocityThreshold": 0.001
+        }
+      ]
+    },
+    {
+      "id": "detail-same-session-call.opacity",
+      "actorId": "detail-same-session-call",
+      "property": "opacity",
+      "initial": 0.0,
+      "events": [
+        {
+          "operation": "spring",
+          "atNanos": 10400000000,
+          "target": 1.0,
+          "responseSeconds": 0.384,
+          "dampingRatio": 1.0,
+          "positionThreshold": 0.001,
+          "velocityThreshold": 0.001
+        },
+        {
+          "operation": "spring",
+          "atNanos": 12400000000,
+          "target": 0.0,
+          "responseSeconds": 0.384,
+          "dampingRatio": 1.0,
+          "positionThreshold": 0.001,
+          "velocityThreshold": 0.001
+        }
+      ]
+    },
+    {
+      "id": "heading-proof.opacity",
+      "actorId": "heading-proof",
+      "property": "opacity",
+      "initial": 0.0,
+      "events": [
+        {
+          "operation": "spring",
+          "atNanos": 12400000000,
+          "target": 1.0,
+          "responseSeconds": 0.384,
+          "dampingRatio": 1.0,
+          "positionThreshold": 0.001,
+          "velocityThreshold": 0.001
+        }
+      ]
+    },
+    {
+      "id": "detail-proof.opacity",
+      "actorId": "detail-proof",
+      "property": "opacity",
+      "initial": 0.0,
+      "events": [
+        {
+          "operation": "spring",
+          "atNanos": 12400000000,
+          "target": 1.0,
+          "responseSeconds": 0.384,
+          "dampingRatio": 1.0,
+          "positionThreshold": 0.001,
+          "velocityThreshold": 0.001
+        }
+      ]
+    }
+  ],
+  "stateChannels": [
+    {
+      "id": "terminal.recording",
+      "actorId": "terminal",
+      "state": "recording",
+      "initial": "live-hot-reload",
+      "events": []
+    }
+  ],
+  "cues": [
+    {
+      "id": "before-tool",
+      "startNanos": 0,
+      "endNanos": 3400000000
+    },
+    {
+      "id": "create-plugin",
+      "startNanos": 3400000000,
+      "endNanos": 7000000000
+    },
+    {
+      "id": "hot-reload",
+      "startNanos": 7000000000,
+      "endNanos": 10400000000
+    },
+    {
+      "id": "same-session-call",
+      "startNanos": 10400000000,
+      "endNanos": 12400000000
+    },
+    {
+      "id": "proof",
+      "startNanos": 12400000000,
+      "endNanos": 15500000000
+    }
+  ],
+  "media": [
+    {
+      "id": "live-hot-reload",
+      "path": "../../assets/opencode-v2-session-tool/live-hot-reload.mp4",
+      "kind": "video",
+      "role": "layer",
+      "sourceStartNanos": 0,
+      "sourceEndNanos": 12280000000,
+      "timelineStartNanos": 600000000,
+      "timelineEndNanos": 12880000000,
+      "gainDb": 0.0
+    },
+    {
+      "id": "voice-setup",
+      "path": "../../assets/opencode-v2-session-tool/voice-01-setup.mp3",
+      "kind": "audio",
+      "role": "script",
+      "sourceStartNanos": 0,
+      "sourceEndNanos": 2229116000,
+      "timelineStartNanos": 500000000,
+      "timelineEndNanos": 2729116000,
+      "gainDb": 6.0
+    },
+    {
+      "id": "voice-create",
+      "path": "../../assets/opencode-v2-session-tool/voice-02-create.mp3",
+      "kind": "audio",
+      "role": "script",
+      "sourceStartNanos": 0,
+      "sourceEndNanos": 3018594000,
+      "timelineStartNanos": 3400000000,
+      "timelineEndNanos": 6418594000,
+      "gainDb": 6.0
+    },
+    {
+      "id": "voice-reload",
+      "path": "../../assets/opencode-v2-session-tool/voice-03-reload.mp3",
+      "kind": "audio",
+      "role": "script",
+      "sourceStartNanos": 0,
+      "sourceEndNanos": 3390113000,
+      "timelineStartNanos": 7000000000,
+      "timelineEndNanos": 10390113000,
+      "gainDb": 6.0
+    },
+    {
+      "id": "voice-call",
+      "path": "../../assets/opencode-v2-session-tool/voice-04-call.mp3",
+      "kind": "audio",
+      "role": "script",
+      "sourceStartNanos": 0,
+      "sourceEndNanos": 1950476000,
+      "timelineStartNanos": 10400000000,
+      "timelineEndNanos": 12350476000,
+      "gainDb": 6.0
+    },
+    {
+      "id": "voice-proof",
+      "path": "../../assets/opencode-v2-session-tool/voice-05-proof.mp3",
+      "kind": "audio",
+      "role": "script",
+      "sourceStartNanos": 0,
+      "sourceEndNanos": 2507755000,
+      "timelineStartNanos": 12400000000,
+      "timelineEndNanos": 14907755000,
+      "gainDb": 6.0
+    },
+    {
+      "id": "plugin-loaded",
+      "path": "../../assets/opencode-hot-reload/save.wav",
+      "kind": "audio",
+      "role": "layer",
+      "sourceStartNanos": 0,
+      "sourceEndNanos": 160000000,
+      "timelineStartNanos": 7000000000,
+      "timelineEndNanos": 7160000000,
+      "gainDb": 2.0
+    },
+    {
+      "id": "tool-success",
+      "path": "../../assets/opencode-hot-reload/confirm.wav",
+      "kind": "audio",
+      "role": "layer",
+      "sourceStartNanos": 0,
+      "sourceEndNanos": 340000000,
+      "timelineStartNanos": 12400000000,
+      "timelineEndNanos": 12740000000,
+      "gainDb": 4.0
+    }
+  ]
+}
