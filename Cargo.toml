@@ -3,6 +3,7 @@ members = [
   "crates/kinograph",
   "crates/kinograph-render",
   "scenes/agent-demo",
+  "scenes/deployment-queue",
   "scenes/hero",
   "scenes/opencode-session-tool",
 ]

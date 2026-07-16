@@ -1,0 +1,384 @@
+{
+  "version": 2,
+  "id": "northstar-release-control",
+  "durationNanos": 9000000000,
+  "actors": [
+    {
+      "id": "deployment-queue",
+      "recipe": "deployment-queue",
+      "data": {
+        "items": [
+          {
+            "id": "web",
+            "label": "Web Gateway"
+          },
+          {
+            "id": "api",
+            "label": "Public API"
+          },
+          {
+            "id": "worker",
+            "label": "Queue Worker"
+          }
+        ]
+      }
+    }
+  ],
+  "semanticTargets": [],
+  "continuousChannels": [
+    {
+      "id": "deployment-queue.x",
+      "actorId": "deployment-queue",
+      "property": "x",
+      "initial": 960.0,
+      "events": [
+        {
+          "operation": "set",
+          "atNanos": 0,
+          "value": 1035.0
+        },
+        {
+          "operation": "spring",
+          "atNanos": 0,
+          "target": 960.0,
+          "responseSeconds": 0.8640001,
+          "dampingRatio": 0.92,
+          "positionThreshold": 0.001,
+          "velocityThreshold": 0.001
+        }
+      ]
+    },
+    {
+      "id": "deployment-queue.y",
+      "actorId": "deployment-queue",
+      "property": "y",
+      "initial": 540.0,
+      "events": [
+        {
+          "operation": "set",
+          "atNanos": 0,
+          "value": 710.0
+        },
+        {
+          "operation": "spring",
+          "atNanos": 0,
+          "target": 540.0,
+          "responseSeconds": 0.8640001,
+          "dampingRatio": 0.92,
+          "positionThreshold": 0.001,
+          "velocityThreshold": 0.001
+        }
+      ]
+    },
+    {
+      "id": "deployment-queue.scale",
+      "actorId": "deployment-queue",
+      "property": "scale",
+      "initial": 1.0,
+      "events": [
+        {
+          "operation": "set",
+          "atNanos": 0,
+          "value": 0.84
+        },
+        {
+          "operation": "spring",
+          "atNanos": 0,
+          "target": 1.0,
+          "responseSeconds": 0.8640001,
+          "dampingRatio": 0.92,
+          "positionThreshold": 0.001,
+          "velocityThreshold": 0.001
+        }
+      ]
+    },
+    {
+      "id": "deployment-queue.rotation",
+      "actorId": "deployment-queue",
+      "property": "rotation",
+      "initial": 0.0,
+      "events": [
+        {
+          "operation": "set",
+          "atNanos": 0,
+          "value": -0.045
+        },
+        {
+          "operation": "spring",
+          "atNanos": 0,
+          "target": 0.0,
+          "responseSeconds": 0.8640001,
+          "dampingRatio": 0.92,
+          "positionThreshold": 0.001,
+          "velocityThreshold": 0.001
+        }
+      ]
+    },
+    {
+      "id": "deployment-queue.tilt-x",
+      "actorId": "deployment-queue",
+      "property": "tilt-x",
+      "initial": 0.0,
+      "events": [
+        {
+          "operation": "set",
+          "atNanos": 0,
+          "value": -0.24
+        },
+        {
+          "operation": "spring",
+          "atNanos": 0,
+          "target": 0.0,
+          "responseSeconds": 0.8640001,
+          "dampingRatio": 0.92,
+          "positionThreshold": 0.001,
+          "velocityThreshold": 0.001
+        }
+      ]
+    },
+    {
+      "id": "deployment-queue.tilt-y",
+      "actorId": "deployment-queue",
+      "property": "tilt-y",
+      "initial": 0.0,
+      "events": [
+        {
+          "operation": "set",
+          "atNanos": 0,
+          "value": 0.32
+        },
+        {
+          "operation": "spring",
+          "atNanos": 0,
+          "target": 0.0,
+          "responseSeconds": 0.8640001,
+          "dampingRatio": 0.92,
+          "positionThreshold": 0.001,
+          "velocityThreshold": 0.001
+        }
+      ]
+    },
+    {
+      "id": "deployment-queue.near-edge-blur",
+      "actorId": "deployment-queue",
+      "property": "near-edge-blur",
+      "initial": 0.0,
+      "events": [
+        {
+          "operation": "set",
+          "atNanos": 0,
+          "value": 12.0
+        },
+        {
+          "operation": "spring",
+          "atNanos": 0,
+          "target": 0.0,
+          "responseSeconds": 0.8640001,
+          "dampingRatio": 0.92,
+          "positionThreshold": 0.001,
+          "velocityThreshold": 0.001
+        }
+      ]
+    },
+    {
+      "id": "deployment-queue.opacity",
+      "actorId": "deployment-queue",
+      "property": "opacity",
+      "initial": 1.0,
+      "events": [
+        {
+          "operation": "set",
+          "atNanos": 0,
+          "value": 0.0
+        },
+        {
+          "operation": "spring",
+          "atNanos": 0,
+          "target": 1.0,
+          "responseSeconds": 0.8640001,
+          "dampingRatio": 0.92,
+          "positionThreshold": 0.001,
+          "velocityThreshold": 0.001
+        }
+      ]
+    }
+  ],
+  "stateChannels": [
+    {
+      "id": "deployment-queue.snapshot",
+      "actorId": "deployment-queue",
+      "state": "snapshot",
+      "initial": {
+        "items": [
+          {
+            "itemId": "web",
+            "phase": "queued"
+          },
+          {
+            "itemId": "api",
+            "phase": "queued"
+          },
+          {
+            "itemId": "worker",
+            "phase": "queued"
+          }
+        ]
+      },
+      "events": [
+        {
+          "atNanos": 1400000000,
+          "value": {
+            "items": [
+              {
+                "itemId": "web",
+                "phase": "deploying",
+                "progress": 0.375
+              },
+              {
+                "itemId": "api",
+                "phase": "building",
+                "progress": 0.25
+              },
+              {
+                "itemId": "worker",
+                "phase": "queued"
+              }
+            ]
+          }
+        },
+        {
+          "atNanos": 2700000000,
+          "value": {
+            "items": [
+              {
+                "itemId": "web",
+                "phase": "verifying",
+                "progress": 0.75
+              },
+              {
+                "itemId": "api",
+                "phase": "deploying",
+                "progress": 0.5
+              },
+              {
+                "itemId": "worker",
+                "phase": "building",
+                "progress": 0.25
+              }
+            ]
+          }
+        },
+        {
+          "atNanos": 3800000000,
+          "value": {
+            "attention": {
+              "itemId": "api",
+              "target": "item"
+            },
+            "items": [
+              {
+                "itemId": "worker",
+                "phase": "deploying",
+                "progress": 0.5
+              },
+              {
+                "itemId": "api",
+                "phase": "failed"
+              },
+              {
+                "itemId": "web",
+                "phase": "succeeded"
+              }
+            ]
+          }
+        },
+        {
+          "atNanos": 5200000000,
+          "value": {
+            "items": [
+              {
+                "itemId": "api",
+                "phase": "building",
+                "progress": 0.125
+              },
+              {
+                "itemId": "worker",
+                "phase": "deploying",
+                "progress": 0.875
+              },
+              {
+                "itemId": "web",
+                "phase": "succeeded"
+              }
+            ]
+          }
+        },
+        {
+          "atNanos": 6600000000,
+          "value": {
+            "items": [
+              {
+                "itemId": "api",
+                "phase": "deploying",
+                "progress": 0.625
+              },
+              {
+                "itemId": "worker",
+                "phase": "succeeded"
+              },
+              {
+                "itemId": "web",
+                "phase": "succeeded"
+              }
+            ]
+          }
+        },
+        {
+          "atNanos": 8000000000,
+          "value": {
+            "attention": {
+              "target": "queue"
+            },
+            "items": [
+              {
+                "itemId": "web",
+                "phase": "succeeded"
+              },
+              {
+                "itemId": "api",
+                "phase": "succeeded"
+              },
+              {
+                "itemId": "worker",
+                "phase": "succeeded"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "cues": [
+    {
+      "id": "rollout",
+      "startNanos": 0,
+      "endNanos": 3800000000
+    },
+    {
+      "id": "blocked",
+      "startNanos": 3800000000,
+      "endNanos": 5200000000
+    },
+    {
+      "id": "retry",
+      "startNanos": 5200000000,
+      "endNanos": 8000000000
+    },
+    {
+      "id": "healthy",
+      "startNanos": 8000000000,
+      "endNanos": 9000000000
+    }
+  ],
+  "media": []
+}
