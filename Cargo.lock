@@ -544,6 +544,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "kinograph-deployment-queue"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "kinograph",
+]
+
+[[package]]
 name = "kinograph-hero"
 version = "0.1.0"
 dependencies = [

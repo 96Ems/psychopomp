@@ -1,10 +1,5 @@
 struct SceneUniforms {
-    resolution: vec2<f32>,
-    panel_offset_y: f32,
-    _padding_0: f32,
-    panel_inverse_0: vec4<f32>,
-    panel_inverse_1: vec4<f32>,
-    panel_inverse_2: vec4<f32>,
+    resolution: vec4<f32>,
     focus: vec4<f32>,
     token_highlight: vec4<f32>,
 }
@@ -66,21 +61,10 @@ fn fill_box(
 
 @fragment
 fn fragment_main(input: VertexOutput) -> @location(0) vec4<f32> {
-    let world_pixel = input.uv * scene.resolution;
+    let pixel = input.uv * scene.resolution.xy;
     var color = vec4<f32>(0.0);
 
-    let panel_center = vec2<f32>(scene.resolution.x * 0.5, scene.resolution.y * 0.52 + scene.panel_offset_y);
-    var pixel = world_pixel;
-    if scene._padding_0 > 0.5 {
-        let delta = world_pixel - panel_center;
-        let world = vec3<f32>(delta, 1.0);
-        let local = vec3<f32>(
-            dot(scene.panel_inverse_0.xyz, world),
-            dot(scene.panel_inverse_1.xyz, world),
-            dot(scene.panel_inverse_2.xyz, world)
-        );
-        pixel = panel_center + local.xy / local.z;
-    }
+    let panel_center = vec2<f32>(scene.resolution.x * 0.5, scene.resolution.y * 0.52);
     let panel_size = vec2<f32>(scene.resolution.x * 0.78, scene.resolution.y * 0.70);
 
     let titlebar_center = panel_center - vec2<f32>(0.0, panel_size.y * 0.5 - 32.0);

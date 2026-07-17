@@ -64,8 +64,12 @@ impl VideoFrameCache {
         [self.width, self.height]
     }
 
+    pub fn frame_index_at(&self, seconds: f32) -> u64 {
+        frame_index(seconds, self.fps, self.frame_count)
+    }
+
     pub fn frame_at(&mut self, seconds: f32) -> Result<&[u8]> {
-        let index = frame_index(seconds, self.fps, self.frame_count);
+        let index = self.frame_index_at(seconds);
         if self.current_frame != Some(index) {
             let offset = index
                 .checked_mul(self.pixels.len() as u64)

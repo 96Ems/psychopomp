@@ -1,4 +1,9 @@
-use std::{cell::RefCell, collections::HashMap, path::Path};
+use std::{
+    cell::RefCell,
+    collections::{HashMap, hash_map::DefaultHasher},
+    hash::{Hash, Hasher},
+    path::Path,
+};
 
 use anyhow::{Context, Result, bail};
 use kinograph::{
@@ -34,6 +39,13 @@ impl PreparedTerminal {
         }
         let mut recordings = HashMap::new();
         for recording in recipe.recordings {
+            if recordings.contains_key(&recording.media_id) {
+                bail!(
+                    "terminal actor '{}' declares recording '{}' more than once",
+                    actor.id,
+                    recording.media_id
+                );
+            }
             if recording.width == 0 || recording.height == 0 || recording.fps == 0 {
                 bail!(
                     "terminal recording '{}' dimensions and fps must be non-zero",
@@ -55,16 +67,12 @@ impl PreparedTerminal {
                     recording.media_id
                 );
             }
-            let source = if planned.path.is_absolute() {
-                planned.path.clone()
-            } else {
-                base.join(&planned.path)
-            };
+            let source = super::resolve_media_path(base, planned);
             let cache = Path::new(env!("CARGO_MANIFEST_DIR"))
                 .join("../..")
                 .join("target")
                 .join("kinograph-cache")
-                .join(format!("plan-{}-{}", actor.id, recording.media_id));
+                .join(cache_directory_name(&actor.id, &recording.media_id));
             let cache = VideoFrameCache::open(
                 source,
                 cache,
@@ -72,22 +80,13 @@ impl PreparedTerminal {
                 recording.height,
                 recording.fps,
             )?;
-            if recordings
-                .insert(
-                    recording.media_id.clone(),
-                    PreparedRecording {
-                        media: planned.clone(),
-                        cache: RefCell::new(cache),
-                    },
-                )
-                .is_some()
-            {
-                bail!(
-                    "terminal actor '{}' declares recording '{}' more than once",
-                    actor.id,
-                    recording.media_id
-                );
-            }
+            recordings.insert(
+                recording.media_id.clone(),
+                PreparedRecording {
+                    media: planned.clone(),
+                    cache: RefCell::new(cache),
+                },
+            );
         }
         Ok(Self {
             actor_id: actor.id.clone(),
@@ -141,6 +140,28 @@ impl PreparedTerminal {
             tagline_opacity: 0.0,
         })
     }
+
+    pub(super) fn frame_index_at(&self, recording_id: &str, time: f64) -> Result<u64> {
+        let recording = self.recordings.get(recording_id).with_context(|| {
+            format!(
+                "terminal actor '{}' selected unknown recording '{}'",
+                self.actor_id, recording_id
+            )
+        })?;
+        let global_nanos = (time * 1_000_000_000.0).round() as u64;
+        let local_nanos = source_nanos_at(&recording.media, global_nanos);
+        Ok(recording
+            .cache
+            .borrow()
+            .frame_index_at(local_nanos as f32 / 1_000_000_000.0))
+    }
+}
+
+fn cache_directory_name(actor_id: &str, media_id: &str) -> String {
+    let mut hasher = DefaultHasher::new();
+    actor_id.hash(&mut hasher);
+    media_id.hash(&mut hasher);
+    format!("plan-{:016x}", hasher.finish())
 }
 
 fn source_nanos_at(media: &MediaPlan, global_nanos: u64) -> u64 {
@@ -156,7 +177,16 @@ mod tests {
 
     use kinograph::plan::{MediaKindPlan, MediaPlan, MediaRolePlan};
 
-    use super::source_nanos_at;
+    use super::{cache_directory_name, source_nanos_at};
+
+    #[test]
+    fn cache_directory_does_not_expose_plan_ids_as_path_components() {
+        let directory = cache_directory_name("../../actor", "../recording/video");
+
+        assert!(directory.starts_with("plan-"));
+        assert!(!directory.contains('/'));
+        assert!(!directory.contains(".."));
+    }
 
     #[test]
     fn global_time_maps_to_trimmed_video_source_time() {

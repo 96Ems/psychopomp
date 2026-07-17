@@ -1,6 +1,6 @@
 use anyhow::{Result, bail};
 
-use super::Bounds;
+use super::{super::blend_pixel, Bounds};
 
 const CAMERA_DISTANCE: f32 = 1_800.0;
 const BYTES_PER_PIXEL: usize = 4;
@@ -29,6 +29,28 @@ pub(crate) enum Fill {
         inner: UiColor,
         outer: UiColor,
     },
+}
+
+#[derive(Clone, Copy, Debug)]
+pub(crate) struct SurfaceStyle {
+    pub fill: Fill,
+    pub corner_radius: f32,
+    border: Option<(f32, UiColor, f32)>,
+}
+
+impl SurfaceStyle {
+    pub const fn new(fill: Fill, corner_radius: f32) -> Self {
+        Self {
+            fill,
+            corner_radius,
+            border: None,
+        }
+    }
+
+    pub const fn border(mut self, width: f32, color: UiColor, opacity: f32) -> Self {
+        self.border = Some((width, color, opacity));
+        self
+    }
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -123,13 +145,7 @@ pub(crate) struct RgbaSource<'a> {
 
 impl<'a> RgbaSource<'a> {
     pub fn packed(pixels: &'a [u8], size: [u32; 2]) -> Result<Self> {
-        Self::strided_region(
-            pixels,
-            size,
-            size[0] as usize * BYTES_PER_PIXEL,
-            [0, 0],
-            size,
-        )
+        Self::strided_region(pixels, size, rgba_row_bytes(size[0])?, [0, 0], size)
     }
 
     pub fn strided_region(
@@ -142,14 +158,22 @@ impl<'a> RgbaSource<'a> {
         if size[0] == 0 || size[1] == 0 {
             bail!("RGBA source dimensions must be non-zero");
         }
-        if origin[0] + size[0] > surface_size[0] || origin[1] + size[1] > surface_size[1] {
+        let region_end = [
+            origin[0].checked_add(size[0]),
+            origin[1].checked_add(size[1]),
+        ];
+        if region_end[0].is_none_or(|end| end > surface_size[0])
+            || region_end[1].is_none_or(|end| end > surface_size[1])
+        {
             bail!("RGBA source region exceeds its surface");
         }
-        let minimum_stride = surface_size[0] as usize * BYTES_PER_PIXEL;
+        let minimum_stride = rgba_row_bytes(surface_size[0])?;
         if bytes_per_row < minimum_stride {
             bail!("RGBA source stride is smaller than its surface width");
         }
-        let required = bytes_per_row * surface_size[1] as usize;
+        let Some(required) = bytes_per_row.checked_mul(surface_size[1] as usize) else {
+            bail!("RGBA source dimensions exceed addressable memory");
+        };
         if pixels.len() < required {
             bail!(
                 "RGBA source requires {required} bytes, received {}",
@@ -213,7 +237,7 @@ pub(crate) struct UiCanvas<'a> {
 }
 
 impl<'a> UiCanvas<'a> {
-    fn new(pixels: &'a mut [u8], size: [u32; 2]) -> Self {
+    pub(crate) fn new(pixels: &'a mut [u8], size: [u32; 2]) -> Self {
         Self {
             pixels,
             size,
@@ -257,6 +281,19 @@ impl<'a> UiCanvas<'a> {
                 let index = (y as usize * self.size[0] as usize + x as usize) * BYTES_PER_PIXEL;
                 blend_pixel(&mut self.pixels[index..index + 4], color.0, coverage);
             }
+        }
+    }
+
+    pub fn surface(&mut self, bounds: Bounds, style: SurfaceStyle, opacity: f32) {
+        self.fill(bounds, style.corner_radius, style.fill, opacity);
+        if let Some((width, color, border_opacity)) = style.border {
+            self.stroke(
+                bounds,
+                style.corner_radius,
+                width,
+                color,
+                opacity * border_opacity,
+            );
         }
     }
 
@@ -415,7 +452,7 @@ impl<'a> FrameUi<'a> {
         card_pixels: &'a mut Vec<u8>,
         overlay_pixels: &'a mut Vec<u8>,
     ) -> Result<Self> {
-        let expected = size[0] as usize * size[1] as usize * BYTES_PER_PIXEL;
+        let expected = rgba_byte_len(size)?;
         if pixels.len() != expected {
             bail!(
                 "UI frame requires {expected} bytes, received {}",
@@ -454,7 +491,7 @@ impl<'a> FrameUi<'a> {
             frame.bounds.size[0].ceil().max(1.0) as u32,
             frame.bounds.size[1].ceil().max(1.0) as u32,
         ];
-        let required = local_size[0] as usize * local_size[1] as usize * BYTES_PER_PIXEL;
+        let required = rgba_byte_len(local_size)?;
         self.card_pixels.resize(required, 0);
         self.card_pixels.fill(0);
         self.overlay_pixels.resize(required, 0);
@@ -490,6 +527,20 @@ impl<'a> FrameUi<'a> {
         );
         Ok(result)
     }
+}
+
+fn rgba_row_bytes(width: u32) -> Result<usize> {
+    let Some(bytes) = (width as usize).checked_mul(BYTES_PER_PIXEL) else {
+        bail!("RGBA row width exceeds addressable memory");
+    };
+    Ok(bytes)
+}
+
+fn rgba_byte_len(size: [u32; 2]) -> Result<usize> {
+    let Some(bytes) = rgba_row_bytes(size[0])?.checked_mul(size[1] as usize) else {
+        bail!("RGBA dimensions exceed addressable memory");
+    };
+    Ok(bytes)
 }
 
 fn validate_card(frame: CardFrame) -> Result<()> {
@@ -625,26 +676,7 @@ fn composite_card_layer(
             let target = (target_y as usize * destination_size[0] as usize + target_x as usize)
                 * BYTES_PER_PIXEL;
             if shell && distance > 0.0 {
-                let shadow_local = transform.unproject([
-                    point[0] - frame.style.shadow_offset[0],
-                    point[1] - frame.style.shadow_offset[1],
-                ]);
-                let shadow_distance = rounded_rect_distance(
-                    shadow_local,
-                    frame.bounds.size,
-                    frame.style.corner_radius,
-                );
-                if shadow_distance < frame.style.shadow_blur * 3.0 {
-                    let shadow = (-shadow_distance.max(0.0).powi(2)
-                        / (2.0 * frame.style.shadow_blur.max(0.001).powi(2)))
-                    .exp()
-                        * frame.style.shadow_opacity;
-                    blend_pixel(
-                        &mut destination[target..target + 4],
-                        [0, 0, 0, 255],
-                        shadow * frame.opacity,
-                    );
-                }
+                composite_card_shadow(destination, target, transform, point, frame);
                 continue;
             }
             let outside = if shell {
@@ -863,21 +895,8 @@ fn sample_source_blurred(source: RgbaSource<'_>, x: f32, y: f32, blur: f32) -> [
 }
 
 fn over_pixel(background: [u8; 4], foreground: [u8; 4]) -> [u8; 4] {
-    let foreground_alpha = f32::from(foreground[3]) / 255.0;
-    let background_alpha = f32::from(background[3]) / 255.0;
-    let output_alpha = foreground_alpha + background_alpha * (1.0 - foreground_alpha);
-    if output_alpha <= 0.0 {
-        return [0; 4];
-    }
-    let mut output = [0; 4];
-    for channel in 0..3 {
-        output[channel] = ((f32::from(foreground[channel]) / 255.0 * foreground_alpha
-            + f32::from(background[channel]) / 255.0 * background_alpha * (1.0 - foreground_alpha))
-            / output_alpha
-            * 255.0)
-            .round() as u8;
-    }
-    output[3] = (output_alpha * 255.0).round() as u8;
+    let mut output = background;
+    blend_pixel(&mut output, foreground, 1.0);
     output
 }
 
@@ -888,34 +907,7 @@ fn sample_layer_blurred(pixels: &[u8], size: [u32; 2], x: f32, y: f32, blur: f32
         bytes_per_row: size[0] as usize * BYTES_PER_PIXEL,
         origin: [0, 0],
     };
-    if blur <= 0.2 {
-        return source.sample(x, y);
-    }
-    let radius = blur * 0.72;
-    let axis = [-radius, 0.0, radius];
-    let weights = [1.0, 2.0, 1.0];
-    let mut alpha = 0.0;
-    let mut premultiplied = [0.0; 3];
-    for (offset_y, weight_y) in axis.into_iter().zip(weights) {
-        for (offset_x, weight_x) in axis.into_iter().zip(weights) {
-            let weight = weight_x * weight_y / 16.0;
-            let sample = source.sample(x + offset_x, y + offset_y);
-            let sample_alpha = f32::from(sample[3]) / 255.0 * weight;
-            alpha += sample_alpha;
-            for channel in 0..3 {
-                premultiplied[channel] += f32::from(sample[channel]) / 255.0 * sample_alpha;
-            }
-        }
-    }
-    if alpha <= 0.0 {
-        return [0; 4];
-    }
-    [
-        (premultiplied[0] / alpha * 255.0).round() as u8,
-        (premultiplied[1] / alpha * 255.0).round() as u8,
-        (premultiplied[2] / alpha * 255.0).round() as u8,
-        (alpha * 255.0).round() as u8,
-    ]
+    sample_source_blurred(source, x, y, blur)
 }
 
 fn rounded_coverage(point: [f32; 2], bounds: Bounds, radius: f32) -> f32 {
@@ -928,24 +920,6 @@ fn rounded_rect_distance(local: [f32; 2], size: [f32; 2], radius: f32) -> f32 {
     let dx = local[0].abs() - (size[0] * 0.5 - radius);
     let dy = local[1].abs() - (size[1] * 0.5 - radius);
     dx.max(0.0).hypot(dy.max(0.0)) + dx.max(dy).min(0.0) - radius
-}
-
-fn blend_pixel(destination: &mut [u8], source: [u8; 4], opacity: f32) {
-    let source_alpha = f32::from(source[3]) / 255.0 * opacity.clamp(0.0, 1.0);
-    if source_alpha <= 0.0 {
-        return;
-    }
-    let destination_alpha = f32::from(destination[3]) / 255.0;
-    let output_alpha = source_alpha + destination_alpha * (1.0 - source_alpha);
-    for channel in 0..3 {
-        let source_channel = f32::from(source[channel]) / 255.0;
-        let destination_channel = f32::from(destination[channel]) / 255.0;
-        let output = (source_channel * source_alpha
-            + destination_channel * destination_alpha * (1.0 - source_alpha))
-            / output_alpha;
-        destination[channel] = (output * 255.0).round() as u8;
-    }
-    destination[3] = (output_alpha * 255.0).round() as u8;
 }
 
 fn card_corners([half_width, half_height]: [f32; 2]) -> [[f32; 2]; 4] {
@@ -989,9 +963,29 @@ fn invert_matrix_3x3(matrix: [[f32; 3]; 3]) -> [[f32; 3]; 3] {
 #[cfg(test)]
 mod tests {
     use super::{
-        Bounds, CardFrame, CardProjection, CardStyle, Clip, ContentFit, FrameUi, RgbaSource,
-        UiColor,
+        Bounds, CardFrame, CardProjection, CardStyle, CardTransform, Clip, ContentFit, Fill,
+        FrameUi, RgbaSource, SurfaceStyle, UiCanvas, UiColor,
     };
+
+    #[test]
+    fn perspective_transform_round_trips_points() {
+        let transform = CardTransform::new(
+            CardProjection {
+                scale: 0.91,
+                rotation_z: -0.08,
+                tilt_x: 0.14,
+                tilt_y: -0.12,
+                surface_blur: 0.0,
+                near_edge_blur: 0.0,
+            },
+            [700.0, 400.0],
+        );
+        let point = [340.0, -170.0];
+        let restored = transform.unproject(transform.project(point));
+
+        assert!((restored[0] - point[0]).abs() < 0.001);
+        assert!((restored[1] - point[1]).abs() < 0.001);
+    }
 
     #[test]
     fn nested_clips_constrain_composed_rgba_content() {
@@ -1015,6 +1009,27 @@ mod tests {
 
         assert_eq!(&output[(4 * 8 + 4) * 4..(4 * 8 + 4) * 4 + 4], &[255; 4]);
         assert_eq!(&output[0..4], &[0; 4]);
+    }
+
+    #[test]
+    fn surfaces_compose_fill_and_border_as_one_operation() {
+        let mut output = vec![0; 8 * 8 * 4];
+        let mut canvas = UiCanvas::new(&mut output, [8, 8]);
+        canvas.surface(
+            Bounds {
+                origin: [1.0, 1.0],
+                size: [6.0, 6.0],
+            },
+            SurfaceStyle::new(Fill::Solid(UiColor::srgb8(220, 20, 20, 255)), 0.0).border(
+                1.0,
+                UiColor::srgb8(20, 220, 20, 255),
+                1.0,
+            ),
+            1.0,
+        );
+
+        assert!(output.chunks_exact(4).any(|pixel| pixel[0] > pixel[1]));
+        assert!(output.chunks_exact(4).any(|pixel| pixel[1] > pixel[0]));
     }
 
     #[test]
@@ -1096,6 +1111,15 @@ mod tests {
         assert_eq!(
             &output[(8 * 16 + 8) * 4..(8 * 16 + 8) * 4 + 4],
             &[20, 220, 20, 255]
+        );
+    }
+
+    #[test]
+    fn rgba_sources_reject_overflowing_regions_and_dimensions() {
+        assert!(RgbaSource::packed(&[], [u32::MAX, u32::MAX]).is_err());
+        assert!(
+            RgbaSource::strided_region(&[], [u32::MAX, 1], usize::MAX, [u32::MAX, 0], [1, 1])
+                .is_err()
         );
     }
 }

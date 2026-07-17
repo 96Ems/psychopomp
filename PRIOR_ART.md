@@ -115,6 +115,47 @@ What Kinograph should avoid:
 - implicit real-time state that makes offline random-access sampling ambiguous
 - APIs where convenience hides the compiled timeline and prevents inspection
 
+## GPUI
+
+[GPUI](https://github.com/zed-industries/zed/tree/main/crates/gpui) is prior art for composing high-performance Rust interfaces from plain values. Its `RenderOnce`, `IntoElement`, and `Element` layers rebuild declarative element structure while retaining application state outside the tree; layout, prepaint, and paint remain distinct phases.
+
+What Kinograph should borrow:
+
+- plain data components whose rendering can be rebuilt from one sampled state
+- stable identity only where state, caching, or layout animation requires it
+- explicit layout before paint
+- small fluent fixed-canvas layout operations
+- cached shaped text and expensive immutable surfaces
+- call-order painting and lexical clipping for concrete renderer recipes
+
+What Kinograph should avoid:
+
+- reactive entities, notifications, subscriptions, and invalidation as animation truth
+- wall-clock animation elements that request future frames
+- input dispatch, hitboxes, focus, accessibility, and platform-window lifecycle
+- a public retained element tree or serialized flexbox vocabulary
+- copying GPUI's runtime state machinery into an offline renderer whose complete state is already a function of media time
+
+The `deployment-queue` proof takes this narrower path. One UI Snapshot produces recipe-owned target layout, stable keyed tracks preserve motion across snapshot changes, and a private immediate-mode painter reconstructs the complete UI Surface at every Temporal Sample.
+
+## Animations.dev
+
+[Animations.dev](https://animations.dev/learn) by Emil Kowalski is practical prior art for judging product motion rather than merely implementing it. Its animation-theory, Family drawer, Dynamic Island, and good-versus-great lessons reinforce several rules that apply directly to Kinograph scenes:
+
+- record the result and inspect state changes frame by frame instead of tuning only from code
+- give every animation one legible purpose; repeated decoration reduces the value of motion
+- use decelerating motion for entry and restrained ease-in-out or no-bounce springs for persistent layout changes
+- default product springs to no bounce unless a gesture or physical collision supplies the force that justifies it
+- preserve velocity when an in-flight layout motion is redirected
+- scale perceptual duration with element size and distance while keeping frequently encountered feedback short
+- keep exits simpler than entries and avoid large scale changes; a value near the destination reads as continuity rather than creation from nothing
+- preserve spatial consistency, including a stable direction and a single meaningful destination for reordering
+- bridge rich state replacement deliberately: crossfade simple content, or sequence outgoing and incoming content when showing both creates visual collisions
+- choose easing before duration, then inspect the result in slow motion and at normal speed
+- prefer solid materials or eased multi-stop gradients; plain two-stop color gradients expose banding and often add hierarchy-free decoration
+
+The deployment queue applies the relevant subset with solid materials, stable service order, a no-bounce entrance, critically damped position and presence springs, previous-to-current phase presentation, staggered rich-state replacement, and event-boundary artifact checks. Separate keyed-layout tests prove velocity-preserving redirection and exit/re-entry behavior; the canonical scene does not claim to demonstrate those motions or size-dependent timing. Kinograph still compiles these choices into deterministic arbitrary-time tracks rather than adopting a browser animation runtime.
+
 ### Pointer Motion Principles
 
 [Emil Kowalski's animation guidance](https://emilkowal.ski/ui/great-animations) emphasizes natural spring motion, speed, purpose, interruptibility, and reviewing work in slow motion or frame by frame. His published design-engineering skill specifically recommends spring interpolation for decorative pointer-following motion because direct target assignment feels artificial.

@@ -15,11 +15,14 @@ use wgpu::util::DeviceExt;
 use kinograph::code::{CodeLine, LineId, PlacedLine, StyledSpan, SyntaxStyle};
 use kinograph::dsl::AnnotationFrame;
 
+mod deployment_queue;
 mod effects;
 mod task;
 mod terminal;
 mod ui;
 
+pub(crate) use deployment_queue::deployment_row_center_y;
+pub use deployment_queue::{DeploymentItemFrame, DeploymentQueueFrame};
 pub use task::{QuoteFrame, TaskLinkFrame, TaskSceneFrame};
 pub use terminal::{CommandFileFrame, TerminalBackground, TerminalSceneFrame};
 
@@ -27,7 +30,6 @@ const FORMAT: wgpu::TextureFormat = wgpu::TextureFormat::Rgba8UnormSrgb;
 const BYTES_PER_PIXEL: u32 = 4;
 const COPY_ROW_ALIGNMENT: u32 = 256;
 const LINE_HEIGHT: f32 = 44.0;
-const PANEL_CAMERA_DISTANCE: f32 = 1800.0;
 
 #[derive(Clone)]
 pub struct RenderSpec {
@@ -108,81 +110,9 @@ pub struct TextRangeBounds {
 #[repr(C)]
 #[derive(Clone, Copy, Pod, Zeroable)]
 struct SceneUniforms {
-    resolution: [f32; 2],
-    panel_offset_y: f32,
-    _padding_0: f32,
-    panel_inverse_0: [f32; 4],
-    panel_inverse_1: [f32; 4],
-    panel_inverse_2: [f32; 4],
+    resolution: [f32; 4],
     focus: [f32; 4],
     token_highlight: [f32; 4],
-}
-
-#[derive(Clone, Copy)]
-struct PanelTransform {
-    inverse: [[f32; 3]; 3],
-}
-
-impl PanelTransform {
-    fn from_frame(frame: &EditorFrame<'_>) -> Self {
-        let (sine_x, cosine_x) = frame.panel_tilt_x.sin_cos();
-        let (sine_y, cosine_y) = frame.panel_tilt_y.sin_cos();
-        let (sine_z, cosine_z) = frame.panel_rotation.sin_cos();
-        let a = cosine_z * cosine_y;
-        let b = cosine_z * sine_y * sine_x - sine_z * cosine_x;
-        let c = sine_z * cosine_y;
-        let d = sine_z * sine_y * sine_x + cosine_z * cosine_x;
-        let depth = [-sine_y, cosine_y * sine_x];
-        let scale = frame.panel_scale.max(0.001);
-        let forward = [
-            [scale * a, scale * b, 0.0],
-            [scale * c, scale * d, 0.0],
-            [
-                -depth[0] / PANEL_CAMERA_DISTANCE,
-                -depth[1] / PANEL_CAMERA_DISTANCE,
-                1.0,
-            ],
-        ];
-        let inverse = invert_matrix_3x3(forward);
-        Self { inverse }
-    }
-}
-
-fn panel_transform_active(frame: &EditorFrame<'_>) -> bool {
-    frame.panel_rotation.abs() > 0.0001
-        || frame.panel_tilt_x.abs() > 0.0001
-        || frame.panel_tilt_y.abs() > 0.0001
-        || (frame.panel_scale - 1.0).abs() > 0.0001
-}
-
-#[cfg(test)]
-fn multiply_matrix_point(matrix: [[f32; 3]; 3], point: [f32; 2]) -> [f32; 3] {
-    let vector = [point[0], point[1], 1.0];
-    matrix.map(|row| row[0] * vector[0] + row[1] * vector[1] + row[2] * vector[2])
-}
-
-fn invert_matrix_3x3(matrix: [[f32; 3]; 3]) -> [[f32; 3]; 3] {
-    let [a, b, c] = matrix;
-    let determinant = a[0] * (b[1] * c[2] - b[2] * c[1]) - a[1] * (b[0] * c[2] - b[2] * c[0])
-        + a[2] * (b[0] * c[1] - b[1] * c[0]);
-    let inverse_determinant = determinant.recip();
-    [
-        [
-            (b[1] * c[2] - b[2] * c[1]) * inverse_determinant,
-            (a[2] * c[1] - a[1] * c[2]) * inverse_determinant,
-            (a[1] * b[2] - a[2] * b[1]) * inverse_determinant,
-        ],
-        [
-            (b[2] * c[0] - b[0] * c[2]) * inverse_determinant,
-            (a[0] * c[2] - a[2] * c[0]) * inverse_determinant,
-            (a[2] * b[0] - a[0] * b[2]) * inverse_determinant,
-        ],
-        [
-            (b[0] * c[1] - b[1] * c[0]) * inverse_determinant,
-            (a[1] * c[0] - a[0] * c[1]) * inverse_determinant,
-            (a[0] * b[1] - a[1] * b[0]) * inverse_determinant,
-        ],
-    ]
 }
 
 struct TextSprite {
@@ -213,8 +143,10 @@ pub struct HeadlessRenderer {
     task_layer_pixels: Vec<u8>,
     task_blur_source: Vec<[f32; 4]>,
     task_blur_scratch: Vec<[f32; 4]>,
+    editor_background_pixels: Vec<u8>,
     terminal_background_pixels: Vec<u8>,
     terminal_neutral_background_pixels: Vec<u8>,
+    deployment_background_pixels: Vec<u8>,
     ui_card_pixels: Vec<u8>,
     ui_overlay_pixels: Vec<u8>,
 }
@@ -298,12 +230,7 @@ impl HeadlessRenderer {
             cache: None,
         });
         let initial_uniforms = SceneUniforms {
-            resolution: [spec.width as f32, spec.height as f32],
-            panel_offset_y: 0.0,
-            _padding_0: 0.0,
-            panel_inverse_0: [1.0, 0.0, 0.0, 0.0],
-            panel_inverse_1: [0.0, 1.0, 0.0, 0.0],
-            panel_inverse_2: [0.0, 0.0, 1.0, 0.0],
+            resolution: [spec.width as f32, spec.height as f32, 0.0, 0.0],
             focus: [0.0, 0.0, LINE_HEIGHT, 0.0],
             token_highlight: [0.0; 4],
         };
@@ -363,8 +290,10 @@ impl HeadlessRenderer {
             task_layer_pixels: Vec::new(),
             task_blur_source: Vec::new(),
             task_blur_scratch: Vec::new(),
+            editor_background_pixels: Vec::new(),
             terminal_background_pixels: Vec::new(),
             terminal_neutral_background_pixels: Vec::new(),
+            deployment_background_pixels: Vec::new(),
             ui_card_pixels: Vec::new(),
             ui_overlay_pixels: Vec::new(),
         })
@@ -568,33 +497,12 @@ impl HeadlessRenderer {
     }
 
     pub fn render_shapes(&mut self, frame: &EditorFrame<'_>) -> Result<Vec<u8>> {
-        let panel_center_y = self.spec.height as f32 * 0.52 + frame.panel_offset_y;
-        let panel_top = self.spec.height as f32 * 0.17 + frame.panel_offset_y;
+        let panel_center_y = self.spec.height as f32 * 0.52;
+        let panel_top = self.spec.height as f32 * 0.17;
         let code_top = panel_top + 104.0;
         let focus_offset_y = code_top + frame.focus_line_y + LINE_HEIGHT * 0.5 - panel_center_y;
-        let transform = PanelTransform::from_frame(frame);
         let uniforms = SceneUniforms {
-            resolution: [self.spec.width as f32, self.spec.height as f32],
-            panel_offset_y: frame.panel_offset_y,
-            _padding_0: f32::from(panel_transform_active(frame)),
-            panel_inverse_0: [
-                transform.inverse[0][0],
-                transform.inverse[0][1],
-                transform.inverse[0][2],
-                0.0,
-            ],
-            panel_inverse_1: [
-                transform.inverse[1][0],
-                transform.inverse[1][1],
-                transform.inverse[1][2],
-                0.0,
-            ],
-            panel_inverse_2: [
-                transform.inverse[2][0],
-                transform.inverse[2][1],
-                transform.inverse[2][2],
-                0.0,
-            ],
+            resolution: [self.spec.width as f32, self.spec.height as f32, 0.0, 0.0],
             focus: [
                 frame.focus_intensity,
                 focus_offset_y,
@@ -725,34 +633,41 @@ impl HeadlessRenderer {
             source_origin,
             card_size,
         )?;
-        let mut pixels = vec![0_u8; self.spec.width as usize * self.spec.height as usize * 4];
+        if self.editor_background_pixels.is_empty() {
+            let mut background =
+                vec![0_u8; self.spec.width as usize * self.spec.height as usize * 4];
+            self.composite_ui(&mut background, |ui| {
+                ui.paint(|canvas| {
+                    let bounds = canvas.bounds();
+                    canvas.fill(
+                        bounds,
+                        0.0,
+                        ui::card::Fill::Solid(ui::card::UiColor::srgb8(4, 4, 5, 255)),
+                        1.0,
+                    );
+                    canvas.fill(
+                        bounds,
+                        0.0,
+                        ui::card::Fill::Radial {
+                            center: [bounds.size[0] * 0.5, bounds.size[1] * 0.46],
+                            radius: bounds.size[0] * 0.62,
+                            inner: ui::card::UiColor::srgb8(18, 18, 21, 150),
+                            outer: ui::card::UiColor::srgb8(0, 0, 0, 0),
+                        },
+                        1.0,
+                    );
+                    Ok(())
+                })
+            })?;
+            self.editor_background_pixels = background;
+        }
+        let mut pixels = self.editor_background_pixels.clone();
         let destination_size = [card_size[0] as f32, card_size[1] as f32];
         let destination_center = [
             self.spec.width as f32 * 0.5,
             self.spec.height as f32 * 0.52 + frame.panel_offset_y,
         ];
         self.composite_ui(&mut pixels, |ui| {
-            ui.paint(|canvas| {
-                let bounds = canvas.bounds();
-                canvas.fill(
-                    bounds,
-                    0.0,
-                    ui::card::Fill::Solid(ui::card::UiColor::srgb8(4, 4, 5, 255)),
-                    1.0,
-                );
-                canvas.fill(
-                    bounds,
-                    0.0,
-                    ui::card::Fill::Radial {
-                        center: [bounds.size[0] * 0.5, bounds.size[1] * 0.46],
-                        radius: bounds.size[0] * 0.62,
-                        inner: ui::card::UiColor::srgb8(18, 18, 21, 150),
-                        outer: ui::card::UiColor::srgb8(0, 0, 0, 0),
-                    },
-                    1.0,
-                );
-                Ok(())
-            })?;
             ui.card(
                 ui::card::CardFrame {
                     bounds: ui::Bounds::from_center(destination_center, destination_size),
@@ -1694,8 +1609,7 @@ fn attributes(base: Attrs<'static>, style: SyntaxStyle) -> Attrs<'static> {
 mod tests {
     use super::{
         InlineRevealFrame, TextSprite, composite_sprite_rotated,
-        composite_sprite_rotated_with_coverage, inline_reveal_segments, invert_matrix_3x3,
-        multiply_matrix_point,
+        composite_sprite_rotated_with_coverage, inline_reveal_segments,
     };
 
     fn opaque_test_sprite() -> TextSprite {
@@ -1782,24 +1696,6 @@ mod tests {
             }
         }
         assert!(painted > 0);
-    }
-
-    #[test]
-    fn perspective_matrix_round_trips_points() {
-        let forward = [
-            [0.91, 0.14, 0.0],
-            [-0.08, 0.88, 0.0],
-            [0.0001, -0.00008, 1.0],
-        ];
-        let inverse = invert_matrix_3x3(forward);
-        let point = [340.0, -170.0];
-        let projected = multiply_matrix_point(forward, point);
-        let projected = [projected[0] / projected[2], projected[1] / projected[2]];
-        let restored = multiply_matrix_point(inverse, projected);
-        let restored = [restored[0] / restored[2], restored[1] / restored[2]];
-
-        assert!((restored[0] - point[0]).abs() < 0.001);
-        assert!((restored[1] - point[1]).abs() < 0.001);
     }
 
     #[test]

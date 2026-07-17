@@ -43,6 +43,7 @@ Do not run the full render as routine validation when unit tests and static chec
 - `crates/kinograph/src/plan.rs`: versioned renderer-independent Scene Plan values and structured validation
 - `crates/kinograph/src/state.rs`: deterministic arbitrary-time discrete State Tracks
 - `crates/kinograph/src/terminal.rs`: lightweight terminal-recording recipe values for planned video media
+- `crates/kinograph/src/deployment.rs`: typed deployment-queue recipe values, semantic snapshots, and authoring handle
 - `crates/kinograph/src/timeline.rs`: relative Animation and explicit-time continuous Property Track compilation
 - `crates/kinograph/src/motion.rs`: deterministic arbitrary-time analytic spring sampling with position and velocity
 - `crates/kinograph/src/transcript.rs`: word timing ingestion and semantic cue lookup
@@ -50,8 +51,9 @@ Do not run the full render as routine validation when unit tests and static chec
 - `crates/kinograph-render/src/render/effects/`: independent pixel recipes for interchangeable short annotation effects
 - `crates/kinograph-render/src/render/task.rs`: concrete Effect Task recipe and compositing
 - `crates/kinograph-render/src/render/terminal.rs`: concrete terminal recording and command-file presentation
+- `crates/kinograph-render/src/render/deployment_queue.rs`: concrete state-driven deployment dashboard UI Surface
 - `crates/kinograph-render/src/render/ui.rs`: private bounds, inset, split, and flow layout primitives for pixel UI
-- `crates/kinograph-render/src/render/ui/card.rs`: shared immediate-mode RGBA composition and projected card presentation used by editor and recorded-video producers
+- `crates/kinograph-render/src/render/ui/card.rs`: shared immediate-mode RGBA composition and projected card presentation used by editor, recorded-video, and simulated-UI producers
 - `crates/kinograph-render/src/encode.rs`: concrete FFmpeg subprocess, raw RGBA protocol, and compiled audio placement
 - `crates/kinograph-render/src/scenes/`: one concrete choreography Module per renderable scene plus shared sampling and encoding mechanics
 - `crates/kinograph-render/src/scenes/effect_institute.rs`: private adapter from pinned published lesson artifacts into stable code, Task overlays, and stitched chapter schedules
@@ -60,9 +62,12 @@ Do not run the full render as routine validation when unit tests and static chec
 - `crates/kinograph-render/src/plan_runtime.rs`: Scene Plan inspection, validation, rendering, and persistent JSON server
 - `crates/kinograph-render/src/plan_runtime/editor.rs`: concrete editor and attached pointer Scene Plan recipe
 - `crates/kinograph-render/src/plan_runtime/terminal.rs`: concrete planned terminal-recording recipe and video source-time mapping
+- `crates/kinograph-render/src/plan_runtime/deployment_queue.rs`: deployment snapshot validation, private track compilation, and rendering adapter
+- `crates/kinograph-render/src/plan_runtime/keyed_layout.rs`: private stable keyed position and presence track compiler
 - `scenes/`: lightweight Rust Scene Programs that emit Scene Plans
 - `scenes/hero/`: canonical editor-heavy Scene Program and generated plan used by the default render command
-- `scenes/opencode-session-tool/`: narration-rich OpenCode v2 plugin lesson using planned terminal video, audio, text, and discrete state
+- `scenes/opencode-session-tool/`: rapid-fire OpenCode v2 hot-reload proof using split Vim/OpenCode terminal video, layered SFX, text, and discrete state
+- `scenes/deployment-queue/`: canonical state-driven simulated UI proof with keyed insertion, phase replacement, failure focus, and retry
 - `crates/kinograph-render/src/scene.wgsl`: editor geometry and focus shader
 
 Preserve these boundaries unless a concrete scene or second implementation demonstrates a better seam. The lightweight `kinograph` and heavyweight `kinograph-render` crates are a demonstrated process and compilation seam. Do not introduce a generic scene graph, renderer or encoder traits, plugins, or additional crate splits merely for future flexibility.

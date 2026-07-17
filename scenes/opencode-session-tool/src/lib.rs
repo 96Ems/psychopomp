@@ -8,9 +8,114 @@ use kinograph::{
 };
 use serde_json::json;
 
-const DURATION: u64 = 15_500_000_000;
+const DURATION: u64 = 20_500_000_000;
 const RECORDING_START: u64 = 600_000_000;
-const RECORDING_DURATION: u64 = 12_280_000_000;
+const RECORDING_DURATION: u64 = 19_216_667_000;
+
+#[derive(Clone, Copy)]
+struct AudioBeat {
+    id: &'static str,
+    path: &'static str,
+    duration: u64,
+    gain_db: f32,
+}
+
+#[derive(Clone, Copy)]
+struct Beat {
+    id: &'static str,
+    heading: &'static str,
+    detail: &'static str,
+    start: u64,
+    end: u64,
+    sound: AudioBeat,
+}
+
+const SAVE: AudioBeat = AudioBeat {
+    id: "save",
+    path: "../../assets/opencode-hot-reload/save.wav",
+    duration: 160_000_000,
+    gain_db: -2.0,
+};
+
+const BEATS: [Beat; 9] = [
+    Beat {
+        id: "command",
+        heading: "COMMAND ADDED LIVE",
+        detail: "opencode.jsonc saved  /  slash command appears  /  no restart",
+        start: 0,
+        end: 2_800_000_000,
+        sound: SAVE,
+    },
+    Beat {
+        id: "agent",
+        heading: "AGENT REGISTRY RELOADED",
+        detail: "release-sentinel enabled  /  mention menu refreshes in place",
+        start: 2_800_000_000,
+        end: 5_200_000_000,
+        sound: SAVE,
+    },
+    Beat {
+        id: "skill",
+        heading: "PROJECT SKILL INVALIDATED",
+        detail: "SKILL.md saved  /  release-protocol becomes slash-visible",
+        start: 5_200_000_000,
+        end: 7_400_000_000,
+        sound: SAVE,
+    },
+    Beat {
+        id: "reference",
+        heading: "REFERENCE MATERIALIZED",
+        detail: "runbook configured  /  @runbook appears in the live picker",
+        start: 7_400_000_000,
+        end: 9_600_000_000,
+        sound: SAVE,
+    },
+    Beat {
+        id: "model",
+        heading: "MODEL CATALOG REFRESHED",
+        detail: "Local Instant enabled  /  model selector updates without reconnecting",
+        start: 9_600_000_000,
+        end: 11_800_000_000,
+        sound: SAVE,
+    },
+    Beat {
+        id: "permission",
+        heading: "PERMISSIONS APPLY NEXT STEP",
+        detail: "read denied for build  /  the following provider request omits it",
+        start: 11_800_000_000,
+        end: 13_600_000_000,
+        sound: SAVE,
+    },
+    Beat {
+        id: "instructions",
+        heading: "AMBIENT INSTRUCTIONS REPLACED",
+        detail: "AGENTS.md changes RED to GREEN inside the same conversation",
+        start: 13_600_000_000,
+        end: 15_400_000_000,
+        sound: SAVE,
+    },
+    Beat {
+        id: "plugin-v1",
+        heading: "PLUGIN GENERATION ONE",
+        detail: "release_status appears and returns STAGING in the open session",
+        start: 15_400_000_000,
+        end: 17_300_000_000,
+        sound: SAVE,
+    },
+    Beat {
+        id: "plugin-v2",
+        heading: "PLUGIN GENERATION TWO. SAME SESSION.",
+        detail: "READY  /  deployment_url added  /  one service, one client, zero restarts",
+        start: 17_300_000_000,
+        end: DURATION,
+        sound: AudioBeat {
+            id: "confirm",
+            path: "../../assets/opencode-hot-reload/confirm.wav",
+            duration: 340_000_000,
+            gain_db: 4.0,
+        },
+    },
+];
 
 pub fn build_plan() -> Result<ScenePlan> {
     let mut scene = PlanBuilder::new("opencode-v2-session-tool", DURATION);
@@ -18,73 +123,36 @@ pub fn build_plan() -> Result<ScenePlan> {
         "terminal",
         TERMINAL_RECORDING_RECIPE,
         TerminalRecordingRecipePlan {
-            file_name: "OpenCode v2".to_owned(),
+            file_name: "OpenCode v2 / Vim".to_owned(),
             recordings: vec![TerminalRecordingPlan {
                 media_id: "live-hot-reload".to_owned(),
-                width: 1120,
-                height: 640,
-                fps: 25,
+                width: 1920,
+                height: 760,
+                fps: 60,
             }],
         },
     )?;
     scene.state(&terminal, "recording", "live-hot-reload")?;
 
     let panel_y = scene.continuous(&terminal, "panel-y", 500.0);
-    let panel_scale = scene.continuous(&terminal, "panel-scale", 1.18);
+    let panel_scale = scene.continuous(&terminal, "panel-scale", 1.35);
     let panel_rotation = scene.continuous(&terminal, "panel-rotation", -0.06);
     let panel_tilt_x = scene.continuous(&terminal, "panel-tilt-x", -0.24);
     let panel_tilt_y = scene.continuous(&terminal, "panel-tilt-y", 0.34);
     let panel_near_blur = scene.continuous(&terminal, "panel-near-blur", 11.0);
-    scene.spring(&panel_y, 0, 560.0, 0.7, 0.0);
-    scene.spring(&panel_scale, 0, 0.86, 0.7, 0.0);
+    scene.spring(&panel_y, 0, 540.0, 0.7, 0.0);
+    scene.spring(&panel_scale, 0, 1.15, 0.7, 0.0);
     scene.spring(&panel_rotation, 0, 0.0, 0.7, 0.0);
     scene.spring(&panel_tilt_x, 0, 0.0, 0.7, 0.0);
     scene.spring(&panel_tilt_y, 0, 0.0, 0.7, 0.0);
     scene.spring(&panel_near_blur, 0, 0.0, 0.7, 0.0);
 
-    let beats = [
-        (
-            "before-tool",
-            "THE TOOL DOES NOT EXIST YET",
-            "provider tools before patch  /  session_greeting absent",
-            0,
-            3_400_000_000,
-        ),
-        (
-            "create-plugin",
-            "THE SESSION CREATES A V2 PLUGIN",
-            "patch creates .opencode/plugins/session-tool.ts inside the live conversation",
-            3_400_000_000,
-            7_000_000_000,
-        ),
-        (
-            "hot-reload",
-            "THE WATCHER LOADS IT. NO RESTART.",
-            "config.updated  /  plugin loaded  /  the TUI and session stay alive",
-            7_000_000_000,
-            10_400_000_000,
-        ),
-        (
-            "same-session-call",
-            "THE SAME SESSION CALLS session_greeting",
-            "same session ID  /  session.tool.called  /  session.tool.success",
-            10_400_000_000,
-            12_400_000_000,
-        ),
-        (
-            "proof",
-            "HOT RELOAD WORKED. HELLO, ADA.",
-            "one interactive session  /  one live reload  /  real tool result",
-            12_400_000_000,
-            DURATION,
-        ),
-    ];
-    for (index, (id, heading, detail, start, end)) in beats.into_iter().enumerate() {
+    for (index, beat) in BEATS.iter().enumerate() {
         let heading_actor = scene.actor(
-            format!("heading-{id}"),
+            format!("heading-{}", beat.id),
             "text",
             json!({
-                "text": heading,
+                "text": beat.heading,
                 "center": [960, 82],
                 "fontSize": 34,
                 "color": [235, 240, 246],
@@ -96,10 +164,10 @@ pub fn build_plan() -> Result<ScenePlan> {
             if index == 0 { 1.0 } else { 0.0 },
         );
         let detail_actor = scene.actor(
-            format!("detail-{id}"),
+            format!("detail-{}", beat.id),
             "text",
             json!({
-                "text": detail,
+                "text": beat.detail,
                 "center": [960, 1020],
                 "fontSize": 22,
                 "color": [139, 166, 199],
@@ -107,80 +175,33 @@ pub fn build_plan() -> Result<ScenePlan> {
         )?;
         let detail_opacity =
             scene.continuous(&detail_actor, "opacity", if index == 0 { 1.0 } else { 0.0 });
-        if start > 0 {
-            scene.spring(&heading_opacity, start, 1.0, 0.32, 0.0);
-            scene.spring(&detail_opacity, start, 1.0, 0.32, 0.0);
+        if beat.start > 0 {
+            scene.spring(&heading_opacity, beat.start, 1.0, 0.32, 0.0);
+            scene.spring(&detail_opacity, beat.start, 1.0, 0.32, 0.0);
         }
-        if end < DURATION {
-            scene.spring(&heading_opacity, end, 0.0, 0.32, 0.0);
-            scene.spring(&detail_opacity, end, 0.0, 0.32, 0.0);
+        if beat.end < DURATION {
+            scene.spring(&heading_opacity, beat.end, 0.0, 0.32, 0.0);
+            scene.spring(&detail_opacity, beat.end, 0.0, 0.32, 0.0);
         }
-        scene.cue(id, start, end);
+        scene.cue(beat.id, beat.start, beat.end);
     }
 
     scene.media(video(
         "live-hot-reload",
-        "../../assets/opencode-v2-session-tool/live-hot-reload.mp4",
+        "../../assets/opencode-v2-session-tool/max-hot-reload-split.mp4",
         RECORDING_DURATION,
         RECORDING_START,
     ));
-    for (id, file, duration, start) in [
-        (
-            "voice-setup",
-            "voice-01-setup.mp3",
-            2_229_116_000,
-            500_000_000,
-        ),
-        (
-            "voice-create",
-            "voice-02-create.mp3",
-            3_018_594_000,
-            3_400_000_000,
-        ),
-        (
-            "voice-reload",
-            "voice-03-reload.mp3",
-            3_390_113_000,
-            7_000_000_000,
-        ),
-        (
-            "voice-call",
-            "voice-04-call.mp3",
-            1_950_476_000,
-            10_400_000_000,
-        ),
-        (
-            "voice-proof",
-            "voice-05-proof.mp3",
-            2_507_755_000,
-            12_400_000_000,
-        ),
-    ] {
+    for (index, beat) in BEATS.into_iter().enumerate() {
         scene.media(audio(
-            id,
-            &format!("../../assets/opencode-v2-session-tool/{file}"),
-            duration,
-            start,
-            MediaRolePlan::Script,
-            6.0,
+            &format!("{}-{index}", beat.sound.id),
+            beat.sound.path,
+            beat.sound.duration,
+            beat.start,
+            MediaRolePlan::Layer,
+            beat.sound.gain_db,
         ));
     }
-    scene.media(audio(
-        "plugin-loaded",
-        "../../assets/opencode-hot-reload/save.wav",
-        160_000_000,
-        7_000_000_000,
-        MediaRolePlan::Layer,
-        2.0,
-    ));
-    scene.media(audio(
-        "tool-success",
-        "../../assets/opencode-hot-reload/confirm.wav",
-        340_000_000,
-        12_400_000_000,
-        MediaRolePlan::Layer,
-        4.0,
-    ));
 
     Ok(scene.finish()?)
 }
@@ -222,7 +243,7 @@ fn audio(
 
 #[cfg(test)]
 mod tests {
-    use kinograph::plan::{MediaRolePlan, TrackEventPlan};
+    use kinograph::plan::TrackEventPlan;
 
     use super::build_plan;
 
@@ -231,33 +252,22 @@ mod tests {
     #[test]
     fn scene_plan_owns_video_audio_state_and_cues() {
         let plan = build_plan().unwrap();
-        assert_eq!(plan.duration_nanos, 15_500_000_000);
-        assert_eq!(plan.media.len(), 8);
+        assert_eq!(plan.duration_nanos, 20_500_000_000);
+        assert_eq!(plan.media.len(), 10);
         assert_eq!(plan.state_channels.len(), 1);
-        assert_eq!(plan.cues.len(), 5);
+        assert_eq!(plan.cues.len(), 9);
     }
 
     #[test]
-    fn narration_beats_do_not_leave_a_dead_interval() {
+    fn beats_cover_the_complete_scene_without_a_dead_interval() {
         let plan = build_plan().unwrap();
-        let mut script = plan
-            .media
-            .iter()
-            .filter(|media| matches!(media.role, MediaRolePlan::Script))
-            .collect::<Vec<_>>();
-        script.sort_by_key(|media| media.timeline_start_nanos);
+        let mut cues = plan.cues.iter().collect::<Vec<_>>();
+        cues.sort_by_key(|cue| cue.start_nanos);
 
-        for pair in script.windows(2) {
-            let gap = pair[1]
-                .timeline_start_nanos
-                .saturating_sub(pair[0].timeline_end_nanos);
-            assert!(
-                gap <= 1_000_000_000,
-                "narration gap between {} and {} is {:.3}s",
-                pair[0].id,
-                pair[1].id,
-                gap as f64 / 1_000_000_000.0,
-            );
+        assert_eq!(cues.first().unwrap().start_nanos, 0);
+        assert_eq!(cues.last().unwrap().end_nanos, plan.duration_nanos);
+        for pair in cues.windows(2) {
+            assert_eq!(pair[0].end_nanos, pair[1].start_nanos);
         }
     }
 

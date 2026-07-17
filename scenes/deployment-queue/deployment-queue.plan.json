@@ -7,6 +7,7 @@
       "id": "deployment-queue",
       "recipe": "deployment-queue",
       "data": {
+        "environment": "PRODUCTION",
         "items": [
           {
             "id": "web",
@@ -20,7 +21,11 @@
             "id": "worker",
             "label": "Queue Worker"
           }
-        ]
+        ],
+        "product": "NORTHSTAR",
+        "release": "release-2026.07.16",
+        "subtitle": "Live deployment telemetry and automated health gates",
+        "title": "Release Control"
       }
     }
   ],
@@ -35,14 +40,14 @@
         {
           "operation": "set",
           "atNanos": 0,
-          "value": 1035.0
+          "value": 992.0
         },
         {
           "operation": "spring",
           "atNanos": 0,
           "target": 960.0,
-          "responseSeconds": 0.8640001,
-          "dampingRatio": 0.92,
+          "responseSeconds": 0.744,
+          "dampingRatio": 1.0,
           "positionThreshold": 0.001,
           "velocityThreshold": 0.001
         }
@@ -57,14 +62,14 @@
         {
           "operation": "set",
           "atNanos": 0,
-          "value": 710.0
+          "value": 620.0
         },
         {
           "operation": "spring",
           "atNanos": 0,
           "target": 540.0,
-          "responseSeconds": 0.8640001,
-          "dampingRatio": 0.92,
+          "responseSeconds": 0.744,
+          "dampingRatio": 1.0,
           "positionThreshold": 0.001,
           "velocityThreshold": 0.001
         }
@@ -79,14 +84,14 @@
         {
           "operation": "set",
           "atNanos": 0,
-          "value": 0.84
+          "value": 0.94
         },
         {
           "operation": "spring",
           "atNanos": 0,
           "target": 1.0,
-          "responseSeconds": 0.8640001,
-          "dampingRatio": 0.92,
+          "responseSeconds": 0.744,
+          "dampingRatio": 1.0,
           "positionThreshold": 0.001,
           "velocityThreshold": 0.001
         }
@@ -101,14 +106,14 @@
         {
           "operation": "set",
           "atNanos": 0,
-          "value": -0.045
+          "value": -0.015
         },
         {
           "operation": "spring",
           "atNanos": 0,
           "target": 0.0,
-          "responseSeconds": 0.8640001,
-          "dampingRatio": 0.92,
+          "responseSeconds": 0.744,
+          "dampingRatio": 1.0,
           "positionThreshold": 0.001,
           "velocityThreshold": 0.001
         }
@@ -123,14 +128,14 @@
         {
           "operation": "set",
           "atNanos": 0,
-          "value": -0.24
+          "value": -0.08
         },
         {
           "operation": "spring",
           "atNanos": 0,
           "target": 0.0,
-          "responseSeconds": 0.8640001,
-          "dampingRatio": 0.92,
+          "responseSeconds": 0.744,
+          "dampingRatio": 1.0,
           "positionThreshold": 0.001,
           "velocityThreshold": 0.001
         }
@@ -145,14 +150,14 @@
         {
           "operation": "set",
           "atNanos": 0,
-          "value": 0.32
+          "value": 0.12
         },
         {
           "operation": "spring",
           "atNanos": 0,
           "target": 0.0,
-          "responseSeconds": 0.8640001,
-          "dampingRatio": 0.92,
+          "responseSeconds": 0.744,
+          "dampingRatio": 1.0,
           "positionThreshold": 0.001,
           "velocityThreshold": 0.001
         }
@@ -167,14 +172,14 @@
         {
           "operation": "set",
           "atNanos": 0,
-          "value": 12.0
+          "value": 4.0
         },
         {
           "operation": "spring",
           "atNanos": 0,
           "target": 0.0,
-          "responseSeconds": 0.8640001,
-          "dampingRatio": 0.92,
+          "responseSeconds": 0.744,
+          "dampingRatio": 1.0,
           "positionThreshold": 0.001,
           "velocityThreshold": 0.001
         }
@@ -195,8 +200,8 @@
           "operation": "spring",
           "atNanos": 0,
           "target": 1.0,
-          "responseSeconds": 0.8640001,
-          "dampingRatio": 0.92,
+          "responseSeconds": 0.744,
+          "dampingRatio": 1.0,
           "positionThreshold": 0.001,
           "velocityThreshold": 0.001
         }
@@ -216,10 +221,6 @@
           },
           {
             "itemId": "api",
-            "phase": "queued"
-          },
-          {
-            "itemId": "worker",
             "phase": "queued"
           }
         ]
@@ -277,17 +278,41 @@
             },
             "items": [
               {
-                "itemId": "worker",
-                "phase": "deploying",
-                "progress": 0.5
+                "itemId": "web",
+                "phase": "succeeded"
               },
               {
                 "itemId": "api",
                 "phase": "failed"
               },
               {
+                "itemId": "worker",
+                "phase": "deploying",
+                "progress": 0.5
+              }
+            ]
+          }
+        },
+        {
+          "atNanos": 5000000000,
+          "value": {
+            "attention": {
+              "itemId": "api",
+              "target": "item"
+            },
+            "items": [
+              {
                 "itemId": "web",
                 "phase": "succeeded"
+              },
+              {
+                "itemId": "api",
+                "phase": "failed"
+              },
+              {
+                "itemId": "worker",
+                "phase": "deploying",
+                "progress": 0.800000011920929
               }
             ]
           }
@@ -297,18 +322,18 @@
           "value": {
             "items": [
               {
+                "itemId": "web",
+                "phase": "succeeded"
+              },
+              {
                 "itemId": "api",
                 "phase": "building",
-                "progress": 0.125
+                "progress": 0.625
               },
               {
                 "itemId": "worker",
                 "phase": "deploying",
                 "progress": 0.875
-              },
-              {
-                "itemId": "web",
-                "phase": "succeeded"
               }
             ]
           }
@@ -318,16 +343,16 @@
           "value": {
             "items": [
               {
-                "itemId": "api",
-                "phase": "deploying",
-                "progress": 0.625
-              },
-              {
-                "itemId": "worker",
+                "itemId": "web",
                 "phase": "succeeded"
               },
               {
-                "itemId": "web",
+                "itemId": "api",
+                "phase": "verifying",
+                "progress": 1.0
+              },
+              {
+                "itemId": "worker",
                 "phase": "succeeded"
               }
             ]
@@ -336,9 +361,6 @@
         {
           "atNanos": 8000000000,
           "value": {
-            "attention": {
-              "target": "queue"
-            },
             "items": [
               {
                 "itemId": "web",

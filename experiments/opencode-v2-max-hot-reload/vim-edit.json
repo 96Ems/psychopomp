@@ -1,0 +1,9 @@
+{
+  "clips": [
+    {
+      "from": "ready",
+      "to": "complete",
+      "speed": 1
+    }
+  ]
+}

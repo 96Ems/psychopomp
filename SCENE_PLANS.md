@@ -29,6 +29,13 @@ cargo run -p kinograph-opencode-session-tool -- \
   scenes/opencode-session-tool/opencode-session-tool.plan.json
 ```
 
+Emit the state-driven deployment queue UI proof:
+
+```bash
+cargo run -p kinograph-deployment-queue -- \
+  scenes/deployment-queue/deployment-queue.plan.json
+```
+
 Inspect or validate the result without initializing a GPU:
 
 ```bash
@@ -114,7 +121,7 @@ Renderer Recipe payloads remain adapter-owned. The lightweight core validates st
 
 Scene Plan v2 scalar values may reference a component of a stable Semantic Target. The target's selector remains recipe-owned; for the hero, the editor recipe resolves logical code range IDs through `cosmic-text` before compiling highlight and pointer channels into the shared Timeline.
 
-The current plan runtime demonstrates `title-card`, `text`, `editor`, attached `pointer`, and `terminal-recording` renderer recipes. Planned audio lowers into exact script or layer placements for FFmpeg. Planned video is accepted only when a prepared visual recipe consumes its media ID; unconsumed video and all image media still return request errors. The terminal recipe maps the global scene clock through the media placement into source time, so cue and range renders do not restart footage. Editor and terminal recipes independently produce RGBA content but delegate framing to the same private immediate-mode card compositor; this reuse does not add recursive presentation nodes to Scene Plan.
+The current plan runtime demonstrates `title-card`, `text`, `editor`, attached `pointer`, `terminal-recording`, and `deployment-queue` renderer recipes. Planned audio lowers into exact script or layer placements for FFmpeg. Planned video is accepted only when a prepared visual recipe consumes its media ID; unconsumed video and all image media still return request errors. The terminal recipe maps the global scene clock through the media placement into source time, so cue and range renders do not restart footage. Editor, terminal, and deployment recipes independently produce RGBA content but delegate framing to the same private immediate-mode card compositor; this reuse does not add recursive presentation nodes to Scene Plan. The deployment recipe compiles ordered semantic snapshots into private stable keyed row tracks, keeping layout destinations distinct from velocity-preserving motion.
 
 ## Package Direction
 
@@ -131,6 +138,8 @@ kinograph-render ----------+
 
 The default hero command embeds `scenes/hero/hero.plan.json` for compatibility. A workspace test regenerates the plan from `scenes/hero/src/lib.rs` and requires byte equality, so the checked artifact cannot drift from its Rust source.
 
-`scenes/opencode-session-tool/opencode-session-tool.plan.json` is likewise checked against its Rust Scene Program. It demonstrates one planned live terminal recording, ElevenLabs voiceover, layered SFX, discrete state, continuous panel motion, text overlays, and named cue selection through the same renderer process.
+`scenes/opencode-session-tool/opencode-session-tool.plan.json` is likewise checked against its Rust Scene Program. It demonstrates one planned split Vim/OpenCode Terminal Recording, layered SFX, discrete state, continuous panel motion, nine live-capability text overlays, and named cue selection through the same renderer process.
+
+`scenes/deployment-queue/deployment-queue.plan.json` is checked the same way. It demonstrates a typed state-driven UI Surface whose rows retain recipe-local identity across insertion, phase replacement, failure focus, and retry while the Scene Plan remains ordinary actors, continuous channels, state channels, and cues.
 
 The plan and authoring Modules intentionally share one lightweight crate. They should become separate crates only after another language, protocol consumer, or independent version lifecycle demonstrates that seam.

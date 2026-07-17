@@ -52,6 +52,18 @@ One named scalar property of a stable actor. Ordered set and spring events compi
 
 One named discrete property of a stable actor. Its compiled State Track retains the previous and current value, completed previous duration, transition time, and current age without depending on frame history.
 
+## UI Snapshot
+
+One complete meaningful state of a simulated interface recipe. A UI Snapshot contains ordered recipe-local item identities and semantic values, not rectangles or animation. Reordering an item changes its layout target without replacing its identity.
+
+## Keyed Layout Transition
+
+A renderer-owned compilation from timestamped UI Snapshots into arbitrary-time position and presence tracks for stable recipe-local item IDs. Each retarget begins from the earlier trajectory's sampled position and velocity. Layout supplies target positions; the Keyed Layout Transition supplies motion between them.
+
+## UI Surface
+
+One stable actor rendered as a simulated application window, dashboard, or panel by a concrete Renderer Recipe. Internal controls and rows remain recipe-local unless another actor demonstrates a need to address them through a Semantic Target.
+
 ## Renderer Recipe
 
 A concrete rendering adapter selected by an actor declaration. Recipe payloads and pixels remain renderer-owned; the Scene Plan core validates identity and timing without understanding their visual implementation.

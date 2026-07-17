@@ -2,7 +2,7 @@ use anyhow::Result;
 use kinograph::{
     author::PlanBuilder,
     deployment::{
-        DeploymentAttentionTargetPlan, DeploymentItemPlan, DeploymentQueueHandle,
+        DeploymentItemPlan, DeploymentQueueHandle, DeploymentQueueRecipePlan,
         DeploymentQueueSnapshotPlan,
     },
     plan::ScenePlan,
@@ -20,8 +20,15 @@ pub fn build_plan() -> Result<ScenePlan> {
     let queue = DeploymentQueueHandle::add(
         &mut scene,
         "deployment-queue",
-        [web.clone(), api.clone(), worker.clone()],
-        DeploymentQueueSnapshotPlan::new([web.queued(), api.queued(), worker.queued()]),
+        DeploymentQueueRecipePlan::new(
+            "NORTHSTAR",
+            "Release Control",
+            "Live deployment telemetry and automated health gates",
+            "PRODUCTION",
+            "release-2026.07.16",
+            [web.clone(), api.clone(), worker.clone()],
+        ),
+        DeploymentQueueSnapshotPlan::new([web.queued(), api.queued()]),
     )?;
     perspective_entrance(&mut scene, &queue);
 
@@ -46,32 +53,33 @@ pub fn build_plan() -> Result<ScenePlan> {
     queue.change(
         &mut scene,
         3_800_000_000,
-        DeploymentQueueSnapshotPlan::new([worker.deploying(0.5), api.failed(), web.succeeded()])
+        DeploymentQueueSnapshotPlan::new([web.succeeded(), api.failed(), worker.deploying(0.5)])
+            .attend(api.target()),
+    )?;
+    queue.change(
+        &mut scene,
+        5_000_000_000,
+        DeploymentQueueSnapshotPlan::new([web.succeeded(), api.failed(), worker.deploying(0.8)])
             .attend(api.target()),
     )?;
     queue.change(
         &mut scene,
         5_200_000_000,
         DeploymentQueueSnapshotPlan::new([
-            api.building(0.125),
-            worker.deploying(0.875),
             web.succeeded(),
+            api.building(0.625),
+            worker.deploying(0.875),
         ]),
     )?;
     queue.change(
         &mut scene,
         6_600_000_000,
-        DeploymentQueueSnapshotPlan::new([
-            api.deploying(0.625),
-            worker.succeeded(),
-            web.succeeded(),
-        ]),
+        DeploymentQueueSnapshotPlan::new([web.succeeded(), api.verifying(1.0), worker.succeeded()]),
     )?;
     queue.change(
         &mut scene,
         8_000_000_000,
-        DeploymentQueueSnapshotPlan::new([web.succeeded(), api.succeeded(), worker.succeeded()])
-            .attend(DeploymentAttentionTargetPlan::Queue),
+        DeploymentQueueSnapshotPlan::new([web.succeeded(), api.succeeded(), worker.succeeded()]),
     )?;
 
     scene.cue("rollout", 0, 3_800_000_000);
@@ -83,18 +91,18 @@ pub fn build_plan() -> Result<ScenePlan> {
 
 fn perspective_entrance(scene: &mut PlanBuilder, queue: &DeploymentQueueHandle) {
     let channels = [
-        (queue.x(), 1_035.0, 960.0),
-        (queue.y(), 710.0, 540.0),
-        (queue.scale(), 0.84, 1.0),
-        (queue.rotation(), -0.045, 0.0),
-        (queue.tilt_x(), -0.24, 0.0),
-        (queue.tilt_y(), 0.32, 0.0),
-        (queue.near_edge_blur(), 12.0, 0.0),
+        (queue.x(), 992.0, 960.0),
+        (queue.y(), 620.0, 540.0),
+        (queue.scale(), 0.94, 1.0),
+        (queue.rotation(), -0.015, 0.0),
+        (queue.tilt_x(), -0.08, 0.0),
+        (queue.tilt_y(), 0.12, 0.0),
+        (queue.near_edge_blur(), 4.0, 0.0),
         (queue.opacity(), 0.0, 1.0),
     ];
     for (channel, initial, target) in channels {
         scene.set(channel, 0, initial);
-        scene.spring(channel, 0, target, 0.72, 0.08);
+        scene.spring(channel, 0, target, 0.62, 0.0);
     }
 }
 
@@ -116,8 +124,8 @@ mod tests {
         assert_eq!(plan.duration_nanos, 9_000_000_000);
         assert_eq!(plan.actors.len(), 1);
         assert_eq!(plan.state_channels.len(), 1);
-        assert_eq!(state.events.len(), 6);
-        assert_eq!(snapshots.len(), 7);
+        assert_eq!(state.events.len(), 7);
+        assert_eq!(snapshots.len(), 8);
         assert_eq!(
             state
                 .events
@@ -128,6 +136,7 @@ mod tests {
                 1_400_000_000,
                 2_700_000_000,
                 3_800_000_000,
+                5_000_000_000,
                 5_200_000_000,
                 6_600_000_000,
                 8_000_000_000,
@@ -146,12 +155,13 @@ mod tests {
                 })
                 .collect::<Vec<_>>(),
             [
-                vec!["queued", "queued", "queued"],
+                vec!["queued", "queued"],
                 vec!["deploying", "building", "queued"],
                 vec!["verifying", "deploying", "building"],
-                vec!["deploying", "failed", "succeeded"],
-                vec!["building", "deploying", "succeeded"],
-                vec!["deploying", "succeeded", "succeeded"],
+                vec!["succeeded", "failed", "deploying"],
+                vec!["succeeded", "failed", "deploying"],
+                vec!["succeeded", "building", "deploying"],
+                vec!["succeeded", "verifying", "succeeded"],
                 vec!["succeeded", "succeeded", "succeeded"],
             ]
         );
@@ -170,20 +180,23 @@ mod tests {
     }
 
     #[test]
-    fn retry_interrupts_the_previous_reorder_and_healthy_attends_the_queue() {
+    fn failure_focus_and_retry_preserve_stable_queue_order() {
         let plan = build_plan().unwrap();
         let events = &plan.state_channels[0].events;
         let blocked = &events[2];
-        let retry = &events[3];
-        let healthy = &events[5];
+        let quarantine = &events[3];
+        let retry = &events[4];
+        let healthy = &events[6];
 
         assert_eq!(blocked.at_nanos, 3_800_000_000);
-        assert_eq!(blocked.value["items"][0]["itemId"], "worker");
+        assert_eq!(blocked.value["items"][1]["itemId"], "api");
         assert_eq!(blocked.value["attention"]["itemId"], "api");
+        assert_eq!(quarantine.at_nanos, 5_000_000_000);
+        assert_eq!(quarantine.value["items"][1]["itemId"], "api");
         assert_eq!(retry.at_nanos, 5_200_000_000);
-        assert_eq!(retry.value["items"][0]["itemId"], "api");
-        assert_eq!(retry.value["items"][0]["phase"], "building");
-        assert_eq!(healthy.value["attention"]["target"], "queue");
+        assert_eq!(retry.value["items"][1]["itemId"], "api");
+        assert_eq!(retry.value["items"][1]["phase"], "building");
+        assert!(healthy.value["attention"].is_null());
     }
 
     #[test]

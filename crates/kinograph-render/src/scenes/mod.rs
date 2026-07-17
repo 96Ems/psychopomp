@@ -69,14 +69,15 @@ pub(crate) fn encode_video_with_samples(
     )
 }
 
-pub(crate) fn encode_video_window(
+pub(crate) fn encode_video_window_by_key<K: PartialEq>(
     renderer: &mut HeadlessRenderer,
     output: &Path,
     scene: &CompiledScene,
     window: TimeRange,
+    sample_key: impl FnMut(f64) -> Result<K>,
     render_sample: impl FnMut(&mut HeadlessRenderer, f64) -> Result<Vec<u8>>,
 ) -> Result<()> {
-    encode_video_window_with_samples(
+    encode_video_window_with_samples_by_key(
         renderer,
         output,
         scene,
@@ -84,6 +85,7 @@ pub(crate) fn encode_video_window(
         TEMPORAL_SAMPLES,
         ENTRANCE_TEMPORAL_SAMPLES,
         &[0.0..1.0],
+        sample_key,
         render_sample,
     )
 }
@@ -97,6 +99,31 @@ fn encode_video_window_with_samples(
     temporal_samples: u32,
     entrance_temporal_samples: u32,
     high_sample_ranges: &[std::ops::Range<f32>],
+    render_sample: impl FnMut(&mut HeadlessRenderer, f64) -> Result<Vec<u8>>,
+) -> Result<()> {
+    encode_video_window_with_samples_by_key(
+        renderer,
+        output,
+        scene,
+        window,
+        temporal_samples,
+        entrance_temporal_samples,
+        high_sample_ranges,
+        |time| Ok(time.to_bits()),
+        render_sample,
+    )
+}
+
+#[allow(clippy::too_many_arguments)]
+fn encode_video_window_with_samples_by_key<K: PartialEq>(
+    renderer: &mut HeadlessRenderer,
+    output: &Path,
+    scene: &CompiledScene,
+    window: TimeRange,
+    temporal_samples: u32,
+    entrance_temporal_samples: u32,
+    high_sample_ranges: &[std::ops::Range<f32>],
+    mut sample_key: impl FnMut(f64) -> Result<K>,
     mut render_sample: impl FnMut(&mut HeadlessRenderer, f64) -> Result<Vec<u8>>,
 ) -> Result<()> {
     assert!(temporal_samples > 0 && entrance_temporal_samples > 0);
@@ -164,7 +191,12 @@ fn encode_video_window_with_samples(
         } else {
             temporal_samples
         };
-        for time in temporal_sample_times(frame_start, frame_end, frame_temporal_samples) {
+        let samples = unique_sample_times(
+            temporal_sample_times(frame_start, frame_end, frame_temporal_samples),
+            &mut sample_key,
+        )?;
+        let unique_samples = samples.len();
+        for (time, multiplicity) in samples {
             let pixels = render_sample(renderer, time)?;
             if pixels.len() != frame_byte_count {
                 bail!(
@@ -173,11 +205,12 @@ fn encode_video_window_with_samples(
                 );
             }
 
+            let weight = multiplicity as f32;
             for (sum, pixel) in accumulation.chunks_exact_mut(4).zip(pixels.chunks_exact(4)) {
-                sum[0] += srgb_to_linear[pixel[0] as usize];
-                sum[1] += srgb_to_linear[pixel[1] as usize];
-                sum[2] += srgb_to_linear[pixel[2] as usize];
-                sum[3] += f32::from(pixel[3]) / 255.0;
+                sum[0] += srgb_to_linear[pixel[0] as usize] * weight;
+                sum[1] += srgb_to_linear[pixel[1] as usize] * weight;
+                sum[2] += srgb_to_linear[pixel[2] as usize] * weight;
+                sum[3] += f32::from(pixel[3]) / 255.0 * weight;
             }
         }
 
@@ -197,7 +230,7 @@ fn encode_video_window_with_samples(
 
         if frame % u64::from(FPS) == 0 || frame + 1 == frame_count {
             eprintln!(
-                "Rendered {:>3}/{frame_count} frames ({:.1}s, {frame_temporal_samples} samples)",
+                "Rendered {:>3}/{frame_count} frames ({:.1}s, {frame_temporal_samples} samples, {unique_samples} unique)",
                 frame + 1,
                 center_time,
             );
@@ -211,6 +244,28 @@ fn encode_video_window_with_samples(
         started.elapsed().as_secs_f32()
     );
     Ok(())
+}
+
+fn unique_sample_times<K: PartialEq>(
+    times: impl IntoIterator<Item = f64>,
+    mut sample_key: impl FnMut(f64) -> Result<K>,
+) -> Result<Vec<(f64, u32)>> {
+    let mut samples: Vec<(K, f64, u32)> = Vec::new();
+    for time in times {
+        let key = sample_key(time)?;
+        if let Some((_, _, multiplicity)) = samples
+            .iter_mut()
+            .find(|(candidate, _, _)| candidate == &key)
+        {
+            *multiplicity += 1;
+        } else {
+            samples.push((key, time, 1));
+        }
+    }
+    Ok(samples
+        .into_iter()
+        .map(|(_, time, multiplicity)| (time, multiplicity))
+        .collect())
 }
 
 fn temporal_sample_times(frame_start: f64, frame_end: f64, samples: u32) -> Vec<f64> {
@@ -297,7 +352,7 @@ fn span(text: &str, style: SyntaxStyle) -> StyledSpan {
 
 #[cfg(test)]
 mod tests {
-    use super::temporal_sample_times;
+    use super::{temporal_sample_times, unique_sample_times};
 
     #[test]
     fn partial_frame_samples_stay_inside_the_render_window() {
@@ -306,5 +361,15 @@ mod tests {
         assert!(samples.iter().all(|time| (12.0..=12.001).contains(time)));
         assert!(samples[0] > 12.0);
         assert!(samples[7] < 12.001);
+    }
+
+    #[test]
+    fn identical_temporal_states_are_weighted_once() {
+        let samples = unique_sample_times([0.1, 0.2, 0.3, 0.4], |time| {
+            Ok::<_, anyhow::Error>((time * 10.0_f64).round() as u32 % 2)
+        })
+        .unwrap();
+
+        assert_eq!(samples, vec![(0.1, 2), (0.2, 2)]);
     }
 }

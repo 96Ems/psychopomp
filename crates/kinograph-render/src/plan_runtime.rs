@@ -8,6 +8,7 @@ use std::{
 use anyhow::{Context, Result, bail};
 use kinograph::{
     composition::{Asset, Composition, Duration, Time, TimeRange},
+    deployment::DEPLOYMENT_QUEUE_RECIPE,
     dsl::{Scalar, Scene, TargetGeometry},
     editor::{EDITOR_RECIPE, POINTER_RECIPE, PointerRecipePlan},
     plan::{
@@ -23,12 +24,15 @@ use serde_json::{Value, json};
 
 use crate::{
     render::{HeadlessRenderer, RenderSpec},
-    scenes::{FONT_PATH, HEIGHT, WIDTH, encode_video_window},
+    scenes::{FONT_PATH, HEIGHT, WIDTH, encode_video_window_by_key},
 };
 
+mod deployment_queue;
 mod editor;
+mod keyed_layout;
 mod terminal;
 
+use deployment_queue::{DeploymentQueueVisualKey, PreparedDeploymentQueue};
 use editor::PreparedEditor;
 use terminal::PreparedTerminal;
 
@@ -54,7 +58,8 @@ pub(crate) fn command(arguments: &[String]) -> Result<()> {
             Ok(())
         }
         [command, path] if command == "validate" => {
-            let _ = read_plan(Path::new(path))?;
+            let plan = read_plan(Path::new(path))?;
+            validate_renderer_plan(&plan)?;
             println!(
                 "{}",
                 serde_json::to_string_pretty(&json!({
@@ -256,6 +261,15 @@ struct PreparedPlan {
     editors: Vec<PreparedEditor>,
     pointers: HashMap<String, String>,
     terminal: Option<PreparedTerminal>,
+    deployment_queue: Option<PreparedDeploymentQueue>,
+}
+
+#[derive(Debug, PartialEq)]
+struct VisualSampleKey {
+    motion: Vec<[u32; 4]>,
+    states: Vec<Value>,
+    video_frame: Option<u64>,
+    deployment_queue: Option<DeploymentQueueVisualKey>,
 }
 
 impl PreparedPlan {
@@ -277,6 +291,14 @@ impl PreparedPlan {
             .iter()
             .find(|actor| actor.recipe == TERMINAL_RECORDING_RECIPE)
             .map(|actor| PreparedTerminal::new(actor, &plan.media, base))
+            .transpose()?;
+        let deployment_queue = plan
+            .actors
+            .iter()
+            .find(|actor| actor.recipe == DEPLOYMENT_QUEUE_RECIPE)
+            .map(|actor| {
+                PreparedDeploymentQueue::new(actor, &plan.state_channels, plan.duration_nanos)
+            })
             .transpose()?;
         let mut pointers = HashMap::new();
         for actor in plan
@@ -327,6 +349,7 @@ impl PreparedPlan {
         prepared.editors = editors;
         prepared.pointers = pointers;
         prepared.terminal = terminal;
+        prepared.deployment_queue = deployment_queue;
         Ok(prepared)
     }
 
@@ -404,11 +427,7 @@ impl PreparedPlan {
                     media.id
                 );
             }
-            let path = if media.path.is_absolute() {
-                media.path.clone()
-            } else {
-                base.join(&media.path)
-            };
+            let path = resolve_media_path(base, media);
             let asset = Asset::audio(media.id.clone(), path);
             let clip = asset
                 .clip(TimeRange::new(
@@ -439,6 +458,7 @@ impl PreparedPlan {
             editors: Vec::new(),
             pointers: HashMap::new(),
             terminal: None,
+            deployment_queue: None,
         })
     }
 
@@ -449,9 +469,14 @@ impl PreparedPlan {
         window: TimeRange,
     ) -> Result<()> {
         renderer.set_file_name(self.file_name());
-        encode_video_window(renderer, output, &self.scene, window, |renderer, time| {
-            self.render_sample(renderer, time)
-        })
+        encode_video_window_by_key(
+            renderer,
+            output,
+            &self.scene,
+            window,
+            |time| self.visual_sample_key(time),
+            |renderer, time| self.render_sample(renderer, time),
+        )
     }
 
     fn render_frame_with(
@@ -470,7 +495,75 @@ impl PreparedPlan {
             .first()
             .map(PreparedEditor::file_name)
             .or_else(|| self.terminal.as_ref().map(PreparedTerminal::file_name))
+            .or_else(|| {
+                self.deployment_queue
+                    .as_ref()
+                    .map(PreparedDeploymentQueue::file_name)
+            })
             .unwrap_or(self.plan.id.as_str())
+    }
+
+    fn visual_sample_key(&self, time: f64) -> Result<VisualSampleKey> {
+        let previous_time = (time - 1.0 / 240.0).max(0.0);
+        let motion = self
+            .plan
+            .continuous_channels
+            .iter()
+            .map(|channel| {
+                let property = self
+                    .properties
+                    .get(&channel.id)
+                    .with_context(|| format!("missing compiled property '{}'", channel.id))?;
+                let current = self
+                    .timeline
+                    .sample_at(property, time)
+                    .with_context(|| format!("sample property '{}' at {time}", channel.id))?;
+                let previous = self
+                    .timeline
+                    .sample_at(property, previous_time)
+                    .with_context(|| {
+                        format!("sample property '{}' at {previous_time}", channel.id)
+                    })?;
+                Ok([
+                    current.position.to_bits(),
+                    current.velocity.to_bits(),
+                    previous.position.to_bits(),
+                    previous.velocity.to_bits(),
+                ])
+            })
+            .collect::<Result<Vec<_>>>()?;
+        let states = self
+            .plan
+            .state_channels
+            .iter()
+            .map(|channel| {
+                self.state_tracks
+                    .get(&channel.id)
+                    .with_context(|| format!("missing compiled state track '{}'", channel.id))
+                    .map(|track| track.sample_at(time).current.clone())
+            })
+            .collect::<Result<Vec<_>>>()?;
+        let video_frame = self
+            .terminal
+            .as_ref()
+            .map(|terminal| {
+                let recording = self
+                    .state_value(terminal.actor_id(), "recording", time)
+                    .and_then(Value::as_str)
+                    .context("terminal-recording actor requires string recording state")?;
+                terminal.frame_index_at(recording, time)
+            })
+            .transpose()?;
+        let deployment_queue = self
+            .deployment_queue
+            .as_ref()
+            .map(|deployment| deployment.visual_key(time));
+        Ok(VisualSampleKey {
+            motion,
+            states,
+            video_frame,
+            deployment_queue,
+        })
     }
 
     fn render_sample(&self, renderer: &mut HeadlessRenderer, time: f64) -> Result<Vec<u8>> {
@@ -494,6 +587,10 @@ impl PreparedPlan {
             terminal.render(renderer, recording, time, |property, default| {
                 self.property_value(terminal.actor_id(), property, time, default)
             })?
+        } else if let Some(deployment) = &self.deployment_queue {
+            deployment.render(renderer, time, |property, default| {
+                self.property_value(deployment.actor_id(), property, time, default)
+            })?
         } else if let Some(actor) = title_card {
             let title = actor
                 .data
@@ -515,7 +612,11 @@ impl PreparedPlan {
         };
         for actor in &self.plan.actors {
             match actor.recipe.as_str() {
-                "title-card" | EDITOR_RECIPE | POINTER_RECIPE | TERMINAL_RECORDING_RECIPE => {}
+                "title-card"
+                | EDITOR_RECIPE
+                | POINTER_RECIPE
+                | TERMINAL_RECORDING_RECIPE
+                | DEPLOYMENT_QUEUE_RECIPE => {}
                 "text" => {
                     let text = self
                         .state_value(&actor.id, "content", time)
@@ -712,6 +813,7 @@ fn handle_server_request(request: ServerRequest, renderer: &mut HeadlessRenderer
         ServerRequest::Schema => Ok(ScenePlan::schema()),
         ServerRequest::Validate { plan } => {
             let plan = read_plan(&plan)?;
+            validate_renderer_plan(&plan)?;
             Ok(json!({ "valid": true, "id": plan.id }))
         }
         ServerRequest::Inspect { plan } => {
@@ -762,6 +864,14 @@ fn handle_server_request(request: ServerRequest, renderer: &mut HeadlessRenderer
             }))
         }
         ServerRequest::Shutdown => Ok(json!({ "shutdown": true })),
+    }
+}
+
+fn resolve_media_path(base: &Path, media: &kinograph::plan::MediaPlan) -> PathBuf {
+    if media.path.is_absolute() {
+        media.path.clone()
+    } else {
+        base.join(&media.path)
     }
 }
 
@@ -862,6 +972,11 @@ fn validate_root_recipes(plan: &ScenePlan) -> Result<()> {
         .iter()
         .filter(|actor| actor.recipe == TERMINAL_RECORDING_RECIPE)
         .count();
+    let deployment_queue_count = plan
+        .actors
+        .iter()
+        .filter(|actor| actor.recipe == DEPLOYMENT_QUEUE_RECIPE)
+        .count();
     if editor_count > 1 {
         bail!("plan renderer currently supports at most one editor root actor");
     }
@@ -871,11 +986,30 @@ fn validate_root_recipes(plan: &ScenePlan) -> Result<()> {
     if terminal_count > 1 {
         bail!("plan renderer currently supports at most one terminal-recording root actor");
     }
-    if editor_count + title_card_count + terminal_count > 1 {
-        bail!("editor, title-card, and terminal-recording actors are exclusive root recipes");
+    if deployment_queue_count > 1 {
+        bail!("plan renderer currently supports at most one deployment-queue root actor");
+    }
+    if editor_count + title_card_count + terminal_count + deployment_queue_count > 1 {
+        bail!(
+            "editor, title-card, terminal-recording, and deployment-queue actors are exclusive root recipes"
+        );
     }
     for actor in plan.actors.iter().filter(|actor| actor.recipe == "text") {
         validate_text_recipe(actor)?;
+    }
+    Ok(())
+}
+
+fn validate_renderer_plan(plan: &ScenePlan) -> Result<()> {
+    validate_root_recipes(plan)?;
+    for actor in &plan.actors {
+        match actor.recipe.as_str() {
+            "title-card" | "text" | EDITOR_RECIPE | POINTER_RECIPE | TERMINAL_RECORDING_RECIPE => {}
+            DEPLOYMENT_QUEUE_RECIPE => {
+                PreparedDeploymentQueue::new(actor, &plan.state_channels, plan.duration_nanos)?;
+            }
+            recipe => bail!("unsupported actor recipe '{recipe}'"),
+        }
     }
     Ok(())
 }
@@ -948,7 +1082,9 @@ mod tests {
     };
     use serde_json::json;
 
-    use super::{BUILTIN_HERO_PLAN, PreparedPlan, parse_range, validate_root_recipes};
+    use super::{
+        BUILTIN_HERO_PLAN, PreparedPlan, parse_range, validate_renderer_plan, validate_root_recipes,
+    };
 
     #[test]
     fn plan_channels_compile_through_the_shared_timeline() {
@@ -979,6 +1115,41 @@ mod tests {
         assert_eq!(
             prepared.timeline.sample(property, 1.0).unwrap().position,
             1.0
+        );
+    }
+
+    #[test]
+    fn visual_keys_merge_settled_samples_but_preserve_motion() {
+        let mut plan = ScenePlan::new("demo", 2_000_000_000);
+        plan.actors.push(ActorPlan {
+            id: "title".to_owned(),
+            recipe: "title-card".to_owned(),
+            data: json!({ "title": "Hello" }),
+        });
+        plan.continuous_channels.push(ContinuousChannelPlan {
+            id: "title.opacity".to_owned(),
+            actor_id: "title".to_owned(),
+            property: "opacity".to_owned(),
+            initial: 0.0.into(),
+            events: vec![TrackEventPlan::Spring {
+                at_nanos: 0,
+                target: 1.0.into(),
+                response_seconds: 0.4,
+                damping_ratio: 1.0,
+                position_threshold: 0.001,
+                velocity_threshold: 0.001,
+            }],
+        });
+        plan.validate().unwrap();
+        let prepared = PreparedPlan::compile(plan, std::path::Path::new(".")).unwrap();
+
+        assert_ne!(
+            prepared.visual_sample_key(0.1).unwrap(),
+            prepared.visual_sample_key(0.11).unwrap()
+        );
+        assert_eq!(
+            prepared.visual_sample_key(1.5).unwrap(),
+            prepared.visual_sample_key(1.51).unwrap()
         );
     }
 
@@ -1100,6 +1271,27 @@ mod tests {
             },
         ];
         assert!(validate_root_recipes(&plan).is_err());
+    }
+
+    #[test]
+    fn concrete_validation_rejects_unpreparable_and_unknown_recipes() {
+        let mut plan = ScenePlan::new("demo", 1_000_000_000);
+        plan.actors.push(ActorPlan {
+            id: "deployments".to_owned(),
+            recipe: "deployment-queue".to_owned(),
+            data: json!({
+                "product": "NORTHSTAR",
+                "title": "Release Control",
+                "subtitle": "Live deployment telemetry",
+                "environment": "PRODUCTION",
+                "release": "release-2026.07.16",
+                "items": []
+            }),
+        });
+        assert!(validate_renderer_plan(&plan).is_err());
+
+        plan.actors[0].recipe = "unknown".to_owned();
+        assert!(validate_renderer_plan(&plan).is_err());
     }
 
     #[test]
