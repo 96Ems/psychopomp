@@ -7,6 +7,7 @@ members = [
   "scenes/hero",
   "scenes/effect-succeed-slides",
   "scenes/interactive-showcase",
+  "scenes/keyed-grid",
   "scenes/opencode-session-tool",
   "scenes/quark-before-after",
 ]

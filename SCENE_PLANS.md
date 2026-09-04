@@ -117,8 +117,8 @@ sampling cap without changing video FPS or disabling FIFO synchronization. A
 explicit GPU-completion waits to the benchmark and separates completed rendering
 work from waiting for a drawable; it is a diagnostic mode, not normal playback.
 
-The interruptible player accepts editor, pointer, text, title-card, and planned
-Effect Task scenes. Task recipe state changes lower into continuous visual tracks;
+The interruptible player accepts editor, pointer, text, title-card, planned
+Effect Task, and keyed-grid scenes. Task and grid snapshots lower into continuous visual tracks;
 generic State Channels and recorded-media scenes are still rejected until
 their interactive timing is defined. The same Scene Plan still exports as MP4
 through `plan render`, with its original timing and media placements. Live source
@@ -136,7 +136,7 @@ parallel Tasks, and keyed code insertion/removal with an attached highlight.
 `DeckPlan` v1 contains an ID and titled `SlidePlan` values, each embedding an
 independent Scene Plan. Single-plan presentation remains supported.
 
-- **`'` / Shift+`'`:** next/previous slide, wrapping around.
+- **⌘→ / ⌘←:** next/previous slide, wrapping around (`'` / Shift+`'` remain aliases).
 - **1–9:** jump directly to a slide.
 - **Left/Right:** previous/next step within the active slide.
 - **Home/End:** first/last step within that slide.
@@ -153,6 +153,32 @@ individual slide JSON files beside the deck for `plan frame`, `plan render`, and
 For a deck, `--benchmark` also switches slides every two measured seconds. Those
 results include slide-switch costs and are not directly comparable with a
 single-scene throughput benchmark.
+
+### Present A Growing 3D Grid
+
+```sh
+cargo run -p kinograph-keyed-grid
+cargo run --release -- plan present target/keyed-grid/deck.json
+```
+
+This two-slide proof grows a connected row/table/3D line lattice, then regroups
+the same 24 tuples as `(A × B) × C` and `A × (B × C)`. Straight-on and angled
+orthographic views share identical 3D geometry. A camera-only step reveals
+existing depth; separate extent tracks grow the grid from its fixed leading
+corner without scaling individual cells. The projection centers the currently
+visible geometry through growth and rotation. Opaque cells hide rear lines;
+slice focus reveals one layer through continuous cutaway tracks. Optional
+`GridCellLabelPlan` values provide symbols and secondary text, with row, column,
+and depth headings drawn along the sides. Existing navigation,
+pause, replay, and reduced motion apply to cell motion and camera angles alike.
+`scenes/keyed-grid/README.md` explains the slice semantics and export commands.
+
+`GridRecipePlan` contains three immutable `GridAxisPlan` values, an initial
+`GridSnapshotPlan`, and timed snapshots. The concrete recipe caps the catalog at
+256 cells and supports one root grid with text/Task overlays. Cells are keyed by
+their indices in that immutable catalog; no automatic matching occurs. Do not
+author in the generated `__grid.*` channel namespace. No mesh import, picking,
+free orbit, or general-purpose correspondence API is exposed by this proof.
 
 ### Mask Rolling Text
 
@@ -281,7 +307,7 @@ Renderer Recipe payloads remain adapter-owned. The lightweight core validates st
 
 Scene Plan v2 scalar values may reference a component of a stable Semantic Target. The target's selector remains recipe-owned; for the hero, the editor recipe resolves logical code range IDs through `cosmic-text` before compiling highlight and pointer channels into the shared Timeline.
 
-The current plan runtime demonstrates `title-card`, `text`, `editor`, attached `pointer`, `effect-task`, `terminal-recording`, and `deployment-queue` renderer recipes. Planned audio lowers into exact script or layer placements for FFmpeg. Planned video is accepted only when a prepared visual recipe consumes its media ID; unconsumed video and all image media still return request errors. The terminal recipe maps the global scene clock through the media placement into source time, so cue and range renders do not restart footage. Editor, terminal, and deployment recipes independently produce RGBA content but delegate framing to the same private immediate-mode card compositor; this reuse does not add recursive presentation nodes to Scene Plan. The deployment recipe compiles ordered semantic snapshots into private stable keyed row tracks, keeping layout destinations distinct from velocity-preserving motion.
+The current plan runtime demonstrates `title-card`, `text`, `editor`, attached `pointer`, `effect-task`, `keyed-grid`, `terminal-recording`, and `deployment-queue` renderer recipes. Planned audio lowers into exact script or layer placements for FFmpeg. Planned video is accepted only when a prepared visual recipe consumes its media ID; unconsumed video and all image media still return request errors. The terminal recipe maps the global scene clock through the media placement into source time, so cue and range renders do not restart footage. Editor, terminal, and deployment recipes independently produce RGBA content but delegate framing to the same private immediate-mode card compositor; this reuse does not add recursive presentation nodes to Scene Plan. The deployment recipe compiles ordered semantic snapshots into private stable keyed row tracks, keeping layout destinations distinct from velocity-preserving motion.
 
 ## Package Direction
 

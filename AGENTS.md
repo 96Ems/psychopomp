@@ -46,6 +46,7 @@ Do not run the full render as routine validation when unit tests and static chec
 - `crates/kinograph/src/editor.rs`: typed editor recipe data lowering stable inline parts and logical ranges into Code Transitions
 - `crates/kinograph/src/editor/stability.rs`: GPU-free step deltas and heuristic common-text stability warnings
 - `crates/kinograph/src/task.rs`: typed planned Task state schedules
+- `crates/kinograph/src/grid.rs`: finite keyed product catalogs and semantic Grid Snapshots
 - `crates/kinograph/src/author.rs`: typed Scene Plan builder and stable actor/channel handles for lightweight Scene Programs
 - `crates/kinograph/src/plan.rs`: versioned renderer-independent Scene Plan values and structured validation
 - `crates/kinograph/src/state.rs`: deterministic arbitrary-time discrete State Tracks
@@ -58,6 +59,7 @@ Do not run the full render as routine validation when unit tests and static chec
 - `crates/kinograph-render/src/render.rs`: concrete headless `wgpu` renderer, sprite compositor, and code annotations
 - `crates/kinograph-render/src/render/effects/`: independent pixel recipes for interchangeable short annotation effects
 - `crates/kinograph-render/src/render/task.rs`: concrete Effect Task recipe and compositing
+- `crates/kinograph-render/src/render/grid.rs`: opaque connected 3D grid, sampled-bounds centering, and cached symbols/labels
 - `crates/kinograph-render/src/render/terminal.rs`: concrete terminal recording and command-file presentation
 - `crates/kinograph-render/src/render/deployment_queue.rs`: concrete state-driven deployment dashboard UI Surface
 - `crates/kinograph-render/src/render/ui.rs`: private bounds, inset, split, and flow layout primitives for pixel UI
@@ -75,6 +77,7 @@ Do not run the full render as routine validation when unit tests and static chec
 - `crates/kinograph-render/src/plan_runtime/editor.rs`: concrete editor and attached pointer Scene Plan recipe
 - `crates/kinograph-render/src/plan_runtime/attachments.rs`: private companion-track compilation for layout-aware semantic coordinates
 - `crates/kinograph-render/src/plan_runtime/task.rs`: Task state schedules lowered into interruptible scalar visual destinations
+- `crates/kinograph-render/src/plan_runtime/grid.rs`: GPU-free keyed grid layout and continuous destination compilation
 - `crates/kinograph-render/src/plan_runtime/terminal.rs`: concrete planned terminal-recording recipe and video source-time mapping
 - `crates/kinograph-render/src/plan_runtime/deployment_queue.rs`: deployment snapshot validation, private track compilation, and rendering adapter
 - `crates/kinograph-render/src/plan_runtime/keyed_layout.rs`: private stable keyed position and presence track compiler
@@ -82,6 +85,7 @@ Do not run the full render as routine validation when unit tests and static chec
 - `scenes/hero/`: canonical editor-heavy Scene Program and generated plan used by the default render command
 - `scenes/effect-succeed-slides/`: Effect Institute code-reveal adaptation proving manual presentation and video export from one source
 - `scenes/interactive-showcase/`: four-slide native deck covering inline reveals, Task lifecycle/retry, parallel Tasks, and keyed code edits
+- `scenes/keyed-grid/`: native row/table/3D-layer growth and product-reassociation proof
 - `scenes/opencode-session-tool/`: rapid-fire OpenCode v2 hot-reload proof using split Vim/OpenCode terminal video, layered SFX, text, and discrete state
 - `scenes/deployment-queue/`: canonical state-driven simulated UI proof with keyed insertion, phase replacement, failure focus, and retry
 - `crates/kinograph-render/src/scene.wgsl`: editor geometry and focus shader

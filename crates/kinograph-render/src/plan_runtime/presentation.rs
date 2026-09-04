@@ -18,7 +18,7 @@ use winit::{
     dpi::LogicalSize,
     event::{ElementState, StartCause, WindowEvent},
     event_loop::{ActiveEventLoop, ControlFlow, EventLoop},
-    keyboard::{Key, NamedKey},
+    keyboard::{Key, ModifiersState, NamedKey},
     window::{Fullscreen, Window, WindowId, WindowLevel},
 };
 
@@ -80,12 +80,12 @@ pub(super) fn run(slides: Vec<SlidePlan>, base: PathBuf, options: Options) -> Re
             || slide.plan.actors.iter().any(|actor| {
                 !matches!(
                     actor.recipe.as_str(),
-                    "editor" | "pointer" | "text" | "title-card" | "effect-task"
+                    "editor" | "pointer" | "text" | "title-card" | "effect-task" | "keyed-grid"
                 )
             })
     }) {
         bail!(
-            "interruptible native playback supports editor, pointer, text, and effect-task scenes with continuous channels; generic State Channels and recorded media still support video export"
+            "interruptible native playback supports editor, pointer, text, effect-task, and keyed-grid scenes with continuous channels; generic State Channels and recorded media still support video export"
         );
     }
     let mut renderer = pollster::block_on(new_renderer(&slides[0].plan.id))?;
@@ -128,10 +128,11 @@ pub(super) fn run(slides: Vec<SlidePlan>, base: PathBuf, options: Options) -> Re
         front_timing: None,
         frame_interval: frame_interval(options.fps, None),
         refresh_millihertz: None,
+        modifiers: ModifiersState::empty(),
         options,
     };
     eprintln!(
-        "Native Kinograph player: ' / Shift+' next/previous slide, ←/→ previous/next step, 1–9 choose slide, R replay, Space/P pause or resume, Home/End first/last step, M reduced motion, X smooth/pixelated, F full screen, Esc close."
+        "Native Kinograph player: ⌘←/⌘→ or Shift+' / ' previous/next slide, ←/→ previous/next step, 1–9 choose slide, R replay, Space/P pause or resume, Home/End first/last step, M reduced motion, X smooth/pixelated, F full screen, Esc close."
     );
     eprintln!(
         "Live single-sample preview. Export retains shutter sampling and audio; this player is silent."
@@ -167,6 +168,7 @@ struct Player {
     front_timing: Option<(Instant, Duration)>,
     frame_interval: Duration,
     refresh_millihertz: Option<u32>,
+    modifiers: ModifiersState,
     options: Options,
 }
 
@@ -525,6 +527,7 @@ impl ApplicationHandler<RenderEvent> for Player {
             }
             WindowEvent::Moved(_) | WindowEvent::Focused(true) => self.update_refresh_rate(),
             WindowEvent::Focused(false) => {
+                self.modifiers = ModifiersState::empty();
                 if self.benchmark.is_none() {
                     self.slides[self.slide_index]
                         .playback
@@ -551,6 +554,7 @@ impl ApplicationHandler<RenderEvent> for Player {
                     self.redraw();
                 }
             }
+            WindowEvent::ModifiersChanged(modifiers) => self.modifiers = modifiers.state(),
             WindowEvent::KeyboardInput { event, .. }
                 if event.state == ElementState::Pressed && !event.repeat =>
             {
@@ -560,10 +564,19 @@ impl ApplicationHandler<RenderEvent> for Player {
                     }
                     return;
                 }
+                if let Some(navigation) = arrow_navigation(&event.logical_key, self.modifiers) {
+                    match navigation {
+                        ArrowNavigation::Step(command) => self.command(command),
+                        ArrowNavigation::Slide(offset) => self.select_slide(
+                            (self.slide_index as isize + offset)
+                                .rem_euclid(self.slides.len() as isize)
+                                as usize,
+                        ),
+                    }
+                    return;
+                }
                 match event.logical_key {
                     Key::Named(NamedKey::Escape) => event_loop.exit(),
-                    Key::Named(NamedKey::ArrowRight) => self.command(PlaybackCommand::Next),
-                    Key::Named(NamedKey::ArrowLeft) => self.command(PlaybackCommand::Previous),
                     Key::Named(NamedKey::Home) => self.command(PlaybackCommand::First),
                     Key::Named(NamedKey::End) => self.command(PlaybackCommand::Last),
                     Key::Named(NamedKey::Space) => {
@@ -634,6 +647,25 @@ fn frame_interval(fps: Option<u32>, refresh_millihertz: Option<u32>) -> Duration
     Duration::from_nanos(1_000_000_000_000 / rate)
 }
 
+#[derive(Debug, PartialEq)]
+enum ArrowNavigation {
+    Step(PlaybackCommand),
+    Slide(isize),
+}
+
+fn arrow_navigation(key: &Key, modifiers: ModifiersState) -> Option<ArrowNavigation> {
+    let (direction, command) = match key {
+        Key::Named(NamedKey::ArrowRight) => (1, PlaybackCommand::Next),
+        Key::Named(NamedKey::ArrowLeft) => (-1, PlaybackCommand::Previous),
+        _ => return None,
+    };
+    Some(if modifiers.super_key() {
+        ArrowNavigation::Slide(direction)
+    } else {
+        ArrowNavigation::Step(command)
+    })
+}
+
 /// Keep a fixed cadence despite late OS wakes. Missed slots are skipped, never
 /// queued, and an immediate input-driven sample does not reset the timer phase.
 fn next_deadline(previous: Option<Instant>, now: Instant, interval: Duration) -> Instant {
@@ -667,6 +699,31 @@ enum Filter {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn command_arrows_switch_slides_and_plain_arrows_keep_steps() {
+        for (key, direction, command) in [
+            (NamedKey::ArrowLeft, -1, PlaybackCommand::Previous),
+            (NamedKey::ArrowRight, 1, PlaybackCommand::Next),
+        ] {
+            assert_eq!(
+                arrow_navigation(&Key::Named(key), ModifiersState::SUPER),
+                Some(ArrowNavigation::Slide(direction))
+            );
+            assert_eq!(
+                arrow_navigation(&Key::Named(key), ModifiersState::empty()),
+                Some(ArrowNavigation::Step(command))
+            );
+            assert_eq!(
+                arrow_navigation(&Key::Named(key), ModifiersState::CONTROL),
+                Some(ArrowNavigation::Step(command))
+            );
+        }
+        assert_eq!(
+            arrow_navigation(&Key::Named(NamedKey::Home), ModifiersState::SUPER),
+            None
+        );
+    }
 
     #[test]
     fn pacing_does_not_accumulate_late_wakes_or_queue_missed_ticks() {

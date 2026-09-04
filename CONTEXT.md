@@ -68,6 +68,18 @@ A renderer-owned compilation from timestamped UI Snapshots into arbitrary-time p
 
 One stable actor rendered as a simulated application window, dashboard, or panel by a concrete Renderer Recipe. Internal controls and rows remain recipe-local unless another actor demonstrates a need to address them through a Semantic Target.
 
+## Keyed Grid
+
+A finite product of three immutable ordered value axes. Each tuple has stable recipe-local identity, independent of its visibility or arrangement. A row or table can show a slice of that catalog; revealing another axis value adds visible tuples without replacing retained ones.
+
+## Grid Snapshot
+
+The visible prefix of each axis, an Arrangement, and optional focused depth slice. Straight-on and angled orthographic arrangements view the same connected 3D geometry; a flat-looking grid can still contain depth. Reassociated arrangements regroup the tuples. Layout supplies position, extent, and cutaway targets; ordinary Property Tracks supply motion. Extents reveal a connected grid without scaling individual cells; the projection deliberately centers its currently sampled visible bounds during growth. A focused slice clips away other layers without deleting their identities. Reassociation changes `((a, b), c)` into `(a, (b, c))` without adding or losing tuples. Growing a product is not an isomorphism between the smaller and larger sets.
+
+A cell's primary symbol and secondary label are representations of its tuple,
+not its identity. Row, column, and depth headings describe the values along the
+edges and remain separate from the cell labels.
+
 ## Renderer Recipe
 
 A concrete rendering adapter selected by an actor declaration. Recipe payloads and pixels remain renderer-owned; the Scene Plan core validates identity and timing without understanding their visual implementation.

@@ -17,12 +17,14 @@ use kinograph::dsl::AnnotationFrame;
 
 mod deployment_queue;
 mod effects;
+mod grid;
 mod task;
 mod terminal;
 mod ui;
 
 pub(crate) use deployment_queue::deployment_row_center_y;
 pub use deployment_queue::{DeploymentItemFrame, DeploymentQueueFrame};
+pub use grid::{GridFrame, GridItemFrame};
 pub use task::{
     BubblePose, ContentPose, QuoteFrame, TaskContentFrame, TaskLinkFrame, TaskSceneFrame,
     TaskVisualFrame,
@@ -212,6 +214,7 @@ pub struct HeadlessRenderer {
     ui_overlay_pixels: Vec<u8>,
     interactive_preview: bool,
     preview_editor_backgrounds: VecDeque<(String, Vec<u8>)>,
+    grid_renderer: Option<grid::GridRenderer>,
 }
 
 impl HeadlessRenderer {
@@ -361,6 +364,7 @@ impl HeadlessRenderer {
             ui_overlay_pixels: Vec::new(),
             interactive_preview: false,
             preview_editor_backgrounds: VecDeque::new(),
+            grid_renderer: None,
         })
     }
 
@@ -630,6 +634,10 @@ impl HeadlessRenderer {
             pass.set_bind_group(0, &self.scene_bind_group, &[]);
             pass.draw(0..3, 0..1);
         }
+        self.read_frame(encoder)
+    }
+
+    fn read_frame(&self, mut encoder: wgpu::CommandEncoder) -> Result<Vec<u8>> {
         encoder.copy_texture_to_buffer(
             wgpu::TexelCopyTextureInfo {
                 texture: &self.texture,

@@ -4,6 +4,7 @@ pub mod composition;
 pub mod deployment;
 pub mod dsl;
 pub mod editor;
+pub mod grid;
 pub mod motion;
 pub mod plan;
 pub mod playback;

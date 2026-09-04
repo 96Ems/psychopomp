@@ -47,6 +47,34 @@ The default artifact is `output/kinograph-prototype.mp4`.
 
 ## Current Stability And Native Presentation
 
+- The `keyed-grid` proof now uses an opaque, connected orthographic grid rather
+  than detached colored blocks or an X-ray wireframe. The example illustrates
+  chess pieces × sides × boards, with primary symbols, short secondary labels,
+  and outside row/column/depth headings. Sampled visible cell bounds stay centered
+  at the canvas center during fractional growth, rotation, and slice isolation;
+  a GPU test measures the rendered silhouette within 0.75 pixels on both axes.
+  Coplanar fronts exposed depth fighting during rapid regrouping. A tiny stable
+  catalog-order depth bias resolves their priority without moving their geometry;
+  the original failing pixel-neighborhood regression then passed unchanged.
+  Catalog/label validation, connected boundaries, group membership, equal-time
+  coalescing, settled holds, position/velocity continuity, exact boundary pixels,
+  sampling order, and reduced-motion holds have focused checks. Command+Left/Right
+  switches slides while unmodified arrows retain step navigation.
+  Current images and targeted shutter-sampled clips are under `output/grid-chess/`.
+  Earlier solid-block (`output/keyed-grid/`) and wireframe (`output/connected-grid/`)
+  videos are historical, superseded design evidence, not the current appearance.
+  Native screenshot/accessibility automation remains unverified; offscreen
+  frames and the native submission benchmark are the automated pixel/performance
+  evidence, not a claim of verified display scanout or normal-speed human review.
+
+- The **initial solid-block** grid-deck run submitted 60 frames in each of nine measured seconds
+  after a one-second warmup, at 1920×1080 / a 2560×1440 window / 60 Hz FIFO.
+  Round render medians were 4.73–5.19 ms; median-round p95 submission interval
+  was 19.83 ms, so cadence still varies. This is a historical workload baseline, not
+  a measured improvement to Effect Tasks. Readback and native texture upload
+  still occur; zero-copy composition, 120 Hz scanout, and imported meshes remain
+  unproved.
+
 - Rolling captions now use a fixed canvas-space aperture with linear edge fades, following Visual Types' `CyclingSection`/`FadeOverlays`. Row-integrated mask coverage preserves fractional edges and only affects text alpha, not the scene behind it. GPU checks cover unchanged held text, native/video parity, clipping throughout rapid reversals and skipped steps, out-of-order sampling, and reduced motion. Caption and Task timing profiles are unchanged by this mask.
 
 - Expressive content needs independent property timings, not only a pose separate from its container. The first content pass slowed the body to 0.34 seconds and drove all content through one 0.32-second spring plus extra visibility windows; Kit judged this stale against Effect Institute. The correction restores the source Pixi body's 0.2-second/bounce-0.5 response, roughly 0.167-second icons, and a 0.25-second/bounce-0.4 result pop with independent 0.15-second deblur. Bubble rise/fade/deblur likewise have separate source profiles, without a staged wait. Native and authored entry poses, reversal continuity, unchanged sibling pixels, reduced-motion destinations, and actual channel samples against the source's pinned Motion generator are tested. See the timing table in `PRIOR_ART.md`.

@@ -11,6 +11,7 @@ use kinograph::{
     deployment::DEPLOYMENT_QUEUE_RECIPE,
     dsl::{Scalar, Scene, TargetGeometry},
     editor::{EDITOR_RECIPE, POINTER_RECIPE, PointerRecipePlan},
+    grid::GRID_RECIPE,
     plan::{
         MediaKindPlan, MediaRolePlan, ReadPlanError, ScalarPlan, ScenePlan, TargetComponentPlan,
         TrackEventPlan,
@@ -32,6 +33,7 @@ mod attachments;
 mod delivery;
 mod deployment_queue;
 mod editor;
+mod grid;
 mod keyed_layout;
 mod presentation;
 #[cfg(test)]
@@ -309,6 +311,7 @@ struct PreparedPlan {
     deployment_queue: Option<PreparedDeploymentQueue>,
     attachments: Vec<attachments::Attachment>,
     tasks: Vec<task::PreparedTask>,
+    grid: Option<grid::PreparedGrid>,
 }
 
 #[derive(Debug, PartialEq)]
@@ -349,6 +352,7 @@ impl PreparedPlan {
             .map(PreparedEditor::new)
             .collect::<Result<Vec<_>>>()?;
         compile_editor_channels(&mut plan, &editors)?;
+        let grid = grid::compile(&mut plan)?;
         validate_task_channels(&plan)?;
         let tasks = plan
             .actors
@@ -456,6 +460,7 @@ impl PreparedPlan {
         prepared.deployment_queue = deployment_queue;
         prepared.attachments = attachments;
         prepared.tasks = tasks;
+        prepared.grid = grid;
         Ok(prepared)
     }
 
@@ -567,6 +572,7 @@ impl PreparedPlan {
             deployment_queue: None,
             attachments: Vec::new(),
             tasks: Vec::new(),
+            grid: None,
         })
     }
 
@@ -699,6 +705,8 @@ impl PreparedPlan {
             deployment.render(renderer, time, |property, default| {
                 self.property_value(timeline, deployment.actor_id(), property, time, default)
             })?
+        } else if let Some(grid) = &self.grid {
+            grid.render(renderer, timeline, time)?
         } else if let Some(actor) = title_card {
             let title = actor
                 .data
@@ -724,6 +732,7 @@ impl PreparedPlan {
                 | EDITOR_RECIPE
                 | POINTER_RECIPE
                 | TASK_RECIPE
+                | GRID_RECIPE
                 | TERMINAL_RECORDING_RECIPE
                 | DEPLOYMENT_QUEUE_RECIPE => {}
                 "text" => {
@@ -1184,6 +1193,14 @@ fn validate_root_recipes(plan: &ScenePlan) -> Result<()> {
         .iter()
         .filter(|actor| actor.recipe == DEPLOYMENT_QUEUE_RECIPE)
         .count();
+    let grid_count = plan
+        .actors
+        .iter()
+        .filter(|actor| actor.recipe == GRID_RECIPE)
+        .count();
+    if grid_count > 1 {
+        bail!("plan renderer currently supports at most one keyed-grid root actor");
+    }
     if editor_count > 1 {
         bail!("plan renderer currently supports at most one editor root actor");
     }
@@ -1196,9 +1213,9 @@ fn validate_root_recipes(plan: &ScenePlan) -> Result<()> {
     if deployment_queue_count > 1 {
         bail!("plan renderer currently supports at most one deployment-queue root actor");
     }
-    if editor_count + title_card_count + terminal_count + deployment_queue_count > 1 {
+    if editor_count + title_card_count + terminal_count + deployment_queue_count + grid_count > 1 {
         bail!(
-            "editor, title-card, terminal-recording, and deployment-queue actors are exclusive root recipes"
+            "editor, title-card, terminal-recording, deployment-queue, and keyed-grid actors are exclusive root recipes"
         );
     }
     for actor in plan.actors.iter().filter(|actor| actor.recipe == "text") {
@@ -1284,10 +1301,11 @@ fn validate_renderer_plan(plan: &ScenePlan) -> Result<()> {
         .map(PreparedEditor::new)
         .collect::<Result<Vec<_>>>()?;
     compile_editor_channels(&mut plan.clone(), &editors)?;
+    grid::compile(&mut plan.clone())?;
     validate_task_channels(plan)?;
     for actor in &plan.actors {
         match actor.recipe.as_str() {
-            TASK_RECIPE => {}
+            TASK_RECIPE | GRID_RECIPE => {}
             "title-card" | "text" | EDITOR_RECIPE | POINTER_RECIPE | TERMINAL_RECORDING_RECIPE => {}
             DEPLOYMENT_QUEUE_RECIPE => {
                 PreparedDeploymentQueue::new(actor, &plan.state_channels, plan.duration_nanos)?;

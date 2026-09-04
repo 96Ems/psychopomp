@@ -24,3 +24,4 @@ winit = "0.30"
 kinograph-hero = { path = "../../scenes/hero" }
 kinograph-effect-succeed-slides = { path = "../../scenes/effect-succeed-slides" }
 kinograph-interactive-showcase = { path = "../../scenes/interactive-showcase" }
+kinograph-keyed-grid = { path = "../../scenes/keyed-grid" }

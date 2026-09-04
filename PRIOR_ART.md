@@ -13,6 +13,26 @@ The API should eventually support both:
 
 Both forms must compile into trajectories that can be sampled independently at arbitrary timestamps. Rendering frame 120 directly must match frame 120 from a complete render.
 
+## Functional Data Modeling Talk
+
+The local Scala source in
+`/Users/kit/code/lessons/scala-course/frontend/src/main/scala/slides/content/modeling/`
+contains `Slide_3_WhyModeling.scala` and `Slide_4_Modeling.scala`: the light-switch,
+Pac-Man joystick, counting, chess, and sum/product-type examples. Its `DynamicGrid`
+shows Cartesian products as growing keyed rows and columns. The first Kinograph
+adaptation (`scenes/keyed-grid`) keeps finite tuple identity separate from layout
+and extends those arrangements into a real connected 3D line lattice and product
+reassociation. The source uses adjoining 130-pixel cells, orange borders, dark
+gray interiors, outside axis labels, and opposing ±45° CSS grid rotations for
+its depth reveal. The initial Kinograph solid-block treatment was rejected;
+the corrected recipe has adjoining opaque faces with restrained borders, no cell
+scaling, and an orthographic view of the same 3D geometry. A wireframe intermediate
+was rejected because rear lines cluttered the diagram. The current chess-symbol
+example adds outside headings and centers sampled visible bounds, including
+during growth. It does not port the source's timer-driven random boards, joystick
+assets, or complete talk. Infinite cardinalities and arbitrary mappings remain
+future examples, not claims made by the 24-cell proof.
+
 ## Manim
 
 [Manim](https://docs.manim.community/en/stable/) is the strongest reference for semantic scene construction.

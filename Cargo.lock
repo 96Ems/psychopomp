@@ -915,6 +915,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "kinograph-keyed-grid"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "kinograph",
+ "serde_json",
+]
+
+[[package]]
 name = "kinograph-opencode-session-tool"
 version = "0.1.0"
 dependencies = [
@@ -943,6 +952,7 @@ dependencies = [
  "kinograph-effect-succeed-slides",
  "kinograph-hero",
  "kinograph-interactive-showcase",
+ "kinograph-keyed-grid",
  "png",
  "pollster",
  "resvg",

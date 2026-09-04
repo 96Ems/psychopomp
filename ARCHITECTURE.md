@@ -73,6 +73,40 @@ Transcript parsing does not understand code, actors, or rendering. It only conne
 
 ## Rendering Is One Concrete Adapter
 
+`kinograph::grid` describes the immutable finite-product catalog and Grid Snapshots.
+`plan_runtime/grid.rs` validates these without a GPU, computes concrete table,
+volume, and reassociation layouts, and lowers cell x/y/z, presence, emphasis,
+labels, extents, slice cutaways, and camera parameters into reserved `__grid.*`
+continuous channels. Equal-time snapshots
+coalesce and unchanged destinations do not restart. The same prepared Timeline
+drives native navigation and export; generic State Channels remain unsupported
+in native presentation.
+
+`render/grid.rs` and `render/grid.wgsl` are the first true 3D recipe: GPU-instanced
+connected cells, a Depth32Float attachment, four-sample spatial AA, an orthographic
+orbit, and cached two-line label textures. Detached colored blocks were rejected
+in favor of the old talk's adjoining grid; a subsequent wireframe pass was made
+opaque to hide rear lines. There are no gaps or per-cell scale animations.
+Continuous axis extents clip growth from a leading corner, while the projection
+centers the sampled visible cell bounds at canvas center on every frame. This
+deliberate recentering includes fractional growth, rotation, and slice cutaways;
+side headings do not skew the cell bounds. The catalog determines base scale,
+with a separate continuous zoom-out for labeled reassociation groups.
+
+Optional `GridCellLabelPlan` values supply primary symbols and secondary text
+without replacing tuple identity. The chess example demonstrates this separation.
+Cell labels share geometry and depth testing; outside row/column/depth headings
+stay upright at projected anchors. A selected slice clips away the other layers
+rather than becoming hidden behind opaque faces. Group headers remain text,
+not backing cards. The depth range fits sampled geometry, back faces are culled,
+and a tiny stable-order depth bias resolves coplanar front faces during regrouping
+without moving their geometry. This fixes a pixel regression in rapid navigation.
+The pass resolves into the existing RGBA texture and shares readback/encoding;
+native presentation still uploads those pixels, rather than sharing a zero-copy
+surface. Resources are lazy and only the latest grid's label atlas is retained.
+This reopens procedural 3D for one concrete diagram, not arbitrary meshes,
+Blender materials, a public camera graph, or a renderer abstraction.
+
 `crates/kinograph-render/src/render.rs` is the concrete `wgpu` and `cosmic-text` Adapter. `HeadlessRenderer::render_shapes` renders transparent editor-local geometry into tightly packed RGBA pixels. Cached stable-line sprites, pointers, and annotations are added to that flat editor surface before the shared card compositor presents it.
 
 The Adapter also resolves semantic token targets from `cosmic-text` glyph cluster hitboxes. Token highlights and the pointer consume those measured bounds; choreography does not estimate monospace character widths or hardcode target coordinates.

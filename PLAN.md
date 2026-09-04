@@ -332,6 +332,17 @@ playback. Live recompilation and presentation audio remain deferred. Further
 cleanup should follow measured bottlenecks; native pacing findings live in
 `perf/native-playback.md`.
 
+### Procedural Grid Proof
+
+`scenes/keyed-grid` reopens 3D narrowly for the functional-data-modeling talk:
+one stable finite product grows from a row into a connected 3D line lattice,
+then demonstrates reversible product reassociation. It must preserve tuple
+identity, position/velocity through arbitrary navigation, and deterministic
+native/video sampling. The grid stays three-dimensional while an orthographic
+camera changes the view; axis extents grow connected lines, not separate blocks.
+Blender/GLB models, joystick input, arbitrary
+materials, infinite value spaces, and a generic isomorphism API remain deferred.
+
 ## The Repository Starts Small
 
 ```text
