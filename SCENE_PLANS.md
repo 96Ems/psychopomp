@@ -154,6 +154,27 @@ For a deck, `--benchmark` also switches slides every two measured seconds. Those
 results include slide-switch costs and are not directly comparable with a
 single-scene throughput benchmark.
 
+### Mask Rolling Text
+
+The `text` recipe accepts an optional canvas-space `verticalMask`:
+
+```json
+{"text":"Run the computation","center":[960,780],"fontSize":30,
+ "verticalMask":{"top":750,"bottom":810,"fade":12}}
+```
+
+The mask stays fixed while the actor's `y` channel moves the text through it.
+Coverage ramps linearly from zero at `top` to full opacity at `top + fade`, stays
+full in the middle, and falls to zero at `bottom`. Everything outside is clipped.
+`fade` may be zero for a hard aperture, but cannot exceed half its height.
+`plan validate` checks finite ordered bounds and the fade range without a GPU.
+
+This is a text alpha mask, not a dark rectangle composited over the scene.
+Other actors and the background remain unchanged. The showcase captions use a
+shared 60-pixel aperture and 12-pixel edge fades, following `visual-types`' rolling
+content treatment. Existing opacity channels still prevent skipped, unselected
+captions from appearing while their y destinations change.
+
 ### Inspect Maximum Stability
 
 ```bash

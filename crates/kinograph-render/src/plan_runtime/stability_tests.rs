@@ -97,6 +97,116 @@ fn renderer_validation_checks_editor_data_without_a_gpu() {
 }
 
 #[test]
+fn text_mask_validation_rejects_invalid_apertures_without_a_gpu() {
+    let mut actor = kinograph::plan::ActorPlan {
+        id: "caption".into(),
+        recipe: "text".into(),
+        data: json!({"text": "Rolling", "center": [960, 780]}),
+    };
+    validate_text_recipe(&actor).unwrap();
+    actor.data["verticalMask"] = json!({"top": 750, "bottom": 810, "fade": 12});
+    validate_text_recipe(&actor).unwrap();
+    for invalid in [
+        json!({"top": 810, "bottom": 750, "fade": 12}),
+        json!({"top": 750, "bottom": 750, "fade": 0}),
+        json!({"top": 750, "bottom": 810, "fade": -1}),
+        json!({"top": 750, "bottom": 810, "fade": 31}),
+        json!({"top": 750, "bottom": 1e100, "fade": 12}),
+        json!({"top": "750", "bottom": 810, "fade": 12}),
+        json!({"top": 750, "bottom": 810}),
+        json!(null),
+    ] {
+        actor.data["verticalMask"] = invalid;
+        assert!(
+            validate_text_recipe(&actor).is_err(),
+            "accepted {}",
+            actor.data["verticalMask"]
+        );
+    }
+}
+
+#[test]
+#[ignore = "requires a headless GPU; rolling captions share a stationary mask in native and video sampling"]
+fn rolling_captions_stay_inside_their_aperture_through_reversals() {
+    let mut plan = kinograph_interactive_showcase::build_deck().unwrap().slides[1]
+        .plan
+        .clone();
+    plan.actors.retain(|actor| actor.id.starts_with("caption-"));
+    plan.continuous_channels
+        .retain(|channel| channel.actor_id.starts_with("caption-"));
+    let mut unmasked = plan.clone();
+    for actor in &mut unmasked.actors {
+        actor.data.as_object_mut().unwrap().remove("verticalMask");
+    }
+    let mut renderer = pollster::block_on(new_renderer("rolling-caption")).unwrap();
+    let prepared = PreparedPlan::prepare(plan, Path::new("."), &mut renderer).unwrap();
+    let unmasked = PreparedPlan::prepare(unmasked, Path::new("."), &mut renderer).unwrap();
+    let blank = renderer.render_title_card("", None, 0.);
+    let assert_clipped = |pixels: &[u8]| {
+        for y in (0..750).chain(810..1080) {
+            let start = y * 1920 * 4;
+            assert_eq!(
+                &pixels[start..start + 1920 * 4],
+                &blank[start..start + 1920 * 4],
+                "mask leaked at row {y}"
+            );
+        }
+    };
+    // The held line stays completely sharp. Only moving edge pixels change.
+    assert_eq!(
+        prepared.render_sample(&mut renderer, 0.).unwrap(),
+        unmasked.render_sample(&mut renderer, 0.).unwrap()
+    );
+    let expected = prepared.render_sample(&mut renderer, 3.12).unwrap();
+    assert_clipped(&expected);
+    assert_ne!(
+        expected,
+        unmasked.render_sample(&mut renderer, 3.12).unwrap()
+    );
+    prepared.render_sample(&mut renderer, 15.).unwrap();
+    assert_eq!(
+        expected,
+        prepared.render_sample(&mut renderer, 3.12).unwrap()
+    );
+
+    let mut playback = prepared.playback(false).unwrap();
+    playback.command(PlaybackCommand::Next, Duration::ZERO);
+    let live = prepared
+        .render_sample_using(&mut renderer, 0.12, &playback.timeline())
+        .unwrap();
+    assert_eq!(live, expected);
+    for (time, command) in [
+        (0.12, PlaybackCommand::Previous),
+        (0.2, PlaybackCommand::Next),
+        (0.24, PlaybackCommand::Last),
+        (0.3, PlaybackCommand::First),
+    ] {
+        let before = prepared
+            .render_sample_using(&mut renderer, time, &playback.timeline())
+            .unwrap();
+        playback.command(command, Duration::from_secs_f64(time));
+        assert_eq!(
+            before,
+            prepared
+                .render_sample_using(&mut renderer, time, &playback.timeline())
+                .unwrap()
+        );
+        assert_clipped(
+            &prepared
+                .render_sample_using(&mut renderer, time + 0.02, &playback.timeline())
+                .unwrap(),
+        );
+    }
+    playback.set_reduced_motion(true, Duration::from_secs_f64(0.4));
+    assert_eq!(
+        prepared
+            .render_sample_using(&mut renderer, 0.4, &playback.timeline())
+            .unwrap(),
+        prepared.render_sample(&mut renderer, 0.).unwrap()
+    );
+}
+
+#[test]
 fn task_preflight_rejects_id_only_collisions_and_accepts_actual_position_overrides() {
     let mut plan = kinograph_interactive_showcase::build_deck().unwrap().slides[1]
         .plan

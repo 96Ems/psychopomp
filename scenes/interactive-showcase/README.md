@@ -30,6 +30,9 @@ compresses; the sweep no longer waits for the content to leave. Bubble fade,
 scale, blur, and rise have their own source profiles rather than a staged wait.
 Results resolve without spinning. These tracks reverse smoothly on Left/Right
 and apply to video export; no mount/reset behavior is needed on navigation.
+The rolling explanation lines move through a fixed window with 12-pixel linear
+top/bottom fades, like Visual Types. They disappear behind its edges rather than
+floating away as fully visible rows. Their existing movement timings are unchanged.
 Error bubbles stay readable while their failed step is held. Running motion uses
 a bounded deterministic signal so leaving a Task running for a long presentation
 does not increase its sampling cost.

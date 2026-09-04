@@ -776,7 +776,7 @@ impl PreparedPlan {
                             ]
                         })
                         .unwrap_or([255, 255, 255]);
-                    renderer.composite_centered_text(
+                    renderer.composite_centered_text_masked(
                         &mut pixels,
                         text,
                         [x, y],
@@ -784,6 +784,7 @@ impl PreparedPlan {
                         color,
                         self.property_value(timeline, &actor.id, "opacity", time, 1.0)
                             .clamp(0.0, 1.0),
+                        text_vertical_mask(actor)?,
                     );
                 }
                 recipe => bail!("unsupported actor recipe '{recipe}'"),
@@ -1085,7 +1086,40 @@ fn resolve_scalar(scalar: &ScalarPlan, targets: &HashMap<String, TargetGeometry>
     }
 }
 
+fn text_vertical_mask(
+    actor: &kinograph::plan::ActorPlan,
+) -> Result<Option<crate::render::VerticalMask>> {
+    let Some(value) = actor.data.get("verticalMask") else {
+        return Ok(None);
+    };
+    let field = |name: &str| -> Result<f32> {
+        value
+            .get(name)
+            .and_then(Value::as_f64)
+            .map(|value| value as f32)
+            .with_context(|| {
+                format!(
+                    "text actor '{}' verticalMask.{name} must be numeric",
+                    actor.id
+                )
+            })
+    };
+    let mask = crate::render::VerticalMask {
+        top: field("top")?,
+        bottom: field("bottom")?,
+        fade: field("fade")?,
+    };
+    if !mask.is_valid() {
+        bail!(
+            "text actor '{}' verticalMask requires finite top < bottom and fade in [0, half the mask height]",
+            actor.id
+        );
+    }
+    Ok(Some(mask))
+}
+
 fn validate_text_recipe(actor: &kinograph::plan::ActorPlan) -> Result<()> {
+    text_vertical_mask(actor)?;
     let center = actor
         .data
         .get("center")

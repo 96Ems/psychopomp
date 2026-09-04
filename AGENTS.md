@@ -119,6 +119,7 @@ This is the default for every code presentation and video, not only Effect Insti
 - Match a known reference's operation-specific timings and overlap before inventing new staging. Do not force every transition into an outgoing-content → container → incoming-content sequence; unnecessary waits can destroy its snap.
 - Content needs its own scale, opacity, and blur pose, independent of container geometry. Use rotation selectively for symbols; do not automatically spin result text, labels, or stable code.
 - Keep unchanged content still. Resolve competing payloads rather than layering two readable silhouettes in the same space.
+- Rolling text should pass through a stationary clipped window with linear edge fades (`text.data.verticalMask`), not carry a fade with the moving line or paint a dark overlay over unrelated actors. Preserve the existing motion timing when adding this spatial treatment.
 - Give scale, opacity, blur, and secondary geometry independent tracks when the reference uses different springs. A second easing or progress window on an already animated value changes its timing; it is not a neutral implementation detail.
 - Richer staging must remain interruptible and deterministic. Avoid delayed callbacks and direction-dependent pose resets; test each visible channel and its velocity through reversal.
 - Inspect normal-speed and slowed/stepped artifacts, not only endpoint images. The motion-graphics sources and their application are recorded in `PRIOR_ART.md`.

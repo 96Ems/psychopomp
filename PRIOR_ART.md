@@ -246,6 +246,23 @@ These are Motion `visualDuration` parameters, not deadlines at which every sprin
 
 The regression fixture `crates/kinograph-render/tests/fixtures/effect-task-timing.json` is generated with Motion DOM 12.42.2, as pinned by the inspected Effect Institute lockfile. Its adjacent Bun script loads cached UMD bundles without installing or modifying Effect Institute dependencies. Tests compare actual compiled Rust channel samples, not only duplicated configuration constants. The fixture uses tight rest tolerances to compare analytic curves; Kinograph keeps its deterministic permanent-settling policy.
 
+## Visual Types Rolling Content
+
+`/Users/kit/code/experiments/typescript/visual-types` demonstrates a fixed viewing
+window for moving text. `src/components/Lesson/CyclingSection.tsx` translates a
+stable content stack inside an `overflow-hidden` viewport;
+`Lesson/FadeOverlays.tsx` adds stationary linear top and bottom fades. The cycling
+section supplies a 12-pixel fade height. `FocusedCodeBlock.tsx` applies the same
+idea to a centered code line, sizing its fade regions from the measured line height.
+
+The important feature is spatial occlusion: text disappears into the edges of
+the window, rather than fading uniformly while visibly floating above or below
+its resting row. Kinograph's showcase captions use a fixed text alpha aperture
+with the same 12-pixel fades. Applying it before blending, instead of painting
+the source project's solid-background overlays, also preserves arbitrary
+backgrounds. Existing presence channels keep skipped captions hidden, and
+ordinary y tracks preserve interruption velocity. Text spring timings are unchanged.
+
 ## effect-institute
 
 `/Users/kit/code/experiments/typescript/effect-institute` is local product prior art for semantic code states, not the immediate timeline model.

@@ -168,7 +168,9 @@ fn task_slide(
             at,
             if index == 0 { 0 } else { at + 2 * SECOND },
         );
-        let text = scene.actor(format!("caption-{index}"), "text", json!({"text": caption, "center": [960, 780], "fontSize": 30, "color": [170, 182, 200]}))?;
+        // Like visual-types' CyclingSection/FadeOverlays: the aperture stays
+        // fixed while rows roll through its 12-pixel top and bottom fades.
+        let text = scene.actor(format!("caption-{index}"), "text", json!({"text": caption, "center": [960, 780], "fontSize": 30, "color": [170, 182, 200], "verticalMask": {"top": 750, "bottom": 810, "fade": 12}}))?;
         let opacity = scene.continuous(&text, "opacity", if index == 0 { 1. } else { 0. });
         let y = scene.continuous(&text, "y", if index == 0 { 780. } else { 824. });
         if index > 0 {

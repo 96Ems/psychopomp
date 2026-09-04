@@ -133,6 +133,56 @@ struct TextSprite {
     pixels: Vec<u8>,
 }
 
+/// Stationary canvas-space aperture. Text moves through it; the fade does not
+/// move with the glyphs or paint over the already-composited background.
+#[derive(Clone, Copy, Debug)]
+pub struct VerticalMask {
+    pub top: f32,
+    pub bottom: f32,
+    pub fade: f32,
+}
+
+impl VerticalMask {
+    pub fn is_valid(self) -> bool {
+        let height = self.bottom - self.top;
+        self.top.is_finite()
+            && self.bottom.is_finite()
+            && height.is_finite()
+            && height > 0.
+            && self.fade.is_finite()
+            && self.fade >= 0.
+            && self.fade <= height * 0.5
+    }
+
+    fn coverage(self, start: f32, end: f32) -> f32 {
+        let start = start.max(self.top);
+        let end = end.min(self.bottom);
+        if start >= end {
+            return 0.;
+        }
+        if self.fade == 0. {
+            return (end - start).clamp(0., 1.);
+        }
+        // Integrate the linear mask over this pixel's covered row interval.
+        // Fractional mask edges cannot expose an opaque row at once.
+        let fade = f64::from(self.fade);
+        let ramp = |y: f64| {
+            if y <= 0. {
+                0.
+            } else if y < fade {
+                y * y / (2. * fade)
+            } else {
+                y - fade * 0.5
+            }
+        };
+        let integral = |y: f32| {
+            ramp(f64::from(y) - f64::from(self.top))
+                - ramp(f64::from(y) - (f64::from(self.bottom) - fade))
+        };
+        (integral(end) - integral(start)).clamp(0., 1.) as f32
+    }
+}
+
 pub struct HeadlessRenderer {
     spec: RenderSpec,
     device: wgpu::Device,
@@ -376,6 +426,7 @@ impl HeadlessRenderer {
             64.0,
             [238, 240, 244],
             opacity,
+            None,
         );
         if let Some(subtitle) = subtitle {
             self.composite_title_card_text(
@@ -385,6 +436,7 @@ impl HeadlessRenderer {
                 26.0,
                 [135, 145, 160],
                 opacity * 0.9,
+                None,
             );
         }
         pixels
@@ -399,7 +451,21 @@ impl HeadlessRenderer {
         color: [u8; 3],
         opacity: f32,
     ) {
-        self.composite_title_card_text(pixels, text, center, font_size, color, opacity);
+        self.composite_title_card_text(pixels, text, center, font_size, color, opacity, None);
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub fn composite_centered_text_masked(
+        &mut self,
+        pixels: &mut [u8],
+        text: &str,
+        center: [f32; 2],
+        font_size: f32,
+        color: [u8; 3],
+        opacity: f32,
+        mask: Option<VerticalMask>,
+    ) {
+        self.composite_title_card_text(pixels, text, center, font_size, color, opacity, mask);
     }
 
     pub fn render_centered_code_line(
@@ -460,6 +526,7 @@ impl HeadlessRenderer {
         Ok(pixels)
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn composite_title_card_text(
         &mut self,
         pixels: &mut [u8],
@@ -468,6 +535,7 @@ impl HeadlessRenderer {
         font_size: f32,
         color: [u8; 3],
         opacity: f32,
+        mask: Option<VerticalMask>,
     ) {
         let mut hasher = DefaultHasher::new();
         text.hash(&mut hasher);
@@ -492,7 +560,7 @@ impl HeadlessRenderer {
             self.part_sprites.insert(key.clone(), (0, sprite));
         }
         let sprite = &self.part_sprites[&key].1;
-        composite_text_sprite(
+        composite_text_region(
             pixels,
             [self.spec.width, self.spec.height],
             sprite,
@@ -500,10 +568,12 @@ impl HeadlessRenderer {
                 center[0] - sprite.advance * 0.5,
                 center[1] - sprite.height as f32 * 0.5,
             ],
+            0.,
             sprite.width as f32,
             0.0,
             opacity,
             [0.0, self.spec.height as f32],
+            mask,
         );
     }
 
@@ -909,6 +979,7 @@ impl HeadlessRenderer {
                 bright.blur,
                 bright.opacity,
                 [code_top, code_bottom],
+                None,
             );
         }
         for squiggle in frame.squiggles {
@@ -1426,7 +1497,7 @@ fn composite_text_sprite(
     clip_y: [f32; 2],
 ) {
     composite_text_region(
-        canvas, size, sprite, origin, 0., clip_width, blur, opacity, clip_y,
+        canvas, size, sprite, origin, 0., clip_width, blur, opacity, clip_y, None,
     );
 }
 
@@ -1441,6 +1512,7 @@ fn composite_text_region(
     blur: f32,
     opacity: f32,
     clip_y: [f32; 2],
+    mask: Option<VerticalMask>,
 ) {
     if opacity <= 0.0 || clip_width <= 0.0 {
         return;
@@ -1449,6 +1521,9 @@ fn composite_text_region(
         source_left,
         (source_left + clip_width).min(sprite.width as f32),
     ];
+    let clip_y = mask.map_or(clip_y, |mask| {
+        [clip_y[0].max(mask.top), clip_y[1].min(mask.bottom)]
+    });
     // The source mask is filtered with the glyph. Include its complete support;
     // otherwise changing floor/ceil bounds would discard nonzero filtered texels.
     let left = x - source_left + source_clip[0].floor() - blur - 1.0;
@@ -1456,9 +1531,15 @@ fn composite_text_region(
     let top = (y - blur - 1.0).max(clip_y[0]);
     let bottom = (y + sprite.height as f32 + blur + 1.0).min(clip_y[1]);
     for target_y in (top.floor() as i32).max(0)..(bottom.ceil() as i32).min(canvas_height as i32) {
-        let coverage_y = ((target_y as f32 + 1.0).min(clip_y[1])
-            - (target_y as f32).max(clip_y[0]))
-        .clamp(0.0, 1.0);
+        let row_start = (target_y as f32).max(clip_y[0]);
+        let row_end = (target_y as f32 + 1.).min(clip_y[1]);
+        let coverage_y = mask.map_or_else(
+            || (row_end - row_start).clamp(0., 1.),
+            |mask| mask.coverage(row_start, row_end),
+        );
+        if coverage_y <= 0. {
+            continue;
+        }
         for target_x in (left.floor() as i32).max(0)..(right.ceil() as i32).min(canvas_width as i32)
         {
             let source_x = source_left + target_x as f32 - x;
@@ -1733,6 +1814,97 @@ fn attributes(base: Attrs<'static>, style: SyntaxStyle) -> Attrs<'static> {
 #[cfg(test)]
 mod tests {
     #[test]
+    fn vertical_mask_integrates_linear_fades_and_fractional_edges() {
+        let mask = super::VerticalMask {
+            top: 2.,
+            bottom: 8.,
+            fade: 2.,
+        };
+        assert!(mask.is_valid());
+        for (y, expected) in [0., 0., 0.25, 0.75, 1., 1., 0.75, 0.25, 0.]
+            .into_iter()
+            .enumerate()
+        {
+            assert_eq!(mask.coverage(y as f32, y as f32 + 1.), expected);
+        }
+        let fractional = super::VerticalMask {
+            top: 2.5,
+            bottom: 8.5,
+            fade: 2.,
+        };
+        assert_eq!(fractional.coverage(2., 3.), 0.0625);
+        assert_eq!(fractional.coverage(8., 9.), 0.0625);
+        let a = super::VerticalMask {
+            top: 2.49,
+            ..fractional
+        };
+        let b = super::VerticalMask {
+            top: 2.51,
+            ..fractional
+        };
+        assert!((a.coverage(2., 3.) - b.coverage(2., 3.)).abs() < 0.006);
+        assert_eq!(
+            super::VerticalMask {
+                fade: 0.,
+                ..fractional
+            }
+            .coverage(2., 3.),
+            0.5
+        );
+    }
+
+    #[test]
+    fn stationary_mask_fades_glyph_rows_not_the_existing_background() {
+        let sprite = opaque_test_sprite();
+        let mask = super::VerticalMask {
+            top: 4.,
+            bottom: 12.,
+            fade: 2.,
+        };
+        let mut pixels = vec![0; 16 * 16 * 4];
+        super::composite_text_region(
+            &mut pixels,
+            [16, 16],
+            &sprite,
+            [4., 3.],
+            0.,
+            4.,
+            0.,
+            1.,
+            [0., 16.],
+            Some(mask),
+        );
+        let alpha = |y: usize| pixels[(y * 16 + 5) * 4 + 3];
+        assert_eq!([alpha(3), alpha(4), alpha(5), alpha(6)], [0, 64, 191, 255]);
+        for pixel in pixels.chunks_exact(4).filter(|p| p[3] != 0) {
+            assert_eq!(&pixel[..3], &[255; 3]);
+        }
+
+        let background = [17, 33, 49, 255].repeat(16 * 16);
+        let mut pixels = background.clone();
+        super::composite_text_region(
+            &mut pixels,
+            [16, 16],
+            &sprite,
+            [4., 3.],
+            0.,
+            4.,
+            0.,
+            1.,
+            [0., 16.],
+            Some(mask),
+        );
+        for y in 0..16 {
+            for x in 0..16 {
+                if x == 0 || !(4..12).contains(&y) {
+                    let offset = (y * 16 + x) * 4;
+                    assert_eq!(&pixels[offset..offset + 4], &background[offset..offset + 4]);
+                }
+            }
+        }
+    }
+
+    #[test]
     fn filtered_text_footprint_has_no_integer_boundary_pops() {
         let sprite = super::TextSprite {
             width: 12,
@@ -1900,6 +2072,7 @@ mod tests {
                     blur,
                     1.,
                     [5.5, 14.5],
+                    None,
                 );
                 assert_eq!(base, bright, "origin y={y}, blur={blur}");
             }

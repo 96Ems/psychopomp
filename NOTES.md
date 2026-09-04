@@ -47,6 +47,8 @@ The default artifact is `output/kinograph-prototype.mp4`.
 
 ## Current Stability And Native Presentation
 
+- Rolling captions now use a fixed canvas-space aperture with linear edge fades, following Visual Types' `CyclingSection`/`FadeOverlays`. Row-integrated mask coverage preserves fractional edges and only affects text alpha, not the scene behind it. GPU checks cover unchanged held text, native/video parity, clipping throughout rapid reversals and skipped steps, out-of-order sampling, and reduced motion. Caption and Task timing profiles are unchanged by this mask.
+
 - Expressive content needs independent property timings, not only a pose separate from its container. The first content pass slowed the body to 0.34 seconds and drove all content through one 0.32-second spring plus extra visibility windows; Kit judged this stale against Effect Institute. The correction restores the source Pixi body's 0.2-second/bounce-0.5 response, roughly 0.167-second icons, and a 0.25-second/bounce-0.4 result pop with independent 0.15-second deblur. Bubble rise/fade/deblur likewise have separate source profiles, without a staged wait. Native and authored entry poses, reversal continuity, unchanged sibling pixels, reduced-motion destinations, and actual channel samples against the source's pinned Motion generator are tested. See the timing table in `PRIOR_ART.md`.
 
 - Compiled springs now use deterministic remaining-motion bounds. Once settled, an unchanged channel cannot wake when another channel resumes. Tests cover the original underdamped and tiny critical-move failures without frame-history-dependent state.
