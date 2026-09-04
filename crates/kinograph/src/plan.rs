@@ -8,6 +8,43 @@ use serde_json::Value;
 
 pub const SCENE_PLAN_VERSION: u32 = 2;
 
+/// One native presentation containing independently authored Scene Plans.
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DeckPlan {
+    pub version: u32,
+    pub id: String,
+    pub slides: Vec<SlidePlan>,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SlidePlan {
+    pub title: String,
+    pub plan: ScenePlan,
+}
+
+impl DeckPlan {
+    pub fn validate(&self) -> anyhow::Result<()> {
+        if self.version != 1 || self.id.trim().is_empty() || self.slides.is_empty() {
+            anyhow::bail!("deck requires version 1, an ID, and at least one slide");
+        }
+        let mut ids = HashSet::new();
+        for slide in &self.slides {
+            slide.plan.validate()?;
+            if slide.title.trim().is_empty()
+                || slide.plan.presentation_steps.is_empty()
+                || !ids.insert(&slide.plan.id)
+            {
+                anyhow::bail!(
+                    "deck slides need a title, presentation steps, and distinct scene IDs"
+                );
+            }
+        }
+        Ok(())
+    }
+}
+
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ScenePlan {
@@ -26,6 +63,8 @@ pub struct ScenePlan {
     pub cues: Vec<CuePlan>,
     #[serde(default)]
     pub media: Vec<MediaPlan>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub presentation_steps: Vec<PresentationStepPlan>,
 }
 
 impl ScenePlan {
@@ -40,6 +79,7 @@ impl ScenePlan {
             state_channels: Vec::new(),
             cues: Vec::new(),
             media: Vec::new(),
+            presentation_steps: Vec::new(),
         }
     }
 
@@ -210,6 +250,47 @@ impl ScenePlan {
             );
         }
 
+        let mut step_ids = HashSet::new();
+        let mut previous_hold = None;
+        for (index, step) in self.presentation_steps.iter().enumerate() {
+            let path = format!("presentationSteps[{index}]");
+            validate_id(
+                &step.id,
+                &format!("{path}.id"),
+                "presentation step",
+                &mut diagnostics,
+            );
+            if !step_ids.insert(step.id.as_str()) {
+                diagnostics.push(PlanDiagnostic::new(
+                    "duplicate-presentation-step-id",
+                    format!("{path}.id"),
+                    format!("presentation step '{}' is declared more than once", step.id),
+                ));
+            }
+            if step.title.trim().is_empty() {
+                diagnostics.push(PlanDiagnostic::new(
+                    "empty-step-title",
+                    format!("{path}.title"),
+                    "presentation step title must not be empty",
+                ));
+            }
+            if step.start_nanos > step.hold_nanos || step.hold_nanos > self.duration_nanos {
+                diagnostics.push(PlanDiagnostic::new(
+                    "invalid-step-range",
+                    &path,
+                    "presentation step must satisfy 0 <= startNanos <= holdNanos <= scene duration",
+                ));
+            }
+            if previous_hold.is_some_and(|hold| step.start_nanos < hold) {
+                diagnostics.push(PlanDiagnostic::new(
+                    "overlapping-presentation-steps",
+                    &path,
+                    "presentation steps must be in playback order and start at or after the preceding hold",
+                ));
+            }
+            previous_hold = Some(step.hold_nanos);
+        }
+
         let mut media_ids = HashSet::new();
         for (index, media) in self.media.iter().enumerate() {
             let path = format!("media[{index}]");
@@ -305,6 +386,11 @@ impl ScenePlan {
             "cue": {
                 "required": ["id", "startNanos", "endNanos"]
             },
+            "presentationStep": {
+                "required": ["id", "title", "startNanos", "holdNanos"],
+                "timing": "ordered, non-overlapping entry ranges; equal start and hold means a still step",
+                "playback": "open at the first hold; Next plays the following entry then holds; Previous restores the preceding hold"
+            },
             "media": {
                 "required": [
                     "id", "path", "kind", "role", "sourceStartNanos", "sourceEndNanos",
@@ -372,7 +458,7 @@ pub struct TargetScalarPlan {
     pub offset: f32,
 }
 
-#[derive(Clone, Copy, Debug, Deserialize, Serialize)]
+#[derive(Clone, Copy, Debug, Deserialize, Serialize, Eq, Hash, PartialEq)]
 #[serde(rename_all = "kebab-case")]
 pub enum TargetComponentPlan {
     X,
@@ -445,6 +531,17 @@ pub struct CuePlan {
     pub id: String,
     pub start_nanos: u64,
     pub end_nanos: u64,
+}
+
+/// An authored entry range and exact held endpoint on the original scene clock.
+/// Presentation waits do not alter scene time or the automatic video schedule.
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PresentationStepPlan {
+    pub id: String,
+    pub title: String,
+    pub start_nanos: u64,
+    pub hold_nanos: u64,
 }
 
 #[derive(Clone, Copy, Debug, Deserialize, Serialize)]
@@ -611,11 +708,14 @@ fn validate_track_events(
                     &format!("{event_path}.target"),
                     diagnostics,
                 );
-                if !response_seconds.is_finite() || *response_seconds <= 0.0 {
+                if !response_seconds.is_finite()
+                    || *response_seconds <= 0.0
+                    || !(std::f32::consts::TAU / response_seconds).is_finite()
+                {
                     diagnostics.push(PlanDiagnostic::new(
                         "invalid-spring",
                         format!("{event_path}.responseSeconds"),
-                        "spring response must be positive and finite",
+                        "spring response must be positive, finite, and have a representable angular frequency",
                     ));
                 }
                 if !damping_ratio.is_finite() || *damping_ratio <= 0.0 || *damping_ratio > 1.0 {
@@ -843,6 +943,26 @@ mod tests {
     }
 
     #[test]
+    fn unrepresentable_spring_frequency_returns_a_structured_diagnostic() {
+        let mut plan = plan();
+        let TrackEventPlan::Spring {
+            response_seconds, ..
+        } = &mut plan.continuous_channels[0].events[0]
+        else {
+            unreachable!()
+        };
+        *response_seconds = 1e-38;
+        let error = plan.validate().unwrap_err();
+        assert!(
+            error
+                .diagnostics()
+                .iter()
+                .any(|diagnostic| diagnostic.code == "invalid-spring"
+                    && diagnostic.path.ends_with("responseSeconds"))
+        );
+    }
+
+    #[test]
     fn validation_returns_structured_paths_and_suggestions() {
         let mut plan = plan();
         plan.continuous_channels[0].actor_id = "missing".to_owned();
@@ -992,5 +1112,78 @@ mod tests {
         assert_eq!(changes[0].before, None);
         assert_eq!(changes[0].after, Some(json!("white")));
         assert_eq!(changes[1].after, Some(json!(null)));
+    }
+
+    #[test]
+    fn presentation_metadata_is_optional_and_does_not_change_existing_json() {
+        let original = plan().to_json_pretty().unwrap();
+        assert!(!original.contains("presentationSteps"));
+        let mut plan = ScenePlan::from_json(&original).unwrap();
+        plan.presentation_steps = vec![
+            super::PresentationStepPlan {
+                id: "initial".into(),
+                title: "Initial state".into(),
+                start_nanos: 0,
+                hold_nanos: 0,
+            },
+            super::PresentationStepPlan {
+                id: "reveal".into(),
+                title: "Reveal".into(),
+                start_nanos: 500_000_000,
+                hold_nanos: 2_000_000_000,
+            },
+        ];
+        let json = plan.to_json_pretty().unwrap();
+        assert_eq!(
+            ScenePlan::from_json(&json)
+                .unwrap()
+                .to_json_pretty()
+                .unwrap(),
+            json
+        );
+        plan.presentation_steps.clear();
+        assert_eq!(plan.to_json_pretty().unwrap(), original);
+    }
+
+    #[test]
+    fn presentation_steps_validate_identity_titles_ranges_and_order() {
+        let mut plan = plan();
+        plan.presentation_steps = vec![
+            super::PresentationStepPlan {
+                id: "first".into(),
+                title: "First".into(),
+                start_nanos: 0,
+                hold_nanos: 1_000_000_000,
+            },
+            super::PresentationStepPlan {
+                id: "first".into(),
+                title: " ".into(),
+                start_nanos: 500_000_000,
+                hold_nanos: 3_000_000_000,
+            },
+        ];
+        let error = plan.validate().unwrap_err();
+        for code in [
+            "duplicate-presentation-step-id",
+            "empty-step-title",
+            "invalid-step-range",
+            "overlapping-presentation-steps",
+        ] {
+            assert!(
+                error
+                    .diagnostics()
+                    .iter()
+                    .any(|diagnostic| diagnostic.code == code),
+                "{code}"
+            );
+        }
+        plan.presentation_steps[0].start_nanos = 1_500_000_000;
+        assert!(
+            plan.validate()
+                .unwrap_err()
+                .diagnostics()
+                .iter()
+                .any(|d| d.path == "presentationSteps[0]" && d.code == "invalid-step-range")
+        );
     }
 }

@@ -164,6 +164,7 @@ fn editor_recipe() -> EditorRecipePlan {
 
     EditorRecipePlan {
         file_name: "service.ts".to_owned(),
+        snapshots: Vec::new(),
         lines: vec![
             line(
                 "import",
@@ -256,7 +257,10 @@ fn editor_recipe() -> EditorRecipePlan {
         inline_reveal: EditorInlineRevealPlan {
             line_id: FOCUS_LINE_ID.to_owned(),
             range_id: "error-slot".to_owned(),
+            channel: None,
+            reversed: false,
         },
+        additional_inline_reveals: Vec::new(),
     }
 }
 

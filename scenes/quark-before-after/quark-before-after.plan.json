@@ -1,0 +1,963 @@
+{
+  "version": 2,
+  "id": "quark-before-after",
+  "durationNanos": 23000000000,
+  "actors": [
+    {
+      "id": "editor",
+      "recipe": "editor",
+      "data": {
+        "additionalInlineReveals": [
+          {
+            "channel": "api-change",
+            "lineId": "comment",
+            "rangeId": "quark-comment"
+          },
+          {
+            "channel": "api-change",
+            "lineId": "declaration",
+            "rangeId": "solid-binding-open",
+            "reversed": true
+          },
+          {
+            "channel": "api-change",
+            "lineId": "declaration",
+            "rangeId": "solid-binding-rest",
+            "reversed": true
+          },
+          {
+            "channel": "api-change",
+            "lineId": "declaration",
+            "rangeId": "solid-initializer",
+            "reversed": true
+          },
+          {
+            "channel": "api-change",
+            "lineId": "declaration",
+            "rangeId": "quark-initializer"
+          },
+          {
+            "channel": "api-change",
+            "lineId": "for-open",
+            "rangeId": "keyed-prefix"
+          },
+          {
+            "channel": "api-change",
+            "lineId": "for-open",
+            "rangeId": "solid-source",
+            "reversed": true
+          },
+          {
+            "channel": "api-change",
+            "lineId": "for-open",
+            "rangeId": "quark-source"
+          },
+          {
+            "channel": "api-change",
+            "lineId": "row",
+            "rangeId": "row-call"
+          },
+          {
+            "channel": "api-change",
+            "lineId": "for-close",
+            "rangeId": "close-keyed-prefix"
+          },
+          {
+            "channel": "update-change",
+            "lineId": "update",
+            "rangeId": "solid-update-prefix",
+            "reversed": true
+          },
+          {
+            "channel": "update-change",
+            "lineId": "update",
+            "rangeId": "quark-update-prefix"
+          },
+          {
+            "channel": "update-change",
+            "lineId": "update",
+            "rangeId": "solid-update-plural",
+            "reversed": true
+          },
+          {
+            "channel": "update-change",
+            "lineId": "update",
+            "rangeId": "solid-update-suffix",
+            "reversed": true
+          },
+          {
+            "channel": "update-change",
+            "lineId": "update",
+            "rangeId": "quark-update-suffix"
+          }
+        ],
+        "enteringOffsetX": 0.0,
+        "fileName": "state.ts",
+        "finalLineIds": [
+          "comment",
+          "declaration",
+          "gap",
+          "update",
+          "render-gap",
+          "slots",
+          "for-open",
+          "row",
+          "for-close"
+        ],
+        "focusHeight": 46.0,
+        "focusLineId": "for-open",
+        "initialLineIds": [
+          "comment",
+          "declaration",
+          "gap",
+          "update",
+          "render-gap",
+          "for-open",
+          "row",
+          "for-close"
+        ],
+        "inlineReveal": {
+          "channel": "api-change",
+          "lineId": "comment",
+          "rangeId": "solid-comment",
+          "reversed": true
+        },
+        "lineHeight": 46.0,
+        "lines": [
+          {
+            "id": "comment",
+            "parts": [
+              {
+                "id": "comment-prefix",
+                "spans": [
+                  {
+                    "style": "accent",
+                    "text": "// "
+                  }
+                ]
+              },
+              {
+                "id": "solid-comment",
+                "spans": [
+                  {
+                    "style": "accent",
+                    "text": "Values and structure"
+                  }
+                ]
+              },
+              {
+                "id": "quark-comment",
+                "spans": [
+                  {
+                    "style": "accent",
+                    "text": "Stable keyed slots"
+                  }
+                ]
+              }
+            ],
+            "semanticRanges": [
+              {
+                "firstPartId": "solid-comment",
+                "id": "solid-comment",
+                "lastPartId": "solid-comment"
+              },
+              {
+                "firstPartId": "quark-comment",
+                "id": "quark-comment",
+                "lastPartId": "quark-comment"
+              }
+            ]
+          },
+          {
+            "id": "declaration",
+            "parts": [
+              {
+                "id": "const",
+                "spans": [
+                  {
+                    "style": "keyword",
+                    "text": "const"
+                  }
+                ]
+              },
+              {
+                "id": "space",
+                "spans": [
+                  {
+                    "style": "plain",
+                    "text": " "
+                  }
+                ]
+              },
+              {
+                "id": "solid-binding-open",
+                "spans": [
+                  {
+                    "style": "plain",
+                    "text": "["
+                  }
+                ]
+              },
+              {
+                "id": "rows",
+                "spans": [
+                  {
+                    "style": "plain",
+                    "text": "rows"
+                  }
+                ]
+              },
+              {
+                "id": "solid-binding-rest",
+                "spans": [
+                  {
+                    "style": "plain",
+                    "text": ", setRows]"
+                  }
+                ]
+              },
+              {
+                "id": "equals",
+                "spans": [
+                  {
+                    "style": "plain",
+                    "text": " = "
+                  }
+                ]
+              },
+              {
+                "id": "solid-initializer",
+                "spans": [
+                  {
+                    "style": "type",
+                    "text": "createStore"
+                  },
+                  {
+                    "style": "plain",
+                    "text": "(initialRows)"
+                  }
+                ]
+              },
+              {
+                "id": "quark-initializer",
+                "spans": [
+                  {
+                    "style": "type",
+                    "text": "Keyed"
+                  },
+                  {
+                    "style": "plain",
+                    "text": ".make({ "
+                  },
+                  {
+                    "style": "accent",
+                    "text": "key"
+                  },
+                  {
+                    "style": "plain",
+                    "text": ": (row) => row.id })"
+                  }
+                ]
+              }
+            ],
+            "semanticRanges": [
+              {
+                "firstPartId": "solid-binding-open",
+                "id": "solid-binding-open",
+                "lastPartId": "solid-binding-open"
+              },
+              {
+                "firstPartId": "solid-binding-rest",
+                "id": "solid-binding-rest",
+                "lastPartId": "solid-binding-rest"
+              },
+              {
+                "firstPartId": "solid-initializer",
+                "id": "solid-initializer",
+                "lastPartId": "solid-initializer"
+              },
+              {
+                "firstPartId": "quark-initializer",
+                "id": "quark-initializer",
+                "lastPartId": "quark-initializer"
+              }
+            ]
+          },
+          {
+            "id": "gap",
+            "parts": [],
+            "semanticRanges": []
+          },
+          {
+            "id": "update",
+            "parts": [
+              {
+                "id": "solid-update-prefix",
+                "spans": [
+                  {
+                    "style": "type",
+                    "text": "setRows(reconcile("
+                  }
+                ]
+              },
+              {
+                "id": "quark-update-prefix",
+                "spans": [
+                  {
+                    "style": "accent",
+                    "text": "rows.update("
+                  }
+                ]
+              },
+              {
+                "id": "next-row",
+                "spans": [
+                  {
+                    "style": "plain",
+                    "text": "nextRow"
+                  }
+                ]
+              },
+              {
+                "id": "solid-update-plural",
+                "spans": [
+                  {
+                    "style": "plain",
+                    "text": "s"
+                  }
+                ]
+              },
+              {
+                "id": "solid-update-suffix",
+                "spans": [
+                  {
+                    "style": "plain",
+                    "text": "))"
+                  }
+                ]
+              },
+              {
+                "id": "quark-update-suffix",
+                "spans": [
+                  {
+                    "style": "plain",
+                    "text": ")"
+                  }
+                ]
+              }
+            ],
+            "semanticRanges": [
+              {
+                "firstPartId": "solid-update-prefix",
+                "id": "solid-update-prefix",
+                "lastPartId": "solid-update-prefix"
+              },
+              {
+                "firstPartId": "quark-update-prefix",
+                "id": "quark-update-prefix",
+                "lastPartId": "quark-update-prefix"
+              },
+              {
+                "firstPartId": "solid-update-plural",
+                "id": "solid-update-plural",
+                "lastPartId": "solid-update-plural"
+              },
+              {
+                "firstPartId": "solid-update-suffix",
+                "id": "solid-update-suffix",
+                "lastPartId": "solid-update-suffix"
+              },
+              {
+                "firstPartId": "quark-update-suffix",
+                "id": "quark-update-suffix",
+                "lastPartId": "quark-update-suffix"
+              }
+            ]
+          },
+          {
+            "id": "render-gap",
+            "parts": [],
+            "semanticRanges": []
+          },
+          {
+            "id": "slots",
+            "parts": [
+              {
+                "id": "span-0",
+                "spans": [
+                  {
+                    "style": "keyword",
+                    "text": "const"
+                  }
+                ]
+              },
+              {
+                "id": "span-1",
+                "spans": [
+                  {
+                    "style": "plain",
+                    "text": " slots = "
+                  }
+                ]
+              },
+              {
+                "id": "span-2",
+                "spans": [
+                  {
+                    "style": "type",
+                    "text": "useValue"
+                  }
+                ]
+              },
+              {
+                "id": "span-3",
+                "spans": [
+                  {
+                    "style": "plain",
+                    "text": "(rows.slots)"
+                  }
+                ]
+              }
+            ],
+            "semanticRanges": []
+          },
+          {
+            "id": "for-open",
+            "parts": [
+              {
+                "id": "open",
+                "spans": [
+                  {
+                    "style": "plain",
+                    "text": "<"
+                  }
+                ]
+              },
+              {
+                "id": "keyed-prefix",
+                "spans": [
+                  {
+                    "style": "accent",
+                    "text": "Keyed"
+                  }
+                ]
+              },
+              {
+                "id": "for",
+                "spans": [
+                  {
+                    "style": "type",
+                    "text": "For"
+                  }
+                ]
+              },
+              {
+                "id": "each-open",
+                "spans": [
+                  {
+                    "style": "plain",
+                    "text": " each={"
+                  }
+                ]
+              },
+              {
+                "id": "solid-source",
+                "spans": [
+                  {
+                    "style": "plain",
+                    "text": "rows"
+                  }
+                ]
+              },
+              {
+                "id": "quark-source",
+                "spans": [
+                  {
+                    "style": "plain",
+                    "text": "slots"
+                  }
+                ]
+              },
+              {
+                "id": "open-close",
+                "spans": [
+                  {
+                    "style": "plain",
+                    "text": "}>"
+                  }
+                ]
+              }
+            ],
+            "semanticRanges": [
+              {
+                "firstPartId": "keyed-prefix",
+                "id": "keyed-prefix",
+                "lastPartId": "keyed-prefix"
+              },
+              {
+                "firstPartId": "solid-source",
+                "id": "solid-source",
+                "lastPartId": "solid-source"
+              },
+              {
+                "firstPartId": "quark-source",
+                "id": "quark-source",
+                "lastPartId": "quark-source"
+              }
+            ]
+          },
+          {
+            "id": "row",
+            "parts": [
+              {
+                "id": "row-prefix",
+                "spans": [
+                  {
+                    "style": "plain",
+                    "text": "  {(row) => <RowView row={row"
+                  }
+                ]
+              },
+              {
+                "id": "row-call",
+                "spans": [
+                  {
+                    "style": "accent",
+                    "text": "()"
+                  }
+                ]
+              },
+              {
+                "id": "row-suffix",
+                "spans": [
+                  {
+                    "style": "plain",
+                    "text": "} />}"
+                  }
+                ]
+              }
+            ],
+            "semanticRanges": [
+              {
+                "firstPartId": "row-call",
+                "id": "row-call",
+                "lastPartId": "row-call"
+              }
+            ]
+          },
+          {
+            "id": "for-close",
+            "parts": [
+              {
+                "id": "close-open",
+                "spans": [
+                  {
+                    "style": "plain",
+                    "text": "</"
+                  }
+                ]
+              },
+              {
+                "id": "close-keyed-prefix",
+                "spans": [
+                  {
+                    "style": "accent",
+                    "text": "Keyed"
+                  }
+                ]
+              },
+              {
+                "id": "close-for",
+                "spans": [
+                  {
+                    "style": "type",
+                    "text": "For"
+                  }
+                ]
+              },
+              {
+                "id": "close",
+                "spans": [
+                  {
+                    "style": "plain",
+                    "text": ">"
+                  }
+                ]
+              }
+            ],
+            "semanticRanges": [
+              {
+                "firstPartId": "close-keyed-prefix",
+                "id": "close-keyed-prefix",
+                "lastPartId": "close-keyed-prefix"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "before-label",
+      "recipe": "text",
+      "data": {
+        "center": [
+          960,
+          118
+        ],
+        "color": [
+          148,
+          163,
+          184
+        ],
+        "fontSize": 25,
+        "text": "BEFORE  /  SOLID STORE"
+      }
+    },
+    {
+      "id": "after-label",
+      "recipe": "text",
+      "data": {
+        "center": [
+          960,
+          118
+        ],
+        "color": [
+          96,
+          165,
+          250
+        ],
+        "fontSize": 25,
+        "text": "AFTER  /  QUARK"
+      }
+    },
+    {
+      "id": "reconcile-detail",
+      "recipe": "text",
+      "data": {
+        "center": [
+          960,
+          1010
+        ],
+        "color": [
+          148,
+          163,
+          184
+        ],
+        "fontSize": 21,
+        "text": "RECONCILE THE ARRAY"
+      }
+    },
+    {
+      "id": "slot-detail",
+      "recipe": "text",
+      "data": {
+        "center": [
+          960,
+          1010
+        ],
+        "color": [
+          96,
+          165,
+          250
+        ],
+        "fontSize": 21,
+        "text": "ONE SLOT  /  NO STRUCTURAL PUBLICATION"
+      }
+    }
+  ],
+  "semanticTargets": [],
+  "continuousChannels": [
+    {
+      "id": "editor.panel-y",
+      "actorId": "editor",
+      "property": "panel-y",
+      "initial": 260.0,
+      "events": [
+        {
+          "operation": "spring",
+          "atNanos": 0,
+          "target": 0.0,
+          "responseSeconds": 0.84000003,
+          "dampingRatio": 1.0,
+          "positionThreshold": 0.001,
+          "velocityThreshold": 0.001
+        }
+      ]
+    },
+    {
+      "id": "editor.panel-scale",
+      "actorId": "editor",
+      "property": "panel-scale",
+      "initial": 0.86,
+      "events": [
+        {
+          "operation": "spring",
+          "atNanos": 0,
+          "target": 1.0,
+          "responseSeconds": 0.84000003,
+          "dampingRatio": 1.0,
+          "positionThreshold": 0.001,
+          "velocityThreshold": 0.001
+        }
+      ]
+    },
+    {
+      "id": "editor.panel-rotation",
+      "actorId": "editor",
+      "property": "panel-rotation",
+      "initial": -0.045,
+      "events": [
+        {
+          "operation": "spring",
+          "atNanos": 0,
+          "target": 0.0,
+          "responseSeconds": 0.84000003,
+          "dampingRatio": 1.0,
+          "positionThreshold": 0.001,
+          "velocityThreshold": 0.001
+        }
+      ]
+    },
+    {
+      "id": "editor.panel-tilt-x",
+      "actorId": "editor",
+      "property": "panel-tilt-x",
+      "initial": -0.18,
+      "events": [
+        {
+          "operation": "spring",
+          "atNanos": 0,
+          "target": 0.0,
+          "responseSeconds": 0.84000003,
+          "dampingRatio": 1.0,
+          "positionThreshold": 0.001,
+          "velocityThreshold": 0.001
+        }
+      ]
+    },
+    {
+      "id": "editor.panel-tilt-y",
+      "actorId": "editor",
+      "property": "panel-tilt-y",
+      "initial": 0.24,
+      "events": [
+        {
+          "operation": "spring",
+          "atNanos": 0,
+          "target": 0.0,
+          "responseSeconds": 0.84000003,
+          "dampingRatio": 1.0,
+          "positionThreshold": 0.001,
+          "velocityThreshold": 0.001
+        }
+      ]
+    },
+    {
+      "id": "editor.panel-near-blur",
+      "actorId": "editor",
+      "property": "panel-near-blur",
+      "initial": 10.0,
+      "events": [
+        {
+          "operation": "spring",
+          "atNanos": 0,
+          "target": 0.0,
+          "responseSeconds": 0.84000003,
+          "dampingRatio": 1.0,
+          "positionThreshold": 0.001,
+          "velocityThreshold": 0.001
+        }
+      ]
+    },
+    {
+      "id": "editor.layout",
+      "actorId": "editor",
+      "property": "layout",
+      "initial": 0.0,
+      "events": [
+        {
+          "operation": "spring",
+          "atNanos": 8619000000,
+          "target": 1.0,
+          "responseSeconds": 0.54,
+          "dampingRatio": 1.0,
+          "positionThreshold": 0.001,
+          "velocityThreshold": 0.001
+        }
+      ]
+    },
+    {
+      "id": "editor.content",
+      "actorId": "editor",
+      "property": "content",
+      "initial": 0.0,
+      "events": [
+        {
+          "operation": "spring",
+          "atNanos": 8749000000,
+          "target": 1.0,
+          "responseSeconds": 0.54,
+          "dampingRatio": 1.0,
+          "positionThreshold": 0.001,
+          "velocityThreshold": 0.001
+        }
+      ]
+    },
+    {
+      "id": "editor.api-change",
+      "actorId": "editor",
+      "property": "api-change",
+      "initial": 0.0,
+      "events": [
+        {
+          "operation": "spring",
+          "atNanos": 9319000000,
+          "target": 1.0,
+          "responseSeconds": 0.48000002,
+          "dampingRatio": 1.0,
+          "positionThreshold": 0.001,
+          "velocityThreshold": 0.001
+        }
+      ]
+    },
+    {
+      "id": "editor.update-change",
+      "actorId": "editor",
+      "property": "update-change",
+      "initial": 0.0,
+      "events": [
+        {
+          "operation": "spring",
+          "atNanos": 13239000000,
+          "target": 1.0,
+          "responseSeconds": 0.48000002,
+          "dampingRatio": 1.0,
+          "positionThreshold": 0.001,
+          "velocityThreshold": 0.001
+        }
+      ]
+    },
+    {
+      "id": "before-label.opacity",
+      "actorId": "before-label",
+      "property": "opacity",
+      "initial": 0.0,
+      "events": [
+        {
+          "operation": "spring",
+          "atNanos": 350000000,
+          "target": 1.0,
+          "responseSeconds": 0.48000002,
+          "dampingRatio": 1.0,
+          "positionThreshold": 0.001,
+          "velocityThreshold": 0.001
+        },
+        {
+          "operation": "spring",
+          "atNanos": 8419000000,
+          "target": 0.0,
+          "responseSeconds": 0.42000002,
+          "dampingRatio": 1.0,
+          "positionThreshold": 0.001,
+          "velocityThreshold": 0.001
+        }
+      ]
+    },
+    {
+      "id": "after-label.opacity",
+      "actorId": "after-label",
+      "property": "opacity",
+      "initial": 0.0,
+      "events": [
+        {
+          "operation": "spring",
+          "atNanos": 8819000000,
+          "target": 1.0,
+          "responseSeconds": 0.42000002,
+          "dampingRatio": 1.0,
+          "positionThreshold": 0.001,
+          "velocityThreshold": 0.001
+        }
+      ]
+    },
+    {
+      "id": "reconcile-detail.opacity",
+      "actorId": "reconcile-detail",
+      "property": "opacity",
+      "initial": 0.0,
+      "events": [
+        {
+          "operation": "spring",
+          "atNanos": 2379000000,
+          "target": 1.0,
+          "responseSeconds": 0.48000002,
+          "dampingRatio": 1.0,
+          "positionThreshold": 0.001,
+          "velocityThreshold": 0.001
+        },
+        {
+          "operation": "spring",
+          "atNanos": 13039000000,
+          "target": 0.0,
+          "responseSeconds": 0.42000002,
+          "dampingRatio": 1.0,
+          "positionThreshold": 0.001,
+          "velocityThreshold": 0.001
+        }
+      ]
+    },
+    {
+      "id": "slot-detail.opacity",
+      "actorId": "slot-detail",
+      "property": "opacity",
+      "initial": 0.0,
+      "events": [
+        {
+          "operation": "spring",
+          "atNanos": 13439000000,
+          "target": 1.0,
+          "responseSeconds": 0.42000002,
+          "dampingRatio": 1.0,
+          "positionThreshold": 0.001,
+          "velocityThreshold": 0.001
+        }
+      ]
+    }
+  ],
+  "stateChannels": [],
+  "cues": [
+    {
+      "id": "solid",
+      "startNanos": 0,
+      "endNanos": 8619000000
+    },
+    {
+      "id": "identity",
+      "startNanos": 8619000000,
+      "endNanos": 13239000000
+    },
+    {
+      "id": "direct-update",
+      "startNanos": 13239000000,
+      "endNanos": 19399000000
+    },
+    {
+      "id": "less-work",
+      "startNanos": 19399000000,
+      "endNanos": 23000000000
+    }
+  ],
+  "media": [
+    {
+      "id": "narration",
+      "path": "assets/narration.mp3",
+      "kind": "audio",
+      "role": "script",
+      "sourceStartNanos": 0,
+      "sourceEndNanos": 22151837000,
+      "timelineStartNanos": 0,
+      "timelineEndNanos": 22151837000,
+      "gainDb": 0.0
+    }
+  ]
+}

@@ -5,7 +5,10 @@ members = [
   "scenes/agent-demo",
   "scenes/deployment-queue",
   "scenes/hero",
+  "scenes/effect-succeed-slides",
+  "scenes/interactive-showcase",
   "scenes/opencode-session-tool",
+  "scenes/quark-before-after",
 ]
 default-members = ["crates/kinograph-render"]
 resolver = "3"

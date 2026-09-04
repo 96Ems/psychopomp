@@ -1,0 +1,10 @@
+[package]
+name = "kinograph-interactive-showcase"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+anyhow = "1.0"
+kinograph = { path = "../../crates/kinograph" }
+kinograph-effect-succeed-slides = { path = "../effect-succeed-slides" }
+serde_json = "1.0"

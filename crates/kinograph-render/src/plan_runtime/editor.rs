@@ -1,4 +1,4 @@
-use std::ops::Range;
+use std::{collections::HashMap, ops::Range};
 
 use anyhow::{Context, Result};
 use kinograph::{
@@ -10,14 +10,37 @@ use kinograph::{
 };
 
 use crate::render::{
-    EditorFrame, HeadlessRenderer, InlineRevealFrame, PointerFrame, TokenHighlight,
+    EditorFrame, HeadlessRenderer, InlineRangeMetrics, InlineRevealFrame, PointerFrame,
+    TokenHighlight,
 };
 
 pub(super) struct PreparedEditor {
     actor_id: String,
     recipe: EditorRecipePlan,
     transition: CodeTransition,
-    inline_reveal_spans: Range<usize>,
+    inline_reveals: Vec<PreparedInlineReveal>,
+    targets: HashMap<String, MeasuredTarget>,
+}
+
+struct MeasuredTarget {
+    line_id: String,
+    keyed_lines: bool,
+    segments: Vec<(InlineRangeMetrics, Option<(String, bool)>)>,
+    before: [f32; 2],
+    after: [f32; 2],
+}
+
+pub(super) struct TargetMotion {
+    pub x: MotionState,
+    pub width: MotionState,
+    pub line_y: MotionState,
+}
+
+struct PreparedInlineReveal {
+    line_id: String,
+    spans: Range<usize>,
+    channel: String,
+    reversed: bool,
 }
 
 impl PreparedEditor {
@@ -29,23 +52,34 @@ impl PreparedEditor {
             layout: 1.0,
             content: 1.0,
         });
-        let reveal_line = settled
-            .iter()
-            .find(|line| line.line.id.as_str() == recipe.inline_reveal.line_id)
-            .with_context(|| {
-                format!(
-                    "editor actor '{}' inline reveal references unknown line '{}'",
-                    actor.id, recipe.inline_reveal.line_id
-                )
-            })?;
-        let inline_reveal_spans = reveal_line
-            .line
-            .semantic_span_range(&RangeId::new(&recipe.inline_reveal.range_id))?;
+        let inline_reveals = std::iter::once(&recipe.inline_reveal)
+            .chain(&recipe.additional_inline_reveals)
+            .map(|reveal| {
+                let line = settled
+                    .iter()
+                    .find(|line| line.line.id.as_str() == reveal.line_id)
+                    .with_context(|| {
+                        format!(
+                            "editor actor '{}' inline reveal references unknown line '{}'",
+                            actor.id, reveal.line_id
+                        )
+                    })?;
+                Ok(PreparedInlineReveal {
+                    line_id: reveal.line_id.clone(),
+                    spans: line
+                        .line
+                        .semantic_span_range(&RangeId::new(&reveal.range_id))?,
+                    channel: reveal.channel().to_owned(),
+                    reversed: reveal.reversed,
+                })
+            })
+            .collect::<Result<Vec<_>>>()?;
         Ok(Self {
             actor_id: actor.id.clone(),
             recipe,
             transition,
-            inline_reveal_spans,
+            inline_reveals,
+            targets: HashMap::new(),
         })
     }
 
@@ -58,7 +92,7 @@ impl PreparedEditor {
     }
 
     pub(super) fn resolve_target(
-        &self,
+        &mut self,
         renderer: &mut HeadlessRenderer,
         target: &SemanticTargetPlan,
     ) -> Result<TargetGeometry> {
@@ -77,15 +111,113 @@ impl PreparedEditor {
                     self.actor_id, target.id, selector.line_id
                 )
             })?;
-        let bytes = line
+        let selected = line
             .line
-            .semantic_byte_range(&RangeId::new(&selector.range_id))?;
-        let bounds = renderer.measure_text_byte_range(line.line, bytes.start, bytes.end)?;
+            .semantic_span_range(&RangeId::new(&selector.range_id))?;
+        let reveals = self
+            .inline_reveals
+            .iter()
+            .filter(|reveal| reveal.line_id == selector.line_id)
+            .collect::<Vec<_>>();
+        let frames = reveals
+            .iter()
+            .map(|reveal| InlineRevealFrame {
+                line_id: &reveal.line_id,
+                start_span: reveal.spans.start,
+                end_span: reveal.spans.end,
+                progress: 1.0,
+            })
+            .collect::<Vec<_>>();
+        let segments = renderer
+            .measure_inline_target(line.line, &frames, selected)?
+            .into_iter()
+            .map(|metrics| {
+                let driver = reveals
+                    .iter()
+                    .find(|reveal| reveal.spans == metrics.spans)
+                    .map(|reveal| (reveal.channel.clone(), reveal.reversed));
+                (metrics, driver)
+            })
+            .collect();
+        let before = self.transition.sample(TransitionProgress {
+            layout: 0.,
+            content: 0.,
+        });
+        let before = before
+            .iter()
+            .find(|line| line.line.id.as_str() == selector.line_id)
+            .expect("validated line");
+        let measured = MeasuredTarget {
+            line_id: selector.line_id,
+            keyed_lines: !self.recipe.snapshots.is_empty(),
+            segments,
+            before: [before.x, before.y],
+            after: [line.x, line.y],
+        };
+        let motion = measured.sample(|_, default| MotionState::at(default), true);
+        self.targets.insert(target.id.clone(), measured);
         Ok(TargetGeometry {
-            x: bounds.x,
-            width: bounds.width,
-            line_y: line.y,
+            x: motion.x.position,
+            width: motion.width.position,
+            line_y: motion.line_y.position,
         })
+    }
+
+    pub(super) fn target_motion(
+        &self,
+        id: &str,
+        sample: impl Fn(&str, &str) -> Option<MotionState>,
+    ) -> Option<TargetMotion> {
+        self.targets.get(id).map(|target| {
+            target.sample(
+                |property, default| {
+                    sample(&self.actor_id, property).unwrap_or(MotionState::at(default))
+                },
+                false,
+            )
+        })
+    }
+
+    pub(super) fn target_scale(&self, id: &str) -> Option<f32> {
+        self.targets.get(id).map(|target| {
+            let width = target
+                .segments
+                .iter()
+                .map(|(metrics, _)| metrics.advance)
+                .sum::<f32>();
+            // Conservative local text/line extent, in pixels. Companion weights
+            // must not inherit pixel tolerances as dimensionless tolerances.
+            (width
+                + target.before[0].abs()
+                + target.after[0].abs()
+                + self.recipe.lines.len() as f32 * self.recipe.line_height)
+                .max(1.0)
+        })
+    }
+
+    pub(super) fn geometry_channels(&self) -> Vec<String> {
+        std::iter::once("layout".into())
+            .chain(std::iter::once("content".into()))
+            .chain(
+                self.inline_reveals
+                    .iter()
+                    .map(|reveal| reveal.channel.clone()),
+            )
+            .chain(
+                self.recipe
+                    .lines
+                    .iter()
+                    .map(|line| format!("line.{}.y", line.id)),
+            )
+            .collect()
+    }
+
+    pub(super) fn snapshot_channels(
+        &self,
+        duration_nanos: u64,
+    ) -> Result<Vec<kinograph::plan::ContinuousChannelPlan>> {
+        self.recipe
+            .snapshot_channels(&self.actor_id, duration_nanos)
     }
 
     pub(super) fn render(
@@ -100,9 +232,26 @@ impl PreparedEditor {
         };
         let layout = value(&self.actor_id, "layout", 0.0);
         let content = value(&self.actor_id, "content", 0.0);
-        let lines = self
+        let mut lines = self
             .transition
             .sample(TransitionProgress { layout, content });
+        if !self.recipe.snapshots.is_empty() {
+            for line in &mut lines {
+                line.x = 0.0;
+                line.y = value(
+                    &self.actor_id,
+                    &format!("line.{}.y", line.line.id.as_str()),
+                    line.y,
+                );
+                line.opacity = value(
+                    &self.actor_id,
+                    &format!("line.{}.opacity", line.line.id.as_str()),
+                    line.opacity,
+                )
+                .clamp(0.0, 1.0);
+                line.blur = (1.0 - line.opacity) * 4.0;
+            }
+        }
         let focus_line_y = lines
             .iter()
             .find(|line| line.line.id.as_str() == self.recipe.focus_line_id)
@@ -131,19 +280,30 @@ impl PreparedEditor {
                 blur: 0.0,
             }
         };
-        let inline_reveals = [InlineRevealFrame {
-            line_id: &self.recipe.inline_reveal.line_id,
-            start_span: self.inline_reveal_spans.start,
-            end_span: self.inline_reveal_spans.end,
-            progress: value(&self.actor_id, "inline-reveal", 0.0),
-        }];
+        let inline_reveals = self
+            .inline_reveals
+            .iter()
+            .map(|reveal| {
+                let progress = value(&self.actor_id, &reveal.channel, 0.0);
+                InlineRevealFrame {
+                    line_id: &reveal.line_id,
+                    start_span: reveal.spans.start,
+                    end_span: reveal.spans.end,
+                    progress: if reveal.reversed {
+                        1.0 - progress
+                    } else {
+                        progress
+                    },
+                }
+            })
+            .collect::<Vec<_>>();
         renderer.render_editor(&EditorFrame {
             panel_offset_y: value(&self.actor_id, "panel-y", 0.0),
-            panel_rotation: 0.0,
-            panel_tilt_x: 0.0,
-            panel_tilt_y: 0.0,
-            panel_scale: 1.0,
-            panel_near_blur: 0.0,
+            panel_rotation: value(&self.actor_id, "panel-rotation", 0.0),
+            panel_tilt_x: value(&self.actor_id, "panel-tilt-x", 0.0),
+            panel_tilt_y: value(&self.actor_id, "panel-tilt-y", 0.0),
+            panel_scale: value(&self.actor_id, "panel-scale", 1.0),
+            panel_near_blur: value(&self.actor_id, "panel-near-blur", 0.0),
             focus_intensity: value(&self.actor_id, "focus", 0.0).clamp(0.0, 1.0),
             focus_line_y,
             focus_height: self.recipe.focus_height,
@@ -155,6 +315,88 @@ impl PreparedEditor {
             annotations: &[],
             lines: &lines,
         })
+    }
+}
+
+fn add(a: MotionState, b: MotionState) -> MotionState {
+    MotionState {
+        position: a.position + b.position,
+        velocity: a.velocity + b.velocity,
+    }
+}
+fn scale(a: MotionState, factor: f32) -> MotionState {
+    MotionState {
+        position: a.position * factor,
+        velocity: a.velocity * factor,
+    }
+}
+
+impl MeasuredTarget {
+    fn sample(&self, sample: impl Fn(&str, f32) -> MotionState, expanded: bool) -> TargetMotion {
+        let mut cursor = MotionState::at(0.0);
+        let mut left = None;
+        let mut right = MotionState::at(0.0);
+        for (metrics, driver) in &self.segments {
+            let progress = if let Some((channel, reversed)) = driver.as_ref().filter(|_| !expanded)
+            {
+                let state = sample(channel, 0.0);
+                let state = if *reversed {
+                    add(MotionState::at(1.0), scale(state, -1.0))
+                } else {
+                    state
+                };
+                MotionState {
+                    position: state.position.clamp(0.0, 1.0),
+                    velocity: if (0.0..=1.0).contains(&state.position) {
+                        state.velocity
+                    } else {
+                        0.0
+                    },
+                }
+            } else {
+                MotionState::at(1.0)
+            };
+            let width = scale(progress, metrics.advance);
+            if let Some([start, end]) = metrics.selection {
+                let clipped = |edge| {
+                    if width.position < edge {
+                        width
+                    } else {
+                        MotionState::at(edge)
+                    }
+                };
+                left.get_or_insert(add(cursor, clipped(start)));
+                right = add(cursor, clipped(end));
+            }
+            cursor = add(cursor, width);
+        }
+        let left = left.expect("nonempty validated semantic selection");
+        let layout = if expanded {
+            MotionState::at(1.0)
+        } else {
+            sample("layout", 0.0)
+        };
+        let content = if expanded {
+            MotionState::at(1.0)
+        } else {
+            sample("content", 0.0)
+        };
+        let x = add(
+            MotionState::at(self.before[0]),
+            scale(content, self.after[0] - self.before[0]),
+        );
+        let mut y = add(
+            MotionState::at(self.before[1]),
+            scale(layout, self.after[1] - self.before[1]),
+        );
+        if !expanded && self.keyed_lines {
+            y = sample(&format!("line.{}.y", self.line_id), y.position);
+        }
+        TargetMotion {
+            x: add(x, left),
+            width: add(right, scale(left, -1.0)),
+            line_y: y,
+        }
     }
 }
 

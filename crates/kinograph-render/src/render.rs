@@ -1,5 +1,5 @@
 use std::{
-    collections::{HashMap, hash_map::DefaultHasher},
+    collections::{HashMap, VecDeque, hash_map::DefaultHasher},
     hash::{Hash, Hasher},
     path::PathBuf,
     sync::mpsc,
@@ -23,7 +23,10 @@ mod ui;
 
 pub(crate) use deployment_queue::deployment_row_center_y;
 pub use deployment_queue::{DeploymentItemFrame, DeploymentQueueFrame};
-pub use task::{QuoteFrame, TaskLinkFrame, TaskSceneFrame};
+pub use task::{
+    BubblePose, ContentPose, QuoteFrame, TaskContentFrame, TaskLinkFrame, TaskSceneFrame,
+    TaskVisualFrame,
+};
 pub use terminal::{CommandFileFrame, TerminalBackground, TerminalSceneFrame};
 
 const FORMAT: wgpu::TextureFormat = wgpu::TextureFormat::Rgba8UnormSrgb;
@@ -107,6 +110,14 @@ pub struct TextRangeBounds {
     pub width: f32,
 }
 
+/// One partition of a line, shaped exactly as the inline compositor shapes it.
+/// Selection bounds are local to this partition; hidden partitions occupy zero width.
+pub(super) struct InlineRangeMetrics {
+    pub spans: std::ops::Range<usize>,
+    pub advance: f32,
+    pub selection: Option<[f32; 2]>,
+}
+
 #[repr(C)]
 #[derive(Clone, Copy, Pod, Zeroable)]
 struct SceneUniforms {
@@ -149,6 +160,8 @@ pub struct HeadlessRenderer {
     deployment_background_pixels: Vec<u8>,
     ui_card_pixels: Vec<u8>,
     ui_overlay_pixels: Vec<u8>,
+    interactive_preview: bool,
+    preview_editor_backgrounds: VecDeque<(String, Vec<u8>)>,
 }
 
 impl HeadlessRenderer {
@@ -296,7 +309,15 @@ impl HeadlessRenderer {
             deployment_background_pixels: Vec::new(),
             ui_card_pixels: Vec::new(),
             ui_overlay_pixels: Vec::new(),
+            interactive_preview: false,
+            preview_editor_backgrounds: VecDeque::new(),
         })
+    }
+
+    /// Live flat-editor preview skips the final optical resampling of glyphs.
+    /// Export never enables this profile; unsupported poses/effects use the full path.
+    pub fn set_interactive_preview(&mut self, enabled: bool) {
+        self.interactive_preview = enabled;
     }
 
     pub fn composite_ui<R>(
@@ -418,36 +439,22 @@ impl HeadlessRenderer {
             })
             .sum::<f32>();
         let mut x = self.spec.width as f32 * 0.5 - width * 0.5;
-        let y = (self.spec.height as f32 * 0.5 - 48.0).round() as i32;
+        let y = self.spec.height as f32 * 0.5 - 48.0;
         for (start, end, progress) in segments {
             let key = format!("centered-code:{}:{start}:{end}", line.id.as_str());
             let sprite = &self.part_sprites[&key].1;
             let progress = progress.unwrap_or(1.0).clamp(0.0, 1.0);
             let visible_width = sprite.advance * progress;
-            if progress < 0.999 {
-                composite_sprite_clipped_blurred(
-                    &mut pixels,
-                    self.spec.width,
-                    self.spec.height,
-                    sprite,
-                    x.round() as i32,
-                    y,
-                    visible_width,
-                    (1.0 - progress) * 4.0,
-                    progress,
-                );
-            } else {
-                composite_sprite_clipped(
-                    &mut pixels,
-                    self.spec.width,
-                    self.spec.height,
-                    sprite,
-                    x.round() as i32,
-                    y,
-                    visible_width,
-                    1.0,
-                );
-            }
+            composite_text_sprite(
+                &mut pixels,
+                [self.spec.width, self.spec.height],
+                sprite,
+                [x, y],
+                visible_width,
+                (1.0 - progress) * 4.0,
+                progress,
+                [0.0, self.spec.height as f32],
+            );
             x += visible_width;
         }
         Ok(pixels)
@@ -485,18 +492,26 @@ impl HeadlessRenderer {
             self.part_sprites.insert(key.clone(), (0, sprite));
         }
         let sprite = &self.part_sprites[&key].1;
-        composite_sprite(
+        composite_text_sprite(
             pixels,
-            self.spec.width,
-            self.spec.height,
+            [self.spec.width, self.spec.height],
             sprite,
-            (center[0] - sprite.advance * 0.5).round() as i32,
-            (center[1] - sprite.height as f32 * 0.5).round() as i32,
+            [
+                center[0] - sprite.advance * 0.5,
+                center[1] - sprite.height as f32 * 0.5,
+            ],
+            sprite.width as f32,
+            0.0,
             opacity,
+            [0.0, self.spec.height as f32],
         );
     }
 
     pub fn render_shapes(&mut self, frame: &EditorFrame<'_>) -> Result<Vec<u8>> {
+        self.render_shapes_pass(frame, true)
+    }
+
+    fn render_shapes_pass(&mut self, frame: &EditorFrame<'_>, chrome: bool) -> Result<Vec<u8>> {
         let panel_center_y = self.spec.height as f32 * 0.52;
         let panel_top = self.spec.height as f32 * 0.17;
         let code_top = panel_top + 104.0;
@@ -507,7 +522,7 @@ impl HeadlessRenderer {
                 frame.focus_intensity,
                 focus_offset_y,
                 frame.focus_height,
-                0.0,
+                if chrome { 1.0 } else { 0.0 },
             ],
             token_highlight: [
                 frame.token_highlight.x,
@@ -597,6 +612,61 @@ impl HeadlessRenderer {
     }
 
     pub fn render_editor(&mut self, frame: &EditorFrame<'_>) -> Result<Vec<u8>> {
+        if self.interactive_preview
+            && can_preview_editor(frame, [self.spec.width, self.spec.height])
+        {
+            if let Some(index) = self
+                .preview_editor_backgrounds
+                .iter()
+                .position(|(name, _)| name == &self.spec.file_name)
+            {
+                let cached = self
+                    .preview_editor_backgrounds
+                    .remove(index)
+                    .expect("located cached chrome");
+                self.preview_editor_backgrounds.push_back(cached);
+            } else {
+                let background_frame = EditorFrame {
+                    lines: &[],
+                    focus_intensity: 0.,
+                    token_highlight: TokenHighlight {
+                        opacity: 0.,
+                        ..frame.token_highlight
+                    },
+                    ..*frame
+                };
+                let pixels = self.render_editor_full(&background_frame)?;
+                // Two editor slides are the demonstrated reuse; bound retained
+                // RGBA memory instead of keeping one full canvas for every file.
+                if self.preview_editor_backgrounds.len() == 2 {
+                    self.preview_editor_backgrounds.pop_front();
+                }
+                self.preview_editor_backgrounds
+                    .push_back((self.spec.file_name.clone(), pixels));
+            }
+            let mut pixels = self
+                .preview_editor_backgrounds
+                .back()
+                .expect("background prepared")
+                .1
+                .clone();
+            if frame.focus_intensity > 0. || frame.token_highlight.opacity > 0. {
+                // The same WGSL recipe draws dynamic overlays, without sending
+                // unchanged chrome through the expensive optical card compositor.
+                let overlay = self.render_shapes_pass(frame, false)?;
+                for (pixel, source) in pixels.chunks_exact_mut(4).zip(overlay.chunks_exact(4)) {
+                    if source[3] > 0 {
+                        blend_pixel(pixel, [source[0], source[1], source[2], source[3]], 1.);
+                    }
+                }
+            }
+            self.composite_text_untransformed(&mut pixels, frame)?;
+            return Ok(pixels);
+        }
+        self.render_editor_full(frame)
+    }
+
+    fn render_editor_full(&mut self, frame: &EditorFrame<'_>) -> Result<Vec<u8>> {
         let flat_frame = EditorFrame {
             panel_offset_y: 0.0,
             panel_rotation: 0.0,
@@ -616,6 +686,7 @@ impl HeadlessRenderer {
             lines: frame.lines,
         };
         let mut flat_pixels = self.render_shapes(&flat_frame)?;
+        self.composite_editor_title(&mut flat_pixels, flat_frame.panel_offset_y);
         self.composite_text_untransformed(&mut flat_pixels, &flat_frame)?;
 
         let card_size = [
@@ -667,11 +738,14 @@ impl HeadlessRenderer {
             self.spec.width as f32 * 0.5,
             self.spec.height as f32 * 0.52 + frame.panel_offset_y,
         ];
+        let mut card_style = ui::card::CardStyle::standard();
+        card_style.border_width = 0.75;
+        card_style.border_color = ui::card::UiColor::srgb8(255, 255, 255, 10);
         self.composite_ui(&mut pixels, |ui| {
             ui.card(
                 ui::card::CardFrame {
                     bounds: ui::Bounds::from_center(destination_center, destination_size),
-                    style: ui::card::CardStyle::standard(),
+                    style: card_style,
                     projection: ui::card::CardProjection {
                         scale: frame.panel_scale,
                         rotation_z: frame.panel_rotation,
@@ -692,11 +766,16 @@ impl HeadlessRenderer {
                     })?;
                     card.overlay(|canvas| {
                         let bounds = canvas.bounds().inset(ui::Edges::all(2.5));
-                        canvas.stroke(
+                        canvas.stroke_fill(
                             bounds,
                             25.5,
                             1.0,
-                            ui::card::UiColor::srgb8(255, 255, 255, 38),
+                            ui::card::Fill::Linear {
+                                from: [0.0, bounds.origin[1]],
+                                to: [0.0, bounds.bottom()],
+                                start: ui::card::UiColor::srgb8(255, 255, 255, 38),
+                                end: ui::card::UiColor::srgb8(255, 255, 255, 5),
+                            },
                             1.0,
                         );
                         Ok(())
@@ -705,6 +784,19 @@ impl HeadlessRenderer {
             )
         })?;
         Ok(pixels)
+    }
+
+    fn composite_editor_title(&self, pixels: &mut [u8], panel_offset_y: f32) {
+        let panel_top = self.spec.height as f32 * 0.17 + panel_offset_y;
+        composite_sprite(
+            pixels,
+            self.spec.width,
+            self.spec.height,
+            &self.title_sprite,
+            (self.spec.width as f32 * 0.135).round() as i32,
+            (panel_top + 16.0).round() as i32,
+            1.0,
+        );
     }
 
     fn composite_text_untransformed(
@@ -740,15 +832,6 @@ impl HeadlessRenderer {
         }
 
         let panel_top = self.spec.height as f32 * 0.17 + frame.panel_offset_y;
-        composite_sprite(
-            pixels,
-            self.spec.width,
-            self.spec.height,
-            &self.title_sprite,
-            (self.spec.width as f32 * 0.135).round() as i32,
-            (panel_top + 16.0).round() as i32,
-            1.0,
-        );
         let code_top = panel_top + 104.0;
         let code_bottom = panel_top + self.spec.height as f32 * 0.70;
         let code_right = self.spec.width as f32 * 0.89 - 32.0;
@@ -758,7 +841,7 @@ impl HeadlessRenderer {
             }
             let line_x = self.spec.width as f32 * 0.145 + placed.x;
             let line_y = code_top + placed.y;
-            if line_y < code_top || line_y + LINE_HEIGHT > code_bottom {
+            if line_y + LINE_HEIGHT <= code_top || line_y >= code_bottom {
                 continue;
             }
             if frame
@@ -773,7 +856,13 @@ impl HeadlessRenderer {
                     .copied()
                     .collect::<Vec<_>>();
                 self.composite_inline_reveals(
-                    pixels, placed, &reveals, line_x, line_y, code_right,
+                    pixels,
+                    placed,
+                    &reveals,
+                    line_x,
+                    line_y,
+                    code_right,
+                    [code_top, code_bottom],
                 )?;
                 continue;
             }
@@ -784,34 +873,20 @@ impl HeadlessRenderer {
                 .expect("line sprite was populated above");
             let line_blur = placed.blur;
             let clip_width = sprite.advance.min((code_right - line_x).max(0.0));
-            if line_blur > 0.01 {
-                composite_sprite_clipped_blurred(
-                    pixels,
-                    self.spec.width,
-                    self.spec.height,
-                    sprite,
-                    line_x.round() as i32,
-                    line_y.round() as i32,
-                    clip_width,
-                    line_blur,
-                    placed.opacity,
-                );
-            } else {
-                composite_sprite_clipped(
-                    pixels,
-                    self.spec.width,
-                    self.spec.height,
-                    sprite,
-                    line_x.round() as i32,
-                    line_y.round() as i32,
-                    clip_width,
-                    placed.opacity,
-                );
-            }
+            composite_text_sprite(
+                pixels,
+                [self.spec.width, self.spec.height],
+                sprite,
+                [line_x, line_y],
+                clip_width,
+                line_blur,
+                placed.opacity,
+                [code_top, code_bottom],
+            );
         }
         for bright in frame.bright_text {
             let y = code_top + bright.y;
-            if y < code_top || y + LINE_HEIGHT > code_bottom {
+            if y + LINE_HEIGHT <= code_top || y >= code_bottom {
                 continue;
             }
             let sprite = self
@@ -824,17 +899,16 @@ impl HeadlessRenderer {
                 .width
                 .min(sprite.width as f32 - source_x)
                 .min(code_right - (self.spec.width as f32 * 0.145 + source_x));
-            composite_sprite_region(
+            composite_text_region(
                 pixels,
-                self.spec.width,
-                self.spec.height,
+                [self.spec.width, self.spec.height],
                 sprite,
+                [self.spec.width as f32 * 0.145 + source_x, y],
                 source_x,
                 width,
-                (self.spec.width as f32 * 0.145 + source_x).round() as i32,
-                y.round() as i32,
                 bright.blur,
                 bright.opacity,
+                [code_top, code_bottom],
             );
         }
         for squiggle in frame.squiggles {
@@ -874,6 +948,7 @@ impl HeadlessRenderer {
         Ok(())
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn composite_inline_reveals(
         &mut self,
         pixels: &mut [u8],
@@ -882,6 +957,7 @@ impl HeadlessRenderer {
         x: f32,
         y: f32,
         right: f32,
+        clip_y: [f32; 2],
     ) -> Result<()> {
         let segments = inline_reveal_segments(placed.line.spans().len(), reveals)?;
 
@@ -900,54 +976,24 @@ impl HeadlessRenderer {
         }
 
         let mut cursor_x = x;
-        let y = y.round() as i32;
         let line_blur = placed.blur;
         for (start, end, progress) in segments {
             let key = format!("{}:{start}:{end}", placed.line.id.as_str());
             let sprite = &self.part_sprites[&key].1;
             let available = (right - cursor_x).max(0.0);
-            if let Some(progress) = progress {
-                let progress = progress.clamp(0.0, 1.0);
-                composite_sprite_clipped_blurred(
-                    pixels,
-                    self.spec.width,
-                    self.spec.height,
-                    sprite,
-                    cursor_x.round() as i32,
-                    y,
-                    (sprite.advance * progress).min(available),
-                    ((1.0 - progress) * 4.0).max(line_blur),
-                    placed.opacity * progress,
-                );
-                cursor_x += sprite.advance * progress;
-            } else {
-                let clip_width = sprite.advance.min(available);
-                if line_blur > 0.01 {
-                    composite_sprite_clipped_blurred(
-                        pixels,
-                        self.spec.width,
-                        self.spec.height,
-                        sprite,
-                        cursor_x.round() as i32,
-                        y,
-                        clip_width,
-                        line_blur,
-                        placed.opacity,
-                    );
-                } else {
-                    composite_sprite_clipped(
-                        pixels,
-                        self.spec.width,
-                        self.spec.height,
-                        sprite,
-                        cursor_x.round() as i32,
-                        y,
-                        clip_width,
-                        placed.opacity,
-                    );
-                }
-                cursor_x += sprite.advance;
-            }
+            let progress = progress.unwrap_or(1.0).clamp(0.0, 1.0);
+            let width = sprite.advance * progress;
+            composite_text_sprite(
+                pixels,
+                [self.spec.width, self.spec.height],
+                sprite,
+                [cursor_x, y],
+                width.min(available),
+                ((1.0 - progress) * 4.0).max(line_blur),
+                placed.opacity * progress,
+                clip_y,
+            );
+            cursor_x += width;
         }
         Ok(())
     }
@@ -959,6 +1005,47 @@ impl HeadlessRenderer {
             .with_context(|| format!("line '{}' does not contain '{text}'", line.id.as_str()))?;
         let end = start + text.len();
         self.measure_text_byte_range(line, start, end)
+    }
+
+    pub(super) fn measure_inline_target(
+        &mut self,
+        line: &CodeLine,
+        reveals: &[InlineRevealFrame<'_>],
+        selected: std::ops::Range<usize>,
+    ) -> Result<Vec<InlineRangeMetrics>> {
+        inline_reveal_segments(line.spans().len(), reveals)?
+            .into_iter()
+            .map(|(start, end, _)| {
+                let spans = &line.spans()[start..end];
+                let advance =
+                    make_spans_sprite(&mut self.font_system, &mut self.swash_cache, spans).advance;
+                let from = start.max(selected.start);
+                let to = end.min(selected.end);
+                let selection = if from < to {
+                    let start_byte = line.spans()[start..from]
+                        .iter()
+                        .map(|span| span.text.len())
+                        .sum();
+                    let end_byte = line.spans()[start..to]
+                        .iter()
+                        .map(|span| span.text.len())
+                        .sum();
+                    let bounds = self.measure_text_byte_range(
+                        &CodeLine::new("measured-part", spans.to_vec()),
+                        start_byte,
+                        end_byte,
+                    )?;
+                    Some([bounds.x, bounds.x + bounds.width])
+                } else {
+                    None
+                };
+                Ok(InlineRangeMetrics {
+                    spans: start..end,
+                    advance,
+                    selection,
+                })
+            })
+            .collect()
     }
 
     pub fn measure_text_byte_range(
@@ -1107,6 +1194,50 @@ fn spans_fingerprint(spans: &[StyledSpan]) -> u64 {
         span.style.hash(&mut hasher);
     }
     hasher.finish()
+}
+
+fn can_preview_editor(frame: &EditorFrame<'_>, [width, height]: [u32; 2]) -> bool {
+    let width = width as f32;
+    let height = height as f32;
+    if frame.panel_offset_y != 0.0
+        || frame.panel_rotation != 0.0
+        || frame.panel_tilt_x != 0.0
+        || frame.panel_tilt_y != 0.0
+        || frame.panel_scale != 1.0
+        || frame.panel_near_blur != 0.0
+        || frame.pointer.opacity > 0.001
+        || !frame.bright_text.is_empty()
+        || !frame.squiggles.is_empty()
+        || !frame.annotations.is_empty()
+        || frame.lines.iter().any(|line| line.x < 0.0)
+    {
+        return false;
+    }
+    // Overlays outside the flat code body need the full rounded-card clip and
+    // chrome draw order. Keep the cheap pass only where the two cannot overlap.
+    let body_top = height * 0.17 + 64.0;
+    let body_bottom = height * 0.87 - 28.0;
+    if frame.focus_intensity > 0.0 {
+        let top = height * 0.17 + 104.0 + frame.focus_line_y + LINE_HEIGHT * 0.5
+            - frame.focus_height * 0.5
+            - 2.0;
+        if top < body_top || top + frame.focus_height + 4.0 > body_bottom {
+            return false;
+        }
+    }
+    if frame.token_highlight.opacity > 0.0 {
+        let highlight = frame.token_highlight;
+        let left = width * 0.145 + highlight.x - 15.0;
+        let top = height * 0.17 + 104.0 + highlight.y - 5.0;
+        if left < width * 0.11 + 28.0
+            || left + highlight.width + 30.0 > width * 0.89 - 28.0
+            || top < body_top
+            || top + 54.0 > body_bottom
+        {
+            return false;
+        }
+    }
+    true
 }
 
 fn make_line_sprite(
@@ -1284,145 +1415,120 @@ fn composite_sprite_clipped(
 }
 
 #[allow(clippy::too_many_arguments)]
-fn composite_sprite_region(
+fn composite_text_sprite(
     canvas: &mut [u8],
-    canvas_width: u32,
-    canvas_height: u32,
+    size: [u32; 2],
     sprite: &TextSprite,
-    source_x: f32,
-    width: f32,
-    target_x: i32,
-    target_y: i32,
-    blur: f32,
-    opacity: f32,
-) {
-    if opacity <= 0.001 || width <= 0.0 {
-        return;
-    }
-    let source_left = source_x.floor().max(0.0) as i32;
-    let visible_width = width.ceil().max(0.0) as i32;
-    for sprite_y in 0..sprite.height as i32 {
-        let canvas_y = target_y + sprite_y;
-        if !(0..canvas_height as i32).contains(&canvas_y) {
-            continue;
-        }
-        for offset_x in 0..visible_width {
-            let canvas_x = target_x + offset_x;
-            if !(0..canvas_width as i32).contains(&canvas_x) {
-                continue;
-            }
-            let source_center_x = source_left + offset_x;
-            if !(0..sprite.width as i32).contains(&source_center_x) {
-                continue;
-            }
-            let source = if blur <= 0.01 {
-                let index =
-                    (sprite_y as usize * sprite.width as usize + source_center_x as usize) * 4;
-                sprite.pixels[index..index + 4]
-                    .try_into()
-                    .expect("RGBA pixel has four channels")
-            } else {
-                let mut alpha_sum = 0_u32;
-                let mut premultiplied = [0_u32; 3];
-                for sample_y in 0..3 {
-                    for sample_x in 0..3 {
-                        let x = source_center_x + ((sample_x as f32 - 1.0) * blur).round() as i32;
-                        let y = sprite_y + ((sample_y as f32 - 1.0) * blur).round() as i32;
-                        if !(source_left..source_left + visible_width).contains(&x)
-                            || !(0..sprite.height as i32).contains(&y)
-                        {
-                            continue;
-                        }
-                        let index = (y as usize * sprite.width as usize + x as usize) * 4;
-                        let alpha = u32::from(sprite.pixels[index + 3]);
-                        alpha_sum += alpha;
-                        for (channel, sum) in premultiplied.iter_mut().enumerate() {
-                            *sum += u32::from(sprite.pixels[index + channel]) * alpha;
-                        }
-                    }
-                }
-                if alpha_sum == 0 {
-                    continue;
-                }
-                [
-                    (premultiplied[0] / alpha_sum) as u8,
-                    (premultiplied[1] / alpha_sum) as u8,
-                    (premultiplied[2] / alpha_sum) as u8,
-                    (alpha_sum / 9) as u8,
-                ]
-            };
-            if source[3] == 0 {
-                continue;
-            }
-            let target_index = (canvas_y as usize * canvas_width as usize + canvas_x as usize) * 4;
-            blend_pixel(&mut canvas[target_index..target_index + 4], source, opacity);
-        }
-    }
-}
-
-#[allow(clippy::too_many_arguments)]
-fn composite_sprite_clipped_blurred(
-    canvas: &mut [u8],
-    canvas_width: u32,
-    canvas_height: u32,
-    sprite: &TextSprite,
-    x: i32,
-    y: i32,
+    origin: [f32; 2],
     clip_width: f32,
     blur: f32,
     opacity: f32,
+    clip_y: [f32; 2],
 ) {
-    if opacity <= 0.001 || clip_width <= 0.0 {
+    composite_text_region(
+        canvas, size, sprite, origin, 0., clip_width, blur, opacity, clip_y,
+    );
+}
+
+#[allow(clippy::too_many_arguments)]
+fn composite_text_region(
+    canvas: &mut [u8],
+    [canvas_width, canvas_height]: [u32; 2],
+    sprite: &TextSprite,
+    [x, y]: [f32; 2],
+    source_left: f32,
+    clip_width: f32,
+    blur: f32,
+    opacity: f32,
+    clip_y: [f32; 2],
+) {
+    if opacity <= 0.0 || clip_width <= 0.0 {
         return;
     }
-    let visible_width = clip_width.ceil().min(sprite.width as f32) as i32;
-    for sprite_y in 0..sprite.height as i32 {
-        let target_y = y + sprite_y;
-        if !(0..canvas_height as i32).contains(&target_y) {
-            continue;
-        }
-        for sprite_x in 0..visible_width {
-            let target_x = x + sprite_x;
-            if !(0..canvas_width as i32).contains(&target_x) {
-                continue;
-            }
-            const SAMPLE_GRID: i32 = 3;
-            let mut alpha_sum = 0_u32;
-            let mut premultiplied = [0_u32; 3];
-            for sample_y in 0..SAMPLE_GRID {
-                for sample_x in 0..SAMPLE_GRID {
-                    let offset_x = (sample_x as f32 / (SAMPLE_GRID - 1) as f32 - 0.5) * blur * 2.0;
-                    let offset_y = (sample_y as f32 / (SAMPLE_GRID - 1) as f32 - 0.5) * blur * 2.0;
-                    let source_x = (sprite_x as f32 + offset_x).round() as i32;
-                    let source_y = (sprite_y as f32 + offset_y).round() as i32;
-                    if !(0..sprite.width as i32).contains(&source_x)
-                        || !(0..sprite.height as i32).contains(&source_y)
-                    {
-                        continue;
-                    }
-                    let source_index =
-                        (source_y as usize * sprite.width as usize + source_x as usize) * 4;
-                    let alpha = u32::from(sprite.pixels[source_index + 3]);
-                    alpha_sum += alpha;
-                    for (channel, sum) in premultiplied.iter_mut().enumerate() {
-                        *sum += u32::from(sprite.pixels[source_index + channel]) * alpha;
+    let source_clip = [
+        source_left,
+        (source_left + clip_width).min(sprite.width as f32),
+    ];
+    // The source mask is filtered with the glyph. Include its complete support;
+    // otherwise changing floor/ceil bounds would discard nonzero filtered texels.
+    let left = x - source_left + source_clip[0].floor() - blur - 1.0;
+    let right = x - source_left + source_clip[1].ceil() + blur + 1.0;
+    let top = (y - blur - 1.0).max(clip_y[0]);
+    let bottom = (y + sprite.height as f32 + blur + 1.0).min(clip_y[1]);
+    for target_y in (top.floor() as i32).max(0)..(bottom.ceil() as i32).min(canvas_height as i32) {
+        let coverage_y = ((target_y as f32 + 1.0).min(clip_y[1])
+            - (target_y as f32).max(clip_y[0]))
+        .clamp(0.0, 1.0);
+        for target_x in (left.floor() as i32).max(0)..(right.ceil() as i32).min(canvas_width as i32)
+        {
+            let source_x = source_left + target_x as f32 - x;
+            let source_y = target_y as f32 - y;
+            let mut color = [0.0; 4];
+            if blur <= 0.0 {
+                color = sample_text_sprite(sprite, source_x, source_y, source_clip);
+            } else {
+                // Bilinear sample locations vary continuously with blur; no
+                // rounded taps that suddenly turn a sharp glyph into a 3x3 copy.
+                for (dy, wy) in [(-1.0, 0.25), (0.0, 0.5), (1.0, 0.25)] {
+                    for (dx, wx) in [(-1.0, 0.25), (0.0, 0.5), (1.0, 0.25)] {
+                        let sample = sample_text_sprite(
+                            sprite,
+                            source_x + dx * blur,
+                            source_y + dy * blur,
+                            source_clip,
+                        );
+                        for channel in 0..4 {
+                            color[channel] += sample[channel] * wx * wy;
+                        }
                     }
                 }
             }
-            if alpha_sum == 0 {
+            if color[3] <= 0.0 {
                 continue;
             }
-            let sample_count = (SAMPLE_GRID * SAMPLE_GRID) as u32;
             let source = [
-                premultiplied[0].checked_div(alpha_sum).unwrap_or(0) as u8,
-                premultiplied[1].checked_div(alpha_sum).unwrap_or(0) as u8,
-                premultiplied[2].checked_div(alpha_sum).unwrap_or(0) as u8,
-                (alpha_sum / sample_count) as u8,
+                (color[0] / color[3]).round() as u8,
+                (color[1] / color[3]).round() as u8,
+                (color[2] / color[3]).round() as u8,
+                (color[3] * coverage_y).round() as u8,
             ];
             let target_index = (target_y as usize * canvas_width as usize + target_x as usize) * 4;
             blend_pixel(&mut canvas[target_index..target_index + 4], source, opacity);
         }
     }
+}
+
+/// Premultiplied RGBA interpolation avoids dark fringes around transparent glyphs.
+fn sample_text_sprite(sprite: &TextSprite, x: f32, y: f32, clip: [f32; 2]) -> [f32; 4] {
+    let left = x.floor() as i32;
+    let top = y.floor() as i32;
+    let dx = x - left as f32;
+    let dy = y - top as f32;
+    let mut color = [0.0; 4];
+    for (row, wy) in [(top, 1.0 - dy), (top + 1, dy)] {
+        for (column, wx) in [(left, 1.0 - dx), (left + 1, dx)] {
+            let weight = wx * wy;
+            if weight == 0.0
+                || column < 0
+                || row < 0
+                || column >= sprite.width as i32
+                || row >= sprite.height as i32
+            {
+                continue;
+            }
+            let offset = (row as usize * sprite.width as usize + column as usize) * 4;
+            // Apply intentional source-range clipping once, before filtering.
+            // Transparent texture borders already provide raster-edge coverage.
+            let coverage =
+                ((column as f32 + 1.0).min(clip[1]) - (column as f32).max(clip[0])).clamp(0.0, 1.0);
+            let alpha = f32::from(sprite.pixels[offset + 3]) * weight * coverage;
+            for (channel, value) in color[..3].iter_mut().enumerate() {
+                *value += f32::from(sprite.pixels[offset + channel]) * alpha;
+            }
+            color[3] += alpha;
+        }
+    }
+    color
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -1473,67 +1579,86 @@ fn composite_sprite_rotated_with_coverage(
     if opacity <= 0.001 {
         return;
     }
+    if display_width <= 0.0 || display_height <= 0.0 {
+        return;
+    }
+    let source_scale = [
+        sprite.width as f32 / display_width,
+        sprite.height as f32 / display_height,
+    ];
+    let filter_radius = [
+        blur * source_scale[0] + (source_scale[0] - 1.).max(0.) * 0.5,
+        blur * source_scale[1] + (source_scale[1] - 1.).max(0.) * 0.5,
+    ];
     let radius = (display_width * display_width + display_height * display_height)
         .sqrt()
-        .mul_add(0.5, blur + 1.0)
+        .mul_add(
+            0.5,
+            blur + (1.0 / source_scale[0]).max(1.0 / source_scale[1]) + 1.0,
+        )
         .ceil() as i32;
     let sine = rotation.sin();
     let cosine = rotation.cos();
     let center_pixel_x = center_x.round() as i32;
     let center_pixel_y = center_y.round() as i32;
 
-    for offset_y in -radius..=radius {
-        let target_y = center_pixel_y + offset_y;
-        if !(0..canvas_height as i32).contains(&target_y) {
-            continue;
-        }
-        for offset_x in -radius..=radius {
-            let target_x = center_pixel_x + offset_x;
-            if !(0..canvas_width as i32).contains(&target_x) {
-                continue;
-            }
+    for target_y in center_pixel_y.saturating_sub(radius).max(0)
+        ..=center_pixel_y
+            .saturating_add(radius)
+            .min(canvas_height as i32 - 1)
+    {
+        for target_x in center_pixel_x.saturating_sub(radius).max(0)
+            ..=center_pixel_x
+                .saturating_add(radius)
+                .min(canvas_width as i32 - 1)
+        {
             let coverage = coverage_at(target_x as f32 + 0.5, target_y as f32 + 0.5);
             if coverage <= 0.0 {
                 continue;
             }
-            const SAMPLE_GRID: i32 = 4;
-            let mut alpha_sum = 0_u32;
-            let mut premultiplied = [0_u32; 3];
-            for sample_y in 0..SAMPLE_GRID {
-                for sample_x in 0..SAMPLE_GRID {
-                    let subpixel_x = offset_x as f32
-                        + ((sample_x as f32 + 0.5) / SAMPLE_GRID as f32 - 0.5) * (1.0 + blur * 2.0);
-                    let subpixel_y = offset_y as f32
-                        + ((sample_y as f32 + 0.5) / SAMPLE_GRID as f32 - 0.5) * (1.0 + blur * 2.0);
-                    let local_x = subpixel_x * cosine + subpixel_y * sine;
-                    let local_y = -subpixel_x * sine + subpixel_y * cosine;
-                    let source_x =
-                        ((local_x / display_width + 0.5) * sprite.width as f32).floor() as i32;
-                    let source_y =
-                        ((local_y / display_height + 0.5) * sprite.height as f32).floor() as i32;
-                    if !(0..sprite.width as i32).contains(&source_x)
-                        || !(0..sprite.height as i32).contains(&source_y)
-                    {
-                        continue;
-                    }
-                    let source_index =
-                        (source_y as usize * sprite.width as usize + source_x as usize) * 4;
-                    let alpha = u32::from(sprite.pixels[source_index + 3]);
-                    alpha_sum += alpha;
-                    for (channel, sum) in premultiplied.iter_mut().enumerate() {
-                        *sum += u32::from(sprite.pixels[source_index + channel]) * alpha;
+            let dx = target_x as f32 + 0.5 - center_x;
+            let dy = target_y as f32 + 0.5 - center_y;
+            let source_x =
+                ((dx * cosine + dy * sine) / display_width + 0.5) * sprite.width as f32 - 0.5;
+            let source_y =
+                ((-dx * sine + dy * cosine) / display_height + 0.5) * sprite.height as f32 - 0.5;
+            let mut color = [0.; 4];
+            if filter_radius == [0., 0.] {
+                color = sample_text_sprite(sprite, source_x, source_y, [0., sprite.width as f32]);
+            } else {
+                // Denser binomial taps soften transformed content instead of
+                // showing three displaced copies of a blurred letter/border.
+                // Fixed support and continuously varying offsets avoid kernel
+                // changes at integer blur radii.
+                const TAPS: [(f32, f32); 5] = [
+                    (-1., 0.0625),
+                    (-0.5, 0.25),
+                    (0., 0.375),
+                    (0.5, 0.25),
+                    (1., 0.0625),
+                ];
+                for (y, wy) in TAPS {
+                    for (x, wx) in TAPS {
+                        let sample = sample_text_sprite(
+                            sprite,
+                            source_x + x * filter_radius[0],
+                            source_y + y * filter_radius[1],
+                            [0., sprite.width as f32],
+                        );
+                        for channel in 0..4 {
+                            color[channel] += sample[channel] * wx * wy;
+                        }
                     }
                 }
             }
-            if alpha_sum == 0 {
+            if color[3] <= 0.0 {
                 continue;
             }
-            let sample_count = (SAMPLE_GRID * SAMPLE_GRID) as u32;
             let source = [
-                premultiplied[0].checked_div(alpha_sum).unwrap_or(0) as u8,
-                premultiplied[1].checked_div(alpha_sum).unwrap_or(0) as u8,
-                premultiplied[2].checked_div(alpha_sum).unwrap_or(0) as u8,
-                (alpha_sum / sample_count) as u8,
+                (color[0] / color[3]).round() as u8,
+                (color[1] / color[3]).round() as u8,
+                (color[2] / color[3]).round() as u8,
+                color[3].round() as u8,
             ];
             let target_index = (target_y as usize * canvas_width as usize + target_x as usize) * 4;
             blend_pixel(
@@ -1607,6 +1732,228 @@ fn attributes(base: Attrs<'static>, style: SyntaxStyle) -> Attrs<'static> {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn filtered_text_footprint_has_no_integer_boundary_pops() {
+        let sprite = super::TextSprite {
+            width: 12,
+            height: 12,
+            advance: 12.,
+            pixels: vec![255; 12 * 12 * 4],
+        };
+        let draw = |origin, width, blur| {
+            let mut pixels = vec![0; 40 * 24 * 4];
+            super::composite_text_sprite(
+                &mut pixels,
+                [40, 24],
+                &sprite,
+                origin,
+                width,
+                blur,
+                1.,
+                [0., 24.],
+            );
+            pixels
+        };
+        for (a, b) in [
+            (draw([10.5, 4.], 4.5, 0.), draw([10.5, 4.], 4.51, 0.)),
+            (draw([9.99, 4.], 12., 0.5), draw([10., 4.], 12., 0.5)),
+            (draw([10., 3.99], 12., 0.5), draw([10., 4.], 12., 0.5)),
+        ] {
+            assert!(
+                a.chunks_exact(4)
+                    .zip(b.chunks_exact(4))
+                    .map(|(a, b)| a[3].abs_diff(b[3]))
+                    .max()
+                    .unwrap()
+                    <= 4
+            );
+        }
+    }
+
+    #[test]
+    fn rotated_content_uses_the_fractional_parent_center() {
+        let sprite = opaque_test_sprite();
+        let draw = |x| {
+            let mut pixels = vec![0; 32 * 32 * 4];
+            super::composite_sprite_rotated(
+                &mut pixels,
+                32,
+                32,
+                &sprite,
+                5.5,
+                5.5,
+                x,
+                12.25,
+                0.12,
+                0.2,
+                1.,
+            );
+            pixels
+        };
+        let centroid = |pixels: &[u8]| {
+            let total = pixels.chunks_exact(4).map(|p| f64::from(p[3])).sum::<f64>();
+            pixels
+                .chunks_exact(4)
+                .enumerate()
+                .map(|(index, p)| (index % 32) as f64 * f64::from(p[3]))
+                .sum::<f64>()
+                / total
+        };
+        let delta = centroid(&draw(12.51)) - centroid(&draw(12.49));
+        assert!((delta - 0.02).abs() < 0.01, "centroid delta={delta}");
+    }
+
+    #[test]
+    fn transformed_content_blur_remains_continuous_at_zero_and_fractional_radii() {
+        let sprite = opaque_test_sprite();
+        let draw = |blur| {
+            let mut pixels = vec![0; 32 * 32 * 4];
+            super::composite_sprite_rotated(
+                &mut pixels,
+                32,
+                32,
+                &sprite,
+                4.,
+                4.,
+                16.25,
+                16.5,
+                0.12,
+                blur,
+                1.,
+            );
+            pixels
+        };
+        for (from, to) in [(0., 0.001), (0.49, 0.51), (3.49, 3.51), (5.99, 6.01)] {
+            assert!(
+                draw(from)
+                    .chunks_exact(4)
+                    .zip(draw(to).chunks_exact(4))
+                    .all(|(a, b)| a[3].abs_diff(b[3]) <= 3),
+                "blur {from} -> {to}"
+            );
+        }
+    }
+
+    #[test]
+    fn fractional_raster_edges_conserve_alpha_and_color() {
+        let sprite = super::TextSprite {
+            width: 1,
+            height: 1,
+            advance: 1.,
+            pixels: vec![255, 32, 0, 255],
+        };
+        for origin in [[2., 2.], [2.5, 2.], [2.5, 2.5], [2.25, 2.75]] {
+            let mut pixels = vec![0; 8 * 8 * 4];
+            super::composite_text_sprite(
+                &mut pixels,
+                [8, 8],
+                &sprite,
+                origin,
+                1.,
+                0.,
+                1.,
+                [0., 8.],
+            );
+            let alpha = pixels
+                .chunks_exact(4)
+                .map(|pixel| u32::from(pixel[3]))
+                .sum::<u32>();
+            assert!(alpha.abs_diff(255) <= 1, "{origin:?}: alpha={alpha}");
+            for pixel in pixels.chunks_exact(4).filter(|pixel| pixel[3] > 0) {
+                assert_eq!(&pixel[..3], &[255, 32, 0]);
+            }
+        }
+    }
+
+    #[test]
+    fn spotlight_region_registers_with_fractional_base_text_and_viewport_clip() {
+        let mut sprite = super::TextSprite {
+            width: 12,
+            height: 12,
+            advance: 12.,
+            pixels: vec![0; 12 * 12 * 4],
+        };
+        for row in 0..12 {
+            sprite.pixels[(row * 12 + 5) * 4..(row * 12 + 5) * 4 + 4].copy_from_slice(&[255; 4]);
+        }
+        for y in [4.25, 4.49, 4.51] {
+            for blur in [0., 0.49, 0.51] {
+                let mut base = vec![0; 40 * 24 * 4];
+                let mut bright = base.clone();
+                super::composite_text_sprite(
+                    &mut base,
+                    [40, 24],
+                    &sprite,
+                    [10.25, y],
+                    12.,
+                    blur,
+                    1.,
+                    [5.5, 14.5],
+                );
+                super::composite_text_region(
+                    &mut bright,
+                    [40, 24],
+                    &sprite,
+                    [12.75, y],
+                    2.5,
+                    6.,
+                    blur,
+                    1.,
+                    [5.5, 14.5],
+                );
+                assert_eq!(base, bright, "origin y={y}, blur={blur}");
+            }
+        }
+    }
+
+    #[test]
+    fn text_positions_clip_edges_and_blur_preserve_fractional_motion() {
+        let mut sprite = super::TextSprite {
+            width: 12,
+            height: 12,
+            advance: 12.,
+            pixels: vec![0; 12 * 12 * 4],
+        };
+        sprite.pixels[(5 * 12 + 5) * 4..(5 * 12 + 5) * 4 + 4].copy_from_slice(&[255; 4]);
+        let draw = |sprite: &super::TextSprite, x, width, blur| {
+            let mut pixels = vec![0; 40 * 24 * 4];
+            super::composite_text_sprite(
+                &mut pixels,
+                [40, 24],
+                sprite,
+                [x, 4.25],
+                width,
+                blur,
+                1.,
+                [0., 24.],
+            );
+            pixels
+        };
+        let centroid = |pixels: &[u8]| {
+            let total = pixels.chunks_exact(4).map(|p| f64::from(p[3])).sum::<f64>();
+            pixels
+                .chunks_exact(4)
+                .enumerate()
+                .map(|(i, p)| (i % 40) as f64 * f64::from(p[3]))
+                .sum::<f64>()
+                / total
+        };
+        let a = draw(&sprite, 10.49, 12., 0.);
+        let b = draw(&sprite, 10.51, 12., 0.);
+        assert_ne!(a, b);
+        assert!((centroid(&b) - centroid(&a) - 0.02).abs() < 0.01);
+        let a = draw(&sprite, 10., 12., 0.49);
+        let b = draw(&sprite, 10., 12., 0.51);
+        assert!(a.iter().zip(&b).map(|(a, b)| a.abs_diff(*b)).max().unwrap() < 10);
+        sprite.pixels.fill(255);
+        let a = draw(&sprite, 10., 4., 0.);
+        let b = draw(&sprite, 10., 4.01, 0.);
+        let edge = (8 * 40 + 14) * 4 + 3;
+        assert_eq!(a[edge], 0);
+        assert!((1..=3).contains(&b[edge]));
+        assert_eq!(draw(&sprite, 10., 4.01, 0.), b);
+    }
+
     use super::{
         InlineRevealFrame, TextSprite, composite_sprite_rotated,
         composite_sprite_rotated_with_coverage, inline_reveal_segments,
@@ -1619,6 +1966,59 @@ mod tests {
             advance: 4.0,
             pixels: vec![255; 4 * 4 * 4],
         }
+    }
+
+    #[test]
+    fn preview_keeps_dynamic_overlays_separate_and_falls_back_for_optical_motion() {
+        use super::{EditorFrame, PointerFrame, TokenHighlight, can_preview_editor};
+        let mut frame = EditorFrame {
+            panel_offset_y: 0.,
+            panel_rotation: 0.,
+            panel_tilt_x: 0.,
+            panel_tilt_y: 0.,
+            panel_scale: 1.,
+            panel_near_blur: 0.,
+            focus_intensity: 0.,
+            focus_line_y: 0.,
+            focus_height: 44.,
+            token_highlight: TokenHighlight {
+                x: 0.,
+                y: 0.,
+                width: 0.,
+                opacity: 0.,
+            },
+            pointer: PointerFrame {
+                x: 0.,
+                y: 0.,
+                opacity: 0.,
+                rotation: 0.,
+                scale: 1.,
+                blur: 0.,
+            },
+            bright_text: &[],
+            inline_reveals: &[],
+            squiggles: &[],
+            annotations: &[],
+            lines: &[],
+        };
+        let hidden = can_preview_editor(&frame, [1920, 1080]);
+        frame.focus_line_y = 100.;
+        assert_eq!(hidden, can_preview_editor(&frame, [1920, 1080]));
+        frame.focus_intensity = 1.;
+        assert_eq!(hidden, can_preview_editor(&frame, [1920, 1080]));
+        frame.panel_rotation = 0.01;
+        assert!(!can_preview_editor(&frame, [1920, 1080]));
+        frame.panel_rotation = 0.;
+        frame.pointer.opacity = 1.;
+        assert!(!can_preview_editor(&frame, [1920, 1080]));
+        frame.pointer.opacity = 0.;
+        frame.token_highlight.opacity = 1.;
+        frame.token_highlight.x = -150.;
+        frame.token_highlight.width = 100.;
+        assert!(!can_preview_editor(&frame, [1920, 1080]));
+        frame.token_highlight.x = 20.;
+        frame.token_highlight.y = -90.;
+        assert!(!can_preview_editor(&frame, [1920, 1080]));
     }
 
     #[test]

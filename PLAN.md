@@ -1,6 +1,6 @@
 # Kinograph Prototype Plan
 
-Kinograph is a code-first motion graphics system for making animated technical videos. It combines Manim's semantic scene construction, Remotion's deterministic programmatic timeline, and the state-driven code animation DSL in `effect-institute`.
+Kinograph is a code-first motion graphics system for animated technical videos and interactive presentations. Both deliveries share authored scenes and deterministic visual sampling. It combines Manim's semantic scene construction, Remotion's deterministic programmatic timeline, and the state-driven code animation DSL in `effect-institute`.
 
 `PRIOR_ART.md` records the specific animation systems and API ideas that should be pressure-tested before committing to an authoring model. In addition to Manim, Remotion, and `effect-institute`, the current research set includes Motion Canvas, Motion/React Motion, and Theatre.js.
 
@@ -307,6 +307,31 @@ Exit criteria:
 - Compiler errors identify the actor, cue, slot, or target involved.
 - The author can inspect a textual list of cues and resolved timestamps.
 
+### Milestone 7: Present The Same Animation Interactively
+
+Add explicit Presentation Steps to Scene Plans without making video timing depend
+on user interaction. Start with one Effect Institute code-reveal example and a
+native Rust player that samples the scene directly. This is a delivery and
+interactive-motion proof, not a browser renderer or movie-player wrapper.
+
+Exit criteria:
+
+- Next and Previous retarget meaningful destinations and hold indefinitely.
+- Mid-flight navigation preserves both position and velocity; unchanged targets do not restart.
+- Pause/resume and rapid navigation cannot let stale rendered frames change steps.
+- Destination poses come from the authored timeline; interactive trajectories retain deterministic sampling.
+- The same Scene Program still exports an ordinary MP4.
+- Reduced motion uses held states without transition playback.
+
+The initial `scenes/effect-succeed-slides` proof now has fractional text rendering,
+deterministic settling, sampled semantic attachments, keyed line schedules, and
+step-delta diagnostics. `scenes/interactive-showcase` adds a four-slide deck and
+interruptible Effect Task lifecycle/parallel examples. Tasks lower into continuous
+visual tracks; this does not reopen arbitrary State Channel or recorded-media
+playback. Live recompilation and presentation audio remain deferred. Further
+cleanup should follow measured bottlenecks; native pacing findings live in
+`perf/native-playback.md`.
+
 ## The Repository Starts Small
 
 ```text
@@ -373,4 +398,10 @@ The lightweight `agent-demo` proves the generic process workflow, and the canoni
 
 The `opencode-session-tool` lesson now proves the narration-rich media seam. One inspectable plan owns an authentic live session creating and hot-reloading a plugin tool, ElevenLabs voiceover, layered SFX, continuous card motion, discrete recording and explanatory-text state, and named cues. The renderer accepts video only when the concrete terminal recipe consumes its media ID, while script and layer audio continue through exact composition and FFmpeg placement.
 
-The next authoring-loop proof is file watching plus a low-resolution preview profile in the persistent renderer. It should rebuild a lightweight Scene Program, validate and diff the generated plan, and render a selected cue without restarting GPU or font state. Raw plan patching remains experimental until that measured loop shows whether whole-plan regeneration is insufficient.
+The native code-reveal proof now samples the same Rust scene recipes directly,
+with interruptible presentation tracks and GPU-backed window scaling. The next
+questions are higher-DPI glyph rasterization, preserving interactive semantics
+for state-driven recipes, and file watching without losing the current pose.
+Raw plan patching remains experimental until whole-plan regeneration demonstrably
+limits the authoring loop. Video export retains its independent authored timing,
+full-quality compositor, shutter samples, and audio.

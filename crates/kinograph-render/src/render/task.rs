@@ -11,9 +11,12 @@ use kinograph::dsl::{TaskFrame, TaskState};
 use kinograph::motion::{MotionState, Spring};
 
 use super::{
-    HeadlessRenderer, TextSprite, blend_pixel, composite_sprite, composite_sprite_rotated,
+    HeadlessRenderer, TextSprite, blend_pixel, composite_sprite_rotated,
     composite_sprite_rotated_with_coverage, make_sprite, rasterize_svg,
 };
+
+mod content;
+pub use content::{BubblePose, ContentPose, TaskContentFrame};
 
 const QUOTE_WORDS: [&str; 8] = ["why", "would", "I", "ever", "want", "to", "use", "Effect?"];
 const NODE_SIZE: f32 = 128.0;
@@ -45,6 +48,21 @@ pub struct TaskSceneFrame<'a> {
     pub nodes: &'a [TaskFrame<'a>],
 }
 
+/// A sampled interactive pose. No edge-triggered state or frame integration is
+/// hidden in this recipe; every state layer retains its own continuous presence.
+pub struct TaskVisualFrame<'a> {
+    pub id: &'a str,
+    pub name: &'a str,
+    pub center: [f32; 2],
+    pub size: [f32; 2],
+    pub scale: f32,
+    pub opacity: f32,
+    pub states: &'a [(&'a TaskState, f32)],
+    pub contents: &'a [TaskContentFrame<'a>],
+    pub activity: f32,
+    pub time: f64,
+}
+
 #[derive(Clone, Copy)]
 pub struct TaskLinkFrame {
     pub from: [f32; 2],
@@ -53,6 +71,156 @@ pub struct TaskLinkFrame {
 }
 
 impl HeadlessRenderer {
+    pub fn composite_task_visual(&mut self, pixels: &mut [u8], node: TaskVisualFrame<'_>) {
+        if node.opacity <= 0.001 {
+            return;
+        }
+        let running = node.activity.clamp(0., 1.);
+        let jitter = if running > 0.0 {
+            ambient_running_jitter(node.id, node.time)
+        } else {
+            [0.; 3]
+        };
+        let center = [
+            node.center[0] + jitter[0] * running,
+            node.center[1] + jitter[1] * running,
+        ];
+        let rotation = jitter[2] * running;
+        let size = [node.size[0] * node.scale, node.size[1] * node.scale];
+        let clip = TaskClip {
+            center,
+            size,
+            rotation,
+        };
+        let mut color = [0.; 3];
+        for (state, weight) in node.states {
+            let rgb = task_state_color(state);
+            for (channel, value) in color.iter_mut().enumerate() {
+                *value += f32::from(rgb[channel]) * weight;
+            }
+        }
+        if running > 0.001 {
+            draw_soft_rect_glow(
+                pixels,
+                self.spec.width,
+                self.spec.height,
+                center,
+                size,
+                rotation,
+                8.,
+                [59, 130, 246, 255],
+                running * node.opacity * 0.3,
+            );
+        }
+        fill_rotated_rect(
+            pixels,
+            self.spec.width,
+            self.spec.height,
+            center,
+            size,
+            rotation,
+            [
+                color[0].round() as u8,
+                color[1].round() as u8,
+                color[2].round() as u8,
+                255,
+            ],
+            node.opacity,
+        );
+        if running > 0.001 {
+            draw_energy_sweep(
+                pixels,
+                self.spec.width,
+                self.spec.height,
+                center,
+                size,
+                rotation,
+                (node
+                    .time
+                    .rem_euclid(f64::from(ENERGY_SPACING / ENERGY_SPEED))) as f32,
+                running * node.opacity,
+            );
+            stroke_rotated_rect(
+                pixels,
+                self.spec.width,
+                self.spec.height,
+                center,
+                size,
+                rotation,
+                [130, 200, 255, 255],
+                running * node.opacity * 0.6,
+            );
+        }
+        for frame in node.contents {
+            let content = frame.pose;
+            let opacity = content.opacity * node.opacity;
+            // Bubble opacity has its own slower spring. Do not cull it with the
+            // faster icon fade when a failure is retried or skipped.
+            if let Some(bubble) = frame.bubble
+                && let TaskState::Failed(error) | TaskState::Death(error) = frame.state
+                && !error.is_empty()
+            {
+                self.composite_task_bubble_content(
+                    pixels,
+                    error,
+                    center,
+                    size[1],
+                    bubble,
+                    node.opacity,
+                );
+            }
+            if opacity <= 0.001 {
+                continue;
+            }
+            let content_scale = node.scale * content.scale;
+            let content_rotation = rotation + content.rotation;
+            match frame.state {
+                TaskState::Hidden | TaskState::Running => {}
+                TaskState::Idle => self.composite_task_icon_in(
+                    pixels,
+                    "sparkle",
+                    clip,
+                    58. * content_scale,
+                    content_rotation,
+                    opacity,
+                    content.blur,
+                    [245, 245, 245],
+                ),
+                TaskState::Succeeded(result) => self.composite_task_text_effect(
+                    pixels,
+                    result.as_deref().unwrap_or("✓"),
+                    clip,
+                    32. * 1.15,
+                    [245, 250, 247],
+                    content_scale,
+                    rotation,
+                    content.blur,
+                    opacity,
+                ),
+                TaskState::Failed(_) | TaskState::Death(_) => {
+                    self.composite_task_icon_in(
+                        pixels,
+                        "error",
+                        clip,
+                        58. * content_scale,
+                        content_rotation,
+                        opacity,
+                        content.blur,
+                        [255, 245, 245],
+                    );
+                }
+            }
+        }
+        self.composite_centered_text(
+            pixels,
+            node.name,
+            [node.center[0], node.center[1] + 104.],
+            26.,
+            [200, 205, 215],
+            node.opacity * 0.85,
+        );
+    }
+
     pub fn measure_task_result_width(&mut self, result: &str) -> f32 {
         let sprite = self.task_text_sprite(result, 32.0 * 1.15, [245, 250, 247]);
         (sprite.advance + 72.0).ceil().clamp(NODE_SIZE, 520.0)
@@ -342,6 +510,7 @@ impl HeadlessRenderer {
                 [width, height],
                 rotation,
                 node.state_age,
+                1.0,
             );
             stroke_rotated_rect(
                 pixels,
@@ -513,6 +682,7 @@ impl HeadlessRenderer {
                         [width, height],
                         rotation,
                         node.previous_state_duration + node.state_age,
+                        1.0,
                     );
                     stroke_rotated_rect(
                         pixels,
@@ -625,20 +795,13 @@ impl HeadlessRenderer {
             [190, 35, 45, 255],
             opacity,
         );
-        for y in 0..=6 {
-            let half_width = 6 - y;
-            for x in -half_width..=half_width {
-                paint(
-                    pixels,
-                    self.spec.width,
-                    self.spec.height,
-                    bubble_center[0].round() as i32 + x,
-                    (bubble_center[1] + 26.0).round() as i32 + y,
-                    [190, 35, 45, 255],
-                    opacity,
-                );
-            }
-        }
+        draw_bubble_tail(
+            pixels,
+            self.spec.width,
+            self.spec.height,
+            bubble_center,
+            opacity,
+        );
         self.composite_task_text(
             pixels,
             error,
@@ -648,6 +811,88 @@ impl HeadlessRenderer {
             [255, 240, 240],
             opacity,
         );
+    }
+
+    fn composite_task_bubble_content(
+        &mut self,
+        pixels: &mut [u8],
+        error: &str,
+        center: [f32; 2],
+        node_height: f32,
+        bubble: BubblePose,
+        opacity: f32,
+    ) {
+        let pose = bubble.content;
+        if pose.opacity * opacity <= 0.001 {
+            return;
+        }
+        let width = self.spec.width;
+        let height = self.spec.height;
+        let sprite = self.task_bubble_sprite(error);
+        // Scale and deblur the complete bubble, including its text and tail.
+        // Its body-center pivot is 28 pixels down inside the padded sprite.
+        let y = center[1] - node_height * 0.5 - 58. + bubble.y;
+        composite_sprite_rotated(
+            pixels,
+            width,
+            height,
+            sprite,
+            sprite.width as f32 * pose.scale,
+            sprite.height as f32 * pose.scale,
+            center[0],
+            y + (sprite.height as f32 * 0.5 - 28.) * pose.scale,
+            0.,
+            pose.blur,
+            pose.opacity * opacity,
+        );
+    }
+
+    fn task_bubble_sprite(&mut self, error: &str) -> &TextSprite {
+        let key = format!("task-bubble:{error}");
+        if !self.part_sprites.contains_key(&key) {
+            let text = self.task_text_sprite(error, 24., [255, 240, 240]);
+            let body_width = (text.advance + 36.).clamp(120., 360.);
+            let width = body_width.ceil() as u32 + 4;
+            let height = 64;
+            let center = [width as f32 * 0.5, 28.];
+            let mut pixels = vec![0; (width * height * 4) as usize];
+            fill_rect(
+                &mut pixels,
+                width,
+                height,
+                center,
+                [body_width, 52.],
+                [190, 35, 45, 255],
+                1.,
+            );
+            draw_bubble_tail(&mut pixels, width, height, center, 1.);
+            super::composite_text_sprite(
+                &mut pixels,
+                [width, height],
+                text,
+                [
+                    center[0] - text.advance * 0.5,
+                    center[1] - text.height as f32 * 0.5,
+                ],
+                text.width as f32,
+                0.,
+                1.,
+                [0., height as f32],
+            );
+            self.part_sprites.insert(
+                key.clone(),
+                (
+                    0,
+                    TextSprite {
+                        width,
+                        height,
+                        advance: body_width,
+                        pixels,
+                    },
+                ),
+            );
+        }
+        &self.part_sprites[&key].1
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -677,6 +922,37 @@ impl HeadlessRenderer {
             rotation,
             blur,
             opacity,
+        );
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn composite_task_icon_in(
+        &mut self,
+        pixels: &mut [u8],
+        kind: &str,
+        clip: TaskClip,
+        size: f32,
+        rotation: f32,
+        opacity: f32,
+        blur: f32,
+        color: [u8; 3],
+    ) {
+        let width = self.spec.width;
+        let height = self.spec.height;
+        let sprite = self.task_icon_sprite(kind, color);
+        composite_sprite_rotated_with_coverage(
+            pixels,
+            width,
+            height,
+            sprite,
+            size,
+            size,
+            clip.center[0],
+            clip.center[1],
+            rotation,
+            blur,
+            opacity,
+            |x, y| task_clip_coverage(clip, x, y),
         );
     }
 
@@ -715,14 +991,18 @@ impl HeadlessRenderer {
         let canvas_width = self.spec.width;
         let canvas_height = self.spec.height;
         let sprite = self.task_text_sprite(text, font_size, color);
-        composite_sprite(
+        super::composite_text_sprite(
             pixels,
-            canvas_width,
-            canvas_height,
+            [canvas_width, canvas_height],
             sprite,
-            (center_x - sprite.advance * 0.5).round() as i32,
-            (center_y - sprite.height as f32 * 0.5).round() as i32,
+            [
+                center_x - sprite.advance * 0.5,
+                center_y - sprite.height as f32 * 0.5,
+            ],
+            sprite.width as f32,
+            0.,
             opacity,
+            [0., canvas_height as f32],
         );
     }
 
@@ -742,7 +1022,6 @@ impl HeadlessRenderer {
         let canvas_width = self.spec.width;
         let canvas_height = self.spec.height;
         let sprite = self.task_text_sprite(text, font_size, color);
-        let (clip_sine, clip_cosine) = clip.rotation.sin_cos();
         composite_sprite_rotated_with_coverage(
             pixels,
             canvas_width,
@@ -755,16 +1034,7 @@ impl HeadlessRenderer {
             rotation,
             blur,
             opacity,
-            move |x, y| {
-                if clip.size[0] <= 0.0 || clip.size[1] <= 0.0 {
-                    return 0.0;
-                }
-                let dx = x - clip.center[0];
-                let dy = y - clip.center[1];
-                let local_x = dx * clip_cosine + dy * clip_sine;
-                let local_y = -dx * clip_sine + dy * clip_cosine;
-                rounded_rect_coverage(local_x, local_y, clip.size)
-            },
+            move |x, y| task_clip_coverage(clip, x, y),
         );
     }
 
@@ -805,6 +1075,28 @@ impl HeadlessRenderer {
             self.part_sprites.insert(key.clone(), (0, sprite));
         }
         &self.part_sprites[&key].1
+    }
+}
+
+fn draw_bubble_tail(pixels: &mut [u8], width: u32, height: u32, center: [f32; 2], opacity: f32) {
+    let tail_y = center[1] + 25.5;
+    for y in (tail_y - 1.).floor() as i32..=(tail_y + 7.).ceil() as i32 {
+        for x in (center[0] - 7.).floor() as i32..=(center[0] + 7.).ceil() as i32 {
+            let dy = y as f32 + 0.5 - tail_y;
+            let dx = (x as f32 + 0.5 - center[0]).abs();
+            let distance = ((dx + dy - 6.) * std::f32::consts::FRAC_1_SQRT_2)
+                .max(-dy)
+                .max(dy - 6.);
+            paint(
+                pixels,
+                width,
+                height,
+                x,
+                y,
+                [190, 35, 45, 255],
+                opacity * (0.5 - distance).clamp(0., 1.),
+            );
+        }
     }
 }
 
@@ -1133,6 +1425,33 @@ fn running_jitter(id: &str, age: f32) -> [f32; 3] {
     }
 }
 
+/// Bounded-cost C1 noise for indefinite native running states. The older authored
+/// Task recipe retains its original finite-history jitter for video parity.
+fn ambient_running_jitter(id: &str, time: f64) -> [f32; 3] {
+    let noise = |interval: f64, axis: u32| {
+        let phase = time.max(0.) / interval;
+        let index = phase.floor() as u64 as u32;
+        let progress = smoothstep(phase.fract() as f32);
+        let a = jitter_target(id, index, axis);
+        let b = jitter_target(id, index.wrapping_add(1), axis);
+        a + (b - a) * progress
+    };
+    std::array::from_fn(|axis| {
+        (noise(0.085, axis as u32) * 0.75 + noise(0.137, axis as u32 + 4) * 0.25)
+            * [3.4, 1.6, 0.055][axis]
+    })
+}
+
+fn task_clip_coverage(clip: TaskClip, x: f32, y: f32) -> f32 {
+    if clip.size[0] <= 0. || clip.size[1] <= 0. {
+        return 0.;
+    }
+    let (sine, cosine) = clip.rotation.sin_cos();
+    let dx = x - clip.center[0];
+    let dy = y - clip.center[1];
+    rounded_rect_coverage(dx * cosine + dy * sine, -dx * sine + dy * cosine, clip.size)
+}
+
 fn settling_running_jitter(id: &str, running_duration: f32, age: f32) -> [f32; 3] {
     let decay = (-18.0 * age.max(0.0)).exp();
     running_jitter(id, running_duration).map(|value| value * decay)
@@ -1191,6 +1510,7 @@ fn draw_energy_sweep(
     size: [f32; 2],
     rotation: f32,
     time: f32,
+    opacity: f32,
 ) {
     let (sine, cosine) = rotation.sin_cos();
     let phase = energy_band_phase(time);
@@ -1208,7 +1528,7 @@ fn draw_energy_sweep(
             let position = local_x + size[0] * 0.5;
             let distance = energy_band_distance_from_phase(position, phase);
             let band = 1.0 - smoothstep(((distance - 1.0) / 39.0).clamp(0.0, 1.0));
-            let alpha = band * 0.5 * coverage;
+            let alpha = band * 0.5 * coverage * opacity;
             if alpha > 0.002 {
                 paint(pixels, width, height, x, y, [150, 215, 255, 255], alpha);
             }
@@ -1477,6 +1797,32 @@ fn paint(pixels: &mut [u8], width: u32, height: u32, x: i32, y: i32, color: [u8;
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn ambient_jitter_is_bounded_and_deterministic_after_hours_of_playback() {
+        let expected = super::ambient_running_jitter("loadUser", 21_600.125);
+        for time in [
+            0.0,
+            0.085 - 0.00001,
+            0.085 + 0.00001,
+            2.,
+            3600.,
+            21_600.125,
+            100_000.125,
+        ] {
+            let value = super::ambient_running_jitter("loadUser", time);
+            for (value, bound) in value.into_iter().zip([3.4, 1.6, 0.055]) {
+                assert!(value.is_finite() && value.abs() <= bound);
+            }
+        }
+        assert_eq!(
+            expected,
+            super::ambient_running_jitter("loadUser", 21_600.125)
+        );
+        let a = super::ambient_running_jitter("loadUser", 0.085 - 0.00001);
+        let b = super::ambient_running_jitter("loadUser", 0.085 + 0.00001);
+        assert!(a.into_iter().zip(b).all(|(a, b)| (a - b).abs() < 0.001));
+    }
+
     use super::{
         ENERGY_SPACING, ENERGY_SPEED, blur_task_layer, energy_band_distance_from_phase,
         energy_band_phase, jitter_interval, running_jitter, settling_running_jitter,

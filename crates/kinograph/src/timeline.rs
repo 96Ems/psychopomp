@@ -32,11 +32,11 @@ impl SpringProfile {
         velocity_threshold: f32,
     ) -> Self {
         assert!(
-            position_threshold > 0.0,
+            position_threshold.is_finite() && position_threshold > 0.0,
             "position threshold must be positive"
         );
         assert!(
-            velocity_threshold > 0.0,
+            velocity_threshold.is_finite() && velocity_threshold > 0.0,
             "velocity threshold must be positive"
         );
         Self {
@@ -260,8 +260,7 @@ enum SegmentKind {
     Spring {
         spring: Spring,
         target: f32,
-        position_threshold: f32,
-        velocity_threshold: f32,
+        settled_after: f64,
     },
 }
 
@@ -279,16 +278,15 @@ impl Segment {
             SegmentKind::Spring {
                 spring,
                 target,
-                position_threshold,
-                velocity_threshold,
+                settled_after,
             } => {
-                let state = spring.sample(self.initial, target, (time - self.start) as f32);
-                if (state.position - target).abs() <= position_threshold
-                    && state.velocity.abs() <= velocity_threshold
-                {
+                let elapsed = time - self.start;
+                if elapsed <= 0.0 {
+                    self.initial
+                } else if elapsed >= settled_after {
                     MotionState::at(target)
                 } else {
-                    state
+                    spring.sample(self.initial, target, elapsed as f32)
                 }
             }
         }
@@ -378,6 +376,9 @@ impl Timeline {
     fn compile_leaf(&mut self, animation: &Animation, start: f64) -> Result<()> {
         match animation {
             Animation::Set { property, value } => {
+                if !value.is_finite() {
+                    bail!("property '{}' set value must be finite", property.as_str());
+                }
                 self.push_segment(
                     property,
                     Segment {
@@ -392,9 +393,21 @@ impl Timeline {
                 target,
                 profile,
             } => {
+                if !target.is_finite() {
+                    bail!(
+                        "property '{}' spring target must be finite",
+                        property.as_str()
+                    );
+                }
                 let initial = self.sample_at(property, start).ok_or_else(|| {
                     anyhow::anyhow!("property '{}' has no initial value", property.as_str())
                 })?;
+                if !initial.position.is_finite() || !initial.velocity.is_finite() {
+                    bail!(
+                        "property '{}' has non-finite motion at retarget",
+                        property.as_str()
+                    );
+                }
                 self.push_segment(
                     property,
                     Segment {
@@ -403,8 +416,12 @@ impl Timeline {
                         kind: SegmentKind::Spring {
                             spring: profile.spring,
                             target: *target,
-                            position_threshold: profile.position_threshold,
-                            velocity_threshold: profile.velocity_threshold,
+                            settled_after: profile.spring.settling_time(
+                                initial,
+                                *target,
+                                profile.position_threshold,
+                                profile.velocity_threshold,
+                            ),
                         },
                     },
                 );
@@ -423,6 +440,12 @@ impl Timeline {
     ) -> Result<Self> {
         let mut tracks = HashMap::new();
         for (property, value) in initial_values {
+            if !value.is_finite() {
+                bail!(
+                    "property '{}' initial value must be finite",
+                    property.as_str()
+                );
+            }
             let id = property.as_str().to_owned();
             if tracks
                 .insert(

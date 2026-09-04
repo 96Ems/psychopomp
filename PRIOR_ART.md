@@ -210,6 +210,42 @@ Relevant ideas:
 
 Kinograph applies these constraints to Effect Task states. Running uses compression and a directional energy sweep rather than perpetual shake. Success prioritizes result expansion and content resolution. Failure stages a short horizontal impact before its error bubble, then becomes still. Death darkens and settles with less scale instead of reusing failure shake. Layout-only changes do not restart semantic flashes or pulses.
 
+## Motion-Graphics Choreography
+
+[Rachel Reid's anticipation article at School of Motion](https://schoolofmotion.com/blog/understanding-the-principles-of-anticipation) and [Adam Crawford's 10 Principles of Motion Design at VMG Studios](https://blog.vmgstudios.com/10-principles-motion-design) address expressive explanation rather than frequent application feedback. The relevant distinction is **choreography**, not adding the same easing to every property.
+
+Principles to apply:
+
+- **Staging:** hand attention from outgoing content to the new state. Two dissimilar, readable payloads in the same space create a collision, not continuity.
+- **Overlapping action:** lighter content can lead the heavier container; they should not finish every channel in lockstep. The body then settles, and secondary information follows.
+- **Anticipation:** a brief preparatory action can establish where to look before the main change. It need not be an obligatory opposite-direction bounce; externally caused reactions do not always need a wind-up.
+- **Secondary motion:** scale, blur, opacity, and selective rotation should express one action together. A star contracting and turning into activity is one idea; spinning every result label is not.
+- **Timing and weight:** preserve contrast between a quick content exit, slower container response, and readable hold. More animation is not necessarily more information.
+
+The first application over-staged the planned Task recipe: it slowed the body and mapped one 0.32-second state spring through additional visibility windows for content, activity, and bubbles. That was continuous but felt stale against Effect Institute. The correction retains independent content scale/opacity/blur and selective symbol rotation while restoring the source's faster, overlapping, operation-specific springs. Labels and unchanged results remain still.
+
+General principles are a vocabulary for studying a good reference, not a reason to override its timing. Independent sampled channels preserve interruption and skipped-step semantics without the source browser's mount resets or delayed callbacks. This does not relax Maximum Stability for code or prescribe icon-sized scale changes for application panels.
+
+### Effect Task timing reference
+
+The requested GPU blocks use `PixiEffectRow`, not the older DOM `StaticEffectNode`. Sources under `src/components/narrated/pixi-effect-row/engine/` in Effect Institute:
+
+| Channel | Visual duration | Bounce | Source |
+| --- | --- | --- | --- |
+| Height, running and resting | 0.2 s | 0.5 | `config.ts::HEIGHT_SPRING_RUNNING/REST` |
+| Width | 0.35 s | 0.35 | `config.ts::WIDTH_SPRING` |
+| Icon opacity, scale, blur | 3/18 s ≈ 0.167 s | 0 | `NodeController.ts::ICON_*_LAMBDA`, `motion.ts::springFromLambda` |
+| Result scale | 0.25 s | 0.4 | `config.ts::contentPopDuration/contentPopBounce` |
+| Result blur | 0.15 s | 0 | `config.ts::contentBlurDuration` |
+| Bubble opacity and scale | 3/14 s ≈ 0.214 s | 0 | `NodeController.ts::BUBBLE_*_LAMBDA` |
+| Bubble blur | 3/16 s = 0.1875 s | 0 | `NodeController.ts::BUBBLE_BLUR_LAMBDA` |
+| Bubble rise, 32 px | 0.25 s | 0.5 | `config.ts::bubbleRise*` |
+| Base color | 3/12 s = 0.25 s | 0 | `NodeController.ts::COLOR_LAMBDA` |
+
+These are Motion `visualDuration` parameters, not deadlines at which every spring is exactly settled. Running effects are enabled immediately in the source; the native recipe uses a short continuity ramp, not a staged content threshold. Source error bubbles also begin immediately and use their different curves to create overlap.
+
+The regression fixture `crates/kinograph-render/tests/fixtures/effect-task-timing.json` is generated with Motion DOM 12.42.2, as pinned by the inspected Effect Institute lockfile. Its adjacent Bun script loads cached UMD bundles without installing or modifying Effect Institute dependencies. Tests compare actual compiled Rust channel samples, not only duplicated configuration constants. The fixture uses tight rest tolerances to compare analytic curves; Kinograph keeps its deterministic permanent-settling policy.
+
 ## effect-institute
 
 `/Users/kit/code/experiments/typescript/effect-institute` is local product prior art for semantic code states, not the immediate timeline model.

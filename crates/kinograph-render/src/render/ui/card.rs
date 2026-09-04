@@ -305,6 +305,17 @@ impl<'a> UiCanvas<'a> {
         color: UiColor,
         opacity: f32,
     ) {
+        self.stroke_fill(bounds, corner_radius, width, Fill::Solid(color), opacity);
+    }
+
+    pub fn stroke_fill(
+        &mut self,
+        bounds: Bounds,
+        corner_radius: f32,
+        width: f32,
+        fill: Fill,
+        opacity: f32,
+    ) {
         if width <= 0.0 {
             return;
         }
@@ -325,6 +336,7 @@ impl<'a> UiCanvas<'a> {
                 if coverage <= 0.0 {
                     continue;
                 }
+                let color = fill.sample(point, outer);
                 let index = (y as usize * self.size[0] as usize + x as usize) * BYTES_PER_PIXEL;
                 blend_pixel(&mut self.pixels[index..index + 4], color.0, coverage);
             }
@@ -1030,6 +1042,31 @@ mod tests {
 
         assert!(output.chunks_exact(4).any(|pixel| pixel[0] > pixel[1]));
         assert!(output.chunks_exact(4).any(|pixel| pixel[1] > pixel[0]));
+    }
+
+    #[test]
+    fn gradient_strokes_support_subtle_top_rim_lighting() {
+        let mut output = vec![0; 10 * 10 * 4];
+        let mut canvas = UiCanvas::new(&mut output, [10, 10]);
+        canvas.stroke_fill(
+            Bounds {
+                origin: [1.0, 1.0],
+                size: [8.0, 8.0],
+            },
+            0.0,
+            1.0,
+            Fill::Linear {
+                from: [0.0, 1.0],
+                to: [0.0, 9.0],
+                start: UiColor::srgb8(255, 255, 255, 80),
+                end: UiColor::srgb8(255, 255, 255, 8),
+            },
+            1.0,
+        );
+
+        let top_alpha = output[(10 + 5) * 4 + 3];
+        let bottom_alpha = output[(8 * 10 + 5) * 4 + 3];
+        assert!(top_alpha > bottom_alpha);
     }
 
     #[test]

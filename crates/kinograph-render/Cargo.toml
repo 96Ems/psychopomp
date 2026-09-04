@@ -18,6 +18,9 @@ resvg = "0.47"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 wgpu = "30.0"
+winit = "0.30"
 
 [dev-dependencies]
 kinograph-hero = { path = "../../scenes/hero" }
+kinograph-effect-succeed-slides = { path = "../../scenes/effect-succeed-slides" }
+kinograph-interactive-showcase = { path = "../../scenes/interactive-showcase" }

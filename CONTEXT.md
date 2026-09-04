@@ -12,6 +12,10 @@ An ordered list of stable line IDs describing one meaningful state of a code doc
 
 A code line whose identity survives between snapshots. Its screen position may move when surrounding lines enter or leave, but its text object is not replaced.
 
+## Maximum Stability
+
+The authoring and rendering contract that preserves common code identity across step destinations. Only changed content enters, exits, or is replaced. Retained lines and inline parts may move to accommodate changed layout, but do not unnecessarily disappear, reappear, fade, or blur. Stability concerns the smallest meaningful content delta, not keeping every screen coordinate fixed.
+
 ## Code Transition
 
 The compiled relationship between two code snapshots. Sampling a code transition places every stable, entering, and exiting line at an arbitrary progress value.
@@ -72,6 +76,18 @@ A concrete rendering adapter selected by an actor declaration. Recipe payloads a
 
 A positive exact range on the global scene clock selected for delivery. Output begins at time zero, intersecting media is trimmed and rebased, and visual sampling retains global time so ongoing trajectories do not restart.
 
+## Presentation Step
+
+An explicitly ordered destination in a Scene Plan, with a stable ID, title, entry start, and held endpoint on the authored scene clock. Entry start may equal the held endpoint for a still step. Unlike a Cue, a Presentation Step is a navigation destination, and step entry ranges cannot overlap. The native player derives scalar target poses at held endpoints, then animates between those destinations on its own pausable clock. Entry start supplies the explicit Replay pose. Authors choose meaningful endpoint poses; live waiting never alters the automatic video schedule.
+
+## Presentation Deck
+
+An ordered collection of titled Scene Plans. Each slide owns its Presentation Steps and local Playback clock. Changing slides preserves the selected step and pauses the departed slide; returning resumes only motion that was running when it was left. Slide navigation is separate from step navigation.
+
+## Playback
+
+Interactive navigation among Presentation Steps. Next and Previous retarget continuous channels from their sampled position and velocity through the same Property Track compiler used for video. Unchanged channel destinations retain their trajectories. Pause freezes the local clock without losing motion state; Replay deliberately restarts from an entry pose. Playback retains an immutable compiled timeline for each navigation revision, so late rendered frames cannot change the current destination. It is not reverse playback of a movie.
+
 ## Composition
 
 A pure, time-bearing value that arranges visual motion and media with sequence, parallel, delay, and hold. Composition owns cross-media timing; Motion remains responsible for visual property trajectories.
@@ -112,9 +128,13 @@ A compiled relationship between a clip's immutable source range and its schedule
 
 The compiled trajectory of one scalar actor property. A later spring on the same track begins from the earlier trajectory's sampled position and velocity.
 
+A spring's settling time is deterministic. After that time the segment stays exactly at rest unless another segment retargets it; starting an unrelated channel cannot wake it.
+
 ## Semantic Target
 
 A stable named selection owned by an actor recipe, such as a logical range inside a stable code line. The plan core preserves identity and validates references; the renderer recipe measures concrete geometry. Highlights and pointers attach to Semantic Targets rather than authored screen coordinates.
+
+Attachment follows sampled visible layout, including collapsed Inline Reveals and moving Stable Lines. Expanded text measurements are a preparation baseline, not final coordinates for every step.
 
 ## Inline Reveal
 
@@ -135,6 +155,8 @@ A stable visual actor representing one Effect computation. Composition schedules
 ## Task State
 
 One meaningful snapshot of a Task. A task state selects semantic content and visual targets, while the renderer derives the transition from the preceding state at arbitrary media time. A succeeded task may carry a result or represent payload-free completion.
+
+Planned interactive Tasks lower state changes into continuous geometry and content-presence tracks. A running Task can keep the local playback clock active after those tracks settle, while pause and reduced motion still stop its ambient animation. It illustrates a computation rather than executing an actual Effect.
 
 ## Task Pose
 

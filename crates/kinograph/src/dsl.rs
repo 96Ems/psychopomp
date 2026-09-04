@@ -204,7 +204,8 @@ impl Task {
     }
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
+#[serde(tag = "kind", content = "value", rename_all = "kebab-case")]
 pub enum TaskState {
     Hidden,
     Idle,

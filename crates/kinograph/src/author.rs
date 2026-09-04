@@ -1,9 +1,9 @@
 use serde::Serialize;
 
 use crate::plan::{
-    ActorPlan, ContinuousChannelPlan, CuePlan, MediaPlan, ScalarPlan, ScenePlan,
-    SemanticTargetPlan, StateChannelPlan, StateEventPlan, TargetComponentPlan, TargetScalarPlan,
-    TrackEventPlan,
+    ActorPlan, ContinuousChannelPlan, CuePlan, MediaPlan, PresentationStepPlan, ScalarPlan,
+    ScenePlan, SemanticTargetPlan, StateChannelPlan, StateEventPlan, TargetComponentPlan,
+    TargetScalarPlan, TrackEventPlan,
 };
 
 pub struct PlanBuilder {
@@ -223,6 +223,22 @@ impl PlanBuilder {
         self.plan.media.push(media);
     }
 
+    /// Declare a presentation stop without changing the automatic video timing.
+    pub fn presentation_step(
+        &mut self,
+        id: impl Into<String>,
+        title: impl Into<String>,
+        start_nanos: u64,
+        hold_nanos: u64,
+    ) {
+        self.plan.presentation_steps.push(PresentationStepPlan {
+            id: id.into(),
+            title: title.into(),
+            start_nanos,
+            hold_nanos,
+        });
+    }
+
     pub fn finish(self) -> Result<ScenePlan, crate::plan::PlanValidationError> {
         self.plan.validate()?;
         Ok(self.plan)
@@ -273,6 +289,7 @@ mod tests {
         );
         scene.change(&subtitle, 1_000_000_000, "Second").unwrap();
         scene.cue("change", 1_000_000_000, 2_000_000_000);
+        scene.presentation_step("change", "Change the title", 1_000_000_000, 2_000_000_000);
         let plan = scene.finish().unwrap();
 
         assert_eq!(opacity.id(), "title.opacity");
@@ -280,5 +297,6 @@ mod tests {
         assert_eq!(plan.continuous_channels[0].actor_id, title.id());
         assert_eq!(target.id(), "title-text");
         assert_eq!(plan.cues[0].id, "change");
+        assert_eq!(plan.presentation_steps[0].title, "Change the title");
     }
 }

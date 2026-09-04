@@ -67,6 +67,7 @@ fn fragment_main(input: VertexOutput) -> @location(0) vec4<f32> {
     let panel_center = vec2<f32>(scene.resolution.x * 0.5, scene.resolution.y * 0.52);
     let panel_size = vec2<f32>(scene.resolution.x * 0.78, scene.resolution.y * 0.70);
 
+    if scene.focus.w > 0.5 {
     let titlebar_center = panel_center - vec2<f32>(0.0, panel_size.y * 0.5 - 32.0);
     color = fill_box(
         color,
@@ -99,6 +100,8 @@ fn fragment_main(input: VertexOutput) -> @location(0) vec4<f32> {
         vec3<f32>(0.13, 0.50, 0.30),
         1.0
     );
+
+    }
 
     let focus_center = panel_center + vec2<f32>(20.0, scene.focus.y);
     let focus_size = vec2<f32>(panel_size.x - 64.0, scene.focus.z);
