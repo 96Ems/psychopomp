@@ -67,6 +67,10 @@ pub struct ReelSegmentPlan {
     pub transition_nanos: u64,
     #[serde(default)]
     pub transition_style: ReelTransitionStyle,
+    /// For `zoom`: the rectangle (x, y, width, height) in the outgoing frame that
+    /// becomes this segment, such as a card that opens into its code.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub transition_focus: Option<[f32; 4]>,
     pub plan: ScenePlan,
 }
 
@@ -80,15 +84,59 @@ pub enum ReelTransitionStyle {
     /// The outgoing segment fades to the empty background, then the incoming one
     /// fades in. Dense frames never overlap.
     Dip,
+    /// The camera flies into `transition_focus`: the outgoing frame zooms past
+    /// while the incoming segment grows out of that rectangle.
+    Zoom,
+}
+
+/// Screen transform of one layer during a zoom: `output = source * scale + offset`.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct ReelZoom {
+    pub scale: f32,
+    pub offset: [f32; 2],
+    /// Corner radius of the incoming frame while it is still a card.
+    pub radius: f32,
+}
+
+impl ReelZoom {
+    /// Where the layer sits at `progress` of a zoom into `focus` on a
+    /// `width` x `height` frame. The outgoing frame magnifies until `focus`
+    /// fills the width; the incoming frame starts inside `focus`.
+    pub fn at(focus: [f32; 4], width: f32, height: f32, progress: f32, incoming: bool) -> Self {
+        let p = progress.clamp(0.0, 1.0);
+        let eased = if p < 0.5 {
+            4.0 * p * p * p
+        } else {
+            1.0 - (-2.0 * p + 2.0).powi(3) / 2.0
+        };
+        let focus_center = [focus[0] + focus[2] * 0.5, focus[1] + focus[3] * 0.5];
+        let center = [width * 0.5, height * 0.5];
+        let fill = width / focus[2].max(1.0);
+        // The focus center travels to the screen center while the scale changes
+        // geometrically, so the zoom speed feels constant.
+        let anchor: [f32; 2] =
+            std::array::from_fn(|i| focus_center[i] + (center[i] - focus_center[i]) * eased);
+        let (scale, pivot) = if incoming {
+            (fill.powf(eased - 1.0), center)
+        } else {
+            (fill.powf(eased), focus_center)
+        };
+        Self {
+            scale,
+            offset: [anchor[0] - pivot[0] * scale, anchor[1] - pivot[1] * scale],
+            radius: if incoming { 28.0 * (1.0 - eased) } else { 0.0 },
+        }
+    }
 }
 
 /// Where one segment sits on the reel clock.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct ReelSpan {
     pub start_nanos: u64,
     pub end_nanos: u64,
     pub transition_nanos: u64,
     pub transition_style: ReelTransitionStyle,
+    pub transition_focus: Option<[f32; 4]>,
 }
 
 /// One segment visible at a reel time, sampled at its own local time. Layers are
@@ -99,6 +147,16 @@ pub struct ReelLayer {
     pub segment: usize,
     pub local_seconds: f64,
     pub weight: f32,
+    /// Set during a zoom; the renderer resolves it with `ReelZoom::at`.
+    pub zoom: Option<ZoomPhase>,
+}
+
+/// One layer's part in a zoom transition.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct ZoomPhase {
+    pub focus: [f32; 4],
+    pub progress: f32,
+    pub incoming: bool,
 }
 
 impl ReelPlan {
@@ -128,6 +186,15 @@ impl ReelPlan {
                     anyhow::bail!("the first reel segment cannot transition from nothing");
                 }
                 continue;
+            }
+            if segment.transition_style == ReelTransitionStyle::Zoom {
+                let focus = segment.transition_focus.unwrap_or_default();
+                if focus.iter().any(|v| !v.is_finite()) || focus[2] < 8.0 || focus[3] < 8.0 {
+                    anyhow::bail!(
+                        "reel segment '{}' zooms without a transitionFocus rectangle",
+                        segment.plan.id
+                    );
+                }
             }
             let previous = &self.segments[index - 1];
             // The previous segment must be alone on screen before this one starts,
@@ -159,6 +226,7 @@ impl ReelPlan {
                 end_nanos: end,
                 transition_nanos: segment.transition_nanos,
                 transition_style: segment.transition_style,
+                transition_focus: segment.transition_focus,
             });
         }
         spans
@@ -197,6 +265,7 @@ impl ReelPlan {
             segment,
             local_seconds: local(segment),
             weight: smoothstep(weight) as f32,
+            zoom: None,
         };
         if progress >= 1.0 || current == 0 {
             return vec![layer(current, 1.0)];
@@ -210,6 +279,27 @@ impl ReelPlan {
                 vec![layer(current - 1, 1.0 - progress * 2.0)]
             }
             ReelTransitionStyle::Dip => vec![layer(current, progress * 2.0 - 1.0)],
+            ReelTransitionStyle::Zoom => {
+                let focus = span.transition_focus.unwrap_or([0.0, 0.0, 1.0, 1.0]);
+                let phase = |incoming| {
+                    Some(ZoomPhase {
+                        focus,
+                        progress: progress as f32,
+                        incoming,
+                    })
+                };
+                // The incoming card fades in while it is still small.
+                vec![
+                    ReelLayer {
+                        zoom: phase(false),
+                        ..layer(current - 1, 1.0)
+                    },
+                    ReelLayer {
+                        zoom: phase(true),
+                        ..layer(current, (progress - 0.08) / 0.4)
+                    },
+                ]
+            }
         }
     }
 }
@@ -1393,6 +1483,7 @@ mod reel_tests {
                 .map(|&(id, duration, transition)| ReelSegmentPlan {
                     transition_nanos: transition,
                     transition_style: ReelTransitionStyle::default(),
+                    transition_focus: None,
                     plan: ScenePlan::new(id, duration),
                 })
                 .collect(),
@@ -1414,19 +1505,22 @@ mod reel_tests {
                     start_nanos: 0,
                     end_nanos: 4 * SECOND,
                     transition_nanos: 0,
-                    transition_style: Crossfade
+                    transition_style: Crossfade,
+                    transition_focus: None,
                 },
                 ReelSpan {
                     start_nanos: 3 * SECOND,
                     end_nanos: 9 * SECOND,
                     transition_nanos: SECOND,
-                    transition_style: Crossfade
+                    transition_style: Crossfade,
+                    transition_focus: None,
                 },
                 ReelSpan {
                     start_nanos: 9 * SECOND,
                     end_nanos: 12 * SECOND,
                     transition_nanos: 0,
-                    transition_style: Crossfade
+                    transition_style: Crossfade,
+                    transition_focus: None,
                 },
             ]
         );
@@ -1441,6 +1535,7 @@ mod reel_tests {
                 segment,
                 local_seconds,
                 weight: 1.0,
+                zoom: None,
             }]
         };
         assert_eq!(reel.layers_at(1.0), only(0, 1.0));
@@ -1485,6 +1580,31 @@ mod reel_tests {
         assert_eq!((late[0].segment, late.len()), (1, 1));
         assert!((late[0].weight - 0.5).abs() < 1e-6);
         assert!((late[0].local_seconds - 0.75).abs() < 1e-9);
+    }
+
+    #[test]
+    fn zoom_opens_the_incoming_segment_out_of_the_focus_rectangle() {
+        use super::ReelZoom;
+        let focus = [240.0, 360.0, 480.0, 270.0];
+        let start = ReelZoom::at(focus, 1920.0, 1080.0, 0.0, true);
+        // The incoming frame begins exactly inside the focus rectangle.
+        assert!((start.scale - 0.25).abs() < 1e-6);
+        assert!((start.offset[0] - 240.0).abs() < 1e-3 && (start.offset[1] - 360.0).abs() < 1e-3);
+        let end = ReelZoom::at(focus, 1920.0, 1080.0, 1.0, true);
+        assert!((end.scale - 1.0).abs() < 1e-6 && end.offset[0].abs() < 1e-3 && end.radius == 0.0);
+        let out = ReelZoom::at(focus, 1920.0, 1080.0, 1.0, false);
+        // The outgoing frame magnifies the focus rectangle to fill the screen.
+        assert!((out.scale - 4.0).abs() < 1e-5);
+        assert!((240.0 * out.scale + out.offset[0]).abs() < 1e-2);
+        let mut zoom = reel(&[("stage", 4 * SECOND, 0), ("code", 4 * SECOND, SECOND)]);
+        zoom.segments[1].transition_style = super::ReelTransitionStyle::Zoom;
+        assert!(zoom.validate().is_err(), "a zoom needs a focus rectangle");
+        zoom.segments[1].transition_focus = Some(focus);
+        zoom.validate().unwrap();
+        let layers = zoom.layers_at(3.5);
+        assert_eq!(layers.len(), 2);
+        assert!(layers[0].zoom.is_some_and(|phase| !phase.incoming));
+        assert!(layers[1].zoom.is_some_and(|phase| phase.incoming));
     }
 
     #[test]

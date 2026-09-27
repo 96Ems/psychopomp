@@ -103,6 +103,12 @@ impl FfmpegEncoder {
                 "medium",
                 "-crf",
                 "17",
+                // Film grain and bloom are expensive noise to encode; cap the rate so
+                // a grainy minute stays shareable while clean frames keep CRF quality.
+                "-maxrate",
+                "14M",
+                "-bufsize",
+                "28M",
                 "-pix_fmt",
                 "yuv420p",
                 "-movflags",

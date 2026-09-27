@@ -44,6 +44,7 @@ mod rich_text;
 mod sequence;
 #[cfg(test)]
 mod stability_tests;
+mod stage;
 mod task;
 mod terminal;
 mod value;
@@ -377,6 +378,7 @@ enum PreparedRoot {
     Deployment(Box<PreparedDeploymentQueue>),
     Grid(Box<grid::PreparedGrid>),
     Diagram(Box<diagram::PreparedDiagram>),
+    Stage(Box<stage::PreparedStage>),
 }
 
 struct PreparedPlan {
@@ -514,6 +516,9 @@ impl PreparedPlan {
             }
             preflight::RootPlan::Deployment(queue) => PreparedRoot::Deployment(queue),
             preflight::RootPlan::Grid(grid) => PreparedRoot::Grid(grid),
+            preflight::RootPlan::Stage { id, recipe } => PreparedRoot::Stage(Box::new(
+                stage::PreparedStage::from_recipe(id, *recipe, renderer)?,
+            )),
             preflight::RootPlan::Diagram { id, recipe } => {
                 PreparedRoot::Diagram(Box::new(diagram::PreparedDiagram::from_recipe(
                     id,
@@ -737,15 +742,15 @@ impl PreparedPlan {
             PreparedRoot::Deployment(queue) => Some(queue.visual_key(time)),
             _ => None,
         };
-        key.ambient_time = self
-            .running_properties()
-            .iter()
-            .any(|property| {
+        // A stage always moves (spin, flow, grain), so every temporal sample renders.
+        let stage = matches!(&self.root, PreparedRoot::Stage(_));
+        key.ambient_time = (stage
+            || self.running_properties().iter().any(|property| {
                 timeline
                     .sample_at(property, time)
                     .is_some_and(|state| state.position > 0.001)
-            })
-            .then_some(time.to_bits());
+            }))
+        .then_some(time.to_bits());
         Ok(key)
     }
 
@@ -769,6 +774,9 @@ impl PreparedPlan {
     ) -> Result<Vec<u8>> {
         let mut pixels = match &self.root {
             PreparedRoot::Diagram(diagram) => diagram.render(renderer, |a, p, d| {
+                self.property_value(timeline, a, p, time, d)
+            })?,
+            PreparedRoot::Stage(stage) => stage.render(renderer, time, |a, p, d| {
                 self.property_value(timeline, a, p, time, d)
             })?,
             PreparedRoot::Editor { editor, pointer } => {

@@ -124,7 +124,9 @@ on a single clock. Each segment keeps its own actors and local time, so a segmen
 choreography never depends on its position in the reel. A transition overlaps a
 segment with its predecessor: a crossfade mixes the incoming frame over the
 outgoing one, while a dip fades the outgoing segment to the empty background before
-the incoming one appears, so dense frames never overlap. At most two segments are
+the incoming one appears, so dense frames never overlap. A zoom flies into a focus
+rectangle of the outgoing frame, such as a card, while the incoming segment grows
+out of it, so a detail visibly becomes the next scene. At most two segments are
 visible at any instant. Segment media is retimed onto the reel clock for one audio
 mix. Unlike a Presentation Deck, a reel is delivered rather than navigated.
 
@@ -181,6 +183,18 @@ travels as a packet before its arrowhead and label land. Rows default to a slot 
 row, but several rows may share a slot, so a scene can play the broken behavior and
 then replay the fixed behavior in the same places by fading one set out. The recipe
 depicts a protocol; it does not simulate one.
+
+## Stage
+
+A 2.5D motion-graphics surface for explainers, rendered on the GPU. Elements sit at
+world positions seen through a perspective camera: floating cards with status
+lines, a particle orb that spins, breathes, and can shatter, curved light beams
+that draw, flow, and snap, packets that travel a beam with a comet trail and ripple
+on arrival, labels, and rings for timers and shockwaves. World x/y are canvas
+pixels at depth zero, so the default camera is pixel exact; depth gives parallax,
+depth of field, and draw order. Bright color blooms; the frame gets highlight
+rolloff, vignette, chromatic pulses, and grain. Ambient motion (spin, flow, grain)
+is a pure function of time, so any frame renders identically in any order.
 
 ## Caption
 

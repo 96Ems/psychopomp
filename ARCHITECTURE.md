@@ -400,6 +400,29 @@ Sequences draw with the other diagram surfaces (after Venn and Value Tokens);
 captions draw above rich text and below plain text. Semantic colors resolve through
 `Theme::tone`, the one place status colors are fixed.
 
+### Stage
+
+`stage` is an exclusive root recipe. The lightweight crate (`stage.rs`) owns the
+element model, strict channel names, the perspective `Camera`, and the deterministic
+geometry (Fibonacci orb points, shatter trajectories, beam curves), so authoring
+helpers (`StageActor`: `to`, `bounce`, `hit`, `send`, `type_in`) and tests need no GPU.
+`render/stage.rs` samples channels, projects every element, and emits depth-sorted
+signed-distance primitives (rounded rect, circle, arc, polyline with drawn length,
+dash, flow, and fade, atlas text, backdrop gradient) into one storage buffer;
+`stage.wgsl` draws them as instanced quads into an `Rgba16Float` target with
+premultiplied blending, where glow adds light at zero alpha. `stage_post.wgsl`
+thresholds and blooms that light through a five-level 13-tap downsample and tent
+upsample, then composites with highlight rolloff (identity below 0.8, so authored
+UI colors stay exact), chromatic aberration, vignette, and grain locked to the
+output frame so temporal samples do not average it away. Stage text is rasterized
+once at twice its size into an R8 atlas and drawn with a soft background-colored
+backing for legibility over light. A stage root marks every temporal sample as
+distinct (`ambient_time`), because spin, flow, and grain always move.
+
+Live shaders: when `KINOGRAPH_SHADER_DIR` is set, the stage reads `stage.wgsl` and
+`stage_post.wgsl` from that directory instead of the compiled-in copies, so each
+`plan frame` or sheet reflects shader edits without recompiling Rust.
+
 The editor adds `panel-x` (a translation of the projected card), `panel-opacity`,
 and Line Marks. Marks draw in the shared text pass before code, so the native
 preview path and the projected export path agree; a non-zero `panel-x` or partial
@@ -421,7 +444,10 @@ segment's media placements are shifted onto the reel clock with
 `MediaPlacement::shifted` and encoded through `scenes::encode_media_window_by_key`,
 the same temporal sampler and FFmpeg path as a single plan. `plan render`, `frame`,
 `validate`, and `inspect` recognize a reel by its `segments` key; `--cue` selects
-one segment by scene ID.
+one segment by scene ID. A zoom transition resolves each layer's
+`ReelZoom` transform (geometric scale, focus-to-center travel, rounded corners on
+the incoming card) and warps the rendered frames bilinearly before mixing; zoom
+progress is part of the sample key so the move keeps its motion blur.
 
 `kinograph/src/playback.rs` derives numeric step destinations from a renderer-prepared Timeline, after semantic geometry has resolved. Next, Previous, First, and Last append only changed channel targets through the shared Timeline compiler. Each spring therefore inherits position and velocity, including mid-flight reversals; unchanged destinations do not restart motion. Per-channel motion profiles come from the destination's latest authored spring (or its first spring before any event; set-only channels use a 0.4-second zero-bounce default). Replay alone resets to the entry pose. The local clock freezes on pause or once all channels settle, without retiming the authored video. Immutable `Arc<Timeline>` revisions make sampling history-independent even while input creates a newer revision.
 

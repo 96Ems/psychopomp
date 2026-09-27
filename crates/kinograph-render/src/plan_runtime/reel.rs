@@ -6,12 +6,15 @@ use std::{fs, path::Path};
 use anyhow::{Context, Result, bail};
 use kinograph::{
     composition::{Duration, MediaPlacement, Time, TimeRange},
-    plan::ReelPlan,
+    plan::{ReelPlan, ReelZoom},
 };
 use serde_json::{Value, json};
 
 use super::{PreparedPlan, VisualSampleKey, delivery, inspect_plan, validate_renderer_plan};
-use crate::render::{HeadlessRenderer, Theme};
+use crate::{
+    render::{HeadlessRenderer, Theme},
+    scenes::{HEIGHT, WIDTH},
+};
 
 /// Reels are recognized by their `segments` key, as decks are by `slides`.
 pub(super) fn is_reel(path: &Path) -> Result<bool> {
@@ -81,7 +84,7 @@ pub(super) struct PreparedReel {
 }
 
 #[derive(Debug, PartialEq)]
-pub(super) struct ReelSampleKey(Vec<(usize, u32, VisualSampleKey)>);
+pub(super) struct ReelSampleKey(Vec<(usize, u32, Option<u32>, VisualSampleKey)>);
 
 impl PreparedReel {
     pub(super) fn prepare(
@@ -125,9 +128,11 @@ impl PreparedReel {
             .layers_at(time)
             .into_iter()
             .map(|layer| {
+                // A zoom moves pixels even when both segments hold still.
                 Ok((
                     layer.segment,
                     layer.weight.to_bits(),
+                    layer.zoom.map(|phase| phase.progress.to_bits()),
                     self.segments[layer.segment].visual_sample_key(layer.local_seconds)?,
                 ))
             })
@@ -154,15 +159,101 @@ impl PreparedReel {
             let prepared = &self.segments[layer.segment];
             renderer.set_file_name(prepared.file_name());
             let pixels = prepared.render_sample(renderer, layer.local_seconds)?;
-            blended = Some(match blended {
-                None => pixels,
-                Some(mut below) => {
+            let (pixels, coverage) = match layer.zoom {
+                Some(phase) => {
+                    let zoom = ReelZoom::at(
+                        phase.focus,
+                        WIDTH as f32,
+                        HEIGHT as f32,
+                        phase.progress,
+                        phase.incoming,
+                    );
+                    let (warped, coverage) = warp(&pixels, zoom);
+                    (warped, Some(coverage))
+                }
+                None => (pixels, None),
+            };
+            blended = Some(match (blended, coverage) {
+                (None, None) => pixels,
+                (None, Some(coverage)) => {
+                    let mut below = renderer.render_title_card("", None, 0.0);
+                    mix_covered(&mut below, &pixels, &coverage, layer.weight);
+                    below
+                }
+                (Some(mut below), None) => {
                     crossfade(&mut below, &pixels, layer.weight);
+                    below
+                }
+                (Some(mut below), Some(coverage)) => {
+                    mix_covered(&mut below, &pixels, &coverage, layer.weight);
                     below
                 }
             });
         }
         blended.context("reel has no visible segment at this time")
+    }
+}
+
+/// A frame magnified or shrunk on screen: `output = source * scale + offset`,
+/// sampled bilinearly, with per-pixel coverage that is zero outside the source
+/// and rounded at `radius` (in output pixels) while the frame is card-sized.
+fn warp(source: &[u8], zoom: ReelZoom) -> (Vec<u8>, Vec<f32>) {
+    let (width, height) = (WIDTH as usize, HEIGHT as usize);
+    let mut pixels = vec![0_u8; width * height * 4];
+    let mut coverage = vec![0.0_f32; width * height];
+    let inverse = 1.0 / zoom.scale;
+    let radius = zoom.radius * inverse;
+    let (w, h) = (width as f32, height as f32);
+    for y in 0..height {
+        let sy = (y as f32 + 0.5 - zoom.offset[1]) * inverse - 0.5;
+        if sy < -1.0 || sy > h {
+            continue;
+        }
+        for x in 0..width {
+            let sx = (x as f32 + 0.5 - zoom.offset[0]) * inverse - 0.5;
+            if sx < -1.0 || sx > w {
+                continue;
+            }
+            // Distance inside the (rounded) source rectangle, in source pixels.
+            let qx = (sx + 0.5 - w * 0.5).abs() - (w * 0.5 - radius);
+            let qy = (sy + 0.5 - h * 0.5).abs() - (h * 0.5 - radius);
+            let outside = qx.max(0.0).hypot(qy.max(0.0)) + qx.max(qy).min(0.0) - radius;
+            let cover = (0.5 - outside * zoom.scale).clamp(0.0, 1.0);
+            if cover <= 0.0 {
+                continue;
+            }
+            let x0 = sx.floor().clamp(0.0, w - 1.0) as usize;
+            let y0 = sy.floor().clamp(0.0, h - 1.0) as usize;
+            let x1 = (x0 + 1).min(width - 1);
+            let y1 = (y0 + 1).min(height - 1);
+            let fx = (sx - x0 as f32).clamp(0.0, 1.0);
+            let fy = (sy - y0 as f32).clamp(0.0, 1.0);
+            let index = (y * width + x) * 4;
+            for channel in 0..3 {
+                let at = |px: usize, py: usize| f32::from(source[(py * width + px) * 4 + channel]);
+                let top = at(x0, y0) + (at(x1, y0) - at(x0, y0)) * fx;
+                let bottom = at(x0, y1) + (at(x1, y1) - at(x0, y1)) * fx;
+                pixels[index + channel] = (top + (bottom - top) * fy).round() as u8;
+            }
+            pixels[index + 3] = 255;
+            coverage[y * width + x] = cover;
+        }
+    }
+    (pixels, coverage)
+}
+
+/// Mix `above` over `below` where it covers, by `weight`.
+fn mix_covered(below: &mut [u8], above: &[u8], coverage: &[f32], weight: f32) {
+    for (index, cover) in coverage.iter().enumerate() {
+        let amount = (cover * weight).clamp(0.0, 1.0);
+        if amount <= 0.0 {
+            continue;
+        }
+        for channel in 0..3 {
+            let i = index * 4 + channel;
+            let mixed = f32::from(below[i]) + (f32::from(above[i]) - f32::from(below[i])) * amount;
+            below[i] = mixed.round() as u8;
+        }
     }
 }
 

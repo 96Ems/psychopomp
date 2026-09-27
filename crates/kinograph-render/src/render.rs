@@ -25,6 +25,7 @@ mod grid;
 mod header;
 mod rich_text;
 mod sequence;
+mod stage;
 mod task;
 mod terminal;
 mod text;
@@ -43,6 +44,7 @@ pub use grid::{
 };
 pub(crate) use header::{HeaderGlyphs, header_words};
 pub(crate) use rich_text::{RichTextGlyphs, RichTextSource, parse as parse_rich_text};
+pub(crate) use stage::StageGpu;
 pub use task::{
     BubblePose, ContentPose, QuoteFrame, TaskContentFrame, TaskLinkFrame, TaskSceneFrame,
     TaskVisualFrame,

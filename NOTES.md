@@ -515,6 +515,9 @@ The first four bullets below retain the **pre-fix review evidence**. Their unres
 - Phrase-keyed choreography survives re-voicing only if anchors avoid words speech recognition reformats. Whisper wrote "fifteen" as "15", "TUI" as "2e", and "SIGKILL" as "a kill" for the draft voice; number words now normalize to digits, and anchors avoid acronyms. A missing phrase fails the Scene Program with its clip and phrase instead of silently mistiming.
 - Replaying the fixed behavior in the same Sequence Diagram slots reads as a direct comparison: shared rows stay, broken-only rows fade, and fixed rows arrive where the broken ones were. Strikes reset at the switch so a dropped message reappears intact.
 
+- Explainer quality came from motion craft, not more diagram types. Remaking #50825 on the GPU Stage (particle orb, floating cards, flowing beams, packets with comet trails, perspective camera with depth of field, HDR bloom, rewind, and a zoom-through into the code) replaced a flat sequence diagram with a readable physical story: the SIGTERM visibly shatters the service and snaps every connection, and the fix replays the same moment intact. The 62-second film rendered in 547 seconds with every stage sample distinct (spin, flow, and grain always move).
+- Stage tuning notes: mixing accent into a near-black backdrop in linear light reads brown, so the backdrop is neutral and warmth comes only from bloom of lit objects; a dashed glow must be measured along the path too or it renders as bars across the line; snapped beams must recoil fully or their stubs meet as an asterisk; per-frame grain costs x264 about 24 Mbit/s at CRF 17, so the encoder now caps the rate at 14 Mbit/s (a 6 Mbit/s share copy of the flagship is visually equivalent at 39 MB).
+
 ## Next Question
 
 Can native interactive playback retain its responsiveness and interruption semantics for more complex editor, UI Surface, and media-backed scenes without forking the authored visual model?

@@ -27,6 +27,7 @@ use kinograph::{
     grid::GRID_RECIPE,
     plan::{ActorPlan, MediaKindPlan, ScenePlan, StateChannelPlan},
     sequence::SEQUENCE_RECIPE,
+    stage::{STAGE_RECIPE, StagePlan},
     state::{StateTrack, TimedState},
     task::{TASK_RECIPE, TaskRecipePlan},
     terminal::TERMINAL_RECORDING_RECIPE,
@@ -63,6 +64,10 @@ pub(super) enum RootPlan {
     Diagram {
         id: String,
         recipe: DiagramPlan,
+    },
+    Stage {
+        id: String,
+        recipe: Box<StagePlan>,
     },
 }
 pub(super) struct Title {
@@ -277,6 +282,7 @@ impl RootPlan {
             Self::Deployment(_) => Some(DEPLOYMENT_QUEUE_RECIPE),
             Self::Grid(_) => Some(GRID_RECIPE),
             Self::Diagram { .. } => Some(DIAGRAM),
+            Self::Stage { .. } => Some(STAGE_RECIPE),
         }
     }
 }
@@ -286,7 +292,7 @@ fn put_root(root: &mut RootPlan, next: RootPlan) -> Result<()> {
             bail!("plan renderer currently supports at most one {existing} root actor");
         }
         bail!(
-            "editor, title-card, terminal-recording, deployment-queue, keyed-grid, and prototype-diagram actors are exclusive root recipes"
+            "editor, title-card, terminal-recording, deployment-queue, keyed-grid, prototype-diagram, and stage actors are exclusive root recipes"
         );
     }
     *root = next;
@@ -357,6 +363,16 @@ impl Plan {
                         },
                     )?;
                 }
+                STAGE_RECIPE => put_root(
+                    &mut root,
+                    RootPlan::Stage {
+                        id: actor.id.clone(),
+                        recipe: Box::new(super::stage::validate_recipe(
+                            actor,
+                            &plan.continuous_channels,
+                        )?),
+                    },
+                )?,
                 "text" => texts.push(PlainText::new(actor, &plan)?),
                 TASK_RECIPE => {
                     let recipe: TaskRecipePlan = serde_json::from_value(actor.data.clone())
@@ -446,7 +462,8 @@ impl Plan {
             | RootPlan::Title(_)
             | RootPlan::Editor { .. }
             | RootPlan::Grid(_)
-            | RootPlan::Diagram { .. } => true,
+            | RootPlan::Diagram { .. }
+            | RootPlan::Stage { .. } => true,
             RootPlan::Terminal(_) | RootPlan::Deployment(_) => false,
         } && plan.state_channels.is_empty()
             && plan.media.is_empty();

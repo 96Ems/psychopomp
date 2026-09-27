@@ -12,6 +12,7 @@ pub mod motion;
 pub mod plan;
 pub mod playback;
 pub mod sequence;
+pub mod stage;
 pub mod state;
 pub mod task;
 pub mod terminal;

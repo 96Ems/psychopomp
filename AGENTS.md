@@ -77,11 +77,14 @@ Do not run the full render as routine validation when unit tests and static chec
 - `crates/kinograph/src/transcript.rs`: word timing ingestion, word and phrase cue lookup
 - `crates/kinograph/src/sequence.rs`: Sequence Diagram recipe values, slot geometry, validation, and the `SequenceActor` authoring handle
 - `crates/kinograph/src/caption.rs`: Caption recipe values and the `CaptionActor` authoring handle (typing, show, hide)
+- `crates/kinograph/src/stage.rs`: Stage elements, strict channels, perspective camera, orb/beam geometry, and the `StageActor` authoring handle
 - `crates/kinograph/src/tone.rs`: semantic Tone roles shared by explainer recipes
 - `crates/kinograph/src/highlight.rs`: line-local TypeScript highlighting into editor spans
 - `crates/kinograph-render/src/plan_runtime/reel.rs`: Reel preparation, layer mixing, media retiming, and reel frame/video delivery
 - `crates/kinograph-render/src/plan_runtime/sequence.rs` and `caption.rs`: strict-channel preflight for the explainer overlays
 - `crates/kinograph-render/src/render/sequence.rs` and `render/caption.rs`: Sequence Diagram and Caption pixels
+- `crates/kinograph-render/src/plan_runtime/stage.rs`: Stage root preflight and preparation
+- `crates/kinograph-render/src/render/stage.rs`, `stage.wgsl`, `stage_post.wgsl`: Stage primitives, HDR bloom, and composite; `KINOGRAPH_SHADER_DIR` loads the WGSL live
 - `crates/kinograph-render/src/render.rs`: concrete headless `wgpu` renderer, sprite compositor, and code annotations
 - `crates/kinograph-render/src/render/effects/`: independent pixel recipes for interchangeable short annotation effects
 - `crates/kinograph-render/src/render/task.rs`: concrete Effect Task recipe and compositing

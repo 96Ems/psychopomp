@@ -407,7 +407,9 @@ cargo run --release -- plan render scenes/pr-walkthrough/pr-walkthrough.reel.jso
 `narration.json` with exact decoded durations. Draft and final clips share file
 names, so switching voices re-times the reel without touching the Scene Program.
 
-A reel is `{ "version": 1, "id", "segments": [{ "transitionNanos", "transitionStyle": "crossfade" | "dip", "plan" }] }`.
+A reel is `{ "version": 1, "id", "segments": [{ "transitionNanos", "transitionStyle": "crossfade" | "dip" | "zoom", "transitionFocus"?, "plan" }] }`.
+A `zoom` needs `transitionFocus: [x, y, width, height]` in the outgoing frame; compute
+it with `stage::Camera::project` so it matches the card the camera flies into.
 Relative media paths resolve against the reel file. Prefer `dip` between frames
 that are both dense with text; a crossfade between two editors turns both unreadable.
 
@@ -424,6 +426,24 @@ Components used by explainers:
 - Editor Line Marks: `"mark": "added" | "removed"` on a line, with presence
   channel `mark.<line-id>`; `panel-x` and `panel-opacity` move and fade the card.
 - `--theme opencode` renders with the OpenCode TUI's tokens.
+- `stage` (root): `elements` of `kind` `card` (`at`, `size`, `title`, `status`,
+  `tone`), `orb` (`at`, `radius`, `points`), `beam` (`from`, `to`, `bend`),
+  `packet` (`beam`, `reverse`, `label`), `label` (`at`, `size`, `spans`), and `ring`
+  (`at`, `radius`, `thickness`), plus `post` (`bloom`, `grain`, `vignette`,
+  `backdrop`). Channels are `<element>.<property>` (for example `service.shatter`,
+  `link.flow`, `probe.travel`, `client.alarm`) and `camera.x|y|z|focus|dof|shake`,
+  `post.bloom|chroma|exposure|vignette`. Use `StageActor`: `send` eases a packet and
+  ripples on arrival, `hit` flashes and settles, `bounce` overshoots.
+
+`scenes/pr-walkthrough` also emits `pr-50825.reel.json`, a Stage film of #50825
+that zooms from the client card into its code:
+
+```sh
+cargo run -p kinograph-pr-walkthrough pr-50825
+KINOGRAPH_SHADER_DIR=crates/kinograph-render/src/render \
+  bun scripts/sheet.ts scenes/pr-walkthrough/pr-50825.reel.json 2,13,19,46 --theme opencode
+cargo run --release -- plan render scenes/pr-walkthrough/pr-50825.reel.json output/pr-50825.mp4 --theme opencode
+```
 
 ## Keep The Renderer Running
 
