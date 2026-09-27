@@ -3,152 +3,152 @@
   {
    "word": "In",
    "start": 0,
-   "end": 0.08
+   "end": 0.12
   },
   {
    "word": "the",
-   "start": 0.08,
-   "end": 0.14
+   "start": 0.12,
+   "end": 0.2
   },
   {
    "word": "code,",
-   "start": 0.14,
-   "end": 0.56
+   "start": 0.2,
+   "end": 0.46
   },
   {
    "word": "the",
-   "start": 0.62,
-   "end": 0.86
+   "start": 0.64,
+   "end": 1.14
   },
   {
    "word": "client",
-   "start": 0.86,
-   "end": 1.22
+   "start": 1.14,
+   "end": 1.46
   },
   {
    "word": "checks",
-   "start": 1.22,
-   "end": 1.58
+   "start": 1.46,
+   "end": 1.82
   },
   {
    "word": "the",
-   "start": 1.58,
-   "end": 1.78
-  },
-  {
-   "word": "version",
-   "start": 1.78,
+   "start": 1.82,
    "end": 2.04
   },
   {
-   "word": "requirement",
+   "word": "version",
    "start": 2.04,
-   "end": 2.42
+   "end": 2.32
+  },
+  {
+   "word": "requirement",
+   "start": 2.32,
+   "end": 2.66
   },
   {
    "word": "first.",
-   "start": 2.42,
-   "end": 3.12
+   "start": 2.66,
+   "end": 3.34
   },
   {
    "word": "If",
-   "start": 3.36,
-   "end": 3.66
+   "start": 3.84,
+   "end": 4.46
   },
   {
    "word": "the",
-   "start": 3.66,
-   "end": 3.78
+   "start": 4.46,
+   "end": 4.6
   },
   {
    "word": "version",
-   "start": 3.78,
-   "end": 4.1
+   "start": 4.6,
+   "end": 4.92
   },
   {
    "word": "is",
-   "start": 4.1,
-   "end": 4.28
+   "start": 4.92,
+   "end": 5.06
   },
   {
    "word": "fine",
-   "start": 4.28,
-   "end": 4.52
+   "start": 5.06,
+   "end": 5.36
   },
   {
    "word": "but",
-   "start": 4.52,
-   "end": 4.72
+   "start": 5.36,
+   "end": 5.68
   },
   {
    "word": "the",
-   "start": 4.72,
-   "end": 4.84
+   "start": 5.68,
+   "end": 5.84
   },
   {
    "word": "protocol",
-   "start": 4.84,
-   "end": 5.22
+   "start": 5.84,
+   "end": 6.16
   },
   {
    "word": "isn't,",
-   "start": 5.22,
-   "end": 5.88
+   "start": 6.16,
+   "end": 6.74
   },
   {
    "word": "it",
-   "start": 5.88,
-   "end": 6.12
+   "start": 6.78,
+   "end": 7.3
   },
   {
    "word": "fails",
-   "start": 6.12,
-   "end": 6.46
+   "start": 7.3,
+   "end": 7.7
   },
   {
    "word": "with",
-   "start": 6.46,
-   "end": 6.62
+   "start": 7.7,
+   "end": 8.04
   },
   {
    "word": "that",
-   "start": 6.62,
-   "end": 6.8
+   "start": 8.04,
+   "end": 8.24
   },
   {
-   "word": "message,",
-   "start": 6.8,
-   "end": 7.22
+   "word": "message",
+   "start": 8.24,
+   "end": 8.62
   },
   {
    "word": "instead",
-   "start": 7.42,
-   "end": 7.84
+   "start": 8.62,
+   "end": 9.4
   },
   {
    "word": "of",
-   "start": 7.84,
-   "end": 8.12
+   "start": 9.4,
+   "end": 9.7
   },
   {
    "word": "falling",
-   "start": 8.12,
-   "end": 8.36
+   "start": 9.7,
+   "end": 9.94
   },
   {
    "word": "through",
-   "start": 8.36,
-   "end": 8.72
+   "start": 9.94,
+   "end": 10.38
   },
   {
    "word": "to",
-   "start": 8.72,
-   "end": 8.86
+   "start": 10.38,
+   "end": 10.62
   },
   {
    "word": "stop.",
-   "start": 8.86,
-   "end": 9.14
+   "start": 10.62,
+   "end": 10.94
   }
  ]
 }

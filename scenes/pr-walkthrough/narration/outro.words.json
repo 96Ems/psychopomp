@@ -3,162 +3,162 @@
   {
    "word": "That's",
    "start": 0,
-   "end": 0.16
+   "end": 0.24
   },
   {
    "word": "all",
-   "start": 0.16,
-   "end": 0.28
+   "start": 0.24,
+   "end": 0.34
   },
   {
    "word": "five.",
-   "start": 0.28,
-   "end": 0.64
+   "start": 0.34,
+   "end": 0.72
   },
   {
    "word": "Start",
-   "start": 0.84,
-   "end": 1.26
+   "start": 1.12,
+   "end": 1.84
   },
   {
    "word": "with",
-   "start": 1.26,
-   "end": 1.54
+   "start": 1.84,
+   "end": 2.08
   },
   {
    "word": "the",
-   "start": 1.54,
-   "end": 1.64
+   "start": 2.08,
+   "end": 2.2
   },
   {
    "word": "first",
-   "start": 1.64,
-   "end": 1.92
+   "start": 2.2,
+   "end": 2.44
   },
   {
-   "word": "two.",
-   "start": 1.92,
-   "end": 2.16
+   "word": "two,",
+   "start": 2.44,
+   "end": 2.74
   },
   {
    "word": "Honest",
-   "start": 2.4,
-   "end": 2.92
-  },
-  {
-   "word": "startup",
    "start": 2.92,
-   "end": 3.2
+   "end": 3.84
   },
   {
-   "word": "errors.",
-   "start": 3.2,
-   "end": 3.62
+   "word": "Startup",
+   "start": 3.84,
+   "end": 4.26
   },
   {
-   "word": "And",
-   "start": 3.92,
-   "end": 4.24
+   "word": "Errors",
+   "start": 4.26,
+   "end": 4.66
   },
   {
-   "word": "no",
-   "start": 4.24,
-   "end": 4.36
+   "word": "and",
+   "start": 4.66,
+   "end": 5.3
   },
   {
-   "word": "more",
-   "start": 4.36,
-   "end": 4.56
+   "word": "No",
+   "start": 5.3,
+   "end": 5.56
   },
   {
-   "word": "killed",
-   "start": 4.56,
-   "end": 4.84
+   "word": "More",
+   "start": 5.56,
+   "end": 5.76
   },
   {
-   "word": "servers.",
-   "start": 4.84,
-   "end": 5.22
+   "word": "Killed",
+   "start": 5.76,
+   "end": 6.12
+  },
+  {
+   "word": "Servers.",
+   "start": 6.12,
+   "end": 6.64
   },
   {
    "word": "Then",
-   "start": 5.56,
-   "end": 5.88
-  },
-  {
-   "word": "bind",
-   "start": 5.88,
-   "end": 6.2
-  },
-  {
-   "word": "retries.",
-   "start": 6.2,
-   "end": 6.74
-  },
-  {
-   "word": "Clean",
-   "start": 6.96,
-   "end": 7.4
-  },
-  {
-   "word": "stops.",
-   "start": 7.4,
+   "start": 7.300000000000001,
    "end": 7.66
   },
   {
-   "word": "And",
-   "start": 8.1,
-   "end": 8.4
+   "word": "bind",
+   "start": 7.66,
+   "end": 8.06
+  },
+  {
+   "word": "retries,",
+   "start": 8.06,
+   "end": 8.68
+  },
+  {
+   "word": "clean",
+   "start": 8.86,
+   "end": 9.48
+  },
+  {
+   "word": "stops,",
+   "start": 9.48,
+   "end": 9.88
+  },
+  {
+   "word": "and",
+   "start": 10.18,
+   "end": 10.48
   },
   {
    "word": "the",
-   "start": 8.4,
-   "end": 8.5
+   "start": 10.48,
+   "end": 10.56
   },
   {
-   "word": "2e",
-   "start": 8.5,
-   "end": 8.84
+   "word": "TUI",
+   "start": 10.56,
+   "end": 11.14
   },
   {
    "word": "reconnect.",
-   "start": 8.84,
-   "end": 9.16
+   "start": 11.14,
+   "end": 11.56
   },
   {
    "word": "Each",
-   "start": 9.6,
-   "end": 9.92
+   "start": 12.46,
+   "end": 12.82
   },
   {
    "word": "one",
-   "start": 9.92,
-   "end": 10.04
+   "start": 12.82,
+   "end": 13.02
   },
   {
    "word": "is",
-   "start": 10.04,
-   "end": 10.28
+   "start": 13.02,
+   "end": 13.22
   },
   {
-   "word": "small.",
-   "start": 10.28,
-   "end": 10.5
+   "word": "small,",
+   "start": 13.22,
+   "end": 13.56
   },
   {
-   "word": "Tested.",
-   "start": 10.9,
-   "end": 11.48
+   "word": "tested,",
+   "start": 13.76,
+   "end": 14.3
   },
   {
-   "word": "And",
-   "start": 11.52,
-   "end": 11.82
+   "word": "and",
+   "start": 14.56,
+   "end": 14.9
   },
   {
    "word": "independent.",
-   "start": 11.82,
-   "end": 12.06
+   "start": 14.9,
+   "end": 15.26
   }
  ]
 }

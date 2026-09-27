@@ -3,207 +3,207 @@
   {
    "word": "Last,",
    "start": 0,
-   "end": 0.34
+   "end": 0.48
   },
   {
    "word": "the",
-   "start": 0.44,
-   "end": 0.68
+   "start": 0.6,
+   "end": 1.08
   },
   {
-   "word": "2e's",
-   "start": 0.68,
-   "end": 1.14
+   "word": "TUI's",
+   "start": 1.08,
+   "end": 1.84
   },
   {
    "word": "very",
-   "start": 1.14,
-   "end": 1.36
+   "start": 1.84,
+   "end": 2.3
   },
   {
    "word": "first",
-   "start": 1.36,
-   "end": 1.74
+   "start": 2.3,
+   "end": 2.64
   },
   {
    "word": "request.",
-   "start": 1.74,
-   "end": 2.22
+   "start": 2.64,
+   "end": 3.12
   },
   {
    "word": "The",
-   "start": 2.54,
-   "end": 2.82
+   "start": 3.98,
+   "end": 4.32
   },
   {
-   "word": "2e",
-   "start": 2.82,
-   "end": 3.18
+   "word": "TUI",
+   "start": 4.32,
+   "end": 4.9
   },
   {
    "word": "finds",
-   "start": 3.18,
-   "end": 3.48
+   "start": 4.9,
+   "end": 5.26
   },
   {
    "word": "a",
-   "start": 3.48,
-   "end": 3.72
+   "start": 5.26,
+   "end": 5.46
   },
   {
    "word": "healthy",
-   "start": 3.72,
-   "end": 3.96
-  },
-  {
-   "word": "server,",
-   "start": 3.96,
-   "end": 4.34
-  },
-  {
-   "word": "then",
-   "start": 4.58,
-   "end": 4.86
-  },
-  {
-   "word": "asks",
-   "start": 4.86,
-   "end": 5.2
-  },
-  {
-   "word": "it",
-   "start": 5.2,
-   "end": 5.4
-  },
-  {
-   "word": "for",
-   "start": 5.4,
-   "end": 5.54
-  },
-  {
-   "word": "the",
-   "start": 5.54,
+   "start": 5.46,
    "end": 5.66
   },
   {
-   "word": "current",
+   "word": "server,",
    "start": 5.66,
-   "end": 5.92
+   "end": 6.06
   },
   {
-   "word": "location.",
-   "start": 5.92,
-   "end": 6.46
+   "word": "then",
+   "start": 6.3,
+   "end": 7.04
   },
   {
-   "word": "If",
-   "start": 6.62,
-   "end": 7.1
+   "word": "asks",
+   "start": 7.04,
+   "end": 7.46
   },
   {
-   "word": "that",
-   "start": 7.1,
-   "end": 7.28
-  },
-  {
-   "word": "server",
-   "start": 7.28,
-   "end": 7.54
-  },
-  {
-   "word": "goes",
-   "start": 7.54,
-   "end": 7.82
-  },
-  {
-   "word": "away",
-   "start": 7.82,
-   "end": 8.16
-  },
-  {
-   "word": "in",
-   "start": 8.16,
-   "end": 8.34
-  },
-  {
-   "word": "between,",
-   "start": 8.34,
-   "end": 8.62
+   "word": "it",
+   "start": 7.46,
+   "end": 7.68
   },
   {
    "word": "for",
-   "start": 8.96,
-   "end": 9.26
-  },
-  {
-   "word": "any",
-   "start": 9.26,
-   "end": 9.46
-  },
-  {
-   "word": "reason,",
-   "start": 9.46,
-   "end": 9.84
-  },
-  {
-   "word": "that",
-   "start": 10.02,
-   "end": 10.32
-  },
-  {
-   "word": "one",
-   "start": 10.32,
-   "end": 10.52
-  },
-  {
-   "word": "request",
-   "start": 10.52,
-   "end": 10.88
-  },
-  {
-   "word": "fails,",
-   "start": 10.88,
-   "end": 11.4
-  },
-  {
-   "word": "and",
-   "start": 11.64,
-   "end": 11.92
+   "start": 7.68,
+   "end": 7.9
   },
   {
    "word": "the",
-   "start": 11.92,
-   "end": 12.02
+   "start": 7.9,
+   "end": 8.06
   },
   {
-   "word": "2e",
-   "start": 12.02,
-   "end": 12.4
+   "word": "current",
+   "start": 8.06,
+   "end": 8.3
+  },
+  {
+   "word": "location.",
+   "start": 8.3,
+   "end": 8.8
+  },
+  {
+   "word": "If",
+   "start": 9.58,
+   "end": 9.92
+  },
+  {
+   "word": "that",
+   "start": 9.92,
+   "end": 10.1
+  },
+  {
+   "word": "server",
+   "start": 10.1,
+   "end": 10.44
+  },
+  {
+   "word": "goes",
+   "start": 10.44,
+   "end": 10.66
+  },
+  {
+   "word": "away",
+   "start": 10.66,
+   "end": 11
+  },
+  {
+   "word": "in",
+   "start": 11,
+   "end": 11.2
+  },
+  {
+   "word": "between,",
+   "start": 11.2,
+   "end": 11.48
+  },
+  {
+   "word": "for",
+   "start": 11.72,
+   "end": 12.08
+  },
+  {
+   "word": "any",
+   "start": 12.08,
+   "end": 12.44
+  },
+  {
+   "word": "reason,",
+   "start": 12.44,
+   "end": 12.88
+  },
+  {
+   "word": "that",
+   "start": 12.98,
+   "end": 13.3
+  },
+  {
+   "word": "one",
+   "start": 13.3,
+   "end": 13.58
+  },
+  {
+   "word": "request",
+   "start": 13.58,
+   "end": 13.9
+  },
+  {
+   "word": "fails,",
+   "start": 13.9,
+   "end": 14.44
+  },
+  {
+   "word": "and",
+   "start": 15.02,
+   "end": 15.36
+  },
+  {
+   "word": "the",
+   "start": 15.36,
+   "end": 15.54
+  },
+  {
+   "word": "TUI",
+   "start": 15.54,
+   "end": 16.08
   },
   {
    "word": "exits",
-   "start": 12.4,
-   "end": 12.68
+   "start": 16.08,
+   "end": 16.54
   },
   {
    "word": "with",
-   "start": 12.68,
-   "end": 12.94
+   "start": 16.54,
+   "end": 16.98
   },
   {
    "word": "a",
-   "start": 12.94,
-   "end": 13.08
+   "start": 16.98,
+   "end": 17.2
   },
   {
    "word": "transport",
-   "start": 13.08,
-   "end": 13.46
+   "start": 17.2,
+   "end": 17.6
   },
   {
    "word": "error.",
-   "start": 13.46,
-   "end": 13.88
+   "start": 17.6,
+   "end": 18.08
   }
  ]
 }

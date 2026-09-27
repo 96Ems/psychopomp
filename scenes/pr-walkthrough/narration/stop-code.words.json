@@ -3,77 +3,77 @@
   {
    "word": "The",
    "start": 0,
-   "end": 0.14
+   "end": 0.18
   },
   {
    "word": "fix",
-   "start": 0.14,
-   "end": 0.26
+   "start": 0.18,
+   "end": 0.4
   },
   {
    "word": "deletes",
-   "start": 0.26,
-   "end": 0.78
+   "start": 0.4,
+   "end": 0.98
   },
   {
    "word": "two",
-   "start": 0.78,
-   "end": 0.9
+   "start": 0.98,
+   "end": 1.24
   },
   {
    "word": "lines",
-   "start": 0.9,
-   "end": 1.2
+   "start": 1.24,
+   "end": 1.68
   },
   {
    "word": "in",
-   "start": 1.2,
-   "end": 1.4
+   "start": 1.68,
+   "end": 1.96
   },
   {
    "word": "each",
-   "start": 1.4,
-   "end": 1.56
+   "start": 1.96,
+   "end": 2.14
   },
   {
    "word": "client,",
-   "start": 1.56,
-   "end": 1.98
+   "start": 2.14,
+   "end": 2.56
   },
   {
    "word": "the",
-   "start": 2.14,
-   "end": 2.4
+   "start": 2.72,
+   "end": 3.4
   },
   {
    "word": "early",
-   "start": 2.4,
-   "end": 2.66
+   "start": 3.4,
+   "end": 3.72
   },
   {
    "word": "return",
-   "start": 2.66,
-   "end": 3.02
+   "start": 3.72,
+   "end": 4.08
   },
   {
    "word": "that",
-   "start": 3.02,
-   "end": 3.3
+   "start": 4.08,
+   "end": 4.48
   },
   {
    "word": "trusted",
-   "start": 3.3,
-   "end": 3.62
+   "start": 4.48,
+   "end": 4.9
   },
   {
    "word": "the",
-   "start": 3.62,
-   "end": 3.84
+   "start": 4.9,
+   "end": 5.1
   },
   {
-   "word": "file.",
-   "start": 3.84,
-   "end": 4.06
+   "word": "file,",
+   "start": 5.1,
+   "end": 5.38
   }
  ]
 }

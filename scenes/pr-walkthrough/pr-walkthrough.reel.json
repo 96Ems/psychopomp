@@ -8,7 +8,7 @@
       "plan": {
         "version": 2,
         "id": "intro",
-        "durationNanos": 19372145833,
+        "durationNanos": 24779312500,
         "actors": [
           {
             "id": "header",
@@ -439,7 +439,7 @@
               },
               {
                 "operation": "spring",
-                "atNanos": 12860000000,
+                "atNanos": 16820000000,
                 "target": 0.0,
                 "responseSeconds": 0.54,
                 "dampingRatio": 1.0,
@@ -473,7 +473,7 @@
             "events": [
               {
                 "operation": "spring",
-                "atNanos": 3240000000,
+                "atNanos": 4140000000,
                 "target": 1.0,
                 "responseSeconds": 0.72,
                 "dampingRatio": 1.0,
@@ -490,7 +490,7 @@
             "events": [
               {
                 "operation": "spring",
-                "atNanos": 4180000000,
+                "atNanos": 5360000000,
                 "target": 1.0,
                 "responseSeconds": 0.72,
                 "dampingRatio": 1.0,
@@ -507,7 +507,7 @@
             "events": [
               {
                 "operation": "spring",
-                "atNanos": 4980000000,
+                "atNanos": 6180000000,
                 "target": 1.0,
                 "responseSeconds": 0.72,
                 "dampingRatio": 1.0,
@@ -524,7 +524,7 @@
             "events": [
               {
                 "operation": "spring",
-                "atNanos": 8840000000,
+                "atNanos": 11640000000,
                 "target": 1.0,
                 "responseSeconds": 0.72,
                 "dampingRatio": 1.0,
@@ -541,7 +541,7 @@
             "events": [
               {
                 "operation": "spring",
-                "atNanos": 12300000000,
+                "atNanos": 15800000000,
                 "target": 1.0,
                 "responseSeconds": 0.72,
                 "dampingRatio": 1.0,
@@ -558,7 +558,7 @@
             "events": [
               {
                 "operation": "set",
-                "atNanos": 13410000000,
+                "atNanos": 17370000000,
                 "value": 1.0
               }
             ]
@@ -571,182 +571,182 @@
             "events": [
               {
                 "operation": "set",
-                "atNanos": 13422500000,
+                "atNanos": 17382500000,
                 "value": 0.027777778
               },
               {
                 "operation": "set",
-                "atNanos": 13435000000,
+                "atNanos": 17395000000,
                 "value": 0.055555556
               },
               {
                 "operation": "set",
-                "atNanos": 13447500000,
+                "atNanos": 17407500000,
                 "value": 0.083333336
               },
               {
                 "operation": "set",
-                "atNanos": 13460000000,
+                "atNanos": 17420000000,
                 "value": 0.11111111
               },
               {
                 "operation": "set",
-                "atNanos": 13472500000,
+                "atNanos": 17432500000,
                 "value": 0.1388889
               },
               {
                 "operation": "set",
-                "atNanos": 13485000000,
+                "atNanos": 17445000000,
                 "value": 0.16666667
               },
               {
                 "operation": "set",
-                "atNanos": 13497500000,
+                "atNanos": 17457500000,
                 "value": 0.19444445
               },
               {
                 "operation": "set",
-                "atNanos": 13510000000,
+                "atNanos": 17470000000,
                 "value": 0.22222222
               },
               {
                 "operation": "set",
-                "atNanos": 13522500000,
+                "atNanos": 17482500000,
                 "value": 0.25
               },
               {
                 "operation": "set",
-                "atNanos": 13535000000,
+                "atNanos": 17495000000,
                 "value": 0.2777778
               },
               {
                 "operation": "set",
-                "atNanos": 13547500000,
+                "atNanos": 17507500000,
                 "value": 0.30555555
               },
               {
                 "operation": "set",
-                "atNanos": 13560000000,
+                "atNanos": 17520000000,
                 "value": 0.33333334
               },
               {
                 "operation": "set",
-                "atNanos": 13572500000,
+                "atNanos": 17532500000,
                 "value": 0.3611111
               },
               {
                 "operation": "set",
-                "atNanos": 13585000000,
+                "atNanos": 17545000000,
                 "value": 0.3888889
               },
               {
                 "operation": "set",
-                "atNanos": 13597500000,
+                "atNanos": 17557500000,
                 "value": 0.41666666
               },
               {
                 "operation": "set",
-                "atNanos": 13610000000,
+                "atNanos": 17570000000,
                 "value": 0.44444445
               },
               {
                 "operation": "set",
-                "atNanos": 13622500000,
+                "atNanos": 17582500000,
                 "value": 0.4722222
               },
               {
                 "operation": "set",
-                "atNanos": 13635000000,
+                "atNanos": 17595000000,
                 "value": 0.5
               },
               {
                 "operation": "set",
-                "atNanos": 13647500000,
+                "atNanos": 17607500000,
                 "value": 0.5277778
               },
               {
                 "operation": "set",
-                "atNanos": 13660000000,
+                "atNanos": 17620000000,
                 "value": 0.5555556
               },
               {
                 "operation": "set",
-                "atNanos": 13672500000,
+                "atNanos": 17632500000,
                 "value": 0.5833333
               },
               {
                 "operation": "set",
-                "atNanos": 13685000000,
+                "atNanos": 17645000000,
                 "value": 0.6111111
               },
               {
                 "operation": "set",
-                "atNanos": 13697500000,
+                "atNanos": 17657500000,
                 "value": 0.6388889
               },
               {
                 "operation": "set",
-                "atNanos": 13710000000,
+                "atNanos": 17670000000,
                 "value": 0.6666667
               },
               {
                 "operation": "set",
-                "atNanos": 13722500000,
+                "atNanos": 17682500000,
                 "value": 0.6944444
               },
               {
                 "operation": "set",
-                "atNanos": 13735000000,
+                "atNanos": 17695000000,
                 "value": 0.7222222
               },
               {
                 "operation": "set",
-                "atNanos": 13747500000,
+                "atNanos": 17707500000,
                 "value": 0.75
               },
               {
                 "operation": "set",
-                "atNanos": 13760000000,
+                "atNanos": 17720000000,
                 "value": 0.7777778
               },
               {
                 "operation": "set",
-                "atNanos": 13772500000,
+                "atNanos": 17732500000,
                 "value": 0.8055556
               },
               {
                 "operation": "set",
-                "atNanos": 13785000000,
+                "atNanos": 17745000000,
                 "value": 0.8333333
               },
               {
                 "operation": "set",
-                "atNanos": 13797500000,
+                "atNanos": 17757500000,
                 "value": 0.8611111
               },
               {
                 "operation": "set",
-                "atNanos": 13810000000,
+                "atNanos": 17770000000,
                 "value": 0.8888889
               },
               {
                 "operation": "set",
-                "atNanos": 13822500000,
+                "atNanos": 17782500000,
                 "value": 0.9166667
               },
               {
                 "operation": "set",
-                "atNanos": 13835000000,
+                "atNanos": 17795000000,
                 "value": 0.9444444
               },
               {
                 "operation": "set",
-                "atNanos": 13847500000,
+                "atNanos": 17807500000,
                 "value": 0.9722222
               },
               {
                 "operation": "set",
-                "atNanos": 13860000000,
+                "atNanos": 17820000000,
                 "value": 1.0
               }
             ]
@@ -759,12 +759,12 @@
             "events": [
               {
                 "operation": "set",
-                "atNanos": 13410000000,
+                "atNanos": 17370000000,
                 "value": 1.0
               },
               {
                 "operation": "spring",
-                "atNanos": 13860000000,
+                "atNanos": 17820000000,
                 "target": 0.0,
                 "responseSeconds": 0.24000001,
                 "dampingRatio": 1.0,
@@ -781,7 +781,7 @@
             "events": [
               {
                 "operation": "set",
-                "atNanos": 13980000000,
+                "atNanos": 17940000000,
                 "value": 1.0
               }
             ]
@@ -794,182 +794,182 @@
             "events": [
               {
                 "operation": "set",
-                "atNanos": 13992500000,
+                "atNanos": 17952500000,
                 "value": 0.027777778
               },
               {
                 "operation": "set",
-                "atNanos": 14005000000,
+                "atNanos": 17965000000,
                 "value": 0.055555556
               },
               {
                 "operation": "set",
-                "atNanos": 14017500000,
+                "atNanos": 17977500000,
                 "value": 0.083333336
               },
               {
                 "operation": "set",
-                "atNanos": 14030000000,
+                "atNanos": 17990000000,
                 "value": 0.11111111
               },
               {
                 "operation": "set",
-                "atNanos": 14042500000,
+                "atNanos": 18002500000,
                 "value": 0.1388889
               },
               {
                 "operation": "set",
-                "atNanos": 14055000000,
+                "atNanos": 18015000000,
                 "value": 0.16666667
               },
               {
                 "operation": "set",
-                "atNanos": 14067500000,
+                "atNanos": 18027500000,
                 "value": 0.19444445
               },
               {
                 "operation": "set",
-                "atNanos": 14080000000,
+                "atNanos": 18040000000,
                 "value": 0.22222222
               },
               {
                 "operation": "set",
-                "atNanos": 14092500000,
+                "atNanos": 18052500000,
                 "value": 0.25
               },
               {
                 "operation": "set",
-                "atNanos": 14105000000,
+                "atNanos": 18065000000,
                 "value": 0.2777778
               },
               {
                 "operation": "set",
-                "atNanos": 14117500000,
+                "atNanos": 18077500000,
                 "value": 0.30555555
               },
               {
                 "operation": "set",
-                "atNanos": 14130000000,
+                "atNanos": 18090000000,
                 "value": 0.33333334
               },
               {
                 "operation": "set",
-                "atNanos": 14142500000,
+                "atNanos": 18102500000,
                 "value": 0.3611111
               },
               {
                 "operation": "set",
-                "atNanos": 14155000000,
+                "atNanos": 18115000000,
                 "value": 0.3888889
               },
               {
                 "operation": "set",
-                "atNanos": 14167500000,
+                "atNanos": 18127500000,
                 "value": 0.41666666
               },
               {
                 "operation": "set",
-                "atNanos": 14180000000,
+                "atNanos": 18140000000,
                 "value": 0.44444445
               },
               {
                 "operation": "set",
-                "atNanos": 14192500000,
+                "atNanos": 18152500000,
                 "value": 0.4722222
               },
               {
                 "operation": "set",
-                "atNanos": 14205000000,
+                "atNanos": 18165000000,
                 "value": 0.5
               },
               {
                 "operation": "set",
-                "atNanos": 14217500000,
+                "atNanos": 18177500000,
                 "value": 0.5277778
               },
               {
                 "operation": "set",
-                "atNanos": 14230000000,
+                "atNanos": 18190000000,
                 "value": 0.5555556
               },
               {
                 "operation": "set",
-                "atNanos": 14242500000,
+                "atNanos": 18202500000,
                 "value": 0.5833333
               },
               {
                 "operation": "set",
-                "atNanos": 14255000000,
+                "atNanos": 18215000000,
                 "value": 0.6111111
               },
               {
                 "operation": "set",
-                "atNanos": 14267500000,
+                "atNanos": 18227500000,
                 "value": 0.6388889
               },
               {
                 "operation": "set",
-                "atNanos": 14280000000,
+                "atNanos": 18240000000,
                 "value": 0.6666667
               },
               {
                 "operation": "set",
-                "atNanos": 14292500000,
+                "atNanos": 18252500000,
                 "value": 0.6944444
               },
               {
                 "operation": "set",
-                "atNanos": 14305000000,
+                "atNanos": 18265000000,
                 "value": 0.7222222
               },
               {
                 "operation": "set",
-                "atNanos": 14317500000,
+                "atNanos": 18277500000,
                 "value": 0.75
               },
               {
                 "operation": "set",
-                "atNanos": 14330000000,
+                "atNanos": 18290000000,
                 "value": 0.7777778
               },
               {
                 "operation": "set",
-                "atNanos": 14342500000,
+                "atNanos": 18302500000,
                 "value": 0.8055556
               },
               {
                 "operation": "set",
-                "atNanos": 14355000000,
+                "atNanos": 18315000000,
                 "value": 0.8333333
               },
               {
                 "operation": "set",
-                "atNanos": 14367500000,
+                "atNanos": 18327500000,
                 "value": 0.8611111
               },
               {
                 "operation": "set",
-                "atNanos": 14380000000,
+                "atNanos": 18340000000,
                 "value": 0.8888889
               },
               {
                 "operation": "set",
-                "atNanos": 14392500000,
+                "atNanos": 18352500000,
                 "value": 0.9166667
               },
               {
                 "operation": "set",
-                "atNanos": 14405000000,
+                "atNanos": 18365000000,
                 "value": 0.9444444
               },
               {
                 "operation": "set",
-                "atNanos": 14417500000,
+                "atNanos": 18377500000,
                 "value": 0.9722222
               },
               {
                 "operation": "set",
-                "atNanos": 14430000000,
+                "atNanos": 18390000000,
                 "value": 1.0
               }
             ]
@@ -982,12 +982,12 @@
             "events": [
               {
                 "operation": "set",
-                "atNanos": 13980000000,
+                "atNanos": 17940000000,
                 "value": 1.0
               },
               {
                 "operation": "spring",
-                "atNanos": 14430000000,
+                "atNanos": 18390000000,
                 "target": 0.0,
                 "responseSeconds": 0.24000001,
                 "dampingRatio": 1.0,
@@ -1004,7 +1004,7 @@
             "events": [
               {
                 "operation": "set",
-                "atNanos": 14550000000,
+                "atNanos": 18510000000,
                 "value": 1.0
               }
             ]
@@ -1017,197 +1017,197 @@
             "events": [
               {
                 "operation": "set",
-                "atNanos": 14562500000,
+                "atNanos": 18522500000,
                 "value": 0.025641026
               },
               {
                 "operation": "set",
-                "atNanos": 14575000000,
+                "atNanos": 18535000000,
                 "value": 0.051282052
               },
               {
                 "operation": "set",
-                "atNanos": 14587500000,
+                "atNanos": 18547500000,
                 "value": 0.07692308
               },
               {
                 "operation": "set",
-                "atNanos": 14600000000,
+                "atNanos": 18560000000,
                 "value": 0.102564104
               },
               {
                 "operation": "set",
-                "atNanos": 14612500000,
+                "atNanos": 18572500000,
                 "value": 0.12820514
               },
               {
                 "operation": "set",
-                "atNanos": 14625000000,
+                "atNanos": 18585000000,
                 "value": 0.15384616
               },
               {
                 "operation": "set",
-                "atNanos": 14637500000,
+                "atNanos": 18597500000,
                 "value": 0.17948718
               },
               {
                 "operation": "set",
-                "atNanos": 14650000000,
+                "atNanos": 18610000000,
                 "value": 0.20512821
               },
               {
                 "operation": "set",
-                "atNanos": 14662500000,
+                "atNanos": 18622500000,
                 "value": 0.23076923
               },
               {
                 "operation": "set",
-                "atNanos": 14675000000,
+                "atNanos": 18635000000,
                 "value": 0.25641027
               },
               {
                 "operation": "set",
-                "atNanos": 14687500000,
+                "atNanos": 18647500000,
                 "value": 0.2820513
               },
               {
                 "operation": "set",
-                "atNanos": 14700000000,
+                "atNanos": 18660000000,
                 "value": 0.30769232
               },
               {
                 "operation": "set",
-                "atNanos": 14712500000,
+                "atNanos": 18672500000,
                 "value": 0.33333334
               },
               {
                 "operation": "set",
-                "atNanos": 14725000000,
+                "atNanos": 18685000000,
                 "value": 0.35897437
               },
               {
                 "operation": "set",
-                "atNanos": 14737500000,
+                "atNanos": 18697500000,
                 "value": 0.3846154
               },
               {
                 "operation": "set",
-                "atNanos": 14750000000,
+                "atNanos": 18710000000,
                 "value": 0.41025642
               },
               {
                 "operation": "set",
-                "atNanos": 14762500000,
+                "atNanos": 18722500000,
                 "value": 0.43589744
               },
               {
                 "operation": "set",
-                "atNanos": 14775000000,
+                "atNanos": 18735000000,
                 "value": 0.46153846
               },
               {
                 "operation": "set",
-                "atNanos": 14787500000,
+                "atNanos": 18747500000,
                 "value": 0.4871795
               },
               {
                 "operation": "set",
-                "atNanos": 14800000000,
+                "atNanos": 18760000000,
                 "value": 0.51282054
               },
               {
                 "operation": "set",
-                "atNanos": 14812500000,
+                "atNanos": 18772500000,
                 "value": 0.53846157
               },
               {
                 "operation": "set",
-                "atNanos": 14825000000,
+                "atNanos": 18785000000,
                 "value": 0.5641026
               },
               {
                 "operation": "set",
-                "atNanos": 14837500000,
+                "atNanos": 18797500000,
                 "value": 0.5897436
               },
               {
                 "operation": "set",
-                "atNanos": 14850000000,
+                "atNanos": 18810000000,
                 "value": 0.61538464
               },
               {
                 "operation": "set",
-                "atNanos": 14862500000,
+                "atNanos": 18822500000,
                 "value": 0.64102566
               },
               {
                 "operation": "set",
-                "atNanos": 14875000000,
+                "atNanos": 18835000000,
                 "value": 0.6666667
               },
               {
                 "operation": "set",
-                "atNanos": 14887500000,
+                "atNanos": 18847500000,
                 "value": 0.6923077
               },
               {
                 "operation": "set",
-                "atNanos": 14900000000,
+                "atNanos": 18860000000,
                 "value": 0.71794873
               },
               {
                 "operation": "set",
-                "atNanos": 14912500000,
+                "atNanos": 18872500000,
                 "value": 0.74358976
               },
               {
                 "operation": "set",
-                "atNanos": 14925000000,
+                "atNanos": 18885000000,
                 "value": 0.7692308
               },
               {
                 "operation": "set",
-                "atNanos": 14937500000,
+                "atNanos": 18897500000,
                 "value": 0.7948718
               },
               {
                 "operation": "set",
-                "atNanos": 14950000000,
+                "atNanos": 18910000000,
                 "value": 0.82051283
               },
               {
                 "operation": "set",
-                "atNanos": 14962500000,
+                "atNanos": 18922500000,
                 "value": 0.84615386
               },
               {
                 "operation": "set",
-                "atNanos": 14975000000,
+                "atNanos": 18935000000,
                 "value": 0.8717949
               },
               {
                 "operation": "set",
-                "atNanos": 14987500000,
+                "atNanos": 18947500000,
                 "value": 0.8974359
               },
               {
                 "operation": "set",
-                "atNanos": 15000000000,
+                "atNanos": 18960000000,
                 "value": 0.9230769
               },
               {
                 "operation": "set",
-                "atNanos": 15012500000,
+                "atNanos": 18972500000,
                 "value": 0.94871795
               },
               {
                 "operation": "set",
-                "atNanos": 15025000000,
+                "atNanos": 18985000000,
                 "value": 0.974359
               },
               {
                 "operation": "set",
-                "atNanos": 15037500000,
+                "atNanos": 18997500000,
                 "value": 1.0
               }
             ]
@@ -1220,12 +1220,12 @@
             "events": [
               {
                 "operation": "set",
-                "atNanos": 14550000000,
+                "atNanos": 18510000000,
                 "value": 1.0
               },
               {
                 "operation": "spring",
-                "atNanos": 15037500000,
+                "atNanos": 18997500000,
                 "target": 0.0,
                 "responseSeconds": 0.24000001,
                 "dampingRatio": 1.0,
@@ -1242,7 +1242,7 @@
             "events": [
               {
                 "operation": "set",
-                "atNanos": 15157500000,
+                "atNanos": 19117500000,
                 "value": 1.0
               }
             ]
@@ -1255,177 +1255,177 @@
             "events": [
               {
                 "operation": "set",
-                "atNanos": 15170000000,
+                "atNanos": 19130000000,
                 "value": 0.028571429
               },
               {
                 "operation": "set",
-                "atNanos": 15182500000,
+                "atNanos": 19142500000,
                 "value": 0.057142857
               },
               {
                 "operation": "set",
-                "atNanos": 15195000000,
+                "atNanos": 19155000000,
                 "value": 0.08571429
               },
               {
                 "operation": "set",
-                "atNanos": 15207500000,
+                "atNanos": 19167500000,
                 "value": 0.114285715
               },
               {
                 "operation": "set",
-                "atNanos": 15220000000,
+                "atNanos": 19180000000,
                 "value": 0.14285715
               },
               {
                 "operation": "set",
-                "atNanos": 15232500000,
+                "atNanos": 19192500000,
                 "value": 0.17142858
               },
               {
                 "operation": "set",
-                "atNanos": 15245000000,
+                "atNanos": 19205000000,
                 "value": 0.2
               },
               {
                 "operation": "set",
-                "atNanos": 15257500000,
+                "atNanos": 19217500000,
                 "value": 0.22857143
               },
               {
                 "operation": "set",
-                "atNanos": 15270000000,
+                "atNanos": 19230000000,
                 "value": 0.25714287
               },
               {
                 "operation": "set",
-                "atNanos": 15282500000,
+                "atNanos": 19242500000,
                 "value": 0.2857143
               },
               {
                 "operation": "set",
-                "atNanos": 15295000000,
+                "atNanos": 19255000000,
                 "value": 0.31428573
               },
               {
                 "operation": "set",
-                "atNanos": 15307500000,
+                "atNanos": 19267500000,
                 "value": 0.34285715
               },
               {
                 "operation": "set",
-                "atNanos": 15320000000,
+                "atNanos": 19280000000,
                 "value": 0.37142858
               },
               {
                 "operation": "set",
-                "atNanos": 15332500000,
+                "atNanos": 19292500000,
                 "value": 0.4
               },
               {
                 "operation": "set",
-                "atNanos": 15345000000,
+                "atNanos": 19305000000,
                 "value": 0.42857143
               },
               {
                 "operation": "set",
-                "atNanos": 15357500000,
+                "atNanos": 19317500000,
                 "value": 0.45714286
               },
               {
                 "operation": "set",
-                "atNanos": 15370000000,
+                "atNanos": 19330000000,
                 "value": 0.4857143
               },
               {
                 "operation": "set",
-                "atNanos": 15382500000,
+                "atNanos": 19342500000,
                 "value": 0.51428574
               },
               {
                 "operation": "set",
-                "atNanos": 15395000000,
+                "atNanos": 19355000000,
                 "value": 0.54285717
               },
               {
                 "operation": "set",
-                "atNanos": 15407500000,
+                "atNanos": 19367500000,
                 "value": 0.5714286
               },
               {
                 "operation": "set",
-                "atNanos": 15420000000,
+                "atNanos": 19380000000,
                 "value": 0.6
               },
               {
                 "operation": "set",
-                "atNanos": 15432500000,
+                "atNanos": 19392500000,
                 "value": 0.62857145
               },
               {
                 "operation": "set",
-                "atNanos": 15445000000,
+                "atNanos": 19405000000,
                 "value": 0.6571429
               },
               {
                 "operation": "set",
-                "atNanos": 15457500000,
+                "atNanos": 19417500000,
                 "value": 0.6857143
               },
               {
                 "operation": "set",
-                "atNanos": 15470000000,
+                "atNanos": 19430000000,
                 "value": 0.71428573
               },
               {
                 "operation": "set",
-                "atNanos": 15482500000,
+                "atNanos": 19442500000,
                 "value": 0.74285716
               },
               {
                 "operation": "set",
-                "atNanos": 15495000000,
+                "atNanos": 19455000000,
                 "value": 0.7714286
               },
               {
                 "operation": "set",
-                "atNanos": 15507500000,
+                "atNanos": 19467500000,
                 "value": 0.8
               },
               {
                 "operation": "set",
-                "atNanos": 15520000000,
+                "atNanos": 19480000000,
                 "value": 0.82857144
               },
               {
                 "operation": "set",
-                "atNanos": 15532500000,
+                "atNanos": 19492500000,
                 "value": 0.85714287
               },
               {
                 "operation": "set",
-                "atNanos": 15545000000,
+                "atNanos": 19505000000,
                 "value": 0.8857143
               },
               {
                 "operation": "set",
-                "atNanos": 15557500000,
+                "atNanos": 19517500000,
                 "value": 0.9142857
               },
               {
                 "operation": "set",
-                "atNanos": 15570000000,
+                "atNanos": 19530000000,
                 "value": 0.94285715
               },
               {
                 "operation": "set",
-                "atNanos": 15582500000,
+                "atNanos": 19542500000,
                 "value": 0.9714286
               },
               {
                 "operation": "set",
-                "atNanos": 15595000000,
+                "atNanos": 19555000000,
                 "value": 1.0
               }
             ]
@@ -1438,12 +1438,12 @@
             "events": [
               {
                 "operation": "set",
-                "atNanos": 15157500000,
+                "atNanos": 19117500000,
                 "value": 1.0
               },
               {
                 "operation": "spring",
-                "atNanos": 15595000000,
+                "atNanos": 19555000000,
                 "target": 0.0,
                 "responseSeconds": 0.24000001,
                 "dampingRatio": 1.0,
@@ -1460,7 +1460,7 @@
             "events": [
               {
                 "operation": "set",
-                "atNanos": 15715000000,
+                "atNanos": 19675000000,
                 "value": 1.0
               }
             ]
@@ -1473,212 +1473,212 @@
             "events": [
               {
                 "operation": "set",
-                "atNanos": 15727500000,
+                "atNanos": 19687500000,
                 "value": 0.023809524
               },
               {
                 "operation": "set",
-                "atNanos": 15740000000,
+                "atNanos": 19700000000,
                 "value": 0.04761905
               },
               {
                 "operation": "set",
-                "atNanos": 15752500000,
+                "atNanos": 19712500000,
                 "value": 0.071428575
               },
               {
                 "operation": "set",
-                "atNanos": 15765000000,
+                "atNanos": 19725000000,
                 "value": 0.0952381
               },
               {
                 "operation": "set",
-                "atNanos": 15777500000,
+                "atNanos": 19737500000,
                 "value": 0.11904762
               },
               {
                 "operation": "set",
-                "atNanos": 15790000000,
+                "atNanos": 19750000000,
                 "value": 0.14285715
               },
               {
                 "operation": "set",
-                "atNanos": 15802500000,
+                "atNanos": 19762500000,
                 "value": 0.16666667
               },
               {
                 "operation": "set",
-                "atNanos": 15815000000,
+                "atNanos": 19775000000,
                 "value": 0.1904762
               },
               {
                 "operation": "set",
-                "atNanos": 15827500000,
+                "atNanos": 19787500000,
                 "value": 0.21428572
               },
               {
                 "operation": "set",
-                "atNanos": 15840000000,
+                "atNanos": 19800000000,
                 "value": 0.23809524
               },
               {
                 "operation": "set",
-                "atNanos": 15852500000,
+                "atNanos": 19812500000,
                 "value": 0.26190478
               },
               {
                 "operation": "set",
-                "atNanos": 15865000000,
+                "atNanos": 19825000000,
                 "value": 0.2857143
               },
               {
                 "operation": "set",
-                "atNanos": 15877500000,
+                "atNanos": 19837500000,
                 "value": 0.30952382
               },
               {
                 "operation": "set",
-                "atNanos": 15890000000,
+                "atNanos": 19850000000,
                 "value": 0.33333334
               },
               {
                 "operation": "set",
-                "atNanos": 15902500000,
+                "atNanos": 19862500000,
                 "value": 0.35714287
               },
               {
                 "operation": "set",
-                "atNanos": 15915000000,
+                "atNanos": 19875000000,
                 "value": 0.3809524
               },
               {
                 "operation": "set",
-                "atNanos": 15927500000,
+                "atNanos": 19887500000,
                 "value": 0.4047619
               },
               {
                 "operation": "set",
-                "atNanos": 15940000000,
+                "atNanos": 19900000000,
                 "value": 0.42857143
               },
               {
                 "operation": "set",
-                "atNanos": 15952500000,
+                "atNanos": 19912500000,
                 "value": 0.45238096
               },
               {
                 "operation": "set",
-                "atNanos": 15965000000,
+                "atNanos": 19925000000,
                 "value": 0.47619048
               },
               {
                 "operation": "set",
-                "atNanos": 15977500000,
+                "atNanos": 19937500000,
                 "value": 0.5
               },
               {
                 "operation": "set",
-                "atNanos": 15990000000,
+                "atNanos": 19950000000,
                 "value": 0.52380955
               },
               {
                 "operation": "set",
-                "atNanos": 16002500000,
+                "atNanos": 19962500000,
                 "value": 0.54761904
               },
               {
                 "operation": "set",
-                "atNanos": 16015000000,
+                "atNanos": 19975000000,
                 "value": 0.5714286
               },
               {
                 "operation": "set",
-                "atNanos": 16027500000,
+                "atNanos": 19987500000,
                 "value": 0.5952381
               },
               {
                 "operation": "set",
-                "atNanos": 16040000000,
+                "atNanos": 20000000000,
                 "value": 0.61904764
               },
               {
                 "operation": "set",
-                "atNanos": 16052500000,
+                "atNanos": 20012500000,
                 "value": 0.64285713
               },
               {
                 "operation": "set",
-                "atNanos": 16065000000,
+                "atNanos": 20025000000,
                 "value": 0.6666667
               },
               {
                 "operation": "set",
-                "atNanos": 16077500000,
+                "atNanos": 20037500000,
                 "value": 0.6904762
               },
               {
                 "operation": "set",
-                "atNanos": 16090000000,
+                "atNanos": 20050000000,
                 "value": 0.71428573
               },
               {
                 "operation": "set",
-                "atNanos": 16102500000,
+                "atNanos": 20062500000,
                 "value": 0.7380952
               },
               {
                 "operation": "set",
-                "atNanos": 16115000000,
+                "atNanos": 20075000000,
                 "value": 0.7619048
               },
               {
                 "operation": "set",
-                "atNanos": 16127500000,
+                "atNanos": 20087500000,
                 "value": 0.78571427
               },
               {
                 "operation": "set",
-                "atNanos": 16140000000,
+                "atNanos": 20100000000,
                 "value": 0.8095238
               },
               {
                 "operation": "set",
-                "atNanos": 16152500000,
+                "atNanos": 20112500000,
                 "value": 0.8333333
               },
               {
                 "operation": "set",
-                "atNanos": 16165000000,
+                "atNanos": 20125000000,
                 "value": 0.85714287
               },
               {
                 "operation": "set",
-                "atNanos": 16177500000,
+                "atNanos": 20137500000,
                 "value": 0.88095236
               },
               {
                 "operation": "set",
-                "atNanos": 16190000000,
+                "atNanos": 20150000000,
                 "value": 0.9047619
               },
               {
                 "operation": "set",
-                "atNanos": 16202500000,
+                "atNanos": 20162500000,
                 "value": 0.9285714
               },
               {
                 "operation": "set",
-                "atNanos": 16215000000,
+                "atNanos": 20175000000,
                 "value": 0.95238096
               },
               {
                 "operation": "set",
-                "atNanos": 16227500000,
+                "atNanos": 20187500000,
                 "value": 0.97619045
               },
               {
                 "operation": "set",
-                "atNanos": 16240000000,
+                "atNanos": 20200000000,
                 "value": 1.0
               }
             ]
@@ -1691,12 +1691,12 @@
             "events": [
               {
                 "operation": "set",
-                "atNanos": 15715000000,
+                "atNanos": 19675000000,
                 "value": 1.0
               },
               {
                 "operation": "spring",
-                "atNanos": 16240000000,
+                "atNanos": 20200000000,
                 "target": 0.0,
                 "responseSeconds": 0.24000001,
                 "dampingRatio": 1.0,
@@ -1715,9 +1715,9 @@
             "kind": "audio",
             "role": "script",
             "sourceStartNanos": 0,
-            "sourceEndNanos": 16372145833,
+            "sourceEndNanos": 21779312500,
             "timelineStartNanos": 800000000,
-            "timelineEndNanos": 17172145833,
+            "timelineEndNanos": 22579312500,
             "gainDb": 0.0
           }
         ]
@@ -1729,7 +1729,7 @@
       "plan": {
         "version": 2,
         "id": "errors-behavior",
-        "durationNanos": 43735354166,
+        "durationNanos": 53065729165,
         "actors": [
           {
             "id": "header",
@@ -2236,7 +2236,7 @@
               },
               {
                 "operation": "spring",
-                "atNanos": 27666479166,
+                "atNanos": 33794791666,
                 "target": 0.0,
                 "responseSeconds": 0.36,
                 "dampingRatio": 1.0,
@@ -2270,7 +2270,7 @@
             "events": [
               {
                 "operation": "spring",
-                "atNanos": 27916479166,
+                "atNanos": 34044791666,
                 "target": 1.0,
                 "responseSeconds": 0.42000002,
                 "dampingRatio": 1.0,
@@ -2287,7 +2287,7 @@
             "events": [
               {
                 "operation": "spring",
-                "atNanos": 27916479166,
+                "atNanos": 34044791666,
                 "target": 0.0,
                 "responseSeconds": 0.54,
                 "dampingRatio": 1.0,
@@ -2338,7 +2338,7 @@
             "events": [
               {
                 "operation": "spring",
-                "atNanos": 4900000000,
+                "atNanos": 5700000000,
                 "target": 1.0,
                 "responseSeconds": 0.72,
                 "dampingRatio": 1.0,
@@ -2355,7 +2355,7 @@
             "events": [
               {
                 "operation": "spring",
-                "atNanos": 7560000000,
+                "atNanos": 8660000000,
                 "target": 1.0,
                 "responseSeconds": 0.72,
                 "dampingRatio": 1.0,
@@ -2372,7 +2372,7 @@
             "events": [
               {
                 "operation": "spring",
-                "atNanos": 11500000000,
+                "atNanos": 13580000000,
                 "target": 1.0,
                 "responseSeconds": 0.72,
                 "dampingRatio": 1.0,
@@ -2389,7 +2389,7 @@
             "events": [
               {
                 "operation": "spring",
-                "atNanos": 12140000000,
+                "atNanos": 14480000000,
                 "target": 1.0,
                 "responseSeconds": 0.72,
                 "dampingRatio": 1.0,
@@ -2406,7 +2406,7 @@
             "events": [
               {
                 "operation": "spring",
-                "atNanos": 14300000000,
+                "atNanos": 17200000000,
                 "target": 1.0,
                 "responseSeconds": 0.72,
                 "dampingRatio": 1.0,
@@ -2423,7 +2423,7 @@
             "events": [
               {
                 "operation": "spring",
-                "atNanos": 17820000000,
+                "atNanos": 21640000000,
                 "target": 1.0,
                 "responseSeconds": 0.72,
                 "dampingRatio": 1.0,
@@ -2440,7 +2440,7 @@
             "events": [
               {
                 "operation": "spring",
-                "atNanos": 20600000000,
+                "atNanos": 24980000000,
                 "target": 1.0,
                 "responseSeconds": 0.72,
                 "dampingRatio": 1.0,
@@ -2457,7 +2457,7 @@
             "events": [
               {
                 "operation": "spring",
-                "atNanos": 22720000000,
+                "atNanos": 27560000000,
                 "target": 1.0,
                 "responseSeconds": 0.72,
                 "dampingRatio": 1.0,
@@ -2474,7 +2474,7 @@
             "events": [
               {
                 "operation": "spring",
-                "atNanos": 30186479166,
+                "atNanos": 36374791666,
                 "target": 1.0,
                 "responseSeconds": 0.72,
                 "dampingRatio": 1.0,
@@ -2491,7 +2491,7 @@
             "events": [
               {
                 "operation": "spring",
-                "atNanos": 31746479166,
+                "atNanos": 38454791666,
                 "target": 1.0,
                 "responseSeconds": 0.72,
                 "dampingRatio": 1.0,
@@ -2508,7 +2508,7 @@
             "events": [
               {
                 "operation": "spring",
-                "atNanos": 38006479166,
+                "atNanos": 46514791666,
                 "target": 1.0,
                 "responseSeconds": 0.72,
                 "dampingRatio": 1.0,
@@ -2525,7 +2525,7 @@
             "events": [
               {
                 "operation": "spring",
-                "atNanos": 39446479166,
+                "atNanos": 48614791666,
                 "target": 1.0,
                 "responseSeconds": 0.72,
                 "dampingRatio": 1.0,
@@ -2542,7 +2542,7 @@
             "events": [
               {
                 "operation": "spring",
-                "atNanos": 20260000000,
+                "atNanos": 24420000000,
                 "target": 1.0,
                 "responseSeconds": 0.6,
                 "dampingRatio": 1.0,
@@ -2551,7 +2551,7 @@
               },
               {
                 "operation": "spring",
-                "atNanos": 27666479166,
+                "atNanos": 33794791666,
                 "target": 0.0,
                 "responseSeconds": 0.48000002,
                 "dampingRatio": 1.0,
@@ -2568,7 +2568,7 @@
             "events": [
               {
                 "operation": "spring",
-                "atNanos": 27666479166,
+                "atNanos": 33794791666,
                 "target": 0.0,
                 "responseSeconds": 0.54,
                 "dampingRatio": 1.0,
@@ -2585,7 +2585,7 @@
             "events": [
               {
                 "operation": "spring",
-                "atNanos": 27666479166,
+                "atNanos": 33794791666,
                 "target": 0.0,
                 "responseSeconds": 0.54,
                 "dampingRatio": 1.0,
@@ -2602,7 +2602,7 @@
             "events": [
               {
                 "operation": "spring",
-                "atNanos": 27666479166,
+                "atNanos": 33794791666,
                 "target": 0.0,
                 "responseSeconds": 0.54,
                 "dampingRatio": 1.0,
@@ -2619,7 +2619,7 @@
             "events": [
               {
                 "operation": "spring",
-                "atNanos": 27666479166,
+                "atNanos": 33794791666,
                 "target": 0.0,
                 "responseSeconds": 0.54,
                 "dampingRatio": 1.0,
@@ -2636,7 +2636,7 @@
             "events": [
               {
                 "operation": "spring",
-                "atNanos": 11500000000,
+                "atNanos": 13580000000,
                 "target": 1.0,
                 "responseSeconds": 0.42000002,
                 "dampingRatio": 1.0,
@@ -2645,7 +2645,7 @@
               },
               {
                 "operation": "spring",
-                "atNanos": 14300000000,
+                "atNanos": 17200000000,
                 "target": 0.0,
                 "responseSeconds": 0.54,
                 "dampingRatio": 1.0,
@@ -2662,7 +2662,7 @@
             "events": [
               {
                 "operation": "spring",
-                "atNanos": 17620000000,
+                "atNanos": 21440000000,
                 "target": 1.0,
                 "responseSeconds": 0.6,
                 "dampingRatio": 1.0,
@@ -2671,7 +2671,7 @@
               },
               {
                 "operation": "spring",
-                "atNanos": 27666479166,
+                "atNanos": 33794791666,
                 "target": 0.25,
                 "responseSeconds": 0.54,
                 "dampingRatio": 1.0,
@@ -2688,12 +2688,12 @@
             "events": [
               {
                 "operation": "set",
-                "atNanos": 25660000000,
+                "atNanos": 31620000000,
                 "value": 1.0
               },
               {
                 "operation": "spring",
-                "atNanos": 27666479166,
+                "atNanos": 33794791666,
                 "target": 0.0,
                 "responseSeconds": 0.36,
                 "dampingRatio": 1.0,
@@ -2710,207 +2710,207 @@
             "events": [
               {
                 "operation": "set",
-                "atNanos": 25683809523,
+                "atNanos": 31643809523,
                 "value": 0.024390243
               },
               {
                 "operation": "set",
-                "atNanos": 25707619046,
+                "atNanos": 31667619046,
                 "value": 0.048780486
               },
               {
                 "operation": "set",
-                "atNanos": 25731428569,
+                "atNanos": 31691428569,
                 "value": 0.07317073
               },
               {
                 "operation": "set",
-                "atNanos": 25755238092,
+                "atNanos": 31715238092,
                 "value": 0.09756097
               },
               {
                 "operation": "set",
-                "atNanos": 25779047615,
+                "atNanos": 31739047615,
                 "value": 0.12195122
               },
               {
                 "operation": "set",
-                "atNanos": 25802857138,
+                "atNanos": 31762857138,
                 "value": 0.14634146
               },
               {
                 "operation": "set",
-                "atNanos": 25826666661,
+                "atNanos": 31786666661,
                 "value": 0.17073171
               },
               {
                 "operation": "set",
-                "atNanos": 25850476184,
+                "atNanos": 31810476184,
                 "value": 0.19512194
               },
               {
                 "operation": "set",
-                "atNanos": 25874285707,
+                "atNanos": 31834285707,
                 "value": 0.2195122
               },
               {
                 "operation": "set",
-                "atNanos": 25898095230,
+                "atNanos": 31858095230,
                 "value": 0.24390244
               },
               {
                 "operation": "set",
-                "atNanos": 25921904753,
+                "atNanos": 31881904753,
                 "value": 0.2682927
               },
               {
                 "operation": "set",
-                "atNanos": 25945714276,
+                "atNanos": 31905714276,
                 "value": 0.29268292
               },
               {
                 "operation": "set",
-                "atNanos": 25969523799,
+                "atNanos": 31929523799,
                 "value": 0.31707317
               },
               {
                 "operation": "set",
-                "atNanos": 25993333322,
+                "atNanos": 31953333322,
                 "value": 0.34146342
               },
               {
                 "operation": "set",
-                "atNanos": 26017142845,
+                "atNanos": 31977142845,
                 "value": 0.36585367
               },
               {
                 "operation": "set",
-                "atNanos": 26040952368,
+                "atNanos": 32000952368,
                 "value": 0.3902439
               },
               {
                 "operation": "set",
-                "atNanos": 26064761891,
+                "atNanos": 32024761891,
                 "value": 0.41463414
               },
               {
                 "operation": "set",
-                "atNanos": 26088571414,
+                "atNanos": 32048571414,
                 "value": 0.4390244
               },
               {
                 "operation": "set",
-                "atNanos": 26112380937,
+                "atNanos": 32072380937,
                 "value": 0.46341464
               },
               {
                 "operation": "set",
-                "atNanos": 26136190460,
+                "atNanos": 32096190460,
                 "value": 0.4878049
               },
               {
                 "operation": "set",
-                "atNanos": 26159999983,
+                "atNanos": 32119999983,
                 "value": 0.5121951
               },
               {
                 "operation": "set",
-                "atNanos": 26183809506,
+                "atNanos": 32143809506,
                 "value": 0.5365854
               },
               {
                 "operation": "set",
-                "atNanos": 26207619029,
+                "atNanos": 32167619029,
                 "value": 0.5609756
               },
               {
                 "operation": "set",
-                "atNanos": 26231428552,
+                "atNanos": 32191428552,
                 "value": 0.58536583
               },
               {
                 "operation": "set",
-                "atNanos": 26255238075,
+                "atNanos": 32215238075,
                 "value": 0.6097561
               },
               {
                 "operation": "set",
-                "atNanos": 26279047598,
+                "atNanos": 32239047598,
                 "value": 0.63414633
               },
               {
                 "operation": "set",
-                "atNanos": 26302857121,
+                "atNanos": 32262857121,
                 "value": 0.6585366
               },
               {
                 "operation": "set",
-                "atNanos": 26326666644,
+                "atNanos": 32286666644,
                 "value": 0.68292683
               },
               {
                 "operation": "set",
-                "atNanos": 26350476167,
+                "atNanos": 32310476167,
                 "value": 0.70731705
               },
               {
                 "operation": "set",
-                "atNanos": 26374285690,
+                "atNanos": 32334285690,
                 "value": 0.73170733
               },
               {
                 "operation": "set",
-                "atNanos": 26398095213,
+                "atNanos": 32358095213,
                 "value": 0.75609756
               },
               {
                 "operation": "set",
-                "atNanos": 26421904736,
+                "atNanos": 32381904736,
                 "value": 0.7804878
               },
               {
                 "operation": "set",
-                "atNanos": 26445714259,
+                "atNanos": 32405714259,
                 "value": 0.80487806
               },
               {
                 "operation": "set",
-                "atNanos": 26469523782,
+                "atNanos": 32429523782,
                 "value": 0.8292683
               },
               {
                 "operation": "set",
-                "atNanos": 26493333305,
+                "atNanos": 32453333305,
                 "value": 0.85365856
               },
               {
                 "operation": "set",
-                "atNanos": 26517142828,
+                "atNanos": 32477142828,
                 "value": 0.8780488
               },
               {
                 "operation": "set",
-                "atNanos": 26540952351,
+                "atNanos": 32500952351,
                 "value": 0.902439
               },
               {
                 "operation": "set",
-                "atNanos": 26564761874,
+                "atNanos": 32524761874,
                 "value": 0.9268293
               },
               {
                 "operation": "set",
-                "atNanos": 26588571397,
+                "atNanos": 32548571397,
                 "value": 0.9512195
               },
               {
                 "operation": "set",
-                "atNanos": 26612380920,
+                "atNanos": 32572380920,
                 "value": 0.9756098
               },
               {
                 "operation": "set",
-                "atNanos": 26636190443,
+                "atNanos": 32596190443,
                 "value": 1.0
               }
             ]
@@ -2923,12 +2923,12 @@
             "events": [
               {
                 "operation": "set",
-                "atNanos": 25660000000,
+                "atNanos": 31620000000,
                 "value": 1.0
               },
               {
                 "operation": "spring",
-                "atNanos": 27436190454,
+                "atNanos": 33396190454,
                 "target": 0.0,
                 "responseSeconds": 0.24000001,
                 "dampingRatio": 1.0,
@@ -2945,7 +2945,7 @@
             "events": [
               {
                 "operation": "set",
-                "atNanos": 39446479166,
+                "atNanos": 48614791666,
                 "value": 1.0
               }
             ]
@@ -2958,172 +2958,172 @@
             "events": [
               {
                 "operation": "set",
-                "atNanos": 39470288689,
+                "atNanos": 48638601189,
                 "value": 0.029411765
               },
               {
                 "operation": "set",
-                "atNanos": 39494098212,
+                "atNanos": 48662410712,
                 "value": 0.05882353
               },
               {
                 "operation": "set",
-                "atNanos": 39517907735,
+                "atNanos": 48686220235,
                 "value": 0.0882353
               },
               {
                 "operation": "set",
-                "atNanos": 39541717258,
+                "atNanos": 48710029758,
                 "value": 0.11764706
               },
               {
                 "operation": "set",
-                "atNanos": 39565526781,
+                "atNanos": 48733839281,
                 "value": 0.14705883
               },
               {
                 "operation": "set",
-                "atNanos": 39589336304,
+                "atNanos": 48757648804,
                 "value": 0.1764706
               },
               {
                 "operation": "set",
-                "atNanos": 39613145827,
+                "atNanos": 48781458327,
                 "value": 0.20588236
               },
               {
                 "operation": "set",
-                "atNanos": 39636955350,
+                "atNanos": 48805267850,
                 "value": 0.23529412
               },
               {
                 "operation": "set",
-                "atNanos": 39660764873,
+                "atNanos": 48829077373,
                 "value": 0.2647059
               },
               {
                 "operation": "set",
-                "atNanos": 39684574396,
+                "atNanos": 48852886896,
                 "value": 0.29411766
               },
               {
                 "operation": "set",
-                "atNanos": 39708383919,
+                "atNanos": 48876696419,
                 "value": 0.32352942
               },
               {
                 "operation": "set",
-                "atNanos": 39732193442,
+                "atNanos": 48900505942,
                 "value": 0.3529412
               },
               {
                 "operation": "set",
-                "atNanos": 39756002965,
+                "atNanos": 48924315465,
                 "value": 0.38235295
               },
               {
                 "operation": "set",
-                "atNanos": 39779812488,
+                "atNanos": 48948124988,
                 "value": 0.4117647
               },
               {
                 "operation": "set",
-                "atNanos": 39803622011,
+                "atNanos": 48971934511,
                 "value": 0.44117647
               },
               {
                 "operation": "set",
-                "atNanos": 39827431534,
+                "atNanos": 48995744034,
                 "value": 0.47058824
               },
               {
                 "operation": "set",
-                "atNanos": 39851241057,
+                "atNanos": 49019553557,
                 "value": 0.5
               },
               {
                 "operation": "set",
-                "atNanos": 39875050580,
+                "atNanos": 49043363080,
                 "value": 0.5294118
               },
               {
                 "operation": "set",
-                "atNanos": 39898860103,
+                "atNanos": 49067172603,
                 "value": 0.5588235
               },
               {
                 "operation": "set",
-                "atNanos": 39922669626,
+                "atNanos": 49090982126,
                 "value": 0.5882353
               },
               {
                 "operation": "set",
-                "atNanos": 39946479149,
+                "atNanos": 49114791649,
                 "value": 0.61764705
               },
               {
                 "operation": "set",
-                "atNanos": 39970288672,
+                "atNanos": 49138601172,
                 "value": 0.64705884
               },
               {
                 "operation": "set",
-                "atNanos": 39994098195,
+                "atNanos": 49162410695,
                 "value": 0.6764706
               },
               {
                 "operation": "set",
-                "atNanos": 40017907718,
+                "atNanos": 49186220218,
                 "value": 0.7058824
               },
               {
                 "operation": "set",
-                "atNanos": 40041717241,
+                "atNanos": 49210029741,
                 "value": 0.7352941
               },
               {
                 "operation": "set",
-                "atNanos": 40065526764,
+                "atNanos": 49233839264,
                 "value": 0.7647059
               },
               {
                 "operation": "set",
-                "atNanos": 40089336287,
+                "atNanos": 49257648787,
                 "value": 0.7941176
               },
               {
                 "operation": "set",
-                "atNanos": 40113145810,
+                "atNanos": 49281458310,
                 "value": 0.8235294
               },
               {
                 "operation": "set",
-                "atNanos": 40136955333,
+                "atNanos": 49305267833,
                 "value": 0.85294116
               },
               {
                 "operation": "set",
-                "atNanos": 40160764856,
+                "atNanos": 49329077356,
                 "value": 0.88235295
               },
               {
                 "operation": "set",
-                "atNanos": 40184574379,
+                "atNanos": 49352886879,
                 "value": 0.9117647
               },
               {
                 "operation": "set",
-                "atNanos": 40208383902,
+                "atNanos": 49376696402,
                 "value": 0.9411765
               },
               {
                 "operation": "set",
-                "atNanos": 40232193425,
+                "atNanos": 49400505925,
                 "value": 0.9705882
               },
               {
                 "operation": "set",
-                "atNanos": 40256002948,
+                "atNanos": 49424315448,
                 "value": 1.0
               }
             ]
@@ -3136,12 +3136,12 @@
             "events": [
               {
                 "operation": "set",
-                "atNanos": 39446479166,
+                "atNanos": 48614791666,
                 "value": 1.0
               },
               {
                 "operation": "spring",
-                "atNanos": 41056002959,
+                "atNanos": 50224315459,
                 "target": 0.0,
                 "responseSeconds": 0.24000001,
                 "dampingRatio": 1.0,
@@ -3160,9 +3160,9 @@
             "kind": "audio",
             "role": "script",
             "sourceStartNanos": 0,
-            "sourceEndNanos": 26266479166,
+            "sourceEndNanos": 32394791666,
             "timelineStartNanos": 1000000000,
-            "timelineEndNanos": 27266479166,
+            "timelineEndNanos": 33394791666,
             "gainDb": 0.0
           },
           {
@@ -3171,9 +3171,9 @@
             "kind": "audio",
             "role": "script",
             "sourceStartNanos": 0,
-            "sourceEndNanos": 13468875000,
-            "timelineStartNanos": 28866479166,
-            "timelineEndNanos": 42335354166,
+            "sourceEndNanos": 16670937499,
+            "timelineStartNanos": 34994791666,
+            "timelineEndNanos": 51665729165,
             "gainDb": 0.0
           }
         ]
@@ -3185,7 +3185,7 @@
       "plan": {
         "version": 2,
         "id": "errors-code",
-        "durationNanos": 12751062500,
+        "durationNanos": 16013020833,
         "actors": [
           {
             "id": "header",
@@ -3836,7 +3836,7 @@
               ],
               "snapshots": [
                 {
-                  "atNanos": 2680000000,
+                  "atNanos": 3520000000,
                   "lineIds": [
                     "line-0",
                     "line-1",
@@ -3854,7 +3854,7 @@
                   ]
                 },
                 {
-                  "atNanos": 5400000000,
+                  "atNanos": 7080000000,
                   "lineIds": [
                     "line-0",
                     "line-1",
@@ -3873,7 +3873,7 @@
                   ]
                 },
                 {
-                  "atNanos": 8220000000,
+                  "atNanos": 10820000000,
                   "lineIds": [
                     "line-0",
                     "line-1",
@@ -3958,7 +3958,7 @@
             "events": [
               {
                 "operation": "spring",
-                "atNanos": 1780000000,
+                "atNanos": 2620000000,
                 "target": 1.0,
                 "responseSeconds": 0.42000002,
                 "dampingRatio": 1.0,
@@ -3975,7 +3975,7 @@
             "events": [
               {
                 "operation": "spring",
-                "atNanos": 4500000000,
+                "atNanos": 6180000000,
                 "target": 1.0,
                 "responseSeconds": 0.42000002,
                 "dampingRatio": 1.0,
@@ -3992,7 +3992,7 @@
             "events": [
               {
                 "operation": "spring",
-                "atNanos": 7320000000,
+                "atNanos": 9920000000,
                 "target": 1.0,
                 "responseSeconds": 0.42000002,
                 "dampingRatio": 1.0,
@@ -4079,9 +4079,9 @@
             "kind": "audio",
             "role": "script",
             "sourceStartNanos": 0,
-            "sourceEndNanos": 10251062500,
+            "sourceEndNanos": 13513020833,
             "timelineStartNanos": 900000000,
-            "timelineEndNanos": 11151062500,
+            "timelineEndNanos": 14413020833,
             "gainDb": 0.0
           }
         ]
@@ -4093,7 +4093,7 @@
       "plan": {
         "version": 2,
         "id": "mismatch-behavior",
-        "durationNanos": 38510770833,
+        "durationNanos": 47082499999,
         "actors": [
           {
             "id": "header",
@@ -4564,7 +4564,7 @@
               },
               {
                 "operation": "spring",
-                "atNanos": 22925208333,
+                "atNanos": 28229520833,
                 "target": 0.0,
                 "responseSeconds": 0.36,
                 "dampingRatio": 1.0,
@@ -4598,7 +4598,7 @@
             "events": [
               {
                 "operation": "spring",
-                "atNanos": 23175208333,
+                "atNanos": 28479520833,
                 "target": 1.0,
                 "responseSeconds": 0.42000002,
                 "dampingRatio": 1.0,
@@ -4615,7 +4615,7 @@
             "events": [
               {
                 "operation": "spring",
-                "atNanos": 23175208333,
+                "atNanos": 28479520833,
                 "target": 0.0,
                 "responseSeconds": 0.54,
                 "dampingRatio": 1.0,
@@ -4666,7 +4666,7 @@
             "events": [
               {
                 "operation": "spring",
-                "atNanos": 7580000000,
+                "atNanos": 9300000000,
                 "target": 1.0,
                 "responseSeconds": 0.72,
                 "dampingRatio": 1.0,
@@ -4683,7 +4683,7 @@
             "events": [
               {
                 "operation": "spring",
-                "atNanos": 8980000000,
+                "atNanos": 11420000000,
                 "target": 1.0,
                 "responseSeconds": 0.72,
                 "dampingRatio": 1.0,
@@ -4700,7 +4700,7 @@
             "events": [
               {
                 "operation": "spring",
-                "atNanos": 11220000000,
+                "atNanos": 14180000000,
                 "target": 1.0,
                 "responseSeconds": 0.72,
                 "dampingRatio": 1.0,
@@ -4717,7 +4717,7 @@
             "events": [
               {
                 "operation": "spring",
-                "atNanos": 13900000000,
+                "atNanos": 17340000000,
                 "target": 1.0,
                 "responseSeconds": 0.72,
                 "dampingRatio": 1.0,
@@ -4734,7 +4734,7 @@
             "events": [
               {
                 "operation": "spring",
-                "atNanos": 14900000000,
+                "atNanos": 18340000000,
                 "target": 1.0,
                 "responseSeconds": 0.72,
                 "dampingRatio": 1.0,
@@ -4751,7 +4751,7 @@
             "events": [
               {
                 "operation": "spring",
-                "atNanos": 20720000000,
+                "atNanos": 25800000000,
                 "target": 1.0,
                 "responseSeconds": 0.72,
                 "dampingRatio": 1.0,
@@ -4768,7 +4768,7 @@
             "events": [
               {
                 "operation": "spring",
-                "atNanos": 26005208333,
+                "atNanos": 31869520833,
                 "target": 1.0,
                 "responseSeconds": 0.72,
                 "dampingRatio": 1.0,
@@ -4785,7 +4785,7 @@
             "events": [
               {
                 "operation": "spring",
-                "atNanos": 31265208333,
+                "atNanos": 38449520833,
                 "target": 1.0,
                 "responseSeconds": 0.72,
                 "dampingRatio": 1.0,
@@ -4802,7 +4802,7 @@
             "events": [
               {
                 "operation": "spring",
-                "atNanos": 35665208333,
+                "atNanos": 43929520833,
                 "target": 1.0,
                 "responseSeconds": 0.72,
                 "dampingRatio": 1.0,
@@ -4819,7 +4819,7 @@
             "events": [
               {
                 "operation": "spring",
-                "atNanos": 22925208333,
+                "atNanos": 28229520833,
                 "target": 0.0,
                 "responseSeconds": 0.54,
                 "dampingRatio": 1.0,
@@ -4836,7 +4836,7 @@
             "events": [
               {
                 "operation": "spring",
-                "atNanos": 22925208333,
+                "atNanos": 28229520833,
                 "target": 0.0,
                 "responseSeconds": 0.54,
                 "dampingRatio": 1.0,
@@ -4853,7 +4853,7 @@
             "events": [
               {
                 "operation": "spring",
-                "atNanos": 22925208333,
+                "atNanos": 28229520833,
                 "target": 0.0,
                 "responseSeconds": 0.54,
                 "dampingRatio": 1.0,
@@ -4870,7 +4870,7 @@
             "events": [
               {
                 "operation": "spring",
-                "atNanos": 22925208333,
+                "atNanos": 28229520833,
                 "target": 0.0,
                 "responseSeconds": 0.54,
                 "dampingRatio": 1.0,
@@ -4887,7 +4887,7 @@
             "events": [
               {
                 "operation": "spring",
-                "atNanos": 13900000000,
+                "atNanos": 17340000000,
                 "target": 1.0,
                 "responseSeconds": 0.42000002,
                 "dampingRatio": 1.0,
@@ -4896,7 +4896,7 @@
               },
               {
                 "operation": "spring",
-                "atNanos": 20720000000,
+                "atNanos": 25800000000,
                 "target": 0.0,
                 "responseSeconds": 0.54,
                 "dampingRatio": 1.0,
@@ -4913,12 +4913,12 @@
             "events": [
               {
                 "operation": "set",
-                "atNanos": 20720000000,
+                "atNanos": 25800000000,
                 "value": 1.0
               },
               {
                 "operation": "spring",
-                "atNanos": 22925208333,
+                "atNanos": 28229520833,
                 "target": 0.0,
                 "responseSeconds": 0.36,
                 "dampingRatio": 1.0,
@@ -4935,142 +4935,142 @@
             "events": [
               {
                 "operation": "set",
-                "atNanos": 20743809523,
+                "atNanos": 25823809523,
                 "value": 0.035714287
               },
               {
                 "operation": "set",
-                "atNanos": 20767619046,
+                "atNanos": 25847619046,
                 "value": 0.071428575
               },
               {
                 "operation": "set",
-                "atNanos": 20791428569,
+                "atNanos": 25871428569,
                 "value": 0.10714286
               },
               {
                 "operation": "set",
-                "atNanos": 20815238092,
+                "atNanos": 25895238092,
                 "value": 0.14285715
               },
               {
                 "operation": "set",
-                "atNanos": 20839047615,
+                "atNanos": 25919047615,
                 "value": 0.17857143
               },
               {
                 "operation": "set",
-                "atNanos": 20862857138,
+                "atNanos": 25942857138,
                 "value": 0.21428572
               },
               {
                 "operation": "set",
-                "atNanos": 20886666661,
+                "atNanos": 25966666661,
                 "value": 0.25
               },
               {
                 "operation": "set",
-                "atNanos": 20910476184,
+                "atNanos": 25990476184,
                 "value": 0.2857143
               },
               {
                 "operation": "set",
-                "atNanos": 20934285707,
+                "atNanos": 26014285707,
                 "value": 0.32142857
               },
               {
                 "operation": "set",
-                "atNanos": 20958095230,
+                "atNanos": 26038095230,
                 "value": 0.35714287
               },
               {
                 "operation": "set",
-                "atNanos": 20981904753,
+                "atNanos": 26061904753,
                 "value": 0.39285713
               },
               {
                 "operation": "set",
-                "atNanos": 21005714276,
+                "atNanos": 26085714276,
                 "value": 0.42857143
               },
               {
                 "operation": "set",
-                "atNanos": 21029523799,
+                "atNanos": 26109523799,
                 "value": 0.4642857
               },
               {
                 "operation": "set",
-                "atNanos": 21053333322,
+                "atNanos": 26133333322,
                 "value": 0.5
               },
               {
                 "operation": "set",
-                "atNanos": 21077142845,
+                "atNanos": 26157142845,
                 "value": 0.53571427
               },
               {
                 "operation": "set",
-                "atNanos": 21100952368,
+                "atNanos": 26180952368,
                 "value": 0.5714286
               },
               {
                 "operation": "set",
-                "atNanos": 21124761891,
+                "atNanos": 26204761891,
                 "value": 0.60714287
               },
               {
                 "operation": "set",
-                "atNanos": 21148571414,
+                "atNanos": 26228571414,
                 "value": 0.64285713
               },
               {
                 "operation": "set",
-                "atNanos": 21172380937,
+                "atNanos": 26252380937,
                 "value": 0.6785714
               },
               {
                 "operation": "set",
-                "atNanos": 21196190460,
+                "atNanos": 26276190460,
                 "value": 0.71428573
               },
               {
                 "operation": "set",
-                "atNanos": 21219999983,
+                "atNanos": 26299999983,
                 "value": 0.75
               },
               {
                 "operation": "set",
-                "atNanos": 21243809506,
+                "atNanos": 26323809506,
                 "value": 0.78571427
               },
               {
                 "operation": "set",
-                "atNanos": 21267619029,
+                "atNanos": 26347619029,
                 "value": 0.8214286
               },
               {
                 "operation": "set",
-                "atNanos": 21291428552,
+                "atNanos": 26371428552,
                 "value": 0.85714287
               },
               {
                 "operation": "set",
-                "atNanos": 21315238075,
+                "atNanos": 26395238075,
                 "value": 0.89285713
               },
               {
                 "operation": "set",
-                "atNanos": 21339047598,
+                "atNanos": 26419047598,
                 "value": 0.9285714
               },
               {
                 "operation": "set",
-                "atNanos": 21362857121,
+                "atNanos": 26442857121,
                 "value": 0.96428573
               },
               {
                 "operation": "set",
-                "atNanos": 21386666644,
+                "atNanos": 26466666644,
                 "value": 1.0
               }
             ]
@@ -5083,12 +5083,12 @@
             "events": [
               {
                 "operation": "set",
-                "atNanos": 20720000000,
+                "atNanos": 25800000000,
                 "value": 1.0
               },
               {
                 "operation": "spring",
-                "atNanos": 22186666655,
+                "atNanos": 27266666655,
                 "target": 0.0,
                 "responseSeconds": 0.24000001,
                 "dampingRatio": 1.0,
@@ -5105,7 +5105,7 @@
             "events": [
               {
                 "operation": "set",
-                "atNanos": 35665208333,
+                "atNanos": 43929520833,
                 "value": 1.0
               }
             ]
@@ -5118,182 +5118,182 @@
             "events": [
               {
                 "operation": "set",
-                "atNanos": 35689017856,
+                "atNanos": 43953330356,
                 "value": 0.027777778
               },
               {
                 "operation": "set",
-                "atNanos": 35712827379,
+                "atNanos": 43977139879,
                 "value": 0.055555556
               },
               {
                 "operation": "set",
-                "atNanos": 35736636902,
+                "atNanos": 44000949402,
                 "value": 0.083333336
               },
               {
                 "operation": "set",
-                "atNanos": 35760446425,
+                "atNanos": 44024758925,
                 "value": 0.11111111
               },
               {
                 "operation": "set",
-                "atNanos": 35784255948,
+                "atNanos": 44048568448,
                 "value": 0.1388889
               },
               {
                 "operation": "set",
-                "atNanos": 35808065471,
+                "atNanos": 44072377971,
                 "value": 0.16666667
               },
               {
                 "operation": "set",
-                "atNanos": 35831874994,
+                "atNanos": 44096187494,
                 "value": 0.19444445
               },
               {
                 "operation": "set",
-                "atNanos": 35855684517,
+                "atNanos": 44119997017,
                 "value": 0.22222222
               },
               {
                 "operation": "set",
-                "atNanos": 35879494040,
+                "atNanos": 44143806540,
                 "value": 0.25
               },
               {
                 "operation": "set",
-                "atNanos": 35903303563,
+                "atNanos": 44167616063,
                 "value": 0.2777778
               },
               {
                 "operation": "set",
-                "atNanos": 35927113086,
+                "atNanos": 44191425586,
                 "value": 0.30555555
               },
               {
                 "operation": "set",
-                "atNanos": 35950922609,
+                "atNanos": 44215235109,
                 "value": 0.33333334
               },
               {
                 "operation": "set",
-                "atNanos": 35974732132,
+                "atNanos": 44239044632,
                 "value": 0.3611111
               },
               {
                 "operation": "set",
-                "atNanos": 35998541655,
+                "atNanos": 44262854155,
                 "value": 0.3888889
               },
               {
                 "operation": "set",
-                "atNanos": 36022351178,
+                "atNanos": 44286663678,
                 "value": 0.41666666
               },
               {
                 "operation": "set",
-                "atNanos": 36046160701,
+                "atNanos": 44310473201,
                 "value": 0.44444445
               },
               {
                 "operation": "set",
-                "atNanos": 36069970224,
+                "atNanos": 44334282724,
                 "value": 0.4722222
               },
               {
                 "operation": "set",
-                "atNanos": 36093779747,
+                "atNanos": 44358092247,
                 "value": 0.5
               },
               {
                 "operation": "set",
-                "atNanos": 36117589270,
+                "atNanos": 44381901770,
                 "value": 0.5277778
               },
               {
                 "operation": "set",
-                "atNanos": 36141398793,
+                "atNanos": 44405711293,
                 "value": 0.5555556
               },
               {
                 "operation": "set",
-                "atNanos": 36165208316,
+                "atNanos": 44429520816,
                 "value": 0.5833333
               },
               {
                 "operation": "set",
-                "atNanos": 36189017839,
+                "atNanos": 44453330339,
                 "value": 0.6111111
               },
               {
                 "operation": "set",
-                "atNanos": 36212827362,
+                "atNanos": 44477139862,
                 "value": 0.6388889
               },
               {
                 "operation": "set",
-                "atNanos": 36236636885,
+                "atNanos": 44500949385,
                 "value": 0.6666667
               },
               {
                 "operation": "set",
-                "atNanos": 36260446408,
+                "atNanos": 44524758908,
                 "value": 0.6944444
               },
               {
                 "operation": "set",
-                "atNanos": 36284255931,
+                "atNanos": 44548568431,
                 "value": 0.7222222
               },
               {
                 "operation": "set",
-                "atNanos": 36308065454,
+                "atNanos": 44572377954,
                 "value": 0.75
               },
               {
                 "operation": "set",
-                "atNanos": 36331874977,
+                "atNanos": 44596187477,
                 "value": 0.7777778
               },
               {
                 "operation": "set",
-                "atNanos": 36355684500,
+                "atNanos": 44619997000,
                 "value": 0.8055556
               },
               {
                 "operation": "set",
-                "atNanos": 36379494023,
+                "atNanos": 44643806523,
                 "value": 0.8333333
               },
               {
                 "operation": "set",
-                "atNanos": 36403303546,
+                "atNanos": 44667616046,
                 "value": 0.8611111
               },
               {
                 "operation": "set",
-                "atNanos": 36427113069,
+                "atNanos": 44691425569,
                 "value": 0.8888889
               },
               {
                 "operation": "set",
-                "atNanos": 36450922592,
+                "atNanos": 44715235092,
                 "value": 0.9166667
               },
               {
                 "operation": "set",
-                "atNanos": 36474732115,
+                "atNanos": 44739044615,
                 "value": 0.9444444
               },
               {
                 "operation": "set",
-                "atNanos": 36498541638,
+                "atNanos": 44762854138,
                 "value": 0.9722222
               },
               {
                 "operation": "set",
-                "atNanos": 36522351161,
+                "atNanos": 44786663661,
                 "value": 1.0
               }
             ]
@@ -5306,12 +5306,12 @@
             "events": [
               {
                 "operation": "set",
-                "atNanos": 35665208333,
+                "atNanos": 43929520833,
                 "value": 1.0
               },
               {
                 "operation": "spring",
-                "atNanos": 37322351172,
+                "atNanos": 45586663672,
                 "target": 0.0,
                 "responseSeconds": 0.24000001,
                 "dampingRatio": 1.0,
@@ -5330,9 +5330,9 @@
             "kind": "audio",
             "role": "script",
             "sourceStartNanos": 0,
-            "sourceEndNanos": 21525208333,
+            "sourceEndNanos": 26829520833,
             "timelineStartNanos": 1000000000,
-            "timelineEndNanos": 22525208333,
+            "timelineEndNanos": 27829520833,
             "gainDb": 0.0
           },
           {
@@ -5341,9 +5341,9 @@
             "kind": "audio",
             "role": "script",
             "sourceStartNanos": 0,
-            "sourceEndNanos": 12985562500,
-            "timelineStartNanos": 24125208333,
-            "timelineEndNanos": 37110770833,
+            "sourceEndNanos": 16252979166,
+            "timelineStartNanos": 29429520833,
+            "timelineEndNanos": 45682499999,
             "gainDb": 0.0
           }
         ]
@@ -5355,7 +5355,7 @@
       "plan": {
         "version": 2,
         "id": "mismatch-code",
-        "durationNanos": 12131875000,
+        "durationNanos": 13830333333,
         "actors": [
           {
             "id": "header",
@@ -5859,7 +5859,7 @@
               ],
               "snapshots": [
                 {
-                  "atNanos": 2120000000,
+                  "atNanos": 2360000000,
                   "lineIds": [
                     "line-0",
                     "line-3",
@@ -5872,7 +5872,7 @@
                   ]
                 },
                 {
-                  "atNanos": 4260000000,
+                  "atNanos": 4740000000,
                   "lineIds": [
                     "line-0",
                     "line-3",
@@ -5955,7 +5955,7 @@
             "events": [
               {
                 "operation": "spring",
-                "atNanos": 1220000000,
+                "atNanos": 1460000000,
                 "target": 1.0,
                 "responseSeconds": 0.42000002,
                 "dampingRatio": 1.0,
@@ -5972,7 +5972,7 @@
             "events": [
               {
                 "operation": "spring",
-                "atNanos": 1220000000,
+                "atNanos": 1460000000,
                 "target": 1.0,
                 "responseSeconds": 0.42000002,
                 "dampingRatio": 1.0,
@@ -6059,9 +6059,9 @@
             "kind": "audio",
             "role": "script",
             "sourceStartNanos": 0,
-            "sourceEndNanos": 9631875000,
+            "sourceEndNanos": 11330333333,
             "timelineStartNanos": 900000000,
-            "timelineEndNanos": 10531875000,
+            "timelineEndNanos": 12230333333,
             "gainDb": 0.0
           }
         ]
@@ -6073,7 +6073,7 @@
       "plan": {
         "version": 2,
         "id": "bind-behavior",
-        "durationNanos": 33695062499,
+        "durationNanos": 40893479166,
         "actors": [
           {
             "id": "header",
@@ -6565,7 +6565,7 @@
               },
               {
                 "operation": "spring",
-                "atNanos": 21568687499,
+                "atNanos": 25848583333,
                 "target": 0.0,
                 "responseSeconds": 0.36,
                 "dampingRatio": 1.0,
@@ -6599,7 +6599,7 @@
             "events": [
               {
                 "operation": "spring",
-                "atNanos": 21818687499,
+                "atNanos": 26098583333,
                 "target": 1.0,
                 "responseSeconds": 0.42000002,
                 "dampingRatio": 1.0,
@@ -6616,7 +6616,7 @@
             "events": [
               {
                 "operation": "spring",
-                "atNanos": 21818687499,
+                "atNanos": 26098583333,
                 "target": 0.0,
                 "responseSeconds": 0.54,
                 "dampingRatio": 1.0,
@@ -6667,7 +6667,7 @@
             "events": [
               {
                 "operation": "spring",
-                "atNanos": 3760000000,
+                "atNanos": 4760000000,
                 "target": 1.0,
                 "responseSeconds": 0.72,
                 "dampingRatio": 1.0,
@@ -6684,7 +6684,7 @@
             "events": [
               {
                 "operation": "spring",
-                "atNanos": 7140000000,
+                "atNanos": 9120000000,
                 "target": 1.0,
                 "responseSeconds": 0.72,
                 "dampingRatio": 1.0,
@@ -6701,7 +6701,7 @@
             "events": [
               {
                 "operation": "spring",
-                "atNanos": 8820000000,
+                "atNanos": 10760000000,
                 "target": 1.0,
                 "responseSeconds": 0.72,
                 "dampingRatio": 1.0,
@@ -6718,7 +6718,7 @@
             "events": [
               {
                 "operation": "spring",
-                "atNanos": 13440000000,
+                "atNanos": 16140000000,
                 "target": 1.0,
                 "responseSeconds": 0.72,
                 "dampingRatio": 1.0,
@@ -6735,7 +6735,7 @@
             "events": [
               {
                 "operation": "spring",
-                "atNanos": 14680000000,
+                "atNanos": 17540000000,
                 "target": 1.0,
                 "responseSeconds": 0.72,
                 "dampingRatio": 1.0,
@@ -6752,7 +6752,7 @@
             "events": [
               {
                 "operation": "spring",
-                "atNanos": 19020000000,
+                "atNanos": 22820000000,
                 "target": 1.0,
                 "responseSeconds": 0.72,
                 "dampingRatio": 1.0,
@@ -6769,7 +6769,7 @@
             "events": [
               {
                 "operation": "spring",
-                "atNanos": 19960000000,
+                "atNanos": 23840000000,
                 "target": 1.0,
                 "responseSeconds": 0.72,
                 "dampingRatio": 1.0,
@@ -6786,7 +6786,7 @@
             "events": [
               {
                 "operation": "spring",
-                "atNanos": 24808687499,
+                "atNanos": 29168583333,
                 "target": 1.0,
                 "responseSeconds": 0.72,
                 "dampingRatio": 1.0,
@@ -6803,7 +6803,7 @@
             "events": [
               {
                 "operation": "spring",
-                "atNanos": 27508687499,
+                "atNanos": 33268583333,
                 "target": 1.0,
                 "responseSeconds": 0.72,
                 "dampingRatio": 1.0,
@@ -6820,7 +6820,7 @@
             "events": [
               {
                 "operation": "spring",
-                "atNanos": 31008687499,
+                "atNanos": 38128583333,
                 "target": 1.0,
                 "responseSeconds": 0.72,
                 "dampingRatio": 1.0,
@@ -6837,7 +6837,7 @@
             "events": [
               {
                 "operation": "spring",
-                "atNanos": 21568687499,
+                "atNanos": 25848583333,
                 "target": 0.0,
                 "responseSeconds": 0.54,
                 "dampingRatio": 1.0,
@@ -6854,7 +6854,7 @@
             "events": [
               {
                 "operation": "spring",
-                "atNanos": 21568687499,
+                "atNanos": 25848583333,
                 "target": 0.0,
                 "responseSeconds": 0.54,
                 "dampingRatio": 1.0,
@@ -6871,7 +6871,7 @@
             "events": [
               {
                 "operation": "spring",
-                "atNanos": 21568687499,
+                "atNanos": 25848583333,
                 "target": 0.0,
                 "responseSeconds": 0.54,
                 "dampingRatio": 1.0,
@@ -6888,7 +6888,7 @@
             "events": [
               {
                 "operation": "spring",
-                "atNanos": 16100000000,
+                "atNanos": 19480000000,
                 "target": 1.0,
                 "responseSeconds": 0.42000002,
                 "dampingRatio": 1.0,
@@ -6897,7 +6897,7 @@
               },
               {
                 "operation": "spring",
-                "atNanos": 19020000000,
+                "atNanos": 22820000000,
                 "target": 0.0,
                 "responseSeconds": 0.54,
                 "dampingRatio": 1.0,
@@ -6914,12 +6914,12 @@
             "events": [
               {
                 "operation": "set",
-                "atNanos": 19960000000,
+                "atNanos": 23840000000,
                 "value": 1.0
               },
               {
                 "operation": "spring",
-                "atNanos": 21568687499,
+                "atNanos": 25848583333,
                 "target": 0.0,
                 "responseSeconds": 0.36,
                 "dampingRatio": 1.0,
@@ -6936,217 +6936,217 @@
             "events": [
               {
                 "operation": "set",
-                "atNanos": 19983809523,
+                "atNanos": 23863809523,
                 "value": 0.023255814
               },
               {
                 "operation": "set",
-                "atNanos": 20007619046,
+                "atNanos": 23887619046,
                 "value": 0.046511628
               },
               {
                 "operation": "set",
-                "atNanos": 20031428569,
+                "atNanos": 23911428569,
                 "value": 0.069767445
               },
               {
                 "operation": "set",
-                "atNanos": 20055238092,
+                "atNanos": 23935238092,
                 "value": 0.093023255
               },
               {
                 "operation": "set",
-                "atNanos": 20079047615,
+                "atNanos": 23959047615,
                 "value": 0.11627907
               },
               {
                 "operation": "set",
-                "atNanos": 20102857138,
+                "atNanos": 23982857138,
                 "value": 0.13953489
               },
               {
                 "operation": "set",
-                "atNanos": 20126666661,
+                "atNanos": 24006666661,
                 "value": 0.1627907
               },
               {
                 "operation": "set",
-                "atNanos": 20150476184,
+                "atNanos": 24030476184,
                 "value": 0.18604651
               },
               {
                 "operation": "set",
-                "atNanos": 20174285707,
+                "atNanos": 24054285707,
                 "value": 0.20930232
               },
               {
                 "operation": "set",
-                "atNanos": 20198095230,
+                "atNanos": 24078095230,
                 "value": 0.23255815
               },
               {
                 "operation": "set",
-                "atNanos": 20221904753,
+                "atNanos": 24101904753,
                 "value": 0.25581396
               },
               {
                 "operation": "set",
-                "atNanos": 20245714276,
+                "atNanos": 24125714276,
                 "value": 0.27906978
               },
               {
                 "operation": "set",
-                "atNanos": 20269523799,
+                "atNanos": 24149523799,
                 "value": 0.30232558
               },
               {
                 "operation": "set",
-                "atNanos": 20293333322,
+                "atNanos": 24173333322,
                 "value": 0.3255814
               },
               {
                 "operation": "set",
-                "atNanos": 20317142845,
+                "atNanos": 24197142845,
                 "value": 0.3488372
               },
               {
                 "operation": "set",
-                "atNanos": 20340952368,
+                "atNanos": 24220952368,
                 "value": 0.37209302
               },
               {
                 "operation": "set",
-                "atNanos": 20364761891,
+                "atNanos": 24244761891,
                 "value": 0.39534885
               },
               {
                 "operation": "set",
-                "atNanos": 20388571414,
+                "atNanos": 24268571414,
                 "value": 0.41860464
               },
               {
                 "operation": "set",
-                "atNanos": 20412380937,
+                "atNanos": 24292380937,
                 "value": 0.44186047
               },
               {
                 "operation": "set",
-                "atNanos": 20436190460,
+                "atNanos": 24316190460,
                 "value": 0.4651163
               },
               {
                 "operation": "set",
-                "atNanos": 20459999983,
+                "atNanos": 24339999983,
                 "value": 0.4883721
               },
               {
                 "operation": "set",
-                "atNanos": 20483809506,
+                "atNanos": 24363809506,
                 "value": 0.5116279
               },
               {
                 "operation": "set",
-                "atNanos": 20507619029,
+                "atNanos": 24387619029,
                 "value": 0.53488374
               },
               {
                 "operation": "set",
-                "atNanos": 20531428552,
+                "atNanos": 24411428552,
                 "value": 0.55813956
               },
               {
                 "operation": "set",
-                "atNanos": 20555238075,
+                "atNanos": 24435238075,
                 "value": 0.5813953
               },
               {
                 "operation": "set",
-                "atNanos": 20579047598,
+                "atNanos": 24459047598,
                 "value": 0.60465115
               },
               {
                 "operation": "set",
-                "atNanos": 20602857121,
+                "atNanos": 24482857121,
                 "value": 0.627907
               },
               {
                 "operation": "set",
-                "atNanos": 20626666644,
+                "atNanos": 24506666644,
                 "value": 0.6511628
               },
               {
                 "operation": "set",
-                "atNanos": 20650476167,
+                "atNanos": 24530476167,
                 "value": 0.6744186
               },
               {
                 "operation": "set",
-                "atNanos": 20674285690,
+                "atNanos": 24554285690,
                 "value": 0.6976744
               },
               {
                 "operation": "set",
-                "atNanos": 20698095213,
+                "atNanos": 24578095213,
                 "value": 0.7209302
               },
               {
                 "operation": "set",
-                "atNanos": 20721904736,
+                "atNanos": 24601904736,
                 "value": 0.74418604
               },
               {
                 "operation": "set",
-                "atNanos": 20745714259,
+                "atNanos": 24625714259,
                 "value": 0.76744187
               },
               {
                 "operation": "set",
-                "atNanos": 20769523782,
+                "atNanos": 24649523782,
                 "value": 0.7906977
               },
               {
                 "operation": "set",
-                "atNanos": 20793333305,
+                "atNanos": 24673333305,
                 "value": 0.81395346
               },
               {
                 "operation": "set",
-                "atNanos": 20817142828,
+                "atNanos": 24697142828,
                 "value": 0.8372093
               },
               {
                 "operation": "set",
-                "atNanos": 20840952351,
+                "atNanos": 24720952351,
                 "value": 0.8604651
               },
               {
                 "operation": "set",
-                "atNanos": 20864761874,
+                "atNanos": 24744761874,
                 "value": 0.88372093
               },
               {
                 "operation": "set",
-                "atNanos": 20888571397,
+                "atNanos": 24768571397,
                 "value": 0.90697676
               },
               {
                 "operation": "set",
-                "atNanos": 20912380920,
+                "atNanos": 24792380920,
                 "value": 0.9302326
               },
               {
                 "operation": "set",
-                "atNanos": 20936190443,
+                "atNanos": 24816190443,
                 "value": 0.95348835
               },
               {
                 "operation": "set",
-                "atNanos": 20959999966,
+                "atNanos": 24839999966,
                 "value": 0.9767442
               },
               {
                 "operation": "set",
-                "atNanos": 20983809489,
+                "atNanos": 24863809489,
                 "value": 1.0
               }
             ]
@@ -7159,12 +7159,12 @@
             "events": [
               {
                 "operation": "set",
-                "atNanos": 19960000000,
+                "atNanos": 23840000000,
                 "value": 1.0
               },
               {
                 "operation": "spring",
-                "atNanos": 21783809500,
+                "atNanos": 25663809500,
                 "target": 0.0,
                 "responseSeconds": 0.24000001,
                 "dampingRatio": 1.0,
@@ -7181,7 +7181,7 @@
             "events": [
               {
                 "operation": "set",
-                "atNanos": 31008687499,
+                "atNanos": 38128583333,
                 "value": 1.0
               }
             ]
@@ -7194,137 +7194,137 @@
             "events": [
               {
                 "operation": "set",
-                "atNanos": 31032497022,
+                "atNanos": 38152392856,
                 "value": 0.037037037
               },
               {
                 "operation": "set",
-                "atNanos": 31056306545,
+                "atNanos": 38176202379,
                 "value": 0.074074075
               },
               {
                 "operation": "set",
-                "atNanos": 31080116068,
+                "atNanos": 38200011902,
                 "value": 0.11111111
               },
               {
                 "operation": "set",
-                "atNanos": 31103925591,
+                "atNanos": 38223821425,
                 "value": 0.14814815
               },
               {
                 "operation": "set",
-                "atNanos": 31127735114,
+                "atNanos": 38247630948,
                 "value": 0.18518518
               },
               {
                 "operation": "set",
-                "atNanos": 31151544637,
+                "atNanos": 38271440471,
                 "value": 0.22222222
               },
               {
                 "operation": "set",
-                "atNanos": 31175354160,
+                "atNanos": 38295249994,
                 "value": 0.25925925
               },
               {
                 "operation": "set",
-                "atNanos": 31199163683,
+                "atNanos": 38319059517,
                 "value": 0.2962963
               },
               {
                 "operation": "set",
-                "atNanos": 31222973206,
+                "atNanos": 38342869040,
                 "value": 0.33333334
               },
               {
                 "operation": "set",
-                "atNanos": 31246782729,
+                "atNanos": 38366678563,
                 "value": 0.37037036
               },
               {
                 "operation": "set",
-                "atNanos": 31270592252,
+                "atNanos": 38390488086,
                 "value": 0.4074074
               },
               {
                 "operation": "set",
-                "atNanos": 31294401775,
+                "atNanos": 38414297609,
                 "value": 0.44444445
               },
               {
                 "operation": "set",
-                "atNanos": 31318211298,
+                "atNanos": 38438107132,
                 "value": 0.4814815
               },
               {
                 "operation": "set",
-                "atNanos": 31342020821,
+                "atNanos": 38461916655,
                 "value": 0.5185185
               },
               {
                 "operation": "set",
-                "atNanos": 31365830344,
+                "atNanos": 38485726178,
                 "value": 0.5555556
               },
               {
                 "operation": "set",
-                "atNanos": 31389639867,
+                "atNanos": 38509535701,
                 "value": 0.5925926
               },
               {
                 "operation": "set",
-                "atNanos": 31413449390,
+                "atNanos": 38533345224,
                 "value": 0.6296296
               },
               {
                 "operation": "set",
-                "atNanos": 31437258913,
+                "atNanos": 38557154747,
                 "value": 0.6666667
               },
               {
                 "operation": "set",
-                "atNanos": 31461068436,
+                "atNanos": 38580964270,
                 "value": 0.7037037
               },
               {
                 "operation": "set",
-                "atNanos": 31484877959,
+                "atNanos": 38604773793,
                 "value": 0.7407407
               },
               {
                 "operation": "set",
-                "atNanos": 31508687482,
+                "atNanos": 38628583316,
                 "value": 0.7777778
               },
               {
                 "operation": "set",
-                "atNanos": 31532497005,
+                "atNanos": 38652392839,
                 "value": 0.8148148
               },
               {
                 "operation": "set",
-                "atNanos": 31556306528,
+                "atNanos": 38676202362,
                 "value": 0.8518519
               },
               {
                 "operation": "set",
-                "atNanos": 31580116051,
+                "atNanos": 38700011885,
                 "value": 0.8888889
               },
               {
                 "operation": "set",
-                "atNanos": 31603925574,
+                "atNanos": 38723821408,
                 "value": 0.9259259
               },
               {
                 "operation": "set",
-                "atNanos": 31627735097,
+                "atNanos": 38747630931,
                 "value": 0.962963
               },
               {
                 "operation": "set",
-                "atNanos": 31651544620,
+                "atNanos": 38771440454,
                 "value": 1.0
               }
             ]
@@ -7337,12 +7337,12 @@
             "events": [
               {
                 "operation": "set",
-                "atNanos": 31008687499,
+                "atNanos": 38128583333,
                 "value": 1.0
               },
               {
                 "operation": "spring",
-                "atNanos": 32451544631,
+                "atNanos": 39571440465,
                 "target": 0.0,
                 "responseSeconds": 0.24000001,
                 "dampingRatio": 1.0,
@@ -7361,9 +7361,9 @@
             "kind": "audio",
             "role": "script",
             "sourceStartNanos": 0,
-            "sourceEndNanos": 20168687499,
+            "sourceEndNanos": 24448583333,
             "timelineStartNanos": 1000000000,
-            "timelineEndNanos": 21168687499,
+            "timelineEndNanos": 25448583333,
             "gainDb": 0.0
           },
           {
@@ -7372,9 +7372,9 @@
             "kind": "audio",
             "role": "script",
             "sourceStartNanos": 0,
-            "sourceEndNanos": 9526375000,
-            "timelineStartNanos": 22768687499,
-            "timelineEndNanos": 32295062499,
+            "sourceEndNanos": 12444895833,
+            "timelineStartNanos": 27048583333,
+            "timelineEndNanos": 39493479166,
             "gainDb": 0.0
           }
         ]
@@ -7386,7 +7386,7 @@
       "plan": {
         "version": 2,
         "id": "bind-code",
-        "durationNanos": 11439125000,
+        "durationNanos": 14759145833,
         "actors": [
           {
             "id": "header",
@@ -8172,7 +8172,7 @@
               ],
               "snapshots": [
                 {
-                  "atNanos": 1200000000,
+                  "atNanos": 1320000000,
                   "lineIds": [
                     "line-2",
                     "line-3",
@@ -8257,7 +8257,7 @@
             "events": [
               {
                 "operation": "spring",
-                "atNanos": 300000000,
+                "atNanos": 420000000,
                 "target": 1.0,
                 "responseSeconds": 0.42000002,
                 "dampingRatio": 1.0,
@@ -8274,7 +8274,7 @@
             "events": [
               {
                 "operation": "spring",
-                "atNanos": 300000000,
+                "atNanos": 420000000,
                 "target": 1.0,
                 "responseSeconds": 0.42000002,
                 "dampingRatio": 1.0,
@@ -8291,7 +8291,7 @@
             "events": [
               {
                 "operation": "spring",
-                "atNanos": 300000000,
+                "atNanos": 420000000,
                 "target": 1.0,
                 "responseSeconds": 0.42000002,
                 "dampingRatio": 1.0,
@@ -8308,7 +8308,7 @@
             "events": [
               {
                 "operation": "spring",
-                "atNanos": 300000000,
+                "atNanos": 420000000,
                 "target": 1.0,
                 "responseSeconds": 0.42000002,
                 "dampingRatio": 1.0,
@@ -8395,9 +8395,9 @@
             "kind": "audio",
             "role": "script",
             "sourceStartNanos": 0,
-            "sourceEndNanos": 8939125000,
+            "sourceEndNanos": 12259145833,
             "timelineStartNanos": 900000000,
-            "timelineEndNanos": 9839125000,
+            "timelineEndNanos": 13159145833,
             "gainDb": 0.0
           }
         ]
@@ -8409,7 +8409,7 @@
       "plan": {
         "version": 2,
         "id": "stop-behavior",
-        "durationNanos": 36652604166,
+        "durationNanos": 45283104165,
         "actors": [
           {
             "id": "header",
@@ -8914,7 +8914,7 @@
               },
               {
                 "operation": "spring",
-                "atNanos": 20636625000,
+                "atNanos": 26058604166,
                 "target": 0.0,
                 "responseSeconds": 0.36,
                 "dampingRatio": 1.0,
@@ -8948,7 +8948,7 @@
             "events": [
               {
                 "operation": "spring",
-                "atNanos": 20886625000,
+                "atNanos": 26308604166,
                 "target": 1.0,
                 "responseSeconds": 0.42000002,
                 "dampingRatio": 1.0,
@@ -8965,7 +8965,7 @@
             "events": [
               {
                 "operation": "spring",
-                "atNanos": 20886625000,
+                "atNanos": 26308604166,
                 "target": 0.0,
                 "responseSeconds": 0.54,
                 "dampingRatio": 1.0,
@@ -9016,7 +9016,7 @@
             "events": [
               {
                 "operation": "spring",
-                "atNanos": 3240000000,
+                "atNanos": 4640000000,
                 "target": 1.0,
                 "responseSeconds": 0.72,
                 "dampingRatio": 1.0,
@@ -9033,7 +9033,7 @@
             "events": [
               {
                 "operation": "spring",
-                "atNanos": 4760000000,
+                "atNanos": 7140000000,
                 "target": 1.0,
                 "responseSeconds": 0.72,
                 "dampingRatio": 1.0,
@@ -9050,7 +9050,7 @@
             "events": [
               {
                 "operation": "spring",
-                "atNanos": 10300000000,
+                "atNanos": 13840000000,
                 "target": 1.0,
                 "responseSeconds": 0.72,
                 "dampingRatio": 1.0,
@@ -9067,7 +9067,7 @@
             "events": [
               {
                 "operation": "spring",
-                "atNanos": 11640000000,
+                "atNanos": 15080000000,
                 "target": 1.0,
                 "responseSeconds": 0.72,
                 "dampingRatio": 1.0,
@@ -9084,7 +9084,7 @@
             "events": [
               {
                 "operation": "spring",
-                "atNanos": 12240000000,
+                "atNanos": 15680000000,
                 "target": 1.0,
                 "responseSeconds": 0.72,
                 "dampingRatio": 1.0,
@@ -9101,7 +9101,7 @@
             "events": [
               {
                 "operation": "spring",
-                "atNanos": 13600000000,
+                "atNanos": 17580000000,
                 "target": 1.0,
                 "responseSeconds": 0.72,
                 "dampingRatio": 1.0,
@@ -9118,7 +9118,7 @@
             "events": [
               {
                 "operation": "spring",
-                "atNanos": 17980000000,
+                "atNanos": 23140000000,
                 "target": 1.0,
                 "responseSeconds": 0.72,
                 "dampingRatio": 1.0,
@@ -9135,7 +9135,7 @@
             "events": [
               {
                 "operation": "spring",
-                "atNanos": 19180000000,
+                "atNanos": 24500000000,
                 "target": 1.0,
                 "responseSeconds": 0.72,
                 "dampingRatio": 1.0,
@@ -9152,7 +9152,7 @@
             "events": [
               {
                 "operation": "spring",
-                "atNanos": 22096625000,
+                "atNanos": 27698604166,
                 "target": 1.0,
                 "responseSeconds": 0.72,
                 "dampingRatio": 1.0,
@@ -9169,7 +9169,7 @@
             "events": [
               {
                 "operation": "spring",
-                "atNanos": 27216625000,
+                "atNanos": 34218604166,
                 "target": 1.0,
                 "responseSeconds": 0.72,
                 "dampingRatio": 1.0,
@@ -9186,7 +9186,7 @@
             "events": [
               {
                 "operation": "spring",
-                "atNanos": 28016625000,
+                "atNanos": 35018604166,
                 "target": 1.0,
                 "responseSeconds": 0.72,
                 "dampingRatio": 1.0,
@@ -9203,7 +9203,7 @@
             "events": [
               {
                 "operation": "spring",
-                "atNanos": 28076625000,
+                "atNanos": 36118604166,
                 "target": 1.0,
                 "responseSeconds": 0.72,
                 "dampingRatio": 1.0,
@@ -9220,7 +9220,7 @@
             "events": [
               {
                 "operation": "spring",
-                "atNanos": 28676625000,
+                "atNanos": 36718604166,
                 "target": 1.0,
                 "responseSeconds": 0.72,
                 "dampingRatio": 1.0,
@@ -9237,7 +9237,7 @@
             "events": [
               {
                 "operation": "spring",
-                "atNanos": 20636625000,
+                "atNanos": 26058604166,
                 "target": 0.0,
                 "responseSeconds": 0.54,
                 "dampingRatio": 1.0,
@@ -9254,7 +9254,7 @@
             "events": [
               {
                 "operation": "spring",
-                "atNanos": 20636625000,
+                "atNanos": 26058604166,
                 "target": 0.0,
                 "responseSeconds": 0.54,
                 "dampingRatio": 1.0,
@@ -9271,7 +9271,7 @@
             "events": [
               {
                 "operation": "spring",
-                "atNanos": 20636625000,
+                "atNanos": 26058604166,
                 "target": 0.0,
                 "responseSeconds": 0.54,
                 "dampingRatio": 1.0,
@@ -9288,7 +9288,7 @@
             "events": [
               {
                 "operation": "spring",
-                "atNanos": 20636625000,
+                "atNanos": 26058604166,
                 "target": 0.0,
                 "responseSeconds": 0.54,
                 "dampingRatio": 1.0,
@@ -9305,7 +9305,7 @@
             "events": [
               {
                 "operation": "spring",
-                "atNanos": 20636625000,
+                "atNanos": 26058604166,
                 "target": 0.0,
                 "responseSeconds": 0.54,
                 "dampingRatio": 1.0,
@@ -9322,7 +9322,7 @@
             "events": [
               {
                 "operation": "spring",
-                "atNanos": 7920000000,
+                "atNanos": 11300000000,
                 "target": 1.0,
                 "responseSeconds": 0.42000002,
                 "dampingRatio": 1.0,
@@ -9331,7 +9331,7 @@
               },
               {
                 "operation": "spring",
-                "atNanos": 17980000000,
+                "atNanos": 23140000000,
                 "target": 0.0,
                 "responseSeconds": 0.54,
                 "dampingRatio": 1.0,
@@ -9348,12 +9348,12 @@
             "events": [
               {
                 "operation": "set",
-                "atNanos": 19180000000,
+                "atNanos": 24500000000,
                 "value": 1.0
               },
               {
                 "operation": "spring",
-                "atNanos": 20636625000,
+                "atNanos": 26058604166,
                 "target": 0.0,
                 "responseSeconds": 0.36,
                 "dampingRatio": 1.0,
@@ -9370,207 +9370,207 @@
             "events": [
               {
                 "operation": "set",
-                "atNanos": 19203809523,
+                "atNanos": 24523809523,
                 "value": 0.024390243
               },
               {
                 "operation": "set",
-                "atNanos": 19227619046,
+                "atNanos": 24547619046,
                 "value": 0.048780486
               },
               {
                 "operation": "set",
-                "atNanos": 19251428569,
+                "atNanos": 24571428569,
                 "value": 0.07317073
               },
               {
                 "operation": "set",
-                "atNanos": 19275238092,
+                "atNanos": 24595238092,
                 "value": 0.09756097
               },
               {
                 "operation": "set",
-                "atNanos": 19299047615,
+                "atNanos": 24619047615,
                 "value": 0.12195122
               },
               {
                 "operation": "set",
-                "atNanos": 19322857138,
+                "atNanos": 24642857138,
                 "value": 0.14634146
               },
               {
                 "operation": "set",
-                "atNanos": 19346666661,
+                "atNanos": 24666666661,
                 "value": 0.17073171
               },
               {
                 "operation": "set",
-                "atNanos": 19370476184,
+                "atNanos": 24690476184,
                 "value": 0.19512194
               },
               {
                 "operation": "set",
-                "atNanos": 19394285707,
+                "atNanos": 24714285707,
                 "value": 0.2195122
               },
               {
                 "operation": "set",
-                "atNanos": 19418095230,
+                "atNanos": 24738095230,
                 "value": 0.24390244
               },
               {
                 "operation": "set",
-                "atNanos": 19441904753,
+                "atNanos": 24761904753,
                 "value": 0.2682927
               },
               {
                 "operation": "set",
-                "atNanos": 19465714276,
+                "atNanos": 24785714276,
                 "value": 0.29268292
               },
               {
                 "operation": "set",
-                "atNanos": 19489523799,
+                "atNanos": 24809523799,
                 "value": 0.31707317
               },
               {
                 "operation": "set",
-                "atNanos": 19513333322,
+                "atNanos": 24833333322,
                 "value": 0.34146342
               },
               {
                 "operation": "set",
-                "atNanos": 19537142845,
+                "atNanos": 24857142845,
                 "value": 0.36585367
               },
               {
                 "operation": "set",
-                "atNanos": 19560952368,
+                "atNanos": 24880952368,
                 "value": 0.3902439
               },
               {
                 "operation": "set",
-                "atNanos": 19584761891,
+                "atNanos": 24904761891,
                 "value": 0.41463414
               },
               {
                 "operation": "set",
-                "atNanos": 19608571414,
+                "atNanos": 24928571414,
                 "value": 0.4390244
               },
               {
                 "operation": "set",
-                "atNanos": 19632380937,
+                "atNanos": 24952380937,
                 "value": 0.46341464
               },
               {
                 "operation": "set",
-                "atNanos": 19656190460,
+                "atNanos": 24976190460,
                 "value": 0.4878049
               },
               {
                 "operation": "set",
-                "atNanos": 19679999983,
+                "atNanos": 24999999983,
                 "value": 0.5121951
               },
               {
                 "operation": "set",
-                "atNanos": 19703809506,
+                "atNanos": 25023809506,
                 "value": 0.5365854
               },
               {
                 "operation": "set",
-                "atNanos": 19727619029,
+                "atNanos": 25047619029,
                 "value": 0.5609756
               },
               {
                 "operation": "set",
-                "atNanos": 19751428552,
+                "atNanos": 25071428552,
                 "value": 0.58536583
               },
               {
                 "operation": "set",
-                "atNanos": 19775238075,
+                "atNanos": 25095238075,
                 "value": 0.6097561
               },
               {
                 "operation": "set",
-                "atNanos": 19799047598,
+                "atNanos": 25119047598,
                 "value": 0.63414633
               },
               {
                 "operation": "set",
-                "atNanos": 19822857121,
+                "atNanos": 25142857121,
                 "value": 0.6585366
               },
               {
                 "operation": "set",
-                "atNanos": 19846666644,
+                "atNanos": 25166666644,
                 "value": 0.68292683
               },
               {
                 "operation": "set",
-                "atNanos": 19870476167,
+                "atNanos": 25190476167,
                 "value": 0.70731705
               },
               {
                 "operation": "set",
-                "atNanos": 19894285690,
+                "atNanos": 25214285690,
                 "value": 0.73170733
               },
               {
                 "operation": "set",
-                "atNanos": 19918095213,
+                "atNanos": 25238095213,
                 "value": 0.75609756
               },
               {
                 "operation": "set",
-                "atNanos": 19941904736,
+                "atNanos": 25261904736,
                 "value": 0.7804878
               },
               {
                 "operation": "set",
-                "atNanos": 19965714259,
+                "atNanos": 25285714259,
                 "value": 0.80487806
               },
               {
                 "operation": "set",
-                "atNanos": 19989523782,
+                "atNanos": 25309523782,
                 "value": 0.8292683
               },
               {
                 "operation": "set",
-                "atNanos": 20013333305,
+                "atNanos": 25333333305,
                 "value": 0.85365856
               },
               {
                 "operation": "set",
-                "atNanos": 20037142828,
+                "atNanos": 25357142828,
                 "value": 0.8780488
               },
               {
                 "operation": "set",
-                "atNanos": 20060952351,
+                "atNanos": 25380952351,
                 "value": 0.902439
               },
               {
                 "operation": "set",
-                "atNanos": 20084761874,
+                "atNanos": 25404761874,
                 "value": 0.9268293
               },
               {
                 "operation": "set",
-                "atNanos": 20108571397,
+                "atNanos": 25428571397,
                 "value": 0.9512195
               },
               {
                 "operation": "set",
-                "atNanos": 20132380920,
+                "atNanos": 25452380920,
                 "value": 0.9756098
               },
               {
                 "operation": "set",
-                "atNanos": 20156190443,
+                "atNanos": 25476190443,
                 "value": 1.0
               }
             ]
@@ -9583,12 +9583,12 @@
             "events": [
               {
                 "operation": "set",
-                "atNanos": 19180000000,
+                "atNanos": 24500000000,
                 "value": 1.0
               },
               {
                 "operation": "spring",
-                "atNanos": 20956190454,
+                "atNanos": 26276190454,
                 "target": 0.0,
                 "responseSeconds": 0.24000001,
                 "dampingRatio": 1.0,
@@ -9605,7 +9605,7 @@
             "events": [
               {
                 "operation": "set",
-                "atNanos": 30996625000,
+                "atNanos": 39378604166,
                 "value": 1.0
               }
             ]
@@ -9618,262 +9618,262 @@
             "events": [
               {
                 "operation": "set",
-                "atNanos": 31020434523,
+                "atNanos": 39402413689,
                 "value": 0.01923077
               },
               {
                 "operation": "set",
-                "atNanos": 31044244046,
+                "atNanos": 39426223212,
                 "value": 0.03846154
               },
               {
                 "operation": "set",
-                "atNanos": 31068053569,
+                "atNanos": 39450032735,
                 "value": 0.057692308
               },
               {
                 "operation": "set",
-                "atNanos": 31091863092,
+                "atNanos": 39473842258,
                 "value": 0.07692308
               },
               {
                 "operation": "set",
-                "atNanos": 31115672615,
+                "atNanos": 39497651781,
                 "value": 0.09615385
               },
               {
                 "operation": "set",
-                "atNanos": 31139482138,
+                "atNanos": 39521461304,
                 "value": 0.115384616
               },
               {
                 "operation": "set",
-                "atNanos": 31163291661,
+                "atNanos": 39545270827,
                 "value": 0.13461539
               },
               {
                 "operation": "set",
-                "atNanos": 31187101184,
+                "atNanos": 39569080350,
                 "value": 0.15384616
               },
               {
                 "operation": "set",
-                "atNanos": 31210910707,
+                "atNanos": 39592889873,
                 "value": 0.17307693
               },
               {
                 "operation": "set",
-                "atNanos": 31234720230,
+                "atNanos": 39616699396,
                 "value": 0.1923077
               },
               {
                 "operation": "set",
-                "atNanos": 31258529753,
+                "atNanos": 39640508919,
                 "value": 0.21153846
               },
               {
                 "operation": "set",
-                "atNanos": 31282339276,
+                "atNanos": 39664318442,
                 "value": 0.23076923
               },
               {
                 "operation": "set",
-                "atNanos": 31306148799,
+                "atNanos": 39688127965,
                 "value": 0.25
               },
               {
                 "operation": "set",
-                "atNanos": 31329958322,
+                "atNanos": 39711937488,
                 "value": 0.26923078
               },
               {
                 "operation": "set",
-                "atNanos": 31353767845,
+                "atNanos": 39735747011,
                 "value": 0.28846154
               },
               {
                 "operation": "set",
-                "atNanos": 31377577368,
+                "atNanos": 39759556534,
                 "value": 0.30769232
               },
               {
                 "operation": "set",
-                "atNanos": 31401386891,
+                "atNanos": 39783366057,
                 "value": 0.32692307
               },
               {
                 "operation": "set",
-                "atNanos": 31425196414,
+                "atNanos": 39807175580,
                 "value": 0.34615386
               },
               {
                 "operation": "set",
-                "atNanos": 31449005937,
+                "atNanos": 39830985103,
                 "value": 0.3653846
               },
               {
                 "operation": "set",
-                "atNanos": 31472815460,
+                "atNanos": 39854794626,
                 "value": 0.3846154
               },
               {
                 "operation": "set",
-                "atNanos": 31496624983,
+                "atNanos": 39878604149,
                 "value": 0.40384614
               },
               {
                 "operation": "set",
-                "atNanos": 31520434506,
+                "atNanos": 39902413672,
                 "value": 0.42307693
               },
               {
                 "operation": "set",
-                "atNanos": 31544244029,
+                "atNanos": 39926223195,
                 "value": 0.44230768
               },
               {
                 "operation": "set",
-                "atNanos": 31568053552,
+                "atNanos": 39950032718,
                 "value": 0.46153846
               },
               {
                 "operation": "set",
-                "atNanos": 31591863075,
+                "atNanos": 39973842241,
                 "value": 0.48076922
               },
               {
                 "operation": "set",
-                "atNanos": 31615672598,
+                "atNanos": 39997651764,
                 "value": 0.5
               },
               {
                 "operation": "set",
-                "atNanos": 31639482121,
+                "atNanos": 40021461287,
                 "value": 0.5192308
               },
               {
                 "operation": "set",
-                "atNanos": 31663291644,
+                "atNanos": 40045270810,
                 "value": 0.53846157
               },
               {
                 "operation": "set",
-                "atNanos": 31687101167,
+                "atNanos": 40069080333,
                 "value": 0.5576923
               },
               {
                 "operation": "set",
-                "atNanos": 31710910690,
+                "atNanos": 40092889856,
                 "value": 0.5769231
               },
               {
                 "operation": "set",
-                "atNanos": 31734720213,
+                "atNanos": 40116699379,
                 "value": 0.59615386
               },
               {
                 "operation": "set",
-                "atNanos": 31758529736,
+                "atNanos": 40140508902,
                 "value": 0.61538464
               },
               {
                 "operation": "set",
-                "atNanos": 31782339259,
+                "atNanos": 40164318425,
                 "value": 0.63461536
               },
               {
                 "operation": "set",
-                "atNanos": 31806148782,
+                "atNanos": 40188127948,
                 "value": 0.65384614
               },
               {
                 "operation": "set",
-                "atNanos": 31829958305,
+                "atNanos": 40211937471,
                 "value": 0.6730769
               },
               {
                 "operation": "set",
-                "atNanos": 31853767828,
+                "atNanos": 40235746994,
                 "value": 0.6923077
               },
               {
                 "operation": "set",
-                "atNanos": 31877577351,
+                "atNanos": 40259556517,
                 "value": 0.71153843
               },
               {
                 "operation": "set",
-                "atNanos": 31901386874,
+                "atNanos": 40283366040,
                 "value": 0.7307692
               },
               {
                 "operation": "set",
-                "atNanos": 31925196397,
+                "atNanos": 40307175563,
                 "value": 0.75
               },
               {
                 "operation": "set",
-                "atNanos": 31949005920,
+                "atNanos": 40330985086,
                 "value": 0.7692308
               },
               {
                 "operation": "set",
-                "atNanos": 31972815443,
+                "atNanos": 40354794609,
                 "value": 0.78846157
               },
               {
                 "operation": "set",
-                "atNanos": 31996624966,
+                "atNanos": 40378604132,
                 "value": 0.8076923
               },
               {
                 "operation": "set",
-                "atNanos": 32020434489,
+                "atNanos": 40402413655,
                 "value": 0.8269231
               },
               {
                 "operation": "set",
-                "atNanos": 32044244012,
+                "atNanos": 40426223178,
                 "value": 0.84615386
               },
               {
                 "operation": "set",
-                "atNanos": 32068053535,
+                "atNanos": 40450032701,
                 "value": 0.86538464
               },
               {
                 "operation": "set",
-                "atNanos": 32091863058,
+                "atNanos": 40473842224,
                 "value": 0.88461536
               },
               {
                 "operation": "set",
-                "atNanos": 32115672581,
+                "atNanos": 40497651747,
                 "value": 0.90384614
               },
               {
                 "operation": "set",
-                "atNanos": 32139482104,
+                "atNanos": 40521461270,
                 "value": 0.9230769
               },
               {
                 "operation": "set",
-                "atNanos": 32163291627,
+                "atNanos": 40545270793,
                 "value": 0.9423077
               },
               {
                 "operation": "set",
-                "atNanos": 32187101150,
+                "atNanos": 40569080316,
                 "value": 0.96153843
               },
               {
                 "operation": "set",
-                "atNanos": 32210910673,
+                "atNanos": 40592889839,
                 "value": 0.9807692
               },
               {
                 "operation": "set",
-                "atNanos": 32234720196,
+                "atNanos": 40616699362,
                 "value": 1.0
               }
             ]
@@ -9886,12 +9886,12 @@
             "events": [
               {
                 "operation": "set",
-                "atNanos": 30996625000,
+                "atNanos": 39378604166,
                 "value": 1.0
               },
               {
                 "operation": "spring",
-                "atNanos": 33034720207,
+                "atNanos": 41416699373,
                 "target": 0.0,
                 "responseSeconds": 0.24000001,
                 "dampingRatio": 1.0,
@@ -9910,9 +9910,9 @@
             "kind": "audio",
             "role": "script",
             "sourceStartNanos": 0,
-            "sourceEndNanos": 19236625000,
+            "sourceEndNanos": 24658604166,
             "timelineStartNanos": 1000000000,
-            "timelineEndNanos": 20236625000,
+            "timelineEndNanos": 25658604166,
             "gainDb": 0.0
           },
           {
@@ -9921,9 +9921,9 @@
             "kind": "audio",
             "role": "script",
             "sourceStartNanos": 0,
-            "sourceEndNanos": 13415979166,
-            "timelineStartNanos": 21836625000,
-            "timelineEndNanos": 35252604166,
+            "sourceEndNanos": 16624499999,
+            "timelineStartNanos": 27258604166,
+            "timelineEndNanos": 43883104165,
             "gainDb": 0.0
           }
         ]
@@ -9935,7 +9935,7 @@
       "plan": {
         "version": 2,
         "id": "stop-code",
-        "durationNanos": 7120208333,
+        "durationNanos": 8257562500,
         "actors": [
           {
             "id": "header",
@@ -10426,7 +10426,7 @@
               ],
               "snapshots": [
                 {
-                  "atNanos": 1160000000,
+                  "atNanos": 1300000000,
                   "lineIds": [
                     "line-0",
                     "line-1",
@@ -10506,7 +10506,7 @@
             "events": [
               {
                 "operation": "spring",
-                "atNanos": 260000000,
+                "atNanos": 400000000,
                 "target": 1.0,
                 "responseSeconds": 0.42000002,
                 "dampingRatio": 1.0,
@@ -10523,7 +10523,7 @@
             "events": [
               {
                 "operation": "spring",
-                "atNanos": 260000000,
+                "atNanos": 400000000,
                 "target": 1.0,
                 "responseSeconds": 0.42000002,
                 "dampingRatio": 1.0,
@@ -10610,9 +10610,9 @@
             "kind": "audio",
             "role": "script",
             "sourceStartNanos": 0,
-            "sourceEndNanos": 4620208333,
+            "sourceEndNanos": 5757562500,
             "timelineStartNanos": 900000000,
-            "timelineEndNanos": 5520208333,
+            "timelineEndNanos": 6657562500,
             "gainDb": 0.0
           }
         ]
@@ -10624,7 +10624,7 @@
       "plan": {
         "version": 2,
         "id": "bootstrap-behavior",
-        "durationNanos": 32439250000,
+        "durationNanos": 39199458333,
         "actors": [
           {
             "id": "header",
@@ -11138,7 +11138,7 @@
               },
               {
                 "operation": "spring",
-                "atNanos": 15752875000,
+                "atNanos": 19882083333,
                 "target": 0.0,
                 "responseSeconds": 0.36,
                 "dampingRatio": 1.0,
@@ -11172,7 +11172,7 @@
             "events": [
               {
                 "operation": "spring",
-                "atNanos": 16002875000,
+                "atNanos": 20132083333,
                 "target": 1.0,
                 "responseSeconds": 0.42000002,
                 "dampingRatio": 1.0,
@@ -11189,7 +11189,7 @@
             "events": [
               {
                 "operation": "spring",
-                "atNanos": 16002875000,
+                "atNanos": 20132083333,
                 "target": 0.0,
                 "responseSeconds": 0.54,
                 "dampingRatio": 1.0,
@@ -11240,7 +11240,7 @@
             "events": [
               {
                 "operation": "spring",
-                "atNanos": 4180000000,
+                "atNanos": 5900000000,
                 "target": 1.0,
                 "responseSeconds": 0.72,
                 "dampingRatio": 1.0,
@@ -11257,7 +11257,7 @@
             "events": [
               {
                 "operation": "spring",
-                "atNanos": 4880000000,
+                "atNanos": 6600000000,
                 "target": 1.0,
                 "responseSeconds": 0.72,
                 "dampingRatio": 1.0,
@@ -11274,7 +11274,7 @@
             "events": [
               {
                 "operation": "spring",
-                "atNanos": 8540000000,
+                "atNanos": 11440000000,
                 "target": 1.0,
                 "responseSeconds": 0.72,
                 "dampingRatio": 1.0,
@@ -11291,7 +11291,7 @@
             "events": [
               {
                 "operation": "spring",
-                "atNanos": 11020000000,
+                "atNanos": 13980000000,
                 "target": 1.0,
                 "responseSeconds": 0.72,
                 "dampingRatio": 1.0,
@@ -11308,7 +11308,7 @@
             "events": [
               {
                 "operation": "spring",
-                "atNanos": 14080000000,
+                "atNanos": 18200000000,
                 "target": 1.0,
                 "responseSeconds": 0.72,
                 "dampingRatio": 1.0,
@@ -11325,7 +11325,7 @@
             "events": [
               {
                 "operation": "spring",
-                "atNanos": 19712875000,
+                "atNanos": 24342083333,
                 "target": 1.0,
                 "responseSeconds": 0.72,
                 "dampingRatio": 1.0,
@@ -11342,7 +11342,7 @@
             "events": [
               {
                 "operation": "spring",
-                "atNanos": 21372875000,
+                "atNanos": 26562083333,
                 "target": 1.0,
                 "responseSeconds": 0.72,
                 "dampingRatio": 1.0,
@@ -11359,7 +11359,7 @@
             "events": [
               {
                 "operation": "spring",
-                "atNanos": 22892875000,
+                "atNanos": 28562083333,
                 "target": 1.0,
                 "responseSeconds": 0.72,
                 "dampingRatio": 1.0,
@@ -11376,7 +11376,7 @@
             "events": [
               {
                 "operation": "spring",
-                "atNanos": 24332875000,
+                "atNanos": 30222083333,
                 "target": 1.0,
                 "responseSeconds": 0.72,
                 "dampingRatio": 1.0,
@@ -11393,7 +11393,7 @@
             "events": [
               {
                 "operation": "spring",
-                "atNanos": 25892875000,
+                "atNanos": 32342083333,
                 "target": 1.0,
                 "responseSeconds": 0.72,
                 "dampingRatio": 1.0,
@@ -11410,7 +11410,7 @@
             "events": [
               {
                 "operation": "spring",
-                "atNanos": 15752875000,
+                "atNanos": 19882083333,
                 "target": 0.0,
                 "responseSeconds": 0.54,
                 "dampingRatio": 1.0,
@@ -11427,7 +11427,7 @@
             "events": [
               {
                 "operation": "spring",
-                "atNanos": 8540000000,
+                "atNanos": 11440000000,
                 "target": 1.0,
                 "responseSeconds": 0.42000002,
                 "dampingRatio": 1.0,
@@ -11436,7 +11436,7 @@
               },
               {
                 "operation": "spring",
-                "atNanos": 14080000000,
+                "atNanos": 18200000000,
                 "target": 0.0,
                 "responseSeconds": 0.54,
                 "dampingRatio": 1.0,
@@ -11453,7 +11453,7 @@
             "events": [
               {
                 "operation": "spring",
-                "atNanos": 21372875000,
+                "atNanos": 26562083333,
                 "target": 1.0,
                 "responseSeconds": 0.6,
                 "dampingRatio": 1.0,
@@ -11470,12 +11470,12 @@
             "events": [
               {
                 "operation": "set",
-                "atNanos": 14080000000,
+                "atNanos": 18200000000,
                 "value": 1.0
               },
               {
                 "operation": "spring",
-                "atNanos": 15752875000,
+                "atNanos": 19882083333,
                 "target": 0.0,
                 "responseSeconds": 0.36,
                 "dampingRatio": 1.0,
@@ -11492,157 +11492,157 @@
             "events": [
               {
                 "operation": "set",
-                "atNanos": 14103809523,
+                "atNanos": 18223809523,
                 "value": 0.032258064
               },
               {
                 "operation": "set",
-                "atNanos": 14127619046,
+                "atNanos": 18247619046,
                 "value": 0.06451613
               },
               {
                 "operation": "set",
-                "atNanos": 14151428569,
+                "atNanos": 18271428569,
                 "value": 0.09677419
               },
               {
                 "operation": "set",
-                "atNanos": 14175238092,
+                "atNanos": 18295238092,
                 "value": 0.12903225
               },
               {
                 "operation": "set",
-                "atNanos": 14199047615,
+                "atNanos": 18319047615,
                 "value": 0.16129032
               },
               {
                 "operation": "set",
-                "atNanos": 14222857138,
+                "atNanos": 18342857138,
                 "value": 0.19354838
               },
               {
                 "operation": "set",
-                "atNanos": 14246666661,
+                "atNanos": 18366666661,
                 "value": 0.22580644
               },
               {
                 "operation": "set",
-                "atNanos": 14270476184,
+                "atNanos": 18390476184,
                 "value": 0.2580645
               },
               {
                 "operation": "set",
-                "atNanos": 14294285707,
+                "atNanos": 18414285707,
                 "value": 0.29032257
               },
               {
                 "operation": "set",
-                "atNanos": 14318095230,
+                "atNanos": 18438095230,
                 "value": 0.32258064
               },
               {
                 "operation": "set",
-                "atNanos": 14341904753,
+                "atNanos": 18461904753,
                 "value": 0.3548387
               },
               {
                 "operation": "set",
-                "atNanos": 14365714276,
+                "atNanos": 18485714276,
                 "value": 0.38709676
               },
               {
                 "operation": "set",
-                "atNanos": 14389523799,
+                "atNanos": 18509523799,
                 "value": 0.41935483
               },
               {
                 "operation": "set",
-                "atNanos": 14413333322,
+                "atNanos": 18533333322,
                 "value": 0.4516129
               },
               {
                 "operation": "set",
-                "atNanos": 14437142845,
+                "atNanos": 18557142845,
                 "value": 0.48387095
               },
               {
                 "operation": "set",
-                "atNanos": 14460952368,
+                "atNanos": 18580952368,
                 "value": 0.516129
               },
               {
                 "operation": "set",
-                "atNanos": 14484761891,
+                "atNanos": 18604761891,
                 "value": 0.5483871
               },
               {
                 "operation": "set",
-                "atNanos": 14508571414,
+                "atNanos": 18628571414,
                 "value": 0.58064514
               },
               {
                 "operation": "set",
-                "atNanos": 14532380937,
+                "atNanos": 18652380937,
                 "value": 0.61290324
               },
               {
                 "operation": "set",
-                "atNanos": 14556190460,
+                "atNanos": 18676190460,
                 "value": 0.6451613
               },
               {
                 "operation": "set",
-                "atNanos": 14579999983,
+                "atNanos": 18699999983,
                 "value": 0.67741936
               },
               {
                 "operation": "set",
-                "atNanos": 14603809506,
+                "atNanos": 18723809506,
                 "value": 0.7096774
               },
               {
                 "operation": "set",
-                "atNanos": 14627619029,
+                "atNanos": 18747619029,
                 "value": 0.7419355
               },
               {
                 "operation": "set",
-                "atNanos": 14651428552,
+                "atNanos": 18771428552,
                 "value": 0.7741935
               },
               {
                 "operation": "set",
-                "atNanos": 14675238075,
+                "atNanos": 18795238075,
                 "value": 0.8064516
               },
               {
                 "operation": "set",
-                "atNanos": 14699047598,
+                "atNanos": 18819047598,
                 "value": 0.83870965
               },
               {
                 "operation": "set",
-                "atNanos": 14722857121,
+                "atNanos": 18842857121,
                 "value": 0.87096775
               },
               {
                 "operation": "set",
-                "atNanos": 14746666644,
+                "atNanos": 18866666644,
                 "value": 0.9032258
               },
               {
                 "operation": "set",
-                "atNanos": 14770476167,
+                "atNanos": 18890476167,
                 "value": 0.9354839
               },
               {
                 "operation": "set",
-                "atNanos": 14794285690,
+                "atNanos": 18914285690,
                 "value": 0.9677419
               },
               {
                 "operation": "set",
-                "atNanos": 14818095213,
+                "atNanos": 18938095213,
                 "value": 1.0
               }
             ]
@@ -11655,12 +11655,12 @@
             "events": [
               {
                 "operation": "set",
-                "atNanos": 14080000000,
+                "atNanos": 18200000000,
                 "value": 1.0
               },
               {
                 "operation": "spring",
-                "atNanos": 15618095224,
+                "atNanos": 19738095224,
                 "target": 0.0,
                 "responseSeconds": 0.24000001,
                 "dampingRatio": 1.0,
@@ -11677,7 +11677,7 @@
             "events": [
               {
                 "operation": "set",
-                "atNanos": 27392875000,
+                "atNanos": 33882083333,
                 "value": 1.0
               }
             ]
@@ -11690,297 +11690,297 @@
             "events": [
               {
                 "operation": "set",
-                "atNanos": 27416684523,
+                "atNanos": 33905892856,
                 "value": 0.016949153
               },
               {
                 "operation": "set",
-                "atNanos": 27440494046,
+                "atNanos": 33929702379,
                 "value": 0.033898305
               },
               {
                 "operation": "set",
-                "atNanos": 27464303569,
+                "atNanos": 33953511902,
                 "value": 0.050847456
               },
               {
                 "operation": "set",
-                "atNanos": 27488113092,
+                "atNanos": 33977321425,
                 "value": 0.06779661
               },
               {
                 "operation": "set",
-                "atNanos": 27511922615,
+                "atNanos": 34001130948,
                 "value": 0.084745765
               },
               {
                 "operation": "set",
-                "atNanos": 27535732138,
+                "atNanos": 34024940471,
                 "value": 0.10169491
               },
               {
                 "operation": "set",
-                "atNanos": 27559541661,
+                "atNanos": 34048749994,
                 "value": 0.118644066
               },
               {
                 "operation": "set",
-                "atNanos": 27583351184,
+                "atNanos": 34072559517,
                 "value": 0.13559322
               },
               {
                 "operation": "set",
-                "atNanos": 27607160707,
+                "atNanos": 34096369040,
                 "value": 0.15254237
               },
               {
                 "operation": "set",
-                "atNanos": 27630970230,
+                "atNanos": 34120178563,
                 "value": 0.16949153
               },
               {
                 "operation": "set",
-                "atNanos": 27654779753,
+                "atNanos": 34143988086,
                 "value": 0.18644068
               },
               {
                 "operation": "set",
-                "atNanos": 27678589276,
+                "atNanos": 34167797609,
                 "value": 0.20338982
               },
               {
                 "operation": "set",
-                "atNanos": 27702398799,
+                "atNanos": 34191607132,
                 "value": 0.22033899
               },
               {
                 "operation": "set",
-                "atNanos": 27726208322,
+                "atNanos": 34215416655,
                 "value": 0.23728813
               },
               {
                 "operation": "set",
-                "atNanos": 27750017845,
+                "atNanos": 34239226178,
                 "value": 0.2542373
               },
               {
                 "operation": "set",
-                "atNanos": 27773827368,
+                "atNanos": 34263035701,
                 "value": 0.27118644
               },
               {
                 "operation": "set",
-                "atNanos": 27797636891,
+                "atNanos": 34286845224,
                 "value": 0.2881356
               },
               {
                 "operation": "set",
-                "atNanos": 27821446414,
+                "atNanos": 34310654747,
                 "value": 0.30508474
               },
               {
                 "operation": "set",
-                "atNanos": 27845255937,
+                "atNanos": 34334464270,
                 "value": 0.3220339
               },
               {
                 "operation": "set",
-                "atNanos": 27869065460,
+                "atNanos": 34358273793,
                 "value": 0.33898306
               },
               {
                 "operation": "set",
-                "atNanos": 27892874983,
+                "atNanos": 34382083316,
                 "value": 0.3559322
               },
               {
                 "operation": "set",
-                "atNanos": 27916684506,
+                "atNanos": 34405892839,
                 "value": 0.37288135
               },
               {
                 "operation": "set",
-                "atNanos": 27940494029,
+                "atNanos": 34429702362,
                 "value": 0.3898305
               },
               {
                 "operation": "set",
-                "atNanos": 27964303552,
+                "atNanos": 34453511885,
                 "value": 0.40677965
               },
               {
                 "operation": "set",
-                "atNanos": 27988113075,
+                "atNanos": 34477321408,
                 "value": 0.42372882
               },
               {
                 "operation": "set",
-                "atNanos": 28011922598,
+                "atNanos": 34501130931,
                 "value": 0.44067797
               },
               {
                 "operation": "set",
-                "atNanos": 28035732121,
+                "atNanos": 34524940454,
                 "value": 0.45762712
               },
               {
                 "operation": "set",
-                "atNanos": 28059541644,
+                "atNanos": 34548749977,
                 "value": 0.47457626
               },
               {
                 "operation": "set",
-                "atNanos": 28083351167,
+                "atNanos": 34572559500,
                 "value": 0.4915254
               },
               {
                 "operation": "set",
-                "atNanos": 28107160690,
+                "atNanos": 34596369023,
                 "value": 0.5084746
               },
               {
                 "operation": "set",
-                "atNanos": 28130970213,
+                "atNanos": 34620178546,
                 "value": 0.5254237
               },
               {
                 "operation": "set",
-                "atNanos": 28154779736,
+                "atNanos": 34643988069,
                 "value": 0.5423729
               },
               {
                 "operation": "set",
-                "atNanos": 28178589259,
+                "atNanos": 34667797592,
                 "value": 0.55932206
               },
               {
                 "operation": "set",
-                "atNanos": 28202398782,
+                "atNanos": 34691607115,
                 "value": 0.5762712
               },
               {
                 "operation": "set",
-                "atNanos": 28226208305,
+                "atNanos": 34715416638,
                 "value": 0.59322035
               },
               {
                 "operation": "set",
-                "atNanos": 28250017828,
+                "atNanos": 34739226161,
                 "value": 0.6101695
               },
               {
                 "operation": "set",
-                "atNanos": 28273827351,
+                "atNanos": 34763035684,
                 "value": 0.62711865
               },
               {
                 "operation": "set",
-                "atNanos": 28297636874,
+                "atNanos": 34786845207,
                 "value": 0.6440678
               },
               {
                 "operation": "set",
-                "atNanos": 28321446397,
+                "atNanos": 34810654730,
                 "value": 0.66101694
               },
               {
                 "operation": "set",
-                "atNanos": 28345255920,
+                "atNanos": 34834464253,
                 "value": 0.6779661
               },
               {
                 "operation": "set",
-                "atNanos": 28369065443,
+                "atNanos": 34858273776,
                 "value": 0.69491524
               },
               {
                 "operation": "set",
-                "atNanos": 28392874966,
+                "atNanos": 34882083299,
                 "value": 0.7118644
               },
               {
                 "operation": "set",
-                "atNanos": 28416684489,
+                "atNanos": 34905892822,
                 "value": 0.7288136
               },
               {
                 "operation": "set",
-                "atNanos": 28440494012,
+                "atNanos": 34929702345,
                 "value": 0.7457627
               },
               {
                 "operation": "set",
-                "atNanos": 28464303535,
+                "atNanos": 34953511868,
                 "value": 0.7627119
               },
               {
                 "operation": "set",
-                "atNanos": 28488113058,
+                "atNanos": 34977321391,
                 "value": 0.779661
               },
               {
                 "operation": "set",
-                "atNanos": 28511922581,
+                "atNanos": 35001130914,
                 "value": 0.7966102
               },
               {
                 "operation": "set",
-                "atNanos": 28535732104,
+                "atNanos": 35024940437,
                 "value": 0.8135593
               },
               {
                 "operation": "set",
-                "atNanos": 28559541627,
+                "atNanos": 35048749960,
                 "value": 0.8305085
               },
               {
                 "operation": "set",
-                "atNanos": 28583351150,
+                "atNanos": 35072559483,
                 "value": 0.84745765
               },
               {
                 "operation": "set",
-                "atNanos": 28607160673,
+                "atNanos": 35096369006,
                 "value": 0.86440676
               },
               {
                 "operation": "set",
-                "atNanos": 28630970196,
+                "atNanos": 35120178529,
                 "value": 0.88135594
               },
               {
                 "operation": "set",
-                "atNanos": 28654779719,
+                "atNanos": 35143988052,
                 "value": 0.89830506
               },
               {
                 "operation": "set",
-                "atNanos": 28678589242,
+                "atNanos": 35167797575,
                 "value": 0.91525424
               },
               {
                 "operation": "set",
-                "atNanos": 28702398765,
+                "atNanos": 35191607098,
                 "value": 0.9322034
               },
               {
                 "operation": "set",
-                "atNanos": 28726208288,
+                "atNanos": 35215416621,
                 "value": 0.9491525
               },
               {
                 "operation": "set",
-                "atNanos": 28750017811,
+                "atNanos": 35239226144,
                 "value": 0.9661017
               },
               {
                 "operation": "set",
-                "atNanos": 28773827334,
+                "atNanos": 35263035667,
                 "value": 0.9830508
               },
               {
                 "operation": "set",
-                "atNanos": 28797636857,
+                "atNanos": 35286845190,
                 "value": 1.0
               }
             ]
@@ -11993,12 +11993,12 @@
             "events": [
               {
                 "operation": "set",
-                "atNanos": 27392875000,
+                "atNanos": 33882083333,
                 "value": 1.0
               },
               {
                 "operation": "spring",
-                "atNanos": 29597636868,
+                "atNanos": 36086845201,
                 "target": 0.0,
                 "responseSeconds": 0.24000001,
                 "dampingRatio": 1.0,
@@ -12017,9 +12017,9 @@
             "kind": "audio",
             "role": "script",
             "sourceStartNanos": 0,
-            "sourceEndNanos": 14352875000,
+            "sourceEndNanos": 18482083333,
             "timelineStartNanos": 1000000000,
-            "timelineEndNanos": 15352875000,
+            "timelineEndNanos": 19482083333,
             "gainDb": 0.0
           },
           {
@@ -12028,9 +12028,9 @@
             "kind": "audio",
             "role": "script",
             "sourceStartNanos": 0,
-            "sourceEndNanos": 14086375000,
-            "timelineStartNanos": 16952875000,
-            "timelineEndNanos": 31039250000,
+            "sourceEndNanos": 16717375000,
+            "timelineStartNanos": 21082083333,
+            "timelineEndNanos": 37799458333,
             "gainDb": 0.0
           }
         ]
@@ -12042,7 +12042,7 @@
       "plan": {
         "version": 2,
         "id": "bootstrap-code",
-        "durationNanos": 10947979166,
+        "durationNanos": 13087312500,
         "actors": [
           {
             "id": "header",
@@ -12729,13 +12729,13 @@
               ],
               "snapshots": [
                 {
-                  "atNanos": 1060000000,
+                  "atNanos": 1080000000,
                   "lineIds": [
                     "line-4"
                   ]
                 },
                 {
-                  "atNanos": 2600000000,
+                  "atNanos": 2780000000,
                   "lineIds": [
                     "line-4",
                     "line-5",
@@ -12819,7 +12819,7 @@
             "events": [
               {
                 "operation": "spring",
-                "atNanos": 160000000,
+                "atNanos": 180000000,
                 "target": 1.0,
                 "responseSeconds": 0.42000002,
                 "dampingRatio": 1.0,
@@ -12836,7 +12836,7 @@
             "events": [
               {
                 "operation": "spring",
-                "atNanos": 160000000,
+                "atNanos": 180000000,
                 "target": 1.0,
                 "responseSeconds": 0.42000002,
                 "dampingRatio": 1.0,
@@ -12853,7 +12853,7 @@
             "events": [
               {
                 "operation": "spring",
-                "atNanos": 160000000,
+                "atNanos": 180000000,
                 "target": 1.0,
                 "responseSeconds": 0.42000002,
                 "dampingRatio": 1.0,
@@ -12870,7 +12870,7 @@
             "events": [
               {
                 "operation": "spring",
-                "atNanos": 160000000,
+                "atNanos": 180000000,
                 "target": 1.0,
                 "responseSeconds": 0.42000002,
                 "dampingRatio": 1.0,
@@ -12957,9 +12957,9 @@
             "kind": "audio",
             "role": "script",
             "sourceStartNanos": 0,
-            "sourceEndNanos": 8447979166,
+            "sourceEndNanos": 10587312500,
             "timelineStartNanos": 900000000,
-            "timelineEndNanos": 9347979166,
+            "timelineEndNanos": 11487312500,
             "gainDb": 0.0
           }
         ]
@@ -12971,7 +12971,7 @@
       "plan": {
         "version": 2,
         "id": "outro",
-        "durationNanos": 16068333333,
+        "durationNanos": 19227895833,
         "actors": [
           {
             "id": "header",
@@ -13233,7 +13233,7 @@
               },
               {
                 "operation": "spring",
-                "atNanos": 1540000000,
+                "atNanos": 1820000000,
                 "target": 1.0,
                 "responseSeconds": 0.48000002,
                 "dampingRatio": 1.0,
@@ -13242,7 +13242,7 @@
               },
               {
                 "operation": "spring",
-                "atNanos": 14868333333,
+                "atNanos": 18027895833,
                 "target": 0.0,
                 "responseSeconds": 0.72,
                 "dampingRatio": 1.0,
@@ -13268,7 +13268,7 @@
               },
               {
                 "operation": "spring",
-                "atNanos": 1790000000,
+                "atNanos": 2070000000,
                 "target": 1.0,
                 "responseSeconds": 0.48000002,
                 "dampingRatio": 1.0,
@@ -13277,7 +13277,7 @@
               },
               {
                 "operation": "spring",
-                "atNanos": 14868333333,
+                "atNanos": 18027895833,
                 "target": 0.0,
                 "responseSeconds": 0.72,
                 "dampingRatio": 1.0,
@@ -13303,7 +13303,7 @@
               },
               {
                 "operation": "spring",
-                "atNanos": 6760000000,
+                "atNanos": 8500000000,
                 "target": 1.0,
                 "responseSeconds": 0.48000002,
                 "dampingRatio": 1.0,
@@ -13312,7 +13312,7 @@
               },
               {
                 "operation": "spring",
-                "atNanos": 14868333333,
+                "atNanos": 18027895833,
                 "target": 0.0,
                 "responseSeconds": 0.72,
                 "dampingRatio": 1.0,
@@ -13338,7 +13338,7 @@
               },
               {
                 "operation": "spring",
-                "atNanos": 7010000000,
+                "atNanos": 8750000000,
                 "target": 1.0,
                 "responseSeconds": 0.48000002,
                 "dampingRatio": 1.0,
@@ -13347,7 +13347,7 @@
               },
               {
                 "operation": "spring",
-                "atNanos": 14868333333,
+                "atNanos": 18027895833,
                 "target": 0.0,
                 "responseSeconds": 0.72,
                 "dampingRatio": 1.0,
@@ -13373,7 +13373,7 @@
               },
               {
                 "operation": "spring",
-                "atNanos": 7260000000,
+                "atNanos": 9000000000,
                 "target": 1.0,
                 "responseSeconds": 0.48000002,
                 "dampingRatio": 1.0,
@@ -13382,7 +13382,7 @@
               },
               {
                 "operation": "spring",
-                "atNanos": 14868333333,
+                "atNanos": 18027895833,
                 "target": 0.0,
                 "responseSeconds": 0.72,
                 "dampingRatio": 1.0,
@@ -13399,12 +13399,12 @@
             "events": [
               {
                 "operation": "set",
-                "atNanos": 10300000000,
+                "atNanos": 13160000000,
                 "value": 1.0
               },
               {
                 "operation": "spring",
-                "atNanos": 14868333333,
+                "atNanos": 18027895833,
                 "target": 0.0,
                 "responseSeconds": 0.36,
                 "dampingRatio": 1.0,
@@ -13421,212 +13421,212 @@
             "events": [
               {
                 "operation": "set",
-                "atNanos": 10325000000,
+                "atNanos": 13185000000,
                 "value": 0.023809524
               },
               {
                 "operation": "set",
-                "atNanos": 10350000000,
+                "atNanos": 13210000000,
                 "value": 0.04761905
               },
               {
                 "operation": "set",
-                "atNanos": 10375000000,
+                "atNanos": 13235000000,
                 "value": 0.071428575
               },
               {
                 "operation": "set",
-                "atNanos": 10400000000,
+                "atNanos": 13260000000,
                 "value": 0.0952381
               },
               {
                 "operation": "set",
-                "atNanos": 10425000000,
+                "atNanos": 13285000000,
                 "value": 0.11904762
               },
               {
                 "operation": "set",
-                "atNanos": 10450000000,
+                "atNanos": 13310000000,
                 "value": 0.14285715
               },
               {
                 "operation": "set",
-                "atNanos": 10475000000,
+                "atNanos": 13335000000,
                 "value": 0.16666667
               },
               {
                 "operation": "set",
-                "atNanos": 10500000000,
+                "atNanos": 13360000000,
                 "value": 0.1904762
               },
               {
                 "operation": "set",
-                "atNanos": 10525000000,
+                "atNanos": 13385000000,
                 "value": 0.21428572
               },
               {
                 "operation": "set",
-                "atNanos": 10550000000,
+                "atNanos": 13410000000,
                 "value": 0.23809524
               },
               {
                 "operation": "set",
-                "atNanos": 10575000000,
+                "atNanos": 13435000000,
                 "value": 0.26190478
               },
               {
                 "operation": "set",
-                "atNanos": 10600000000,
+                "atNanos": 13460000000,
                 "value": 0.2857143
               },
               {
                 "operation": "set",
-                "atNanos": 10625000000,
+                "atNanos": 13485000000,
                 "value": 0.30952382
               },
               {
                 "operation": "set",
-                "atNanos": 10650000000,
+                "atNanos": 13510000000,
                 "value": 0.33333334
               },
               {
                 "operation": "set",
-                "atNanos": 10675000000,
+                "atNanos": 13535000000,
                 "value": 0.35714287
               },
               {
                 "operation": "set",
-                "atNanos": 10700000000,
+                "atNanos": 13560000000,
                 "value": 0.3809524
               },
               {
                 "operation": "set",
-                "atNanos": 10725000000,
+                "atNanos": 13585000000,
                 "value": 0.4047619
               },
               {
                 "operation": "set",
-                "atNanos": 10750000000,
+                "atNanos": 13610000000,
                 "value": 0.42857143
               },
               {
                 "operation": "set",
-                "atNanos": 10775000000,
+                "atNanos": 13635000000,
                 "value": 0.45238096
               },
               {
                 "operation": "set",
-                "atNanos": 10800000000,
+                "atNanos": 13660000000,
                 "value": 0.47619048
               },
               {
                 "operation": "set",
-                "atNanos": 10825000000,
+                "atNanos": 13685000000,
                 "value": 0.5
               },
               {
                 "operation": "set",
-                "atNanos": 10850000000,
+                "atNanos": 13710000000,
                 "value": 0.52380955
               },
               {
                 "operation": "set",
-                "atNanos": 10875000000,
+                "atNanos": 13735000000,
                 "value": 0.54761904
               },
               {
                 "operation": "set",
-                "atNanos": 10900000000,
+                "atNanos": 13760000000,
                 "value": 0.5714286
               },
               {
                 "operation": "set",
-                "atNanos": 10925000000,
+                "atNanos": 13785000000,
                 "value": 0.5952381
               },
               {
                 "operation": "set",
-                "atNanos": 10950000000,
+                "atNanos": 13810000000,
                 "value": 0.61904764
               },
               {
                 "operation": "set",
-                "atNanos": 10975000000,
+                "atNanos": 13835000000,
                 "value": 0.64285713
               },
               {
                 "operation": "set",
-                "atNanos": 11000000000,
+                "atNanos": 13860000000,
                 "value": 0.6666667
               },
               {
                 "operation": "set",
-                "atNanos": 11025000000,
+                "atNanos": 13885000000,
                 "value": 0.6904762
               },
               {
                 "operation": "set",
-                "atNanos": 11050000000,
+                "atNanos": 13910000000,
                 "value": 0.71428573
               },
               {
                 "operation": "set",
-                "atNanos": 11075000000,
+                "atNanos": 13935000000,
                 "value": 0.7380952
               },
               {
                 "operation": "set",
-                "atNanos": 11100000000,
+                "atNanos": 13960000000,
                 "value": 0.7619048
               },
               {
                 "operation": "set",
-                "atNanos": 11125000000,
+                "atNanos": 13985000000,
                 "value": 0.78571427
               },
               {
                 "operation": "set",
-                "atNanos": 11150000000,
+                "atNanos": 14010000000,
                 "value": 0.8095238
               },
               {
                 "operation": "set",
-                "atNanos": 11175000000,
+                "atNanos": 14035000000,
                 "value": 0.8333333
               },
               {
                 "operation": "set",
-                "atNanos": 11200000000,
+                "atNanos": 14060000000,
                 "value": 0.85714287
               },
               {
                 "operation": "set",
-                "atNanos": 11225000000,
+                "atNanos": 14085000000,
                 "value": 0.88095236
               },
               {
                 "operation": "set",
-                "atNanos": 11250000000,
+                "atNanos": 14110000000,
                 "value": 0.9047619
               },
               {
                 "operation": "set",
-                "atNanos": 11275000000,
+                "atNanos": 14135000000,
                 "value": 0.9285714
               },
               {
                 "operation": "set",
-                "atNanos": 11300000000,
+                "atNanos": 14160000000,
                 "value": 0.95238096
               },
               {
                 "operation": "set",
-                "atNanos": 11325000000,
+                "atNanos": 14185000000,
                 "value": 0.97619045
               },
               {
                 "operation": "set",
-                "atNanos": 11350000000,
+                "atNanos": 14210000000,
                 "value": 1.0
               }
             ]
@@ -13639,12 +13639,12 @@
             "events": [
               {
                 "operation": "set",
-                "atNanos": 10300000000,
+                "atNanos": 13160000000,
                 "value": 1.0
               },
               {
                 "operation": "spring",
-                "atNanos": 12550000047,
+                "atNanos": 15410000047,
                 "target": 0.0,
                 "responseSeconds": 0.24000001,
                 "dampingRatio": 1.0,
@@ -13663,9 +13663,9 @@
             "kind": "audio",
             "role": "script",
             "sourceStartNanos": 0,
-            "sourceEndNanos": 12768333333,
+            "sourceEndNanos": 15927895833,
             "timelineStartNanos": 700000000,
-            "timelineEndNanos": 13468333333,
+            "timelineEndNanos": 16627895833,
             "gainDb": 0.0
           }
         ]

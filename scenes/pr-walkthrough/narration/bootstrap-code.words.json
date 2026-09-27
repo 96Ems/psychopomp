@@ -3,112 +3,112 @@
   {
    "word": "It's",
    "start": 0,
-   "end": 0.16
+   "end": 0.18
   },
   {
    "word": "one",
-   "start": 0.16,
-   "end": 0.24
+   "start": 0.18,
+   "end": 0.4
   },
   {
    "word": "new",
-   "start": 0.24,
-   "end": 0.48
+   "start": 0.4,
+   "end": 0.68
   },
   {
    "word": "bootstrap",
-   "start": 0.48,
-   "end": 1.04
+   "start": 0.68,
+   "end": 1.26
   },
   {
-   "word": "function.",
-   "start": 1.04,
-   "end": 1.44
+   "word": "function,",
+   "start": 1.26,
+   "end": 1.66
   },
   {
-   "word": "Connect.",
-   "start": 1.7,
-   "end": 2.16
+   "word": "connect.",
+   "start": 1.88,
+   "end": 2.58
   },
   {
    "word": "If",
-   "start": 2.46,
-   "end": 2.76
+   "start": 3.4900000000000007,
+   "end": 3.88
   },
   {
    "word": "that",
-   "start": 2.76,
-   "end": 2.92
+   "start": 3.88,
+   "end": 4.08
   },
   {
    "word": "fails",
-   "start": 2.92,
-   "end": 3.24
+   "start": 4.08,
+   "end": 4.5
   },
   {
    "word": "with",
-   "start": 3.24,
-   "end": 3.44
-  },
-  {
-   "word": "a",
-   "start": 3.44,
-   "end": 3.56
-  },
-  {
-   "word": "transport",
-   "start": 3.56,
-   "end": 4.02
-  },
-  {
-   "word": "error",
-   "start": 4.02,
-   "end": 4.38
-  },
-  {
-   "word": "on",
-   "start": 4.38,
-   "end": 4.64
-  },
-  {
-   "word": "a",
-   "start": 4.64,
+   "start": 4.5,
    "end": 4.74
   },
   {
-   "word": "managed",
+   "word": "a",
    "start": 4.74,
-   "end": 5.08
+   "end": 4.9
+  },
+  {
+   "word": "transport",
+   "start": 4.9,
+   "end": 5.34
+  },
+  {
+   "word": "error",
+   "start": 5.34,
+   "end": 5.88
+  },
+  {
+   "word": "on",
+   "start": 5.88,
+   "end": 6.28
+  },
+  {
+   "word": "a",
+   "start": 6.28,
+   "end": 6.4
+  },
+  {
+   "word": "managed",
+   "start": 6.4,
+   "end": 6.76
   },
   {
    "word": "connection,",
-   "start": 5.08,
-   "end": 5.42
+   "start": 6.76,
+   "end": 7.14
   },
   {
    "word": "reconnect",
-   "start": 5.82,
-   "end": 6.2
+   "start": 7.5,
+   "end": 8.2
   },
   {
-   "word": "once,",
-   "start": 6.2,
-   "end": 6.72
+   "word": "once",
+   "start": 8.2,
+   "end": 8.68
   },
   {
    "word": "and",
-   "start": 7.04,
-   "end": 7.34
+   "start": 8.68,
+   "end": 9.32
   },
   {
    "word": "connect",
-   "start": 7.34,
-   "end": 7.54
+   "start": 9.32,
+   "end": 9.72
   },
   {
    "word": "again.",
-   "start": 7.54,
-   "end": 7.92
+   "start": 9.72,
+   "end": 10.12
   }
  ]
 }

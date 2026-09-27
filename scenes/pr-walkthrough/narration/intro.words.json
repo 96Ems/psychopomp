@@ -3,232 +3,232 @@
   {
    "word": "OpenCode",
    "start": 0,
-   "end": 0.5
+   "end": 0.64
   },
   {
    "word": "runs",
-   "start": 0.5,
-   "end": 0.68
+   "start": 0.64,
+   "end": 0.88
   },
   {
    "word": "one",
-   "start": 0.68,
-   "end": 1
+   "start": 0.88,
+   "end": 1.38
   },
   {
    "word": "background",
-   "start": 1,
-   "end": 1.36
+   "start": 1.38,
+   "end": 1.84
   },
   {
    "word": "service,",
-   "start": 1.36,
-   "end": 1.88
+   "start": 1.84,
+   "end": 2.24
   },
   {
    "word": "and",
-   "start": 2.18,
-   "end": 2.44
+   "start": 2.6,
+   "end": 3.34
   },
   {
    "word": "every",
-   "start": 2.44,
-   "end": 2.7
+   "start": 3.34,
+   "end": 3.72
   },
   {
    "word": "terminal",
-   "start": 2.7,
-   "end": 3.16
+   "start": 3.72,
+   "end": 4.24
   },
   {
    "word": "and",
-   "start": 3.16,
-   "end": 3.38
+   "start": 4.24,
+   "end": 4.56
   },
   {
    "word": "the",
-   "start": 3.38,
-   "end": 3.46
+   "start": 4.56,
+   "end": 4.7
   },
   {
    "word": "desktop",
-   "start": 3.46,
-   "end": 3.82
+   "start": 4.7,
+   "end": 5
   },
   {
    "word": "app",
-   "start": 3.82,
-   "end": 4.18
+   "start": 5,
+   "end": 5.38
   },
   {
    "word": "connect",
-   "start": 4.18,
-   "end": 4.48
+   "start": 5.38,
+   "end": 5.86
   },
   {
    "word": "to",
-   "start": 4.48,
-   "end": 4.74
+   "start": 5.86,
+   "end": 6.16
   },
   {
    "word": "it.",
-   "start": 4.74,
-   "end": 4.96
+   "start": 6.16,
+   "end": 6.4
   },
   {
    "word": "When",
-   "start": 5.06,
-   "end": 5.34
+   "start": 6.7,
+   "end": 7.46
   },
   {
    "word": "that",
-   "start": 5.34,
-   "end": 5.54
+   "start": 7.46,
+   "end": 7.64
   },
   {
    "word": "service",
-   "start": 5.54,
-   "end": 5.84
+   "start": 7.64,
+   "end": 7.96
   },
   {
    "word": "failed",
-   "start": 5.84,
-   "end": 6.22
+   "start": 7.96,
+   "end": 8.38
   },
   {
    "word": "to",
-   "start": 6.22,
-   "end": 6.38
+   "start": 8.38,
+   "end": 8.54
   },
   {
    "word": "start,",
-   "start": 6.38,
-   "end": 6.78
+   "start": 8.54,
+   "end": 8.92
   },
   {
    "word": "you",
-   "start": 6.94,
-   "end": 7.18
+   "start": 9.06,
+   "end": 9.76
   },
   {
    "word": "usually",
-   "start": 7.18,
-   "end": 7.52
+   "start": 9.76,
+   "end": 10.14
   },
   {
    "word": "saw",
-   "start": 7.52,
-   "end": 7.88
+   "start": 10.14,
+   "end": 10.52
   },
   {
    "word": "a",
-   "start": 7.88,
-   "end": 8.04
+   "start": 10.52,
+   "end": 10.84
   },
   {
    "word": "vague",
-   "start": 8.04,
-   "end": 8.24
+   "start": 10.84,
+   "end": 11.26
   },
   {
    "word": "timeout,",
-   "start": 8.24,
-   "end": 8.76
+   "start": 11.26,
+   "end": 11.96
   },
   {
    "word": "and",
-   "start": 8.88,
-   "end": 9.18
+   "start": 12.02,
+   "end": 12.48
   },
   {
    "word": "sometimes,",
-   "start": 9.18,
-   "end": 9.54
+   "start": 12.48,
+   "end": 12.86
   },
   {
    "word": "a",
-   "start": 10,
-   "end": 10.26
+   "start": 13.24,
+   "end": 13.7
   },
   {
    "word": "perfectly",
-   "start": 10.26,
-   "end": 10.66
+   "start": 13.7,
+   "end": 14.1
   },
   {
    "word": "healthy",
-   "start": 10.66,
-   "end": 11.1
+   "start": 14.1,
+   "end": 14.54
   },
   {
    "word": "server",
-   "start": 11.1,
-   "end": 11.5
+   "start": 14.54,
+   "end": 15
   },
   {
    "word": "got",
-   "start": 11.5,
-   "end": 11.78
+   "start": 15,
+   "end": 15.34
   },
   {
    "word": "killed.",
-   "start": 11.78,
-   "end": 12.16
+   "start": 15.34,
+   "end": 15.82
   },
   {
    "word": "These",
-   "start": 12.36,
-   "end": 12.64
+   "start": 16.32,
+   "end": 17.08
   },
   {
    "word": "five",
-   "start": 12.64,
-   "end": 12.9
+   "start": 17.08,
+   "end": 17.5
   },
   {
    "word": "small",
-   "start": 12.9,
-   "end": 13.22
+   "start": 17.5,
+   "end": 18.1
   },
   {
    "word": "pull",
-   "start": 13.22,
-   "end": 13.54
+   "start": 18.1,
+   "end": 18.52
   },
   {
    "word": "requests",
-   "start": 13.54,
-   "end": 13.96
+   "start": 18.52,
+   "end": 18.9
   },
   {
    "word": "fix",
-   "start": 13.96,
-   "end": 14.38
+   "start": 18.9,
+   "end": 19.56
   },
   {
    "word": "that.",
-   "start": 14.38,
-   "end": 14.6
+   "start": 19.56,
+   "end": 19.8
   },
   {
    "word": "Let's",
-   "start": 14.88,
-   "end": 15.36
+   "start": 20.46,
+   "end": 20.86
   },
   {
    "word": "walk",
-   "start": 15.36,
-   "end": 15.48
+   "start": 20.86,
+   "end": 21
   },
   {
    "word": "through",
-   "start": 15.48,
-   "end": 15.7
+   "start": 21,
+   "end": 21.22
   },
   {
    "word": "them.",
-   "start": 15.7,
-   "end": 15.84
+   "start": 21.22,
+   "end": 21.42
   }
  ]
 }

@@ -7,133 +7,133 @@
   },
   {
    "word": "while",
-   "start": 0.32,
+   "start": 0.3,
+   "end": 0.56
+  },
+  {
+   "word": "it",
+   "start": 0.56,
    "end": 0.7
   },
   {
-   "word": "it",
-   "start": 0.7,
-   "end": 0.9
-  },
-  {
    "word": "waits,",
-   "start": 0.9,
-   "end": 1.2
+   "start": 0.7,
+   "end": 1.04
   },
   {
    "word": "it",
-   "start": 1.48,
-   "end": 1.74
+   "start": 1.18,
+   "end": 1.8
   },
   {
    "word": "also",
-   "start": 1.74,
-   "end": 2.04
+   "start": 1.8,
+   "end": 2.12
   },
   {
    "word": "retries",
-   "start": 2.04,
-   "end": 2.54
+   "start": 2.12,
+   "end": 2.66
   },
   {
    "word": "the",
-   "start": 2.54,
-   "end": 2.72
+   "start": 2.66,
+   "end": 2.92
   },
   {
-   "word": "bind,",
-   "start": 2.72,
-   "end": 3.08
+   "word": "bind",
+   "start": 2.92,
+   "end": 3.28
   },
   {
    "word": "every",
-   "start": 3.24,
-   "end": 3.58
+   "start": 3.28,
+   "end": 4.08
   },
   {
    "word": "100",
-   "start": 3.58,
-   "end": 3.9
+   "start": 4.08,
+   "end": 4.6
   },
   {
    "word": "milliseconds.",
-   "start": 3.9,
-   "end": 4.5
+   "start": 4.6,
+   "end": 5.28
   },
   {
    "word": "As",
-   "start": 4.74,
-   "end": 5.26
+   "start": 6.22,
+   "end": 6.88
   },
   {
    "word": "soon",
-   "start": 5.26,
-   "end": 5.48
+   "start": 6.88,
+   "end": 7.1
   },
   {
    "word": "as",
-   "start": 5.48,
-   "end": 5.64
+   "start": 7.1,
+   "end": 7.3
   },
   {
    "word": "the",
-   "start": 5.64,
-   "end": 5.78
+   "start": 7.3,
+   "end": 7.38
   },
   {
    "word": "port",
-   "start": 5.78,
-   "end": 6.04
+   "start": 7.38,
+   "end": 7.64
   },
   {
    "word": "is",
-   "start": 6.04,
-   "end": 6.2
+   "start": 7.64,
+   "end": 7.84
   },
   {
    "word": "free,",
-   "start": 6.2,
-   "end": 6.42
+   "start": 7.84,
+   "end": 8.2
   },
   {
    "word": "the",
-   "start": 6.6,
-   "end": 6.84
+   "start": 8.42,
+   "end": 9
   },
   {
    "word": "same",
-   "start": 6.84,
-   "end": 7.12
+   "start": 9,
+   "end": 9.32
   },
   {
    "word": "process",
-   "start": 7.12,
-   "end": 7.5
+   "start": 9.32,
+   "end": 9.74
   },
   {
    "word": "takes",
-   "start": 7.5,
-   "end": 7.88
+   "start": 9.74,
+   "end": 10.2
   },
   {
    "word": "it",
-   "start": 7.88,
-   "end": 8.14
+   "start": 10.2,
+   "end": 10.5
   },
   {
    "word": "and",
-   "start": 8.14,
-   "end": 8.24
+   "start": 10.5,
+   "end": 11.08
   },
   {
    "word": "starts",
-   "start": 8.24,
-   "end": 8.54
+   "start": 11.08,
+   "end": 11.44
   },
   {
    "word": "normally.",
-   "start": 8.54,
-   "end": 8.96
+   "start": 11.44,
+   "end": 11.96
   }
  ]
 }

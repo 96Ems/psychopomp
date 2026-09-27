@@ -3,197 +3,197 @@
   {
    "word": "Now",
    "start": 0,
-   "end": 0.12
+   "end": 0.28
   },
   {
    "word": "a",
-   "start": 0.12,
-   "end": 0.24
+   "start": 0.28,
+   "end": 0.48
   },
   {
    "word": "transport",
-   "start": 0.24,
-   "end": 0.7
+   "start": 0.48,
+   "end": 0.98
   },
   {
    "word": "failure",
-   "start": 0.7,
-   "end": 1.1
+   "start": 0.98,
+   "end": 1.44
   },
   {
    "word": "during",
-   "start": 1.1,
-   "end": 1.52
+   "start": 1.44,
+   "end": 1.9
   },
   {
    "word": "startup",
-   "start": 1.52,
-   "end": 2
+   "start": 1.9,
+   "end": 2.34
   },
   {
    "word": "gets",
-   "start": 2,
-   "end": 2.3
+   "start": 2.34,
+   "end": 2.72
   },
   {
    "word": "exactly",
-   "start": 2.3,
-   "end": 2.76
+   "start": 2.72,
+   "end": 3.26
   },
   {
    "word": "one",
-   "start": 2.76,
-   "end": 3.16
+   "start": 3.26,
+   "end": 3.78
   },
   {
    "word": "managed",
-   "start": 3.16,
-   "end": 3.58
+   "start": 3.78,
+   "end": 4.36
   },
   {
    "word": "reconnect.",
-   "start": 3.58,
-   "end": 3.92
-  },
-  {
-   "word": "Find",
-   "start": 4.42,
+   "start": 4.36,
    "end": 4.86
   },
   {
+   "word": "Find",
+   "start": 5.48,
+   "end": 6.16
+  },
+  {
    "word": "or",
-   "start": 4.86,
-   "end": 5.02
+   "start": 6.16,
+   "end": 6.44
   },
   {
    "word": "start",
-   "start": 5.02,
-   "end": 5.26
+   "start": 6.44,
+   "end": 6.78
   },
   {
    "word": "a",
-   "start": 5.26,
-   "end": 5.46
-  },
-  {
-   "word": "server,",
-   "start": 5.46,
-   "end": 5.78
-  },
-  {
-   "word": "rebuild",
-   "start": 5.94,
-   "end": 6.32
-  },
-  {
-   "word": "the",
-   "start": 6.32,
-   "end": 6.56
-  },
-  {
-   "word": "client,",
-   "start": 6.56,
+   "start": 6.78,
    "end": 6.96
   },
   {
+   "word": "server,",
+   "start": 6.96,
+   "end": 7.32
+  },
+  {
+   "word": "rebuild",
+   "start": 7.48,
+   "end": 8.16
+  },
+  {
+   "word": "the",
+   "start": 8.16,
+   "end": 8.44
+  },
+  {
+   "word": "client,",
+   "start": 8.44,
+   "end": 8.78
+  },
+  {
    "word": "and",
-   "start": 7.12,
-   "end": 7.38
+   "start": 8.92,
+   "end": 9.14
   },
   {
    "word": "try",
-   "start": 7.38,
-   "end": 7.58
+   "start": 9.14,
+   "end": 9.46
   },
   {
-   "word": "again,",
-   "start": 7.58,
-   "end": 7.86
+   "word": "again.",
+   "start": 9.46,
+   "end": 9.76
   },
   {
-   "word": "all",
-   "start": 8.16,
-   "end": 8.46
+   "word": "All",
+   "start": 10.4,
+   "end": 10.74
   },
   {
    "word": "within",
-   "start": 8.46,
-   "end": 8.72
+   "start": 10.74,
+   "end": 11.02
   },
   {
    "word": "a",
-   "start": 8.72,
-   "end": 8.94
-  },
-  {
-   "word": "two",
-   "start": 8.94,
-   "end": 9.1
-  },
-  {
-   "word": "-minute",
-   "start": 9.1,
-   "end": 9.4
-  },
-  {
-   "word": "deadline.",
-   "start": 9.4,
-   "end": 9.72
-  },
-  {
-   "word": "An",
-   "start": 10.14,
-   "end": 10.44
-  },
-  {
-   "word": "explicit",
-   "start": 10.44,
-   "end": 10.84
-  },
-  {
-   "word": "server",
-   "start": 10.84,
+   "start": 11.02,
    "end": 11.26
   },
   {
-   "word": "connection",
+   "word": "two",
    "start": 11.26,
-   "end": 11.62
+   "end": 11.52
+  },
+  {
+   "word": "-minute",
+   "start": 11.52,
+   "end": 11.82
+  },
+  {
+   "word": "deadline.",
+   "start": 11.82,
+   "end": 12.22
+  },
+  {
+   "word": "An",
+   "start": 12.5,
+   "end": 12.8
+  },
+  {
+   "word": "explicit",
+   "start": 12.8,
+   "end": 13.16
+  },
+  {
+   "word": "server",
+   "start": 13.16,
+   "end": 13.56
+  },
+  {
+   "word": "connection",
+   "start": 13.56,
+   "end": 13.9
   },
   {
    "word": "never",
-   "start": 11.62,
-   "end": 12.1
+   "start": 13.9,
+   "end": 14.56
   },
   {
    "word": "starts",
-   "start": 12.1,
-   "end": 12.52
+   "start": 14.56,
+   "end": 15
   },
   {
    "word": "a",
-   "start": 12.52,
-   "end": 12.7
+   "start": 15,
+   "end": 15.16
   },
   {
    "word": "service",
-   "start": 12.7,
-   "end": 13.02
+   "start": 15.16,
+   "end": 15.54
   },
   {
    "word": "on",
-   "start": 13.02,
-   "end": 13.24
+   "start": 15.54,
+   "end": 15.9
   },
   {
    "word": "its",
-   "start": 13.24,
-   "end": 13.42
+   "start": 15.9,
+   "end": 16.08
   },
   {
    "word": "own.",
-   "start": 13.42,
-   "end": 13.7
+   "start": 16.08,
+   "end": 16.34
   }
  ]
 }
