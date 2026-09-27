@@ -1,0 +1,139 @@
+{
+ "wordTimings": [
+  {
+   "word": "Now,",
+   "start": 0,
+   "end": 0.26
+  },
+  {
+   "word": "while",
+   "start": 0.32,
+   "end": 0.7
+  },
+  {
+   "word": "it",
+   "start": 0.7,
+   "end": 0.9
+  },
+  {
+   "word": "waits,",
+   "start": 0.9,
+   "end": 1.2
+  },
+  {
+   "word": "it",
+   "start": 1.48,
+   "end": 1.74
+  },
+  {
+   "word": "also",
+   "start": 1.74,
+   "end": 2.04
+  },
+  {
+   "word": "retries",
+   "start": 2.04,
+   "end": 2.54
+  },
+  {
+   "word": "the",
+   "start": 2.54,
+   "end": 2.72
+  },
+  {
+   "word": "bind,",
+   "start": 2.72,
+   "end": 3.08
+  },
+  {
+   "word": "every",
+   "start": 3.24,
+   "end": 3.58
+  },
+  {
+   "word": "100",
+   "start": 3.58,
+   "end": 3.9
+  },
+  {
+   "word": "milliseconds.",
+   "start": 3.9,
+   "end": 4.5
+  },
+  {
+   "word": "As",
+   "start": 4.74,
+   "end": 5.26
+  },
+  {
+   "word": "soon",
+   "start": 5.26,
+   "end": 5.48
+  },
+  {
+   "word": "as",
+   "start": 5.48,
+   "end": 5.64
+  },
+  {
+   "word": "the",
+   "start": 5.64,
+   "end": 5.78
+  },
+  {
+   "word": "port",
+   "start": 5.78,
+   "end": 6.04
+  },
+  {
+   "word": "is",
+   "start": 6.04,
+   "end": 6.2
+  },
+  {
+   "word": "free,",
+   "start": 6.2,
+   "end": 6.42
+  },
+  {
+   "word": "the",
+   "start": 6.6,
+   "end": 6.84
+  },
+  {
+   "word": "same",
+   "start": 6.84,
+   "end": 7.12
+  },
+  {
+   "word": "process",
+   "start": 7.12,
+   "end": 7.5
+  },
+  {
+   "word": "takes",
+   "start": 7.5,
+   "end": 7.88
+  },
+  {
+   "word": "it",
+   "start": 7.88,
+   "end": 8.14
+  },
+  {
+   "word": "and",
+   "start": 8.14,
+   "end": 8.24
+  },
+  {
+   "word": "starts",
+   "start": 8.24,
+   "end": 8.54
+  },
+  {
+   "word": "normally.",
+   "start": 8.54,
+   "end": 8.96
+  }
+ ]
+}

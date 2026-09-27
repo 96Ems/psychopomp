@@ -1,0 +1,129 @@
+{
+ "wordTimings": [
+  {
+   "word": "The",
+   "start": 0,
+   "end": 0.08
+  },
+  {
+   "word": "15",
+   "start": 0.08,
+   "end": 0.3
+  },
+  {
+   "word": "second",
+   "start": 0.3,
+   "end": 0.72
+  },
+  {
+   "word": "wait",
+   "start": 0.72,
+   "end": 1.08
+  },
+  {
+   "word": "becomes",
+   "start": 1.08,
+   "end": 1.46
+  },
+  {
+   "word": "a",
+   "start": 1.46,
+   "end": 1.68
+  },
+  {
+   "word": "lube.",
+   "start": 1.68,
+   "end": 1.94
+  },
+  {
+   "word": "Look",
+   "start": 2.06,
+   "end": 2.38
+  },
+  {
+   "word": "for",
+   "start": 2.38,
+   "end": 2.52
+  },
+  {
+   "word": "an",
+   "start": 2.52,
+   "end": 2.7
+  },
+  {
+   "word": "incumbent.",
+   "start": 2.7,
+   "end": 3.04
+  },
+  {
+   "word": "Sleep",
+   "start": 3.36,
+   "end": 3.76
+  },
+  {
+   "word": "100",
+   "start": 3.76,
+   "end": 4.02
+  },
+  {
+   "word": "milliseconds.",
+   "start": 4.02,
+   "end": 4.74
+  },
+  {
+   "word": "Try",
+   "start": 5.22,
+   "end": 5.6
+  },
+  {
+   "word": "to",
+   "start": 5.6,
+   "end": 5.78
+  },
+  {
+   "word": "bind",
+   "start": 5.78,
+   "end": 6.04
+  },
+  {
+   "word": "again.",
+   "start": 6.04,
+   "end": 6.32
+  },
+  {
+   "word": "The",
+   "start": 6.62,
+   "end": 6.92
+  },
+  {
+   "word": "helper",
+   "start": 6.92,
+   "end": 7.24
+  },
+  {
+   "word": "that",
+   "start": 7.24,
+   "end": 7.44
+  },
+  {
+   "word": "only",
+   "start": 7.44,
+   "end": 7.72
+  },
+  {
+   "word": "waited",
+   "start": 7.72,
+   "end": 8.08
+  },
+  {
+   "word": "is",
+   "start": 8.08,
+   "end": 8.24
+  },
+  {
+   "word": "gone.",
+   "start": 8.24,
+   "end": 8.46
+  }
+ ]
+}

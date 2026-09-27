@@ -1,0 +1,199 @@
+{
+ "wordTimings": [
+  {
+   "word": "Now",
+   "start": 0,
+   "end": 0.12
+  },
+  {
+   "word": "a",
+   "start": 0.12,
+   "end": 0.24
+  },
+  {
+   "word": "transport",
+   "start": 0.24,
+   "end": 0.7
+  },
+  {
+   "word": "failure",
+   "start": 0.7,
+   "end": 1.1
+  },
+  {
+   "word": "during",
+   "start": 1.1,
+   "end": 1.52
+  },
+  {
+   "word": "startup",
+   "start": 1.52,
+   "end": 2
+  },
+  {
+   "word": "gets",
+   "start": 2,
+   "end": 2.3
+  },
+  {
+   "word": "exactly",
+   "start": 2.3,
+   "end": 2.76
+  },
+  {
+   "word": "one",
+   "start": 2.76,
+   "end": 3.16
+  },
+  {
+   "word": "managed",
+   "start": 3.16,
+   "end": 3.58
+  },
+  {
+   "word": "reconnect.",
+   "start": 3.58,
+   "end": 3.92
+  },
+  {
+   "word": "Find",
+   "start": 4.42,
+   "end": 4.86
+  },
+  {
+   "word": "or",
+   "start": 4.86,
+   "end": 5.02
+  },
+  {
+   "word": "start",
+   "start": 5.02,
+   "end": 5.26
+  },
+  {
+   "word": "a",
+   "start": 5.26,
+   "end": 5.46
+  },
+  {
+   "word": "server,",
+   "start": 5.46,
+   "end": 5.78
+  },
+  {
+   "word": "rebuild",
+   "start": 5.94,
+   "end": 6.32
+  },
+  {
+   "word": "the",
+   "start": 6.32,
+   "end": 6.56
+  },
+  {
+   "word": "client,",
+   "start": 6.56,
+   "end": 6.96
+  },
+  {
+   "word": "and",
+   "start": 7.12,
+   "end": 7.38
+  },
+  {
+   "word": "try",
+   "start": 7.38,
+   "end": 7.58
+  },
+  {
+   "word": "again,",
+   "start": 7.58,
+   "end": 7.86
+  },
+  {
+   "word": "all",
+   "start": 8.16,
+   "end": 8.46
+  },
+  {
+   "word": "within",
+   "start": 8.46,
+   "end": 8.72
+  },
+  {
+   "word": "a",
+   "start": 8.72,
+   "end": 8.94
+  },
+  {
+   "word": "two",
+   "start": 8.94,
+   "end": 9.1
+  },
+  {
+   "word": "-minute",
+   "start": 9.1,
+   "end": 9.4
+  },
+  {
+   "word": "deadline.",
+   "start": 9.4,
+   "end": 9.72
+  },
+  {
+   "word": "An",
+   "start": 10.14,
+   "end": 10.44
+  },
+  {
+   "word": "explicit",
+   "start": 10.44,
+   "end": 10.84
+  },
+  {
+   "word": "server",
+   "start": 10.84,
+   "end": 11.26
+  },
+  {
+   "word": "connection",
+   "start": 11.26,
+   "end": 11.62
+  },
+  {
+   "word": "never",
+   "start": 11.62,
+   "end": 12.1
+  },
+  {
+   "word": "starts",
+   "start": 12.1,
+   "end": 12.52
+  },
+  {
+   "word": "a",
+   "start": 12.52,
+   "end": 12.7
+  },
+  {
+   "word": "service",
+   "start": 12.7,
+   "end": 13.02
+  },
+  {
+   "word": "on",
+   "start": 13.02,
+   "end": 13.24
+  },
+  {
+   "word": "its",
+   "start": 13.24,
+   "end": 13.42
+  },
+  {
+   "word": "own.",
+   "start": 13.42,
+   "end": 13.7
+  }
+ ]
+}

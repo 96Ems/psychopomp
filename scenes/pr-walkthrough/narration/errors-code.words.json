@@ -1,0 +1,164 @@
+{
+ "wordTimings": [
+  {
+   "word": "The",
+   "start": 0,
+   "end": 0.12
+  },
+  {
+   "word": "diff",
+   "start": 0.12,
+   "end": 0.2
+  },
+  {
+   "word": "is",
+   "start": 0.2,
+   "end": 0.36
+  },
+  {
+   "word": "tiny.",
+   "start": 0.36,
+   "end": 0.68
+  },
+  {
+   "word": "The",
+   "start": 0.9,
+   "end": 1.18
+  },
+  {
+   "word": "failure",
+   "start": 1.18,
+   "end": 1.54
+  },
+  {
+   "word": "now",
+   "start": 1.54,
+   "end": 1.78
+  },
+  {
+   "word": "lives",
+   "start": 1.78,
+   "end": 2.08
+  },
+  {
+   "word": "outside",
+   "start": 2.08,
+   "end": 2.54
+  },
+  {
+   "word": "the",
+   "start": 2.54,
+   "end": 2.8
+  },
+  {
+   "word": "loop.",
+   "start": 2.8,
+   "end": 2.98
+  },
+  {
+   "word": "So",
+   "start": 3.2,
+   "end": 3.5
+  },
+  {
+   "word": "it",
+   "start": 3.5,
+   "end": 3.72
+  },
+  {
+   "word": "survives.",
+   "start": 3.72,
+   "end": 4.04
+  },
+  {
+   "word": "No",
+   "start": 4.5,
+   "end": 4.8
+  },
+  {
+   "word": "new",
+   "start": 4.8,
+   "end": 5.02
+  },
+  {
+   "word": "contender",
+   "start": 5.02,
+   "end": 5.54
+  },
+  {
+   "word": "starts",
+   "start": 5.54,
+   "end": 5.8
+  },
+  {
+   "word": "after",
+   "start": 5.8,
+   "end": 6.24
+  },
+  {
+   "word": "a",
+   "start": 6.24,
+   "end": 6.44
+  },
+  {
+   "word": "failure.",
+   "start": 6.44,
+   "end": 6.78
+  },
+  {
+   "word": "And",
+   "start": 7.02,
+   "end": 7.32
+  },
+  {
+   "word": "the",
+   "start": 7.32,
+   "end": 7.42
+  },
+  {
+   "word": "timeout",
+   "start": 7.42,
+   "end": 7.86
+  },
+  {
+   "word": "reports",
+   "start": 7.86,
+   "end": 8.16
+  },
+  {
+   "word": "the",
+   "start": 8.16,
+   "end": 8.48
+  },
+  {
+   "word": "saved",
+   "start": 8.48,
+   "end": 8.78
+  },
+  {
+   "word": "error",
+   "start": 8.78,
+   "end": 9.02
+  },
+  {
+   "word": "when",
+   "start": 9.02,
+   "end": 9.26
+  },
+  {
+   "word": "there",
+   "start": 9.26,
+   "end": 9.44
+  },
+  {
+   "word": "is",
+   "start": 9.44,
+   "end": 9.58
+  },
+  {
+   "word": "one.",
+   "start": 9.58,
+   "end": 9.74
+  }
+ ]
+}

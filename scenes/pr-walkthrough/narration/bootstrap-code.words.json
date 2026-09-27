@@ -1,0 +1,114 @@
+{
+ "wordTimings": [
+  {
+   "word": "It's",
+   "start": 0,
+   "end": 0.16
+  },
+  {
+   "word": "one",
+   "start": 0.16,
+   "end": 0.24
+  },
+  {
+   "word": "new",
+   "start": 0.24,
+   "end": 0.48
+  },
+  {
+   "word": "bootstrap",
+   "start": 0.48,
+   "end": 1.04
+  },
+  {
+   "word": "function.",
+   "start": 1.04,
+   "end": 1.44
+  },
+  {
+   "word": "Connect.",
+   "start": 1.7,
+   "end": 2.16
+  },
+  {
+   "word": "If",
+   "start": 2.46,
+   "end": 2.76
+  },
+  {
+   "word": "that",
+   "start": 2.76,
+   "end": 2.92
+  },
+  {
+   "word": "fails",
+   "start": 2.92,
+   "end": 3.24
+  },
+  {
+   "word": "with",
+   "start": 3.24,
+   "end": 3.44
+  },
+  {
+   "word": "a",
+   "start": 3.44,
+   "end": 3.56
+  },
+  {
+   "word": "transport",
+   "start": 3.56,
+   "end": 4.02
+  },
+  {
+   "word": "error",
+   "start": 4.02,
+   "end": 4.38
+  },
+  {
+   "word": "on",
+   "start": 4.38,
+   "end": 4.64
+  },
+  {
+   "word": "a",
+   "start": 4.64,
+   "end": 4.74
+  },
+  {
+   "word": "managed",
+   "start": 4.74,
+   "end": 5.08
+  },
+  {
+   "word": "connection,",
+   "start": 5.08,
+   "end": 5.42
+  },
+  {
+   "word": "reconnect",
+   "start": 5.82,
+   "end": 6.2
+  },
+  {
+   "word": "once,",
+   "start": 6.2,
+   "end": 6.72
+  },
+  {
+   "word": "and",
+   "start": 7.04,
+   "end": 7.34
+  },
+  {
+   "word": "connect",
+   "start": 7.34,
+   "end": 7.54
+  },
+  {
+   "word": "again.",
+   "start": 7.54,
+   "end": 7.92
+  }
+ ]
+}

@@ -13,6 +13,7 @@ members = [
   "scenes/component-prototypes",
   "scenes/opencode-session-tool",
   "scenes/quark-before-after",
+  "scenes/pr-walkthrough",
 ]
 default-members = ["crates/kinograph-render"]
 resolver = "3"

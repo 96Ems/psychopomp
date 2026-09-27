@@ -1,0 +1,209 @@
+{
+ "wordTimings": [
+  {
+   "word": "Now",
+   "start": 0,
+   "end": 0.12
+  },
+  {
+   "word": "it",
+   "start": 0.12,
+   "end": 0.26
+  },
+  {
+   "word": "only",
+   "start": 0.26,
+   "end": 0.5
+  },
+  {
+   "word": "trusts",
+   "start": 0.5,
+   "end": 0.94
+  },
+  {
+   "word": "the",
+   "start": 0.94,
+   "end": 1.12
+  },
+  {
+   "word": "process",
+   "start": 1.12,
+   "end": 1.48
+  },
+  {
+   "word": "it",
+   "start": 1.48,
+   "end": 1.74
+  },
+  {
+   "word": "signaled.",
+   "start": 1.74,
+   "end": 2.2
+  },
+  {
+   "word": "If",
+   "start": 2.3,
+   "end": 2.6
+  },
+  {
+   "word": "that",
+   "start": 2.6,
+   "end": 2.76
+  },
+  {
+   "word": "process",
+   "start": 2.76,
+   "end": 3.18
+  },
+  {
+   "word": "is",
+   "start": 3.18,
+   "end": 3.46
+  },
+  {
+   "word": "still",
+   "start": 3.46,
+   "end": 3.66
+  },
+  {
+   "word": "alive",
+   "start": 3.66,
+   "end": 3.92
+  },
+  {
+   "word": "after",
+   "start": 3.92,
+   "end": 4.32
+  },
+  {
+   "word": "the",
+   "start": 4.32,
+   "end": 4.52
+  },
+  {
+   "word": "grace",
+   "start": 4.52,
+   "end": 4.78
+  },
+  {
+   "word": "period,",
+   "start": 4.78,
+   "end": 5.1
+  },
+  {
+   "word": "it",
+   "start": 5.38,
+   "end": 5.64
+  },
+  {
+   "word": "gets",
+   "start": 5.64,
+   "end": 5.92
+  },
+  {
+   "word": "a",
+   "start": 5.92,
+   "end": 6.1
+  },
+  {
+   "word": "kill.",
+   "start": 6.1,
+   "end": 6.24
+  },
+  {
+   "word": "And",
+   "start": 6.5,
+   "end": 6.84
+  },
+  {
+   "word": "if",
+   "start": 6.84,
+   "end": 6.98
+  },
+  {
+   "word": "even",
+   "start": 6.98,
+   "end": 7.26
+  },
+  {
+   "word": "that",
+   "start": 7.26,
+   "end": 7.42
+  },
+  {
+   "word": "fails,",
+   "start": 7.42,
+   "end": 7.92
+  },
+  {
+   "word": "stop",
+   "start": 8.1,
+   "end": 8.5
+  },
+  {
+   "word": "reports",
+   "start": 8.5,
+   "end": 8.86
+  },
+  {
+   "word": "a",
+   "start": 8.86,
+   "end": 9.16
+  },
+  {
+   "word": "clear",
+   "start": 9.16,
+   "end": 9.36
+  },
+  {
+   "word": "error",
+   "start": 9.36,
+   "end": 9.66
+  },
+  {
+   "word": "after",
+   "start": 9.66,
+   "end": 9.96
+  },
+  {
+   "word": "about",
+   "start": 9.96,
+   "end": 10.26
+  },
+  {
+   "word": "10",
+   "start": 10.26,
+   "end": 10.6
+  },
+  {
+   "word": "seconds,",
+   "start": 10.6,
+   "end": 11.06
+  },
+  {
+   "word": "instead",
+   "start": 11.28,
+   "end": 11.68
+  },
+  {
+   "word": "of",
+   "start": 11.68,
+   "end": 12
+  },
+  {
+   "word": "pretending",
+   "start": 12,
+   "end": 12.32
+  },
+  {
+   "word": "it",
+   "start": 12.32,
+   "end": 12.7
+  },
+  {
+   "word": "worked.",
+   "start": 12.7,
+   "end": 12.98
+  }
+ ]
+}

@@ -1,0 +1,314 @@
+{
+ "wordTimings": [
+  {
+   "word": "second,",
+   "start": 0,
+   "end": 0.34
+  },
+  {
+   "word": "never",
+   "start": 0.52,
+   "end": 0.86
+  },
+  {
+   "word": "kill",
+   "start": 0.86,
+   "end": 1.14
+  },
+  {
+   "word": "a",
+   "start": 1.14,
+   "end": 1.3
+  },
+  {
+   "word": "healthy",
+   "start": 1.3,
+   "end": 1.58
+  },
+  {
+   "word": "server",
+   "start": 1.58,
+   "end": 1.92
+  },
+  {
+   "word": "over",
+   "start": 1.92,
+   "end": 2.24
+  },
+  {
+   "word": "a",
+   "start": 2.24,
+   "end": 2.42
+  },
+  {
+   "word": "protocol",
+   "start": 2.42,
+   "end": 2.76
+  },
+  {
+   "word": "mismatch",
+   "start": 2.76,
+   "end": 3.62
+  },
+  {
+   "word": "when",
+   "start": 3.62,
+   "end": 4
+  },
+  {
+   "word": "a",
+   "start": 4,
+   "end": 4.18
+  },
+  {
+   "word": "client",
+   "start": 4.18,
+   "end": 4.56
+  },
+  {
+   "word": "reconnects,",
+   "start": 4.56,
+   "end": 5.42
+  },
+  {
+   "word": "it",
+   "start": 5.42,
+   "end": 5.66
+  },
+  {
+   "word": "checks",
+   "start": 5.66,
+   "end": 5.96
+  },
+  {
+   "word": "the",
+   "start": 5.96,
+   "end": 6.14
+  },
+  {
+   "word": "server's",
+   "start": 6.14,
+   "end": 6.58
+  },
+  {
+   "word": "health",
+   "start": 6.58,
+   "end": 6.8
+  },
+  {
+   "word": "endpoint",
+   "start": 6.8,
+   "end": 7.16
+  },
+  {
+   "word": "if",
+   "start": 7.51,
+   "end": 7.8
+  },
+  {
+   "word": "that",
+   "start": 7.8,
+   "end": 7.98
+  },
+  {
+   "word": "returns",
+   "start": 7.98,
+   "end": 8.36
+  },
+  {
+   "word": "a",
+   "start": 8.36,
+   "end": 8.6
+  },
+  {
+   "word": "404,",
+   "start": 8.6,
+   "end": 9.28
+  },
+  {
+   "word": "the",
+   "start": 9.62,
+   "end": 9.86
+  },
+  {
+   "word": "client",
+   "start": 9.86,
+   "end": 10.22
+  },
+  {
+   "word": "assumed",
+   "start": 10.22,
+   "end": 10.54
+  },
+  {
+   "word": "the",
+   "start": 10.54,
+   "end": 10.82
+  },
+  {
+   "word": "server",
+   "start": 10.82,
+   "end": 11.12
+  },
+  {
+   "word": "was",
+   "start": 11.12,
+   "end": 11.34
+  },
+  {
+   "word": "outdated",
+   "start": 11.34,
+   "end": 11.76
+  },
+  {
+   "word": "and",
+   "start": 11.76,
+   "end": 12.22
+  },
+  {
+   "word": "replaced",
+   "start": 12.22,
+   "end": 12.62
+  },
+  {
+   "word": "it,",
+   "start": 12.62,
+   "end": 13
+  },
+  {
+   "word": "sigterm,",
+   "start": 13.08,
+   "end": 13.72
+  },
+  {
+   "word": "then",
+   "start": 13.9,
+   "end": 14.24
+  },
+  {
+   "word": "start",
+   "start": 14.24,
+   "end": 14.54
+  },
+  {
+   "word": "a",
+   "start": 14.54,
+   "end": 14.74
+  },
+  {
+   "word": "new",
+   "start": 14.74,
+   "end": 14.86
+  },
+  {
+   "word": "one",
+   "start": 14.86,
+   "end": 15.08
+  },
+  {
+   "word": "that's",
+   "start": 15.08,
+   "end": 15.72
+  },
+  {
+   "word": "how",
+   "start": 15.72,
+   "end": 15.84
+  },
+  {
+   "word": "a",
+   "start": 15.84,
+   "end": 15.98
+  },
+  {
+   "word": "terminal",
+   "start": 15.98,
+   "end": 16.36
+  },
+  {
+   "word": "opened",
+   "start": 16.36,
+   "end": 16.66
+  },
+  {
+   "word": "before",
+   "start": 16.66,
+   "end": 17.06
+  },
+  {
+   "word": "an",
+   "start": 17.06,
+   "end": 17.3
+  },
+  {
+   "word": "update",
+   "start": 17.3,
+   "end": 17.58
+  },
+  {
+   "word": "could",
+   "start": 17.58,
+   "end": 17.8
+  },
+  {
+   "word": "shut",
+   "start": 17.8,
+   "end": 18.04
+  },
+  {
+   "word": "down",
+   "start": 18.04,
+   "end": 18.28
+  },
+  {
+   "word": "a",
+   "start": 18.28,
+   "end": 18.5
+  },
+  {
+   "word": "brand",
+   "start": 18.5,
+   "end": 18.64
+  },
+  {
+   "word": "new",
+   "start": 18.64,
+   "end": 18.92
+  },
+  {
+   "word": "server",
+   "start": 18.92,
+   "end": 19.3
+  },
+  {
+   "word": "and",
+   "start": 19.3,
+   "end": 19.72
+  },
+  {
+   "word": "cut",
+   "start": 19.72,
+   "end": 19.92
+  },
+  {
+   "word": "off",
+   "start": 19.92,
+   "end": 20.16
+  },
+  {
+   "word": "every",
+   "start": 20.16,
+   "end": 20.44
+  },
+  {
+   "word": "other",
+   "start": 20.44,
+   "end": 20.66
+  },
+  {
+   "word": "client",
+   "start": 20.66,
+   "end": 21.06
+  }
+ ]
+}

@@ -1,0 +1,72 @@
+{
+  "clips": [
+    {
+      "id": "intro",
+      "text": "[warm and conversational] OpenCode runs one background service, and every terminal and the desktop app connect to it. When that service failed to start, you usually saw a vague timeout. And sometimes, a perfectly healthy server got killed. These five small pull requests fix that. Let's walk through them."
+    },
+    {
+      "id": "errors-before",
+      "text": "First: startup errors. When no service is running, the client starts contenders, small processes that each try to become the server. Say the port is taken. Contender A fails with a real, useful error. But the client only reports a failure once no contenders are left, and it keeps starting new ones. So that error is dropped, over and over, until you get: timed out waiting for the background service to start. Two minutes later."
+    },
+    {
+      "id": "errors-after",
+      "text": "[confident] With the fix, the client keeps the first error, and stops starting replacements once anything has failed. Contenders that are already running can still succeed. But if none of them does, you see the actual cause, instead of a timeout."
+    },
+    {
+      "id": "errors-code",
+      "text": "The diff is tiny. The failure now lives outside the loop, so it survives. No new contender starts after a failure. And the timeout reports the saved error when there is one."
+    },
+    {
+      "id": "mismatch-before",
+      "text": "Second: never kill a healthy server over a protocol mismatch. When a client reconnects, it checks the server's health endpoint. If that returns a 404, the client assumed the server was outdated, and replaced it. SIGTERM, then start a new one. That's how a terminal opened before an update could shut down a brand new server, and cut off every other client."
+    },
+    {
+      "id": "mismatch-after",
+      "text": "[confident] Now a 404 only means the health protocols don't match. Unless you asked for a different version, the client stops with a clear message: update this client, or explicitly restart the service. Nothing gets killed."
+    },
+    {
+      "id": "mismatch-code",
+      "text": "In the code, the client checks the version requirement first. If the version is fine but the protocol isn't, it fails with that message, instead of falling through to stop."
+    },
+    {
+      "id": "bind-before",
+      "text": "Third: restarts. A new server can try to bind the port a moment before the old one lets go. It gets address in use, so it waits up to fifteen seconds for whoever owns the port to register. But the old process isn't coming back. It's exiting. The port frees up almost immediately, and the new server just keeps waiting, then fails."
+    },
+    {
+      "id": "bind-after",
+      "text": "[confident] Now, while it waits, it also retries the bind, every hundred milliseconds. As soon as the port is free, the same process takes it and starts normally."
+    },
+    {
+      "id": "bind-code",
+      "text": "The fifteen second wait becomes a loop: look for an incumbent, sleep a hundred milliseconds, try to bind again. The helper that only waited is gone."
+    },
+    {
+      "id": "stop-before",
+      "text": "Fourth: stopping. To restart, the client sends SIGTERM and waits for the server to exit. But if the old process was still running after the grace period, and its registration file had disappeared or changed, the client gave up without escalating. The old process could still hold the port, and the restart that followed would collide with it."
+    },
+    {
+      "id": "stop-after",
+      "text": "[confident] Now it only trusts the process it signaled. If that process is still alive after the grace period, it gets SIGKILL. And if even that fails, stop reports a clear error after about ten seconds, instead of pretending it worked."
+    },
+    {
+      "id": "stop-code",
+      "text": "The fix deletes two lines in each client: the early return that trusted the file."
+    },
+    {
+      "id": "bootstrap-before",
+      "text": "Last: the TUI's very first request. The TUI finds a healthy server, then asks it for the current location. If that server goes away in between, for any reason, that one request fails, and the TUI exits with a transport error."
+    },
+    {
+      "id": "bootstrap-after",
+      "text": "[confident] Now a transport failure during startup gets exactly one managed reconnect: find or start a server, rebuild the client, and try again, all within a two minute deadline. An explicit server connection never starts a service on its own."
+    },
+    {
+      "id": "bootstrap-code",
+      "text": "It's one new bootstrap function. Connect. If that fails with a transport error on a managed connection, reconnect once, and connect again."
+    },
+    {
+      "id": "outro",
+      "text": "[warm and conversational] That's all five. Start with the first two: honest startup errors, and no more killed servers. Then bind retries, clean stops, and the TUI reconnect. Each one is small, tested, and independent."
+    }
+  ]
+}
