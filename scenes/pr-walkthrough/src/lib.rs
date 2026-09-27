@@ -5,7 +5,10 @@
 //! the actual change as a diff. Every visual moment is keyed to a phrase in the
 //! narration, so re-voicing the script re-times the film.
 mod diff;
+mod flagship;
 mod narration;
+
+pub use flagship::build_flagship;
 
 use std::path::Path;
 
@@ -69,7 +72,7 @@ pub fn build_reel(narration_dir: &Path) -> Result<ReelPlan> {
     let mut plans = vec![intro(&narration)?];
     for (index, pr) in PRS.iter().enumerate() {
         plans.push(behavior(pr, &narration, flows(index))?);
-        plans.push(code(pr, &narration, diffs(index))?);
+        plans.push(code(pr, &narration, diffs(index), true)?);
     }
     plans.push(outro(&narration)?);
     let reel = ReelPlan {
@@ -81,6 +84,7 @@ pub fn build_reel(narration_dir: &Path) -> Result<ReelPlan> {
             .map(|(index, plan)| ReelSegmentPlan {
                 transition_nanos: if index == 0 { 0 } else { TRANSITION },
                 transition_style: ReelTransitionStyle::Dip,
+                transition_focus: None,
                 plan,
             })
             .collect(),
@@ -348,10 +352,12 @@ fn behavior(pr: &Pr, narration: &Narration, flow: Flow) -> Result<ScenePlan> {
         .with_context(|| format!("{}-behavior", pr.slug))
 }
 
+/// `entrance`: the editor rises into place. Skip it when a zoom opens into the code.
 fn code(
     pr: &Pr,
     narration: &Narration,
     (diff, steps, note): (Diff, Vec<&'static str>, &'static str),
+    entrance: bool,
 ) -> Result<ScenePlan> {
     let clip = narration.clip(&format!("{}-code", pr.slug))?;
     let lead = ns(0.9);
@@ -365,7 +371,7 @@ fn code(
         .iter()
         .map(|phrase| spoken.at(phrase))
         .collect::<Vec<_>>();
-    diff.declare(&mut scene, &times, ns(0.9))?;
+    diff.declare(&mut scene, &times, ns(0.9), entrance)?;
     let mut caption = footer(&mut scene, "footer", vec![span(note, Tone::Muted)])?;
     caption.show(&mut scene, ns(0.6));
     scene.finish().with_context(|| format!("{}-code", pr.slug))
@@ -1179,5 +1185,11 @@ mod tests {
             committed
         );
         assert_eq!(reel.segments.len(), 12);
+        let flagship = super::build_flagship(&root.join("narration")).unwrap();
+        let committed = std::fs::read_to_string(root.join("pr-50825.reel.json")).unwrap();
+        assert_eq!(
+            serde_json::to_string_pretty(&flagship).unwrap() + "\n",
+            committed
+        );
     }
 }

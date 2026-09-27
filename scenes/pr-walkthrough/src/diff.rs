@@ -76,7 +76,13 @@ impl Diff {
 
     /// Declare the editor. `step_times[k]` is when step `k + 1` happens; removed
     /// lines turn red `warning` nanoseconds before their step.
-    pub fn declare(&self, scene: &mut PlanBuilder, step_times: &[u64], warning: u64) -> Result<()> {
+    pub fn declare(
+        &self,
+        scene: &mut PlanBuilder,
+        step_times: &[u64],
+        warning: u64,
+        entrance: bool,
+    ) -> Result<()> {
         let steps = self.steps();
         anyhow::ensure!(
             step_times.len() == steps,
@@ -159,11 +165,13 @@ impl Diff {
                 scene.spring(&mark, at.saturating_sub(warning), 1.0, 0.35, 0.0);
             }
         }
-        // The card rises into place.
-        let y = scene.continuous(&editor, "panel-y", 70.0);
-        let opacity = scene.continuous(&editor, "panel-opacity", 0.0);
-        scene.spring(&y, 0, 0.0, 0.7, 0.0);
-        scene.spring(&opacity, 0, 1.0, 0.5, 0.0);
+        if entrance {
+            // The card rises into place.
+            let y = scene.continuous(&editor, "panel-y", 70.0);
+            let opacity = scene.continuous(&editor, "panel-opacity", 0.0);
+            scene.spring(&y, 0, 0.0, 0.7, 0.0);
+            scene.spring(&opacity, 0, 1.0, 0.5, 0.0);
+        }
         Ok(())
     }
 }
