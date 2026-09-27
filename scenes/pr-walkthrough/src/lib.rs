@@ -425,6 +425,8 @@ fn intro(narration: &Narration) -> Result<ScenePlan> {
     let list_at = spoken.at("these five small pull requests");
     sequence.animate(&mut scene, "opacity", 0.0, list_at - ns(0.3), 0.0, 0.45);
 
+    // One caret at a time: each row starts typing when the previous one lands.
+    let mut cursor = list_at + ns(0.25);
     for (index, pr) in PRS.iter().enumerate() {
         let plan = CaptionPlan::line(
             [560.0, 330.0 + index as f32 * 84.0],
@@ -436,14 +438,9 @@ fn intro(narration: &Narration) -> Result<ScenePlan> {
             ],
         );
         let mut row = CaptionActor::declare(&mut scene, format!("pr-{}", pr.slug), &plan)?;
-        row.type_in(
-            &mut scene,
-            list_at + ns(0.25 + index as f64 * 0.42),
-            70.0,
-            0.25,
-        );
+        cursor = row.type_in(&mut scene, cursor, 80.0, 0.0) + ns(0.12);
     }
-    Ok(scene.finish()?)
+    scene.finish().context("intro")
 }
 
 fn outro(narration: &Narration) -> Result<ScenePlan> {
