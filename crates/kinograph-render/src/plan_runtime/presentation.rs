@@ -10,7 +10,7 @@ use std::{
 use anyhow::{Context, Result, anyhow, bail};
 use kinograph::{
     plan::SlidePlan,
-    playback::{Playback, PlaybackCommand, PlaybackPhase, PlaybackSample},
+    playback::{Playback, PlaybackCommand, PlaybackPhase, PlaybackSample, PlaybackSpeed},
     timeline::PropertyId,
 };
 use winit::{
@@ -23,11 +23,18 @@ use winit::{
 };
 
 use super::{PreparedPlan, new_renderer};
-use crate::scenes::{HEIGHT, WIDTH};
+use crate::{
+    render::{GridLinePalette, Theme},
+    scenes::{HEIGHT, WIDTH},
+};
 mod benchmark;
+mod debug;
 mod gpu;
+mod preferences;
+mod scheduler;
 mod worker;
 use benchmark::Benchmark;
+use scheduler::{Event as ScheduleEvent, FrameScheduler, RequestStamp};
 use worker::{RenderEvent, RenderWorker};
 
 #[derive(Default)]
@@ -37,6 +44,9 @@ pub(super) struct Options {
     benchmark: bool,
     benchmark_gpu: bool,
     fps: Option<u32>,
+    theme: Option<Theme>,
+    speed: PlaybackSpeed,
+    debug: bool,
 }
 
 impl Options {
@@ -63,44 +73,73 @@ impl Options {
                     }
                     options.fps = Some(fps);
                 }
+                "--theme" => {
+                    options.theme = Some(Theme::parse(
+                        flags.next().context("--theme requires a name")?,
+                    )?)
+                }
+                "--speed" => {
+                    options.speed = PlaybackSpeed::parse(
+                        flags
+                            .next()
+                            .context("--speed requires 1, 0.5, 0.25, or 0.1")?,
+                    )?
+                }
+                "--debug" => options.debug = true,
                 _ => bail!("unknown presentation option '{flag}'"),
             }
+        }
+        if options.benchmark && (options.speed != PlaybackSpeed::Normal || options.debug) {
+            bail!("benchmarks require normal speed and no debug overlay");
         }
         Ok(options)
     }
 }
 
-pub(super) fn run(slides: Vec<SlidePlan>, base: PathBuf, options: Options) -> Result<()> {
+fn preflight_slides(slides: Vec<SlidePlan>) -> Result<Vec<(String, super::preflight::Plan)>> {
     if slides.is_empty() {
         bail!("presentation needs at least one slide");
     }
-    if slides.iter().any(|slide| {
-        !slide.plan.state_channels.is_empty()
-            || !slide.plan.media.is_empty()
-            || slide.plan.actors.iter().any(|actor| {
-                !matches!(
-                    actor.recipe.as_str(),
-                    "editor" | "pointer" | "text" | "title-card" | "effect-task" | "keyed-grid"
-                )
-            })
-    }) {
-        bail!(
-            "interruptible native playback supports editor, pointer, text, effect-task, and keyed-grid scenes with continuous channels; generic State Channels and recorded media still support video export"
-        );
-    }
-    let mut renderer = pollster::block_on(new_renderer(&slides[0].plan.id))?;
+    slides
+        .into_iter()
+        .map(|slide| {
+            let input = super::preflight::Plan::new(slide.plan)?;
+            input.require_native()?;
+            Ok((slide.title, input))
+        })
+        .collect()
+}
+
+pub(super) fn run(slides: Vec<SlidePlan>, base: PathBuf, options: Options) -> Result<()> {
+    let slides = preflight_slides(slides)?;
+    let mut renderer = pollster::block_on(new_renderer(&slides[0].1.plan.id))?;
+    let preferences = preferences::path();
+    let saved = preferences
+        .as_ref()
+        .and_then(|path| match preferences::load(path) {
+            Ok(t) => Some(t),
+            Err(e) => {
+                eprintln!("Could not load theme: {e:#}; using Original");
+                None
+            }
+        })
+        .unwrap_or_default();
+    let theme = options.theme.unwrap_or(saved);
+    renderer.set_theme(theme);
     renderer.set_interactive_preview(!options.full_quality);
     let mut prepared = Vec::new();
     let mut playbacks = Vec::new();
-    for slide in slides {
-        let plan = PreparedPlan::prepare(slide.plan, &base, &mut renderer)?;
-        let playback = plan.playback(options.reduced_motion)?;
+    for (title, input) in slides {
+        let plan = PreparedPlan::prepare_preflight(input, &base, &mut renderer)?;
+        let mut playback = plan.playback(options.reduced_motion)?;
+        playback.set_speed(options.speed, Duration::ZERO);
         renderer.set_file_name(plan.file_name());
         // Warm immutable glyph/chrome resources before opening the window, not
         // at the first interactive visit to each slide.
         plan.render_sample_using(&mut renderer, 0.0, &playback.timeline())?;
         playbacks.push(SlidePlayback {
-            title: slide.title,
+            grid: matches!(&plan.root, super::PreparedRoot::Grid(_)),
+            title,
             playback,
             running: plan.running_properties(),
             resume_on_enter: false,
@@ -116,11 +155,7 @@ pub(super) fn run(slides: Vec<SlidePlan>, base: PathBuf, options: Options) -> Re
         epoch: Instant::now(),
         window: None,
         front: None,
-        dirty: true,
-        busy: false,
-        occluded: false,
-        next_frame: None,
-        submitted: None,
+        scheduler: FrameScheduler::new(),
         title: String::new(),
         failure: None,
         filter: Filter::Smooth,
@@ -129,10 +164,13 @@ pub(super) fn run(slides: Vec<SlidePlan>, base: PathBuf, options: Options) -> Re
         frame_interval: frame_interval(options.fps, None),
         refresh_millihertz: None,
         modifiers: ModifiersState::empty(),
+        grid_palette: GridLinePalette::default(),
+        theme,
+        preferences,
         options,
     };
     eprintln!(
-        "Native Kinograph player: ⌘←/⌘→ or Shift+' / ' previous/next slide, ←/→ previous/next step, 1–9 choose slide, R replay, Space/P pause or resume, Home/End first/last step, M reduced motion, X smooth/pixelated, F full screen, Esc close."
+        "Native Kinograph player: ⌘←/⌘→ or Shift+' / ' previous/next slide, ←/→ previous/next step, 1–9 choose slide, T/Shift+T next/previous theme (saved), S/Shift+S speed, ,/. previous/next frame (pauses), D debug overlay, R replay, Shift+R replay paused, Space/P pause or resume, Home/End first/last step, C/Shift+C next/previous grid line color, M reduced motion, X smooth/pixelated, F full screen, Esc close."
     );
     eprintln!(
         "Live single-sample preview. Export retains shutter sampling and audio; this player is silent."
@@ -156,11 +194,7 @@ struct Player {
     epoch: Instant,
     window: Option<WindowState>,
     front: Option<Arc<Vec<u8>>>,
-    dirty: bool,
-    busy: bool,
-    occluded: bool,
-    next_frame: Option<Instant>,
-    submitted: Option<PlaybackSample>,
+    scheduler: FrameScheduler,
     title: String,
     failure: Option<String>,
     filter: Filter,
@@ -169,10 +203,14 @@ struct Player {
     frame_interval: Duration,
     refresh_millihertz: Option<u32>,
     modifiers: ModifiersState,
+    grid_palette: GridLinePalette,
+    theme: Theme,
+    preferences: Option<PathBuf>,
     options: Options,
 }
 
 struct SlidePlayback {
+    grid: bool,
     title: String,
     playback: Playback,
     running: Vec<PropertyId>,
@@ -218,8 +256,7 @@ impl Player {
         self.slides[self.slide_index].leave(now);
         self.slide_index = index;
         self.slides[index].enter(now);
-        self.submitted = None;
-        self.dirty = false;
+        self.scheduler.event(ScheduleEvent::SlideChanged);
         self.update_title();
         self.redraw();
     }
@@ -282,14 +319,34 @@ impl Player {
             }
         };
         let title = format!(
-            "Kinograph · Slide {}/{}: {} · Step {}/{} · {} · {mode} · {:?}   ['  ← →  R  Space  X  F]",
+            "Kinograph · Slide {}/{}: {} · Step {}/{} · {} · {mode} · {} [S]{} · {:?} · Theme: {} [T]{}   ['  ← →  R  Space  X  F]",
             self.slide_index + 1,
             self.slides.len(),
             slide.title,
             sample.step_index + 1,
             slide.playback.steps().len(),
             step.title,
-            self.filter
+            self.options.speed.label(),
+            if self.options.debug {
+                " · Debug [D]"
+            } else {
+                ""
+            },
+            self.filter,
+            self.theme.name(),
+            if slide.grid {
+                format!(
+                    " · Lines: {} [C]",
+                    if self.theme != Theme::Original && self.grid_palette == GridLinePalette::Orange
+                    {
+                        "Theme"
+                    } else {
+                        self.grid_palette.name()
+                    }
+                )
+            } else {
+                String::new()
+            }
         );
         if title != self.title {
             if let Some(state) = &self.window {
@@ -310,36 +367,67 @@ impl Player {
         }
     }
 
+    fn inspect(&mut self, action: InspectionAction) {
+        let now = self.epoch.elapsed();
+        let scheduling = match action {
+            InspectionAction::Speed(reverse) => {
+                self.options.speed = self.options.speed.cycle(reverse);
+                for slide in &mut self.slides {
+                    slide.playback.set_speed(self.options.speed, now);
+                }
+                ScheduleEvent::InspectionChanged
+            }
+            InspectionAction::Frame(backward) => {
+                if !self.slides[self.slide_index]
+                    .playback
+                    .step_frame(backward, now)
+                {
+                    eprintln!("Disable reduced motion [M] to inspect transition frames");
+                    return;
+                }
+                ScheduleEvent::InspectionChanged
+            }
+            InspectionAction::Overlay => {
+                self.options.debug = !self.options.debug;
+                ScheduleEvent::AppearanceChanged
+            }
+            InspectionAction::ReplayPaused => {
+                let playback = &mut self.slides[self.slide_index].playback;
+                playback.command(PlaybackCommand::Replay, now);
+                playback.pause(now);
+                ScheduleEvent::InspectionChanged
+            }
+        };
+        self.scheduler.event(scheduling);
+        self.update_title();
+        eprintln!("{}", self.title);
+        self.redraw();
+    }
+
     fn request_frame(&mut self) -> Result<()> {
-        if self.busy || self.occluded {
+        if !self.scheduler.can_sample() {
             return Ok(());
         }
         let sample = self.sample();
-        if self.submitted == Some(sample) {
-            return Ok(());
-        }
-        let same_revision = self
-            .submitted
-            .is_some_and(|previous| previous.revision == sample.revision);
-        if same_revision
-            && self
-                .next_frame
-                .is_some_and(|deadline| Instant::now() < deadline)
-        {
-            return Ok(());
-        }
-        self.worker.request(
-            self.slide_index,
+        let stamp = RequestStamp {
+            slide_index: self.slide_index,
             sample,
-            self.slides[self.slide_index].playback.timeline(),
-        )?;
-        self.busy = true;
-        self.submitted = Some(sample);
-        self.next_frame = Some(next_deadline(
-            self.next_frame,
-            Instant::now(),
-            self.frame_interval,
-        ));
+            palette: self.grid_palette,
+            theme: self.theme,
+            debug: self.options.debug,
+        };
+        let playback = &self.slides[self.slide_index].playback;
+        let worker = &self.worker;
+        self.scheduler
+            .request(sample, self.frame_interval, Instant::now, || {
+                worker.request(
+                    stamp,
+                    playback.timeline(),
+                    stamp
+                        .debug
+                        .then(|| debug::DebugState::capture(playback, sample)),
+                )
+            })?;
         Ok(())
     }
 
@@ -351,14 +439,13 @@ impl Player {
         if size.width == 0 || size.height == 0 {
             return Ok(());
         }
-        if self.dirty {
+        if self.scheduler.needs_paint() {
             match state.presenter.paint(
                 self.front.as_ref(),
                 self.filter,
                 self.options.benchmark_gpu,
             )? {
                 gpu::Paint::Presented(timing) => {
-                    self.occluded = false;
                     if let Some(benchmark) = &mut self.benchmark
                         && let Some((requested_at, render_time)) = self.front_timing
                     {
@@ -371,16 +458,19 @@ impl Player {
                             requested_at.elapsed(),
                         );
                     }
-                    self.dirty = false;
+                    self.scheduler.event(ScheduleEvent::Presented);
                 }
                 gpu::Paint::Retry => {
-                    self.next_frame = Some(Instant::now() + self.frame_interval);
+                    self.scheduler.event(ScheduleEvent::Retry {
+                        now: Instant::now(),
+                        interval: self.frame_interval,
+                    });
                 }
                 gpu::Paint::Occluded => {
                     if self.benchmark.as_ref().is_some_and(Benchmark::measuring) {
                         bail!("benchmark surface was occluded; rerun with it visible");
                     }
-                    self.occluded = true;
+                    self.scheduler.event(ScheduleEvent::VisibilityChanged(true));
                 }
             }
         }
@@ -414,7 +504,7 @@ impl ApplicationHandler<RenderEvent> for Player {
             Ok(state) => {
                 self.window = Some(state);
                 self.update_refresh_rate();
-                self.dirty = true;
+                self.scheduler.event(ScheduleEvent::Repaint);
                 self.update_title();
                 self.redraw();
             }
@@ -425,17 +515,26 @@ impl ApplicationHandler<RenderEvent> for Player {
     fn user_event(&mut self, event_loop: &ActiveEventLoop, event: RenderEvent) {
         match event {
             RenderEvent::Frame {
-                slide_index,
-                sample,
+                stamp,
                 pixels,
                 requested_at,
                 render_time,
             } => {
-                self.busy = false;
-                if slide_index == self.slide_index && sample.revision == self.sample().revision {
+                let slide_index = self.slide_index;
+                let palette = self.grid_palette;
+                let theme = self.theme;
+                let debug = self.options.debug;
+                let epoch = self.epoch;
+                let slide = &mut self.slides[slide_index];
+                if self.scheduler.complete(stamp, || RequestStamp {
+                    slide_index,
+                    sample: slide.sample(epoch.elapsed()),
+                    palette,
+                    theme,
+                    debug,
+                }) {
                     self.front = Some(pixels);
                     self.front_timing = Some((requested_at, render_time));
-                    self.dirty = true;
                 }
                 // Even discarded frames release the worker so the newest requested state can render.
                 self.update_title();
@@ -474,19 +573,11 @@ impl ApplicationHandler<RenderEvent> for Player {
 
     fn about_to_wait(&mut self, event_loop: &ActiveEventLoop) {
         let sample = self.sample();
-        let waiting_for_sample = self.submitted != Some(sample);
         let drawable = self.window.as_ref().is_some_and(|state| {
             let size = state.window.inner_size();
             size.width > 0 && size.height > 0
         });
-        let frame_deadline =
-            if !self.busy && !self.occluded && drawable && (waiting_for_sample || self.dirty) {
-                let deadline = self.next_frame.unwrap_or_else(Instant::now);
-                Some(deadline)
-            } else {
-                // No animation ticks, GPU work, or pixel uploads while held/paused.
-                None
-            };
+        let frame_deadline = self.scheduler.wake_at(sample, drawable, Instant::now);
         let deadline = frame_deadline
             .into_iter()
             .chain(self.benchmark.as_ref().map(Benchmark::deadline))
@@ -522,7 +613,7 @@ impl ApplicationHandler<RenderEvent> for Player {
             }
             WindowEvent::Resized(_) | WindowEvent::ScaleFactorChanged { .. } => {
                 self.update_refresh_rate();
-                self.dirty = true;
+                self.scheduler.event(ScheduleEvent::Repaint);
                 self.redraw();
             }
             WindowEvent::Moved(_) | WindowEvent::Focused(true) => self.update_refresh_rate(),
@@ -544,13 +635,13 @@ impl ApplicationHandler<RenderEvent> for Player {
                     );
                     return;
                 }
-                self.occluded = occluded;
+                self.scheduler
+                    .event(ScheduleEvent::VisibilityChanged(occluded));
                 if occluded {
                     self.slides[self.slide_index]
                         .playback
                         .pause(self.epoch.elapsed());
                 } else {
-                    self.dirty = true;
                     self.redraw();
                 }
             }
@@ -575,6 +666,10 @@ impl ApplicationHandler<RenderEvent> for Player {
                     }
                     return;
                 }
+                if let Some(action) = inspection_action(&event.logical_key, self.modifiers) {
+                    self.inspect(action);
+                    return;
+                }
                 match event.logical_key {
                     Key::Named(NamedKey::Escape) => event_loop.exit(),
                     Key::Named(NamedKey::Home) => self.command(PlaybackCommand::First),
@@ -588,6 +683,41 @@ impl ApplicationHandler<RenderEvent> for Player {
                         self.command(command);
                     }
                     Key::Character(key) => match key.to_lowercase().as_str() {
+                        "t" if !self.modifiers.intersects(
+                            ModifiersState::SUPER | ModifiersState::CONTROL | ModifiersState::ALT,
+                        ) =>
+                        {
+                            self.theme = self.theme.cycle(self.modifiers.shift_key());
+                            self.grid_palette = GridLinePalette::default();
+                            if let Some(path) = &self.preferences {
+                                if let Err(e) = preferences::save(path, self.theme) {
+                                    eprintln!("Theme changed, but could not save it: {e:#}");
+                                }
+                            } else {
+                                eprintln!(
+                                    "Theme changed, but no configuration directory is available to save it"
+                                );
+                            }
+                            self.scheduler.event(ScheduleEvent::AppearanceChanged);
+                            self.update_title();
+                            eprintln!("{}", self.title);
+                            self.redraw();
+                        }
+                        "c" if self.slides[self.slide_index].grid
+                            && !self.modifiers.intersects(
+                                ModifiersState::SUPER
+                                    | ModifiersState::CONTROL
+                                    | ModifiersState::ALT,
+                            ) =>
+                        {
+                            self.grid_palette = self.grid_palette.cycle(self.modifiers.shift_key());
+                            // Force a fresh held/paused sample without touching the
+                            // Playback clock, step, or current motion trajectories.
+                            self.scheduler.event(ScheduleEvent::AppearanceChanged);
+                            self.update_title();
+                            eprintln!("{}", self.title);
+                            self.redraw();
+                        }
                         "'" => self.select_slide((self.slide_index + 1) % self.slides.len()),
                         "\"" => self.select_slide(
                             (self.slide_index + self.slides.len() - 1) % self.slides.len(),
@@ -606,7 +736,7 @@ impl ApplicationHandler<RenderEvent> for Player {
                                 Filter::Smooth => Filter::Pixelated,
                                 Filter::Pixelated => Filter::Smooth,
                             };
-                            self.dirty = true;
+                            self.scheduler.event(ScheduleEvent::Repaint);
                             self.update_title();
                             self.redraw();
                         }
@@ -653,6 +783,31 @@ enum ArrowNavigation {
     Slide(isize),
 }
 
+#[derive(Debug, PartialEq)]
+enum InspectionAction {
+    Speed(bool),
+    Frame(bool),
+    Overlay,
+    ReplayPaused,
+}
+
+fn inspection_action(key: &Key, modifiers: ModifiersState) -> Option<InspectionAction> {
+    if modifiers.intersects(ModifiersState::SUPER | ModifiersState::CONTROL | ModifiersState::ALT) {
+        return None;
+    }
+    let Key::Character(key) = key else {
+        return None;
+    };
+    match key.to_lowercase().as_str() {
+        "s" => Some(InspectionAction::Speed(modifiers.shift_key())),
+        "d" => Some(InspectionAction::Overlay),
+        "," => Some(InspectionAction::Frame(true)),
+        "." => Some(InspectionAction::Frame(false)),
+        "r" if modifiers.shift_key() => Some(InspectionAction::ReplayPaused),
+        _ => None,
+    }
+}
+
 fn arrow_navigation(key: &Key, modifiers: ModifiersState) -> Option<ArrowNavigation> {
     let (direction, command) = match key {
         Key::Named(NamedKey::ArrowRight) => (1, PlaybackCommand::Next),
@@ -664,19 +819,6 @@ fn arrow_navigation(key: &Key, modifiers: ModifiersState) -> Option<ArrowNavigat
     } else {
         ArrowNavigation::Step(command)
     })
-}
-
-/// Keep a fixed cadence despite late OS wakes. Missed slots are skipped, never
-/// queued, and an immediate input-driven sample does not reset the timer phase.
-fn next_deadline(previous: Option<Instant>, now: Instant, interval: Duration) -> Instant {
-    let Some(deadline) = previous else {
-        return now + interval;
-    };
-    if deadline > now {
-        return deadline;
-    }
-    let remainder = now.duration_since(deadline).as_nanos() % interval.as_nanos();
-    now + interval - Duration::from_nanos(remainder as u64)
 }
 
 /// Letterbox an authored frame instead of reflowing its layout on resize.
@@ -699,6 +841,17 @@ enum Filter {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn native_recipe_gate_accepts_the_diagram_scene() {
+        let mut slides = vec![SlidePlan {
+            title: "Daemon / merge".into(),
+            plan: kinograph_opencode_architecture::build_scene().unwrap(),
+        }];
+        preflight_slides(slides.clone()).unwrap();
+        slides[0].plan.actors[0].recipe = "unsupported-recipe".into();
+        assert!(preflight_slides(slides).is_err());
+    }
 
     #[test]
     fn command_arrows_switch_slides_and_plain_arrows_keep_steps() {
@@ -726,22 +879,45 @@ mod tests {
     }
 
     #[test]
-    fn pacing_does_not_accumulate_late_wakes_or_queue_missed_ticks() {
-        let start = Instant::now();
-        let interval = Duration::from_millis(10);
-        let deadline = start + interval;
-        assert_eq!(
-            next_deadline(Some(deadline), start + Duration::from_millis(13), interval),
-            start + Duration::from_millis(20)
-        );
-        assert_eq!(
-            next_deadline(Some(deadline), start + Duration::from_millis(43), interval),
-            start + Duration::from_millis(50)
-        );
-        assert_eq!(
-            next_deadline(Some(deadline), start + Duration::from_millis(5), interval),
-            deadline
-        );
+    fn inspection_keys_are_scoped() {
+        let key = |s: &str| Key::Character(s.into());
+        for (text, modifiers, expected) in [
+            (
+                "s",
+                ModifiersState::empty(),
+                Some(InspectionAction::Speed(false)),
+            ),
+            (
+                "S",
+                ModifiersState::SHIFT,
+                Some(InspectionAction::Speed(true)),
+            ),
+            (
+                "d",
+                ModifiersState::empty(),
+                Some(InspectionAction::Overlay),
+            ),
+            (
+                ".",
+                ModifiersState::empty(),
+                Some(InspectionAction::Frame(false)),
+            ),
+            (
+                ",",
+                ModifiersState::empty(),
+                Some(InspectionAction::Frame(true)),
+            ),
+            (
+                "R",
+                ModifiersState::SHIFT,
+                Some(InspectionAction::ReplayPaused),
+            ),
+            ("r", ModifiersState::empty(), None),
+            ("s", ModifiersState::SUPER, None),
+            ("d", ModifiersState::CONTROL, None),
+        ] {
+            assert_eq!(inspection_action(&key(text), modifiers), expected);
+        }
     }
 
     fn slide(ambient: bool) -> SlidePlayback {
@@ -773,6 +949,7 @@ mod tests {
         )
         .unwrap();
         SlidePlayback {
+            grid: false,
             title: "test".into(),
             playback: Playback::new(&plan.finish().unwrap(), &timeline, false).unwrap(),
             running: vec![activity],
@@ -862,6 +1039,11 @@ mod tests {
             &["--fps", "NaN"],
             &["--fps", "60.5"],
             &["--other"],
+            &["--speed"],
+            &["--speed", "0"],
+            &["--speed", "NaN"],
+            &["--benchmark", "--speed", "0.25"],
+            &["--benchmark", "--debug"],
         ] {
             assert!(parse(flags).is_err());
         }
@@ -882,6 +1064,11 @@ mod tests {
         );
         assert!(parse(&[]).unwrap().fps.is_none());
         assert!(!parse(&["--benchmark"]).unwrap().benchmark_gpu);
+        assert_eq!(
+            parse(&["--speed", "0.25", "--debug"]).unwrap().speed,
+            PlaybackSpeed::Quarter
+        );
+        assert!(parse(&["--debug"]).unwrap().debug);
     }
 
     #[test]

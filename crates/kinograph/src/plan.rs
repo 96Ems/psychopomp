@@ -6,6 +6,9 @@ use std::{
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
+mod channels;
+pub use channels::{SpringPlan, compile_channels, destination_channel, effective_snapshots};
+
 pub const SCENE_PLAN_VERSION: u32 = 2;
 
 /// One native presentation containing independently authored Scene Plans.

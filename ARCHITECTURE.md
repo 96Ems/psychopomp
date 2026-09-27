@@ -2,7 +2,19 @@
 
 Kinograph is organized around a small set of Modules whose Interfaces correspond to demonstrated change seams: code identity, media composition, motion trajectories, scalar tracks, rendering, and encoding.
 
-Video export and native interactive presentation share Scene Plan preparation, scalar tracks, and visual recipes. Winit owns the native window and input; a wgpu surface displays Rust-rendered RGBA pixels. There is no browser playback layer or second animation implementation.
+Video export and native interactive presentation share Scene Plan preparation, scalar tracks, and visual recipes. Winit owns the native window and input; a wgpu surface displays Rust-rendered RGBA pixels. These supported paths have no browser playback layer or second animation implementation.
+
+`experiments/browser-grid-prototype` is an isolated, throwaway browser feasibility
+probe, not another supported crate boundary. It compiles the existing grid/diagram
+layout, shaders, and Playback for WASM/WebGPU with build-time baked labels and GPU-only
+canvas delivery. It does not port the complete renderer, native slide text, live
+code typography, or video export. Its own notes record near-native pixel evidence,
+client memory/timing costs and remaining compatibility/accessibility work.
+The browser host now acquires a matching RGBA canvas texture before each sample,
+so shared grid passes target its sRGB view directly instead of a redundant full-frame
+texture/blit. Native readback/export delivery is unchanged. Grid label atlases in
+both hosts use R8 coverage; theme color stays in uniforms. `perf/browser-grid.md`
+records the fixed-quality autoresearch and rejected alternatives.
 
 ## Scene Programs And Rendering Compile Separately
 
@@ -15,6 +27,27 @@ Rust Scene Program -> Scene Plan -> persistent kinograph-render process
 A Scene Program remains ordinary Rust and may perform arbitrary calculations before emitting a plan. The Scene Plan is compiled output rather than a replacement authoring language. Its renderer-independent Interface contains stable actors, continuous channels, state channels, exact cues, and media placements. Renderer Recipe payloads remain opaque to the core and are interpreted only by concrete adapters in `kinograph-render`.
 
 `crates/kinograph-render/src/plan_runtime.rs` validates and inspects plans without initializing a GPU, renders exact global Render Windows, and provides a newline-delimited JSON server that retains the GPU device and font caches across requests. Intersecting media is trimmed and rebased to output zero while visual sampling remains on the original global clock. Explicit event selection uses a `f64` seconds clock derived from serialized integer nanoseconds; scalar spring positions and velocities remain `f32`.
+
+`plan_runtime/preflight.rs` owns decoded recipe inputs, exclusive root selection,
+references, and native eligibility before resource creation. Resource preparation
+consumes those inputs to construct one complete `PreparedPlan`; it does not install
+independent optional roots afterward. `CompiledPlan` keeps numeric/state/audio
+compilation separate from resource ownership. Plain text and bounded Markdown are
+parsed once, not interpreted from actor JSON during sampling. Typed current-state
+projections consider only observable values; raw State Tracks retain distinct
+equal-time predecessors for snapshot semantics and exact visual keys.
+State Tracks keep predecessor clones rather than borrowing another segment's
+current payload: `Clone` may deliberately isolate interior-mutable values.
+
+Shared rules have narrow owners rather than a recipe registry:
+
+- `kinograph::plan::compile_channels` lowers scalar events exactly. Its callers
+  choose channels, resolve semantic scalars, and retain diagnostic context.
+- `destination_channel` and `effective_snapshots` opt snapshot recipes into final
+  equal-time destinations and unchanged-target suppression. Raw continuous events
+  and distinct State Track transitions keep their authored ordering.
+- `plan_runtime/generated.rs` reserves generated channel IDs and actor/property
+  pairs. Task x/y is the sole explicit authored override, not last-writer-wins.
 
 Planned audio and visual media share the same exact source and timeline ranges but have different concrete consumers. Audio lowers into `Composition` and the FFmpeg encoder. A video placement is accepted only when a prepared renderer recipe explicitly consumes its media ID; unconsumed video and image media remain errors. The `terminal-recording` recipe maps the original global clock through the planned timeline range into source time, samples `VideoFrameCache`, and presents authentic TUI pixels through the existing terminal compositor. It does not pass video to the audio-only encoder or create a generic video layer.
 
@@ -43,6 +76,11 @@ The Effect Institute corpus and hand-authored lesson ports demonstrated flat sta
 
 Maximum Stability uses authored identity, not an inferred text diff. `CodeTransition::compile` still matches line IDs between two row maps. The planned editor preserves that legacy path when `snapshots` is empty. A timed `EditorSnapshotPlan` schedule instead lowers through `EditorRecipePlan::snapshot_channels` into private per-line y and opacity channels. Lines absent from both endpoints remain available between them; equal-time snapshots coalesce before layout, and unchanged row/presence targets do not restart. Native playback includes those generated channels in ordinary destination compilation, so insertion, removal, reordering, and re-entry use the same velocity-preserving tracks as video.
 
+`kinograph::editor::compiled` owns the validated catalog, legacy/keyed placement,
+and reveal span/part ranges used by both inspection and renderer preparation.
+The public `CodeTransition` and `EditorRecipePlan` Interfaces remain compatibility
+entry points; actual keyed sampling does not fabricate a two-snapshot transition.
+
 `kinograph/src/editor/stability.rs` provides GPU-free `inspect_steps`, exposed by `kinograph plan steps` and the persistent server's `steps` command. It reports before/after text, changed-part markers, retained-line movement, unsettled or partial holds, and heuristic common-text warnings for exchanged parts or replaced lines. It never assigns identity automatically. The ordinary Scene Plan JSON diff remains a structural plan diff, not an animation-stability analysis.
 
 ## Motion Carries Position and Velocity
@@ -65,6 +103,10 @@ Still images remain stable scene actors rather than pretending to be time-based 
 
 `crates/kinograph-render/src/video.rs` is the narrow input-video boundary demonstrated by the OpenCode command-hot-reload scene. FFmpeg decodes a checked-in H.264 terminal recording into an ignored seekable RGBA cache under `target/`; fixed-size frame offsets then provide deterministic arbitrary-time sampling without codec bindings or retaining the decoded recording in memory. The cache is regenerated when the immutable source changes.
 
+The decoder receives null stdin, never the persistent server's request stream.
+A failed seek/read invalidates the in-memory frame identity before it can expose
+partially overwritten bytes as a cache hit.
+
 ## Transcript Cues Drive Choreography
 
 `crates/kinograph/src/transcript.rs` ingests word timing sidecars and resolves exact word occurrences into cue ranges. The `effect-shows-errors`, `promises-only-happy-path`, and `effect-is-a-description` ports demonstrate the intended seam: original narration is a script clip, while published word timings schedule ordinary code, Task, and pointer motions through `Cue::at` on the same composition clock.
@@ -73,7 +115,138 @@ Transcript parsing does not understand code, actors, or rendering. It only conne
 
 ## Rendering Is One Concrete Adapter
 
+`render/theme.rs` owns the presentation paint tokens. Native T/Shift+T selects a
+theme and `presentation/preferences.rs` atomically saves it under the user's
+configuration directory. Worker requests, cached frames, and results include the
+theme as well as the grid palette, so stale appearance cannot win a race. Theme
+changes clear colored editor resources, but never recompile a Timeline or change
+glyph metrics. Grid clear/material/ink colors are GPU uniforms; text colors are
+resolved before coverage blending. Existing neutral RGB typography and known
+syntax/showroom colors have a compatibility mapping; other literal art/status
+colors remain authored. This is not a final-frame color filter. Native appearance
+does not mutate plans. `plan frame` and `plan render --theme NAME` use the same
+renderer with an explicit theme; omitted export themes remain Original.
+
+The provisional `prototype-rich-text` adapter parses a bounded Markdown subset
+with `pulldown-cmark` and shapes bold/italic/monospace runs with `cosmic-text`.
+Paragraph wrapping is measured once, with a lazy current-theme sprite cache.
+Inline code backgrounds, list markers, quote rules, links, and strikethroughs share
+those measurements. Actor x/y/opacity/reveal/blur and `block.N.opacity`/`block.N.y`
+are ordinary scalar channels. A stationary vertical mask supports rising headers.
+Rich-text fades are sharp by default; `fade_blur` is an explicit optical opt-in
+for titles, independent of the channel's motion profile. The showroom uses
+160 ms zero-bounce prose fades and retains the approved 400 ms header rise.
+HTML and images are rejected; no network, browser, Markdown-table layout, or
+dynamic document diffing is introduced. Fenced code is monospaced, not highlighted.
+
+`prototype-width-text` reuses Typeset identity, measured advances, and connector
+anchors with visual-types-style width/blur disclosure rather than a uniform fade.
+Optional `TextPart.spans` reuses editor `StyledSpan` roles inside a single measured
+and animated part. Token style no longer has to equal animation-part identity;
+preflight rejects runs whose concatenation disagrees with the backing text.
+`prototype-venn` samples two rounded boundaries and unions stroke coverage; hatch
+coverage is their actual signed-distance intersection, including the square morph.
+Callout endpoints derive from the sampled boundaries and stay outside both sets.
+Both remain provisional overlays. `scenes/component-prototypes --slideshow`
+combines these with rich text, full-divider tables, and the existing composition.
+
+`prototype-header` adds a bounded bold single-line entrance, optionally partitioned
+into word regions of the **same shaped line**. Split boundaries fall in whitespace;
+staggering changes only vertical pose, not word placement or text shaping. A mirror
+sprite shares the sampled pose and reflects across the fixed reveal edge. Its
+below-edge clip and one-sided linear alpha fade never paint over other actors.
+Reflection strength, depth, and gap are presentation values, not independent timers.
+
+`plan_runtime/header.rs` compiles word entrances into reserved `__header.*` tracks
+and supplies opt-in `Playback::with_start_delays` metadata. The core's `StartDelay`
+contains a resting source, destination, and duration. Only matching resting
+entrances wait; in-flight redirections begin immediately. The shared
+`timeline::retarget::RetargetSchedule` records event ownership and removes superseded
+future starts only for changed channels.
+Unchanged destinations retain pending starts, executed history remains immutable,
+and pause/replay/reduced-motion use the same local clock. The authored header
+compiler uses that same schedule for rapid authored events. Authored nanosecond
+arithmetic and native seconds arithmetic remain distinct, and rejected batches
+leave the previous writes, targets and Timeline revision intact. Existing
+recipes opt into no delays and keep their previous behavior.
+
+`component_prototype` in the lightweight crate, plan runtime, and renderer holds
+the provisional Typeset / Collection / Connector trials. Typeset measures authored
+inline parts; Collection measures a finite keyed row/column catalog; both lower
+snapshot changes to reserved `__component.*` scalar tracks. Connectors reference
+those recipes' item IDs and derive Bezier paths from their currently sampled
+visible bounds, rather than independently springing endpoints. Stroke segments
+union analytic coverage before alpha composition. These are foreground overlays,
+not additional roots, and do not yet extend editor Semantic Targets. Their
+font/anchor/payload interfaces are intentionally experimental; the native
+`scenes/component-prototypes` showroom is the approval surface.
+Fading prototype glyphs use the existing fractional text-blur kernel with a
+sampling offset of `4 * (1 - opacity)` output pixels. This optical pose follows
+the same fade in either direction, without changing the scalar timeline or
+measured bounds. Fully present glyphs use the identical sharp path.
+
+The provisional `prototype-diagram` is a finite box-and-wire root, demonstrated
+by `scenes/opencode-architecture`'s Daemon / merge adaptation. `plan_runtime/diagram.rs`
+validates node/link identities, allowed scalar properties, bounded text/layout,
+and recipe-owned resting Start Delays. `render/diagram.rs` resolves ports from
+sampled box bounds and packs scalar poses for `render/diagram.wgsl`. The bare GPU
+pass draws only boxes, wires, traces, halos and R8-atlas glyphs with 4× spatial AA.
+Flat and equal-axis orthographic Isometric share semantic identity and layout;
+the Isometric Scene Program uses an ordinary depth channel for a fast critically
+damped extrusion from a fixed base, and keeps labels upright. The recipe also
+accepts lift, but the current scene no longer animates a competing downward lift.
+An optional `width-reveal` scalar multiplies sampled width without scaling height
+or type. This separates entrance presence from the server's structural merge
+width, so a skipped merge still uses the same cancellation-safe server start wait.
+The Scene Program times width growth to clear the adjacent rising side faces;
+this is authored choreography, not a collision solver. Upright glyphs disclose
+within the sampled Isometric top face with fractional edge coverage.
+`Pose::port` resolves the current
+side-face midpoint, not a top-plane point. Wires compare their interpolated world
+height with sampled top/side-face hits so visible endpoints are not hidden until
+the lower rim. Isometric paint packets (shell, glyphs, blur and halo together) are
+stably sorted by sampled solid-center depth along the view ray `(1, 1, 1)`.
+Authored order breaks only equal-depth ties; Flat retains authored paint order.
+This bounded whole-box painter and wire alpha attenuation are not a general
+depth-sorted mesh/interpenetration solution. The frame, dotted stage,
+title, caption and indicators were explicitly rejected and are no longer drawn.
+Their reference metadata remains in the provisional payload; the canonical scene
+no longer authors invisible chrome tracks. There is no CPU backdrop or node-image
+rasterization in this recipe now.
+
+The Scene Program owns every destination/timing; no daemon concepts, graph layout
+or callbacks enter the recipe. It remains an exclusive root, not Code/Grid bounded
+composition. The isolated browser probe stages these actual diagram modules and
+the same Start Delay preparation. Native/export use shared RGBA readback; WASM
+targets its acquired canvas directly. `perf/diagram-gpu.md` records measurements
+and cross-host evidence; this is not byte-identical CPU-to-GPU pixel migration.
+The earlier shared card zero-border guard and constant-texel sampler remain for
+other card consumers; `perf/daemon-diagram.md` is the historical CPU experiment.
+
+`kinograph::value::ValueTokenPlan` is an immutable labeled tile in a finite
+teaching diagram. `plan_runtime/value.rs` parses it once and samples ordinary
+authored x/y/opacity/emphasis channels; it generates no extra timeline or State
+Tracks. `render/value.rs` composites the tile with the existing `UiCanvas` card
+coverage and cached fractional text, before foreground text annotations. Hidden
+glyphs are warmed too. Border emphasis does not change text presence. This is
+an overlay recipe, not another exclusive root or a general graph renderer.
+`scenes/data-modeling/src/stage.rs` keeps concrete token layout, pair annotations,
+and step destinations scene-local. Its second and subsequent uses are finite
+sets, representation comparisons, tagged alternatives, and the nullable-pair
+state table; the existing Keyed Grid still owns Cartesian-product geometry.
+
 `kinograph::grid` describes the immutable finite-product catalog and Grid Snapshots.
+Its optional `GridStylePlan` is immutable presentation data, not another recipe.
+Omitting it preserves the original JSON and pixels. `plan_runtime/grid/table.rs`
+provides unequal-width, fixed-anchor table placement and conventional column
+headings; the same extent and presence tracks still drive growth. Table layout
+supports one depth layer in straight-on or angled view, not reassociation.
+`render/grid.rs` keys its glyph atlas by labels, text style, and available width;
+table text is rasterized at its chosen size and clipped to padded cells rather
+than squeezed into the old symbol tile. Row rules select front-plane horizontal
+edges in the existing centered-stroke pass. Background-matching fills keep opaque
+depth writes but bypass face lighting. Default cube placement, typography,
+lighting, and stroke behavior are unchanged.
 `plan_runtime/grid.rs` validates these without a GPU, computes concrete table,
 volume, and reassociation layouts, and lowers cell x/y/z, presence, emphasis,
 labels, extents, slice cutaways, and camera parameters into reserved `__grid.*`
@@ -92,24 +265,74 @@ centers the sampled visible cell bounds at canvas center on every frame. This
 deliberate recentering includes fractional growth, rotation, and slice cutaways;
 side headings do not skew the cell bounds. The catalog determines base scale,
 with a separate continuous zoom-out for labeled reassociation groups.
+An optional authored `scale` channel multiplies that conservative fit for slides
+that need a larger diagram without changing the existing default. Strokes remain
+output-pixel sized. A singleton depth catalog has no outside Z heading, avoiding
+a misleading extra column label in a two-dimensional product.
 
 Optional `GridCellLabelPlan` values supply primary symbols and secondary text
 without replacing tuple identity. The chess example demonstrates this separation.
-Cell labels share geometry and depth testing; outside row/column/depth headings
-stay upright at projected anchors. A selected slice clips away the other layers
-rather than becoming hidden behind opaque faces. Group headers remain text,
-not backing cards. The depth range fits sampled geometry, back faces are culled,
+Cell labels share geometry and depth testing; every tuple retains its ink until
+its actual face is hidden or removed. Cell ink does not fade toward the next
+focused slice: doing so left a blank opaque outgoing face in front of the new
+labels. Outside row/column/depth headings stay upright at projected anchors.
+A selected slice clips away the other layers without dimming their still-visible
+strokes. The former 18% focus-emphasis target is no longer scheduled; contrast
+does not anticipate a layer's physical removal. Group headers remain text,
+not backing cards. Headings use a separate premultiplied-alpha overlay after
+the completed material and strokes, with no depth attachment. Their cached glyph
+coverage and spatial feather blend into the existing frame; faint outgoing
+headings neither overwrite cells with background-colored glyphs nor block lines.
+Cell material and attached ink retain opaque depth-tested rendering.
+The depth range fits sampled geometry, back faces are culled,
 and a tiny stable-order depth bias resolves coplanar front faces during regrouping
 without moving their geometry. This fixes a pixel regression in rapid navigation.
-The pass resolves into the existing RGBA texture and shares readback/encoding;
+`render/grid/edges.rs` and its shaders draw centered 1.7-output-pixel strokes
+separately from the opaque material and text. A stroke-depth prepass selects
+visible edges, an RGBA16Float max-coverage pass unions coincident strokes, and a
+linear-light composite resolves them over the material. Thus silhouettes,
+shared grid lines, and two-face creases have the same width. Edge-local ray/box
+depth and per-sample coordinates preserve coverage at grazing angles. Material
+keeps catalog-order depth priority; strokes uniformly clear that priority budget
+and merge shared coverage rather than choosing between neighboring opacities.
+The final composite uses the existing RGBA texture and shared readback/encoding;
 native presentation still uploads those pixels, rather than sharing a zero-copy
 surface. Resources are lazy and only the latest grid's label atlas is retained.
 This reopens procedural 3D for one concrete diagram, not arbitrary meshes,
 Blender materials, a public camera graph, or a renderer abstraction.
 
+Growth-edge disclosure is the default (`plan_runtime/grid/disclosure.rs`),
+selected from the former A/B/C comparison. Disclosure tracks use ordinary native
+retargeting for semantic visibility, while the feather samples existing extent
+and slice bounds, with no separate reveal timer or competing growth fade.
+Headings disclose in catalog order along projected X, −Y, or −Z; cell ink follows
+the clipped face edge. Upright headings use a glyph-fitting aperture when their
+projected cell interval is too small. The 8-output-pixel linear ramp affects ink,
+not material or borders; it is neither another easing nor a blur filter.
+Geometry timing is unchanged; the losing motion treatments and prototype hint
+have been removed. The earlier Euclidean per-face border correction fixed
+diagonal expansion but not half-width silhouettes; centered strokes replace it.
+
+`render/grid/palette.rs` contains five native line-color audition choices. C and
+Shift+C select a preview-only palette without modifying Playback or Scene Plans.
+The worker's `FrameCache` keys pixels by slide, visual sample, theme, and palette; frame
+results carry that palette so a stale in-flight render cannot overwrite a newer
+choice. Paused/held frames can change color without advancing their clock. The
+renderer override changes cell borders only; exports keep the recipe's default color.
+Orange remains the Original theme's default after auditioning the alternatives.
+Other themes start with their accent; C auditions override colors for the current
+player lifetime, and T restores the newly selected theme's default line treatment.
+
 `crates/kinograph-render/src/render.rs` is the concrete `wgpu` and `cosmic-text` Adapter. `HeadlessRenderer::render_shapes` renders transparent editor-local geometry into tightly packed RGBA pixels. Cached stable-line sprites, pointers, and annotations are added to that flat editor surface before the shared card compositor presents it.
 
 The Adapter also resolves semantic token targets from `cosmic-text` glyph cluster hitboxes. Token highlights and the pointer consume those measured bounds; choreography does not estimate monospace character widths or hardcode target coordinates.
+
+Code-target measurement shapes each inline partition once for both its advance
+and selected cluster bounds, without rasterizing discarded pixels. The separate
+`render/text/raster.rs` leaf owns exact glyph rasterization shared with the native
+browser bake. `render/text.rs` owns the typed plain-text cache; root, Task, terminal,
+and deployment callers retain their different width, line-height, crop, and color
+policies. Debug, inline-code, SVG, and bubble resources keep their own lifetimes.
 
 Editor panel translation, three-axis rotation, and scale are sampled properties. The editor shader remains flat and transparent; `render/ui/card.rs` is the sole perspective implementation for both editor and recorded-video surfaces. Depth-weighted Gaussian sampling softens the near edge during the opening pose, while increased entrance shutter sampling keeps fast perspective motion continuous.
 
@@ -143,7 +366,7 @@ The lesson port extends the compositor to multiple non-overlapping reveals on on
 
 `scenes/quark-before-after` is a compact narrated tutorial contrasting Solid Store reconciliation with explicit keyed identity. It uses the existing editor, text, and Script Clip recipes rather than introducing a reactive-system visualization or another renderer abstraction. The scene also demonstrates the planned editor's shared perspective-card entrance and multiple channel-driven Inline Reveals: one new Stable Line enters before opposing variable parts exchange inside otherwise stable lines, then the update call changes on its own narration cue.
 
-`crates/kinograph-render/src/render/ui.rs` is a private, GPUI-inspired immediate-mode vocabulary for renderer-owned pixel interfaces. Immutable `Bounds` values split, inset, and align child regions; axis-aware `Flow` and equal tracks derive row and column placement from extents and gaps. `render/ui/card.rs` adds nested rounded clips, fills, strokes, packed or strided RGBA sources, fit modes, card-local overlays, and projected cards with one material, border, shadow, surface blur, and depth-dependent near-edge blur. Draw order is z-order and closures provide local composition without retaining public nodes. Flattened editor pixels, decoded terminal-video pixels, and the composed deployment dashboard all enter through this Module. A direct borrowed-source operation preserves the same presentation semantics without first rasterizing a second full-card intermediate; the closure path remains available when a card needs multiple composed layers. The Module intentionally stops before an element tree, flexbox engine, event model, retained widgets, renderer trait, or public UI framework.
+`crates/kinograph-render/src/render/ui.rs` is a private, GPUI-inspired immediate-mode vocabulary for renderer-owned pixel interfaces. Immutable `Bounds` values split and inset child regions; `VerticalFlow` places the terminal's source lines. Deployment row centers come directly from their index and fixed row height/gap, not a general layout engine. `render/ui/card.rs` adds nested rounded clips, fills, strokes, packed or strided RGBA sources, fit modes, card-local overlays, and projected cards with one material, border, shadow, surface blur, and depth-dependent near-edge blur. Draw order is z-order and closures provide local composition without retaining public nodes. Flattened editor pixels, decoded terminal-video pixels, and the composed deployment dashboard all enter through this Module. A direct borrowed-source operation preserves the same presentation semantics without first rasterizing a second full-card intermediate; the closure path remains available when a card needs multiple composed layers. The Module intentionally stops before an element tree, flexbox engine, event model, retained widgets, renderer trait, or public UI framework.
 
 The Adapter keeps these details private:
 
@@ -163,6 +386,27 @@ There is no renderer trait. One Adapter is a hypothetical seam; a second backend
 `kinograph/src/playback.rs` derives numeric step destinations from a renderer-prepared Timeline, after semantic geometry has resolved. Next, Previous, First, and Last append only changed channel targets through the shared Timeline compiler. Each spring therefore inherits position and velocity, including mid-flight reversals; unchanged destinations do not restart motion. Per-channel motion profiles come from the destination's latest authored spring (or its first spring before any event; set-only channels use a 0.4-second zero-bounce default). Replay alone resets to the entry pose. The local clock freezes on pause or once all channels settle, without retiming the authored video. Immutable `Arc<Timeline>` revisions make sampling history-independent even while input creates a newer revision.
 
 `plan_runtime/presentation.rs` owns winit lifecycle, slide/step navigation, full screen, letterboxed resizing, and smooth/pixelated display filtering. `presentation/worker.rs` retains the deck's prepared scenes, fonts, and GPU. At most one render is in flight; requests and results carry slide identity and immutable timeline revisions, so switching slides cannot display a stale result from another scene. Each slide retains its selected step and paused local clock while inactive. Explicit pause stays paused on return; previously running motion resumes. Held/paused scenes sleep unless a planned Task requests ambient clock advancement. Generic State Channels and recorded media remain unsupported by interruptible playback; video support is unchanged.
+
+The GPU-free `presentation/scheduler.rs` owns request eligibility, complete-sample
+equality, invalidation, completion freshness, and phase-preserving deadlines.
+`RequestStamp` provenance is distinct from the worker's visual cache key and the
+uploaded pixel `Arc`. A stale completion releases the one-in-flight slot without
+replacing front pixels or clearing a pending repaint.
+
+Native inspection uses `PlaybackSpeed` (1x, 0.5x, 0.25x, 0.1x) to divide elapsed
+wall time. A speed change reanchors at the same local time without rebuilding the
+Timeline. Frame steps change only the paused sample cursor by 16.667 ms and stop
+backward movement at the latest navigation boundary. Both operations increment
+the presentation revision, rejecting old in-flight frames. Shift+R uses ordinary
+Replay followed by pause so the first frame and delayed word starts can be inspected.
+
+`presentation/debug.rs` captures local/navigation time, speed, phase, and pending
+start counts with the render request. Header readouts sample each word's actual
+spring progress. `render/debug.rs` paints a bounded optional HUD over a clone of
+the worker's clean cached frame; hiding it restores the exact clean cache object.
+The HUD has at most eight replace-in-place glyph-cache slots and never enters
+Scene Plans, visual sample keys, or file exports. Speed/debug are session-local,
+not saved alongside theme preferences; benchmark mode rejects slow/debug options.
 
 Semantic coordinates retain a numeric expanded-layout baseline plus private companion weights compiled by `plan_runtime/attachments.rs`. Sampling applies each weight to the difference between expanded and visible target geometry, including product-rule velocity. Target measurements use the same span partitions and shaping as inline painting; weight tolerances are normalized to the measured coordinate extent. Companion tracks participate in native retargeting, preserving continuity when switching between moving targets and literal coordinates. Line-layout and reveal drivers must use literals: semantic feedback into their own geometry is rejected. These are prepared renderer tracks, not new public Scene Plan fields.
 

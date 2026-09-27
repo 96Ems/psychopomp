@@ -59,10 +59,8 @@ Camera, visible pointer, and annotation combinations fall back to the full
 renderer. `--full-quality` disables this preview shortcut; it still samples one
 instant rather than an export shutter. It can be much slower.
 
-Interruptible presentation currently supports continuous-channel editor, pointer,
-text, and title-card scenes. Discrete UI recipes and recorded media need a separate
-interactive timing contract and are explicitly rejected by this player, not
-silently retimed. Their existing video exports are unchanged.
+See [Play as a presentation](../../SCENE_PLANS.md#play-as-a-presentation)
+for the current player capabilities and limitations.
 
 ## Export the same source as video
 

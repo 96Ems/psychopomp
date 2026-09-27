@@ -2,6 +2,8 @@ struct SceneUniforms {
     resolution: vec4<f32>,
     focus: vec4<f32>,
     token_highlight: vec4<f32>,
+    surface: vec4<f32>,
+    accent: vec4<f32>,
 }
 
 @group(0) @binding(0)
@@ -75,7 +77,7 @@ fn fragment_main(input: VertexOutput) -> @location(0) vec4<f32> {
         titlebar_center,
         vec2<f32>(panel_size.x - 2.0, 62.0),
         15.0,
-        vec3<f32>(0.011, 0.012, 0.014),
+        select(vec3<f32>(0.011, 0.012, 0.014),scene.surface.rgb,scene.surface.w>0.),
         1.0
     );
 
@@ -86,7 +88,7 @@ fn fragment_main(input: VertexOutput) -> @location(0) vec4<f32> {
         titlebar_center + vec2<f32>(0.0, 15.5),
         vec2<f32>(panel_size.x - 2.0, 31.0),
         0.0,
-        vec3<f32>(0.011, 0.012, 0.014),
+        select(vec3<f32>(0.011, 0.012, 0.014),scene.surface.rgb,scene.surface.w>0.),
         1.0
     );
 
@@ -111,7 +113,7 @@ fn fragment_main(input: VertexOutput) -> @location(0) vec4<f32> {
         focus_center,
         focus_size,
         4.0,
-        vec3<f32>(0.014, 0.020, 0.018),
+        select(vec3<f32>(0.014, 0.020, 0.018),scene.surface.rgb,scene.surface.w>0.),
         scene.focus.x
     );
 
@@ -129,7 +131,7 @@ fn fragment_main(input: VertexOutput) -> @location(0) vec4<f32> {
     );
     let token_softness = 0.75 + (1.0 - clamp(token_opacity / 0.8, 0.0, 1.0)) * 7.0;
     let token_alpha = (1.0 - smoothstep(-token_softness, token_softness, token_distance)) * token_opacity * 0.72;
-    color = over(color, vec3<f32>(0.055, 0.12, 0.095), token_alpha);
+    color = over(color, select(vec3<f32>(0.055, 0.12, 0.095),scene.accent.rgb*0.18,scene.surface.w>0.), token_alpha);
 
     return color;
 }

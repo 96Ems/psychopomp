@@ -880,6 +880,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "kinograph-component-prototypes"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "kinograph",
+ "kinograph-keyed-grid",
+ "serde_json",
+]
+
+[[package]]
+name = "kinograph-data-modeling"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "kinograph",
+ "serde_json",
+]
+
+[[package]]
 name = "kinograph-deployment-queue"
 version = "0.1.0"
 dependencies = [
@@ -893,6 +912,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "kinograph",
+ "serde_json",
 ]
 
 [[package]]
@@ -901,7 +921,6 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "kinograph",
- "serde_json",
 ]
 
 [[package]]
@@ -916,6 +935,15 @@ dependencies = [
 
 [[package]]
 name = "kinograph-keyed-grid"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "kinograph",
+ "serde_json",
+]
+
+[[package]]
+name = "kinograph-opencode-architecture"
 version = "0.1.0"
 dependencies = [
  "anyhow",
@@ -949,12 +977,18 @@ dependencies = [
  "bytemuck",
  "cosmic-text",
  "kinograph",
+ "kinograph-component-prototypes",
+ "kinograph-data-modeling",
+ "kinograph-deployment-queue",
  "kinograph-effect-succeed-slides",
  "kinograph-hero",
  "kinograph-interactive-showcase",
  "kinograph-keyed-grid",
+ "kinograph-opencode-architecture",
+ "kinograph-opencode-session-tool",
  "png",
  "pollster",
+ "pulldown-cmark",
  "resvg",
  "serde",
  "serde_json",
@@ -1650,6 +1684,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3d595e54a326bc53c1c197b32d295e14b169e3cfeaa8dc82b529f947fba6bcf5"
 
 [[package]]
+name = "pulldown-cmark"
+version = "0.13.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e9f068eba8e7071c5f9511831b44f32c740d5adf574e990f946ddb53db2f314e"
+dependencies = [
+ "bitflags 2.13.0",
+ "memchr",
+ "unicase",
+]
+
+[[package]]
 name = "quick-error"
 version = "2.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2339,6 +2384,12 @@ checksum = "d2df906b07856748fa3f6e0ad0cbaa047052d4a7dd609e231c4f72cee8c36f31"
 dependencies = [
  "core_maths",
 ]
+
+[[package]]
+name = "unicase"
+version = "2.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "dbc4bc3a9f746d862c45cb89d705aa10f187bb96c76001afab07a0d35ce60142"
 
 [[package]]
 name = "unicode-bidi"

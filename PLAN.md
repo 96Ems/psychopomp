@@ -343,6 +343,27 @@ camera changes the view; axis extents grow connected lines, not separate blocks.
 Blender/GLB models, joystick input, arbitrary
 materials, infinite value spaces, and a generic isomorphism API remain deferred.
 
+### Reusable Visual Components Before More Lessons
+
+The first seven-slide data-modeling adaptation passed technical checks but was
+not aesthetically accepted. The next proof is a small native component showroom,
+not expansion of that lesson deck: measured typesetting, keyed collections, and
+anchored connectors, each shown alone and reused in a composition. Provisional
+recipes stay explicitly marked as prototypes until visual review. Existing Code
+and Grid are the other reusable pieces; making both bounded composable surfaces
+remains a separate concrete task, not permission to introduce a generic scene graph.
+
+The grid's plain-table presentation is the next reuse proof: configurable paint,
+rectangular cells, conventional headers, and stable row/column growth share the
+existing renderer. A keyed-record update/sort model remains separate from this
+presentation work; do not disguise product enumeration as a complete data table.
+
+The next showroom extends the same reusable vocabulary with bounded Markdown
+typography, list/quote blocks, header entrances, stable width-revealing expressions,
+and an explicit two-set Venn diagram informed by visual-types. Themes are paint,
+not alternate scenes. Keep these component payloads provisional while their visual
+behavior is reviewed; do not turn a Markdown parser into a second slideshow runtime.
+
 ## The Repository Starts Small
 
 ```text

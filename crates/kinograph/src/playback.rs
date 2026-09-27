@@ -1,6 +1,6 @@
 //! Interactive destinations over the same scalar tracks used by video export.
-//! Navigation appends spring retargets on a local, pausable clock. It never seeks
-//! backward through the authored animation or replaces in-flight motion state.
+//! Navigation schedules spring retargets on a local, pausable clock and cancels
+//! superseded unstarted writes. It never seeks backward or replaces in-flight state.
 use std::{collections::HashMap, sync::Arc, time::Duration};
 
 use anyhow::{Context, Result, bail};
@@ -8,7 +8,9 @@ use anyhow::{Context, Result, bail};
 use crate::{
     motion::MotionState,
     plan::{PresentationStepPlan, ScenePlan, TrackEventPlan},
-    timeline::{PropertyId, SpringProfile, TimedEvent, Timeline},
+    timeline::{
+        PropertyId, Retarget, RetargetMode, RetargetSchedule, ScheduleTime, SpringProfile, Timeline,
+    },
 };
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -43,13 +45,63 @@ struct Destination {
     profiles: Vec<SpringProfile>,
 }
 
+pub use crate::timeline::StartDelay;
+
+/// Diagnostic clock rates, not alternate spring profiles or export timing.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum PlaybackSpeed {
+    #[default]
+    Normal,
+    Half,
+    Quarter,
+    Tenth,
+}
+
+impl PlaybackSpeed {
+    pub const ALL: [Self; 4] = [Self::Normal, Self::Half, Self::Quarter, Self::Tenth];
+    pub fn label(self) -> &'static str {
+        match self {
+            Self::Normal => "1x",
+            Self::Half => "0.5x",
+            Self::Quarter => "0.25x",
+            Self::Tenth => "0.1x",
+        }
+    }
+    pub fn parse(value: &str) -> Result<Self> {
+        match value {
+            "1" | "1.0" => Ok(Self::Normal),
+            "0.5" => Ok(Self::Half),
+            "0.25" => Ok(Self::Quarter),
+            "0.1" => Ok(Self::Tenth),
+            _ => bail!("speed must be 1, 0.5, 0.25, or 0.1"),
+        }
+    }
+    pub fn cycle(self, reverse: bool) -> Self {
+        let i = Self::ALL.iter().position(|s| *s == self).unwrap();
+        Self::ALL[(i + if reverse { 3 } else { 1 }) % 4]
+    }
+    fn divisor(self) -> u32 {
+        match self {
+            Self::Normal => 1,
+            Self::Half => 2,
+            Self::Quarter => 4,
+            Self::Tenth => 10,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct PendingStarts {
+    pub count: usize,
+    pub until_next: Option<Duration>,
+}
+
 pub struct Playback {
     steps: Vec<PresentationStepPlan>,
     destinations: Vec<Destination>,
     properties: Vec<PropertyId>,
-    initial: Vec<(PropertyId, f32)>,
-    events: Vec<TimedEvent>,
-    timeline: Arc<Timeline>,
+    start_delays: Vec<Option<StartDelay>>,
+    schedule: RetargetSchedule,
     index: usize,
     revision: u64,
     reduced_motion: bool,
@@ -59,6 +111,8 @@ pub struct Playback {
     anchor: Option<Duration>,
     phase: PlaybackPhase,
     continuous: bool,
+    speed: PlaybackSpeed,
+    navigation_start: Duration,
 }
 
 impl Playback {
@@ -75,6 +129,16 @@ impl Playback {
         reduced_motion: bool,
         defaults: &HashMap<String, SpringProfile>,
     ) -> Result<Self> {
+        Self::with_start_delays(plan, authored, reduced_motion, defaults, &HashMap::new())
+    }
+
+    pub fn with_start_delays(
+        plan: &ScenePlan,
+        authored: &Timeline,
+        reduced_motion: bool,
+        defaults: &HashMap<String, SpringProfile>,
+        delays: &HashMap<String, StartDelay>,
+    ) -> Result<Self> {
         plan.validate()?;
         if plan.presentation_steps.is_empty() {
             bail!(
@@ -87,6 +151,19 @@ impl Playback {
             .iter()
             .map(|channel| PropertyId::new(&channel.id))
             .collect::<Vec<_>>();
+        for (id, delay) in delays {
+            if !properties.iter().any(|p| p.as_str() == id)
+                || !delay.from.is_finite()
+                || !delay.to.is_finite()
+                || delay.delay.as_secs_f64() > 60.
+            {
+                bail!("start delay needs a declared channel, finite poses, and at most 60 seconds");
+            }
+        }
+        let start_delays = properties
+            .iter()
+            .map(|p| delays.get(p.as_str()).copied())
+            .collect();
         let values_at = |nanos| {
             properties
                 .iter()
@@ -100,61 +177,52 @@ impl Playback {
                 })
                 .collect::<Result<Vec<_>>>()
         };
-        let destinations =
-            plan.presentation_steps
-                .iter()
-                .map(|step| {
-                    let profiles =
-                        plan.continuous_channels
-                            .iter()
-                            .map(|channel| {
-                                let springs = || {
-                                    channel.events.iter().filter(|event| {
-                                        matches!(event, TrackEventPlan::Spring { .. })
-                                    })
-                                };
-                                let event = springs()
-                                    .rfind(|event| event.at_nanos() <= step.hold_nanos)
-                                    .or_else(|| springs().next());
-                                match event {
-                                    Some(TrackEventPlan::Spring {
-                                        response_seconds,
-                                        damping_ratio,
-                                        position_threshold,
-                                        velocity_threshold,
-                                        ..
-                                    }) => SpringProfile::new(
-                                        *response_seconds,
-                                        *damping_ratio,
-                                        *position_threshold,
-                                        *velocity_threshold,
-                                    ),
-                                    _ => defaults.get(&channel.id).copied().unwrap_or_else(|| {
-                                        SpringProfile::from_visual_duration(0.4, 0.0, 0.001, 0.001)
-                                    }),
-                                }
+        let destinations = plan
+            .presentation_steps
+            .iter()
+            .map(|step| {
+                let profiles = plan
+                    .continuous_channels
+                    .iter()
+                    .map(|channel| {
+                        let springs = || {
+                            channel
+                                .events
+                                .iter()
+                                .filter(|event| matches!(event, TrackEventPlan::Spring { .. }))
+                        };
+                        let event = springs()
+                            .rfind(|event| event.at_nanos() <= step.hold_nanos)
+                            .or_else(|| springs().next());
+                        event
+                            .and_then(TrackEventPlan::spring_plan)
+                            .map(|spring| spring.profile())
+                            .unwrap_or_else(|| {
+                                defaults.get(&channel.id).copied().unwrap_or_else(|| {
+                                    SpringProfile::from_visual_duration(0.4, 0.0, 0.001, 0.001)
+                                })
                             })
-                            .collect();
-                    Ok(Destination {
-                        values: values_at(step.hold_nanos)?,
-                        entry: values_at(step.start_nanos)?,
-                        profiles,
                     })
+                    .collect();
+                Ok(Destination {
+                    values: values_at(step.hold_nanos)?,
+                    entry: values_at(step.start_nanos)?,
+                    profiles,
                 })
-                .collect::<Result<Vec<_>>>()?;
+            })
+            .collect::<Result<Vec<_>>>()?;
         let initial = properties
             .iter()
             .cloned()
             .zip(destinations[0].values.iter().copied())
             .collect::<Vec<_>>();
-        let timeline = Arc::new(Timeline::compile_events(initial.clone(), [], 0.0)?);
+        let schedule = RetargetSchedule::new(initial)?;
         Ok(Self {
             steps: plan.presentation_steps.clone(),
             destinations,
             properties,
-            initial,
-            events: Vec::new(),
-            timeline,
+            start_delays,
+            schedule,
             index: 0,
             revision: 0,
             reduced_motion,
@@ -162,6 +230,8 @@ impl Playback {
             anchor: None,
             phase: PlaybackPhase::Held,
             continuous: false,
+            speed: PlaybackSpeed::Normal,
+            navigation_start: Duration::ZERO,
         })
     }
 
@@ -172,7 +242,66 @@ impl Playback {
         self.reduced_motion
     }
     pub fn timeline(&self) -> Arc<Timeline> {
-        self.timeline.clone()
+        self.schedule.timeline().clone()
+    }
+
+    pub fn speed(&self) -> PlaybackSpeed {
+        self.speed
+    }
+    pub fn navigation_start(&self) -> Duration {
+        self.navigation_start
+    }
+
+    /// Reanchor at the current scene time. Position and scene-time velocity,
+    /// pending start times, selected destination, and the Timeline stay intact.
+    pub fn set_speed(&mut self, speed: PlaybackSpeed, now: Duration) -> bool {
+        if self.speed == speed {
+            return false;
+        }
+        self.local_time = self.time(now);
+        if self.anchor.is_some() {
+            self.anchor = Some(now);
+        }
+        self.speed = speed;
+        self.revision += 1;
+        true
+    }
+
+    /// Explicit diagnostic sampling, distinct from Previous destination navigation.
+    /// Freeze after a 16.667ms scene-time step, independent of speed/display FPS.
+    /// Backward inspection stops at the latest navigation boundary.
+    pub fn step_frame(&mut self, backward: bool, now: Duration) -> bool {
+        if self.reduced_motion {
+            return false;
+        }
+        let time = self.time(now);
+        let frame = Duration::from_nanos(16_666_667);
+        self.local_time = if backward {
+            time.saturating_sub(frame).max(self.navigation_start)
+        } else {
+            time.saturating_add(frame)
+        };
+        self.anchor = None;
+        self.phase = PlaybackPhase::Paused;
+        self.revision += 1;
+        true
+    }
+
+    pub fn pending_starts(&self, at: Duration) -> PendingStarts {
+        let mut pending = PendingStarts::default();
+        for event in self.schedule.writes() {
+            let due = Duration::from_secs_f64(event.at.seconds());
+            if due > at {
+                pending.count += 1;
+                let remaining = due - at;
+                pending.until_next = Some(
+                    pending
+                        .until_next
+                        .map_or(remaining, |old| old.min(remaining)),
+                );
+            }
+        }
+        pending
     }
 
     /// Observe the local clock and stop it once all channels are exactly at rest.
@@ -245,10 +374,10 @@ impl Playback {
     }
 
     fn time(&self, now: Duration) -> Duration {
-        self.local_time.saturating_add(
-            self.anchor
-                .map_or(Duration::ZERO, |since| now.saturating_sub(since)),
-        )
+        self.local_time
+            .saturating_add(self.anchor.map_or(Duration::ZERO, |since| {
+                now.saturating_sub(since) / self.speed.divisor()
+            }))
     }
 
     fn at_rest(&self, time: Duration) -> bool {
@@ -256,7 +385,9 @@ impl Playback {
             .iter()
             .zip(&self.destinations[self.index].values)
             .all(|(property, target)| {
-                self.timeline.sample_at(property, time.as_secs_f64())
+                self.schedule
+                    .timeline()
+                    .sample_at(property, time.as_secs_f64())
                     == Some(MotionState::at(*target))
             })
     }
@@ -266,46 +397,30 @@ impl Playback {
             return false;
         };
         let time = self.time(now);
-        for (component, property) in self.properties.iter().enumerate() {
-            let target = destination.values[component];
-            if self.reduced_motion {
-                self.events.push(TimedEvent::set(
-                    time.as_secs_f64(),
-                    property.clone(),
-                    target,
-                ));
-            } else if replay {
-                self.events.push(TimedEvent::set(
-                    time.as_secs_f64(),
-                    property.clone(),
-                    destination.entry[component],
-                ));
-                self.events.push(TimedEvent::spring(
-                    time.as_secs_f64(),
-                    property.clone(),
-                    target,
-                    destination.profiles[component],
-                ));
-            } else if target != self.destinations[self.index].values[component] {
-                // The shared Timeline compiler starts from sampled position AND
-                // velocity. Unchanged destinations keep their existing trajectory.
-                self.events.push(TimedEvent::spring(
-                    time.as_secs_f64(),
-                    property.clone(),
-                    target,
-                    destination.profiles[component],
-                ));
-            }
-        }
-        self.timeline = Arc::new(
-            Timeline::compile_events(
-                self.initial.clone(),
-                self.events.clone(),
-                time.as_secs_f64(),
-            )
-            .expect("validated presentation events refer to declared channels on a finite clock"),
-        );
+        let requests = self
+            .properties
+            .iter()
+            .enumerate()
+            .map(|(component, property)| Retarget {
+                property: property.clone(),
+                target: destination.values[component],
+                profile: destination.profiles[component],
+                delay: self.start_delays[component],
+                mode: if self.reduced_motion {
+                    RetargetMode::Immediate
+                } else if replay {
+                    RetargetMode::Replay {
+                        from: destination.entry[component],
+                    }
+                } else {
+                    RetargetMode::Animate
+                },
+            });
+        self.schedule
+            .retarget(ScheduleTime::Seconds(time.as_secs_f64()), requests, None)
+            .expect("validated presentation events refer to declared channels on a finite clock");
         self.index = index;
+        self.navigation_start = time;
         self.local_time = time;
         self.anchor = Some(now);
         self.phase = PlaybackPhase::Playing;
@@ -319,6 +434,7 @@ impl Playback {
 mod tests {
     use super::*;
     use crate::author::PlanBuilder;
+    use crate::timeline::TimedEvent;
     use PlaybackCommand::*;
 
     fn playback() -> Playback {
@@ -348,13 +464,173 @@ mod tests {
     fn profile() -> SpringProfile {
         SpringProfile::from_visual_duration(0.4, 0.0, 0.001, 0.001)
     }
+    fn staggered() -> Playback {
+        let mut p = playback();
+        p.start_delays[0] = Some(StartDelay {
+            from: 0.,
+            to: 1.,
+            delay: Duration::from_millis(100),
+        });
+        p
+    }
+
+    #[test]
+    fn slowing_the_clock_preserves_the_pose_velocity_and_timeline() {
+        let mut p = playback();
+        p.command(Next, seconds(0.));
+        let before = state(&mut p, 0.2, "code.reveal");
+        let timeline = p.timeline();
+        assert!(p.set_speed(PlaybackSpeed::Quarter, seconds(0.2)));
+        assert_eq!(before, state(&mut p, 0.2, "code.reveal"));
+        assert!(Arc::ptr_eq(&timeline, &p.timeline()));
+        assert_eq!(p.sample(seconds(0.6)).at_nanos, 300_000_000);
+        assert_eq!(
+            state(&mut p, 0.6, "code.reveal"),
+            timeline
+                .sample_at(&PropertyId::new("code.reveal"), 0.3)
+                .unwrap()
+        );
+        let current = state(&mut p, 0.6, "code.reveal");
+        p.command(Previous, seconds(0.6));
+        assert_eq!(
+            current,
+            state(&mut p, 0.6, "code.reveal"),
+            "slow reversal inherits scene-time velocity"
+        );
+        p.pause(seconds(0.8));
+        let paused = p.sample(seconds(0.8));
+        p.set_speed(PlaybackSpeed::Tenth, seconds(10.));
+        assert_eq!(p.sample(seconds(50.)).at_nanos, paused.at_nanos);
+        assert_eq!(p.sample(seconds(50.)).phase, PlaybackPhase::Paused);
+    }
+
+    #[test]
+    fn slow_motion_scales_waits_and_frame_steps_do_not_retarget() {
+        let mut p = staggered();
+        p.set_speed(PlaybackSpeed::Quarter, Duration::ZERO);
+        p.command(Next, Duration::ZERO);
+        assert_eq!(p.sample(seconds(0.2)).at_nanos, 50_000_000);
+        assert_eq!(state(&mut p, 0.2, "code.reveal"), MotionState::at(0.));
+        assert_eq!(
+            p.pending_starts(Duration::from_millis(50)),
+            PendingStarts {
+                count: 1,
+                until_next: Some(Duration::from_millis(50))
+            }
+        );
+        assert!(state(&mut p, 0.5, "code.reveal").position > 0.);
+        p.pause(seconds(0.5));
+        let timeline = p.timeline();
+        let before = p.sample(seconds(0.5)).at_nanos;
+        p.step_frame(false, seconds(10.));
+        let next = p.sample(seconds(100.));
+        assert_eq!(next.at_nanos, before + 16_666_667);
+        assert_eq!(next.phase, PlaybackPhase::Paused);
+        p.step_frame(true, seconds(101.));
+        assert_eq!(p.sample(seconds(102.)).at_nanos, before);
+        assert!(Arc::ptr_eq(&timeline, &p.timeline()));
+        for _ in 0..20 {
+            p.step_frame(true, seconds(200.));
+        }
+        assert_eq!(
+            p.sample(seconds(200.)).at_nanos,
+            0,
+            "inspection cannot cross its navigation boundary"
+        );
+        p.set_reduced_motion(true, seconds(200.));
+        assert!(!p.step_frame(false, seconds(201.)));
+        assert_eq!(p.pending_starts(Duration::ZERO).count, 0);
+    }
+
+    #[test]
+    fn diagnostic_rates_cycle_and_preserve_the_default_clock() {
+        for speed in PlaybackSpeed::ALL {
+            assert_eq!(speed.cycle(false).cycle(true), speed);
+        }
+        assert_eq!(PlaybackSpeed::default(), PlaybackSpeed::Normal);
+        assert!(PlaybackSpeed::parse("0").is_err());
+        assert!(PlaybackSpeed::parse("NaN").is_err());
+        let mut p = playback();
+        assert!(!p.set_speed(PlaybackSpeed::Normal, seconds(10.)));
+        p.set_speed(PlaybackSpeed::Half, seconds(20.));
+        assert_eq!(p.sample(seconds(30.)).phase, PlaybackPhase::Held);
+        assert_eq!(p.sample(seconds(30.)).at_nanos, 0);
+    }
+
+    #[test]
+    fn pending_entrances_are_cancelled_without_changing_executed_history() {
+        let mut p = staggered();
+        let id = PropertyId::new("code.reveal");
+        p.command(Next, seconds(0.));
+        let original = p.timeline();
+        assert_eq!(p.sample(seconds(0.05)).phase, PlaybackPhase::Playing);
+        assert_eq!(state(&mut p, 0.05, "code.reveal"), MotionState::at(0.));
+        p.command(Previous, seconds(0.05));
+        for at in [0.05, 0.11, 0.5, 2.] {
+            assert_eq!(p.timeline().sample_at(&id, at), Some(MotionState::at(0.)));
+        }
+        assert!(
+            original.sample_at(&id, 0.2).unwrap().position > 0.,
+            "prior immutable revision retains its original schedule"
+        );
+    }
+
+    #[test]
+    fn unchanged_pending_words_keep_their_due_time_and_reversal_is_immediate_after_start() {
+        let mut p = staggered();
+        let id = PropertyId::new("code.reveal");
+        p.command(Next, seconds(0.));
+        let original = p.timeline();
+        p.command(Next, seconds(0.04));
+        for at in [0.04, 0.09, 0.12, 0.3] {
+            assert_eq!(p.timeline().sample_at(&id, at), original.sample_at(&id, at));
+        }
+        p.command(First, seconds(0.13));
+        let reversed = state(&mut p, 0.13, "code.reveal");
+        assert_eq!(reversed, original.sample_at(&id, 0.13).unwrap());
+        let before = state(&mut p, 0.15, "code.reveal");
+        p.command(Next, seconds(0.15));
+        assert_eq!(before, state(&mut p, 0.15, "code.reveal"));
+        assert!(
+            p.schedule
+                .writes()
+                .iter()
+                .all(|write| write.property != id || write.at.seconds() <= 0.15),
+            "moving words must redirect now, not coast toward a delayed reversal"
+        );
+    }
+
+    #[test]
+    fn stagger_pause_replay_reduced_motion_and_rapid_a_b_a_c_do_not_leak_starts() {
+        let mut p = staggered();
+        p.command(Next, seconds(0.));
+        p.pause(seconds(0.04));
+        assert_eq!(state(&mut p, 10., "code.reveal"), MotionState::at(0.));
+        p.command(TogglePause, seconds(10.));
+        assert_eq!(state(&mut p, 10.05, "code.reveal"), MotionState::at(0.));
+        assert!(state(&mut p, 10.08, "code.reveal").position > 0.);
+        p.command(Replay, seconds(10.1));
+        assert_eq!(state(&mut p, 10.15, "code.reveal"), MotionState::at(0.));
+        p.set_reduced_motion(true, seconds(10.15));
+        assert_eq!(state(&mut p, 20., "code.reveal"), MotionState::at(1.));
+        let mut p = staggered();
+        p.command(Next, seconds(0.));
+        p.command(Previous, seconds(0.04));
+        p.command(Last, seconds(0.06));
+        let id = PropertyId::new("code.reveal");
+        assert_eq!(p.timeline().sample_at(&id, 0.14), Some(MotionState::at(0.)));
+        let sample = p.timeline().sample_at(&id, 0.19).unwrap();
+        assert!(sample.position > 0.);
+        p.timeline().sample_at(&id, 4.);
+        assert_eq!(p.timeline().sample_at(&id, 0.19), Some(sample));
+    }
     fn seconds(n: f64) -> Duration {
         Duration::from_secs_f64(n)
     }
     fn state(playback: &mut Playback, now: f64, property: &str) -> MotionState {
         let sample = playback.sample(seconds(now));
         playback
-            .timeline
+            .timeline()
             .sample_at(
                 &PropertyId::new(property),
                 sample.at_nanos as f64 / 1_000_000_000.0,
@@ -384,7 +660,7 @@ mod tests {
         for time in [0.1, 0.2, 0.5] {
             assert_eq!(
                 playback
-                    .timeline
+                    .timeline()
                     .sample_at(&PropertyId::new("code.reveal"), time),
                 original.sample_at(&PropertyId::new("code.reveal"), time)
             );
@@ -416,11 +692,11 @@ mod tests {
         playback.command(Previous, seconds(0.12));
         playback.command(Next, seconds(0.20));
         let property = PropertyId::new("code.reveal");
-        let expected = playback.timeline.sample_at(&property, 0.25).unwrap();
-        playback.timeline.sample_at(&property, 5.);
-        playback.timeline.sample_at(&property, 0.05);
+        let expected = playback.timeline().sample_at(&property, 0.25).unwrap();
+        playback.timeline().sample_at(&property, 5.);
+        playback.timeline().sample_at(&property, 0.05);
         assert_eq!(
-            playback.timeline.sample_at(&property, 0.25).unwrap(),
+            playback.timeline().sample_at(&property, 0.25).unwrap(),
             expected
         );
     }
@@ -458,11 +734,11 @@ mod tests {
         for index in 0..240 {
             let at = 2.0 + f64::from(index) / 120.0;
             assert_eq!(
-                playback.timeline.sample_at(&x, at),
+                playback.timeline().sample_at(&x, at),
                 Some(MotionState::at(1.))
             );
         }
-        assert!(playback.timeline.sample_at(&y, 2.05).unwrap().position > 0.);
+        assert!(playback.timeline().sample_at(&y, 2.05).unwrap().position > 0.);
     }
 
     #[test]

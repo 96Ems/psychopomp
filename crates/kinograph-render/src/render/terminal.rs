@@ -1,13 +1,8 @@
-use std::{
-    collections::hash_map::DefaultHasher,
-    hash::{Hash, Hasher},
-};
-
 use anyhow::{Result, bail};
-use cosmic_text::{Attrs, Color, Family, Metrics, Weight};
 
 use super::{
-    HeadlessRenderer, TextSprite, blend_pixel, composite_sprite, make_sprite,
+    HeadlessRenderer, TextSprite, blend_pixel, composite_sprite,
+    text::PlainTextSpec,
     ui::{
         Bounds, Edges, VerticalFlow,
         card::{CardFrame, CardProjection, CardStyle, ContentFit, RgbaSource},
@@ -397,29 +392,17 @@ impl HeadlessRenderer {
     }
 
     fn terminal_text_sprite(&mut self, text: &str, font_size: f32, color: [u8; 3]) -> &TextSprite {
-        let mut hasher = DefaultHasher::new();
-        text.hash(&mut hasher);
-        font_size.to_bits().hash(&mut hasher);
-        color.hash(&mut hasher);
-        let key = format!("terminal:{:x}", hasher.finish());
-        if !self.part_sprites.contains_key(&key) {
-            let attrs = Attrs::new()
-                .family(Family::Name("CommitMono"))
-                .weight(Weight::NORMAL)
-                .color(Color::rgb(color[0], color[1], color[2]));
-            let height = (font_size * 1.5).ceil() as u32;
-            let sprite = make_sprite(
-                &mut self.font_system,
-                &mut self.swash_cache,
-                vec![(text, attrs.clone())],
-                attrs,
-                Metrics::new(font_size, height as f32),
-                900,
-                height,
-            );
-            self.part_sprites.insert(key.clone(), (0, sprite));
-        }
-        &self.part_sprites[&key].1
+        let height = (font_size * 1.5).ceil() as u32;
+        self.plain_text_sprite(
+            text,
+            PlainTextSpec {
+                font_size,
+                color,
+                size: [900, height],
+                semibold: false,
+                crop_to_advance: false,
+            },
+        )
     }
 }
 

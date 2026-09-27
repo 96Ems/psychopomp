@@ -4,6 +4,10 @@ Kinograph is an early Rust prototype for deterministic, code-first motion graphi
 
 ## Read First
 
+Start with `README.md` for the working example and documentation map. Use the
+domain and current architecture as contracts; consult relevant experiment
+history for evidence rather than treating earlier trials as current policy.
+
 - `CONTEXT.md` defines the domain language. Use its terms in code and documentation.
 - `ARCHITECTURE.md` describes the current module boundaries and intentional non-abstractions.
 - `PLAN.md` defines the product direction, milestones, scope cuts, and success criteria.
@@ -28,6 +32,13 @@ cargo run --release -- plan present target/effect-succeed-slides.json
 cargo run -- plan steps target/effect-succeed-slides.json
 cargo run -p kinograph-interactive-showcase
 cargo run --release -- plan present target/interactive-showcase/deck.json
+cargo run -p kinograph-data-modeling
+cargo run --release -- plan present target/data-modeling/deck.json
+bash scenes/component-prototypes/run.sh
+cargo run -p kinograph-keyed-grid -- --styles
+cargo run --release -- plan present target/grid-styles/deck.json
+cargo run -p kinograph-component-prototypes -- --slideshow
+cargo run --release -- plan present target/slideshow-components/deck.json
 ```
 
 `cargo run --release` renders `output/kinograph-prototype.mp4` by default. Pass an output path as the first argument to override it. A full render requires:
@@ -44,25 +55,36 @@ Do not run the full render as routine validation when unit tests and static chec
 - `crates/kinograph/src/composition.rs`: exact media time, immutable assets and clips, script/layer scheduling, cues, and cross-media composition
 - `crates/kinograph/src/dsl.rs`: public Rust scene values, semantic targets, actor helpers, and lowering into scalar tracks
 - `crates/kinograph/src/editor.rs`: typed editor recipe data lowering stable inline parts and logical ranges into Code Transitions
+- `crates/kinograph/src/editor/compiled.rs`: shared validated catalog, reveal ranges, and legacy/keyed placement used by inspection and rendering
 - `crates/kinograph/src/editor/stability.rs`: GPU-free step deltas and heuristic common-text stability warnings
 - `crates/kinograph/src/task.rs`: typed planned Task state schedules
 - `crates/kinograph/src/grid.rs`: finite keyed product catalogs and semantic Grid Snapshots
+- `crates/kinograph/src/value.rs`: immutable Value Token recipe data for finite teaching diagrams
 - `crates/kinograph/src/author.rs`: typed Scene Plan builder and stable actor/channel handles for lightweight Scene Programs
 - `crates/kinograph/src/plan.rs`: versioned renderer-independent Scene Plan values and structured validation
+- `crates/kinograph/src/plan/channels.rs`: exact scalar-event lowering and opt-in snapshot-destination reduction; raw event ordering remains distinct
 - `crates/kinograph/src/state.rs`: deterministic arbitrary-time discrete State Tracks
 - `crates/kinograph/src/playback.rs`: interruptible step destinations, continuous track retargeting, and a pausable local presentation clock
 - `crates/kinograph/src/terminal.rs`: lightweight terminal-recording recipe values for planned video media
 - `crates/kinograph/src/deployment.rs`: typed deployment-queue recipe values, semantic snapshots, and authoring handle
 - `crates/kinograph/src/timeline.rs`: relative Animation and explicit-time continuous Property Track compilation
+- `crates/kinograph/src/timeline/retarget.rs`: shared cancellation-safe numeric schedule for Playback and authored resting entrances
 - `crates/kinograph/src/motion.rs`: deterministic arbitrary-time analytic spring sampling with position and velocity
 - `crates/kinograph/src/transcript.rs`: word timing ingestion and semantic cue lookup
 - `crates/kinograph-render/src/render.rs`: concrete headless `wgpu` renderer, sprite compositor, and code annotations
 - `crates/kinograph-render/src/render/effects/`: independent pixel recipes for interchangeable short annotation effects
 - `crates/kinograph-render/src/render/task.rs`: concrete Effect Task recipe and compositing
 - `crates/kinograph-render/src/render/grid.rs`: opaque connected 3D grid, sampled-bounds centering, and cached symbols/labels
+- `crates/kinograph-render/src/render/grid/edges.rs`: centered screen-space grid strokes, nearest-depth selection, and shared-edge coverage union
+- `crates/kinograph-render/src/render/value.rs`: Value Token tiles using shared card coverage and cached fractional text
+- `crates/kinograph-render/src/render/theme.rs`: named native/export paint palettes; no layout or motion
+- `crates/kinograph-render/src/render/rich_text.rs`: bounded Markdown shaping, decoration, and theme-aware glyph cache
+- `crates/kinograph-render/src/render/text.rs` and `text/raster.rs`: typed plain-text cache and exact native glyph rasterization shared with the experimental bake
+- `crates/kinograph-render/src/render/venn.rs`: sampled rounded-set geometry and exact intersection hatching
+- `crates/kinograph-render/src/render/header.rs`: fixed-edge line/word rises and mirrored, fading reflection ink
 - `crates/kinograph-render/src/render/terminal.rs`: concrete terminal recording and command-file presentation
 - `crates/kinograph-render/src/render/deployment_queue.rs`: concrete state-driven deployment dashboard UI Surface
-- `crates/kinograph-render/src/render/ui.rs`: private bounds, inset, split, and flow layout primitives for pixel UI
+- `crates/kinograph-render/src/render/ui.rs`: private bounds, inset, split, and terminal line-flow primitives for pixel UI
 - `crates/kinograph-render/src/render/ui/card.rs`: shared immediate-mode RGBA composition and projected card presentation used by editor, recorded-video, and simulated-UI producers
 - `crates/kinograph-render/src/encode.rs`: concrete FFmpeg subprocess, raw RGBA protocol, and compiled audio placement
 - `crates/kinograph-render/src/scenes/`: one concrete choreography Module per renderable scene plus shared sampling and encoding mechanics
@@ -70,14 +92,23 @@ Do not run the full render as routine validation when unit tests and static chec
 - `crates/kinograph-render/src/main.rs`: command parsing, output selection, and scene dispatch
 - `crates/kinograph/src/lib.rs`: lightweight public library boundary used by Rust Scene Programs
 - `crates/kinograph-render/src/plan_runtime.rs`: Scene Plan inspection, validation, rendering, and persistent JSON server
+- `crates/kinograph-render/src/plan_runtime/preflight.rs`: owned typed recipe inputs, root selection, references, and native eligibility before resources
+- `crates/kinograph-render/src/plan_runtime/generated.rs`: generated-channel reservation/insertion, including the explicit Task position override
 - `crates/kinograph-render/src/plan_runtime/delivery.rs`: PNG and MP4 delivery from a prepared scene
 - `crates/kinograph-render/src/plan_runtime/presentation.rs`: native winit window, step navigation, and smooth/pixelated display filtering
 - `crates/kinograph-render/src/plan_runtime/presentation/worker.rs`: persistent render worker with bounded in-flight sampling and immutable timeline revisions
+- `crates/kinograph-render/src/plan_runtime/presentation/scheduler.rs`: GPU-free request eligibility, invalidation, completion freshness, and deadlines
+- `crates/kinograph-render/src/plan_runtime/presentation/debug.rs`: sample-coherent optional native motion diagnostics
 - `crates/kinograph-render/src/plan_runtime/presentation/gpu.rs`: native wgpu surface and GPU-backed smooth/pixelated frame presentation
 - `crates/kinograph-render/src/plan_runtime/editor.rs`: concrete editor and attached pointer Scene Plan recipe
 - `crates/kinograph-render/src/plan_runtime/attachments.rs`: private companion-track compilation for layout-aware semantic coordinates
 - `crates/kinograph-render/src/plan_runtime/task.rs`: Task state schedules lowered into interruptible scalar visual destinations
 - `crates/kinograph-render/src/plan_runtime/grid.rs`: GPU-free keyed grid layout and continuous destination compilation
+- `crates/kinograph-render/src/plan_runtime/grid/table.rs`: fixed-anchor table placement, display headings, and padding/alignment over the same grid catalog
+- `crates/kinograph-render/src/plan_runtime/value.rs`: Value Token validation and ordinary scalar-channel sampling
+- `crates/kinograph-render/src/plan_runtime/header.rs`: header word tracks and opt-in resting-entrance delays with cancellation
+- `crates/kinograph-render/src/plan_runtime/diagram.rs`: finite box/wire preflight and recipe-owned native start delays
+- `crates/kinograph-render/src/render/diagram.rs` and `diagram.wgsl`: shared native/browser GPU boxes, sampled ports, wire traces and bare flat/isometric views
 - `crates/kinograph-render/src/plan_runtime/terminal.rs`: concrete planned terminal-recording recipe and video source-time mapping
 - `crates/kinograph-render/src/plan_runtime/deployment_queue.rs`: deployment snapshot validation, private track compilation, and rendering adapter
 - `crates/kinograph-render/src/plan_runtime/keyed_layout.rs`: private stable keyed position and presence track compiler
@@ -86,6 +117,9 @@ Do not run the full render as routine validation when unit tests and static chec
 - `scenes/effect-succeed-slides/`: Effect Institute code-reveal adaptation proving manual presentation and video export from one source
 - `scenes/interactive-showcase/`: four-slide native deck covering inline reveals, Task lifecycle/retry, parallel Tasks, and keyed code edits
 - `scenes/keyed-grid/`: native row/table/3D-layer growth and product-reassociation proof
+- `scenes/data-modeling/`: seven-slide types/cardinality, finite correspondence, joystick, sum/product, and illegal-state adaptation
+- `scenes/component-prototypes/`: provisional reusable Typeset, Collection, and Connector showroom; payloads and adapters remain in the three `component_prototype.rs` modules until visual approval
+- `scenes/opencode-architecture/`: four-step Daemon / merge port using the provisional box-and-wire diagram surface
 - `scenes/opencode-session-tool/`: rapid-fire OpenCode v2 hot-reload proof using split Vim/OpenCode terminal video, layered SFX, text, and discrete state
 - `scenes/deployment-queue/`: canonical state-driven simulated UI proof with keyed insertion, phase replacement, failure focus, and retry
 - `crates/kinograph-render/src/scene.wgsl`: editor geometry and focus shader
@@ -119,6 +153,10 @@ This is the default for every code presentation and video, not only Effect Insti
 - Run `kinograph plan steps <plan.json>` for code presentations. Inspect `beforeDelta`, `delta`, changed part IDs, line positions, and unsettled-hold warnings. Common-text warnings require semantic judgment, not automatic identity merging. Use timed `EditorSnapshotPlan` values for multi-step line-order changes.
 
 ## Expressive Content Motion
+
+- Normal paragraphs should appear sharply and quickly, not inherit the word/slot
+  blur treatment. The native showroom uses 160 ms zero-bounce prose fades; the
+  approved masked-rise header retains its separate 400 ms motion and fade blur.
 
 - Match a known reference's operation-specific timings and overlap before inventing new staging. Do not force every transition into an outgoing-content → container → incoming-content sequence; unnecessary waits can destroy its snap.
 - Content needs its own scale, opacity, and blur pose, independent of container geometry. Use rotation selectively for symbols; do not automatically spin result text, labels, or stable code.

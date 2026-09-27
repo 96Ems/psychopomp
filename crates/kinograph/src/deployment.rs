@@ -190,9 +190,9 @@ impl DeploymentQueueHandle {
         recipe: DeploymentQueueRecipePlan,
         initial: DeploymentQueueSnapshotPlan,
     ) -> Result<Self> {
-        recipe.validate()?;
+        validate_recipe(&recipe)?;
         let catalog_ids = validate_catalog(&recipe.items)?;
-        recipe.validate_snapshot(&initial)?;
+        validate_snapshot(&initial, &catalog_ids)?;
 
         let actor = scene.actor(id, DEPLOYMENT_QUEUE_RECIPE, recipe)?;
         let snapshot = scene.state(&actor, "snapshot", initial)?;
@@ -505,5 +505,84 @@ mod tests {
 
         assert!(result.is_err());
         assert!(scene.finish().unwrap().actors.is_empty());
+    }
+
+    #[test]
+    fn add_preserves_validation_precedence_and_the_entire_builder_on_error() {
+        let api = DeploymentItemPlan::new("api", "API");
+        let unknown = DeploymentItemPlan::new("unknown", "Unknown");
+        let invalid_snapshot = DeploymentQueueSnapshotPlan::new([unknown.building(f32::NAN)]);
+        let builder = |populated| {
+            let mut scene = PlanBuilder::new("deploy", 1_000_000_000);
+            if populated {
+                let actor = scene
+                    .actor("retained", "title-card", json!({"title": "Keep"}))
+                    .unwrap();
+                let opacity = scene.continuous(&actor, "opacity", 0.0);
+                scene.spring(&opacity, 100_000_000, 1.0, 0.4, 0.0);
+                scene.state(&actor, "subtitle", "Unchanged").unwrap();
+            }
+            scene
+        };
+        for (product, items, snapshot, expected) in [
+            (
+                " ",
+                vec![api.clone(), api.clone()],
+                invalid_snapshot.clone(),
+                "deployment queue recipe product must not be empty",
+            ),
+            (
+                "APP",
+                vec![api.clone(), api.clone()],
+                invalid_snapshot.clone(),
+                "deployment item catalog ID 'api' is declared more than once",
+            ),
+            (
+                "APP",
+                vec![api.clone()],
+                invalid_snapshot,
+                "deployment snapshot references unknown item 'unknown'",
+            ),
+            (
+                "APP",
+                vec![api.clone()],
+                DeploymentQueueSnapshotPlan::new([api.building(f32::NAN)]).attend(unknown.target()),
+                "deployment snapshot item 'api' progress must be finite and in [0, 1]",
+            ),
+            (
+                "APP",
+                vec![api.clone()],
+                DeploymentQueueSnapshotPlan::new([api.queued()]).attend(unknown.target()),
+                "deployment attention target 'unknown' must be visible in the snapshot",
+            ),
+        ] {
+            let recipe = DeploymentQueueRecipePlan::new(
+                product,
+                "Release",
+                "Telemetry",
+                "PRODUCTION",
+                "release-1",
+                items,
+            );
+            for populated in [false, true] {
+                let mut scene = builder(populated);
+                let error = DeploymentQueueHandle::add(
+                    &mut scene,
+                    "deployments",
+                    recipe.clone(),
+                    snapshot.clone(),
+                )
+                .unwrap_err();
+                assert_eq!(error.to_string(), expected);
+                assert_eq!(
+                    scene.finish().unwrap().to_json_pretty().unwrap(),
+                    builder(populated)
+                        .finish()
+                        .unwrap()
+                        .to_json_pretty()
+                        .unwrap()
+                );
+            }
+        }
     }
 }

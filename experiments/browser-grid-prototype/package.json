@@ -1,0 +1,7 @@
+{
+  "name": "kinograph-browser-grid-prototype",
+  "private": true,
+  "type": "module",
+  "scripts": { "bench": "bun bench.ts", "proof:diagram": "bun diagram-proof.ts" },
+  "devDependencies": { "playwright-core": "1.62.1" }
+}

@@ -1,18 +1,13 @@
-use std::{
-    collections::hash_map::DefaultHasher,
-    hash::{Hash, Hasher},
-};
-
 use anyhow::{Result, bail};
-use cosmic_text::{Attrs, Color, Family, Metrics, Weight};
 use kinograph::deployment::{
     DeploymentAttentionTargetPlan, DeploymentItemPlan, DeploymentPhasePlan,
 };
 
 use super::{
-    HeadlessRenderer, TextSprite, composite_sprite, make_sprite,
+    HeadlessRenderer, TextSprite, composite_sprite,
+    text::PlainTextSpec,
     ui::{
-        Align, Axis, Bounds, Edges, Flow,
+        Bounds, Edges,
         card::{
             CardFrame, CardProjection, CardStyle, ContentFit, Fill, RgbaSource, SurfaceStyle,
             UiCanvas, UiColor,
@@ -32,21 +27,7 @@ const HEALTH_PANEL_WIDTH: f32 = 320.0;
 const COLUMN_GAP: f32 = 36.0;
 
 pub(crate) fn deployment_row_center_y(index: usize) -> f32 {
-    let mut rows = Flow::new(
-        Bounds {
-            origin: [CARD_PADDING, 180.0],
-            size: [QUEUE_WIDTH, 500.0],
-        },
-        Axis::Vertical,
-        [QUEUE_WIDTH, QUEUE_ROW_HEIGHT],
-        8.0,
-        Align::Stretch,
-    );
-    (0..=index)
-        .map(|_| rows.next())
-        .last()
-        .expect("deployment row index is included")
-        .center()[1]
+    180.0 + index as f32 * (QUEUE_ROW_HEIGHT + 8.0) + QUEUE_ROW_HEIGHT * 0.5
 }
 
 pub struct DeploymentQueueFrame<'a> {
@@ -324,8 +305,7 @@ impl HeadlessRenderer {
             if row.opacity <= 0.001 {
                 continue;
             }
-            let scale = row.bounds.size[0] / QUEUE_WIDTH;
-            let x = |offset: f32| row.bounds.origin[0] + offset * scale;
+            let x = |offset: f32| row.bounds.origin[0] + offset;
             let monogram = item
                 .item
                 .label
@@ -416,10 +396,7 @@ impl HeadlessRenderer {
             self.composite_deployment_text(
                 pixels,
                 &percent,
-                [
-                    row.bounds.right() - 30.0 * scale,
-                    row.bounds.center()[1] - 17.0,
-                ],
+                [row.bounds.right() - 30.0, row.bounds.center()[1] - 17.0],
                 12.0,
                 phase_transition_text_color(item),
                 true,
@@ -615,47 +592,17 @@ impl HeadlessRenderer {
         color: [u8; 3],
         semibold: bool,
     ) -> &TextSprite {
-        let mut hasher = DefaultHasher::new();
-        text.hash(&mut hasher);
-        font_size.to_bits().hash(&mut hasher);
-        color.hash(&mut hasher);
-        semibold.hash(&mut hasher);
-        let key = format!("deployment-queue:{:x}", hasher.finish());
-        if !self.part_sprites.contains_key(&key) {
-            let attrs = Attrs::new()
-                .family(Family::Name("CommitMono"))
-                .weight(if semibold {
-                    Weight::SEMIBOLD
-                } else {
-                    Weight::NORMAL
-                })
-                .color(Color::rgb(color[0], color[1], color[2]));
-            let height = (font_size * 1.55).ceil() as u32;
-            let mut sprite = make_sprite(
-                &mut self.font_system,
-                &mut self.swash_cache,
-                vec![(text, attrs.clone())],
-                attrs,
-                Metrics::new(font_size, height as f32),
-                760,
-                height,
-            );
-            let cropped_width = sprite.advance.ceil().clamp(1.0, sprite.width as f32) as u32;
-            if cropped_width < sprite.width {
-                let mut cropped = vec![0_u8; cropped_width as usize * sprite.height as usize * 4];
-                for y in 0..sprite.height as usize {
-                    let source_start = y * sprite.width as usize * 4;
-                    let target_start = y * cropped_width as usize * 4;
-                    let row_bytes = cropped_width as usize * 4;
-                    cropped[target_start..target_start + row_bytes]
-                        .copy_from_slice(&sprite.pixels[source_start..source_start + row_bytes]);
-                }
-                sprite.width = cropped_width;
-                sprite.pixels = cropped;
-            }
-            self.part_sprites.insert(key.clone(), (0, sprite));
-        }
-        &self.part_sprites[&key].1
+        let height = (font_size * 1.55).ceil() as u32;
+        self.plain_text_sprite(
+            text,
+            PlainTextSpec {
+                font_size,
+                color,
+                size: [760, height],
+                semibold,
+                crop_to_advance: true,
+            },
+        )
     }
 }
 
@@ -836,26 +783,25 @@ fn draw_deployment_row(
         row.opacity * (transition_pulse(item.transition) * 0.16 + attention * 0.42),
     );
 
-    let scale = row.bounds.size[0] / QUEUE_WIDTH;
     let icon = Bounds::from_center(
-        [row.bounds.origin[0] + 48.0 * scale, row.bounds.center()[1]],
-        [52.0 * scale, 52.0 * scale],
+        [row.bounds.origin[0] + 48.0, row.bounds.center()[1]],
+        [52.0, 52.0],
     );
     canvas.surface(
         icon,
         SurfaceStyle::new(
             Fill::Solid(UiColor::srgb8(color[0], color[1], color[2], 255)),
-            15.0 * scale,
+            15.0,
         )
         .border(1.0, UiColor::srgb8(color[0], color[1], color[2], 255), 0.48),
         row.opacity * 0.12,
     );
     canvas.fill(
         Bounds {
-            origin: [row.bounds.origin[0], row.bounds.origin[1] + 23.0 * scale],
-            size: [3.0 * scale, row.bounds.size[1] - 46.0 * scale],
+            origin: [row.bounds.origin[0], row.bounds.origin[1] + 23.0],
+            size: [3.0, row.bounds.size[1] - 46.0],
         },
-        1.5 * scale,
+        1.5,
         Fill::Solid(UiColor::srgb8(color[0], color[1], color[2], 255)),
         row.opacity * 0.9,
     );
@@ -875,11 +821,8 @@ fn draw_deployment_row(
         row.opacity * 0.45,
     );
     canvas.fill(
-        Bounds::from_center(
-            [chip.origin[0] + 16.0 * scale, chip.center()[1]],
-            [6.0 * scale, 6.0 * scale],
-        ),
-        3.0 * scale,
+        Bounds::from_center([chip.origin[0] + 16.0, chip.center()[1]], [6.0, 6.0]),
+        3.0,
         Fill::Solid(UiColor::srgb8(color[0], color[1], color[2], 255)),
         row.opacity,
     );
@@ -999,7 +942,6 @@ fn row_presentation(item: &DeploymentItemFrame<'_>) -> RowPresentation {
 }
 
 fn phase_chip_bounds(row: Bounds, item: &DeploymentItemFrame<'_>) -> Bounds {
-    let scale = row.size[0] / QUEUE_WIDTH;
     let current_width = phase_chip_width(item.phase);
     let width = item
         .previous_phase
@@ -1010,12 +952,8 @@ fn phase_chip_bounds(row: Bounds, item: &DeploymentItemFrame<'_>) -> Bounds {
                 phase_transition_mix(item),
             )
         })
-        .unwrap_or(current_width)
-        * scale;
-    Bounds::from_center(
-        [row.origin[0] + 510.0 * scale, row.center()[1]],
-        [width, 34.0 * scale],
-    )
+        .unwrap_or(current_width);
+    Bounds::from_center([row.origin[0] + 510.0, row.center()[1]], [width, 34.0])
 }
 
 fn phase_chip_width(phase: &DeploymentPhasePlan) -> f32 {
@@ -1030,13 +968,9 @@ fn phase_chip_width(phase: &DeploymentPhasePlan) -> f32 {
 }
 
 fn progress_track_bounds(row: Bounds) -> Bounds {
-    let scale = row.size[0] / QUEUE_WIDTH;
     Bounds {
-        origin: [
-            row.origin[0] + 650.0 * scale,
-            row.center()[1] + 15.0 * scale,
-        ],
-        size: [300.0 * scale, 8.0 * scale],
+        origin: [row.origin[0] + 650.0, row.center()[1] + 15.0],
+        size: [300.0, 8.0],
     }
 }
 
@@ -1428,6 +1362,44 @@ mod tests {
         assert_eq!(phase_text_opacities(&frame(0.0)), (1.0, 0.0));
         assert_eq!(phase_text_opacities(&frame(0.5)), (0.0, 0.0));
         assert_eq!(phase_text_opacities(&frame(1.0)), (0.0, 1.0));
+    }
+
+    #[test]
+    fn row_layout_is_fixed_size_even_during_presence_and_phase_changes() {
+        let item = DeploymentItemPlan::new("api", "Public API");
+        let queued = DeploymentPhasePlan::Queued;
+        for (index, expected_y) in [232.0_f32, 344.0, 456.0, 568.0, 680.0, 792.0]
+            .into_iter()
+            .enumerate()
+        {
+            assert_eq!(
+                super::deployment_row_center_y(index).to_bits(),
+                expected_y.to_bits()
+            );
+        }
+        for presence in [-0.1, 0.0, 0.001, 0.37, 0.999, 1.0, 1.1] {
+            for phase in [
+                queued,
+                DeploymentPhasePlan::Building { progress: 0.25 },
+                DeploymentPhasePlan::Failed,
+            ] {
+                let frame = DeploymentItemFrame {
+                    item: &item,
+                    phase: &phase,
+                    previous_phase: Some(&queued),
+                    present: presence > 0.5,
+                    row_y: 344.375,
+                    presence,
+                    progress: 0.5,
+                    transition: 0.31,
+                };
+                let row = row_presentation(&frame);
+                assert_eq!(row.bounds.size, [1040.0, 104.0]);
+                assert_eq!(row.opacity, presence.clamp(0.0, 1.0));
+                assert_eq!(super::progress_track_bounds(row.bounds).size, [300.0, 8.0]);
+                assert_eq!(super::phase_chip_bounds(row.bounds, &frame).size[1], 34.0);
+            }
+        }
     }
 
     #[test]

@@ -15,21 +15,39 @@ use wgpu::util::DeviceExt;
 use kinograph::code::{CodeLine, LineId, PlacedLine, StyledSpan, SyntaxStyle};
 use kinograph::dsl::AnnotationFrame;
 
+mod component_prototype;
+mod debug;
 mod deployment_queue;
+mod diagram;
 mod effects;
 mod grid;
+mod header;
+mod rich_text;
 mod task;
 mod terminal;
+mod text;
+mod theme;
 mod ui;
+mod value;
+mod venn;
+use text::{PlainTextSpec, TextSprite, blend_pixel, make_sprite, paint_rect};
 
+pub(crate) use component_prototype::PrototypeGlyphs;
 pub(crate) use deployment_queue::deployment_row_center_y;
 pub use deployment_queue::{DeploymentItemFrame, DeploymentQueueFrame};
-pub use grid::{GridFrame, GridItemFrame};
+pub(crate) use diagram::DiagramGlyphs;
+pub use grid::{
+    GridFrame, GridItemFrame, GridLabelStyle, GridLinePalette, GridTextClip, GridTextDisclosure,
+};
+pub(crate) use header::{HeaderGlyphs, header_words};
+pub(crate) use rich_text::{RichTextGlyphs, RichTextSource, parse as parse_rich_text};
 pub use task::{
     BubblePose, ContentPose, QuoteFrame, TaskContentFrame, TaskLinkFrame, TaskSceneFrame,
     TaskVisualFrame,
 };
 pub use terminal::{CommandFileFrame, TerminalBackground, TerminalSceneFrame};
+pub use theme::Theme;
+pub(crate) use venn::validate as validate_venn;
 
 const FORMAT: wgpu::TextureFormat = wgpu::TextureFormat::Rgba8UnormSrgb;
 const BYTES_PER_PIXEL: u32 = 4;
@@ -126,13 +144,8 @@ struct SceneUniforms {
     resolution: [f32; 4],
     focus: [f32; 4],
     token_highlight: [f32; 4],
-}
-
-struct TextSprite {
-    width: u32,
-    height: u32,
-    advance: f32,
-    pixels: Vec<u8>,
+    surface: [f32; 4],
+    accent: [f32; 4],
 }
 
 /// Stationary canvas-space aperture. Text moves through it; the fade does not
@@ -203,6 +216,7 @@ pub struct HeadlessRenderer {
     code_column_width: f32,
     line_sprites: HashMap<LineId, (u64, TextSprite)>,
     part_sprites: HashMap<String, (u64, TextSprite)>,
+    plain_text_sprites: text::PlainTextCache,
     task_layer_pixels: Vec<u8>,
     task_blur_source: Vec<[f32; 4]>,
     task_blur_scratch: Vec<[f32; 4]>,
@@ -215,6 +229,8 @@ pub struct HeadlessRenderer {
     interactive_preview: bool,
     preview_editor_backgrounds: VecDeque<(String, Vec<u8>)>,
     grid_renderer: Option<grid::GridRenderer>,
+    grid_line_palette: Option<GridLinePalette>,
+    theme: Theme,
 }
 
 impl HeadlessRenderer {
@@ -299,6 +315,8 @@ impl HeadlessRenderer {
             resolution: [spec.width as f32, spec.height as f32, 0.0, 0.0],
             focus: [0.0, 0.0, LINE_HEIGHT, 0.0],
             token_highlight: [0.0; 4],
+            surface: [0.; 4],
+            accent: [0.; 4],
         };
         let uniform_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("scene uniforms"),
@@ -353,6 +371,7 @@ impl HeadlessRenderer {
             code_column_width,
             line_sprites: HashMap::new(),
             part_sprites: HashMap::new(),
+            plain_text_sprites: text::PlainTextCache::default(),
             task_layer_pixels: Vec::new(),
             task_blur_source: Vec::new(),
             task_blur_scratch: Vec::new(),
@@ -365,6 +384,8 @@ impl HeadlessRenderer {
             interactive_preview: false,
             preview_editor_backgrounds: VecDeque::new(),
             grid_renderer: None,
+            grid_line_palette: None,
+            theme: Theme::default(),
         })
     }
 
@@ -372,6 +393,24 @@ impl HeadlessRenderer {
     /// Export never enables this profile; unsupported poses/effects use the full path.
     pub fn set_interactive_preview(&mut self, enabled: bool) {
         self.interactive_preview = enabled;
+    }
+
+    pub fn set_theme(&mut self, theme: Theme) {
+        if self.theme == theme {
+            return;
+        }
+        self.theme = theme;
+        self.line_sprites.clear();
+        self.part_sprites.clear();
+        self.plain_text_sprites.clear();
+        self.preview_editor_backgrounds.clear();
+        self.editor_background_pixels.clear();
+        self.title_sprite = make_title_sprite(
+            &mut self.font_system,
+            &mut self.swash_cache,
+            &self.spec.file_name,
+        );
+        theme.sprite(&mut self.title_sprite);
     }
 
     pub fn composite_ui<R>(
@@ -405,6 +444,7 @@ impl HeadlessRenderer {
             &mut self.swash_cache,
             &self.spec.file_name,
         );
+        self.theme.sprite(&mut self.title_sprite);
     }
 
     pub fn code_column_width(&self) -> f32 {
@@ -419,7 +459,8 @@ impl HeadlessRenderer {
     ) -> Vec<u8> {
         let mut pixels = vec![0_u8; self.spec.width as usize * self.spec.height as usize * 4];
         for pixel in pixels.chunks_exact_mut(4) {
-            pixel.copy_from_slice(&[1, 2, 4, 255]);
+            let [r, g, b] = self.theme.background([1, 2, 4]);
+            pixel.copy_from_slice(&[r, g, b, 255]);
         }
         let center_x = self.spec.width as f32 * 0.5;
         let center_y = self.spec.height as f32 * 0.5;
@@ -479,7 +520,8 @@ impl HeadlessRenderer {
     ) -> Result<Vec<u8>> {
         let mut pixels = vec![0_u8; self.spec.width as usize * self.spec.height as usize * 4];
         for pixel in pixels.chunks_exact_mut(4) {
-            pixel.copy_from_slice(&[1, 2, 4, 255]);
+            let [r, g, b] = self.theme.background([1, 2, 4]);
+            pixel.copy_from_slice(&[r, g, b, 255]);
         }
         let segments = inline_reveal_segments(line.spans().len(), reveals)?;
         for (start, end, _) in &segments {
@@ -491,13 +533,14 @@ impl HeadlessRenderer {
                 .get(&key)
                 .is_none_or(|(cached, _)| *cached != fingerprint)
             {
-                let sprite = make_spans_sprite_at_size(
+                let mut sprite = make_spans_sprite_at_size(
                     &mut self.font_system,
                     &mut self.swash_cache,
                     spans,
                     64.0,
                     96.0,
                 );
+                self.theme.sprite(&mut sprite);
                 self.part_sprites.insert(key, (fingerprint, sprite));
             }
         }
@@ -541,32 +584,22 @@ impl HeadlessRenderer {
         opacity: f32,
         mask: Option<VerticalMask>,
     ) {
-        let mut hasher = DefaultHasher::new();
-        text.hash(&mut hasher);
-        font_size.to_bits().hash(&mut hasher);
-        color.hash(&mut hasher);
-        let key = format!("title-card:{:x}", hasher.finish());
-        if !self.part_sprites.contains_key(&key) {
-            let attrs = Attrs::new()
-                .family(Family::Name("CommitMono"))
-                .weight(Weight::NORMAL)
-                .color(Color::rgb(color[0], color[1], color[2]));
-            let height = (font_size * 1.5).ceil() as u32;
-            let sprite = make_sprite(
-                &mut self.font_system,
-                &mut self.swash_cache,
-                vec![(text, attrs.clone())],
-                attrs,
-                Metrics::new(font_size, height as f32),
-                self.spec.width.saturating_sub(160),
-                height,
-            );
-            self.part_sprites.insert(key.clone(), (0, sprite));
-        }
-        let sprite = &self.part_sprites[&key].1;
+        let canvas_size = [self.spec.width, self.spec.height];
+        let color = self.theme.ink(color);
+        let height = (font_size * 1.5).ceil() as u32;
+        let sprite = self.plain_text_sprite(
+            text,
+            PlainTextSpec {
+                font_size,
+                color,
+                size: [canvas_size[0].saturating_sub(160), height],
+                semibold: false,
+                crop_to_advance: false,
+            },
+        );
         composite_text_region(
             pixels,
-            [self.spec.width, self.spec.height],
+            canvas_size,
             sprite,
             [
                 center[0] - sprite.advance * 0.5,
@@ -576,7 +609,7 @@ impl HeadlessRenderer {
             sprite.width as f32,
             0.0,
             opacity,
-            [0.0, self.spec.height as f32],
+            [0.0, canvas_size[1] as f32],
             mask,
         );
     }
@@ -604,6 +637,14 @@ impl HeadlessRenderer {
                 frame.token_highlight.width,
                 frame.token_highlight.opacity,
             ],
+            surface: {
+                let c = theme::linear(self.theme.palette().raised);
+                [c[0], c[1], c[2], f32::from(self.theme != Theme::Original)]
+            },
+            accent: {
+                let c = theme::linear(self.theme.palette().accent);
+                [c[0], c[1], c[2], 1.]
+            },
         };
         self.queue
             .write_buffer(&self.uniform_buffer, 0, bytemuck::bytes_of(&uniforms));
@@ -783,6 +824,7 @@ impl HeadlessRenderer {
             card_size,
         )?;
         if self.editor_background_pixels.is_empty() {
+            let theme = self.theme;
             let mut background =
                 vec![0_u8; self.spec.width as usize * self.spec.height as usize * 4];
             self.composite_ui(&mut background, |ui| {
@@ -791,7 +833,10 @@ impl HeadlessRenderer {
                     canvas.fill(
                         bounds,
                         0.0,
-                        ui::card::Fill::Solid(ui::card::UiColor::srgb8(4, 4, 5, 255)),
+                        ui::card::Fill::Solid({
+                            let [r, g, b] = theme.background([4, 4, 5]);
+                            ui::card::UiColor::srgb8(r, g, b, 255)
+                        }),
                         1.0,
                     );
                     canvas.fill(
@@ -803,7 +848,7 @@ impl HeadlessRenderer {
                             inner: ui::card::UiColor::srgb8(18, 18, 21, 150),
                             outer: ui::card::UiColor::srgb8(0, 0, 0, 0),
                         },
-                        1.0,
+                        if theme == Theme::Original { 1.0 } else { 0. },
                     );
                     Ok(())
                 })
@@ -817,6 +862,10 @@ impl HeadlessRenderer {
             self.spec.height as f32 * 0.52 + frame.panel_offset_y,
         ];
         let mut card_style = ui::card::CardStyle::standard();
+        if self.theme != Theme::Original {
+            let [r, g, b] = self.theme.palette().surface;
+            card_style.material = ui::card::Fill::Solid(ui::card::UiColor::srgb8(r, g, b, 255));
+        }
         card_style.border_width = 0.75;
         card_style.border_color = ui::card::UiColor::srgb8(255, 255, 255, 10);
         self.composite_ui(&mut pixels, |ui| {
@@ -889,8 +938,9 @@ impl HeadlessRenderer {
                 .get(&placed.line.id)
                 .is_none_or(|(cached, _)| *cached != fingerprint);
             if is_stale {
-                let sprite =
+                let mut sprite =
                     make_line_sprite(&mut self.font_system, &mut self.swash_cache, placed.line);
+                self.theme.sprite(&mut sprite);
                 self.line_sprites
                     .insert(placed.line.id.clone(), (fingerprint, sprite));
             }
@@ -902,8 +952,9 @@ impl HeadlessRenderer {
                 .get(&bright.line.id)
                 .is_none_or(|(cached, _)| *cached != fingerprint);
             if is_stale {
-                let sprite =
+                let mut sprite =
                     make_line_sprite(&mut self.font_system, &mut self.swash_cache, &bright.line);
+                self.theme.sprite(&mut sprite);
                 self.line_sprites
                     .insert(bright.line.id.clone(), (fingerprint, sprite));
             }
@@ -1049,7 +1100,9 @@ impl HeadlessRenderer {
                 .get(&key)
                 .is_none_or(|(cached, _)| *cached != fingerprint);
             if stale {
-                let sprite = make_spans_sprite(&mut self.font_system, &mut self.swash_cache, spans);
+                let mut sprite =
+                    make_spans_sprite(&mut self.font_system, &mut self.swash_cache, spans);
+                self.theme.sprite(&mut sprite);
                 self.part_sprites.insert(key, (fingerprint, sprite));
             }
         }
@@ -1096,8 +1149,6 @@ impl HeadlessRenderer {
             .into_iter()
             .map(|(start, end, _)| {
                 let spans = &line.spans()[start..end];
-                let advance =
-                    make_spans_sprite(&mut self.font_system, &mut self.swash_cache, spans).advance;
                 let from = start.max(selected.start);
                 let to = end.min(selected.end);
                 let selection = if from < to {
@@ -1109,19 +1160,16 @@ impl HeadlessRenderer {
                         .iter()
                         .map(|span| span.text.len())
                         .sum();
-                    let bounds = self.measure_text_byte_range(
-                        &CodeLine::new("measured-part", spans.to_vec()),
-                        start_byte,
-                        end_byte,
-                    )?;
-                    Some([bounds.x, bounds.x + bounds.width])
+                    Some(start_byte..end_byte)
                 } else {
                     None
                 };
+                let (advance, selection) =
+                    measure_code_spans(&mut self.font_system, spans, selection)?;
                 Ok(InlineRangeMetrics {
                     spans: start..end,
                     advance,
-                    selection,
+                    selection: selection.map(|bounds| [bounds.x, bounds.x + bounds.width]),
                 })
             })
             .collect()
@@ -1133,45 +1181,63 @@ impl HeadlessRenderer {
         start: usize,
         end: usize,
     ) -> Result<TextRangeBounds> {
-        let full_text: String = line.spans().iter().map(|span| span.text.as_str()).collect();
-        if start >= end
-            || end > full_text.len()
-            || !full_text.is_char_boundary(start)
-            || !full_text.is_char_boundary(end)
+        let (_, bounds) =
+            measure_code_spans(&mut self.font_system, line.spans(), Some(start..end))?;
+        Ok(bounds.expect("requested a code text range"))
+    }
+}
+
+/// Code geometry only: one shaped partition supplies both its advance and the
+/// optional glyph-cluster bounds. Range validation must precede shaping.
+fn measure_code_spans(
+    font_system: &mut FontSystem,
+    spans: &[StyledSpan],
+    selection: Option<std::ops::Range<usize>>,
+) -> Result<(f32, Option<TextRangeBounds>)> {
+    if let Some(range) = &selection {
+        let text: String = spans.iter().map(|span| span.text.as_str()).collect();
+        if range.start >= range.end
+            || range.end > text.len()
+            || !text.is_char_boundary(range.start)
+            || !text.is_char_boundary(range.end)
         {
             bail!("text byte range is outside the code line");
         }
-        let base = Attrs::new().family(Family::Name("CommitMono"));
-        let spans: Vec<_> = line
-            .spans()
-            .iter()
-            .map(|span| (span.text.as_str(), attributes(base.clone(), span.style)))
-            .collect();
-        let mut buffer = Buffer::new(&mut self.font_system, Metrics::new(28.0, LINE_HEIGHT));
-        buffer.set_size(Some(1320.0), Some(LINE_HEIGHT));
-        buffer.set_wrap(Wrap::None);
-        buffer.set_rich_text(spans, &base, Shaping::Advanced, None);
-        buffer.shape_until_scroll(&mut self.font_system, false);
-        let run = buffer
-            .layout_runs()
-            .next()
-            .context("shaped code line has no layout run")?;
-        let mut selected = run
-            .glyphs
-            .iter()
-            .filter(|glyph| glyph.end > start && glyph.start < end);
-        let first = selected.next().context("text range has no shaped glyphs")?;
-        let mut left = first.x;
-        let mut right = first.x + first.w;
-        for glyph in selected {
-            left = left.min(glyph.x);
-            right = right.max(glyph.x + glyph.w);
-        }
-        Ok(TextRangeBounds {
+    }
+    let base = Attrs::new().family(Family::Name("CommitMono"));
+    let spans: Vec<_> = spans
+        .iter()
+        .map(|span| (span.text.as_str(), attributes(base.clone(), span.style)))
+        .collect();
+    let mut buffer = Buffer::new(font_system, Metrics::new(28.0, LINE_HEIGHT));
+    buffer.set_size(Some(1320.0), Some(LINE_HEIGHT));
+    buffer.set_wrap(Wrap::None);
+    buffer.set_rich_text(spans, &base, Shaping::Advanced, None);
+    buffer.shape_until_scroll(font_system, false);
+    let run = buffer.layout_runs().next();
+    let advance = run.as_ref().map_or(0.0, |run| run.line_w);
+    let Some(range) = selection else {
+        return Ok((advance, None));
+    };
+    let run = run.context("shaped code line has no layout run")?;
+    let mut selected = run
+        .glyphs
+        .iter()
+        .filter(|glyph| glyph.end > range.start && glyph.start < range.end);
+    let first = selected.next().context("text range has no shaped glyphs")?;
+    let mut left = first.x;
+    let mut right = first.x + first.w;
+    for glyph in selected {
+        left = left.min(glyph.x);
+        right = right.max(glyph.x + glyph.w);
+    }
+    Ok((
+        advance,
+        Some(TextRangeBounds {
             x: left,
             width: right - left,
-        })
-    }
+        }),
+    ))
 }
 
 type InlineSegment = (usize, usize, Option<f32>);
@@ -1362,75 +1428,6 @@ fn make_spans_sprite_at_size(
     )
 }
 
-fn make_sprite<'a>(
-    font_system: &mut FontSystem,
-    swash_cache: &mut SwashCache,
-    spans: Vec<(&'a str, Attrs<'a>)>,
-    base: Attrs<'a>,
-    metrics: Metrics,
-    width: u32,
-    height: u32,
-) -> TextSprite {
-    let mut buffer = Buffer::new(font_system, metrics);
-    buffer.set_size(Some(width as f32), Some(height as f32));
-    buffer.set_wrap(Wrap::None);
-    buffer.set_rich_text(spans, &base, Shaping::Advanced, None);
-    buffer.shape_until_scroll(font_system, false);
-    let advance = buffer.layout_runs().next().map_or(0.0, |run| run.line_w);
-
-    let mut pixels = vec![0_u8; width as usize * height as usize * 4];
-    buffer.draw(
-        font_system,
-        swash_cache,
-        Color::rgb(228, 228, 231),
-        |x, y, rect_width, rect_height, color| {
-            paint_rect(
-                &mut pixels,
-                width,
-                height,
-                x,
-                y,
-                rect_width,
-                rect_height,
-                [color.r(), color.g(), color.b(), color.a()],
-            );
-        },
-    );
-    TextSprite {
-        width,
-        height,
-        advance,
-        pixels,
-    }
-}
-
-#[allow(clippy::too_many_arguments)]
-fn paint_rect(
-    pixels: &mut [u8],
-    width: u32,
-    height: u32,
-    x: i32,
-    y: i32,
-    rect_width: u32,
-    rect_height: u32,
-    color: [u8; 4],
-) {
-    for row in 0..rect_height as i32 {
-        let target_y = y + row;
-        if !(0..height as i32).contains(&target_y) {
-            continue;
-        }
-        for column in 0..rect_width as i32 {
-            let target_x = x + column;
-            if !(0..width as i32).contains(&target_x) {
-                continue;
-            }
-            let index = (target_y as usize * width as usize + target_x as usize) * 4;
-            blend_pixel(&mut pixels[index..index + 4], color, 1.0);
-        }
-    }
-}
-
 fn composite_sprite(
     canvas: &mut [u8],
     canvas_width: u32,
@@ -1440,33 +1437,12 @@ fn composite_sprite(
     y: i32,
     opacity: f32,
 ) {
-    composite_sprite_clipped(
-        canvas,
-        canvas_width,
-        canvas_height,
-        sprite,
-        x,
-        y,
-        sprite.width as f32,
-        opacity,
-    );
-}
-
-#[allow(clippy::too_many_arguments)]
-fn composite_sprite_clipped(
-    canvas: &mut [u8],
-    canvas_width: u32,
-    canvas_height: u32,
-    sprite: &TextSprite,
-    x: i32,
-    y: i32,
-    clip_width: f32,
-    opacity: f32,
-) {
-    if opacity <= 0.001 || clip_width <= 0.0 {
+    if opacity <= 0.001 || sprite.width == 0 {
         return;
     }
-    let visible_width = clip_width.ceil().min(sprite.width as f32) as i32;
+    // Preserve the former full-width float conversion, including rounding and
+    // saturation for large u32 widths rather than a wrapping integer cast.
+    let visible_width = sprite.width as f32 as i32;
     for sprite_y in 0..sprite.height as i32 {
         let target_y = y + sprite_y;
         if !(0..canvas_height as i32).contains(&target_y) {
@@ -1759,24 +1735,6 @@ fn composite_sprite_rotated_with_coverage(
     }
 }
 
-fn blend_pixel(destination: &mut [u8], source: [u8; 4], opacity: f32) {
-    let source_alpha = f32::from(source[3]) / 255.0 * opacity.clamp(0.0, 1.0);
-    if source_alpha <= 0.0 {
-        return;
-    }
-    let destination_alpha = f32::from(destination[3]) / 255.0;
-    let output_alpha = source_alpha + destination_alpha * (1.0 - source_alpha);
-    for channel in 0..3 {
-        let source_channel = f32::from(source[channel]) / 255.0;
-        let destination_channel = f32::from(destination[channel]) / 255.0;
-        let output = (source_channel * source_alpha
-            + destination_channel * destination_alpha * (1.0 - source_alpha))
-            / output_alpha;
-        destination[channel] = (output * 255.0).round() as u8;
-    }
-    destination[3] = (output_alpha * 255.0).round() as u8;
-}
-
 fn composite_squiggle(
     canvas: &mut [u8],
     canvas_width: u32,
@@ -1821,6 +1779,325 @@ fn attributes(base: Attrs<'static>, style: SyntaxStyle) -> Attrs<'static> {
 
 #[cfg(test)]
 mod tests {
+    mod code_measurement {
+        use super::super::*;
+        use std::ops::Range;
+
+        // The former byte-range measurement, independent of measure_code_spans.
+        // Keep its fixed code policy and first-run cluster selection as an oracle.
+        fn reference_bounds(
+            fonts: &mut FontSystem,
+            spans: &[StyledSpan],
+            range: Range<usize>,
+        ) -> Result<TextRangeBounds> {
+            let text: String = spans.iter().map(|span| span.text.as_str()).collect();
+            if range.start >= range.end
+                || range.end > text.len()
+                || !text.is_char_boundary(range.start)
+                || !text.is_char_boundary(range.end)
+            {
+                bail!("text byte range is outside the code line");
+            }
+            let base = Attrs::new().family(Family::Name("CommitMono"));
+            let spans = spans
+                .iter()
+                .map(|span| (span.text.as_str(), attributes(base.clone(), span.style)))
+                .collect::<Vec<_>>();
+            let mut buffer = Buffer::new(fonts, Metrics::new(28.0, 44.0));
+            buffer.set_size(Some(1320.0), Some(44.0));
+            buffer.set_wrap(Wrap::None);
+            buffer.set_rich_text(spans, &base, Shaping::Advanced, None);
+            buffer.shape_until_scroll(fonts, false);
+            let run = buffer
+                .layout_runs()
+                .next()
+                .context("shaped code line has no layout run")?;
+            let mut glyphs = run
+                .glyphs
+                .iter()
+                .filter(|glyph| glyph.end > range.start && glyph.start < range.end);
+            let first = glyphs.next().context("text range has no shaped glyphs")?;
+            let mut left = first.x;
+            let mut right = first.x + first.w;
+            for glyph in glyphs {
+                left = left.min(glyph.x);
+                right = right.max(glyph.x + glyph.w);
+            }
+            Ok(TextRangeBounds {
+                x: left,
+                width: right - left,
+            })
+        }
+
+        fn bounds_bits(bounds: TextRangeBounds) -> [u32; 2] {
+            [bounds.x.to_bits(), bounds.width.to_bits()]
+        }
+
+        #[test]
+        fn shaping_matches_raster_advance_and_independent_range_reference() {
+            let mut fonts = FontSystem::new();
+            let mut swash = SwashCache::new();
+            let mut cases = [
+                "",
+                " \t  ",
+                "office ffi fi",
+                "e\u{301} + café",
+                "naïve 🦀 東京",
+                "first\nsecond",
+                "\n",
+                "first\r\nsecond",
+            ]
+            .map(|text| vec![StyledSpan::new(text, SyntaxStyle::Plain)])
+            .to_vec();
+            cases.push(vec![StyledSpan::new(
+                "long code ".repeat(200),
+                SyntaxStyle::Plain,
+            )]);
+            cases.push(vec![
+                StyledSpan::new("const ", SyntaxStyle::Keyword),
+                StyledSpan::new("", SyntaxStyle::Accent),
+                StyledSpan::new("café", SyntaxStyle::Plain),
+                StyledSpan::new(": Effect", SyntaxStyle::Type),
+                StyledSpan::new(" = ", SyntaxStyle::Rgb(250, 125, 64)),
+                StyledSpan::new("\"e\u{301}\"", SyntaxStyle::String),
+            ]);
+            for spans in cases {
+                let raster = make_spans_sprite(&mut fonts, &mut swash, &spans);
+                let (advance, unselected) = measure_code_spans(&mut fonts, &spans, None).unwrap();
+                assert_eq!(advance.to_bits(), raster.advance.to_bits());
+                assert!(unselected.is_none());
+                let text: String = spans.iter().map(|s| s.text.as_str()).collect();
+                if text.is_empty() {
+                    assert_eq!(advance, 0., "an empty-text partition occupies no width");
+                }
+                let boundaries = text
+                    .char_indices()
+                    .map(|(i, _)| i)
+                    .chain(std::iter::once(text.len()))
+                    .collect::<Vec<_>>();
+                let ranges = boundaries
+                    .windows(2)
+                    .take(24)
+                    .map(|pair| pair[0]..pair[1])
+                    .chain([
+                        0..text.len(),
+                        boundaries[boundaries.len() / 2]..text.len(),
+                        boundaries[boundaries.len().saturating_sub(2)]..text.len(),
+                    ]);
+                for range in ranges {
+                    let expected = reference_bounds(&mut fonts, &spans, range.clone())
+                        .map(bounds_bits)
+                        .map_err(|e| e.to_string());
+                    let actual = measure_code_spans(&mut fonts, &spans, Some(range.clone()))
+                        .map(|(advance, bounds)| {
+                            assert_eq!(advance.to_bits(), raster.advance.to_bits());
+                            bounds_bits(bounds.unwrap())
+                        })
+                        .map_err(|e| e.to_string());
+                    assert_eq!(actual, expected, "range {range:?} of {text:?}");
+                }
+            }
+            let combined = [StyledSpan::new("e\u{301}", SyntaxStyle::Plain)];
+            let base = measure_code_spans(&mut fonts, &combined, Some(0..1)).unwrap();
+            let mark = measure_code_spans(&mut fonts, &combined, Some(1..3)).unwrap();
+            assert_eq!(bounds_bits(base.1.unwrap()), bounds_bits(mark.1.unwrap()));
+        }
+
+        #[test]
+        fn invalid_byte_ranges_keep_the_validation_error() {
+            let mut fonts = FontSystem::new();
+            for (text, start, end) in [
+                ("", 0, 0),
+                ("", 0, 1),
+                ("x", 1, 0),
+                ("x", 1, 1),
+                ("x", 0, 2),
+                ("x", usize::MAX, usize::MAX),
+                ("é", 0, 1),
+                ("é", 1, 2),
+                ("e\u{301}", 0, 2),
+            ] {
+                let spans = [StyledSpan::new(text, SyntaxStyle::Plain)];
+                let actual = measure_code_spans(&mut fonts, &spans, Some(start..end))
+                    .expect_err("invalid range must fail before shaping");
+                assert_eq!(
+                    actual.to_string(),
+                    "text byte range is outside the code line"
+                );
+                assert_eq!(
+                    actual.to_string(),
+                    reference_bounds(&mut fonts, &spans, start..end)
+                        .err()
+                        .unwrap()
+                        .to_string()
+                );
+            }
+            assert!(measure_code_spans(&mut fonts, &[], Some(0..1)).is_err());
+        }
+
+        #[test]
+        #[ignore = "requires a headless GPU; exercises public measurement and inline partition dispatch"]
+        fn public_measurement_preserves_partition_metrics_and_errors() {
+            let mut renderer = pollster::block_on(HeadlessRenderer::new(RenderSpec {
+                width: 1920,
+                height: 1080,
+                font_path: PathBuf::from(crate::scenes::FONT_PATH),
+                file_name: "code-measurement-proof".into(),
+            }))
+            .unwrap();
+            let line = CodeLine::new(
+                "line",
+                ["const ", "", "x", " = ", "e\u{301}", " + ", "雪"]
+                    .map(|text| StyledSpan::new(text, SyntaxStyle::Plain))
+                    .to_vec(),
+            );
+            let reveals = [(4, 6), (1, 2)].map(|(start_span, end_span)| InlineRevealFrame {
+                line_id: "line",
+                start_span,
+                end_span,
+                progress: 0.37,
+            });
+            let metrics = renderer
+                .measure_inline_target(&line, &reveals, 2..5)
+                .unwrap();
+            let expected = [
+                (0..1, None),
+                (1..2, None),
+                (2..4, Some(0..4)),
+                (4..6, Some(0..3)),
+                (6..7, None),
+            ];
+            assert_eq!(metrics.len(), expected.len());
+            for (metric, (range, selected)) in metrics.iter().zip(expected) {
+                let spans = &line.spans()[range.clone()];
+                assert_eq!(metric.spans, range);
+                let raster =
+                    make_spans_sprite(&mut renderer.font_system, &mut renderer.swash_cache, spans);
+                assert_eq!(metric.advance.to_bits(), raster.advance.to_bits());
+                let bounds = selected.map(|range| {
+                    let b = reference_bounds(&mut renderer.font_system, spans, range).unwrap();
+                    [b.x.to_bits(), (b.x + b.width).to_bits()]
+                });
+                assert_eq!(metric.selection.map(|b| b.map(f32::to_bits)), bounds);
+            }
+            assert_eq!(metrics[1].advance, 0.);
+            let error = renderer
+                .measure_inline_target(&line, &reveals, 1..2)
+                .err()
+                .unwrap();
+            assert_eq!(
+                error.to_string(),
+                "text byte range is outside the code line"
+            );
+            for range in [0..1, 0..18, 10..12, 10..11, 1..1, 0..100] {
+                let expected =
+                    reference_bounds(&mut renderer.font_system, line.spans(), range.clone())
+                        .map(bounds_bits)
+                        .map_err(|e| e.to_string());
+                let actual = renderer
+                    .measure_text_byte_range(&line, range.start, range.end)
+                    .map(bounds_bits)
+                    .map_err(|e| e.to_string());
+                assert_eq!(actual, expected);
+            }
+            assert_eq!(
+                renderer
+                    .measure_text_range(&line, "missing")
+                    .err()
+                    .unwrap()
+                    .to_string(),
+                "line 'line' does not contain 'missing'"
+            );
+        }
+    }
+
+    #[test]
+    fn integer_sprite_matches_the_former_full_width_clipping_path() {
+        fn reference(
+            canvas: &mut [u8],
+            size: [u32; 2],
+            sprite: &super::TextSprite,
+            origin: [i32; 2],
+            opacity: f32,
+        ) {
+            let clip_width = sprite.width as f32;
+            if opacity <= 0.001 || clip_width <= 0.0 {
+                return;
+            }
+            let visible_width = clip_width.ceil().min(sprite.width as f32) as i32;
+            for sy in 0..sprite.height as i32 {
+                let y = origin[1] + sy;
+                if !(0..size[1] as i32).contains(&y) {
+                    continue;
+                }
+                for sx in 0..visible_width {
+                    let x = origin[0] + sx;
+                    if !(0..size[0] as i32).contains(&x) {
+                        continue;
+                    }
+                    let source = (sy as usize * sprite.width as usize + sx as usize) * 4;
+                    if sprite.pixels[source + 3] == 0 {
+                        continue;
+                    }
+                    let target = (y as usize * size[0] as usize + x as usize) * 4;
+                    super::blend_pixel(
+                        &mut canvas[target..target + 4],
+                        sprite.pixels[source..source + 4].try_into().unwrap(),
+                        opacity,
+                    );
+                }
+            }
+        }
+        for sprite_size in [[4, 3], [1, 1], [0, 3], [3, 0], [u32::MAX, 0]] {
+            let sprite = super::TextSprite {
+                width: sprite_size[0],
+                height: sprite_size[1],
+                advance: 2.25,
+                pixels: (0..sprite_size[0] as usize * sprite_size[1] as usize)
+                    .flat_map(|i| [240, 17, 93, [0, 1, 127, 255][i % 4]])
+                    .collect(),
+            };
+            for size in [[8, 6], [1, 1], [0, 6], [8, 0]] {
+                for origin in [[-10, -10], [-1, -1], [0, 0], [1, 2], [7, 5], [8, 6]] {
+                    for opacity in [-1., 0., 0.001, 0.001001, 0.5, 1., 2., f32::NAN] {
+                        let mut actual = [13, 71, 29, 127].repeat((size[0] * size[1]) as usize);
+                        let mut expected = actual.clone();
+                        reference(&mut expected, size, &sprite, origin, opacity);
+                        super::composite_sprite(
+                            &mut actual,
+                            size[0],
+                            size[1],
+                            &sprite,
+                            origin[0],
+                            origin[1],
+                            opacity,
+                        );
+                        assert_eq!(
+                            actual, expected,
+                            "{sprite_size:?}/{size:?}/{origin:?}/{opacity}"
+                        );
+                    }
+                }
+            }
+        }
+        // The old cast rounded large widths through f32 and saturated at i32::MAX.
+        // A direct u32 -> i32 cast would silently wrap instead.
+        for width in [
+            0,
+            1,
+            1320,
+            (1 << 24) - 1,
+            (1 << 24) + 1,
+            i32::MAX as u32,
+            u32::MAX,
+        ] {
+            assert_eq!(
+                (width as f32).ceil().min(width as f32) as i32,
+                width as f32 as i32
+            );
+        }
+    }
+
     #[test]
     fn vertical_mask_integrates_linear_fades_and_fractional_edges() {
         let mask = super::VerticalMask {

@@ -4,11 +4,23 @@ use std::{
 };
 
 fn main() -> anyhow::Result<()> {
-    let deck = kinograph_keyed_grid::build_deck()?;
-    let output = env::args()
-        .nth(1)
+    let mut args = env::args().skip(1);
+    let first = args.next();
+    let styles = first.as_deref() == Some("--styles");
+    let deck = if styles {
+        kinograph_keyed_grid::build_style_deck()?
+    } else {
+        kinograph_keyed_grid::build_deck()?
+    };
+    let output = if styles { args.next() } else { first }
         .map(PathBuf::from)
-        .unwrap_or_else(|| PathBuf::from("target/keyed-grid/deck.json"));
+        .unwrap_or_else(|| {
+            PathBuf::from(if styles {
+                "target/grid-styles/deck.json"
+            } else {
+                "target/keyed-grid/deck.json"
+            })
+        });
     let parent = output.parent().unwrap_or_else(|| Path::new("."));
     fs::create_dir_all(parent)?;
     fs::write(&output, serde_json::to_string_pretty(&deck)?)?;

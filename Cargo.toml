@@ -8,6 +8,9 @@ members = [
   "scenes/effect-succeed-slides",
   "scenes/interactive-showcase",
   "scenes/keyed-grid",
+  "scenes/data-modeling",
+  "scenes/opencode-architecture",
+  "scenes/component-prototypes",
   "scenes/opencode-session-tool",
   "scenes/quark-before-after",
 ]

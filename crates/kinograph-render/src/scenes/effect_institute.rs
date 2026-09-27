@@ -460,7 +460,6 @@ fn probe_audio_duration(path: &Path) -> Result<Duration> {
 
 struct PublishedCode {
     lines: Vec<PreparedLine>,
-    line_lookup: HashMap<String, usize>,
     timeline: Timeline,
     frames: Vec<PublishedFrame>,
     step_times: Vec<f32>,
@@ -926,11 +925,6 @@ impl PublishedCode {
                 variants,
             });
         }
-        let line_lookup = lines
-            .iter()
-            .enumerate()
-            .map(|(index, line)| (line.line.id.as_str().to_owned(), index))
-            .collect::<HashMap<_, _>>();
         let initial_frame = step_times
             .partition_point(|time| *time <= 0.0)
             .saturating_sub(1);
@@ -1034,7 +1028,6 @@ impl PublishedCode {
         let overlays = OverlayAnimation::compile(&slideshow.frames, &step_times, initial_frame);
         Ok(Self {
             lines,
-            line_lookup,
             timeline,
             frames: slideshow.frames,
             step_times,
@@ -1043,7 +1036,25 @@ impl PublishedCode {
     }
 
     fn render(&self, renderer: &mut HeadlessRenderer, time: f32) -> Result<Vec<u8>> {
-        self.render_with_offset(renderer, time, 0.0)
+        let sample = self.sample(renderer, time)?;
+        renderer.render_editor(&EditorFrame {
+            panel_offset_y: 0.0,
+            panel_rotation: 0.0,
+            panel_tilt_x: 0.0,
+            panel_tilt_y: 0.0,
+            panel_scale: 1.0,
+            panel_near_blur: 0.0,
+            focus_intensity: 0.0,
+            focus_line_y: sample.focus_y,
+            focus_height: sample.focus_height,
+            token_highlight: sample.token_highlight,
+            bright_text: &sample.bright_text,
+            pointer: sample.pointer,
+            inline_reveals: &sample.reveals,
+            squiggles: &sample.squiggles,
+            annotations: &sample.annotations,
+            lines: &sample.lines,
+        })
     }
 
     fn render_type_display(&self, renderer: &mut HeadlessRenderer, time: f32) -> Result<Vec<u8>> {
@@ -1065,48 +1076,6 @@ impl PublishedCode {
             })
             .collect::<Vec<_>>();
         renderer.render_centered_code_line(line, &reveals)
-    }
-
-    fn render_with_offset(
-        &self,
-        renderer: &mut HeadlessRenderer,
-        time: f32,
-        y_offset: f32,
-    ) -> Result<Vec<u8>> {
-        let mut sample = self.sample(renderer, time)?;
-        for line in &mut sample.lines {
-            line.y += y_offset;
-        }
-        sample.pointer.y += y_offset;
-        sample.token_highlight.y += y_offset;
-        sample.focus_y += y_offset;
-        for squiggle in &mut sample.squiggles {
-            squiggle.y += y_offset;
-        }
-        for annotation in &mut sample.annotations {
-            annotation.target.line_y += y_offset;
-        }
-        for bright in &mut sample.bright_text {
-            bright.y += y_offset;
-        }
-        renderer.render_editor(&EditorFrame {
-            panel_offset_y: 0.0,
-            panel_rotation: 0.0,
-            panel_tilt_x: 0.0,
-            panel_tilt_y: 0.0,
-            panel_scale: 1.0,
-            panel_near_blur: 0.0,
-            focus_intensity: 0.0,
-            focus_line_y: sample.focus_y,
-            focus_height: sample.focus_height,
-            token_highlight: sample.token_highlight,
-            bright_text: &sample.bright_text,
-            pointer: sample.pointer,
-            inline_reveals: &sample.reveals,
-            squiggles: &sample.squiggles,
-            annotations: &sample.annotations,
-            lines: &sample.lines,
-        })
     }
 
     fn sample<'a>(&'a self, renderer: &mut HeadlessRenderer, time: f32) -> Result<CodeSample<'a>> {
@@ -1233,8 +1202,7 @@ impl PublishedCode {
                 let Some(key) = order.get(line_index) else {
                     continue;
                 };
-                let canonical = canonical_line_id(&self.lines, key)?;
-                let prepared = &self.lines[self.line_lookup[canonical]];
+                let prepared = canonical_line(&self.lines, key)?;
                 let active_line = visible_code_line(frame, prepared, line_index);
                 let text: String = active_line
                     .spans()
@@ -1244,7 +1212,7 @@ impl PublishedCode {
                 let y = self.timeline.sample(&prepared.y, time).unwrap().position - scroll_y;
                 let structural_opacity = lines
                     .iter()
-                    .find(|line| line.line.id.as_str() == canonical)
+                    .find(|line| line.line.id == prepared.line.id)
                     .map_or(0.0, |line| line.opacity);
                 for range in ranges {
                     let start = utf16_to_byte(&text, range.start);
@@ -1388,8 +1356,8 @@ impl PublishedCode {
         let Some(key) = order.get(overlay.line_index) else {
             return Ok(None);
         };
-        let canonical = canonical_line_id(&self.lines, key)?;
-        let visible = visible_line(frame, &self.lines, key)?;
+        let prepared = canonical_line(&self.lines, key)?;
+        let visible = visible_line(frame, prepared)?;
         let start = utf16_to_byte(&visible, overlay.start);
         let end = utf16_to_byte(&visible, overlay.end);
         if start >= end {
@@ -1400,11 +1368,7 @@ impl PublishedCode {
             vec![StyledSpan::new(visible, SyntaxStyle::Plain)],
         );
         let bounds = renderer.measure_text_byte_range(&measure_line, start, end)?;
-        let sampled_y = self
-            .timeline
-            .sample(&self.lines[self.line_lookup[canonical]].y, time)
-            .unwrap()
-            .position
+        let sampled_y = self.timeline.sample(&prepared.y, time).unwrap().position
             - self.overlays.scroll_y.sample(time).position.max(0.0);
         Ok(Some(MeasuredOverlay {
             bounds,
@@ -1521,24 +1485,18 @@ fn first_row_for(orders: &[Vec<(String, usize)>], key: &(String, usize)) -> Opti
     orders.iter().find_map(|order| row_for(order, key))
 }
 
-fn canonical_line_id<'a>(lines: &'a [PreparedLine], key: &(String, usize)) -> Result<&'a str> {
+fn canonical_line<'a>(
+    lines: &'a [PreparedLine],
+    key: &(String, usize),
+) -> Result<&'a PreparedLine> {
     lines
         .iter()
         .find(|line| line.source_id == key.0 && line.occurrence == key.1)
-        .map(|line| line.line.id.as_str())
         .with_context(|| format!("no canonical line for '{}#{}'", key.0, key.1))
 }
 
-fn visible_line(
-    frame: &PublishedFrame,
-    lines: &[PreparedLine],
-    key: &(String, usize),
-) -> Result<String> {
-    let line = lines
-        .iter()
-        .find(|line| line.source_id == key.0 && line.occurrence == key.1)
-        .context("visible line has no prepared line")?;
-    let state = frame
+fn visible_line(frame: &PublishedFrame, line: &PreparedLine) -> Result<String> {
+    frame
         .state
         .get(&line.source_id)
         .context("visible line has no frame state")?;
@@ -1553,7 +1511,6 @@ fn visible_line(
             .collect::<String>();
         output.push_str(&text);
     }
-    let _ = state;
     Ok(output)
 }
 
@@ -2620,6 +2577,202 @@ mod tests {
         AnnotationEffect, PublishedChapter, TaskState, component_nodes, frame_scroll_target,
     };
 
+    fn published_code(chapter: &str, section: &str) -> super::PublishedCode {
+        let directory = Path::new(super::WORKSPACE_ROOT)
+            .join("assets/effect-institute")
+            .join(chapter);
+        let manifest: super::PublishedManifest =
+            serde_json::from_slice(&std::fs::read(directory.join("manifest.json")).unwrap())
+                .unwrap();
+        let file = &manifest
+            .sections
+            .iter()
+            .find(|entry| entry.id == section)
+            .unwrap()
+            .file;
+        let raw: super::PublishedSectionJson =
+            serde_json::from_slice(&std::fs::read(directory.join(file)).unwrap()).unwrap();
+        assert_eq!(raw.id, section);
+        super::PublishedCode::compile(
+            chapter,
+            section,
+            raw.slideshow_data.unwrap(),
+            raw.step_times.unwrap(),
+        )
+        .unwrap()
+    }
+
+    #[test]
+    #[ignore = "requires headless GPU and fonts; bounded published overlay/scroll artifact proof"]
+    fn published_overlay_pixels_are_deterministic_and_select_the_expected_lines() {
+        let mut renderer = pollster::block_on(super::HeadlessRenderer::new(super::RenderSpec {
+            width: super::WIDTH,
+            height: super::HEIGHT,
+            font_path: super::FONT_PATH.into(),
+            file_name: "published-overlay-proof".into(),
+        }))
+        .unwrap();
+        let output =
+            std::env::var_os("KINOGRAPH_PUBLISHED_ARTIFACTS").map(std::path::PathBuf::from);
+        if let Some(directory) = &output {
+            std::fs::create_dir_all(directory).unwrap();
+        }
+        for (chapter, section, step, row, source_id, expected_text) in [
+            (
+                "intro",
+                "promises-only-happy-path",
+                1,
+                0,
+                "sig",
+                "async function checkout(cartId: string): Promise<Order> {",
+            ),
+            (
+                "intro",
+                "promises-only-happy-path",
+                2,
+                0,
+                "sig",
+                "async function checkout(cartId: string): Promise<Order> {",
+            ),
+            (
+                "basics",
+                "effect-sync",
+                10,
+                7,
+                "run1",
+                "const now = await Effect.runPromise(getDate)",
+            ),
+            (
+                "basics",
+                "effect-sync",
+                11,
+                7,
+                "run1",
+                "const now = await Effect.runPromise(getDate)",
+            ),
+            (
+                "intro",
+                "effect-shows-errors",
+                9,
+                1,
+                "sig",
+                "const slowDie: Effect.Effect<number> =",
+            ),
+            (
+                "intro",
+                "effect-shows-errors",
+                10,
+                1,
+                "sig",
+                "const slowDie: Effect.Effect<number> =",
+            ),
+            (
+                "intro",
+                "abort-signal-infusion",
+                6,
+                5,
+                "abortSignal",
+                "    abortSignal: signal",
+            ),
+            (
+                "intro",
+                "abort-signal-infusion",
+                12,
+                11,
+                "starCall",
+                "    ask(\"Zubenelgenubi\", ticker),",
+            ),
+        ] {
+            let code = published_code(chapter, section);
+            let time = code.step_times[step] + 0.12;
+            let frame = &code.frames[step];
+            let order = super::normalized_line_order(frame);
+            let key = &order[row];
+            assert_eq!(key, &(source_id.to_owned(), 0));
+            assert_eq!(
+                super::visible_line(frame, super::canonical_line(&code.lines, key).unwrap())
+                    .unwrap(),
+                expected_text
+            );
+            let selected = code
+                .measure_overlay(
+                    &mut renderer,
+                    frame,
+                    &order,
+                    super::PublishedOverlay {
+                        line_index: row,
+                        start: 0,
+                        end: expected_text.encode_utf16().count(),
+                    },
+                    time,
+                )
+                .unwrap()
+                .unwrap();
+            let line = code
+                .lines
+                .iter()
+                .find(|line| line.source_id == source_id && line.occurrence == 0)
+                .unwrap();
+            let expected_bounds = renderer
+                .measure_text_range(
+                    &super::CodeLine::new(
+                        "expected-overlay",
+                        vec![super::StyledSpan::new(
+                            expected_text,
+                            super::SyntaxStyle::Plain,
+                        )],
+                    ),
+                    expected_text,
+                )
+                .unwrap();
+            assert_eq!(selected.bounds.x, expected_bounds.x);
+            assert_eq!(selected.bounds.width, expected_bounds.width);
+            assert_eq!(
+                selected.line_y,
+                code.timeline.sample(&line.y, time).unwrap().position
+                    - code.overlays.scroll_y.sample(time).position.max(0.)
+            );
+            let sample = code.sample(&mut renderer, time).unwrap();
+            match section {
+                "promises-only-happy-path" => assert!(!sample.bright_text.is_empty()),
+                "effect-sync" => assert!(sample.annotations.iter().any(|a| a.effect
+                    == if step == 10 {
+                        AnnotationEffect::FocusPulse
+                    } else {
+                        AnnotationEffect::PrismaticBloom
+                    })),
+                "effect-shows-errors" => assert!(!sample.squiggles.is_empty()),
+                "abort-signal-infusion" => {
+                    assert!(code.overlays.scroll_y.sample(time).position > 0.01)
+                }
+                _ => unreachable!(),
+            }
+            renderer.set_file_name(&format!("{chapter}/{section}.ts"));
+            let pixels = code.render(&mut renderer, time).unwrap();
+            code.render(&mut renderer, 0.).unwrap();
+            code.render(&mut renderer, time + 0.5).unwrap();
+            assert!(
+                pixels == code.render(&mut renderer, time).unwrap(),
+                "{section} step {step} out-of-order pixels"
+            );
+            eprintln!("published proof: {section} step {step} at {time:.6}s");
+            if let Some(directory) = &output {
+                let file =
+                    std::fs::File::create(directory.join(format!("{section}-{step:02}.png")))
+                        .unwrap();
+                let mut encoder =
+                    png::Encoder::new(std::io::BufWriter::new(file), super::WIDTH, super::HEIGHT);
+                encoder.set_color(png::ColorType::Rgba);
+                encoder.set_depth(png::BitDepth::Eight);
+                encoder
+                    .write_header()
+                    .unwrap()
+                    .write_image_data(&pixels)
+                    .unwrap();
+            }
+        }
+    }
+
     #[test]
     fn published_chapters_resolve_expected_sections() {
         let root = Path::new(super::WORKSPACE_ROOT).join("assets/effect-institute");
@@ -2698,7 +2851,8 @@ mod tests {
                     assert!(!code.lines.is_empty(), "{} has no lines", section.id);
                     for frame in &code.frames {
                         for key in super::normalized_line_order(frame) {
-                            super::visible_line(frame, &code.lines, &key).unwrap();
+                            let line = super::canonical_line(&code.lines, &key).unwrap();
+                            super::visible_line(frame, line).unwrap();
                         }
                     }
                 }
@@ -2708,14 +2862,7 @@ mod tests {
 
     #[test]
     fn duplicate_zero_time_steps_select_the_later_published_frame() {
-        let root = Path::new(super::WORKSPACE_ROOT).join("assets/effect-institute");
-        let intro = PublishedChapter::load("intro", &root.join("intro")).unwrap();
-        let section = intro
-            .sections
-            .iter()
-            .find(|section| section.id == "abort-signal-infusion")
-            .unwrap();
-        let code = section.code.as_ref().unwrap();
+        let code = published_code("intro", "abort-signal-infusion");
 
         assert_eq!(code.step_times[0], 0.0);
         assert_eq!(code.step_times[1], 0.0);
@@ -2729,16 +2876,7 @@ mod tests {
 
     #[test]
     fn inline_versions_preserve_published_insertion_order() {
-        let root = Path::new(super::WORKSPACE_ROOT).join("assets/effect-institute");
-        let basics = PublishedChapter::load("basics", &root.join("basics")).unwrap();
-        let code = basics
-            .sections
-            .iter()
-            .find(|section| section.id == "effect-is-a-description")
-            .unwrap()
-            .code
-            .as_ref()
-            .unwrap();
+        let code = published_code("basics", "effect-is-a-description");
         let line = code
             .lines
             .iter()
@@ -2756,16 +2894,7 @@ mod tests {
 
     #[test]
     fn cursor_retargets_without_position_discontinuity() {
-        let root = Path::new(super::WORKSPACE_ROOT).join("assets/effect-institute");
-        let intro = PublishedChapter::load("intro", &root.join("intro")).unwrap();
-        let code = intro
-            .sections
-            .iter()
-            .find(|section| section.id == "promises-only-happy-path")
-            .unwrap()
-            .code
-            .as_ref()
-            .unwrap();
+        let code = published_code("intro", "promises-only-happy-path");
         let event = code
             .overlays
             .cursor_x_columns
@@ -2789,16 +2918,7 @@ mod tests {
 
     #[test]
     fn imported_focus_state_and_long_frame_camera_survive_compilation() {
-        let root = Path::new(super::WORKSPACE_ROOT).join("assets/effect-institute");
-        let basics = PublishedChapter::load("basics", &root.join("basics")).unwrap();
-        let effect_sync = basics
-            .sections
-            .iter()
-            .find(|section| section.id == "effect-sync")
-            .unwrap()
-            .code
-            .as_ref()
-            .unwrap();
+        let effect_sync = published_code("basics", "effect-sync");
         assert!(effect_sync.frames.iter().any(|frame| {
             frame.state.values().any(|line| line.dimmed) && frame.status.is_some()
         }));
@@ -2849,15 +2969,7 @@ mod tests {
                 < 0.02
         );
 
-        let intro = PublishedChapter::load("intro", &root.join("intro")).unwrap();
-        let promises = intro
-            .sections
-            .iter()
-            .find(|section| section.id == "promises-only-happy-path")
-            .unwrap()
-            .code
-            .as_ref()
-            .unwrap();
+        let promises = published_code("intro", "promises-only-happy-path");
         let range = promises
             .frames
             .iter()
@@ -2867,14 +2979,7 @@ mod tests {
             .unwrap();
         assert!(range.start < range.end);
 
-        let abort = intro
-            .sections
-            .iter()
-            .find(|section| section.id == "abort-signal-infusion")
-            .unwrap()
-            .code
-            .as_ref()
-            .unwrap();
+        let abort = published_code("intro", "abort-signal-infusion");
         for frame in abort
             .frames
             .iter()
@@ -2889,16 +2994,7 @@ mod tests {
 
     #[test]
     fn persistent_success_status_keeps_its_original_start_time() {
-        let root = Path::new(super::WORKSPACE_ROOT).join("assets/effect-institute");
-        let basics = PublishedChapter::load("basics", &root.join("basics")).unwrap();
-        let code = basics
-            .sections
-            .iter()
-            .find(|section| section.id == "effect-sync")
-            .unwrap()
-            .code
-            .as_ref()
-            .unwrap();
+        let code = published_code("basics", "effect-sync");
         for index in 1..code.frames.len() {
             let Some(status) = &code.frames[index].status else {
                 continue;
@@ -2958,17 +3054,8 @@ mod tests {
 
     #[test]
     fn published_bursts_preserve_positive_negative_and_sad_polarity() {
-        let root = Path::new(super::WORKSPACE_ROOT).join("assets/effect-institute");
-        let intro = PublishedChapter::load("intro", &root.join("intro")).unwrap();
         let burst_effects = |section_id: &str| {
-            intro
-                .sections
-                .iter()
-                .find(|section| section.id == section_id)
-                .unwrap()
-                .code
-                .as_ref()
-                .unwrap()
+            published_code("intro", section_id)
                 .frames
                 .iter()
                 .flat_map(|frame| frame.bursts.iter())
@@ -2979,5 +3066,46 @@ mod tests {
         assert!(burst_effects("promises-only-happy-path").contains(&AnnotationEffect::SadPulse));
         assert!(burst_effects("catch-blocks-go-stale").contains(&AnnotationEffect::DangerPulse));
         assert!(burst_effects("catch-tag").contains(&AnnotationEffect::PrismaticBloom));
+    }
+
+    #[test]
+    fn canonical_lines_preserve_occurrence_identity_and_missing_state_errors() {
+        let slideshow = serde_json::from_value(serde_json::json!({
+            "template": {"lines": {
+                "same": {"partOrder": ["body"], "parts": {"body": {"tokens": [{"text": "same()"}]}}},
+                "other": {"partOrder": ["body"], "parts": {"body": {"tokens": [{"text": "other()"}]}}}
+            }},
+            "frames": [{
+                "lineOrder": ["same", "other", "same"],
+                "state": {"same": {"parts": {"body": true}}, "other": {"parts": {"body": true}}}
+            }]
+        })).unwrap();
+        let code =
+            super::PublishedCode::compile("test", "occurrences", slideshow, vec![0.]).unwrap();
+        for (occurrence, y) in [(0, 0.), (1, super::LINE_HEIGHT * 2.)] {
+            let line = super::canonical_line(&code.lines, &("same".into(), occurrence)).unwrap();
+            assert_eq!(
+                line.line.id.as_str(),
+                format!("test/occurrences/same#{occurrence}")
+            );
+            assert_eq!(
+                super::visible_line(&code.frames[0], line).unwrap(),
+                "same()"
+            );
+            assert_eq!(code.timeline.sample(&line.y, 0.).unwrap().position, y);
+            let mut missing = code.frames[0].clone();
+            missing.state.remove("same");
+            assert_eq!(
+                super::visible_line(&missing, line).unwrap_err().to_string(),
+                "visible line has no frame state"
+            );
+        }
+        assert_eq!(
+            super::canonical_line(&code.lines, &("same".into(), 2))
+                .err()
+                .unwrap()
+                .to_string(),
+            "no canonical line for 'same#2'"
+        );
     }
 }

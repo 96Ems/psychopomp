@@ -33,6 +33,44 @@ during growth. It does not port the source's timer-driven random boards, joystic
 assets, or complete talk. Infinite cardinalities and arbitrary mappings remain
 future examples, not claims made by the 24-cell proof.
 
+The old depth illustration is specifically `DoubleFingerPosition` at `mult8`:
+`On / Middle / Off × Finger × Finger = 3 × 5 × 5 = 75`. `DynamicGrid` uses
+opposing ±45° faces, with Thumb/Pinky as the extra-coordinate examples; it does
+not enumerate a full opaque 75-cell volume. The later `IceCreamOrder` recap uses
+`Flavor × Conveyance × Boolean = 4 × 3 × 2 = 24`, with `hasCherryOnTop` as its
+third field. This is a candidate for a more intuitive 3D scene than numbered
+chess boards; it has not yet replaced the current demonstration.
+
+`scenes/data-modeling` adapts the opening `Slide_1_Types` Boolean/cardinality,
+Int/String, and Boolean/Toggle correspondence, plus `Slide_4_Modeling`'s
+joystick fit, `ToggleOrJoystick`, and nullable-pair-to-`UserOrError` examples.
+Its layout and timing are new native choreography, not a pixel-faithful port.
+String's infinity is qualified as an abstract unbounded-length model; actual
+runtime bounds are called out. The error table counts four presence combinations
+versus two case shapes, not all payload values. The old general claim about equal
+cardinality is replaced by an explicit invertible finite pairing. Full
+Alphabet/Alterbet decoding and live joystick input remain unported.
+
+## OpenCode Architecture Diagrams
+
+`/Users/kit/code/open-source/opencode-architecture/src/experiments/options/Merge.tsx`
+is the source for Kinograph's `scenes/opencode-architecture` Daemon / merge port.
+The supplied screenshot shows its third of four steps, not `MergeGoo.tsx`.
+Read-only inspection used HEAD `b7e0fa8` plus the existing working-tree stylesheet;
+the scene README records the exact source file digest and supporting components.
+
+The source demonstrates centered finite client/server growth, 450 ms spatial and
+320 ms convergence springs, independent 300 ms scale / 140 ms focus, 120 ms server
+and 60 ms path offsets, a shared daemon halo, and a 400 ms caption-column spring.
+Kinograph retains the visual/choreographic intent with stable node/port identity
+and cancellation-aware waits. A spring-based trace replaces the CSS cubic-ease
+path/comet and a fade-through replaces mount-based wait-mode label swapping. The
+initial framed port used a stationary caption aperture; Kit then rejected the
+surrounding UI, so the current bare Flat/Isometric variants omit that caption and
+the dotted/card chrome entirely. The goo filter,
+web article, and unrelated architecture experiments are not ported. The original
+project remains unchanged.
+
 ## Manim
 
 [Manim](https://docs.manim.community/en/stable/) is the strongest reference for semantic scene construction.
@@ -267,6 +305,27 @@ These are Motion `visualDuration` parameters, not deadlines at which every sprin
 The regression fixture `crates/kinograph-render/tests/fixtures/effect-task-timing.json` is generated with Motion DOM 12.42.2, as pinned by the inspected Effect Institute lockfile. Its adjacent Bun script loads cached UMD bundles without installing or modifying Effect Institute dependencies. Tests compare actual compiled Rust channel samples, not only duplicated configuration constants. The fixture uses tight rest tolerances to compare analytic curves; Kinograph keeps its deterministic permanent-settling policy.
 
 ## Visual Types Rolling Content
+
+### Width reveals and set geometry
+
+The same checkout's `AnimatedType.tsx` reveals authored stable segments by width
+and 4 CSS px blur (no uniform opacity fade); `animationConfigs.ts` uses 0.4-second,
+zero-bounce entry and a 0.2-second exit. `AnimatedWidthText.tsx` instead exchanges a
+whole measured value with width/opacity/blur using the 0.3-second default. Kinograph's
+`prototype-width-text` adopts the stable-segment variant, not whole-string replacement.
+Its authored enter/leave profiles are 0.4/0.2 seconds; native navigation still uses
+destination profiles with continuous position/velocity, rather than browser mount
+resets. Its 4-output-pixel sampling-offset blur is not claimed to be CSS-blur parity.
+
+`SubsetComparison.tsx` animates circles/rounded rectangles with the 0.3-second,
+0.3-bounce profile, uses 20% fills and 60% 2-pixel outlines, and hatches the overlap
+with 8-pixel-spaced diagonal 1.5-pixel lines at 40% opacity. Intersection geometry
+is derived from current MotionValues, including nested/disjoint states. Kinograph
+keeps that sampled-geometry rule and profile, including a circle-to-square morph.
+It uses explicit authored geometry rather than porting the source's label/radius
+heuristics, TypeScript evaluator, result flash, framed lesson panel, or type badges.
+One theme accent replaces result-specific red/green in this neutral set-diagram trial.
+The native distance-field intersection also covers rounded/square boundaries.
 
 `/Users/kit/code/experiments/typescript/visual-types` demonstrates a fixed viewing
 window for moving text. `src/components/Lesson/CyclingSection.tsx` translates a

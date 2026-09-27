@@ -4,6 +4,11 @@ use anyhow::{Result, bail};
 
 use crate::motion::{MotionState, Spring};
 
+mod retarget;
+pub use retarget::{
+    Retarget, RetargetMode, RetargetSchedule, ScheduleTime, ScheduledWrite, StartDelay,
+};
+
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct PropertyId(String);
 
@@ -192,28 +197,6 @@ impl Animation {
         }
     }
 
-    fn writes_at(&self, start: f32, writes: &mut Vec<(PropertyId, f32)>) {
-        match self {
-            Self::Set { property, .. } | Self::Spring { property, .. } => {
-                writes.push((property.clone(), start));
-            }
-            Self::Sequence(animations) => {
-                let mut cursor = start;
-                for animation in animations {
-                    animation.writes_at(cursor, writes);
-                    cursor += animation.duration();
-                }
-            }
-            Self::Parallel(animations) => {
-                for animation in animations {
-                    animation.writes_at(start, writes);
-                }
-            }
-            Self::Delay { seconds, animation } => animation.writes_at(start + seconds, writes),
-            Self::Hold(_) => {}
-        }
-    }
-
     fn leaves_at<'a>(&'a self, start: f32, leaves: &mut Vec<(f32, &'a Self)>) {
         match self {
             Self::Set { .. } | Self::Spring { .. } => leaves.push((start, self)),
@@ -236,14 +219,16 @@ impl Animation {
         }
     }
 
-    fn validate(&self) -> Result<()> {
-        let mut writes = Vec::new();
-        self.writes_at(0.0, &mut writes);
-        for (index, (property, start)) in writes.iter().enumerate() {
-            if writes[..index]
-                .iter()
-                .any(|(other, other_start)| other == property && other_start == start)
-            {
+    fn validate_leaves(leaves: &[(f32, &Self)]) -> Result<()> {
+        for (index, (start, leaf)) in leaves.iter().enumerate() {
+            let (Self::Set { property, .. } | Self::Spring { property, .. }) = leaf else {
+                unreachable!("only animation leaves are validated");
+            };
+            if leaves[..index].iter().any(|(other_start, other)| {
+                matches!(other,
+                    Self::Set { property: other, .. } | Self::Spring { property: other, .. }
+                    if other == property && other_start == start)
+            }) {
                 bail!(
                     "parallel animations both write property '{}' at {start:.3}s",
                     property.as_str()
@@ -303,11 +288,12 @@ impl Timeline {
         initial_values: impl IntoIterator<Item = (PropertyId, f32)>,
         animation: &Animation,
     ) -> Result<Self> {
-        animation.validate()?;
-        let mut timeline =
-            Self::with_initial_values(initial_values, f64::from(animation.duration()))?;
         let mut leaves = Vec::new();
         animation.leaves_at(0.0, &mut leaves);
+        // Conflicts are diagnosed in authored order, before initial values.
+        Animation::validate_leaves(&leaves)?;
+        let mut timeline =
+            Self::with_initial_values(initial_values, f64::from(animation.duration()))?;
         leaves.sort_by(|(left, _), (right, _)| left.total_cmp(right));
         for (start, leaf) in leaves {
             timeline.compile_leaf(leaf, f64::from(start))?;
@@ -504,6 +490,198 @@ mod tests {
 
         let error = Timeline::compile([], &animation).err().unwrap();
         assert!(error.to_string().contains("both write property 'panel.x'"));
+    }
+
+    #[test]
+    fn relative_write_conflicts_use_authored_order_before_initial_validation() {
+        let late = PropertyId::new("late");
+        let early = PropertyId::new("early");
+        let animation = Animation::parallel([
+            Animation::delay(
+                2.0,
+                Animation::parallel([
+                    Animation::spring(late.clone(), 1.0, profile()),
+                    Animation::set(late.clone(), 2.0),
+                ]),
+            ),
+            Animation::sequence([
+                Animation::hold(0.5),
+                Animation::parallel([
+                    Animation::set(early.clone(), 1.0),
+                    Animation::spring(early, 2.0, profile()),
+                ]),
+            ]),
+        ]);
+        for initial in [
+            Vec::new(),
+            vec![(late.clone(), f32::NAN)],
+            vec![(late.clone(), 0.0), (late.clone(), 1.0)],
+        ] {
+            assert_eq!(
+                Timeline::compile(initial, &animation)
+                    .err()
+                    .unwrap()
+                    .to_string(),
+                "parallel animations both write property 'late' at 2.000s"
+            );
+        }
+        let initial = std::iter::from_fn(|| -> Option<(PropertyId, f32)> {
+            panic!("conflict validation must not consume initial values")
+        });
+        assert!(Timeline::compile(initial, &animation).is_err());
+    }
+
+    #[test]
+    fn initial_validation_still_precedes_sorted_leaf_validation() {
+        let initial = PropertyId::new("initial");
+        let animation = Animation::parallel([
+            Animation::delay(2.0, Animation::set(PropertyId::new("bad-set"), f32::NAN)),
+            Animation::delay(
+                0.5,
+                Animation::spring(PropertyId::new("missing"), 1.0, profile()),
+            ),
+        ]);
+        for (values, expected) in [
+            (
+                vec![(initial.clone(), f32::NAN)],
+                "property 'initial' initial value must be finite",
+            ),
+            (
+                vec![(initial.clone(), 0.0), (initial, 1.0)],
+                "property 'initial' has more than one initial value",
+            ),
+            (Vec::new(), "property 'missing' has no initial value"),
+        ] {
+            assert_eq!(
+                Timeline::compile(values, &animation)
+                    .err()
+                    .unwrap()
+                    .to_string(),
+                expected
+            );
+        }
+    }
+
+    #[test]
+    fn relative_sequence_rounds_in_f32_before_widening_event_time() {
+        let marker = PropertyId::new("marker");
+        let timeline = Timeline::compile(
+            [(marker.clone(), 0.0)],
+            &Animation::sequence([
+                Animation::hold(0.1),
+                Animation::hold(0.2),
+                Animation::set(marker.clone(), 1.0),
+            ]),
+        )
+        .unwrap();
+        let widened_operands_sum = f64::from(0.1_f32) + f64::from(0.2_f32);
+        let rounded_boundary = f64::from(0.1_f32 + 0.2_f32);
+        let between = (widened_operands_sum + rounded_boundary) * 0.5;
+        assert!(widened_operands_sum < between && between < rounded_boundary);
+        for time in [widened_operands_sum, between] {
+            assert_eq!(
+                timeline.sample_at(&marker, time),
+                Some(crate::motion::MotionState::at(0.0))
+            );
+        }
+        assert_eq!(
+            timeline.sample_at(&marker, rounded_boundary),
+            Some(crate::motion::MotionState::at(1.0))
+        );
+    }
+
+    #[test]
+    fn nested_relative_timing_matches_explicit_events_in_position_and_velocity() {
+        let x = PropertyId::new("x");
+        let y = PropertyId::new("y");
+        let z = PropertyId::new("z");
+        let marker = PropertyId::new("marker");
+        let first = profile();
+        let redirect = SpringProfile::new(0.35, 0.65, 0.001, 0.001);
+        assert!(first.advance_time() + 0.125 < 1.0);
+        assert!(redirect.advance_time() + 0.1875 < 1.0);
+        let animation = Animation::sequence([
+            Animation::hold(0.125),
+            Animation::parallel([
+                Animation::sequence([
+                    Animation::spring(x.clone(), 100.0, first),
+                    Animation::delay(0.125, Animation::set(marker.clone(), 2.0)),
+                ]),
+                Animation::delay(
+                    0.1875,
+                    Animation::parallel([
+                        Animation::spring(x.clone(), -40.0, redirect),
+                        Animation::spring(y.clone(), 20.0, first),
+                    ]),
+                ),
+                Animation::delay(
+                    0.0625,
+                    Animation::sequence([
+                        Animation::set(z.clone(), 3.0),
+                        Animation::hold(0.0625),
+                        Animation::spring(z.clone(), 9.0, redirect),
+                    ]),
+                ),
+                Animation::hold(1.0),
+            ]),
+            Animation::set(y.clone(), -10.0),
+            Animation::hold(0.25),
+        ]);
+        let initial = [
+            (x.clone(), 0.0),
+            (y.clone(), -4.0),
+            (z.clone(), 0.0),
+            (marker.clone(), 0.0),
+        ];
+        let relative = Timeline::compile(initial.clone(), &animation).unwrap();
+        // Spell out the expected leaf clock without walking the relative tree.
+        // The marker retains the original f32 sequence-addition order.
+        let marker_at = f64::from((0.125_f32 + first.advance_time()) + 0.125);
+        let explicit = Timeline::compile_events(
+            initial,
+            [
+                TimedEvent::spring(0.125, x.clone(), 100.0, first),
+                TimedEvent::set(marker_at, marker.clone(), 2.0),
+                TimedEvent::spring(0.3125, x.clone(), -40.0, redirect),
+                TimedEvent::spring(0.3125, y.clone(), 20.0, first),
+                TimedEvent::set(0.1875, z.clone(), 3.0),
+                TimedEvent::spring(0.25, z.clone(), 9.0, redirect),
+                TimedEvent::set(1.125, y.clone(), -10.0),
+            ],
+            1.375,
+        )
+        .unwrap();
+        assert_eq!(relative.duration().to_bits(), 1.375_f32.to_bits());
+        assert_eq!(relative.duration().to_bits(), explicit.duration().to_bits());
+        let mut times = vec![4.0, 0.0, 0.45, 0.2, 1.375, 0.45];
+        for at in [0.125, 0.1875, 0.25, 0.3125, marker_at, 1.125] {
+            times.extend([at - 1e-9, at, at + 1e-9]);
+        }
+        for time in times {
+            for property in [&x, &y, &z, &marker] {
+                let actual = relative.sample_at(property, time).unwrap();
+                let expected = explicit.sample_at(property, time).unwrap();
+                assert_eq!(
+                    [actual.position, actual.velocity].map(f32::to_bits),
+                    [expected.position, expected.velocity].map(f32::to_bits),
+                    "{} at {time}",
+                    property.as_str()
+                );
+            }
+        }
+        let uninterrupted = Timeline::compile_events(
+            [(x.clone(), 0.0)],
+            [TimedEvent::spring(0.125, x.clone(), 100.0, first)],
+            1.375,
+        )
+        .unwrap();
+        let at_retarget = relative.sample_at(&x, 0.3125).unwrap();
+        assert_eq!(at_retarget, uninterrupted.sample_at(&x, 0.3125).unwrap());
+        assert!(at_retarget.velocity > 1.0);
+        assert_eq!(
+            relative.sample_at(&y, 1.125),
+            Some(crate::motion::MotionState::at(-10.0))
+        );
     }
 
     #[test]

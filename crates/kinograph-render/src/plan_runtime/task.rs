@@ -1,10 +1,7 @@
 use crate::render::{BubblePose, ContentPose, HeadlessRenderer, TaskContentFrame, TaskVisualFrame};
 use anyhow::{Context, Result, bail};
 use kinograph::{
-    dsl::TaskState,
-    motion::MotionState,
-    plan::{ActorPlan, ContinuousChannelPlan, TrackEventPlan},
-    task::TaskRecipePlan,
+    dsl::TaskState, motion::MotionState, plan::ContinuousChannelPlan, task::TaskRecipePlan,
 };
 
 pub(super) struct PreparedTask {
@@ -15,14 +12,11 @@ pub(super) struct PreparedTask {
 }
 
 impl PreparedTask {
-    pub(super) fn new(
-        actor: &ActorPlan,
-        duration: u64,
+    pub(super) fn from_recipe(
+        actor_id: String,
+        recipe: TaskRecipePlan,
         renderer: &mut HeadlessRenderer,
-    ) -> Result<Self> {
-        let recipe: TaskRecipePlan =
-            serde_json::from_value(actor.data.clone()).context("parse Effect task recipe")?;
-        recipe.validate(duration)?;
+    ) -> Self {
         let states = recipe.states();
         let widths = states
             .iter()
@@ -31,12 +25,12 @@ impl PreparedTask {
                 _ => 128.,
             })
             .collect();
-        Ok(Self {
-            actor_id: actor.id.clone(),
+        Self {
+            actor_id,
             recipe,
             states,
             widths,
-        })
+        }
     }
 
     pub(super) fn channels(&self) -> Vec<ContinuousChannelPlan> {
@@ -124,40 +118,14 @@ impl PreparedTask {
         bounce: f32,
         value: impl Fn(&TaskState) -> f32,
     ) -> ContinuousChannelPlan {
-        let property = property.into();
-        let initial = value(&self.recipe.initial);
-        let mut current = initial;
-        let mut events = Vec::new();
-        for (index, event) in self.recipe.events.iter().enumerate() {
-            if self
-                .recipe
-                .events
-                .get(index + 1)
-                .is_some_and(|next| next.at_nanos == event.at_nanos)
-            {
-                continue;
-            }
-            let target = value(&event.state);
-            if target == current {
-                continue;
-            }
-            events.push(TrackEventPlan::Spring {
-                at_nanos: event.at_nanos,
-                target: target.into(),
-                response_seconds: duration * 1.2,
-                damping_ratio: 1. - bounce,
-                position_threshold: 0.001,
-                velocity_threshold: 0.001,
-            });
-            current = target;
-        }
-        ContinuousChannelPlan {
-            id: format!("{}.{property}", self.actor_id),
-            actor_id: self.actor_id.clone(),
+        kinograph::plan::destination_channel(
+            &self.actor_id,
             property,
-            initial: initial.into(),
-            events,
-        }
+            value(&self.recipe.initial),
+            kinograph::plan::effective_snapshots(&self.recipe.events, |e| e.at_nanos)
+                .map(|e| (e.at_nanos, value(&e.state))),
+            |_, _| kinograph::plan::SpringPlan::visual(duration, bounce),
+        )
     }
 
     pub(super) fn running_property(&self) -> Option<String> {
@@ -261,6 +229,8 @@ fn visible(state: &TaskState) -> f32 {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use kinograph::plan::ActorPlan;
+    use kinograph::plan::TrackEventPlan;
     use kinograph::task::TaskEventPlan;
     use kinograph::{
         plan::{PresentationStepPlan, ScenePlan},
@@ -333,7 +303,7 @@ mod tests {
         }
     }
 
-    fn prepared() -> super::super::PreparedPlan {
+    fn prepared() -> super::super::CompiledPlan {
         let task = task();
         let mut plan = ScenePlan::new("task-timing", 8_000_000_000);
         plan.actors.push(ActorPlan {
@@ -357,7 +327,7 @@ mod tests {
             })
             .collect();
         plan.validate().unwrap();
-        super::super::PreparedPlan::compile(plan, std::path::Path::new(".")).unwrap()
+        super::super::CompiledPlan::compile(plan, std::path::Path::new(".")).unwrap()
     }
 
     #[test]

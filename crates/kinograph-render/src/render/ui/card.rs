@@ -193,6 +193,29 @@ impl<'a> RgbaSource<'a> {
         let y = y.clamp(0.0, self.size[1] as f32 - 1.0);
         let left = x.floor() as i32;
         let top = y.floor() as i32;
+        // Constant 2x2 neighborhoods have exactly the same filtered RGBA at every
+        // fractional position. Flat card faces and transparent padding need no
+        // premultiply/interpolate/unpremultiply work; edges keep the original filter.
+        if x.is_finite()
+            && y.is_finite()
+            && left + 1 < self.size[0] as i32
+            && top + 1 < self.size[1] as i32
+        {
+            let index = (self.origin[1] as usize + top as usize) * self.bytes_per_row
+                + (self.origin[0] as usize + left as usize) * BYTES_PER_PIXEL;
+            let below = index + self.bytes_per_row;
+            let pixel = &self.pixels[index..index + 4];
+            if pixel == &self.pixels[index + 4..index + 8]
+                && pixel == &self.pixels[below..below + 4]
+                && pixel == &self.pixels[below + 4..below + 8]
+            {
+                return if pixel[3] == 0 {
+                    [0; 4]
+                } else {
+                    [pixel[0], pixel[1], pixel[2], pixel[3]]
+                };
+            }
+        }
         let fraction_x = x - left as f32;
         let fraction_y = y - top as f32;
         let samples = [
@@ -720,7 +743,7 @@ fn composite_card_layer(
                 color,
                 coverage * frame.opacity,
             );
-            if shell && -distance <= frame.style.border_width {
+            if shell && frame.style.border_width > 0.0 && -distance <= frame.style.border_width {
                 blend_pixel(
                     &mut destination[target..target + 4],
                     frame.style.border_color.0,
@@ -813,7 +836,7 @@ fn composite_card_source(
                 color,
                 (-distance).clamp(0.0, 1.0) * frame.opacity,
             );
-            if -distance <= frame.style.border_width {
+            if frame.style.border_width > 0.0 && -distance <= frame.style.border_width {
                 blend_pixel(
                     &mut destination[target..target + 4],
                     frame.style.border_color.0,
@@ -978,6 +1001,129 @@ mod tests {
         Bounds, CardFrame, CardProjection, CardStyle, CardTransform, Clip, ContentFit, Fill,
         FrameUi, RgbaSource, SurfaceStyle, UiCanvas, UiColor,
     };
+
+    #[test]
+    fn source_sampling_matches_filtered_reference_in_flat_and_mixed_regions() {
+        // Preserve the original premultiplied bilinear calculation as the oracle,
+        // including transparent RGB, edge clamping and strided region addressing.
+        fn reference(source: RgbaSource<'_>, x: f32, y: f32) -> [u8; 4] {
+            let x = x.clamp(0., source.size[0] as f32 - 1.);
+            let y = y.clamp(0., source.size[1] as f32 - 1.);
+            let left = x.floor() as i32;
+            let top = y.floor() as i32;
+            let fx = x - left as f32;
+            let fy = y - top as f32;
+            let mut alpha = 0.;
+            let mut rgb = [0.; 3];
+            for (x, y, weight) in [
+                (left, top, (1. - fx) * (1. - fy)),
+                (left + 1, top, fx * (1. - fy)),
+                (left, top + 1, (1. - fx) * fy),
+                (left + 1, top + 1, fx * fy),
+            ] {
+                if !(0..source.size[0] as i32).contains(&x)
+                    || !(0..source.size[1] as i32).contains(&y)
+                {
+                    continue;
+                }
+                let index = (source.origin[1] as usize + y as usize) * source.bytes_per_row
+                    + (source.origin[0] as usize + x as usize) * 4;
+                let a = source.pixels[index + 3] as f32 / 255. * weight;
+                alpha += a;
+                for (channel, sum) in rgb.iter_mut().enumerate() {
+                    *sum += source.pixels[index + channel] as f32 / 255. * a;
+                }
+            }
+            if alpha <= 0. {
+                return [0; 4];
+            }
+            [
+                (rgb[0] / alpha * 255.).round() as u8,
+                (rgb[1] / alpha * 255.).round() as u8,
+                (rgb[2] / alpha * 255.).round() as u8,
+                (alpha * 255.).round() as u8,
+            ]
+        }
+        fn blurred(source: RgbaSource<'_>, x: f32, y: f32, blur: f32) -> [u8; 4] {
+            if blur <= 0.2 {
+                return reference(source, x, y);
+            }
+            let radius = blur * 0.72;
+            let mut alpha = 0.;
+            let mut rgb = [0.; 3];
+            for (oy, wy) in [-radius, 0., radius].into_iter().zip([1., 2., 1.]) {
+                for (ox, wx) in [-radius, 0., radius].into_iter().zip([1., 2., 1.]) {
+                    let sample = reference(source, x + ox, y + oy);
+                    let a = sample[3] as f32 / 255. * (wx * wy / 16.);
+                    alpha += a;
+                    for (channel, sum) in rgb.iter_mut().enumerate() {
+                        *sum += sample[channel] as f32 / 255. * a;
+                    }
+                }
+            }
+            if alpha <= 0. {
+                return [0; 4];
+            }
+            [
+                (rgb[0] / alpha * 255.).round() as u8,
+                (rgb[1] / alpha * 255.).round() as u8,
+                (rgb[2] / alpha * 255.).round() as u8,
+                (alpha * 255.).round() as u8,
+            ]
+        }
+        let positions = [
+            -2., 0., 0.00001, 0.1, 0.49999, 0.5, 0.71317, 0.99999, 1., 1.9, 2., 3.,
+        ];
+        for byte in 0..=255u8 {
+            for alpha in [0, 1, 17, 127, 254, 255] {
+                let pixels = [byte, 255 - byte, byte.wrapping_mul(7), alpha].repeat(9);
+                let source = RgbaSource::packed(&pixels, [3, 3]).unwrap();
+                for x in positions {
+                    for y in positions {
+                        assert_eq!(
+                            source.sample(x, y),
+                            reference(source, x, y),
+                            "flat {byte}/{alpha} at {x},{y}"
+                        );
+                    }
+                }
+                if byte % 17 == 0 {
+                    for blur in [0., 0.2, 0.20001, 0.5, 4., 12., 16.] {
+                        assert_eq!(
+                            super::sample_source_blurred(source, 0.37, 0.9, blur),
+                            blurred(source, 0.37, 0.9, blur)
+                        );
+                    }
+                }
+            }
+        }
+        let mut seed = 0x471ac31u32;
+        for _ in 0..80 {
+            let mut pixels = vec![0; 7 * 5 * 4];
+            for byte in &mut pixels {
+                seed = seed.wrapping_mul(1664525).wrapping_add(1013904223);
+                *byte = (seed >> 24) as u8;
+            }
+            let source =
+                RgbaSource::strided_region(&pixels, [6, 5], 7 * 4, [2, 1], [3, 3]).unwrap();
+            for x in positions {
+                for y in positions {
+                    assert_eq!(
+                        source.sample(x, y),
+                        reference(source, x, y),
+                        "strided {x},{y}"
+                    );
+                    for blur in [0.2, 0.20001, 0.5, 4., 12.] {
+                        assert_eq!(
+                            super::sample_source_blurred(source, x, y, blur),
+                            blurred(source, x, y, blur),
+                            "blur {blur} at {x},{y}"
+                        );
+                    }
+                }
+            }
+        }
+    }
 
     #[test]
     fn perspective_transform_round_trips_points() {
@@ -1149,6 +1295,47 @@ mod tests {
             &output[(8 * 16 + 8) * 4..(8 * 16 + 8) * 4 + 4],
             &[20, 220, 20, 255]
         );
+    }
+
+    #[test]
+    fn zero_width_border_never_paints_transparent_card_bounds() {
+        for borrowed in [false, true] {
+            for width in [7., 7.25, 8.] {
+                let mut output = vec![0; 16 * 16 * 4];
+                let mut card = Vec::new();
+                let mut overlay = Vec::new();
+                let style = CardStyle {
+                    material: Fill::Solid(UiColor::srgb8(0, 0, 0, 0)),
+                    corner_radius: 0.,
+                    border_width: 0.,
+                    border_color: UiColor::srgb8(255, 0, 0, 255),
+                    shadow_offset: [0.; 2],
+                    shadow_blur: 0.,
+                    shadow_opacity: 0.,
+                };
+                let frame = CardFrame {
+                    bounds: Bounds::from_center([8., 8.], [width, 7.]),
+                    style,
+                    projection: CardProjection::default(),
+                    opacity: 1.,
+                };
+                let mut ui = FrameUi::new(&mut output, [16, 16], &mut card, &mut overlay).unwrap();
+                if borrowed {
+                    ui.card_source(
+                        frame,
+                        RgbaSource::packed(&[0; 4], [1, 1]).unwrap(),
+                        ContentFit::Fill,
+                    )
+                    .unwrap();
+                } else {
+                    ui.card(frame, |_| Ok(())).unwrap();
+                }
+                assert!(
+                    output.iter().all(|v| *v == 0),
+                    "zero-width border painted a pixel: borrowed={borrowed}, width={width}"
+                );
+            }
+        }
     }
 
     #[test]

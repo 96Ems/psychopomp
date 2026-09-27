@@ -1,0 +1,18 @@
+[package]
+name = "kinograph-session-story-prototype"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+# Throwaway visual comparison, not another supported renderer/library boundary.
+[workspace]
+
+[dependencies]
+anyhow = "1"
+cosmic-text = "0.19"
+kinograph = { path = "../../crates/kinograph" }
+png = "0.18"
+serde_json = "1"
+
+[profile.release]
+opt-level = 3

@@ -196,8 +196,11 @@ mod tests {
     use super::*;
     use kinograph::{
         code::TransitionProgress,
-        timeline::{PropertyId, SpringProfile, TimedEvent, Timeline},
+        editor::inspect_steps,
+        plan::{ScalarPlan, compile_channels},
+        timeline::PropertyId,
     };
+    use serde_json::json;
 
     #[test]
     fn demo_preserves_lines_and_keeps_common_text_outside_changing_ranges() {
@@ -254,36 +257,26 @@ mod tests {
             [1., 1., 1., 1., 1.],
             [1., 1., 1., 0., 0.],
         ];
+        let timeline = compile_channels(
+            plan.continuous_channels
+                .iter()
+                .map(|channel| (channel, PropertyId::new(&channel.id))),
+            plan.duration_nanos,
+            |scalar| match scalar {
+                ScalarPlan::Literal(value) => Ok(*value),
+                _ => anyhow::bail!("expected literal scalar"),
+            },
+        )
+        .unwrap();
+        assert_eq!(plan.continuous_channels.len(), channels.len());
         for (index, channel) in plan.continuous_channels.iter().enumerate() {
             assert_eq!(channel.property, channels[index]);
             let id = PropertyId::new(&channel.id);
-            let events = channel.events.iter().map(|event| {
-                let kinograph::plan::TrackEventPlan::Spring {
-                    at_nanos,
-                    target: kinograph::plan::ScalarPlan::Literal(target),
-                    response_seconds,
-                    damping_ratio,
-                    position_threshold,
-                    velocity_threshold,
-                } = event
-                else {
-                    panic!("expected literal spring");
-                };
-                assert_eq!(*response_seconds, 0.4 * 1.2);
-                assert_eq!(*damping_ratio, 1.0);
-                TimedEvent::spring(
-                    *at_nanos as f64 / SECOND as f64,
-                    id.clone(),
-                    *target,
-                    SpringProfile::new(
-                        *response_seconds,
-                        *damping_ratio,
-                        *position_threshold,
-                        *velocity_threshold,
-                    ),
-                )
-            });
-            let timeline = Timeline::compile_events([(id.clone(), 0.0)], events, 14.0).unwrap();
+            for event in &channel.events {
+                let spring = event.spring_plan().expect("expected spring");
+                assert_eq!(spring.response_seconds, 0.4 * 1.2);
+                assert_eq!(spring.damping_ratio, 1.0);
+            }
             for step_index in [6, 0, 4, 1, 5, 3, 2, 6] {
                 let state = timeline
                     .sample_at(
@@ -299,63 +292,77 @@ mod tests {
 
     #[test]
     fn held_text_matches_the_source_slots_after_display_reflow() {
-        let recipe = editor_recipe();
-        let mut visible = std::collections::HashMap::from([
-            ("constructor", false),
-            ("value", false),
-            ("annotation", false),
-            ("error", false),
-            ("requirements", false),
-        ]);
-        let cases = [
-            (None, "const magicWord =\n  ..."),
+        let report = serde_json::to_value(inspect_steps(&build_plan().unwrap()).unwrap()).unwrap();
+        assert_eq!(report["warnings"], json!([]));
+        let steps = report["steps"].as_array().unwrap();
+        let cases: [(&str, [&[&str]; 2]); 7] = [
             (
-                Some(("constructor", true)),
-                "const magicWord =\n  Effect.succeed(...)",
+                "const magicWord =\n  ...",
+                [&["const", "name", "equals"], &["indent", "placeholder"]],
             ),
             (
-                Some(("value", true)),
-                "const magicWord =\n  Effect.succeed(\"pismire\")",
+                "const magicWord =\n  «Effect.succeed(»...«)»",
+                [&[], &["constructor", "close"]],
             ),
             (
-                Some(("annotation", true)),
+                "const magicWord =\n  Effect.succeed(«\"pismire\"»)",
+                [&[], &["placeholder", "pismire"]],
+            ),
+            (
+                "const magicWord«: Effect.Effect<string»«>» =\n  Effect.succeed(\"pismire\")",
+                [&["type-open", "type-close"], &[]],
+            ),
+            (
+                "const magicWord: Effect.Effect<string«, never»> =\n  Effect.succeed(\"pismire\")",
+                [&["error"], &[]],
+            ),
+            (
+                "const magicWord: Effect.Effect<string, never«, never»> =\n  Effect.succeed(\"pismire\")",
+                [&["requirements"], &[]],
+            ),
+            (
                 "const magicWord: Effect.Effect<string> =\n  Effect.succeed(\"pismire\")",
-            ),
-            (
-                Some(("error", true)),
-                "const magicWord: Effect.Effect<string, never> =\n  Effect.succeed(\"pismire\")",
-            ),
-            (
-                Some(("requirements", true)),
-                "const magicWord: Effect.Effect<string, never, never> =\n  Effect.succeed(\"pismire\")",
+                [&["error", "requirements"], &[]],
             ),
         ];
-        for (change, expected) in cases {
-            if let Some((channel, value)) = change {
-                visible.insert(channel, value);
+        assert_eq!(steps.len(), cases.len());
+        for (index, (step, (delta, changed))) in steps.iter().zip(cases).enumerate() {
+            let editors = step["editors"].as_array().unwrap();
+            assert_eq!(editors.len(), 1);
+            assert_eq!(editors[0]["actorId"], "editor");
+            let lines = editors[0]["lines"].as_array().unwrap();
+            assert_eq!(
+                lines
+                    .iter()
+                    .map(|line| line["id"].as_str().unwrap())
+                    .collect::<Vec<_>>(),
+                ["import", "blank", "magicWord", "value"]
+            );
+            let text = |field: &str| {
+                lines[2..]
+                    .iter()
+                    .map(|line| line[field].as_str().unwrap())
+                    .collect::<Vec<_>>()
+                    .join("\n")
+            };
+            assert_eq!(text("after"), delta.replace(['«', '»'], ""));
+            assert_eq!(text("delta"), delta);
+            if index > 0 {
+                assert_eq!(text("before"), cases[index - 1].0.replace(['«', '»'], ""));
+                assert_eq!(lines[0]["changedPartIds"], json!([]));
             }
-            let actual = recipe
-                .lines
-                .iter()
-                .skip(2)
-                .map(|line| {
-                    line.parts
-                        .iter()
-                        .filter(|part| {
-                            std::iter::once(&recipe.inline_reveal)
-                                .chain(&recipe.additional_inline_reveals)
-                                .find(|reveal| {
-                                    reveal.line_id == line.id && reveal.range_id == part.id
-                                })
-                                .is_none_or(|reveal| visible[reveal.channel()] != reveal.reversed)
-                        })
-                        .flat_map(|part| &part.spans)
-                        .map(|span| span.text.as_str())
-                        .collect::<String>()
-                })
-                .collect::<Vec<_>>()
-                .join("\n");
-            assert_eq!(actual, expected);
+            assert!(lines.iter().all(|line| line["moved"] == false));
+            for (line, parts) in lines[2..].iter().zip(changed) {
+                assert_eq!(line["changedPartIds"], json!(parts));
+            }
         }
+        assert_eq!(
+            steps[2]["editors"][0]["lines"][3]["beforeDelta"],
+            "  Effect.succeed(«...»)",
+        );
+        assert_eq!(
+            steps[6]["editors"][0]["lines"][2]["beforeDelta"],
+            "const magicWord: Effect.Effect<string«, never»«, never»> =",
+        );
     }
 }

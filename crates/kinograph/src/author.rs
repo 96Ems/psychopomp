@@ -122,6 +122,46 @@ impl PlanBuilder {
         ContinuousHandle { id }
     }
 
+    /// One destination per already declared Presentation Step. The first value
+    /// is the initial pose; only changed later destinations emit spring events.
+    /// Ordinary `spring` remains an explicit write and never suppresses events.
+    pub fn step_track(
+        &mut self,
+        actor: &ActorHandle,
+        property: impl Into<String>,
+        values: &[f32],
+        motion: crate::plan::SpringPlan,
+    ) -> ContinuousHandle {
+        let property = property.into();
+        assert!(
+            !values.is_empty(),
+            "a destination track needs an initial value"
+        );
+        assert_eq!(
+            values.len(),
+            self.plan.presentation_steps.len(),
+            "one destination per step: {}.{property}",
+            actor.id
+        );
+        let channel = crate::plan::destination_channel(
+            &actor.id,
+            property,
+            values[0],
+            self.plan
+                .presentation_steps
+                .iter()
+                .zip(values)
+                .skip(1)
+                .map(|(step, value)| (step.start_nanos, *value)),
+            |_, _| motion,
+        );
+        let handle = ContinuousHandle {
+            id: channel.id.clone(),
+        };
+        self.plan.continuous_channels.push(channel);
+        handle
+    }
+
     pub fn set(&mut self, channel: &ContinuousHandle, at_nanos: u64, value: f32) {
         self.set_to(channel, at_nanos, value.into());
     }
@@ -151,18 +191,9 @@ impl PlanBuilder {
         visual_duration: f32,
         bounce: f32,
     ) {
-        assert!(visual_duration.is_finite() && visual_duration > 0.0);
-        assert!((0.0..1.0).contains(&bounce));
-        self.continuous_channel_mut(channel)
-            .events
-            .push(TrackEventPlan::Spring {
-                at_nanos,
-                target,
-                response_seconds: visual_duration * 1.2,
-                damping_ratio: 1.0 - bounce,
-                position_threshold: 0.001,
-                velocity_threshold: 0.001,
-            });
+        let event =
+            crate::plan::SpringPlan::visual(visual_duration, bounce).event(at_nanos, target);
+        self.continuous_channel_mut(channel).events.push(event);
     }
 
     pub fn semantic_target(
@@ -266,6 +297,29 @@ mod tests {
     use serde_json::json;
 
     use super::PlanBuilder;
+
+    #[test]
+    fn step_destinations_use_authored_times_and_do_not_restart_constants() {
+        let mut p = PlanBuilder::new("steps", 3_000_000_000);
+        for (index, at) in [0, 800_000_000, 2_000_000_000].into_iter().enumerate() {
+            p.presentation_step(format!("s{index}"), "step", at, at);
+        }
+        let actor = p
+            .actor("a", "title-card", json!({"title":"Example"}))
+            .unwrap();
+        p.step_track(
+            &actor,
+            "opacity",
+            &[0., 0., 1.],
+            crate::plan::SpringPlan::visual(0.16, 0.),
+        );
+        let plan = p.finish().unwrap();
+        assert_eq!(plan.continuous_channels[0].events.len(), 1);
+        assert_eq!(
+            plan.continuous_channels[0].events[0].at_nanos(),
+            2_000_000_000
+        );
+    }
 
     #[test]
     fn handles_construct_valid_deterministic_channels() {

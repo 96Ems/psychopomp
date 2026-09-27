@@ -79,6 +79,27 @@ The visible prefix of each axis, an Arrangement, and optional focused depth slic
 A cell's primary symbol and secondary label are representations of its tuple,
 not its identity. Row, column, and depth headings describe the values along the
 edges and remain separate from the cell labels.
+Their growth-edge disclosure follows the sampled extent along each catalog axis,
+so supporting labels appear as the grid reaches them rather than on independent
+timers. Semantic visibility (for example regrouping) remains a Property Track.
+
+`GridStylePlan` controls presentation without changing tuple identity: checkerboard,
+background-matching, uniform, or row-banded material; full, row-only, or no rules;
+and optional table layout. Background-matching material remains opaque to rear
+faces and labels. `GridTableLayout` supplies unequal column widths, row height,
+padding, alignment, and display headings independent of catalog names. This
+one-layer view fixes its placement against the complete catalog rather than
+recentering visible prefixes, so headers and retained rows stay still during
+growth. Table headings belong to the table plane; the cube's outside headings
+remain upright. A conventional keyed-record update/sort model is not yet provided.
+
+## Value Token
+
+A stable actor depicting one value or one explicitly labeled case shape in a
+finite teaching diagram. Its immutable label and optional detail describe that
+role; equal text in different roles does not imply shared identity. Position,
+presence, and border emphasis are ordinary Continuous Channels. A group of Value
+Tokens does not imply automatic enumeration or a generic mathematical set API.
 
 ## Renderer Recipe
 
@@ -99,6 +120,66 @@ An ordered collection of titled Scene Plans. Each slide owns its Presentation St
 ## Playback
 
 Interactive navigation among Presentation Steps. Next and Previous retarget continuous channels from their sampled position and velocity through the same Property Track compiler used for video. Unchanged channel destinations retain their trajectories. Pause freezes the local clock without losing motion state; Replay deliberately restarts from an entry pose. Playback retains an immutable compiled timeline for each navigation revision, so late rendered frames cannot change the current destination. It is not reverse playback of a movie.
+
+An explicitly opted-in Start Delay may stagger a property only from a specified
+resting pose toward a specified destination. Changing that destination cancels
+its unstarted writes; unchanged destinations keep their due times. Once moving,
+redirection is immediate and preserves position/velocity. Pausing freezes both
+motion and pending starts on the same local clock; reduced motion cancels waits.
+Header word entrances demonstrate this contract without callbacks or a second clock.
+
+Playback Speed scales wall-clock elapsed time into local scene time without
+changing trajectories, scene-time velocity, or scheduled starts. Diagnostic
+frame-stepping explicitly samples that same Timeline backward/forward while
+paused, bounded below by the latest navigation time. It is not Previous navigation
+and does not reconstruct or reverse earlier destination decisions. Export timing
+and sampling FPS remain independent of these native inspection controls.
+
+## Presentation Theme
+
+A named paint palette, independent of Scene Plan identity, typography measurement,
+and motion. Original, Evergreen, Tokyo Night, and Pure Black can be selected during
+native playback without advancing its clock. The native preference is saved;
+file delivery selects a theme explicitly so a personal preference cannot silently
+change an export. Original preserves existing scene colors. Semantic status colors
+and explicit non-palette art colors are not indiscriminately tinted.
+
+## Rich Text
+
+Immutable Markdown in a bounded overlay, shaped as proportional rich runs with
+monospaced code. Paragraphs, headings, list items, and quotations retain their
+measured block placement while ordinary actor/block opacity and position channels
+animate them. This is not automatic identity matching between edited Markdown
+documents. A width-revealing expression instead uses authored stable inline parts.
+
+## Venn Diagram
+
+Two stable, explicitly sized set boundaries with independently sampled position,
+radius, and roundness. Hatching represents the intersection of their current
+geometry, not a delayed overlay or a relationship guessed from label spelling.
+The recipe is a bounded overlay, not a type checker or arbitrary set-layout engine.
+
+## Diagram Port
+
+A side of a stable diagram node with a tangential pixel offset, resolved against
+the node's currently sampled position, dimensions and scale. In Isometric the
+port lies halfway down the sampled side face, including depth and lift. An optional
+width reveal changes the sampled footprint and ports, not the label's font size.
+Top/Bottom
+name footprint edges (−Y/+Y), not the horizontal top/bottom faces of the solid. The provisional
+box-and-wire Diagram Surface uses these ports for attached straight connections;
+endpoints are derived geometry, not separately animated guesses. Node/link IDs
+are authored, and the Scene Program supplies layout destinations. This is neither
+automatic graph layout nor an extension of editor Semantic Targets.
+
+The bare Diagram View may be Flat or Isometric. Both retain the same authored box
+identity and layout; an Isometric Scene Program may add depth/lift entrance tracks
+through the same motion engine. Projecting geometry and ports does not create
+another clock. Isometric uses upright labels and back-to-front whole-box painting
+by sampled solid-center depth along the fixed view ray. Authored order only breaks
+equal-depth ties; it cannot force the middle pair over a nearer box. Wire visibility
+compares sampled top/side faces. This bounded painter is not a general mesh scene
+or an exact solution for arbitrary interpenetrating/translucent solids.
 
 ## Composition
 

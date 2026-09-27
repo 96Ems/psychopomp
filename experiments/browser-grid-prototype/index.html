@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kinograph · browser grid probe</title>
+<link rel="icon" href="data:,">
+<style>
+  :root { color-scheme: dark; font-family: system-ui, sans-serif; background: #10131b; color: #e8e9ee; }
+  body { max-width: 1280px; margin: 36px auto; padding: 0 24px 48px; }
+  h1 { font-size: 26px; margin-bottom: 8px; } p { color: #a6aebb; line-height: 1.5; }
+  small, output { color: #a6aebb; } a { color: #ef9d64; }
+  kinograph-canvas { display: block; }
+  canvas, .fallback { display: block; width: 100%; height: auto; aspect-ratio: 16 / 9; background: #181c27; }
+  canvas:focus-visible { outline: 2px solid #ef9d64; }
+  nav { display: flex; gap: 8px; flex-wrap: wrap; margin: 14px 0; align-items: center; }
+  button, select { font: inherit; font-size: 14px; color: inherit; background: #242935; border: 1px solid #444b59; padding: 8px 12px; border-radius: 5px; }
+  button { cursor: pointer; } button:hover { background: #343c4a; } button:disabled { opacity: .5; }
+  output { display: block; font: 12px/1.8 ui-monospace, monospace; white-space: pre-wrap; }
+  [role=alert] { color: #f1b59a; } [hidden] { display: none !important; }
+</style>
+<h1>The same grid. A different host.</h1>
+<p>Local, throwaway WebAssembly + WebGPU proof. Shared Rust motion, shared grid shaders. No rendering server.</p>
+<kinograph-canvas aria-label="Interactive finite product: chess piece × side × board">
+  <nav aria-label="Scene and appearance">
+    <label>Scene <select name="scene"><option value="growing-grid">Growing a product</option><option value="grid-isomorphism">Regrouping the same values</option></select></label>
+    <label>Theme <select name="theme"><option value="original">Original</option><option value="evergreen">Evergreen</option><option value="tokyo-night">Tokyo Night</option><option value="black">Pure Black</option></select></label>
+  </nav>
+  <canvas width="1920" height="1080" tabindex="0" aria-label="Chess product diagram. Use the named step controls below; focus here for arrow-key navigation." hidden></canvas>
+  <img class="fallback" src="/native-growing-grid-17.0.png" alt="Static native-rendered reference: three pieces, two sides, four boards; 24 combinations.">
+  <p role="alert" hidden></p>
+  <p class="step" aria-live="polite">Loading the browser renderer…</p>
+  <nav aria-label="Motion controls">
+    <button data-action="previous">← Previous</button><button data-action="next">Next →</button>
+    <button data-action="replay">Replay</button><button data-action="pause">Pause / resume</button>
+    <button data-action="slower">Speed · 1x</button>
+    <button data-action="frame-previous">−1 frame</button><button data-action="frame-next">+1 frame</button>
+    <button data-action="reduce" aria-pressed="false">Reduced motion</button>
+  </nav>
+  <output>Preparing…</output>
+</kinograph-canvas>
+<p><small>Focus the canvas: ← / → steps · Home / End skip · R replay · Shift+R replay paused · P pause · S slower · , / . frame-step.<br>
+Prepared labels, 1920×1080, 4× spatial AA, one temporal sample. The slide's surrounding text is not ported. Canvas text is not selectable; this is not a production accessibility solution.</small></p>
+<script type="module" src="/probe.js"></script>
+</html>

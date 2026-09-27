@@ -1,11 +1,14 @@
-use anyhow::{Context, Result, bail};
+use anyhow::{Context, Result};
 use kinograph::{
-    grid::{GRID_RECIPE, GridArrangement, GridRecipePlan, GridSnapshotPlan},
-    plan::{ActorPlan, ContinuousChannelPlan, ScenePlan, TrackEventPlan},
+    grid::{GRID_RECIPE, GridArrangement, GridFillPlan, GridRecipePlan, GridSnapshotPlan},
+    plan::{ActorPlan, ContinuousChannelPlan, ScenePlan},
     timeline::{PropertyId, Timeline},
 };
 
-use crate::render::{GridFrame, GridItemFrame, HeadlessRenderer};
+use crate::render::{GridFrame, GridItemFrame, GridTextDisclosure, HeadlessRenderer};
+
+mod disclosure;
+mod table;
 
 const CELL: f32 = 150.;
 
@@ -72,6 +75,9 @@ impl PreparedGrid {
             })
             .collect::<Vec<_>>();
         for (left, axis) in [(true, 2), (false, 0)] {
+            if recipe.style.as_ref().is_some_and(|s| s.table.is_some()) {
+                break;
+            }
             for (index, value) in recipe.axes[axis].values.iter().enumerate() {
                 items.push(Item {
                     key: format!("group.{}.{index}", if left { "left" } else { "right" }),
@@ -93,8 +99,22 @@ impl PreparedGrid {
             }
         }
         for axis in 0..3 {
+            if axis != 0 && recipe.style.as_ref().is_some_and(|s| s.table.is_some()) {
+                continue;
+            }
+            // A one-layer product uses Z only as the neutral one-element axis.
+            // Do not make its label look like an extra column heading in 2D.
+            if axis == 2 && recipe.axes[axis].values.len() == 1 {
+                continue;
+            }
             for index in 0..recipe.axes[axis].values.len() {
-                items.push(heading(&recipe, axis, index, None));
+                let mut item = heading(&recipe, axis, index, None);
+                if let Some(table) = recipe.style.as_ref().and_then(|s| s.table.as_ref())
+                    && let Some(label) = table.headers.get(index)
+                {
+                    item.label = label.clone();
+                }
+                items.push(item);
             }
         }
         Ok(Self {
@@ -106,6 +126,9 @@ impl PreparedGrid {
 
     fn pose(&self, item: &Item, snapshot: &GridSnapshotPlan) -> Pose {
         let dims = self.recipe.dimensions();
+        if let Some(table) = self.recipe.style.as_ref().and_then(|s| s.table.as_ref()) {
+            return table::pose(table, dims, &item.kind, snapshot.visible);
+        }
         match item.kind {
             Kind::Cell([a, b, c]) => {
                 let center = match snapshot.arrangement {
@@ -137,11 +160,10 @@ impl PreparedGrid {
                     } else {
                         0.
                     },
-                    emphasis: if snapshot.focus_slice.is_none_or(|slice| slice == c) {
-                        1.
-                    } else {
-                        0.18
-                    },
+                    // Focus is a physical cutaway, not a contrast treatment.
+                    // The outgoing layer remains the visible front until it is
+                    // clipped away, so its grid lines must keep normal contrast.
+                    emphasis: 1.,
                 }
             }
             Kind::Heading { axis, index, group } => self.heading_pose(axis, index, group, snapshot),
@@ -254,19 +276,19 @@ impl PreparedGrid {
                 self.pose(item, s).emphasis
             }));
             channels.push(
-                self.channel(format!("{}.label", item.key), |s| match item.kind {
-                    Kind::Cell([_, _, c]) => {
-                        if matches!(
-                            s.arrangement,
-                            GridArrangement::LeftAssociated | GridArrangement::RightAssociated
-                        ) || c == s.focus_slice.unwrap_or(0)
-                        {
-                            1.
-                        } else {
-                            0.
-                        }
+                self.channel(format!("{}.disclosure", item.key), |snapshot| {
+                    // Every tuple keeps its own ink. Real depth occlusion decides
+                    // which board is visible, including the moving cut surface.
+                    // Fading the outgoing board early exposes a blank opaque face.
+                    if matches!(item.kind, Kind::Cell(_)) {
+                        return 1.;
                     }
-                    Kind::Group { .. } | Kind::Heading { .. } => 1.,
+                    // In the edge-linked treatment, extents alone disclose new
+                    // rows/columns/layers. Opacity handles only semantic switches
+                    // (camera/slice/regroup), never a parallel fade of every label.
+                    let mut complete = snapshot.clone();
+                    complete.visible = self.recipe.dimensions();
+                    self.pose(item, &complete).presence
                 }),
             );
         }
@@ -319,38 +341,28 @@ impl PreparedGrid {
         } else {
             0.000001
         };
-        let mut current = initial;
-        let mut events = Vec::new();
-        for (index, event) in self.recipe.events.iter().enumerate() {
-            if self
-                .recipe
-                .events
-                .get(index + 1)
-                .is_some_and(|next| next.at_nanos == event.at_nanos)
-            {
-                continue;
-            }
-            let target = value(&event.snapshot);
-            if target == current {
-                continue;
-            }
-            events.push(TrackEventPlan::Spring {
-                at_nanos: event.at_nanos,
-                target: target.into(),
-                response_seconds: 0.6,
-                damping_ratio: 1.,
-                position_threshold: threshold,
-                velocity_threshold: threshold,
-            });
-            current = target;
-        }
-        ContinuousChannelPlan {
-            id: format!("{}.__grid.{property}", self.actor_id),
-            actor_id: self.actor_id.clone(),
-            property: format!("__grid.{property}"),
-            initial: initial.into(),
-            events,
-        }
+        let motion = kinograph::plan::SpringPlan {
+            response_seconds: if property.ends_with(".disclosure") {
+                0.22 * 1.2
+            } else {
+                0.6
+            },
+            damping_ratio: 1.,
+            position_threshold: threshold,
+            velocity_threshold: threshold,
+        };
+        kinograph::plan::destination_channel(
+            &self.actor_id,
+            format!("__grid.{property}"),
+            initial,
+            kinograph::plan::effective_snapshots(&self.recipe.events, |e| e.at_nanos)
+                .map(|e| (e.at_nanos, value(&e.snapshot))),
+            |_, _| motion,
+        )
+    }
+
+    pub(super) fn actor_id(&self) -> &str {
+        &self.actor_id
     }
 
     pub(super) fn render(
@@ -358,6 +370,7 @@ impl PreparedGrid {
         renderer: &mut HeadlessRenderer,
         timeline: &Timeline,
         time: f64,
+        presentation_scale: f32,
     ) -> Result<Vec<u8>> {
         // Direct property lookup avoids an O(cells × channels) scan per frame.
         let value = |name: &str| -> Result<f32> {
@@ -371,6 +384,8 @@ impl PreparedGrid {
         };
         let extents = [value("extent.x")?, value("extent.y")?, value("extent.z")?];
         let slice = [value("slice.start")?, value("slice.end")?];
+        let style = self.recipe.style.as_ref();
+        let table = style.and_then(|s| s.table.as_ref());
         let items = self
             .items
             .iter()
@@ -403,21 +418,61 @@ impl PreparedGrid {
                     reveal,
                     trim,
                     fill: if let Kind::Cell([a, b, _]) = item.kind {
-                        if (a + b) % 2 == 0 {
-                            [0.032, 0.04, 0.056]
-                        } else {
-                            [0.018, 0.024, 0.036]
+                        let srgb = |color: [u8; 3]| {
+                            color.map(|c| {
+                                let c = f32::from(c) / 255.;
+                                if c <= 0.04045 {
+                                    c / 12.92
+                                } else {
+                                    ((c + 0.055) / 1.055).powf(2.4)
+                                }
+                            })
+                        };
+                        match style
+                            .map(|s| &s.fill)
+                            .unwrap_or(&GridFillPlan::Checkerboard)
+                        {
+                            GridFillPlan::Checkerboard => {
+                                if (a + b) % 2 == 0 {
+                                    [0.032, 0.04, 0.056]
+                                } else {
+                                    [0.018, 0.024, 0.036]
+                                }
+                            }
+                            GridFillPlan::None => [0.009, 0.012, 0.020],
+                            GridFillPlan::Uniform { color } => srgb(*color),
+                            GridFillPlan::Banded { color } => {
+                                if b % 2 == 0 {
+                                    srgb(*color)
+                                } else {
+                                    [0.009, 0.012, 0.020]
+                                }
+                            }
                         }
                     } else {
                         [0.; 3]
                     },
-                    label_opacity: value(&format!("{}.label", item.key))?.clamp(0., 1.),
+                    label_opacity: 1.,
+                    text_disclosure: Some(GridTextDisclosure {
+                        opacity: value(&format!("{}.disclosure", item.key))?.clamp(0., 1.)
+                            * if table.is_some() && matches!(item.kind, Kind::Heading { .. }) {
+                                0.7
+                            } else {
+                                1.
+                            },
+                        clip: table.map_or_else(
+                            || disclosure::clip(&item.kind, extents, slice),
+                            |table| table::clip(table, &item.kind, extents),
+                        ),
+                        feather_pixels: 8.,
+                    }),
                     emphasis: value(&format!("{}.emphasis", item.key))?.clamp(0., 1.),
                     group: matches!(
                         item.kind,
                         Kind::Group { .. } | Kind::Heading { group: Some(_), .. }
                     ),
                     heading: matches!(item.kind, Kind::Heading { .. }),
+                    label_style: table.and_then(|t| table::label_style(t, &item.kind)),
                 })
             })
             .collect::<Result<Vec<_>>>()?;
@@ -434,12 +489,22 @@ impl PreparedGrid {
                 scale = scale.min(310. / (center[1].abs() + size[1] / 2.));
             }
         }
-        renderer.render_grid(GridFrame {
+        if let Some(table) = table {
+            scale = (1400. / table.column_widths.iter().sum::<f32>())
+                .min(600. / ((dims[1] + 1) as f32 * table.row_height))
+                .min(1.);
+        }
+        let frame = GridFrame {
             items: &items,
             yaw: value("yaw")?,
             pitch: value("pitch")?,
-            scale: scale * (1. - 0.24 * value("grouping")?),
-        })
+            scale: scale * (1. - 0.24 * value("grouping")?) * presentation_scale.max(0.001),
+        };
+        if style.is_some() {
+            renderer.render_grid_styled(frame, style)
+        } else {
+            renderer.render_grid(frame)
+        }
     }
 }
 
@@ -487,6 +552,7 @@ fn group_bounds(dims: [usize; 3], left: bool, index: usize) -> ([f32; 3], [f32; 
 }
 
 /// Shared GPU-free preflight and preparation; generated channels are reserved.
+#[allow(dead_code)] // Concrete entrypoint staged into the isolated browser host.
 pub(super) fn compile(plan: &mut ScenePlan) -> Result<Option<PreparedGrid>> {
     let grid = plan
         .actors
@@ -495,19 +561,7 @@ pub(super) fn compile(plan: &mut ScenePlan) -> Result<Option<PreparedGrid>> {
         .map(|actor| PreparedGrid::new(actor, plan.duration_nanos))
         .transpose()?;
     if let Some(grid) = &grid {
-        for channel in grid.channels() {
-            if plan.continuous_channels.iter().any(|existing| {
-                existing.id == channel.id
-                    || (existing.actor_id == channel.actor_id
-                        && existing.property == channel.property)
-            }) {
-                bail!(
-                    "authored channel collides with generated grid channel '{}'",
-                    channel.id
-                );
-            }
-            plan.continuous_channels.push(channel);
-        }
+        super::generated::extend(plan, grid.channels(), super::generated::Owner::Grid)?;
     }
     Ok(grid)
 }
@@ -516,8 +570,402 @@ pub(super) fn compile(plan: &mut ScenePlan) -> Result<Option<PreparedGrid>> {
 mod tests {
     use super::*;
     use crate::plan_runtime::{PreparedPlan, validate_renderer_plan};
+    use kinograph::plan::TrackEventPlan;
     use kinograph::playback::PlaybackCommand;
     use std::{path::Path, time::Duration};
+
+    #[test]
+    #[ignore = "requires a headless GPU; table paint, fixed headers, configurable rules, and opaque unfilled depth"]
+    fn table_styles_change_paint_without_changing_retained_pixels_or_occlusion() {
+        use kinograph::grid::{GridFillPlan, GridRules};
+        let mut renderer =
+            pollster::block_on(crate::plan_runtime::new_renderer("table-style-proof")).unwrap();
+        let deck = kinograph_keyed_grid::build_style_deck().unwrap();
+        let prepare = |plan: ScenePlan, renderer: &mut HeadlessRenderer| {
+            validate_renderer_plan(&plan).unwrap();
+            PreparedPlan::prepare(plan, Path::new("."), renderer).unwrap()
+        };
+        let p = prepare(deck.slides[0].plan.clone(), &mut renderer);
+        let first = p.render_sample(&mut renderer, 5.).unwrap();
+        let full = p.render_sample(&mut renderer, 11.).unwrap();
+        assert_eq!(
+            &first[300 * 1920 * 4..450 * 1920 * 4],
+            &full[300 * 1920 * 4..450 * 1920 * 4],
+            "headers and retained first row must stay still"
+        );
+        let pixel = |pixels: &[u8], x: usize, y: usize| {
+            pixels[(y * 1920 + x) * 4..(y * 1920 + x) * 4 + 4].to_vec()
+        };
+        let background = pixel(&full, 10, 10);
+        for y in [414, 498, 582, 666] {
+            assert_eq!(
+                pixel(&full, 700, y),
+                background,
+                "None fill must match the background"
+            );
+        }
+        assert_ne!(
+            pixel(&full, 850, 435),
+            background,
+            "normal tables include vertical separators by default"
+        );
+        assert_ne!(
+            pixel(&full, 700, 456),
+            background,
+            "row rule must be visible"
+        );
+        let banded = prepare(deck.slides[1].plan.clone(), &mut renderer)
+            .render_sample(&mut renderer, 11.)
+            .unwrap();
+        assert_ne!(pixel(&banded, 700, 414), pixel(&banded, 700, 498));
+        for rules in [GridRules::Grid, GridRules::Rows, GridRules::None] {
+            let mut plan = deck.slides[0].plan.clone();
+            let actor = plan
+                .actors
+                .iter_mut()
+                .find(|a| a.recipe == GRID_RECIPE)
+                .unwrap();
+            let mut recipe: GridRecipePlan = serde_json::from_value(actor.data.clone()).unwrap();
+            recipe.style.as_mut().unwrap().rules = rules;
+            actor.data = serde_json::to_value(recipe).unwrap();
+            let pixels = prepare(plan, &mut renderer)
+                .render_sample(&mut renderer, 11.)
+                .unwrap();
+            match rules {
+                GridRules::Grid => assert_ne!(pixel(&pixels, 850, 435), background),
+                GridRules::None => assert_eq!(pixel(&pixels, 700, 456), background),
+                GridRules::Rows => assert_eq!(pixel(&pixels, 850, 435), background),
+            }
+        }
+        // Removing material contrast is not permission to see labels through
+        // the front layer. A hidden-payload canary must have no visible effect.
+        let mut plan = deck.slides[2].plan.clone();
+        let actor = plan
+            .actors
+            .iter_mut()
+            .find(|a| a.recipe == GRID_RECIPE)
+            .unwrap();
+        let mut recipe: GridRecipePlan = serde_json::from_value(actor.data.clone()).unwrap();
+        assert_eq!(recipe.style.as_ref().unwrap().fill, GridFillPlan::None);
+        recipe.initial = GridSnapshotPlan {
+            visible: recipe.dimensions(),
+            arrangement: GridArrangement::Table,
+            focus_slice: None,
+        };
+        recipe.events.clear();
+        actor.data = serde_json::to_value(&recipe).unwrap();
+        let expected = prepare(plan.clone(), &mut renderer)
+            .render_sample(&mut renderer, 0.)
+            .unwrap();
+        for label in &mut recipe.labels {
+            if label.indices[2] > 0 {
+                label.primary = "LEAK".into();
+                label.secondary = "HIDDEN".into();
+            }
+        }
+        plan.actors
+            .iter_mut()
+            .find(|a| a.recipe == GRID_RECIPE)
+            .unwrap()
+            .data = serde_json::to_value(recipe).unwrap();
+        let actual = prepare(plan, &mut renderer)
+            .render_sample(&mut renderer, 0.)
+            .unwrap();
+        assert!(
+            actual == expected,
+            "unfilled material must remain opaque to rear ink"
+        );
+    }
+
+    #[test]
+    #[ignore = "requires a headless GPU; both table paints survive arbitrary native navigation and reversed growth"]
+    fn styled_tables_retain_pixel_continuity_through_navigation() {
+        let mut renderer =
+            pollster::block_on(crate::plan_runtime::new_renderer("table-navigation-proof"))
+                .unwrap();
+        for slide in kinograph_keyed_grid::build_style_deck()
+            .unwrap()
+            .slides
+            .into_iter()
+            .take(2)
+        {
+            let p = PreparedPlan::prepare(slide.plan, Path::new("."), &mut renderer).unwrap();
+            let mut playback = p.playback(false).unwrap();
+            let mut now = Duration::ZERO;
+            for command in [
+                PlaybackCommand::Next,
+                PlaybackCommand::Next,
+                PlaybackCommand::Previous,
+                PlaybackCommand::Last,
+                PlaybackCommand::Previous,
+                PlaybackCommand::First,
+            ] {
+                let boundary = crate::plan_runtime::proof::interrupt(
+                    &p,
+                    &mut renderer,
+                    &mut playback,
+                    now,
+                    command,
+                )
+                .unwrap();
+                assert!(boundary.changed);
+                boundary.assert_states_within(&p, 0.001);
+                boundary.assert_pixels(&p, &mut renderer);
+                boundary.sample_later_and_repeat(&p, &mut renderer, 0.08);
+                now += Duration::from_millis(130);
+            }
+            let mut reduced = p.playback(true).unwrap();
+            for step in &p.plan.presentation_steps {
+                let sample = reduced.sample(Duration::ZERO);
+                assert!(
+                    p.render_sample(&mut renderer, step.hold_nanos as f64 / 1e9)
+                        .unwrap()
+                        == p.render_sample_using(
+                            &mut renderer,
+                            sample.at_nanos as f64 / 1e9,
+                            &reduced.timeline()
+                        )
+                        .unwrap()
+                );
+                reduced.command(PlaybackCommand::Next, Duration::ZERO);
+            }
+        }
+    }
+
+    #[test]
+    fn one_layer_product_has_no_spurious_depth_heading() {
+        let p = kinograph_data_modeling::build_deck().unwrap().slides[5]
+            .plan
+            .clone();
+        let actor = p.actors.iter().find(|a| a.recipe == GRID_RECIPE).unwrap();
+        let grid = PreparedGrid::new(actor, p.duration_nanos).unwrap();
+        assert!(!grid.items.iter().any(|item| matches!(
+            item.kind,
+            Kind::Heading {
+                axis: 2,
+                group: None,
+                ..
+            }
+        )));
+        assert_eq!(
+            grid.items
+                .iter()
+                .filter(|item| matches!(item.kind, Kind::Cell(_)))
+                .count(),
+            10
+        );
+    }
+
+    #[test]
+    fn slice_focus_changes_cutaway_bounds_not_cell_contrast() {
+        let p = plan(0);
+        let grid = PreparedGrid::new(&p.actors[0], p.duration_nanos).unwrap();
+        for snapshot in std::iter::once(&grid.recipe.initial)
+            .chain(grid.recipe.events.iter().map(|event| &event.snapshot))
+        {
+            for item in &grid.items {
+                assert_eq!(
+                    grid.pose(item, snapshot).emphasis,
+                    1.,
+                    "{} must keep normal contrast until geometry removes it",
+                    item.key
+                );
+            }
+        }
+        for channel in grid
+            .channels()
+            .iter()
+            .filter(|channel| channel.property.ends_with(".emphasis"))
+        {
+            assert!(
+                channel.events.is_empty(),
+                "slice focus must not schedule a competing contrast fade: {}",
+                channel.id
+            );
+        }
+    }
+
+    #[test]
+    #[ignore = "requires a headless GPU; compare cutaway pixels with identical geometry at normal contrast"]
+    fn cutaway_strokes_keep_normal_contrast_through_navigation() {
+        let mut renderer =
+            pollster::block_on(crate::plan_runtime::new_renderer("slice-contrast-proof")).unwrap();
+        let p = prepared(0);
+        let grid = &p.grid;
+        let mut reference_plan = p.plan.clone();
+        for channel in &mut reference_plan.continuous_channels {
+            if channel.property.ends_with(".emphasis") {
+                channel.initial = 1.0.into();
+                channel.events.clear();
+            }
+        }
+        let reference =
+            crate::plan_runtime::CompiledPlan::compile(reference_plan, Path::new(".")).unwrap();
+        let check =
+            |renderer: &mut HeadlessRenderer, timeline: &Timeline, normal: &Timeline, time| {
+                let pixels = grid.render(renderer, timeline, time, 1.).unwrap();
+                let expected = grid.render(renderer, normal, time, 1.).unwrap();
+                let changed = pixels
+                    .iter()
+                    .zip(expected)
+                    .filter(|(a, b)| **a != *b)
+                    .count();
+                assert_eq!(
+                    changed, 0,
+                    "visible grid dims during cutaway at {time}: {changed} components"
+                );
+            };
+        for time in [21., 21.15, 21.35, 21.65, 22., 23., 24.15, 24.35, 24.65, 26.] {
+            check(&mut renderer, &p.timeline, &reference.timeline, time);
+        }
+        let mut playback = p.playback(true).unwrap();
+        let mut normal = reference.playback(true).unwrap();
+        for _ in 0..6 {
+            playback.command(PlaybackCommand::Next, Duration::ZERO);
+            normal.command(PlaybackCommand::Next, Duration::ZERO);
+        }
+        playback.set_reduced_motion(false, Duration::ZERO);
+        normal.set_reduced_motion(false, Duration::ZERO);
+        let mut now = Duration::ZERO;
+        for command in [
+            PlaybackCommand::Next,
+            PlaybackCommand::Previous,
+            PlaybackCommand::Last,
+            PlaybackCommand::Previous,
+            PlaybackCommand::Next,
+        ] {
+            assert!(playback.command(command, now));
+            assert!(normal.command(command, now));
+            for millis in [0, 40, 100] {
+                let at = playback
+                    .sample(now + Duration::from_millis(millis))
+                    .at_nanos as f64
+                    / 1e9;
+                check(&mut renderer, &playback.timeline(), &normal.timeline(), at);
+            }
+            now += Duration::from_millis(130);
+        }
+    }
+
+    #[test]
+    #[ignore = "requires a headless GPU; outgoing regroup headings cannot darken or occlude the moving grid"]
+    fn regroup_headings_fade_without_dark_glyph_residue() {
+        let mut renderer =
+            pollster::block_on(crate::plan_runtime::new_renderer("regroup-heading-proof")).unwrap();
+        let p = prepared(1);
+        let grid = &p.grid;
+        let mut bare = PreparedGrid::new(&plan(1).actors[0], p.plan.duration_nanos).unwrap();
+        for item in &mut bare.items {
+            if !matches!(item.kind, Kind::Cell(_)) {
+                item.label.clear();
+                item.detail.clear();
+            }
+        }
+        let check = |renderer: &mut HeadlessRenderer, timeline: &Timeline, time| {
+            let pixels = grid.render(renderer, timeline, time, 1.).unwrap();
+            let base = bare.render(renderer, timeline, time, 1.).unwrap();
+            // Heading green is at least as bright as every cell/stroke/label in
+            // this scene. An alpha overlay cannot produce a dark green remnant.
+            let dark = pixels
+                .chunks_exact(4)
+                .zip(base.chunks_exact(4))
+                .filter(|(pixel, base)| pixel[1] < base[1])
+                .count();
+            assert_eq!(dark, 0, "dark heading residue at {time}: {dark} pixels");
+            pixels
+        };
+        for time in [0., 3.15, 3.35, 6.15, 9.15, 12.05, 12.15, 12.35, 12.75, 14.] {
+            check(&mut renderer, &p.timeline, time);
+        }
+        let mut playback = p.playback(false).unwrap();
+        let mut now = Duration::ZERO;
+        for command in [
+            PlaybackCommand::Next,
+            PlaybackCommand::Next,
+            PlaybackCommand::Last,
+            PlaybackCommand::Previous,
+            PlaybackCommand::First,
+            PlaybackCommand::Next,
+        ] {
+            now += Duration::from_millis(130);
+            let at = playback.sample(now).at_nanos as f64 / 1e9;
+            let before = check(&mut renderer, &playback.timeline(), at);
+            assert!(playback.command(command, now));
+            let timeline = playback.timeline();
+            assert_eq!(
+                before,
+                check(&mut renderer, &timeline, at),
+                "interruption boundary"
+            );
+            check(&mut renderer, &timeline, at + 0.08);
+            assert_eq!(
+                before,
+                check(&mut renderer, &timeline, at),
+                "out-of-order sampling"
+            );
+        }
+    }
+
+    #[test]
+    #[ignore = "requires a headless GPU; cell ink must survive the complete board-II cutaway"]
+    fn slice_cutaway_never_leaves_a_blank_front_face() {
+        let mut renderer =
+            pollster::block_on(crate::plan_runtime::new_renderer("slice-ink-proof")).unwrap();
+        let p = prepared(0);
+        let grid = &p.grid;
+        let mut blank = PreparedGrid::new(&plan(0).actors[0], p.plan.duration_nanos).unwrap();
+        for item in &mut blank.items {
+            if matches!(item.kind, Kind::Cell(_)) {
+                item.label.clear();
+                item.detail.clear();
+            }
+        }
+        let ink = |renderer: &mut HeadlessRenderer, timeline: &Timeline, time| {
+            let pixels = grid.render(renderer, timeline, time, 1.).unwrap();
+            let background = blank.render(renderer, timeline, time, 1.).unwrap();
+            pixels
+                .iter()
+                .zip(background)
+                .map(|(&a, b)| u64::from(a.abs_diff(b)))
+                .sum::<u64>()
+        };
+        let held = ink(&mut renderer, &p.timeline, 23.);
+        for time in [21., 21.1, 21.2, 21.35, 21.5, 21.75, 22., 22.5, 23.] {
+            let coverage = ink(&mut renderer, &p.timeline, time);
+            eprintln!("slice t={time}: ink={coverage}, held={held}");
+            assert!(
+                coverage > held / 2,
+                "front face goes blank at {time}: {coverage}/{held}"
+            );
+        }
+        let mut playback = p.playback(true).unwrap();
+        for _ in 0..6 {
+            playback.command(PlaybackCommand::Next, Duration::ZERO);
+        }
+        playback.set_reduced_motion(false, Duration::ZERO);
+        let mut now = Duration::ZERO;
+        for command in [
+            PlaybackCommand::Next,
+            PlaybackCommand::Previous,
+            PlaybackCommand::Last,
+            PlaybackCommand::Previous,
+            PlaybackCommand::Next,
+        ] {
+            assert!(playback.command(command, now));
+            let timeline = playback.timeline();
+            for millis in [0, 40, 100] {
+                let at = playback
+                    .sample(now + Duration::from_millis(millis))
+                    .at_nanos as f64
+                    / 1e9;
+                assert!(
+                    ink(&mut renderer, &timeline, at) > held / 2,
+                    "blank ink during interrupted {command:?} at {at}"
+                );
+            }
+            now += Duration::from_millis(130);
+        }
+    }
 
     fn plan(index: usize) -> ScenePlan {
         kinograph_keyed_grid::build_deck().unwrap().slides[index]
@@ -525,12 +973,21 @@ mod tests {
             .clone()
     }
 
-    fn prepared(index: usize) -> PreparedPlan {
+    struct CompiledGrid {
+        compiled: crate::plan_runtime::CompiledPlan,
+        grid: PreparedGrid,
+    }
+    impl std::ops::Deref for CompiledGrid {
+        type Target = crate::plan_runtime::CompiledPlan;
+        fn deref(&self) -> &Self::Target {
+            &self.compiled
+        }
+    }
+    fn prepared(index: usize) -> CompiledGrid {
         let mut plan = plan(index);
-        let grid = compile(&mut plan).unwrap();
-        let mut prepared = PreparedPlan::compile(plan, Path::new(".")).unwrap();
-        prepared.grid = grid;
-        prepared
+        let grid = compile(&mut plan).unwrap().unwrap();
+        let compiled = crate::plan_runtime::CompiledPlan::compile(plan, Path::new(".")).unwrap();
+        CompiledGrid { compiled, grid }
     }
 
     #[test]
@@ -664,7 +1121,7 @@ mod tests {
     #[test]
     fn grouping_preserves_all_tuples_and_each_group_has_the_right_members() {
         let prepared = prepared(1);
-        let grid = prepared.grid.as_ref().unwrap();
+        let grid = &prepared.grid;
         let cells = grid
             .items
             .iter()
@@ -798,7 +1255,7 @@ mod tests {
                     .zip(&next)
                     .map(|(&a, &b)| a.abs_diff(b) as u64)
                     .sum::<u64>();
-                // Twenty-four moving cubes change many edge pixels even over
+                // Twenty-four moving cells change many edge pixels even over
                 // 0.2 ms. Require convergence toward the identical boundary,
                 // allowing a small MSAA coverage floor, not zero finite motion.
                 let fine_prior = p

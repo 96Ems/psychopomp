@@ -2,11 +2,11 @@ use std::{collections::HashMap, ops::Range};
 
 use anyhow::{Context, Result};
 use kinograph::{
-    code::{CodeTransition, RangeId, TransitionProgress},
+    code::RangeId,
     dsl::TargetGeometry,
-    editor::{EditorRecipePlan, EditorTargetSelector},
+    editor::{CompiledEditor, EditorRecipePlan, EditorTargetSelector},
     motion::MotionState,
-    plan::{ActorPlan, SemanticTargetPlan},
+    plan::ActorPlan,
 };
 
 use crate::render::{
@@ -16,10 +16,14 @@ use crate::render::{
 
 pub(super) struct PreparedEditor {
     actor_id: String,
-    recipe: EditorRecipePlan,
-    transition: CodeTransition,
-    inline_reveals: Vec<PreparedInlineReveal>,
+    editor: CompiledEditor,
     targets: HashMap<String, MeasuredTarget>,
+}
+
+pub(super) struct EditorSelection {
+    line_id: String,
+    spans: Range<usize>,
+    endpoints: [[f32; 2]; 2],
 }
 
 struct MeasuredTarget {
@@ -36,49 +40,24 @@ pub(super) struct TargetMotion {
     pub line_y: MotionState,
 }
 
-struct PreparedInlineReveal {
-    line_id: String,
-    spans: Range<usize>,
-    channel: String,
-    reversed: bool,
-}
-
 impl PreparedEditor {
     pub(super) fn new(actor: &ActorPlan) -> Result<Self> {
         let recipe = serde_json::from_value::<EditorRecipePlan>(actor.data.clone())
             .with_context(|| format!("parse editor recipe for actor '{}'", actor.id))?;
-        let transition = recipe.transition()?;
-        let settled = transition.sample(TransitionProgress {
-            layout: 1.0,
-            content: 1.0,
-        });
-        let inline_reveals = std::iter::once(&recipe.inline_reveal)
-            .chain(&recipe.additional_inline_reveals)
-            .map(|reveal| {
-                let line = settled
-                    .iter()
-                    .find(|line| line.line.id.as_str() == reveal.line_id)
-                    .with_context(|| {
-                        format!(
-                            "editor actor '{}' inline reveal references unknown line '{}'",
-                            actor.id, reveal.line_id
-                        )
-                    })?;
-                Ok(PreparedInlineReveal {
-                    line_id: reveal.line_id.clone(),
-                    spans: line
-                        .line
-                        .semantic_span_range(&RangeId::new(&reveal.range_id))?,
-                    channel: reveal.channel().to_owned(),
-                    reversed: reveal.reversed,
-                })
-            })
-            .collect::<Result<Vec<_>>>()?;
+        let editor = recipe.compile()?;
+        for reveal in editor.inline_reveals() {
+            editor
+                .line_endpoints(&reveal.plan.line_id)
+                .with_context(|| {
+                    format!(
+                        "editor actor '{}' inline reveal references unknown line '{}'",
+                        actor.id, reveal.plan.line_id
+                    )
+                })?;
+        }
         Ok(Self {
             actor_id: actor.id.clone(),
-            recipe,
-            transition,
-            inline_reveals,
+            editor,
             targets: HashMap::new(),
         })
     }
@@ -88,74 +67,82 @@ impl PreparedEditor {
     }
 
     pub(super) fn file_name(&self) -> &str {
-        &self.recipe.file_name
+        self.editor.file_name()
     }
 
-    pub(super) fn resolve_target(
-        &mut self,
-        renderer: &mut HeadlessRenderer,
-        target: &SemanticTargetPlan,
-    ) -> Result<TargetGeometry> {
-        let selector = serde_json::from_value::<EditorTargetSelector>(target.selector.clone())
-            .with_context(|| format!("parse editor semantic target '{}'", target.id))?;
-        let lines = self.transition.sample(TransitionProgress {
-            layout: 1.0,
-            content: 1.0,
-        });
-        let line = lines
-            .iter()
-            .find(|line| line.line.id.as_str() == selector.line_id)
+    pub(super) fn select(
+        &self,
+        id: &str,
+        selector: &EditorTargetSelector,
+    ) -> Result<EditorSelection> {
+        let endpoints = self
+            .editor
+            .line_endpoints(&selector.line_id)
             .with_context(|| {
                 format!(
                     "editor actor '{}' target '{}' references unknown line '{}'",
-                    self.actor_id, target.id, selector.line_id
+                    self.actor_id, id, selector.line_id
                 )
             })?;
-        let selected = line
-            .line
+        let spans = self
+            .editor
+            .line(&selector.line_id)
+            .expect("participating catalog line")
             .semantic_span_range(&RangeId::new(&selector.range_id))?;
+        Ok(EditorSelection {
+            line_id: selector.line_id.clone(),
+            spans,
+            endpoints,
+        })
+    }
+
+    pub(super) fn resolve_selection(
+        &mut self,
+        renderer: &mut HeadlessRenderer,
+        id: &str,
+        selection: &EditorSelection,
+    ) -> Result<TargetGeometry> {
+        let [before, after] = selection.endpoints;
+        let line = self
+            .editor
+            .line(&selection.line_id)
+            .expect("participating catalog line");
+        let selected = selection.spans.clone();
         let reveals = self
-            .inline_reveals
+            .editor
+            .inline_reveals()
             .iter()
-            .filter(|reveal| reveal.line_id == selector.line_id)
+            .filter(|reveal| reveal.plan.line_id == selection.line_id)
             .collect::<Vec<_>>();
         let frames = reveals
             .iter()
             .map(|reveal| InlineRevealFrame {
-                line_id: &reveal.line_id,
+                line_id: &reveal.plan.line_id,
                 start_span: reveal.spans.start,
                 end_span: reveal.spans.end,
                 progress: 1.0,
             })
             .collect::<Vec<_>>();
         let segments = renderer
-            .measure_inline_target(line.line, &frames, selected)?
+            .measure_inline_target(line, &frames, selected)?
             .into_iter()
             .map(|metrics| {
                 let driver = reveals
                     .iter()
                     .find(|reveal| reveal.spans == metrics.spans)
-                    .map(|reveal| (reveal.channel.clone(), reveal.reversed));
+                    .map(|reveal| (reveal.plan.channel().to_owned(), reveal.plan.reversed));
                 (metrics, driver)
             })
             .collect();
-        let before = self.transition.sample(TransitionProgress {
-            layout: 0.,
-            content: 0.,
-        });
-        let before = before
-            .iter()
-            .find(|line| line.line.id.as_str() == selector.line_id)
-            .expect("validated line");
         let measured = MeasuredTarget {
-            line_id: selector.line_id,
-            keyed_lines: !self.recipe.snapshots.is_empty(),
+            line_id: selection.line_id.clone(),
+            keyed_lines: self.editor.is_keyed(),
             segments,
-            before: [before.x, before.y],
-            after: [line.x, line.y],
+            before,
+            after,
         };
         let motion = measured.sample(|_, default| MotionState::at(default), true);
-        self.targets.insert(target.id.clone(), measured);
+        self.targets.insert(id.to_owned(), measured);
         Ok(TargetGeometry {
             x: motion.x.position,
             width: motion.width.position,
@@ -190,8 +177,8 @@ impl PreparedEditor {
             (width
                 + target.before[0].abs()
                 + target.after[0].abs()
-                + self.recipe.lines.len() as f32 * self.recipe.line_height)
-                .max(1.0)
+                + self.editor.lines().len() as f32 * self.editor.line_height())
+            .max(1.0)
         })
     }
 
@@ -199,15 +186,15 @@ impl PreparedEditor {
         std::iter::once("layout".into())
             .chain(std::iter::once("content".into()))
             .chain(
-                self.inline_reveals
+                self.editor
+                    .inline_reveals()
                     .iter()
-                    .map(|reveal| reveal.channel.clone()),
+                    .map(|reveal| reveal.plan.channel().to_owned()),
             )
             .chain(
-                self.recipe
-                    .lines
-                    .iter()
-                    .map(|line| format!("line.{}.y", line.id)),
+                self.editor
+                    .lines()
+                    .map(|line| format!("line.{}.y", line.id.as_str())),
             )
             .collect()
     }
@@ -216,7 +203,7 @@ impl PreparedEditor {
         &self,
         duration_nanos: u64,
     ) -> Result<Vec<kinograph::plan::ContinuousChannelPlan>> {
-        self.recipe
+        self.editor
             .snapshot_channels(&self.actor_id, duration_nanos)
     }
 
@@ -230,35 +217,15 @@ impl PreparedEditor {
         let value = |actor: &str, property: &str, default: f32| {
             sample(actor, property, time).map_or(default, |state| state.position)
         };
-        let layout = value(&self.actor_id, "layout", 0.0);
-        let content = value(&self.actor_id, "content", 0.0);
-        let mut lines = self
-            .transition
-            .sample(TransitionProgress { layout, content });
-        if !self.recipe.snapshots.is_empty() {
-            for line in &mut lines {
-                line.x = 0.0;
-                line.y = value(
-                    &self.actor_id,
-                    &format!("line.{}.y", line.line.id.as_str()),
-                    line.y,
-                );
-                line.opacity = value(
-                    &self.actor_id,
-                    &format!("line.{}.opacity", line.line.id.as_str()),
-                    line.opacity,
-                )
-                .clamp(0.0, 1.0);
-                line.blur = (1.0 - line.opacity) * 4.0;
-            }
-        }
+        let lines = self.editor.sample_lines(|p, d| value(&self.actor_id, p, d));
         let focus_line_y = lines
             .iter()
-            .find(|line| line.line.id.as_str() == self.recipe.focus_line_id)
+            .find(|line| line.line.id.as_str() == self.editor.focus_line_id())
             .with_context(|| {
                 format!(
                     "editor actor '{}' focus references unknown line '{}'",
-                    self.actor_id, self.recipe.focus_line_id
+                    self.actor_id,
+                    self.editor.focus_line_id()
                 )
             })?
             .y;
@@ -281,19 +248,16 @@ impl PreparedEditor {
             }
         };
         let inline_reveals = self
-            .inline_reveals
+            .editor
+            .inline_reveals()
             .iter()
             .map(|reveal| {
-                let progress = value(&self.actor_id, &reveal.channel, 0.0);
+                let progress = value(&self.actor_id, reveal.plan.channel(), 0.0);
                 InlineRevealFrame {
-                    line_id: &reveal.line_id,
+                    line_id: &reveal.plan.line_id,
                     start_span: reveal.spans.start,
                     end_span: reveal.spans.end,
-                    progress: if reveal.reversed {
-                        1.0 - progress
-                    } else {
-                        progress
-                    },
+                    progress: reveal.plan.progress(progress),
                 }
             })
             .collect::<Vec<_>>();
@@ -306,7 +270,7 @@ impl PreparedEditor {
             panel_near_blur: value(&self.actor_id, "panel-near-blur", 0.0),
             focus_intensity: value(&self.actor_id, "focus", 0.0).clamp(0.0, 1.0),
             focus_line_y,
-            focus_height: self.recipe.focus_height,
+            focus_height: self.editor.focus_height(),
             token_highlight,
             bright_text: &[],
             pointer,

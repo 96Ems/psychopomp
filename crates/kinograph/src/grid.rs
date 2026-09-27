@@ -18,6 +18,98 @@ pub struct GridRecipePlan {
     pub initial: GridSnapshotPlan,
     #[serde(default)]
     pub events: Vec<GridEventPlan>,
+    /// Omitted preserves the original cube presentation and serialized plans.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub style: Option<GridStylePlan>,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", default)]
+pub struct GridStylePlan {
+    pub fill: GridFillPlan,
+    pub rules: GridRules,
+    pub line_width: f32,
+    pub line_opacity: f32,
+    pub table: Option<GridTableLayout>,
+}
+
+impl Default for GridStylePlan {
+    fn default() -> Self {
+        Self {
+            fill: GridFillPlan::Checkerboard,
+            rules: GridRules::Grid,
+            line_width: 1.7,
+            line_opacity: 1.,
+            table: None,
+        }
+    }
+}
+
+impl GridStylePlan {
+    pub fn plain_table(column_widths: Vec<f32>) -> Self {
+        Self {
+            fill: GridFillPlan::None,
+            rules: GridRules::Grid,
+            line_width: 1.,
+            line_opacity: 0.4,
+            table: Some(GridTableLayout {
+                column_widths,
+                row_height: 84.,
+                font_size: 28.,
+                padding: 24.,
+                alignments: vec![],
+                headers: vec![],
+            }),
+        }
+    }
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "kebab-case")]
+pub enum GridFillPlan {
+    #[default]
+    Checkerboard,
+    /// Background-matching opaque material, not transparent wireframe.
+    None,
+    Uniform {
+        color: [u8; 3],
+    },
+    Banded {
+        color: [u8; 3],
+    },
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum GridRules {
+    #[default]
+    Grid,
+    Rows,
+    None,
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum GridAlignment {
+    #[default]
+    Left,
+    Center,
+    Right,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GridTableLayout {
+    pub column_widths: Vec<f32>,
+    pub row_height: f32,
+    pub font_size: f32,
+    /// Horizontal inset in unscaled scene pixels.
+    pub padding: f32,
+    #[serde(default)]
+    pub alignments: Vec<GridAlignment>,
+    /// Optional display headings, independent of immutable column identity.
+    #[serde(default)]
+    pub headers: Vec<String>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -100,6 +192,69 @@ impl GridRecipePlan {
 
     pub fn validate(&self, duration: u64) -> Result<()> {
         self.validate_catalog()?;
+        if let Some(style) = &self.style {
+            if !style.line_width.is_finite()
+                || !(0.5..=4.).contains(&style.line_width)
+                || !style.line_opacity.is_finite()
+                || !(0.0..=1.).contains(&style.line_opacity)
+            {
+                bail!("grid line width must be in [0.5,4] and opacity in [0,1]");
+            }
+            if let Some(table) = &style.table {
+                let dims = self.dimensions();
+                if dims[2] != 1
+                    || std::iter::once(&self.initial)
+                        .chain(self.events.iter().map(|e| &e.snapshot))
+                        .any(|s| {
+                            matches!(
+                                s.arrangement,
+                                GridArrangement::LeftAssociated | GridArrangement::RightAssociated
+                            )
+                        })
+                {
+                    bail!(
+                        "table layout supports one depth layer in Table or Layers arrangement; regrouping remains a cube-layout operation"
+                    );
+                }
+                if table.column_widths.len() != dims[0]
+                    || table
+                        .column_widths
+                        .iter()
+                        .any(|w| !w.is_finite() || !(64.0..=900.).contains(w))
+                    || !table.row_height.is_finite()
+                    || !(40.0..=240.).contains(&table.row_height)
+                    || !table.font_size.is_finite()
+                    || !(12.0..=64.).contains(&table.font_size)
+                    || !table.padding.is_finite()
+                    || table.padding < 0.
+                    || table.column_widths.iter().any(|w| 2. * table.padding >= *w)
+                    || table.row_height
+                        < table.font_size
+                            * if self.labels.iter().any(|l| !l.secondary.is_empty()) {
+                                2.5
+                            } else {
+                                1.5
+                            }
+                    || (!table.alignments.is_empty() && table.alignments.len() != dims[0])
+                    || (!table.headers.is_empty() && table.headers.len() != dims[0])
+                    || table
+                        .headers
+                        .iter()
+                        .any(|s| s.trim().is_empty() || s.contains(['\n', '\r']))
+                {
+                    bail!(
+                        "invalid table widths, row height, typography, padding, alignments, or display headings"
+                    );
+                }
+                if self
+                    .labels
+                    .iter()
+                    .any(|l| l.primary.contains(['\n', '\r']) || l.secondary.contains(['\n', '\r']))
+                {
+                    bail!("table cells require single-line primary and secondary text");
+                }
+            }
+        }
         self.validate_snapshot(&self.initial)?;
         let mut previous = 0;
         for event in &self.events {
@@ -181,6 +336,7 @@ mod tests {
                 focus_slice: None,
             },
             events: vec![],
+            style: None,
         }
     }
 
@@ -250,5 +406,81 @@ mod tests {
         recipe.labels.pop();
         recipe.labels[0].indices = [3, 0, 0];
         assert!(recipe.validate(10).is_err());
+    }
+
+    #[test]
+    fn presentation_is_optional_and_never_changes_cell_identity() {
+        let mut recipe = recipe();
+        let cells = recipe.cells().unwrap();
+        assert!(
+            serde_json::to_value(&recipe)
+                .unwrap()
+                .get("style")
+                .is_none()
+        );
+        for fill in [
+            GridFillPlan::None,
+            GridFillPlan::Uniform {
+                color: [24, 28, 39],
+            },
+            GridFillPlan::Banded {
+                color: [30, 35, 45],
+            },
+        ] {
+            recipe.style = Some(GridStylePlan {
+                fill,
+                ..Default::default()
+            });
+            recipe.validate(10).unwrap();
+            assert_eq!(recipe.cells().unwrap(), cells);
+        }
+    }
+
+    #[test]
+    fn plain_table_validates_its_real_geometry_not_a_square_cell_assumption() {
+        let mut r = recipe();
+        r.axes[2].values.truncate(1);
+        r.initial.visible = [3, 2, 1];
+        r.style = Some(GridStylePlan::plain_table(vec![400., 280., 200.]));
+        r.validate(10).unwrap();
+        let mut invalid = r.clone();
+        invalid
+            .style
+            .as_mut()
+            .unwrap()
+            .table
+            .as_mut()
+            .unwrap()
+            .column_widths
+            .pop();
+        assert!(invalid.validate(10).is_err());
+        let mut invalid = r.clone();
+        invalid
+            .style
+            .as_mut()
+            .unwrap()
+            .table
+            .as_mut()
+            .unwrap()
+            .padding = 110.;
+        assert!(invalid.validate(10).is_err());
+        let mut invalid = r.clone();
+        invalid
+            .style
+            .as_mut()
+            .unwrap()
+            .table
+            .as_mut()
+            .unwrap()
+            .alignments = vec![GridAlignment::Right];
+        assert!(invalid.validate(10).is_err());
+        let mut invalid = r.clone();
+        invalid.initial.arrangement = GridArrangement::RightAssociated;
+        assert!(invalid.validate(10).is_err());
+        let mut invalid = r.clone();
+        invalid.style.as_mut().unwrap().line_width = f32::NAN;
+        assert!(invalid.validate(10).is_err());
+        r.initial.arrangement = GridArrangement::Layers;
+        r.validate(10).unwrap();
     }
 }

@@ -98,14 +98,19 @@ fn renderer_validation_checks_editor_data_without_a_gpu() {
 
 #[test]
 fn text_mask_validation_rejects_invalid_apertures_without_a_gpu() {
+    let validate = |actor: &kinograph::plan::ActorPlan| {
+        let mut plan = ScenePlan::new("mask", 1_000_000_000);
+        plan.actors.push(actor.clone());
+        validate_renderer_plan(&plan)
+    };
     let mut actor = kinograph::plan::ActorPlan {
         id: "caption".into(),
         recipe: "text".into(),
         data: json!({"text": "Rolling", "center": [960, 780]}),
     };
-    validate_text_recipe(&actor).unwrap();
+    validate(&actor).unwrap();
     actor.data["verticalMask"] = json!({"top": 750, "bottom": 810, "fade": 12});
-    validate_text_recipe(&actor).unwrap();
+    validate(&actor).unwrap();
     for invalid in [
         json!({"top": 810, "bottom": 750, "fade": 12}),
         json!({"top": 750, "bottom": 750, "fade": 0}),
@@ -118,7 +123,7 @@ fn text_mask_validation_rejects_invalid_apertures_without_a_gpu() {
     ] {
         actor.data["verticalMask"] = invalid;
         assert!(
-            validate_text_recipe(&actor).is_err(),
+            validate(&actor).is_err(),
             "accepted {}",
             actor.data["verticalMask"]
         );
@@ -534,7 +539,9 @@ fn attachments_follow_inline_layout_and_preserve_interruption_pixels() {
         let state = prepared
             .motion_value(&prepared.timeline, "editor", "highlight-x", time)
             .unwrap();
-        let geometry = prepared.editors[0]
+        let geometry = prepared
+            .editor()
+            .unwrap()
             .target_motion("equals", |actor, property| {
                 prepared.raw_motion_value(&prepared.timeline, actor, property, time)
             })

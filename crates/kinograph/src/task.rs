@@ -27,14 +27,7 @@ pub struct TaskEventPlan {
 impl TaskRecipePlan {
     pub fn states(&self) -> Vec<TaskState> {
         let mut states = vec![self.initial.clone()];
-        for (index, event) in self.events.iter().enumerate() {
-            if self
-                .events
-                .get(index + 1)
-                .is_some_and(|next| next.at_nanos == event.at_nanos)
-            {
-                continue;
-            }
+        for event in crate::plan::effective_snapshots(&self.events, |e| e.at_nanos) {
             if !states.contains(&event.state) {
                 states.push(event.state.clone());
             }

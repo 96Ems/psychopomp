@@ -10,6 +10,9 @@ use kinograph::{
 };
 use serde_json::json;
 
+mod styles;
+pub use styles::{build_plain_table_slide, build_style_deck};
+
 const SECOND: u64 = 1_000_000_000;
 
 struct Step {
@@ -36,9 +39,9 @@ fn step(
     }
 }
 
-pub fn build_deck() -> Result<DeckPlan> {
+fn build_growth() -> Result<ScenePlan> {
     use GridArrangement::*;
-    let growth = slide(
+    slide(
         "growing-grid",
         "Counting possibilities",
         &[
@@ -100,7 +103,12 @@ pub fn build_deck() -> Result<DeckPlan> {
                 None,
             ),
         ],
-    )?;
+    )
+}
+
+pub fn build_deck() -> Result<DeckPlan> {
+    use GridArrangement::*;
+    let growth = build_growth()?;
     let isomorphism = slide(
         "grid-isomorphism",
         "Same values. Different grouping.",
@@ -164,6 +172,7 @@ fn slide(id: &str, title: &str, steps: &[Step]) -> Result<ScenePlan> {
     let duration = steps.len() as u64 * 3 * SECOND;
     let mut scene = PlanBuilder::new(id, duration);
     let recipe = GridRecipePlan {
+        style: None,
         axes: std::array::from_fn(|i| GridAxisPlan {
             name: ["Piece", "Side", "Board"][i].into(),
             values: [
@@ -247,7 +256,7 @@ fn slide(id: &str, title: &str, steps: &[Step]) -> Result<ScenePlan> {
         );
         scene.cue(format!("step-{index}"), start, start + 3 * SECOND);
     }
-    scene.actor("hint", "text", json!({"text":"← / →  step     ⌘← / ⌘→  slide     R  replay     M  reduced motion", "center":[960,1020], "fontSize":16, "color":[108,120,144]}))?;
+    scene.actor("hint", "text", json!({"text":"← / →  step     ⌘← / ⌘→  slide     R  replay     C  line color     M  reduced motion", "center":[960,1020], "fontSize":16, "color":[108,120,144]}))?;
     Ok(scene.finish()?)
 }
 
@@ -284,6 +293,20 @@ fn caption(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn named_scenes_match_their_deck_entries() {
+        let deck = build_deck().unwrap();
+        let styles = build_style_deck().unwrap();
+        let growth = build_growth().unwrap().to_json_pretty().unwrap();
+        assert_eq!(growth, deck.slides[0].plan.to_json_pretty().unwrap());
+        assert_eq!(growth, styles.slides[3].plan.to_json_pretty().unwrap());
+        assert_eq!(
+            serde_json::to_value(build_plain_table_slide().unwrap()).unwrap(),
+            serde_json::to_value(&styles.slides[0]).unwrap()
+        );
+    }
+
     #[test]
     fn deterministic_deck_and_constant_isomorphism_cardinality() {
         let deck = build_deck().unwrap();

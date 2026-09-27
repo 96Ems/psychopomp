@@ -2,11 +2,13 @@ use anyhow::{Context, Result, bail};
 use serde::{Deserialize, Serialize};
 
 use crate::code::{
-    CodeDocument, CodeLayout, CodeLine, CodeSnapshot, CodeTransition, InlinePart, LogicalRange,
-    SemanticRange, StyledSpan,
+    CodeDocument, CodeLine, CodeSnapshot, CodeTransition, InlinePart, LineId, LogicalRange,
+    RangeId, SemanticRange, StyledSpan,
 };
 
+mod compiled;
 mod stability;
+pub use compiled::{CompiledEditor, CompiledInlineReveal};
 pub use stability::inspect_steps;
 
 pub const EDITOR_RECIPE: &str = "editor";
@@ -40,7 +42,7 @@ pub struct EditorSnapshotPlan {
 }
 
 impl EditorRecipePlan {
-    pub fn transition(&self) -> Result<CodeTransition> {
+    pub fn compile(&self) -> Result<CompiledEditor> {
         if !self.line_height.is_finite()
             || self.line_height <= 0.0
             || !self.entering_offset_x.is_finite()
@@ -57,16 +59,15 @@ impl EditorRecipePlan {
         )?;
         let mut ranges: std::collections::HashMap<&str, Vec<std::ops::Range<usize>>> =
             std::collections::HashMap::new();
+        let mut compiled_reveals = Vec::new();
         for reveal in std::iter::once(&self.inline_reveal).chain(&self.additional_inline_reveals) {
-            let line = self
-                .lines
-                .iter()
-                .find(|line| line.id == reveal.line_id)
+            let line = document
+                .line(&LineId::new(&reveal.line_id))
                 .with_context(|| {
                     format!("inline reveal references unknown line '{}'", reveal.line_id)
-                })?
-                .code_line()?;
-            let range = line.semantic_span_range(&crate::code::RangeId::new(&reveal.range_id))?;
+                })?;
+            let range_id = RangeId::new(&reveal.range_id);
+            let range = line.semantic_span_range(&range_id)?;
             let previous = ranges.entry(&reveal.line_id).or_default();
             if previous
                 .iter()
@@ -74,18 +75,21 @@ impl EditorRecipePlan {
             {
                 bail!("inline reveal ranges overlap on line '{}'", reveal.line_id);
             }
-            previous.push(range);
+            previous.push(range.clone());
+            let resolved = line
+                .resolve_logical_range(line.semantic_range(&range_id).expect("validated range"))?;
+            compiled_reveals.push(CompiledInlineReveal {
+                plan: reveal.clone(),
+                spans: range,
+                parts: resolved.start_part..resolved.end_part + 1,
+            });
+        }
+        if !self.snapshots.is_empty() {
+            document
+                .validate_snapshot(&CodeSnapshot::new(self.initial_line_ids.iter().cloned()))?;
         }
         for snapshot in &self.snapshots {
-            CodeTransition::compile(
-                &document,
-                &CodeSnapshot::new(self.initial_line_ids.iter().cloned()),
-                &CodeSnapshot::new(snapshot.line_ids.iter().cloned()),
-                CodeLayout {
-                    line_height: self.line_height,
-                    entering_offset_x: 0.0,
-                },
-            )?;
+            document.validate_snapshot(&CodeSnapshot::new(snapshot.line_ids.iter().cloned()))?;
         }
         if self
             .snapshots
@@ -104,19 +108,11 @@ impl EditorRecipePlan {
         {
             bail!("editor focus references a line outside its snapshots");
         }
-        CodeTransition::compile(
-            &document,
-            &CodeSnapshot::new(self.initial_line_ids.iter().cloned()),
-            &CodeSnapshot::new(final_ids),
-            CodeLayout {
-                line_height: self.line_height,
-                entering_offset_x: if self.snapshots.is_empty() {
-                    self.entering_offset_x
-                } else {
-                    0.0
-                },
-            },
-        )
+        CompiledEditor::new(self, document, compiled_reveals)
+    }
+
+    pub fn transition(&self) -> Result<CodeTransition> {
+        self.compile()?.into_transition()
     }
 
     /// Lower keyed snapshots into ordinary continuous channels so native
@@ -126,85 +122,7 @@ impl EditorRecipePlan {
         actor_id: &str,
         duration_nanos: u64,
     ) -> Result<Vec<crate::plan::ContinuousChannelPlan>> {
-        use crate::plan::{ContinuousChannelPlan, TrackEventPlan};
-        self.transition()?;
-        if self.snapshots.is_empty() {
-            return Ok(Vec::new());
-        }
-        let mut previous_time = 0;
-        for snapshot in &self.snapshots {
-            if snapshot.at_nanos < previous_time || snapshot.at_nanos > duration_nanos {
-                bail!("editor snapshots must be ordered within scene duration");
-            }
-            previous_time = snapshot.at_nanos;
-        }
-        // Equal-time writes are one effective snapshot, not a transient layout.
-        let snapshots = self
-            .snapshots
-            .iter()
-            .enumerate()
-            .filter_map(|(index, snapshot)| {
-                self.snapshots
-                    .get(index + 1)
-                    .is_none_or(|next| next.at_nanos != snapshot.at_nanos)
-                    .then_some(snapshot)
-            })
-            .collect::<Vec<_>>();
-        let mut channels = Vec::new();
-        for line in &self.lines {
-            let initial_row = self.initial_line_ids.iter().position(|id| id == &line.id);
-            let first_row = initial_row
-                .or_else(|| {
-                    snapshots
-                        .iter()
-                        .find_map(|snapshot| snapshot.line_ids.iter().position(|id| id == &line.id))
-                })
-                .unwrap_or(0);
-            for (property, initial) in [
-                (
-                    format!("line.{}.y", line.id),
-                    first_row as f32 * self.line_height,
-                ),
-                (
-                    format!("line.{}.opacity", line.id),
-                    if initial_row.is_some() { 1.0 } else { 0.0 },
-                ),
-            ] {
-                let is_y = property.ends_with(".y");
-                let mut current = initial;
-                let mut events = Vec::new();
-                for snapshot in &snapshots {
-                    let row = snapshot.line_ids.iter().position(|id| id == &line.id);
-                    let target = if is_y {
-                        row.map_or(current, |row| row as f32 * self.line_height)
-                    } else if row.is_some() {
-                        1.0
-                    } else {
-                        0.0
-                    };
-                    if target == current {
-                        continue;
-                    }
-                    events.push(TrackEventPlan::Spring {
-                        at_nanos: snapshot.at_nanos,
-                        target: target.into(),
-                        response_seconds: 0.45 * 1.2,
-                        damping_ratio: 1.0,
-                        position_threshold: 0.001,
-                        velocity_threshold: 0.001,
-                    });
-                    current = target;
-                }
-                channels.push(ContinuousChannelPlan {
-                    id: format!("{actor_id}.{property}"),
-                    actor_id: actor_id.into(),
-                    property,
-                    initial: initial.into(),
-                    events,
-                });
-            }
-        }
-        Ok(channels)
+        self.compile()?.snapshot_channels(actor_id, duration_nanos)
     }
 }
 

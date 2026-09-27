@@ -6,9 +6,8 @@ use serde::Serialize;
 
 use super::EditorRecipePlan;
 use crate::{
-    code::{RangeId, TransitionProgress},
-    plan::{ScalarPlan, ScenePlan, TrackEventPlan},
-    timeline::{PropertyId, SpringProfile, TimedEvent, Timeline},
+    plan::{ScalarPlan, ScenePlan},
+    timeline::PropertyId,
 };
 
 #[derive(Serialize)]
@@ -85,14 +84,14 @@ pub fn inspect_steps(plan: &ScenePlan) -> Result<StepInspection> {
     {
         let recipe: EditorRecipePlan = serde_json::from_value(actor.data.clone())
             .context("parse editor for step inspection")?;
-        let transition = recipe.transition()?;
+        let editor = recipe.compile()?;
         let mut channels = plan
             .continuous_channels
             .iter()
             .filter(|channel| channel.actor_id == actor.id)
             .cloned()
             .collect::<Vec<_>>();
-        for channel in recipe.snapshot_channels(&actor.id, plan.duration_nanos)? {
+        for channel in editor.snapshot_channels(&actor.id, plan.duration_nanos)? {
             if channels
                 .iter()
                 .any(|existing| existing.property == channel.property)
@@ -110,50 +109,23 @@ pub fn inspect_steps(plan: &ScenePlan) -> Result<StepInspection> {
             property == "layout"
                 || property == "content"
                 || property.starts_with("line.")
-                || std::iter::once(&recipe.inline_reveal)
-                    .chain(&recipe.additional_inline_reveals)
-                    .any(|reveal| reveal.channel() == property)
+                || editor
+                    .inline_reveals()
+                    .iter()
+                    .any(|reveal| reveal.plan.channel() == property)
         };
         let literal = |value: &ScalarPlan| match value {
             ScalarPlan::Literal(value) => Ok(*value),
             _ => anyhow::bail!("code geometry channels must use literal values"),
         };
-        let mut initials = Vec::new();
-        let mut events = Vec::new();
-        for channel in channels
-            .iter()
-            .filter(|channel| relevant(&channel.property))
-        {
-            let id = PropertyId::new(&channel.property);
-            initials.push((id.clone(), literal(&channel.initial)?));
-            for event in &channel.events {
-                events.push(match event {
-                    TrackEventPlan::Set { at_nanos, value } => {
-                        TimedEvent::set(*at_nanos as f64 / 1e9, id.clone(), literal(value)?)
-                    }
-                    TrackEventPlan::Spring {
-                        at_nanos,
-                        target,
-                        response_seconds,
-                        damping_ratio,
-                        position_threshold,
-                        velocity_threshold,
-                    } => TimedEvent::spring(
-                        *at_nanos as f64 / 1e9,
-                        id.clone(),
-                        literal(target)?,
-                        SpringProfile::new(
-                            *response_seconds,
-                            *damping_ratio,
-                            *position_threshold,
-                            *velocity_threshold,
-                        ),
-                    ),
-                });
-            }
-        }
-        let timeline =
-            Timeline::compile_events(initials, events, plan.duration_nanos as f64 / 1e9)?;
+        let timeline = crate::plan::compile_channels(
+            channels
+                .iter()
+                .filter(|channel| relevant(&channel.property))
+                .map(|channel| (channel, PropertyId::new(&channel.property))),
+            plan.duration_nanos,
+            literal,
+        )?;
         let mut previous: HashMap<String, Pose> = HashMap::new();
         for (step_index, step) in plan.presentation_steps.iter().enumerate() {
             let time = step.hold_nanos as f64 / 1e9;
@@ -166,9 +138,10 @@ pub fn inspect_steps(plan: &ScenePlan) -> Result<StepInspection> {
                         .is_some_and(|state| {
                             let presence = channel.property == "content"
                                 || channel.property.ends_with(".opacity")
-                                || std::iter::once(&recipe.inline_reveal)
-                                    .chain(&recipe.additional_inline_reveals)
-                                    .any(|reveal| reveal.channel() == channel.property);
+                                || editor
+                                    .inline_reveals()
+                                    .iter()
+                                    .any(|reveal| reveal.plan.channel() == channel.property);
                             state.velocity != 0.0
                                 || (presence && state.position != 0.0 && state.position != 1.0)
                         })
@@ -184,69 +157,50 @@ pub fn inspect_steps(plan: &ScenePlan) -> Result<StepInspection> {
                     .sample_at(&PropertyId::new(property), time)
                     .map_or(default, |state| state.position)
             };
-            let placed = transition.sample(TransitionProgress {
-                layout: value("layout", 0.),
-                content: value("content", 0.),
-            });
+            let placed = editor.sample_lines(value);
             let mut lines = Vec::new();
             let mut exits = Vec::new();
             let mut enters = Vec::new();
-            for line in &recipe.lines {
-                let code = line.code_line()?;
-                let placement = placed
-                    .iter()
-                    .find(|placed| placed.line.id.as_str() == line.id);
-                let mut pose = Pose {
+            for line in editor.lines() {
+                let id = line.id.as_str();
+                let parts = line.parts();
+                let placement = placed.iter().find(|placed| placed.line.id == line.id);
+                let pose = Pose {
                     row: placement.map_or(0., |line| line.y),
                     presence: placement.map_or(0., |line| line.opacity),
-                    parts: vec![1.; line.parts.len()],
+                    parts: editor
+                        .part_presence(&line.id, value)
+                        .expect("compiled catalog line"),
                 };
-                if !recipe.snapshots.is_empty() {
-                    pose.row = value(&format!("line.{}.y", line.id), pose.row);
-                    pose.presence =
-                        value(&format!("line.{}.opacity", line.id), pose.presence).clamp(0., 1.);
-                }
-                for reveal in std::iter::once(&recipe.inline_reveal)
-                    .chain(&recipe.additional_inline_reveals)
-                    .filter(|reveal| reveal.line_id == line.id)
-                {
-                    let range = code
-                        .semantic_range(&RangeId::new(&reveal.range_id))
-                        .context("unknown inline reveal range")?;
-                    let range = code.resolve_logical_range(range)?;
-                    pose.parts[range.start_part..=range.end_part]
-                        .fill(reveal.progress(value(reveal.channel(), 0.)).clamp(0., 1.));
-                }
-                let before = previous.get(&line.id);
+                let before = previous.get(id);
                 let text = |pose: &Pose| {
-                    line.parts
+                    parts
                         .iter()
                         .zip(&pose.parts)
                         .filter(|(_, presence)| **presence > 0.001 && pose.presence > 0.001)
-                        .flat_map(|(part, _)| &part.spans)
+                        .flat_map(|(part, _)| part.spans())
                         .map(|span| span.text.as_str())
                         .collect::<String>()
                 };
                 let before_text = before.filter(|pose| pose.presence > 0.001).map(text);
                 let after_text = (pose.presence > 0.001).then(|| text(&pose));
-                let changed = line
-                    .parts
+                let changed = parts
                     .iter()
                     .enumerate()
                     .filter(|(index, _)| {
                         before.map_or(0., |old| old.parts[*index] * old.presence)
                             != pose.parts[*index] * pose.presence
                     })
-                    .map(|(_, part)| part.id.clone())
+                    .map(|(_, part)| part.id().as_str().to_owned())
                     .collect::<Vec<_>>();
                 let mut removed = String::new();
                 let mut added = String::new();
                 if let Some(before) = before {
-                    for (index, part) in line.parts.iter().enumerate() {
+                    for (index, part) in parts.iter().enumerate() {
                         let old = before.parts[index] * before.presence;
                         let new = pose.parts[index] * pose.presence;
                         let text = part
-                            .spans
+                            .spans()
                             .iter()
                             .map(|span| span.text.as_str())
                             .collect::<String>();
@@ -259,26 +213,25 @@ pub fn inspect_steps(plan: &ScenePlan) -> Result<StepInspection> {
                     }
                 }
                 if let Some(common) = common_text(&removed, &added) {
-                    result.warnings.push(StabilityWarning { code: "common-text-in-replacements", step_id: step.id.clone(), actor_id: actor.id.clone(), line_ids: vec![line.id.clone()], common_text: common, channel_ids: Vec::new(), suggestion: "Keep this common text in one stable inline part outside the exchanged ranges; verify semantic identity manually." });
+                    result.warnings.push(StabilityWarning { code: "common-text-in-replacements", step_id: step.id.clone(), actor_id: actor.id.clone(), line_ids: vec![id.to_owned()], common_text: common, channel_ids: Vec::new(), suggestion: "Keep this common text in one stable inline part outside the exchanged ranges; verify semantic identity manually." });
                 }
                 if before_text.is_some() && after_text.is_none() {
-                    exits.push((line.id.clone(), before_text.clone().unwrap()));
+                    exits.push((id.to_owned(), before_text.clone().unwrap()));
                 }
                 if before_text.is_none() && after_text.is_some() {
-                    enters.push((line.id.clone(), after_text.clone().unwrap()));
+                    enters.push((id.to_owned(), after_text.clone().unwrap()));
                 }
-                let delta = line
-                    .parts
+                let delta = parts
                     .iter()
                     .enumerate()
                     .filter(|(index, _)| pose.presence > 0.001 && pose.parts[*index] > 0.001)
                     .map(|(_, part)| {
                         let text = part
-                            .spans
+                            .spans()
                             .iter()
                             .map(|span| span.text.as_str())
                             .collect::<String>();
-                        if step_index > 0 && changed.contains(&part.id) {
+                        if step_index > 0 && changed.iter().any(|id| id == part.id().as_str()) {
                             format!("«{text}»")
                         } else {
                             text
@@ -286,17 +239,17 @@ pub fn inspect_steps(plan: &ScenePlan) -> Result<StepInspection> {
                     })
                     .collect();
                 let before_delta = before.filter(|old| old.presence > 0.001).map(|old| {
-                    line.parts
+                    parts
                         .iter()
                         .enumerate()
                         .filter(|(index, _)| old.parts[*index] > 0.001)
                         .map(|(_, part)| {
                             let text = part
-                                .spans
+                                .spans()
                                 .iter()
                                 .map(|span| span.text.as_str())
                                 .collect::<String>();
-                            if changed.contains(&part.id) {
+                            if changed.iter().any(|id| id == part.id().as_str()) {
                                 format!("«{text}»")
                             } else {
                                 text
@@ -311,7 +264,7 @@ pub fn inspect_steps(plan: &ScenePlan) -> Result<StepInspection> {
                 let after_y = (pose.presence > 0.001).then_some(pose.row);
                 if before_text.is_some() || after_text.is_some() {
                     lines.push(LineDelta {
-                        id: line.id.clone(),
+                        id: id.to_owned(),
                         before: before_text,
                         after: after_text,
                         before_delta,
@@ -322,7 +275,7 @@ pub fn inspect_steps(plan: &ScenePlan) -> Result<StepInspection> {
                         after_y,
                     });
                 }
-                previous.insert(line.id.clone(), pose);
+                previous.insert(id.to_owned(), pose);
             }
             for (old_id, old) in &exits {
                 for (new_id, new) in &enters {

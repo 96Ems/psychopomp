@@ -1,0 +1,9 @@
+[package]
+name = "kinograph-opencode-architecture"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+anyhow = "1"
+kinograph = { path = "../../crates/kinograph" }
+serde_json = "1"

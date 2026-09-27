@@ -151,25 +151,32 @@ impl<T: Clone + PartialEq> StateTrack<T> {
     ) -> Option<f32> {
         let time = f64::from(time.max(0.0));
         let mut active = predicate(&self.initial);
-        let mut current_start = active.then_some(self.initial_at);
-        let mut last_start = current_start;
+        let mut last_start = active.then_some(self.initial_at);
         for event in self.events.iter().filter(|event| event.at <= time) {
             let next = predicate(&event.value);
             if next && !active {
-                current_start = Some(event.at);
-                last_start = current_start;
-            } else if !next && active {
-                current_start = None;
+                last_start = Some(event.at);
             }
             active = next;
         }
-        current_start.or(last_start).map(|start| start as f32)
+        last_start.map(|start| start as f32)
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{StateTrack, TimedState};
+    use super::{StateSample, StateTrack, TimedState};
+
+    fn assert_sample(sample: StateSample<'_, &str>, expected: (&str, &str, [f32; 3])) {
+        assert_eq!(
+            (*sample.previous, *sample.current),
+            (expected.0, expected.1)
+        );
+        assert_eq!(
+            [sample.previous_duration, sample.age, sample.transition_at].map(f32::to_bits),
+            expected.2.map(f32::to_bits)
+        );
+    }
 
     #[test]
     fn repeated_states_do_not_restart_age() {
@@ -209,6 +216,31 @@ mod tests {
     }
 
     #[test]
+    fn sampled_cell_mutation_does_not_change_other_snapshot_copies() {
+        use std::cell::Cell;
+
+        let track = StateTrack::compile(
+            Cell::new(0),
+            [
+                TimedState::new(1.0, Cell::new(1)),
+                TimedState::new(2.0, Cell::new(2)),
+            ],
+            3.0,
+        )
+        .unwrap();
+
+        track.sample_at(1.0).current.set(99);
+        assert_eq!(track.sample_at(2.0).previous.get(), 1);
+        assert_eq!(track.sample_at(1.0).current.get(), 99);
+
+        track.sample_at(0.0).current.set(7);
+        assert_eq!(track.sample_at(1.0).previous.get(), 0);
+        track.sample_at(2.0).previous.set(88);
+        assert_eq!(track.sample_at(1.0).current.get(), 99);
+        assert_eq!(track.sample_at(2.0).current.get(), 2);
+    }
+
+    #[test]
     fn out_of_order_sampling_is_deterministic() {
         let track = StateTrack::compile(0, [TimedState::new(0.5, 1), TimedState::new(1.0, 2)], 2.0)
             .unwrap();
@@ -234,5 +266,203 @@ mod tests {
 
         assert_eq!(track.sample_at(100.0).current, &"first");
         assert_eq!(track.sample_at(100.000_000_001).current, &"second");
+    }
+
+    #[test]
+    fn every_sample_field_retains_equal_time_history_and_ignores_repeated_values() {
+        let track = StateTrack::compile_at(
+            1.0,
+            "initial",
+            [
+                TimedState::new(6.0, "done"),
+                TimedState::new(2.0, "running"),
+                TimedState::new(3.0, "running"),
+                TimedState::new(4.0, "done"),
+                TimedState::new(4.0, "initial"),
+                TimedState::new(4.0, "initial"),
+                TimedState::new(5.0, "initial"),
+            ],
+            8.0,
+        )
+        .unwrap();
+
+        // Deliberately sample backward and beyond duration. At 4s, "done" is
+        // the previous state even though it was never current for positive time.
+        for (time, expected) in [
+            (9.0, ("initial", "done", [2.0, 3.0, 6.0])),
+            (0.0, ("initial", "initial", [0.0, 0.0, 1.0])),
+            (4.0, ("done", "initial", [0.0, 0.0, 4.0])),
+            (3.5, ("initial", "running", [1.0, 1.5, 2.0])),
+            (-2.0, ("initial", "initial", [0.0, 0.0, 1.0])),
+            (6.0, ("initial", "done", [2.0, 0.0, 6.0])),
+            (4.5, ("done", "initial", [0.0, 0.5, 4.0])),
+            (1.0, ("initial", "initial", [0.0, 0.0, 1.0])),
+            (2.0, ("initial", "running", [1.0, 0.0, 2.0])),
+            (1.5, ("initial", "initial", [0.0, 0.5, 1.0])),
+            (4.0, ("done", "initial", [0.0, 0.0, 4.0])),
+        ] {
+            assert_sample(track.sample_at(time), expected);
+            assert_sample(track.sample(time as f32), expected);
+        }
+        assert_eq!(track.duration(), 8.0);
+    }
+
+    #[test]
+    fn empty_and_initial_only_tracks_keep_the_original_initial_time() {
+        for events in [
+            Vec::new(),
+            vec![TimedState::new(2.0, "idle"), TimedState::new(3.0, "idle")],
+        ] {
+            let track = StateTrack::compile_at(2.0, "idle", events, 4.0).unwrap();
+            for (time, age) in [(10.0, 8.0), (-1.0, 0.0), (2.0, 0.0), (3.0, 1.0)] {
+                assert_sample(track.sample_at(time), ("idle", "idle", [0.0, age, 2.0]));
+                assert_eq!(track.last_interval_start(time as f32, |_| true), Some(2.0));
+            }
+        }
+    }
+
+    #[test]
+    fn adjacent_nanoseconds_preserve_all_sample_fields_after_deduplication() {
+        let at = |offset: i64| (100_000_000_000_i64 + offset) as f64 / 1e9;
+        let track = StateTrack::compile(
+            "initial",
+            [
+                TimedState::new(at(3), "third"),
+                TimedState::new(at(0), "first"),
+                TimedState::new(at(1), "second"),
+                TimedState::new(at(2), "second"),
+            ],
+            101.0,
+        )
+        .unwrap();
+        // Differences are taken on the public f64 clock before the sample's f32
+        // conversion, not rounded to an assumed exact 1e-9-second interval.
+        let first_duration = (at(1) - at(0)) as f32;
+        let second_duration = (at(3) - at(1)) as f32;
+        for (offset, expected) in [
+            (3, ("second", "third", [second_duration, 0.0, at(3) as f32])),
+            (-1, ("initial", "initial", [0.0, at(-1) as f32, 0.0])),
+            (0, ("initial", "first", [100.0, 0.0, 100.0])),
+            (1, ("first", "second", [first_duration, 0.0, at(1) as f32])),
+            (
+                2,
+                (
+                    "first",
+                    "second",
+                    [first_duration, (at(2) - at(1)) as f32, at(1) as f32],
+                ),
+            ),
+            (
+                4,
+                (
+                    "second",
+                    "third",
+                    [second_duration, (at(4) - at(3)) as f32, at(3) as f32],
+                ),
+            ),
+            (1, ("first", "second", [first_duration, 0.0, at(1) as f32])),
+        ] {
+            assert_sample(track.sample_at(at(offset)), expected);
+        }
+    }
+
+    #[test]
+    fn interval_queries_preserve_last_start_and_predicate_order() {
+        let track = StateTrack::compile_at(
+            1.0,
+            "hidden",
+            [
+                TimedState::new(2.0, "idle"),
+                TimedState::new(3.0, "running"),
+                TimedState::new(3.5, "running"),
+                TimedState::new(4.0, "hidden"),
+                TimedState::new(4.0, "idle"),
+                TimedState::new(5.0, "hidden"),
+                TimedState::new(6.0, "idle"),
+                TimedState::new(7.0, "running"),
+            ],
+            8.0,
+        )
+        .unwrap();
+        let cases = [
+            (
+                8.0,
+                Some(6.0),
+                Some(7.0),
+                &[
+                    "hidden", "idle", "running", "hidden", "idle", "hidden", "idle", "running",
+                ][..],
+            ),
+            (
+                5.5,
+                Some(4.0),
+                Some(4.0),
+                &["hidden", "idle", "running", "hidden", "idle", "hidden"],
+            ),
+            (0.0, None, None, &["hidden"]),
+            (3.5, Some(2.0), Some(3.0), &["hidden", "idle", "running"]),
+            (
+                4.0,
+                Some(4.0),
+                Some(4.0),
+                &["hidden", "idle", "running", "hidden", "idle"],
+            ),
+            (2.0, Some(2.0), Some(2.0), &["hidden", "idle"]),
+        ];
+        for (time, interval_start, last_match, expected_calls) in cases {
+            let mut calls = Vec::new();
+            assert_eq!(
+                track.last_interval_start(time, |state| {
+                    calls.push(*state);
+                    *state != "hidden"
+                }),
+                interval_start
+            );
+            assert_eq!(calls, expected_calls);
+            assert_eq!(
+                track.last_time_matching(time, |state| *state != "hidden"),
+                last_match
+            );
+        }
+    }
+
+    #[test]
+    fn invalid_state_times_are_checked_before_deduplication_in_existing_order() {
+        for (initial_at, duration, events, expected) in [
+            (
+                f64::NAN,
+                f64::NAN,
+                vec![TimedState::new(3.0, "initial")],
+                "state track duration must be finite and non-negative",
+            ),
+            (
+                3.0,
+                2.0,
+                vec![TimedState::new(0.5, "initial")],
+                "state track initial time must be within its duration",
+            ),
+            (
+                1.0,
+                2.0,
+                vec![
+                    TimedState::new(3.0, "initial"),
+                    TimedState::new(0.5, "initial"),
+                ],
+                "state event cannot precede the initial state",
+            ),
+            (
+                1.0,
+                2.0,
+                vec![TimedState::new(3.0, "initial")],
+                "state event at 3.000s exceeds duration 2.000s",
+            ),
+        ] {
+            assert_eq!(
+                StateTrack::compile_at(initial_at, "initial", events, duration)
+                    .unwrap_err()
+                    .to_string(),
+                expected
+            );
+        }
     }
 }

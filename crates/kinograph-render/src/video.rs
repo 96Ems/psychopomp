@@ -3,7 +3,7 @@ use std::{
     hash::{DefaultHasher, Hash, Hasher},
     io::{Read, Seek, SeekFrom},
     path::{Path, PathBuf},
-    process::{self, Command},
+    process::{self, Command, Stdio},
 };
 
 use anyhow::{Context, Result, bail};
@@ -70,10 +70,20 @@ impl VideoFrameCache {
 
     pub fn frame_at(&mut self, seconds: f32) -> Result<&[u8]> {
         let index = self.frame_index_at(seconds);
+        self.frame_at_index(index)
+    }
+
+    pub(crate) fn frame_at_index(&mut self, index: u64) -> Result<&[u8]> {
+        anyhow::ensure!(
+            index < self.frame_count,
+            "decoded frame index is out of range"
+        );
         if self.current_frame != Some(index) {
             let offset = index
                 .checked_mul(self.pixels.len() as u64)
                 .context("decoded video frame offset overflow")?;
+            // A failed read may overwrite only part of the old frame's pixels.
+            self.current_frame = None;
             self.file
                 .seek(SeekFrom::Start(offset))
                 .context("seek decoded video frame")?;
@@ -115,16 +125,6 @@ fn contracted_cache_path(
         .and_then(|name| name.to_str())
         .context("video cache path must have a UTF-8 file name")?;
     Ok(cache.with_file_name(format!("{name}-{key:016x}.rgba")))
-}
-
-#[cfg(test)]
-fn cache_key(source: &[u8], width: u32, height: u32, fps: u32) -> u64 {
-    let mut hasher = DefaultHasher::new();
-    source.hash(&mut hasher);
-    width.hash(&mut hasher);
-    height.hash(&mut hasher);
-    fps.hash(&mut hasher);
-    hasher.finish()
 }
 
 fn cache_key_file(source: &Path, width: u32, height: u32, fps: u32) -> Result<u64> {
@@ -178,6 +178,8 @@ fn decode_rgba_cache(source: &Path, cache: &Path, width: u32, height: u32, fps: 
     }
     let temporary = temporary_cache_path(cache);
     let status = Command::new("ffmpeg")
+        // The parent may own a pipelined JSON protocol on stdin, not hotkeys.
+        .stdin(Stdio::null())
         .args(["-y", "-loglevel", "error", "-i"])
         .arg(source)
         .args(["-an", "-vf"])
@@ -217,7 +219,94 @@ fn temporary_cache_path(cache: &Path) -> PathBuf {
 
 #[cfg(test)]
 mod tests {
-    use super::{cache_key, frame_index};
+    use std::{fs, io::ErrorKind, path::PathBuf};
+
+    use super::{cache_key_file, frame_index};
+
+    struct TestSource(PathBuf);
+
+    impl TestSource {
+        fn new(name: &str, bytes: &[u8]) -> Self {
+            let path = std::env::temp_dir()
+                .join(format!("kinograph-video-{name}-{}.bin", std::process::id()));
+            fs::write(&path, bytes).unwrap();
+            Self(path)
+        }
+    }
+
+    impl Drop for TestSource {
+        fn drop(&mut self) {
+            let _ = fs::remove_file(&self.0);
+        }
+    }
+
+    #[test]
+    fn failed_partial_read_does_not_poison_the_previously_cached_frame() {
+        let source = TestSource::new(
+            "partial-read",
+            &[1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2],
+        );
+        let mut cache = super::VideoFrameCache {
+            file: fs::File::open(&source.0).unwrap(),
+            width: 2,
+            height: 1,
+            fps: 1,
+            frame_count: 2,
+            current_frame: None,
+            pixels: vec![0; 8],
+        };
+        assert_eq!(cache.frame_at_index(0).unwrap(), &[1; 8]);
+        fs::OpenOptions::new()
+            .write(true)
+            .open(&source.0)
+            .unwrap()
+            .set_len(12)
+            .unwrap();
+        let error = cache.frame_at_index(1).unwrap_err();
+        assert_eq!(
+            error.downcast_ref::<std::io::Error>().unwrap().kind(),
+            ErrorKind::UnexpectedEof
+        );
+        assert_eq!(cache.frame_at_index(0).unwrap(), &[1; 8]);
+        assert_eq!(cache.frame_at_index(0).unwrap(), &[1; 8]);
+    }
+
+    #[test]
+    #[ignore = "requires FFmpeg; decodes a temporary recording to check parent stdin ownership"]
+    fn decoder_preserves_parent_protocol_input() {
+        use std::{io::Read, process::Command};
+
+        const SENTINEL: &str = "{\"id\":\"sentinel\",\"command\":\"shutdown\"}\n";
+        if std::env::var_os("KINOGRAPH_DECODER_STDIN_CHILD").is_some() {
+            let cache = TestSource::new("decoder-output", &[]);
+            let source = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+                .join("../../assets/opencode-hot-reload/fire-the-missiles.mp4");
+            super::decode_rgba_cache(&source, &cache.0, 1200, 720, 25).unwrap();
+            let mut remaining = String::new();
+            std::io::stdin().read_to_string(&mut remaining).unwrap();
+            assert_eq!(remaining, SENTINEL);
+            return;
+        }
+        // Prefilled owned input avoids a writer/decoder startup race. The child
+        // must leave its protocol stream untouched while FFmpeg decodes a file.
+        let input = TestSource::new("decoder-stdin", SENTINEL.as_bytes());
+        let child = Command::new(std::env::current_exe().unwrap())
+            .args([
+                "video::tests::decoder_preserves_parent_protocol_input",
+                "--exact",
+                "--ignored",
+                "--nocapture",
+            ])
+            .env("KINOGRAPH_DECODER_STDIN_CHILD", "1")
+            .stdin(fs::File::open(&input.0).unwrap())
+            .output()
+            .unwrap();
+        assert!(
+            child.status.success(),
+            "{}",
+            String::from_utf8_lossy(&child.stderr)
+        );
+    }
 
     #[test]
     fn frame_sampling_is_clamped_and_deterministic() {
@@ -230,10 +319,18 @@ mod tests {
 
     #[test]
     fn cache_identity_includes_source_and_decode_contract() {
-        let base = cache_key(b"video", 1200, 720, 25);
-        assert_ne!(base, cache_key(b"other video", 1200, 720, 25));
-        assert_ne!(base, cache_key(b"video", 1920, 720, 25));
-        assert_ne!(base, cache_key(b"video", 1200, 1080, 25));
-        assert_ne!(base, cache_key(b"video", 1200, 720, 30));
+        let mut bytes = vec![7; 64 * 1024 + 17];
+        let source = TestSource::new("identity", &bytes);
+        let copy = TestSource::new("identity-copy", &bytes);
+        let key = |width, height, fps| cache_key_file(&source.0, width, height, fps).unwrap();
+        let base = key(1200, 720, 25);
+        assert_eq!(base, cache_key_file(&copy.0, 1200, 720, 25).unwrap());
+        assert_ne!(base, key(1920, 720, 25));
+        assert_ne!(base, key(1200, 1080, 25));
+        assert_ne!(base, key(1200, 720, 30));
+        // A same-length change beyond the first read must change source identity.
+        *bytes.last_mut().unwrap() = 8;
+        fs::write(&source.0, &bytes).unwrap();
+        assert_ne!(base, key(1200, 720, 25));
     }
 }

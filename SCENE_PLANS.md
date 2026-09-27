@@ -51,6 +51,12 @@ cargo run -- plan validate target/agent-demo.json
 cargo run -- plan inspect target/agent-demo.json
 ```
 
+Validation owns recipe decoding, references, exclusive root selection, and
+generated-channel collisions before opening fonts, GPU resources, or video caches.
+Preparation retains those typed inputs. Native admission is checked separately:
+a plan can be valid for export while still using unsupported interactive state or
+media. See [the preparation boundary](ARCHITECTURE.md#scene-programs-and-rendering-compile-separately).
+
 Compare two validated plans or render one exact PNG frame:
 
 ```bash
@@ -70,6 +76,126 @@ A Render Window trims and rebases intersecting media to output time zero, but vi
 Delivery remains frame-based: a window whose duration is not exactly frame-aligned emits one final frame sampled only within the remaining window interval. At 60 fps, the encoded duration therefore rounds up to the next frame boundary.
 
 ## Play As A Presentation
+
+The OpenCode **Daemon / merge** adaptation is a four-step native scene:
+
+```sh
+cargo run -p kinograph-opencode-architecture
+cargo run --release -- plan present target/opencode-architecture/deck.json --theme original
+```
+
+It moves from one client/server pair through three processes to one shared purple
+daemon, with only boxes and attached wires: no dotted background or enclosing UI.
+**1 / 2** selects Flat / Isometric; both share layout and the motion engine, while
+Isometric adds critically damped width/depth entrances. Client labels are **TUI 1**,
+**TUI 2**, and **DESKTOP** in both views. Arrows change destinations, **S** slows the local clock,
+and **Shift+R** plus **.** inspects the current transition from its entry pose.
+The source project remains read-only. See `scenes/opencode-architecture/README.md`
+for reference timings, intentional adaptations and export commands.
+The same bare views run in the isolated WASM/WebGPU probe's `diagram.html`; its
+README documents the static build/serve commands and browser limitations.
+
+The supported player below is native. For the separate, throwaway browser grid
+probe only, run `bash experiments/browser-grid-prototype/run.sh` and open
+`http://127.0.0.1:5201/`. It shares the chess-grid Scene Plans, Playback and shaders
+but not the complete renderer. See that experiment's README for prerequisites,
+baked-label restrictions and browser/measurement limits.
+
+The themed slideshow-component showroom runs natively:
+
+```sh
+cargo run -p kinograph-component-prototypes -- --slideshow
+cargo run --release -- plan present target/slideshow-components/deck.json
+```
+
+Use **1–8** for rich text, lists/quotes, header entrances, width-revealing type
+expressions, Venn diagrams, full-divider tables, an existing composition, and
+reflection/stagger header variants. Slide **3** retains the original rise trial;
+slide **8** compares a mirrored rise, 60 ms word offsets, and a quicker reflected
+variant with 25 ms offsets. Left/Right reverses these entrances without orphaned
+delayed words. An unchanged hold does not replay the header.
+**T / Shift+T** cycles Original, Evergreen, Tokyo Night, and Pure Black in either
+direction. The choice is saved immediately in
+`$XDG_CONFIG_HOME/kinograph/preferences.json`, or
+`~/.config/kinograph/preferences.json` when XDG is unset. Malformed preferences
+produce a warning, not a crash or silent overwrite. The window title names the
+active theme. Held/paused frames repaint without retargeting or advancing motion.
+**C** remains a temporary grid-line audition; changing theme restores its accent.
+
+`--theme original|evergreen|tokyo-night|black` overrides the starting presentation
+theme without saving it until T is used. File export ignores personal preferences
+and accepts the same explicit option:
+
+```sh
+cargo run --release -- plan frame target/slideshow-components/rich-text-showcase.json 8 output/rich.png --theme tokyo-night
+cargo run --release -- plan render target/slideshow-components/venn-showcase.json output/venn.mp4 --range 3..4.2 --theme evergreen
+```
+
+Headers can fade/deblur, reveal across their measured width, or rise through a
+stationary clip. Separate Presentation Steps provide deliberate header-only
+holds; there are no callbacks that might fire after a skipped or reversed step.
+
+### Inspect Motion Slowly
+
+- **S / Shift+S:** cycle forward/backward through **1x / 0.5x / 0.25x / 0.1x**.
+- **P:** pause/resume without changing the selected destination.
+- **. / ,:** step forward/backward by **16.667 ms of scene time**, then remain paused.
+  Backward inspection stops at the current navigation boundary; arrows still
+  animate between step destinations. Frame-stepping is disabled in reduced motion.
+- **Shift+R:** replay the current step and pause immediately at its entry pose.
+- **D:** toggle the debug HUD: local time, time since navigation, current speed,
+  pending starts/next due time, and per-word header spring progress.
+
+For the stagger investigation:
+
+```sh
+cargo run --release -- plan present target/slideshow-components/header-variations.json --speed 0.25 --debug
+```
+
+Press **Right** once to choose the entrance step, then **Shift+R** and tap **.**
+to inspect it from the beginning, or **P** to watch at quarter speed. The 60 ms
+word gaps are overlapping starts, not one word finishing before the next. Rapid
+reversals redirect already-moving words immediately; Replay resets them to rest
+and replays the original stagger. The 25 ms quick variant deliberately overlaps
+even more. No choreography timing is changed by these debug controls.
+
+Slow motion keeps the normal display sampling cadence; it does not lower FPS.
+Speed/debug are not persisted and do not affect exports. `--benchmark` and
+`--benchmark-gpu` reject non-normal speed or an enabled debug HUD.
+
+Compare plain and row-banded tables with unfilled and original 3D volumes:
+
+```bash
+cargo run -p kinograph-keyed-grid -- --styles
+cargo run --release -- plan present target/grid-styles/deck.json
+```
+
+These four scenes share `keyed-grid`; `GridStylePlan::plain_table` adds table
+placement and paint, not another playback engine. Use **1–4** to select a treatment.
+
+The reusable-component visual trials run with:
+
+```bash
+bash scenes/component-prototypes/run.sh
+```
+
+Use **1–4** to compare Typeset, Collection, Connector, and their composition.
+These are explicitly provisional native recipes; see the showroom's README for
+limits and the pending aesthetic verdict. This does not change the lesson deck.
+
+The seven-slide functional-data-modeling adaptation includes the opening
+types/cardinality sequence, Boolean ↔ Toggle, joystick representation fit, OR,
+AND, and an illegal-state code edit:
+
+```bash
+cargo run -p kinograph-data-modeling
+cargo run --release -- plan present target/data-modeling/deck.json
+cargo run -- plan steps target/data-modeling/illegal-states.json
+```
+
+It adds a small `value-token` overlay recipe with ordinary continuous channels;
+no generic State Channel or recorded-media playback support is implied. See
+`scenes/data-modeling/README.md` for source fidelity, controls, and counting limits.
 
 Scene Plan v2 has optional `presentationSteps` metadata. Omitting it preserves
 existing serialized plans and video behavior. Steps are separate from cues: each
@@ -140,6 +266,10 @@ independent Scene Plan. Single-plan presentation remains supported.
 - **1–9:** jump directly to a slide.
 - **Left/Right:** previous/next step within the active slide.
 - **Home/End:** first/last step within that slide.
+- **C / Shift+C:** next/previous grid line color on grid slides (preview-only).
+- **T / Shift+T:** next/previous presentation theme on every slide (saved).
+- **S / Shift+S:** playback speed; **D:** debug HUD; **, / .:** paused frame inspection;
+  **Shift+R:** replay paused at the current entry pose.
 - **Space/P, R, M, X, F, Escape:** pause, replay, reduced motion, filtering,
   fullscreen, and close, as in single-plan presentation.
 
@@ -171,6 +301,10 @@ slice focus reveals one layer through continuous cutaway tracks. Optional
 `GridCellLabelPlan` values provide symbols and secondary text, with row, column,
 and depth headings drawn along the sides. Existing navigation,
 pause, replay, and reduced motion apply to cell motion and camera angles alike.
+Labels use the selected growth-edge disclosure: their feather follows the sampled
+X/Y/depth extent rather than simultaneous per-label wipes. C cycles Orange, Muted
+copper, Slate blue, Sage, and Chalk without changing the current motion. The
+palette is a native preview preference, not a Scene Plan or export mutation.
 `scenes/keyed-grid/README.md` explains the slice semantics and export commands.
 
 `GridRecipePlan` contains three immutable `GridAxisPlan` values, an initial

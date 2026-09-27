@@ -3,8 +3,8 @@ use std::{cmp::Reverse, collections::HashMap, mem::discriminant};
 use anyhow::{Context, Result, bail};
 use kinograph::{
     deployment::{
-        DeploymentItemPlan, DeploymentPhasePlan, DeploymentQueueRecipePlan,
-        DeploymentQueueSnapshotPlan,
+        DeploymentAttentionTargetPlan, DeploymentItemPlan, DeploymentPhasePlan,
+        DeploymentQueueRecipePlan, DeploymentQueueSnapshotPlan,
     },
     plan::{ActorPlan, StateChannelPlan},
     state::{StateTrack, TimedState},
@@ -26,6 +26,9 @@ pub(super) struct PreparedDeploymentQueue {
     release: String,
     catalog: Vec<DeploymentItemPlan>,
     snapshots: StateTrack<DeploymentQueueSnapshotPlan>,
+    // Exiting ink outlives membership in complete snapshots. This is distinct
+    // from `previous_phase`, which must keep the immediately previous snapshot.
+    display_phases: HashMap<String, StateTrack<Option<DeploymentPhasePlan>>>,
     layout: KeyedLayoutTrack<String>,
     item_timeline: Timeline,
     item_properties: HashMap<String, ItemProperties>,
@@ -49,6 +52,41 @@ struct DeploymentItemVisualKey {
     previous_phase: Option<DeploymentPhasePlan>,
     phase: DeploymentPhasePlan,
     values: [u32; 5],
+}
+
+struct SampledRow<'a> {
+    frame: DeploymentItemFrame<'a>,
+    x: f32, // Retain the existing conservative X dependency in the visual key.
+    paint_order: usize,
+}
+struct QueueSample<'a> {
+    items: Vec<SampledRow<'a>>,
+    attention: Option<&'a DeploymentAttentionTargetPlan>,
+    attention_transition: f32,
+}
+impl QueueSample<'_> {
+    fn visual_key(&self) -> DeploymentQueueVisualKey {
+        DeploymentQueueVisualKey {
+            items: self
+                .items
+                .iter()
+                .map(|row| DeploymentItemVisualKey {
+                    item_id: row.frame.item.id.clone(),
+                    previous_phase: row.frame.previous_phase.copied(),
+                    phase: *row.frame.phase,
+                    values: [
+                        row.x,
+                        row.frame.row_y,
+                        row.frame.presence,
+                        row.frame.progress,
+                        row.frame.transition,
+                    ]
+                    .map(f32::to_bits),
+                })
+                .collect(),
+            attention_transition: self.attention_transition.to_bits(),
+        }
+    }
 }
 
 #[derive(Clone)]
@@ -141,6 +179,21 @@ impl PreparedDeploymentQueue {
                 .map(|event| TimedState::new(event.at, event.snapshot.clone())),
             duration,
         )?;
+        let display_phases = recipe
+            .items
+            .iter()
+            .map(|item| {
+                let track = StateTrack::compile(
+                    phase_in_snapshot(&initial, &item.id),
+                    events.iter().filter_map(|event| {
+                        phase_in_snapshot(&event.snapshot, &item.id)
+                            .map(|phase| TimedState::new(event.at, Some(phase)))
+                    }),
+                    duration,
+                )?;
+                Ok((item.id.clone(), track))
+            })
+            .collect::<Result<HashMap<_, _>>>()?;
         let layout = KeyedLayoutTrack::compile(
             layout_snapshot(&initial)?,
             events
@@ -165,6 +218,7 @@ impl PreparedDeploymentQueue {
             release: recipe.release,
             catalog: recipe.items,
             snapshots,
+            display_phases,
             layout,
             item_timeline,
             item_properties,
@@ -180,12 +234,7 @@ impl PreparedDeploymentQueue {
         &self.actor_id
     }
 
-    pub(super) fn render(
-        &self,
-        renderer: &mut HeadlessRenderer,
-        time: f64,
-        value: impl Fn(&str, f32) -> f32,
-    ) -> Result<Vec<u8>> {
+    fn sample_at(&self, time: f64) -> Result<QueueSample<'_>> {
         let snapshot = self.snapshots.sample_at(time);
         let attention_transition =
             self.sample_item_property(&self.attention_transition, time, "attention transition")?;
@@ -194,7 +243,16 @@ impl PreparedDeploymentQueue {
             let catalog = self.catalog_item(row.key)?;
             let current_phase = phase_ref_in_snapshot(snapshot.current, row.key);
             let previous_phase = phase_ref_in_snapshot(snapshot.previous, row.key);
-            let phase = current_phase.or(if row.present { None } else { previous_phase });
+            let phase = current_phase.or_else(|| {
+                if row.present {
+                    None
+                } else {
+                    self.display_phases[row.key]
+                        .sample_at(time)
+                        .current
+                        .as_ref()
+                }
+            });
             let phase = phase.with_context(|| {
                 format!(
                     "deployment queue actor '{}' has no phase for visible item '{}'",
@@ -202,31 +260,51 @@ impl PreparedDeploymentQueue {
                 )
             })?;
             let properties = &self.item_properties[row.key.as_str()];
-            items.push(DeploymentItemFrame {
-                item: catalog,
-                phase,
-                previous_phase,
-                present: row.present,
-                row_y: row.y.position,
-                presence: row.presence.position,
-                progress: self.sample_item_property(&properties.progress, time, "item progress")?,
-                transition: self.sample_item_property(
-                    &properties.transition,
-                    time,
-                    "item phase transition",
-                )?,
-            });
-        }
-        items.sort_by_key(|item| {
-            Reverse(
-                snapshot
+            items.push(SampledRow {
+                x: row.x.position,
+                paint_order: snapshot
                     .current
                     .items
                     .iter()
-                    .position(|current| current.item_id == item.item.id)
+                    .position(|current| current.item_id == *row.key)
                     .unwrap_or(usize::MAX),
-            )
-        });
+                frame: DeploymentItemFrame {
+                    item: catalog,
+                    phase,
+                    previous_phase,
+                    present: row.present,
+                    row_y: row.y.position,
+                    presence: row.presence.position,
+                    progress: self.sample_item_property(
+                        &properties.progress,
+                        time,
+                        "item progress",
+                    )?,
+                    transition: self.sample_item_property(
+                        &properties.transition,
+                        time,
+                        "item phase transition",
+                    )?,
+                },
+            });
+        }
+        Ok(QueueSample {
+            items,
+            attention: snapshot.current.attention.as_ref(),
+            attention_transition,
+        })
+    }
+
+    pub(super) fn render(
+        &self,
+        renderer: &mut HeadlessRenderer,
+        time: f64,
+        value: impl Fn(&str, f32) -> f32,
+    ) -> Result<Vec<u8>> {
+        let sample = self.sample_at(time)?;
+        let mut rows = sample.items;
+        rows.sort_by_key(|row| Reverse(row.paint_order));
+        let items = rows.into_iter().map(|row| row.frame).collect::<Vec<_>>();
 
         renderer.render_deployment_queue(&DeploymentQueueFrame {
             product: &self.product,
@@ -235,8 +313,8 @@ impl PreparedDeploymentQueue {
             environment: &self.environment,
             release: &self.release,
             items: &items,
-            attention: snapshot.current.attention.as_ref(),
-            attention_transition,
+            attention: sample.attention,
+            attention_transition: sample.attention_transition,
             center: [value("x", 960.0), value("y", 540.0)],
             scale: value("scale", 1.0),
             rotation: value("rotation", 0.0),
@@ -248,49 +326,9 @@ impl PreparedDeploymentQueue {
     }
 
     pub(super) fn visual_key(&self, time: f64) -> DeploymentQueueVisualKey {
-        let snapshot = self.snapshots.sample_at(time);
-        let items = self
-            .layout
-            .sample_at(time)
-            .into_iter()
-            .map(|row| {
-                let properties = &self.item_properties[row.key.as_str()];
-                let current_phase = phase_ref_in_snapshot(snapshot.current, row.key);
-                let previous_phase = phase_ref_in_snapshot(snapshot.previous, row.key);
-                let phase = current_phase.or(if row.present { None } else { previous_phase });
-                let phase = phase.expect("visible deployment item must have a display phase");
-                DeploymentItemVisualKey {
-                    item_id: row.key.clone(),
-                    previous_phase: previous_phase.copied(),
-                    phase: *phase,
-                    values: [
-                        row.x.position.to_bits(),
-                        row.y.position.to_bits(),
-                        row.presence.position.to_bits(),
-                        self.item_timeline
-                            .sample_at(&properties.progress, time)
-                            .expect("deployment item progress property must be compiled")
-                            .position
-                            .to_bits(),
-                        self.item_timeline
-                            .sample_at(&properties.transition, time)
-                            .expect("deployment item transition property must be compiled")
-                            .position
-                            .to_bits(),
-                    ],
-                }
-            })
-            .collect();
-        let attention_transition = self
-            .item_timeline
-            .sample_at(&self.attention_transition, time)
-            .expect("deployment attention transition property must be compiled")
-            .position
-            .to_bits();
-        DeploymentQueueVisualKey {
-            items,
-            attention_transition,
-        }
+        self.sample_at(time)
+            .expect("validated deployment sample")
+            .visual_key()
     }
 
     fn catalog_item(&self, item_id: &str) -> Result<&DeploymentItemPlan> {
@@ -514,6 +552,47 @@ mod tests {
     use crate::render::deployment_row_center_y;
 
     use super::PreparedDeploymentQueue;
+
+    #[test]
+    fn exiting_row_keeps_display_phase_across_an_unrelated_snapshot() {
+        let api = DeploymentItemPlan::new("api", "API");
+        let worker = DeploymentItemPlan::new("worker", "Worker");
+        let prepared = PreparedDeploymentQueue::new(
+            &actor(vec![api.clone(), worker.clone()]),
+            &[channel(
+                DeploymentQueueSnapshotPlan::new([api.queued(), worker.queued()]),
+                [
+                    (
+                        500_000_000,
+                        DeploymentQueueSnapshotPlan::new([worker.queued()]),
+                    ),
+                    (
+                        550_000_000,
+                        DeploymentQueueSnapshotPlan::new([worker.building(0.1)]),
+                    ),
+                ],
+            )],
+            DURATION,
+        )
+        .unwrap();
+        let sample = prepared
+            .sample_at(0.55)
+            .expect("unrelated snapshots must not erase outgoing content");
+        let row = sample
+            .items
+            .iter()
+            .find(|row| row.frame.item.id == "api")
+            .unwrap();
+        assert!(!row.frame.present && row.frame.presence > 0.);
+        assert_eq!(*row.frame.phase, DeploymentPhasePlan::Queued);
+        assert_eq!(
+            row.frame.previous_phase, None,
+            "aggregate history remains the immediately previous complete snapshot"
+        );
+        let key = prepared.visual_key(0.55);
+        prepared.sample_at(0.51).unwrap();
+        assert_eq!(key, prepared.visual_key(0.55));
+    }
 
     const DURATION: u64 = 3_000_000_000;
 

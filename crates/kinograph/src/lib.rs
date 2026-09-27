@@ -1,5 +1,6 @@
 pub mod author;
 pub mod code;
+pub mod component_prototype;
 pub mod composition;
 pub mod deployment;
 pub mod dsl;
@@ -13,3 +14,4 @@ pub mod task;
 pub mod terminal;
 pub mod timeline;
 pub mod transcript;
+pub mod value;

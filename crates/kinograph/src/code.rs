@@ -412,6 +412,23 @@ impl CodeDocument {
         }
         Ok(Self { lines: by_id })
     }
+
+    pub(crate) fn line(&self, id: &LineId) -> Option<&CodeLine> {
+        self.lines.get(id)
+    }
+
+    pub(crate) fn validate_snapshot(&self, snapshot: &CodeSnapshot) -> Result<()> {
+        let mut seen = HashSet::with_capacity(snapshot.order.len());
+        for id in &snapshot.order {
+            if !self.lines.contains_key(id) {
+                bail!("snapshot references unknown code line '{}'", id.as_str());
+            }
+            if !seen.insert(id) {
+                bail!("snapshot repeats code line '{}'", id.as_str());
+            }
+        }
+        Ok(())
+    }
 }
 
 pub struct CodeSnapshot {
@@ -441,6 +458,32 @@ struct LineTrack {
     to_row: Option<usize>,
 }
 
+impl LineTrack {
+    fn sample(&self, layout: CodeLayout, progress: TransitionProgress) -> PlacedLine<'_> {
+        let (x, row, opacity) = match (self.from_row, self.to_row) {
+            (Some(from), Some(to)) => (0.0, lerp(from as f32, to as f32, progress.layout), 1.0),
+            (None, Some(to)) => (
+                layout.entering_offset_x * (1.0 - progress.content),
+                to as f32,
+                progress.content.clamp(0.0, 1.0),
+            ),
+            (Some(from), None) => (
+                -layout.entering_offset_x * progress.content,
+                from as f32,
+                (1.0 - progress.content).clamp(0.0, 1.0),
+            ),
+            (None, None) => unreachable!("line track must appear in at least one snapshot"),
+        };
+        PlacedLine {
+            line: &self.line,
+            x,
+            y: row * layout.line_height,
+            opacity,
+            blur: (1.0 - opacity) * 4.0,
+        }
+    }
+}
+
 pub struct CodeTransition {
     tracks: Vec<LineTrack>,
     layout: CodeLayout,
@@ -467,8 +510,8 @@ impl CodeTransition {
         after: &CodeSnapshot,
         layout: CodeLayout,
     ) -> Result<Self> {
-        validate_snapshot(document, before)?;
-        validate_snapshot(document, after)?;
+        document.validate_snapshot(before)?;
+        document.validate_snapshot(after)?;
 
         let before_rows: HashMap<_, _> = before
             .order
@@ -507,46 +550,20 @@ impl CodeTransition {
     pub fn sample(&self, progress: TransitionProgress) -> Vec<PlacedLine<'_>> {
         self.tracks
             .iter()
-            .map(|track| {
-                let (x, row, opacity) = match (track.from_row, track.to_row) {
-                    (Some(from), Some(to)) => {
-                        (0.0, lerp(from as f32, to as f32, progress.layout), 1.0)
-                    }
-                    (None, Some(to)) => (
-                        self.layout.entering_offset_x * (1.0 - progress.content),
-                        to as f32,
-                        progress.content.clamp(0.0, 1.0),
-                    ),
-                    (Some(from), None) => (
-                        -self.layout.entering_offset_x * progress.content,
-                        from as f32,
-                        (1.0 - progress.content).clamp(0.0, 1.0),
-                    ),
-                    (None, None) => unreachable!("line track must appear in at least one snapshot"),
-                };
-                PlacedLine {
-                    line: &track.line,
-                    x,
-                    y: row * self.layout.line_height,
-                    opacity,
-                    blur: (1.0 - opacity) * 4.0,
-                }
-            })
+            .map(|track| track.sample(self.layout, progress))
             .collect()
     }
-}
 
-fn validate_snapshot(document: &CodeDocument, snapshot: &CodeSnapshot) -> Result<()> {
-    let mut seen = HashSet::with_capacity(snapshot.order.len());
-    for id in &snapshot.order {
-        if !document.lines.contains_key(id) {
-            bail!("snapshot references unknown code line '{}'", id.as_str());
-        }
-        if !seen.insert(id) {
-            bail!("snapshot repeats code line '{}'", id.as_str());
-        }
+    pub(crate) fn sample_line(
+        &self,
+        id: &LineId,
+        progress: TransitionProgress,
+    ) -> Option<PlacedLine<'_>> {
+        self.tracks
+            .iter()
+            .find(|track| &track.line.id == id)
+            .map(|track| track.sample(self.layout, progress))
     }
-    Ok(())
 }
 
 fn lerp(from: f32, to: f32, progress: f32) -> f32 {

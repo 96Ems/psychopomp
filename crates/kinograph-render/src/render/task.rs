@@ -5,14 +5,13 @@ use std::{
 };
 
 use anyhow::Result;
-use cosmic_text::{Attrs, Color, Family, Metrics, Weight};
 
 use kinograph::dsl::{TaskFrame, TaskState};
 use kinograph::motion::{MotionState, Spring};
 
 use super::{
     HeadlessRenderer, TextSprite, blend_pixel, composite_sprite_rotated,
-    composite_sprite_rotated_with_coverage, make_sprite, rasterize_svg,
+    composite_sprite_rotated_with_coverage, rasterize_svg, text::PlainTextSpec,
 };
 
 mod content;
@@ -94,7 +93,11 @@ impl HeadlessRenderer {
         };
         let mut color = [0.; 3];
         for (state, weight) in node.states {
-            let rgb = task_state_color(state);
+            let rgb = if matches!(state, TaskState::Idle | TaskState::Hidden) {
+                self.theme.surface(task_state_color(state))
+            } else {
+                task_state_color(state)
+            };
             for (channel, value) in color.iter_mut().enumerate() {
                 *value += f32::from(rgb[channel]) * weight;
             }
@@ -1039,42 +1042,18 @@ impl HeadlessRenderer {
     }
 
     fn task_text_sprite(&mut self, text: &str, font_size: f32, color: [u8; 3]) -> &TextSprite {
-        let mut hasher = DefaultHasher::new();
-        text.hash(&mut hasher);
-        font_size.to_bits().hash(&mut hasher);
-        color.hash(&mut hasher);
-        let key = format!("task:{:x}", hasher.finish());
-        if !self.part_sprites.contains_key(&key) {
-            let attrs = Attrs::new()
-                .family(Family::Name("CommitMono"))
-                .weight(Weight::NORMAL)
-                .color(Color::rgb(color[0], color[1], color[2]));
-            let height = (font_size * 1.5).ceil() as u32;
-            let mut sprite = make_sprite(
-                &mut self.font_system,
-                &mut self.swash_cache,
-                vec![(text, attrs.clone())],
-                attrs,
-                Metrics::new(font_size, height as f32),
-                720,
-                height,
-            );
-            let cropped_width = sprite.advance.ceil().max(1.0) as u32;
-            if cropped_width < sprite.width {
-                let mut cropped = vec![0_u8; cropped_width as usize * sprite.height as usize * 4];
-                for y in 0..sprite.height as usize {
-                    let source_start = y * sprite.width as usize * 4;
-                    let target_start = y * cropped_width as usize * 4;
-                    let row_bytes = cropped_width as usize * 4;
-                    cropped[target_start..target_start + row_bytes]
-                        .copy_from_slice(&sprite.pixels[source_start..source_start + row_bytes]);
-                }
-                sprite.width = cropped_width;
-                sprite.pixels = cropped;
-            }
-            self.part_sprites.insert(key.clone(), (0, sprite));
-        }
-        &self.part_sprites[&key].1
+        let color = self.theme.ink(color);
+        let height = (font_size * 1.5).ceil() as u32;
+        self.plain_text_sprite(
+            text,
+            PlainTextSpec {
+                font_size,
+                color,
+                size: [720, height],
+                semibold: false,
+                crop_to_advance: true,
+            },
+        )
     }
 }
 
