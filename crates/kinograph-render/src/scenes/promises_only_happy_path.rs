@@ -342,7 +342,10 @@ fn render_promises_only_happy_path_sample(
     let squiggles = [];
     let annotations = choreography.scene.annotations_at(time).collect::<Vec<_>>();
     let frame = EditorFrame {
+        panel_offset_x: 0.0,
         panel_offset_y: sample(&choreography.panel_y),
+        panel_opacity: 1.0,
+        line_marks: &[],
         panel_rotation: sample(&choreography.panel_rotation),
         panel_tilt_x: sample(&choreography.panel_tilt_x),
         panel_tilt_y: sample(&choreography.panel_tilt_y),

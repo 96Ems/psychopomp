@@ -15,6 +15,7 @@ use wgpu::util::DeviceExt;
 use kinograph::code::{CodeLine, LineId, PlacedLine, StyledSpan, SyntaxStyle};
 use kinograph::dsl::AnnotationFrame;
 
+mod caption;
 mod component_prototype;
 mod debug;
 mod deployment_queue;
@@ -23,6 +24,7 @@ mod effects;
 mod grid;
 mod header;
 mod rich_text;
+mod sequence;
 mod task;
 mod terminal;
 mod text;
@@ -63,7 +65,11 @@ pub struct RenderSpec {
 }
 
 pub struct EditorFrame<'a> {
+    pub panel_offset_x: f32,
     pub panel_offset_y: f32,
+    /// Whole-card opacity over the editor background.
+    pub panel_opacity: f32,
+    pub line_marks: &'a [LineMarkFrame<'a>],
     pub panel_rotation: f32,
     pub panel_tilt_x: f32,
     pub panel_tilt_y: f32,
@@ -79,6 +85,16 @@ pub struct EditorFrame<'a> {
     pub squiggles: &'a [SquiggleFrame],
     pub annotations: &'a [AnnotationFrame],
     pub lines: &'a [PlacedLine<'a>],
+}
+
+/// A diff-marked line: a tinted row and gutter sign under the code.
+#[derive(Clone, Copy)]
+pub struct LineMarkFrame<'a> {
+    pub line_id: &'a str,
+    pub mark: kinograph::editor::LineMarkPlan,
+    pub presence: f32,
+    /// Row spacing, so consecutive marked rows join into one band.
+    pub row_height: f32,
 }
 
 pub struct BrightTextFrame {
@@ -787,7 +803,10 @@ impl HeadlessRenderer {
 
     fn render_editor_full(&mut self, frame: &EditorFrame<'_>) -> Result<Vec<u8>> {
         let flat_frame = EditorFrame {
+            panel_offset_x: 0.0,
             panel_offset_y: 0.0,
+            panel_opacity: 1.0,
+            line_marks: frame.line_marks,
             panel_rotation: 0.0,
             panel_tilt_x: 0.0,
             panel_tilt_y: 0.0,
@@ -858,7 +877,7 @@ impl HeadlessRenderer {
         let mut pixels = self.editor_background_pixels.clone();
         let destination_size = [card_size[0] as f32, card_size[1] as f32];
         let destination_center = [
-            self.spec.width as f32 * 0.5,
+            self.spec.width as f32 * 0.5 + frame.panel_offset_x,
             self.spec.height as f32 * 0.52 + frame.panel_offset_y,
         ];
         let mut card_style = ui::card::CardStyle::standard();
@@ -881,7 +900,7 @@ impl HeadlessRenderer {
                         surface_blur: 0.0,
                         near_edge_blur: frame.panel_near_blur,
                     },
-                    opacity: 1.0,
+                    opacity: frame.panel_opacity.clamp(0.0, 1.0),
                 },
                 |card| {
                     card.content(|canvas| {
@@ -911,6 +930,80 @@ impl HeadlessRenderer {
             )
         })?;
         Ok(pixels)
+    }
+
+    /// Diff rows sit under the code: a tint across the card, an accent bar, and
+    /// a vector +/- sign in the gutter. Consecutive rows join into one band.
+    fn composite_line_marks(
+        &self,
+        pixels: &mut [u8],
+        frame: &EditorFrame<'_>,
+        [top, bottom]: [f32; 2],
+    ) {
+        let width = self.spec.width as f32;
+        let (left, right) = (width * 0.11 + 12.0, width * 0.89 - 12.0);
+        let sign_x = width * 0.145 - 30.0;
+        for mark in frame.line_marks {
+            let Some(placed) = frame
+                .lines
+                .iter()
+                .find(|line| line.line.id.as_str() == mark.line_id)
+            else {
+                continue;
+            };
+            let alpha = mark.presence.clamp(0.0, 1.0) * placed.opacity.clamp(0.0, 1.0);
+            if alpha <= 0.001 {
+                continue;
+            }
+            let center = top + placed.y + LINE_HEIGHT * 0.5;
+            let band_top = (center - mark.row_height * 0.5).max(top);
+            let band_bottom = (center + mark.row_height * 0.5).min(bottom);
+            if band_bottom <= band_top {
+                continue;
+            }
+            let color = match mark.mark {
+                kinograph::editor::LineMarkPlan::Added => [127, 216, 143],
+                kinograph::editor::LineMarkPlan::Removed => [224, 108, 117],
+            };
+            {
+                let mut canvas =
+                    ui::card::UiCanvas::new(pixels, [self.spec.width, self.spec.height]);
+                let band = ui::Bounds {
+                    origin: [left, band_top],
+                    size: [right - left, band_bottom - band_top],
+                };
+                let solid = |a: u8| {
+                    ui::card::Fill::Solid(ui::card::UiColor::srgb8(color[0], color[1], color[2], a))
+                };
+                canvas.fill(band, 0.0, solid(255), alpha * 0.12);
+                canvas.fill(
+                    ui::Bounds {
+                        origin: [left, band_top],
+                        size: [3.0, band_bottom - band_top],
+                    },
+                    0.0,
+                    solid(255),
+                    alpha * 0.85,
+                );
+            }
+            let half = 7.0;
+            self.composite_prototype_path(
+                pixels,
+                &[[sign_x - half, center], [sign_x + half, center]],
+                2.4,
+                color,
+                alpha,
+            );
+            if mark.mark == kinograph::editor::LineMarkPlan::Added {
+                self.composite_prototype_path(
+                    pixels,
+                    &[[sign_x, center - half], [sign_x, center + half]],
+                    2.4,
+                    color,
+                    alpha,
+                );
+            }
+        }
     }
 
     fn composite_editor_title(&self, pixels: &mut [u8], panel_offset_y: f32) {
@@ -964,6 +1057,7 @@ impl HeadlessRenderer {
         let code_top = panel_top + 104.0;
         let code_bottom = panel_top + self.spec.height as f32 * 0.70;
         let code_right = self.spec.width as f32 * 0.89 - 32.0;
+        self.composite_line_marks(pixels, frame, [code_top, code_bottom]);
         for placed in frame.lines {
             if placed.opacity <= 0.001 {
                 continue;
@@ -1345,6 +1439,8 @@ fn can_preview_editor(frame: &EditorFrame<'_>, [width, height]: [u32; 2]) -> boo
     let width = width as f32;
     let height = height as f32;
     if frame.panel_offset_y != 0.0
+        || frame.panel_offset_x != 0.0
+        || frame.panel_opacity < 1.0
         || frame.panel_rotation != 0.0
         || frame.panel_tilt_x != 0.0
         || frame.panel_tilt_y != 0.0
@@ -2430,7 +2526,10 @@ mod tests {
     fn preview_keeps_dynamic_overlays_separate_and_falls_back_for_optical_motion() {
         use super::{EditorFrame, PointerFrame, TokenHighlight, can_preview_editor};
         let mut frame = EditorFrame {
+            panel_offset_x: 0.0,
             panel_offset_y: 0.,
+            panel_opacity: 1.0,
+            line_marks: &[],
             panel_rotation: 0.,
             panel_tilt_x: 0.,
             panel_tilt_y: 0.,

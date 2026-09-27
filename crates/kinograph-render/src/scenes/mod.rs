@@ -4,7 +4,7 @@ use anyhow::{Context, Result, bail};
 
 use kinograph::{
     code::{CodeLine, PlacedLine, StyledSpan, SyntaxStyle},
-    composition::{Time, TimeRange},
+    composition::{Duration, MediaPlacement, Time, TimeRange},
     dsl::{CompiledScene, Pointer, TargetGeometry},
 };
 
@@ -77,10 +77,33 @@ pub(crate) fn encode_video_window_by_key<K: PartialEq>(
     sample_key: impl FnMut(f64) -> Result<K>,
     render_sample: impl FnMut(&mut HeadlessRenderer, f64) -> Result<Vec<u8>>,
 ) -> Result<()> {
+    encode_media_window_by_key(
+        renderer,
+        output,
+        scene.duration(),
+        scene.media(),
+        window,
+        sample_key,
+        render_sample,
+    )
+}
+
+/// Encode an arbitrary timeline, such as a reel of several Scene Plans, whose
+/// duration and media placements do not come from one compiled scene.
+pub(crate) fn encode_media_window_by_key<K: PartialEq>(
+    renderer: &mut HeadlessRenderer,
+    output: &Path,
+    duration: Duration,
+    media: &[MediaPlacement],
+    window: TimeRange,
+    sample_key: impl FnMut(f64) -> Result<K>,
+    render_sample: impl FnMut(&mut HeadlessRenderer, f64) -> Result<Vec<u8>>,
+) -> Result<()> {
     encode_video_window_with_samples_by_key(
         renderer,
         output,
-        scene,
+        duration,
+        media,
         window,
         TEMPORAL_SAMPLES,
         ENTRANCE_TEMPORAL_SAMPLES,
@@ -104,7 +127,8 @@ fn encode_video_window_with_samples(
     encode_video_window_with_samples_by_key(
         renderer,
         output,
-        scene,
+        scene.duration(),
+        scene.media(),
         window,
         temporal_samples,
         entrance_temporal_samples,
@@ -118,7 +142,8 @@ fn encode_video_window_with_samples(
 fn encode_video_window_with_samples_by_key<K: PartialEq>(
     renderer: &mut HeadlessRenderer,
     output: &Path,
-    scene: &CompiledScene,
+    duration: Duration,
+    media: &[MediaPlacement],
     window: TimeRange,
     temporal_samples: u32,
     entrance_temporal_samples: u32,
@@ -130,19 +155,18 @@ fn encode_video_window_with_samples_by_key<K: PartialEq>(
     if window.duration() == kinograph::composition::Duration::ZERO {
         bail!("render window must have positive duration");
     }
-    let scene_end = Time::ZERO.after(scene.duration());
+    let scene_end = Time::ZERO.after(duration);
     if window.end() > scene_end {
         bail!(
             "render window {}..{} exceeds scene duration {}",
             window.start(),
             window.end(),
-            scene.duration()
+            duration
         );
     }
     let started = Instant::now();
     let frame_count = window.duration().frame_count(FPS);
-    let media = scene
-        .media()
+    let media = media
         .iter()
         .filter_map(|placement| placement.for_window(window))
         .collect::<Vec<_>>();

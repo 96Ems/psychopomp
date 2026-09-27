@@ -382,6 +382,49 @@ Old JSON plans need no new fields. Rust recipe literals use `snapshots: Vec::new
 to retain the old behavior. Do not author in the generated `line.<id>.y`,
 `line.<id>.opacity`, or `__attachment-*` namespaces.
 
+## Make A Narrated Explainer Reel
+
+`scenes/pr-walkthrough` walks through five pull requests: for each, a Sequence
+Diagram plays the broken behavior and replays the fix in the same slots, then an
+editor animates the actual change as a diff with Line Marks. The workflow is
+reusable for any code explainer:
+
+```sh
+# 1. Voice the script (Fish Audio via 1Password; --draft uses macOS `say`).
+2password run --env 'FISH_AUDIO_API_KEY=op://…' -- \
+  bun scripts/narrate.ts scenes/pr-walkthrough/narration/script.json
+# 2. Emit the reel; phrase lookups fail loudly if narration changed.
+cargo run -p kinograph-pr-walkthrough
+cargo run --release -- plan validate scenes/pr-walkthrough/pr-walkthrough.reel.json
+cargo run --release -- plan inspect scenes/pr-walkthrough/pr-walkthrough.reel.json
+# 3. Review exact frames, then one segment with audio, then everything.
+bun scripts/sheet.ts scenes/pr-walkthrough/pr-walkthrough.reel.json 4,30,60 --theme opencode
+cargo run --release -- plan render scenes/pr-walkthrough/pr-walkthrough.reel.json output/errors.mp4 --cue errors-behavior --theme opencode
+cargo run --release -- plan render scenes/pr-walkthrough/pr-walkthrough.reel.json output/pr-walkthrough.mp4 --theme opencode
+```
+
+`narrate.ts` regenerates only clips whose text (or engine) changed and writes
+`narration.json` with exact decoded durations. Draft and final clips share file
+names, so switching voices re-times the reel without touching the Scene Program.
+
+A reel is `{ "version": 1, "id", "segments": [{ "transitionNanos", "transitionStyle": "crossfade" | "dip", "plan" }] }`.
+Relative media paths resolve against the reel file. Prefer `dip` between frames
+that are both dense with text; a crossfade between two editors turns both unreadable.
+
+Components used by explainers:
+
+- `sequence`: `participants` (`id`, `label`, `detail`) and `rows` of `kind`
+  `message` (`from`, `to`, `label`, `tone`, `reply`), `note` (`over`, `text`), and
+  `end` (`participant`, `label`), each with optional `slot` and `aside`. Channels:
+  `opacity`, `x`, `y`, `lifelines`, `participant.<id>.opacity|emphasis`,
+  `row.<id>.reveal|opacity|strike`. Use `SequenceActor` to write reveals by row.
+- `caption`: `origin`, `align`, `size`, `lines` of `{ text, tone }` spans, `chip`.
+  Channels: `opacity`, `x`, `y`, `typed`, `caret`. `CaptionActor::type_in` writes
+  one exact step per character; `show` and `hide` fade.
+- Editor Line Marks: `"mark": "added" | "removed"` on a line, with presence
+  channel `mark.<line-id>`; `panel-x` and `panel-opacity` move and fade the card.
+- `--theme opencode` renders with the OpenCode TUI's tokens.
+
 ## Keep The Renderer Running
 
 `kinograph plan serve` reads one JSON request per line from standard input and writes one JSON response per line to standard output. Progress and GPU diagnostics use standard error, leaving standard output machine-readable.

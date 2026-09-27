@@ -25,6 +25,7 @@ use crate::{
 };
 
 mod attachments;
+mod caption;
 mod component_prototype;
 mod delivery;
 mod deployment_queue;
@@ -38,7 +39,9 @@ mod preflight;
 mod presentation;
 #[cfg(test)]
 mod proof;
+mod reel;
 mod rich_text;
+mod sequence;
 #[cfg(test)]
 mod stability_tests;
 mod task;
@@ -100,8 +103,11 @@ pub(crate) fn command(arguments: &[String]) -> Result<()> {
             Ok(())
         }
         [command, path] if command == "validate" => {
-            let plan = read_plan(Path::new(path))?;
-            validate_renderer_plan(&plan)?;
+            if reel::is_reel(Path::new(path))? {
+                reel::validate(&reel::read(Path::new(path))?)?;
+            } else {
+                validate_renderer_plan(&read_plan(Path::new(path))?)?;
+            }
             println!(
                 "{}",
                 serde_json::to_string_pretty(&json!({
@@ -112,8 +118,12 @@ pub(crate) fn command(arguments: &[String]) -> Result<()> {
             Ok(())
         }
         [command, path] if command == "inspect" => {
-            let plan = read_plan(Path::new(path))?;
-            println!("{}", serde_json::to_string_pretty(&inspect_plan(&plan))?);
+            let report = if reel::is_reel(Path::new(path))? {
+                reel::inspect(&reel::read(Path::new(path))?)
+            } else {
+                inspect_plan(&read_plan(Path::new(path))?)
+            };
+            println!("{}", serde_json::to_string_pretty(&report)?);
             Ok(())
         }
         [command, path] if command == "steps" => {
@@ -137,7 +147,7 @@ pub(crate) fn command(arguments: &[String]) -> Result<()> {
             "usage: kinograph plan serve | kinograph plan schema | kinograph plan validate <plan.json> | \
              kinograph plan inspect <plan.json> | kinograph plan steps <plan.json> | kinograph plan diff <before.json> <after.json> | \
              kinograph plan frame <plan.json> <seconds> [output.png] [--theme NAME] | \
-              kinograph plan render <plan.json> [output] [--cue ID | --range START..END] [--theme NAME] | \
+              kinograph plan render <plan-or-reel.json> [output] [--cue ID | --range START..END] [--theme NAME] | \
                kinograph plan present <plan.json> [--theme NAME] [--speed 1|0.5|0.25|0.1] [--debug] [--reduced-motion] [--full-quality] [--fps FPS] [--benchmark | --benchmark-gpu]"
         ),
     }
@@ -256,6 +266,16 @@ fn render_plan(path: &Path, output: &Path, selection: WindowSelection, theme: Th
         fs::create_dir_all(parent)
             .with_context(|| format!("create output directory {}", parent.display()))?;
     }
+    if reel::is_reel(path)? {
+        let reel = reel::read(path)?;
+        let window = match selection {
+            WindowSelection::Full => None,
+            WindowSelection::Cue(id) => Some(reel::segment_window(&reel, &id)?),
+            WindowSelection::Range(range) => Some(range),
+        };
+        let base = path.parent().unwrap_or_else(|| Path::new(".")).to_owned();
+        return pollster::block_on(reel::render(reel, &base, output, window, theme));
+    }
     let plan = read_plan(path)?;
     let window = match selection {
         WindowSelection::Full => TimeRange::new(Time::ZERO, Time::from_nanos(plan.duration_nanos)),
@@ -280,6 +300,11 @@ fn render_frame(path: &Path, output: &Path, at: Time, theme: Theme) -> Result<()
     if let Some(parent) = output.parent() {
         fs::create_dir_all(parent)
             .with_context(|| format!("create output directory {}", parent.display()))?;
+    }
+    if reel::is_reel(path)? {
+        let reel = reel::read(path)?;
+        let base = path.parent().unwrap_or_else(|| Path::new(".")).to_owned();
+        return pollster::block_on(reel::frame(reel, &base, output, at, theme));
     }
     let plan = read_plan(path)?;
     if at.as_nanos() > plan.duration_nanos {
@@ -365,6 +390,8 @@ struct PreparedPlan {
     components: component_prototype::PreparedComponents,
     rich_text: Vec<rich_text::PreparedRichText>,
     venn: Vec<venn::PreparedVenn>,
+    sequences: Vec<sequence::PreparedSequence>,
+    captions: Vec<caption::PreparedCaption>,
     headers: Vec<header::PreparedHeader>,
 }
 
@@ -430,6 +457,8 @@ impl PreparedPlan {
             headers,
             value_tokens,
             venn,
+            sequences,
+            captions,
             native,
         } = input;
         let components = component_prototype::PreparedComponents::prepare_inputs(
@@ -505,6 +534,8 @@ impl PreparedPlan {
             components,
             rich_text,
             venn,
+            sequences,
+            captions,
             headers,
         })
     }
@@ -781,6 +812,11 @@ impl PreparedPlan {
                 self.property_value(timeline, actor, property, time, default)
             });
         }
+        for sequence in &self.sequences {
+            sequence.render(&mut pixels, renderer, |actor, property, default| {
+                self.property_value(timeline, actor, property, time, default)
+            });
+        }
         self.components
             .render(&mut pixels, renderer, |actor, property, default| {
                 self.property_value(timeline, actor, property, time, default)
@@ -793,6 +829,11 @@ impl PreparedPlan {
         for text in &self.rich_text {
             text.render(&mut pixels, renderer, |a, p, d| {
                 self.property_value(timeline, a, p, time, d)
+            });
+        }
+        for caption in &self.captions {
+            caption.render(&mut pixels, renderer, |actor, property, default| {
+                self.property_value(timeline, actor, property, time, default)
             });
         }
         for text in &self.texts {

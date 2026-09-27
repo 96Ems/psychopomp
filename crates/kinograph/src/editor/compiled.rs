@@ -1,6 +1,6 @@
 //! One validated editor identity/placement model, shared by inspection and paint
 //! preparation. Glyph metrics and attachment derivatives remain renderer-owned.
-use super::{EditorInlineRevealPlan, EditorRecipePlan, EditorSnapshotPlan};
+use super::{EditorInlineRevealPlan, EditorRecipePlan, EditorSnapshotPlan, LineMarkPlan};
 use crate::{
     code::{
         CodeDocument, CodeLayout, CodeLine, CodeSnapshot, CodeTransition, LineId, PlacedLine,
@@ -20,6 +20,7 @@ pub struct CompiledEditor {
     line_height: f32,
     focus_line_id: String,
     focus_height: f32,
+    marks: Vec<(String, LineMarkPlan)>,
 }
 
 enum Placement {
@@ -108,7 +109,19 @@ impl CompiledEditor {
             line_height: recipe.line_height,
             focus_line_id: recipe.focus_line_id.clone(),
             focus_height: recipe.focus_height,
+            marks: recipe
+                .lines
+                .iter()
+                .filter_map(|line| line.mark.map(|mark| (line.id.clone(), mark)))
+                .collect(),
         })
+    }
+
+    /// Diff-marked lines in catalog order, with the channel that shows each mark.
+    pub fn marks(&self) -> impl Iterator<Item = (&str, LineMarkPlan, String)> {
+        self.marks
+            .iter()
+            .map(|(id, mark)| (id.as_str(), *mark, format!("mark.{id}")))
     }
 
     pub fn file_name(&self) -> &str {

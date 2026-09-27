@@ -39,6 +39,10 @@ cargo run -p kinograph-keyed-grid -- --styles
 cargo run --release -- plan present target/grid-styles/deck.json
 cargo run -p kinograph-component-prototypes -- --slideshow
 cargo run --release -- plan present target/slideshow-components/deck.json
+cargo run -p kinograph-pr-walkthrough
+cargo run --release -- plan render scenes/pr-walkthrough/pr-walkthrough.reel.json output/pr-walkthrough.mp4 --theme opencode
+bun scripts/narrate.ts <scene>/narration/script.json [--draft]
+bun scripts/sheet.ts <plan-or-reel.json> <from:to:step | t1,t2,...> [--theme NAME]
 ```
 
 `cargo run --release` renders `output/kinograph-prototype.mp4` by default. Pass an output path as the first argument to override it. A full render requires:
@@ -70,7 +74,14 @@ Do not run the full render as routine validation when unit tests and static chec
 - `crates/kinograph/src/timeline.rs`: relative Animation and explicit-time continuous Property Track compilation
 - `crates/kinograph/src/timeline/retarget.rs`: shared cancellation-safe numeric schedule for Playback and authored resting entrances
 - `crates/kinograph/src/motion.rs`: deterministic arbitrary-time analytic spring sampling with position and velocity
-- `crates/kinograph/src/transcript.rs`: word timing ingestion and semantic cue lookup
+- `crates/kinograph/src/transcript.rs`: word timing ingestion, word and phrase cue lookup
+- `crates/kinograph/src/sequence.rs`: Sequence Diagram recipe values, slot geometry, validation, and the `SequenceActor` authoring handle
+- `crates/kinograph/src/caption.rs`: Caption recipe values and the `CaptionActor` authoring handle (typing, show, hide)
+- `crates/kinograph/src/tone.rs`: semantic Tone roles shared by explainer recipes
+- `crates/kinograph/src/highlight.rs`: line-local TypeScript highlighting into editor spans
+- `crates/kinograph-render/src/plan_runtime/reel.rs`: Reel preparation, layer mixing, media retiming, and reel frame/video delivery
+- `crates/kinograph-render/src/plan_runtime/sequence.rs` and `caption.rs`: strict-channel preflight for the explainer overlays
+- `crates/kinograph-render/src/render/sequence.rs` and `render/caption.rs`: Sequence Diagram and Caption pixels
 - `crates/kinograph-render/src/render.rs`: concrete headless `wgpu` renderer, sprite compositor, and code annotations
 - `crates/kinograph-render/src/render/effects/`: independent pixel recipes for interchangeable short annotation effects
 - `crates/kinograph-render/src/render/task.rs`: concrete Effect Task recipe and compositing

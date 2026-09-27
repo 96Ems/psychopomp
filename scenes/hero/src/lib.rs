@@ -254,12 +254,12 @@ fn editor_recipe() -> EditorRecipePlan {
         entering_offset_x: 96.0,
         focus_line_id: FOCUS_LINE_ID.to_owned(),
         focus_height: 44.0,
-        inline_reveal: EditorInlineRevealPlan {
+        inline_reveal: Some(EditorInlineRevealPlan {
             line_id: FOCUS_LINE_ID.to_owned(),
             range_id: "error-slot".to_owned(),
             channel: None,
             reversed: false,
-        },
+        }),
         additional_inline_reveals: Vec::new(),
     }
 }
@@ -273,6 +273,7 @@ fn line(id: &str, spans: Vec<StyledSpan>) -> EditorLinePlan {
             .map(|(index, span)| part(&format!("span-{index}"), span))
             .collect(),
         semantic_ranges: Vec::new(),
+        mark: None,
     }
 }
 
@@ -285,6 +286,7 @@ fn semantic_line(
         id: id.to_owned(),
         parts,
         semantic_ranges,
+        mark: None,
     }
 }
 

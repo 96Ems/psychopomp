@@ -265,6 +265,19 @@ impl MediaPlacement {
         self.timeline_range
     }
 
+    /// The same clip placed `offset` later on a containing timeline, such as a
+    /// segment's media on a reel clock. The source range is unchanged.
+    pub fn shifted(&self, offset: Duration) -> Self {
+        Self {
+            clip: self.clip.clone(),
+            role: self.role,
+            timeline_range: TimeRange::new(
+                self.timeline_range.start().after(offset),
+                self.timeline_range.end().after(offset),
+            ),
+        }
+    }
+
     pub fn for_window(&self, window: TimeRange) -> Option<Self> {
         let overlap_start = self.timeline_range.start().max(window.start());
         let overlap_end = self.timeline_range.end().min(window.end());

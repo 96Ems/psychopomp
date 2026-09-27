@@ -1,6 +1,7 @@
 //! Pure, typed recipe preflight. Each payload is decoded once and retained for
 //! resource preparation; sampling never interprets immutable actor JSON again.
 use super::{
+    caption::PreparedCaption,
     component_prototype::{self, ComponentInput},
     deployment_queue::PreparedDeploymentQueue,
     diagram,
@@ -8,6 +9,7 @@ use super::{
     generated,
     grid::PreparedGrid,
     header,
+    sequence::PreparedSequence,
     terminal::TerminalInput,
     value::PreparedValueToken,
     venn::PreparedVenn,
@@ -15,6 +17,7 @@ use super::{
 use crate::render::{RichTextSource, VerticalMask};
 use anyhow::{Context, Result, bail};
 use kinograph::{
+    caption::CAPTION_RECIPE,
     component_prototype::{
         COLLECTION, CONNECTOR, DIAGRAM, DiagramPlan, HEADER, HeaderPlan, RICH_TEXT, TYPESET, VENN,
         WIDTH_TEXT,
@@ -23,6 +26,7 @@ use kinograph::{
     editor::{EDITOR_RECIPE, EditorTargetSelector, POINTER_RECIPE, PointerRecipePlan},
     grid::GRID_RECIPE,
     plan::{ActorPlan, MediaKindPlan, ScenePlan, StateChannelPlan},
+    sequence::SEQUENCE_RECIPE,
     state::{StateTrack, TimedState},
     task::{TASK_RECIPE, TaskRecipePlan},
     terminal::TERMINAL_RECORDING_RECIPE,
@@ -41,6 +45,8 @@ pub(super) struct Plan {
     pub headers: Vec<(String, HeaderPlan)>,
     pub value_tokens: Vec<PreparedValueToken>,
     pub venn: Vec<PreparedVenn>,
+    pub sequences: Vec<PreparedSequence>,
+    pub captions: Vec<PreparedCaption>,
     pub native: bool,
 }
 pub(super) enum RootPlan {
@@ -299,6 +305,8 @@ impl Plan {
         let mut headers = Vec::new();
         let mut value_tokens = Vec::new();
         let mut venn = Vec::new();
+        let mut sequences = Vec::new();
+        let mut captions = Vec::new();
         for actor in &plan.actors {
             match actor.recipe.as_str() {
                 "title-card" => put_root(&mut root, RootPlan::Title(Title::new(actor, &plan)?))?,
@@ -369,6 +377,12 @@ impl Plan {
                 )),
                 VALUE_TOKEN_RECIPE => value_tokens.push(PreparedValueToken::new(actor)?),
                 VENN => venn.push(PreparedVenn::new(actor)?),
+                SEQUENCE_RECIPE => {
+                    sequences.push(PreparedSequence::new(actor, &plan.continuous_channels)?)
+                }
+                CAPTION_RECIPE => {
+                    captions.push(PreparedCaption::new(actor, &plan.continuous_channels)?)
+                }
                 recipe => bail!("unsupported actor recipe '{recipe}'"),
             }
         }
@@ -446,6 +460,8 @@ impl Plan {
             headers,
             value_tokens,
             venn,
+            sequences,
+            captions,
             native,
         };
         let editors = match &result.root {

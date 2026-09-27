@@ -663,6 +663,7 @@ fn keyed_line_steps_retain_identity_and_retarget_without_pixel_jumps() {
             spans: vec![StyledSpan::new("const ready = true", SyntaxStyle::Plain)],
         }],
         semantic_ranges: Vec::new(),
+        mark: None,
     });
     let mut inserted = initial.clone();
     inserted.insert(2, "inserted".into());

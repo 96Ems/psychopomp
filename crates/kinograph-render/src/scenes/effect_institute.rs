@@ -1038,7 +1038,10 @@ impl PublishedCode {
     fn render(&self, renderer: &mut HeadlessRenderer, time: f32) -> Result<Vec<u8>> {
         let sample = self.sample(renderer, time)?;
         renderer.render_editor(&EditorFrame {
+            panel_offset_x: 0.0,
             panel_offset_y: 0.0,
+            panel_opacity: 1.0,
+            line_marks: &[],
             panel_rotation: 0.0,
             panel_tilt_x: 0.0,
             panel_tilt_y: 0.0,

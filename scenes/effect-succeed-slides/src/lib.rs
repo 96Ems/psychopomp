@@ -139,7 +139,7 @@ fn editor_recipe() -> EditorRecipePlan {
         entering_offset_x: 0.0,
         focus_line_id: "magicWord".into(),
         focus_height: 88.0,
-        inline_reveal: reveal("value", "constructor", "constructor", false),
+        inline_reveal: Some(reveal("value", "constructor", "constructor", false)),
         additional_inline_reveals: vec![
             reveal("value", "close", "constructor", false),
             reveal("value", "placeholder", "value", true),
@@ -179,6 +179,7 @@ fn line(id: &str, parts: Vec<EditorPartPlan>) -> EditorLinePlan {
         id: id.into(),
         parts,
         semantic_ranges,
+        mark: None,
     }
 }
 
@@ -212,8 +213,10 @@ mod tests {
             content: 1.0,
         });
         assert_eq!(lines.len(), 4);
-        for reveal in
-            std::iter::once(&recipe.inline_reveal).chain(&recipe.additional_inline_reveals)
+        for reveal in recipe
+            .inline_reveal
+            .iter()
+            .chain(&recipe.additional_inline_reveals)
         {
             assert!(!["const", "name", "equals", "indent"].contains(&reveal.range_id.as_str()));
         }

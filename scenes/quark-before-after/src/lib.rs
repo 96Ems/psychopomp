@@ -302,7 +302,7 @@ fn editor_recipe() -> EditorRecipePlan {
         entering_offset_x: 0.0,
         focus_line_id: "for-open".to_owned(),
         focus_height: 46.0,
-        inline_reveal: reveal("comment", "solid-comment", true),
+        inline_reveal: Some(reveal("comment", "solid-comment", true)),
         additional_inline_reveals: vec![
             reveal("comment", "quark-comment", false),
             reveal("declaration", "solid-binding-open", true),
@@ -350,6 +350,7 @@ fn line(id: &str, spans: Vec<StyledSpan>) -> EditorLinePlan {
             .map(|(index, span)| part(&format!("span-{index}"), vec![span]))
             .collect(),
         semantic_ranges: Vec::new(),
+        mark: None,
     }
 }
 
@@ -362,6 +363,7 @@ fn semantic_line(
         id: id.to_owned(),
         parts,
         semantic_ranges,
+        mark: None,
     }
 }
 

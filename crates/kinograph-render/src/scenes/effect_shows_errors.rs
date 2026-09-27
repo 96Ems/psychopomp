@@ -474,7 +474,10 @@ fn render_effect_shows_errors_sample(
     }];
     let annotations = choreography.scene.annotations_at(time).collect::<Vec<_>>();
     let frame = EditorFrame {
+        panel_offset_x: 0.0,
         panel_offset_y: sample(&choreography.panel_y),
+        panel_opacity: 1.0,
+        line_marks: &[],
         panel_rotation: 0.0,
         panel_tilt_x: 0.0,
         panel_tilt_y: 0.0,

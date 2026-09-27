@@ -461,7 +461,10 @@ fn render_effect_is_a_description_sample(
     let squiggles = [];
     let annotations = [];
     let frame = EditorFrame {
+        panel_offset_x: 0.0,
         panel_offset_y: sample(&choreography.panel_y),
+        panel_opacity: 1.0,
+        line_marks: &[],
         panel_rotation: sample(&choreography.panel_rotation),
         panel_tilt_x: sample(&choreography.panel_tilt_x),
         panel_tilt_y: sample(&choreography.panel_tilt_y),

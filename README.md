@@ -40,6 +40,17 @@ not restart it. Exports choose their theme explicitly; native preferences do not
 silently change exported pixels. Generated plans and media belong in ignored
 `target/` and `output/` directories.
 
+## Make a narrated explainer
+
+`scenes/pr-walkthrough` is a complete narrated reel: sequence diagrams replay broken
+and fixed behavior, and editors animate each change as a diff. See
+[Make A Narrated Explainer Reel](SCENE_PLANS.md#make-a-narrated-explainer-reel).
+
+```sh
+cargo run -p kinograph-pr-walkthrough
+cargo run --release -- plan render scenes/pr-walkthrough/pr-walkthrough.reel.json output/pr-walkthrough.mp4 --theme opencode
+```
+
 ## Change intent, motion, or pixels in the right place
 
 A **Scene Program** is a small Rust executable under `scenes/`. It writes a

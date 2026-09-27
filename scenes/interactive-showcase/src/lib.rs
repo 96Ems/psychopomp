@@ -218,6 +218,7 @@ fn code_slide() -> Result<ScenePlan> {
             })
             .collect(),
         parts,
+        mark: None,
     };
     let mut returns = line(
         "return",
@@ -298,12 +299,12 @@ fn code_slide() -> Result<ScenePlan> {
         entering_offset_x: 0.,
         focus_line_id: "return".into(),
         focus_height: 44.,
-        inline_reveal: EditorInlineRevealPlan {
+        inline_reveal: Some(EditorInlineRevealPlan {
             line_id: "return".into(),
             range_id: "id".into(),
             channel: Some("load".into()),
             reversed: true,
-        },
+        }),
         additional_inline_reveals: vec![EditorInlineRevealPlan {
             line_id: "return".into(),
             range_id: "name".into(),

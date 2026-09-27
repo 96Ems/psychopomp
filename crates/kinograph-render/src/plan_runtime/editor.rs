@@ -10,8 +10,8 @@ use kinograph::{
 };
 
 use crate::render::{
-    EditorFrame, HeadlessRenderer, InlineRangeMetrics, InlineRevealFrame, PointerFrame,
-    TokenHighlight,
+    EditorFrame, HeadlessRenderer, InlineRangeMetrics, InlineRevealFrame, LineMarkFrame,
+    PointerFrame, TokenHighlight,
 };
 
 pub(super) struct PreparedEditor {
@@ -261,8 +261,21 @@ impl PreparedEditor {
                 }
             })
             .collect::<Vec<_>>();
+        let line_marks = self
+            .editor
+            .marks()
+            .map(|(line_id, mark, channel)| LineMarkFrame {
+                line_id,
+                mark,
+                presence: value(&self.actor_id, &channel, 1.0).clamp(0.0, 1.0),
+                row_height: self.editor.line_height(),
+            })
+            .collect::<Vec<_>>();
         renderer.render_editor(&EditorFrame {
+            panel_offset_x: value(&self.actor_id, "panel-x", 0.0),
             panel_offset_y: value(&self.actor_id, "panel-y", 0.0),
+            panel_opacity: value(&self.actor_id, "panel-opacity", 1.0).clamp(0.0, 1.0),
+            line_marks: &line_marks,
             panel_rotation: value(&self.actor_id, "panel-rotation", 0.0),
             panel_tilt_x: value(&self.actor_id, "panel-tilt-x", 0.0),
             panel_tilt_y: value(&self.actor_id, "panel-tilt-y", 0.0),

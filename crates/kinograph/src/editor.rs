@@ -29,7 +29,10 @@ pub struct EditorRecipePlan {
     pub entering_offset_x: f32,
     pub focus_line_id: String,
     pub focus_height: f32,
-    pub inline_reveal: EditorInlineRevealPlan,
+    /// A width-revealing edit inside one stable line. Optional: plain code
+    /// transitions need no reveal.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub inline_reveal: Option<EditorInlineRevealPlan>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub additional_inline_reveals: Vec<EditorInlineRevealPlan>,
 }
@@ -60,7 +63,11 @@ impl EditorRecipePlan {
         let mut ranges: std::collections::HashMap<&str, Vec<std::ops::Range<usize>>> =
             std::collections::HashMap::new();
         let mut compiled_reveals = Vec::new();
-        for reveal in std::iter::once(&self.inline_reveal).chain(&self.additional_inline_reveals) {
+        for reveal in self
+            .inline_reveal
+            .iter()
+            .chain(&self.additional_inline_reveals)
+        {
             let line = document
                 .line(&LineId::new(&reveal.line_id))
                 .with_context(|| {
@@ -133,6 +140,18 @@ pub struct EditorLinePlan {
     pub parts: Vec<EditorPartPlan>,
     #[serde(default)]
     pub semantic_ranges: Vec<EditorSemanticRangePlan>,
+    /// Diff decoration: a tinted row and a gutter sign whose presence is the
+    /// `mark.<line-id>` channel (default 1).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub mark: Option<LineMarkPlan>,
+}
+
+/// How a line relates to the change being explained.
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum LineMarkPlan {
+    Added,
+    Removed,
 }
 
 impl EditorLinePlan {
@@ -221,7 +240,7 @@ mod tests {
 
     use super::{
         EditorInlineRevealPlan, EditorLinePlan, EditorPartPlan, EditorRecipePlan,
-        EditorSemanticRangePlan,
+        EditorSemanticRangePlan, LineMarkPlan,
     };
 
     #[test]
@@ -240,6 +259,7 @@ mod tests {
                         first_part_id: "content".to_owned(),
                         last_part_id: "content".to_owned(),
                     }],
+                    mark: None,
                 },
                 EditorLinePlan {
                     id: "entering".to_owned(),
@@ -248,6 +268,7 @@ mod tests {
                         spans: vec![StyledSpan::new("const entering = true", SyntaxStyle::Plain)],
                     }],
                     semantic_ranges: vec![],
+                    mark: None,
                 },
             ],
             initial_line_ids: vec!["stable".to_owned()],
@@ -257,12 +278,12 @@ mod tests {
             entering_offset_x: 96.0,
             focus_line_id: "stable".to_owned(),
             focus_height: 44.0,
-            inline_reveal: EditorInlineRevealPlan {
+            inline_reveal: Some(EditorInlineRevealPlan {
                 line_id: "stable".to_owned(),
                 range_id: "content".to_owned(),
                 channel: None,
                 reversed: false,
-            },
+            }),
             additional_inline_reveals: Vec::new(),
         };
 
@@ -275,6 +296,23 @@ mod tests {
                 })
                 .len(),
             2
+        );
+
+        let mut marked = recipe.clone();
+        marked.lines[1].mark = Some(LineMarkPlan::Added);
+        let compiled = marked.compile().unwrap();
+        let marks = compiled.marks().collect::<Vec<_>>();
+        assert_eq!(
+            marks,
+            vec![("entering", LineMarkPlan::Added, "mark.entering".to_owned())]
+        );
+        let json = serde_json::to_value(&marked.lines[1]).unwrap();
+        assert_eq!(json["mark"], "added");
+        assert!(
+            serde_json::to_value(&marked.lines[0])
+                .unwrap()
+                .get("mark")
+                .is_none()
         );
     }
 
@@ -311,6 +349,7 @@ mod tests {
                 first_part_id: "body".into(),
                 last_part_id: "body".into(),
             }],
+            mark: None,
         };
         let mut recipe = EditorRecipePlan {
             file_name: "test.ts".into(),
@@ -335,12 +374,12 @@ mod tests {
             entering_offset_x: 99.,
             focus_line_id: "a".into(),
             focus_height: 44.,
-            inline_reveal: EditorInlineRevealPlan {
+            inline_reveal: Some(EditorInlineRevealPlan {
                 line_id: "a".into(),
                 range_id: "body".into(),
                 channel: None,
                 reversed: false,
-            },
+            }),
             additional_inline_reveals: Vec::new(),
         };
         let transition = recipe.transition().unwrap();

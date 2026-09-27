@@ -11,6 +11,9 @@ pub enum Theme {
     Evergreen,
     TokyoNight,
     Black,
+    /// The OpenCode TUI's dark tokens (packages/tui theme `opencode`).
+    #[serde(rename = "opencode")]
+    OpenCode,
 }
 
 #[derive(Clone, Copy)]
@@ -27,11 +30,12 @@ pub struct Palette {
 }
 
 impl Theme {
-    pub const ALL: [Self; 4] = [
+    pub const ALL: [Self; 5] = [
         Self::Original,
         Self::Evergreen,
         Self::TokyoNight,
         Self::Black,
+        Self::OpenCode,
     ];
     pub fn name(self) -> &'static str {
         match self {
@@ -39,6 +43,7 @@ impl Theme {
             Self::Evergreen => "Evergreen",
             Self::TokyoNight => "Tokyo Night",
             Self::Black => "Pure Black",
+            Self::OpenCode => "OpenCode",
         }
     }
     pub fn cycle(self, reverse: bool) -> Self {
@@ -51,8 +56,9 @@ impl Theme {
             "evergreen" => Ok(Self::Evergreen),
             "tokyo-night" => Ok(Self::TokyoNight),
             "black" => Ok(Self::Black),
+            "opencode" => Ok(Self::OpenCode),
             _ => anyhow::bail!(
-                "unknown theme '{value}'; use original, evergreen, tokyo-night, or black"
+                "unknown theme '{value}'; use original, evergreen, tokyo-night, black, or opencode"
             ),
         }
     }
@@ -102,6 +108,31 @@ impl Theme {
                 types: [151, 207, 223],
                 string: [179, 212, 151],
             },
+            Self::OpenCode => Palette {
+                background: [10, 10, 10],
+                surface: [20, 20, 20],
+                raised: [30, 30, 30],
+                text: [238, 238, 238],
+                muted: [128, 128, 128],
+                accent: [250, 178, 131],
+                keyword: [157, 124, 216],
+                types: [229, 192, 123],
+                string: [127, 216, 143],
+            },
+        }
+    }
+    /// A semantic tone's color. Status tones are identical in every theme.
+    pub fn tone(self, tone: kinograph::tone::Tone) -> [u8; 3] {
+        use kinograph::tone::Tone;
+        let palette = self.palette();
+        match tone {
+            Tone::Plain => palette.text,
+            Tone::Request => [92, 156, 245],
+            Tone::Success => [127, 216, 143],
+            Tone::Error => [224, 108, 117],
+            Tone::Warning => [229, 192, 123],
+            Tone::Muted => palette.muted,
+            Tone::Accent => palette.accent,
         }
     }
     pub fn background(self, original: [u8; 3]) -> [u8; 3] {
@@ -180,6 +211,8 @@ mod tests {
             assert_eq!(theme.ink([239, 68, 68]), [239, 68, 68]);
         }
         assert_eq!(Theme::Black.palette().background, [0; 3]);
+        assert_eq!(Theme::parse("opencode").unwrap(), Theme::OpenCode);
+        assert_eq!(Theme::OpenCode.palette().accent, [250, 178, 131]);
         assert!(Theme::parse("missing").is_err());
     }
 }

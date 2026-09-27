@@ -430,6 +430,13 @@ The lightweight `agent-demo` proves the generic process workflow, and the canoni
 
 The `opencode-session-tool` lesson now proves the narration-rich media seam. One inspectable plan owns an authentic live session creating and hot-reloading a plugin tool, ElevenLabs voiceover, layered SFX, continuous card motion, discrete recording and explanatory-text state, and named cues. The renderer accepts video only when the concrete terminal recipe consumes its media ID, while script and layer audio continue through exact composition and FFmpeg placement.
 
+The `pr-walkthrough` reel proves the code-explainer direction end to end: narration
+voiced and transcribed by one script, phrase-keyed choreography, Sequence Diagrams
+that replay broken and fixed behavior in the same slots, Captions in the terminal
+voice, editor diffs with Line Marks, and a Reel that joins twelve independently
+authored Scene Plans into one narrated video. Next: reusable explainer layouts
+(for example code beside a diagram) once a second explainer needs them.
+
 The native code-reveal proof now samples the same Rust scene recipes directly,
 with interruptible presentation tracks and GPU-backed window scaling. The next
 questions are higher-DPI glyph rasterization, preserving interactive semantics

@@ -113,6 +113,13 @@ partially overwritten bytes as a cache hit.
 
 Transcript parsing does not understand code, actors, or rendering. It only connects semantic words to the shared media clock.
 
+`Transcript::phrase` and `phrase_after` match consecutive normalized words (case,
+punctuation, and number words versus digits are ignored). `scripts/narrate.ts`
+produces clips, loudness-normalized MP3s, Whisper word timings, and a manifest of
+exact durations; its `--draft` mode uses macOS `say` so a scene can be timed before
+the final voice exists. The `pr-walkthrough` Scene Program keys every reveal to a
+phrase and fails with the clip and phrase when narration no longer says it.
+
 ## Rendering Is One Concrete Adapter
 
 `render/theme.rs` owns the presentation paint tokens. Native T/Shift+T selects a
@@ -379,9 +386,42 @@ The Adapter keeps these details private:
 
 There is no renderer trait. One Adapter is a hypothetical seam; a second backend would make it real.
 
+### Explainer overlays
+
+`sequence` and `caption` are CPU overlays with strict payloads (`deny_unknown_fields`)
+and strict channel names: `plan_runtime/sequence.rs` and `plan_runtime/caption.rs`
+reject any property on their actor that does not name a real participant, row, or
+recipe channel, because a typo would otherwise do nothing. Geometry and validation
+live in the lightweight crate (`sequence.rs`, `caption.rs`), so authoring helpers
+(`SequenceActor`, `CaptionActor`) and tests need no GPU. Pixels come from
+`render/sequence.rs` and `render/caption.rs` through the shared primitives: cached
+CommitMono plain-text sprites, `UiCanvas` fills, and the analytic polyline stroke.
+Sequences draw with the other diagram surfaces (after Venn and Value Tokens);
+captions draw above rich text and below plain text. Semantic colors resolve through
+`Theme::tone`, the one place status colors are fixed.
+
+The editor adds `panel-x` (a translation of the projected card), `panel-opacity`,
+and Line Marks. Marks draw in the shared text pass before code, so the native
+preview path and the projected export path agree; a non-zero `panel-x` or partial
+opacity disables the preview shortcut. `inlineReveal` is optional.
+
+`kinograph::highlight::typescript` compiles one TypeScript line into styled spans
+for editor recipes. It is a line-local approximation for explainers, not a parser.
+
 ## Encoding Is One Concrete Adapter
 
 `plan_runtime/delivery.rs` owns PNG and MP4 delivery separately from `PreparedPlan` preparation and sampling. Video exports keep the authored timeline, full visual quality, shutter samples, and original audio placements.
+
+A Reel (`plan::ReelPlan`) is delivery, not a scene. The lightweight crate owns its
+validation and timing: `spans` places segments on one clock and `layers_at` returns
+the one or two segments visible at a time with eased mix weights. `plan_runtime/reel.rs`
+prepares every segment once on one renderer, samples each visible layer at its local
+time, and mixes opaque frames (a dip mixes over the theme's empty background). Each
+segment's media placements are shifted onto the reel clock with
+`MediaPlacement::shifted` and encoded through `scenes::encode_media_window_by_key`,
+the same temporal sampler and FFmpeg path as a single plan. `plan render`, `frame`,
+`validate`, and `inspect` recognize a reel by its `segments` key; `--cue` selects
+one segment by scene ID.
 
 `kinograph/src/playback.rs` derives numeric step destinations from a renderer-prepared Timeline, after semantic geometry has resolved. Next, Previous, First, and Last append only changed channel targets through the shared Timeline compiler. Each spring therefore inherits position and velocity, including mid-flight reversals; unchanged destinations do not restart motion. Per-channel motion profiles come from the destination's latest authored spring (or its first spring before any event; set-only channels use a 0.4-second zero-bounce default). Replay alone resets to the entry pose. The local clock freezes on pause or once all channels settle, without retiming the authored video. Immutable `Arc<Timeline>` revisions make sampling history-independent even while input creates a newer revision.
 

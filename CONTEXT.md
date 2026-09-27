@@ -117,6 +117,17 @@ An explicitly ordered destination in a Scene Plan, with a stable ID, title, entr
 
 An ordered collection of titled Scene Plans. Each slide owns its Presentation Steps and local Playback clock. Changing slides preserves the selected step and pauses the departed slide; returning resumes only motion that was running when it was left. Slide navigation is separate from step navigation.
 
+## Reel
+
+An ordered sequence of independently authored Scene Plans delivered as one video
+on a single clock. Each segment keeps its own actors and local time, so a segment's
+choreography never depends on its position in the reel. A transition overlaps a
+segment with its predecessor: a crossfade mixes the incoming frame over the
+outgoing one, while a dip fades the outgoing segment to the empty background before
+the incoming one appears, so dense frames never overlap. At most two segments are
+visible at any instant. Segment media is retimed onto the reel clock for one audio
+mix. Unlike a Presentation Deck, a reel is delivered rather than navigated.
+
 ## Playback
 
 Interactive navigation among Presentation Steps. Next and Previous retarget continuous channels from their sampled position and velocity through the same Property Track compiler used for video. Unchanged channel destinations retain their trajectories. Pause freezes the local clock without losing motion state; Replay deliberately restarts from an entry pose. Playback retains an immutable compiled timeline for each navigation revision, so late rendered frames cannot change the current destination. It is not reverse playback of a movie.
@@ -138,7 +149,8 @@ and sampling FPS remain independent of these native inspection controls.
 ## Presentation Theme
 
 A named paint palette, independent of Scene Plan identity, typography measurement,
-and motion. Original, Evergreen, Tokyo Night, and Pure Black can be selected during
+and motion. Original, Evergreen, Tokyo Night, Pure Black, and OpenCode (the OpenCode
+TUI's dark tokens) can be selected during
 native playback without advancing its clock. The native preference is saved;
 file delivery selects a theme explicitly so a personal preference cannot silently
 change an export. Original preserves existing scene colors. Semantic status colors
@@ -158,6 +170,38 @@ Two stable, explicitly sized set boundaries with independently sampled position,
 radius, and roundness. Hatching represents the intersection of their current
 geometry, not a delayed overlay or a relationship guessed from label spelling.
 The recipe is a bounded overlay, not a type checker or arbitrary set-layout engine.
+
+## Sequence Diagram
+
+Participants with dashed lifelines and time-ordered rows: messages between
+lifelines (or a loop to the same one), notes spanning lifelines, and End marks that
+stop a participant. Rows are recipe-local identities revealed by ordinary
+Continuous Channels (`row.<id>.reveal`, `.opacity`, `.strike`); a revealed message
+travels as a packet before its arrowhead and label land. Rows default to a slot per
+row, but several rows may share a slot, so a scene can play the broken behavior and
+then replay the fixed behavior in the same places by fading one set out. The recipe
+depicts a protocol; it does not simulate one.
+
+## Caption
+
+Short lines of styled CommitMono text in an explainer's terminal voice. Spans carry
+a Tone, so one keyword can take the accent while the rest stays plain. The `typed`
+channel reveals characters in order and the accent block caret marks the typing
+position; alignment uses each line's full width, so centered text never slides
+while it appears. An optional chip draws a rounded surface behind the text.
+
+## Tone
+
+A semantic color role shared by explainer recipes: plain, request, success,
+error, warning, muted, and accent. Status tones keep one color in every
+Presentation Theme; the others follow the palette.
+
+## Line Mark
+
+A diff decoration on one editor line: added or removed. The mark tints the row,
+draws an accent bar and a vector +/- sign in the gutter, and joins consecutive
+marked rows into one band. Its presence is the `mark.<line-id>` Continuous Channel,
+so a removed line can turn red just before a Code Snapshot removes it.
 
 ## Diagram Port
 
@@ -211,7 +255,7 @@ A named timeline range. Cues may be authored around a composition or imported fr
 
 ## Transcript
 
-An ordered set of words with source start and end times. Looking up a word occurrence produces a cue range on the same exact media clock used by script clips.
+An ordered set of words with source start and end times. Looking up a word occurrence produces a cue range on the same exact media clock used by script clips. A phrase lookup matches consecutive whole words, ignoring case and punctuation and treating number words as digits, so choreography can be keyed to what narration says rather than to seconds; re-voicing a clip re-times the scene.
 
 ## Media Placement
 

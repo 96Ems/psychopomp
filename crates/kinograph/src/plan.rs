@@ -48,6 +48,177 @@ impl DeckPlan {
     }
 }
 
+/// One encoded video that plays independently authored Scene Plans in order on a
+/// single clock. Each segment keeps its own actors and local time; a transition
+/// crossfades from the previous segment, so at most two segments overlap.
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct ReelPlan {
+    pub version: u32,
+    pub id: String,
+    pub segments: Vec<ReelSegmentPlan>,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct ReelSegmentPlan {
+    /// Transition from the previous segment. The first segment must use zero.
+    #[serde(default)]
+    pub transition_nanos: u64,
+    #[serde(default)]
+    pub transition_style: ReelTransitionStyle,
+    pub plan: ScenePlan,
+}
+
+/// How a segment replaces its predecessor during `transition_nanos`.
+#[derive(Clone, Copy, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum ReelTransitionStyle {
+    /// Both segments are visible while the incoming one fades in over the other.
+    #[default]
+    Crossfade,
+    /// The outgoing segment fades to the empty background, then the incoming one
+    /// fades in. Dense frames never overlap.
+    Dip,
+}
+
+/// Where one segment sits on the reel clock.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct ReelSpan {
+    pub start_nanos: u64,
+    pub end_nanos: u64,
+    pub transition_nanos: u64,
+    pub transition_style: ReelTransitionStyle,
+}
+
+/// One segment visible at a reel time, sampled at its own local time. Layers are
+/// mixed in order over what is below them by `weight`; when the first layer's
+/// weight is below one it is mixed over the empty background.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct ReelLayer {
+    pub segment: usize,
+    pub local_seconds: f64,
+    pub weight: f32,
+}
+
+impl ReelPlan {
+    pub const VERSION: u32 = 1;
+
+    pub fn validate(&self) -> anyhow::Result<()> {
+        if self.version != Self::VERSION {
+            anyhow::bail!("reel requires version {}", Self::VERSION);
+        }
+        if self.id.trim().is_empty() || self.id.chars().any(char::is_whitespace) {
+            anyhow::bail!("reel requires an ID without whitespace");
+        }
+        if self.segments.is_empty() {
+            anyhow::bail!("reel requires at least one segment");
+        }
+        let mut ids = HashSet::new();
+        for (index, segment) in self.segments.iter().enumerate() {
+            segment.plan.validate()?;
+            if !ids.insert(&segment.plan.id) {
+                anyhow::bail!(
+                    "reel segment {index} repeats scene ID '{}'",
+                    segment.plan.id
+                );
+            }
+            if index == 0 {
+                if segment.transition_nanos != 0 {
+                    anyhow::bail!("the first reel segment cannot transition from nothing");
+                }
+                continue;
+            }
+            let previous = &self.segments[index - 1];
+            // The previous segment must be alone on screen before this one starts,
+            // so no instant ever blends three segments.
+            let available = previous
+                .plan
+                .duration_nanos
+                .saturating_sub(previous.transition_nanos);
+            if segment.transition_nanos > available
+                || segment.transition_nanos > segment.plan.duration_nanos
+            {
+                anyhow::bail!(
+                    "reel segment '{}' transition is longer than the time either neighbor is alone on screen",
+                    segment.plan.id
+                );
+            }
+        }
+        Ok(())
+    }
+
+    pub fn spans(&self) -> Vec<ReelSpan> {
+        let mut spans = Vec::with_capacity(self.segments.len());
+        let mut end = 0_u64;
+        for segment in &self.segments {
+            let start = end.saturating_sub(segment.transition_nanos);
+            end = start + segment.plan.duration_nanos;
+            spans.push(ReelSpan {
+                start_nanos: start,
+                end_nanos: end,
+                transition_nanos: segment.transition_nanos,
+                transition_style: segment.transition_style,
+            });
+        }
+        spans
+    }
+
+    pub fn duration_nanos(&self) -> u64 {
+        self.spans().last().map_or(0, |span| span.end_nanos)
+    }
+
+    /// The segments visible at `seconds`, in draw order. Outside transitions this
+    /// is one fully weighted segment. A crossfade mixes the incoming segment over
+    /// the outgoing one; a dip shows one segment faded toward the background.
+    pub fn layers_at(&self, seconds: f64) -> Vec<ReelLayer> {
+        let spans = self.spans();
+        let at = seconds.max(0.0);
+        let local = |index: usize| {
+            let span = spans[index];
+            let start = span.start_nanos as f64 / 1e9;
+            (at - start).clamp(0.0, (span.end_nanos - span.start_nanos) as f64 / 1e9)
+        };
+        // The latest segment that has started is the one being entered or shown.
+        let Some(current) = spans
+            .iter()
+            .rposition(|span| span.start_nanos as f64 / 1e9 <= at)
+        else {
+            return Vec::new();
+        };
+        let span = spans[current];
+        let progress = if span.transition_nanos == 0 {
+            1.0
+        } else {
+            ((at - span.start_nanos as f64 / 1e9) / (span.transition_nanos as f64 / 1e9))
+                .clamp(0.0, 1.0)
+        };
+        let layer = |segment: usize, weight: f64| ReelLayer {
+            segment,
+            local_seconds: local(segment),
+            weight: smoothstep(weight) as f32,
+        };
+        if progress >= 1.0 || current == 0 {
+            return vec![layer(current, 1.0)];
+        }
+        match span.transition_style {
+            ReelTransitionStyle::Crossfade if progress <= 0.0 => vec![layer(current - 1, 1.0)],
+            ReelTransitionStyle::Crossfade => {
+                vec![layer(current - 1, 1.0), layer(current, progress)]
+            }
+            ReelTransitionStyle::Dip if progress < 0.5 => {
+                vec![layer(current - 1, 1.0 - progress * 2.0)]
+            }
+            ReelTransitionStyle::Dip => vec![layer(current, progress * 2.0 - 1.0)],
+        }
+    }
+}
+
+fn smoothstep(value: f64) -> f64 {
+    let value = value.clamp(0.0, 1.0);
+    value * value * (3.0 - 2.0 * value)
+}
+
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ScenePlan {
@@ -615,7 +786,19 @@ impl fmt::Display for PlanValidationError {
             formatter,
             "scene plan has {} validation error(s)",
             self.diagnostics.len()
-        )
+        )?;
+        // Name each problem: a bare count sends authors digging through JSON.
+        for diagnostic in self.diagnostics.iter().take(5) {
+            write!(
+                formatter,
+                "\n  {} at {}: {}",
+                diagnostic.code, diagnostic.path, diagnostic.message
+            )?;
+        }
+        if self.diagnostics.len() > 5 {
+            write!(formatter, "\n  …and {} more", self.diagnostics.len() - 5)?;
+        }
+        Ok(())
     }
 }
 
@@ -1188,5 +1371,164 @@ mod tests {
                 .iter()
                 .any(|d| d.path == "presentationSteps[0]" && d.code == "invalid-step-range")
         );
+    }
+}
+
+#[cfg(test)]
+mod reel_tests {
+    use super::{
+        ReelLayer, ReelPlan, ReelSegmentPlan, ReelSpan,
+        ReelTransitionStyle::{self, Crossfade, Dip},
+        ScenePlan,
+    };
+
+    const SECOND: u64 = 1_000_000_000;
+
+    fn reel(segments: &[(&str, u64, u64)]) -> ReelPlan {
+        ReelPlan {
+            version: ReelPlan::VERSION,
+            id: "walkthrough".to_owned(),
+            segments: segments
+                .iter()
+                .map(|&(id, duration, transition)| ReelSegmentPlan {
+                    transition_nanos: transition,
+                    transition_style: ReelTransitionStyle::default(),
+                    plan: ScenePlan::new(id, duration),
+                })
+                .collect(),
+        }
+    }
+
+    #[test]
+    fn transitions_overlap_neighbors_on_one_clock() {
+        let reel = reel(&[
+            ("intro", 4 * SECOND, 0),
+            ("a", 6 * SECOND, SECOND),
+            ("b", 3 * SECOND, 0),
+        ]);
+        reel.validate().unwrap();
+        assert_eq!(
+            reel.spans(),
+            vec![
+                ReelSpan {
+                    start_nanos: 0,
+                    end_nanos: 4 * SECOND,
+                    transition_nanos: 0,
+                    transition_style: Crossfade
+                },
+                ReelSpan {
+                    start_nanos: 3 * SECOND,
+                    end_nanos: 9 * SECOND,
+                    transition_nanos: SECOND,
+                    transition_style: Crossfade
+                },
+                ReelSpan {
+                    start_nanos: 9 * SECOND,
+                    end_nanos: 12 * SECOND,
+                    transition_nanos: 0,
+                    transition_style: Crossfade
+                },
+            ]
+        );
+        assert_eq!(reel.duration_nanos(), 12 * SECOND);
+    }
+
+    #[test]
+    fn crossfade_mixes_the_incoming_segment_over_the_outgoing_one() {
+        let reel = reel(&[("intro", 4 * SECOND, 0), ("a", 6 * SECOND, SECOND)]);
+        let only = |segment, local_seconds| {
+            vec![ReelLayer {
+                segment,
+                local_seconds,
+                weight: 1.0,
+            }]
+        };
+        assert_eq!(reel.layers_at(1.0), only(0, 1.0));
+        let middle = reel.layers_at(3.5);
+        assert_eq!(middle.len(), 2);
+        assert_eq!((middle[0].segment, middle[0].weight), (0, 1.0));
+        assert_eq!(middle[1].segment, 1);
+        assert!((middle[1].weight - 0.5).abs() < 1e-6);
+        assert!((middle[1].local_seconds - 0.5).abs() < 1e-9);
+        assert!(
+            reel.layers_at(3.1)[1].weight < 0.1,
+            "smoothstep starts gently"
+        );
+        assert_eq!(
+            reel.layers_at(3.0),
+            only(0, 3.0),
+            "the first instant is still the outgoing segment"
+        );
+        assert_eq!(reel.layers_at(4.0), only(1, 1.0));
+        assert_eq!(
+            reel.layers_at(9.0),
+            only(1, 6.0),
+            "the final frame samples the end"
+        );
+    }
+
+    #[test]
+    fn dip_passes_through_the_background_without_overlap() {
+        let mut reel = reel(&[("intro", 4 * SECOND, 0), ("a", 6 * SECOND, SECOND)]);
+        reel.segments[1].transition_style = Dip;
+        let early = reel.layers_at(3.25);
+        assert_eq!(early.len(), 1);
+        assert_eq!(early[0].segment, 0);
+        assert!((early[0].weight - 0.5).abs() < 1e-6);
+        let midpoint = reel.layers_at(3.5);
+        assert_eq!(midpoint.len(), 1);
+        assert!(
+            midpoint[0].weight.abs() < 1e-6,
+            "the midpoint is the empty background"
+        );
+        let late = reel.layers_at(3.75);
+        assert_eq!((late[0].segment, late.len()), (1, 1));
+        assert!((late[0].weight - 0.5).abs() < 1e-6);
+        assert!((late[0].local_seconds - 0.75).abs() < 1e-9);
+    }
+
+    #[test]
+    fn invalid_reels_are_rejected() {
+        assert!(reel(&[]).validate().is_err());
+        assert!(
+            reel(&[("a", SECOND, 1)]).validate().is_err(),
+            "first segment cannot fade in"
+        );
+        assert!(
+            reel(&[("a", SECOND, 0), ("a", SECOND, 0)])
+                .validate()
+                .is_err(),
+            "IDs repeat"
+        );
+        assert!(
+            reel(&[("a", SECOND, 0), ("b", 3 * SECOND, 2 * SECOND)])
+                .validate()
+                .is_err(),
+            "transition longer than the previous segment"
+        );
+        assert!(
+            reel(&[
+                ("a", 3 * SECOND, 0),
+                ("b", 2 * SECOND, 2 * SECOND),
+                ("c", 4 * SECOND, SECOND)
+            ])
+            .validate()
+            .is_err(),
+            "three segments would overlap"
+        );
+        let mut versioned = reel(&[("a", SECOND, 0)]);
+        versioned.version = 2;
+        assert!(versioned.validate().is_err());
+    }
+
+    #[test]
+    fn reel_json_is_camel_case_and_strict() {
+        let reel = reel(&[("intro", SECOND, 0), ("a", SECOND, 250_000_000)]);
+        let json = serde_json::to_string(&reel).unwrap();
+        assert!(json.contains("\"transitionNanos\":250000000"));
+        let decoded: ReelPlan = serde_json::from_str(&json).unwrap();
+        assert_eq!(decoded.spans(), reel.spans());
+        let unknown = json.replacen("\"segments\"", "\"extra\":1,\"segments\"", 1);
+        assert!(serde_json::from_str::<ReelPlan>(&unknown).is_err());
     }
 }

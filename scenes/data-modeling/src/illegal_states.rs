@@ -28,6 +28,7 @@ pub fn build() -> Result<ScenePlan> {
         id: id.into(),
         parts: vec![part("body", text)],
         semantic_ranges: vec![],
+        mark: None,
     };
     let signature = EditorLinePlan {
         id: "signature".into(),
@@ -44,6 +45,7 @@ pub fn build() -> Result<ScenePlan> {
                 last_part_id: id.into(),
             })
             .to_vec(),
+        mark: None,
     };
     let final_ids = ["signature", "gap", "sum", "success", "failure"]
         .map(str::to_owned)
@@ -76,12 +78,12 @@ pub fn build() -> Result<ScenePlan> {
             entering_offset_x: 0.,
             focus_line_id: "signature".into(),
             focus_height: 44.,
-            inline_reveal: EditorInlineRevealPlan {
+            inline_reveal: Some(EditorInlineRevealPlan {
                 line_id: "signature".into(),
                 range_id: "nullable-pair".into(),
                 channel: Some("result-model".into()),
                 reversed: true,
-            },
+            }),
             additional_inline_reveals: vec![EditorInlineRevealPlan {
                 line_id: "signature".into(),
                 range_id: "sum-type".into(),
