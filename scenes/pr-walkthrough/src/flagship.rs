@@ -255,7 +255,7 @@ fn stage_plan() -> StagePlan {
             ],
         ),
         ring("shock", 160.0, 1.8, Tone::Error),
-        ring("safe", 182.0, 1.4, Tone::Success),
+        ring("safe", 162.0, 1.4, Tone::Success),
     ]);
     StagePlan {
         post: StagePost {
