@@ -11,6 +11,7 @@ use kinograph::{
     math::{
         Quat, Vec2, Vec3,
         curve::Polyline,
+        dynamics::ballistic,
         easing::{cubic_out, quad_out},
         lerp, remap_clamp,
         shapes::{Box2, Shape, connect},
@@ -60,6 +61,7 @@ struct PostUniform {
     texel: [f32; 4],
     params: [f32; 4],
     look: [f32; 4],
+    shock: [f32; 4],
 }
 
 struct AtlasText {
@@ -241,7 +243,14 @@ impl HeadlessRenderer {
         });
         let primitive_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("stage primitives"),
-            source: wgpu::ShaderSource::Wgsl(shader("stage.wgsl", include_str!("stage.wgsl"))),
+            source: wgpu::ShaderSource::Wgsl(
+                format!(
+                    "{}\n{}",
+                    shader("stage_burst.wgsl", include_str!("stage_burst.wgsl")),
+                    shader("stage.wgsl", include_str!("stage.wgsl")),
+                )
+                .into(),
+            ),
         });
         let premultiplied = wgpu::BlendState {
             color: wgpu::BlendComponent {
@@ -624,7 +633,24 @@ impl HeadlessRenderer {
             plan.post.grain,
             ((time * 60.0).floor() % 997.0) as f32,
         ];
-        self.draw_stage(gpu, &prims, &points, [params, post], look.background)
+        let shock = plan
+            .elements
+            .iter()
+            .find_map(|element| {
+                let StageElement::Orb { id, .. } = element else {
+                    return None;
+                };
+                let age = scene.v(id, "burst", -1.0);
+                let place = scene.placements.get(id.as_str())?;
+                (0.0..2.4).contains(&age).then_some([
+                    place.center.x,
+                    place.center.y,
+                    age,
+                    place.scale,
+                ])
+            })
+            .unwrap_or([0.0, 0.0, -1.0, 0.0]);
+        self.draw_stage(gpu, &prims, &points, [params, post, shock], look.background)
     }
 
     /// Draw the primitives into the HDR target, bloom, and composite into the
@@ -634,7 +660,7 @@ impl HeadlessRenderer {
         gpu: &StageGpu,
         prims: &[Prim],
         points: &[[f32; 4]],
-        post: [[f32; 4]; 2],
+        post: [[f32; 4]; 3],
         clear: Vec3,
     ) -> Result<Vec<u8>> {
         self.queue
@@ -651,6 +677,7 @@ impl HeadlessRenderer {
                     texel: [pass.texel[0], pass.texel[1], 0.0, 0.0],
                     params: post[0],
                     look: post[1],
+                    shock: post[2],
                 }),
             );
         }
@@ -781,10 +808,6 @@ struct Link {
 impl Link {
     fn far(&self) -> f32 {
         self.depth[0].max(self.depth[1])
-    }
-
-    fn near(&self) -> f32 {
-        self.depth[0].min(self.depth[1])
     }
 
     fn scale_at(&self, fraction: f32) -> f32 {
@@ -959,7 +982,20 @@ impl<'a> Scene<'a> {
             -1.0
         };
         let bend = bend + 10.0 * downward * self.v(id, "twang", 0.0);
-        let curve = connect(a.outline, b.outline, bend * (a.scale + b.scale) * 0.5);
+        // Circular ends continue beneath the shell. Occlusion hides the cap;
+        // the visible wire meets the silhouette rather than a floating socket.
+        let submerged = |shape| match shape {
+            Shape::Circle(mut circle) => {
+                circle.radius *= 0.68;
+                Shape::Circle(circle)
+            }
+            shape => shape,
+        };
+        let curve = connect(
+            submerged(a.outline),
+            submerged(b.outline),
+            bend * (a.scale + b.scale) * 0.5,
+        );
         let card = |id: &str| matches!(self.plan.element(id), Some(StageElement::Card { .. }));
         Some(Link {
             path: curve.flatten(BEAM_SAMPLES),
@@ -1270,6 +1306,11 @@ impl<'a> Painter<'a> {
         if opacity <= 0.001 {
             return;
         }
+        let age = scene.v(id, "burst", -1.0);
+        if age >= 0.0 {
+            self.burst(order, id, radius, place, age, opacity);
+            return;
+        }
         let shatter = scene.v(id, "shatter", 0.0).clamp(0.0, 1.0);
         let pulse = scene.v(id, "pulse", 0.0);
         let hurt = scene.v(id, "hurt", 0.0).clamp(0.0, 1.0);
@@ -1277,7 +1318,17 @@ impl<'a> Painter<'a> {
         let world_radius = radius * scene.v(id, "scale", 1.0).max(0.01) * scene.breath();
         let own = look.tone(tone);
         let red = look.tone(Tone::Error);
-        let blur = scene.blur_at(place.world.z);
+        let blur = scene.blur_at(place.world.z) + scene.v(id, "blur", 0.0).max(0.0) * place.scale;
+        // A dark, softly feathered body occludes connections behind the shell.
+        self.frame.circle(
+            place.center,
+            [radius * place.scale, 0.0],
+            5.0 * place.scale + blur,
+            Paint {
+                fill: rgba(look.background, opacity * (1.0 - shatter)),
+                ..Default::default()
+            },
+        );
         // Core light, fading as the orb breaks apart.
         let core = (0.025 + 0.075 * pulse.max(0.0)) * (1.0 - shatter) * opacity;
         self.frame.circle(
@@ -1289,8 +1340,8 @@ impl<'a> Painter<'a> {
                 ..Default::default()
             },
         );
-        let rotation =
-            Quat::from_rotation_x(0.42) * Quat::from_rotation_y(scene.time * 0.14 * spin);
+        let rotation = Quat::from_rotation_x(0.42)
+            * Quat::from_rotation_y(scene.time * 0.14 * spin + scene.v(id, "rotation", 0.0));
         let mut dots = self.orbs[id]
             .iter()
             .map(|point| {
@@ -1335,6 +1386,90 @@ impl<'a> Painter<'a> {
                 Paint {
                     fill: rgba(color * (0.6 + 0.3 * near + 0.15 * pulse), alpha),
                     glow: glow4(color * (0.035 * alpha), 2.5 * scale),
+                    ..Default::default()
+                },
+            );
+        }
+        self.frame.close(place.world.z, order);
+    }
+
+    /// One deterministic impact clock owns collapse, combustion, smoke, and
+    /// ballistic embers. Reverse this clock to reassemble the same performance.
+    fn burst(
+        &mut self,
+        order: usize,
+        id: &str,
+        radius: f32,
+        place: Placement,
+        age: f32,
+        opacity: f32,
+    ) {
+        if age >= 5.2 {
+            return;
+        }
+        let scale = place.scale;
+        let radius_px = radius * scale;
+        self.frame.prims.push(Prim {
+            bbox: [
+                place.center.x - radius_px * 4.0,
+                place.center.y - radius_px * 4.0,
+                place.center.x + radius_px * 4.0,
+                place.center.y + radius_px * 4.0,
+            ],
+            a: [6.0, place.center.x, place.center.y, radius_px],
+            b: [age, opacity, 0.0, 0.0],
+            ..Default::default()
+        });
+        let released = (age - 0.12).max(0.0);
+        let collapse = 1.0 - 0.55 * smoothstep(age / 0.12);
+        let rotation = Quat::from_rotation_x(0.42)
+            * Quat::from_rotation_y(
+                self.scene.time * 0.14 * self.scene.v(id, "spin", 1.0)
+                    + self.scene.v(id, "rotation", 0.0),
+            );
+        let world_radius = radius * self.scene.v(id, "scale", 1.0).max(0.01) * self.scene.breath();
+        for (index, point) in self.orbs[id].iter().enumerate() {
+            let unit = rotation * point.unit;
+            let velocity = unit * (170.0 + 540.0 * point.seed.x);
+            let gravity = vec3(0.0, 150.0 + 90.0 * point.seed.y, 0.0);
+            let drag = 0.55 + 0.8 * point.seed.z;
+            let anchor = place.world + unit * (world_radius * collapse);
+            let position = anchor + ballistic(velocity, gravity, drag, released);
+            let Some((center, perspective)) = self.scene.camera.project(position) else {
+                continue;
+            };
+            let life = 1.6 + 3.2 * point.seed.y;
+            let fade = (1.0 - smoothstep((released - life * 0.45) / (life * 0.55))) * opacity;
+            if fade <= 0.001 {
+                continue;
+            }
+            let ignition = smoothstep(released / 0.055);
+            let heat = (-released * (0.9 + point.seed.z)).exp();
+            let hot = vec3(4.5, 1.6, 0.35).lerp(vec3(0.8, 0.025, 0.006), 1.0 - heat);
+            let color = self.look.tone(Tone::Accent).lerp(hot, ignition);
+            if index % 4 == 0 && released > 0.0 {
+                let tail = anchor + ballistic(velocity, gravity, drag, (released - 0.045).max(0.0));
+                if let Some((tail, _)) = self.scene.camera.project(tail) {
+                    self.frame.polyline(
+                        &Polyline::new(vec![tail, center]),
+                        1.0,
+                        [1.3 * perspective, 0.0],
+                        Paint {
+                            stroke: rgba(color, fade * 0.8),
+                            glow: glow4(color * fade * 0.12, 3.0 * perspective),
+                            ..Default::default()
+                        },
+                        COMET,
+                    );
+                }
+            }
+            self.frame.circle(
+                center,
+                [(0.9 + 1.0 * point.seed.z) * perspective, 0.0],
+                0.0,
+                Paint {
+                    fill: rgba(color, fade),
+                    glow: glow4(color * fade * ignition * 0.15, 3.0 * perspective),
                     ..Default::default()
                 },
             );
@@ -1534,9 +1669,18 @@ impl<'a> Painter<'a> {
                     ..Default::default()
                 },
             );
-            remap_clamp(travel, [0.0, 0.1], [0.0, 1.0])
+            let label = remap_clamp(travel, [0.0, 0.1], [0.0, 1.0]);
+            if link.socket[usize::from(!reverse)] {
+                label
+            } else {
+                label * (1.0 - smoothstep((travel - 0.65) / 0.25))
+            }
         } else {
-            packet::landing(age, flight).map_or(0.0, |q| 1.0 - smoothstep(q / 0.4))
+            if link.socket[usize::from(!reverse)] {
+                packet::landing(age, flight).map_or(0.0, |q| 1.0 - smoothstep(q / 0.4))
+            } else {
+                0.0
+            }
         };
         if label_alpha > 0.001 {
             let travel = packet::travel(age, flight);
@@ -1551,7 +1695,9 @@ impl<'a> Painter<'a> {
                 0.0,
             );
         }
-        if let Some(q) = packet::landing(age, flight) {
+        if let Some(q) = packet::landing(age, flight)
+            && link.socket[usize::from(!reverse)]
+        {
             // The dot is the ring: a 2 px ring with a 4 px stroke looks like the
             // dot, then opens, grows a little, and fades out.
             let opening = smoothstep(q / 0.24);
@@ -1573,7 +1719,7 @@ impl<'a> Painter<'a> {
                 },
             );
         }
-        self.frame.close(link.near() - 2.0, order);
+        self.frame.close(link.far() + 0.5, order);
     }
 
     /// Every point the packet crossed within the cooling time, dimming with
@@ -2016,6 +2162,12 @@ mod tests {
             before.links["link"].path.points(),
             impact.links["link"].path.points()
         );
+        let link = &before.links["link"];
+        let orb = before.placements["service"];
+        assert!(
+            link.path.at(1.0).distance(orb.center) < 150.0 * orb.scale * 0.8,
+            "the cap is submerged beneath the orb's occluding body"
+        );
     }
 
     #[test]
@@ -2066,6 +2218,25 @@ mod tests {
         assert!(
             draw(&mut renderer, 1.2, 0.0, 0.0) != first,
             "the orb spins with time"
+        );
+        let burst = |renderer: &mut HeadlessRenderer, age: f32| {
+            renderer
+                .render_stage(&plan, &gpu, 2.0, |property, default| match property {
+                    "service.burst" => age,
+                    _ => default,
+                })
+                .unwrap()
+        };
+        let fire = burst(&mut renderer, 0.45);
+        let smoke = burst(&mut renderer, 2.8);
+        assert!(fire != smoke, "combustion cools into smoke");
+        assert!(
+            burst(&mut renderer, 0.45) == fire,
+            "reverse sampling reconstructs the fire"
+        );
+        assert!(
+            burst(&mut renderer, -1.0) != smoke,
+            "negative age restores the intact orb"
         );
     }
 }

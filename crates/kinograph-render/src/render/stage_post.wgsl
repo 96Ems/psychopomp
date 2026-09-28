@@ -8,6 +8,7 @@ struct Post {
     texel: vec4<f32>,  // 1 / source width, 1 / source height, 0, 0
     params: vec4<f32>, // bloom intensity, threshold, knee, exposure
     look: vec4<f32>,   // chroma, vignette, grain, frame seed
+    shock: vec4<f32>,  // center pixels, burst age (-1 inactive), projected scale
 };
 
 @group(0) @binding(0) var<uniform> post: Post;
@@ -96,20 +97,38 @@ fn rolloff(c: vec3<f32>) -> vec3<f32> {
 
 @fragment
 fn composite(in: VOut) -> @location(0) vec4<f32> {
+    var uv = in.uv;
+    var pressure = 0.0;
+    if post.shock.z >= 0.0 {
+        let scale = max(post.shock.w, 0.01);
+        let delta = in.position.xy - post.shock.xy;
+        let distance = length(delta) / scale;
+        let radial = delta / max(length(delta), 1.0);
+        let age = post.shock.z;
+        let t = max(age - 0.12, 0.0);
+        // Inward gravitational pinch, then an expanding bipolar pressure wave.
+        let pinch = sin(clamp(age / 0.12, 0.0, 1.0) * 3.14159265) * exp(-distance * distance / 70000.0);
+        let front = 55.0 + 760.0 * pow(t, 0.75);
+        let band = (distance - front) / (20.0 + 24.0 * t);
+        pressure = exp(-band * band) * exp(-t * 1.8) * smoothstep(0.0, 0.05, t);
+        let displacement = 15.0 * pinch + 25.0 * band * pressure;
+        uv += radial * displacement * scale / vec2<f32>(textureDimensions(source));
+    }
     let offset = (in.uv - vec2<f32>(0.5)) * post.look.x * 0.006;
-    let uv_r = in.uv + offset;
-    let uv_b = in.uv - offset;
+    let uv_r = uv + offset;
+    let uv_b = uv - offset;
     let hdr = vec3<f32>(
         textureSampleLevel(source, linear_sampler, uv_r, 0.0).r,
-        textureSampleLevel(source, linear_sampler, in.uv, 0.0).g,
+        textureSampleLevel(source, linear_sampler, uv, 0.0).g,
         textureSampleLevel(source, linear_sampler, uv_b, 0.0).b,
     );
     let glow = vec3<f32>(
         textureSampleLevel(bloom, linear_sampler, uv_r, 0.0).r,
-        textureSampleLevel(bloom, linear_sampler, in.uv, 0.0).g,
+        textureSampleLevel(bloom, linear_sampler, uv, 0.0).g,
         textureSampleLevel(bloom, linear_sampler, uv_b, 0.0).b,
     );
     var color = (hdr + glow * post.params.x) * post.params.w;
+    color += vec3<f32>(0.035, 0.028, 0.021) * pressure;
     color = rolloff(color);
 
     let centered = (in.uv - vec2<f32>(0.5)) * vec2<f32>(1.0, 0.82);

@@ -411,7 +411,9 @@ placement, and every beam's path once per sample; `Painter` has one method per
 element kind; `StageFrame` owns primitive helpers and depth-sorted layers. A beam is
 a `math::shapes::connect` connector between the two outlines on screen: it leaves the
 middle of the card side that faces the other end, perpendicular to it, and enters an
-orb radially just outside its shell, with a socket where it plugs into a card.
+orb radially beneath its shell, with a socket where it plugs into a card. A dark
+orb body occludes submerged endpoints and packet landing rings; packet labels
+fade before entering the shell. Packets sort behind the connected bodies too.
 A packet is one clock (`age`, `flight`); `stage::packet` derives its phases (gather,
 minimum-jerk quintic flight by arc length, landing ring, and a trail whose points cool with
 the time since the packet crossed them, found by inverting the ease), so rewinding
@@ -440,6 +442,18 @@ reflections stay local. `settle_in` uses small, damped scale/position springs wi
 a separate delayed content spring; `glide` uses `Ease::Smootherstep` for deliberate
 camera compositions. Packet travel uses the same acceleration-continuous quintic,
 with its inverse in shared math providing trail crossing times.
+
+Orb `rotation` is an angular offset, independent of ambient `spin`; `blur` is a
+separate defocus pose. `burst` is an opt-in age in seconds (-1 means intact): a
+120 ms collapse, combustion, smoke, and embers over 5.2 seconds. The private
+`stage_burst.wgsl` is concatenated with the primitive shader and raymarches a
+domain-warped procedural density with emission and Beer-Lambert absorption.
+It is an analytic appearance, not a fluid simulation. Embers use shared
+`math::dynamics::ballistic` (constant gravity and linear drag), while the composite
+refracts the scene with an inward pinch and expanding pressure wave. The first
+active orb in element order drives this screen-space wave; volumes and embers
+render for every bursting orb. Reversing the age reconstructs the effect without
+simulation history; ambient spin remains on the scene clock.
 
 ### Eased events
 

@@ -5,6 +5,7 @@
 //! Renderers and Scene Programs compose these instead of inlining their own
 //! lerps, easings, or geometry.
 pub mod curve;
+pub mod dynamics;
 pub mod easing;
 pub mod random;
 pub mod shapes;

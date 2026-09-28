@@ -236,6 +236,10 @@ fn fs(in: VOut) -> @location(0) vec4<f32> {
             color = mix(prim.fill.rgb, prim.stroke.rgb, smoothstep(0.0, 1.0, t));
             alpha = 1.0;
         }
+        // Raymarched fire and smoke: a = (kind, cx, cy, radius), b = (age, opacity, 0, 0)
+        case 6u: {
+            return burst_volume(px - prim.a.yz, prim.a.w, prim.b.x) * prim.b.y;
+        }
         default: {}
     }
     return vec4<f32>(color, alpha);

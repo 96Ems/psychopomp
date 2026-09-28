@@ -521,6 +521,27 @@ The first four bullets below retain the **pre-fix review evidence**. Their unres
 - Kinetic explainers need every light to have a source. Porting the opencode-architecture diagrams' vocabulary (gather, cubic-in-out flight, cooling trail, dot-to-ring landing, border reflections that follow the packet, floods from the socket, embers at the port, frame sweep, port pop, bead draw, settle-in) made each beat read as energy moving from one place to another. Whole-card flashes and scaling receivers read as noise by comparison.
 - Stepped `set` approximations of an ease (24 steps) judder visibly at 60 fps even with motion blur; the `ease` operation fixed packets and wire draws. A cable twang must build over about 60 ms (a jump pops) and should sag downward on every beam.
 
+## Procedural Stage Burst Study
+
+- A bounded raymarched volume makes the service destruction legible as fire
+  cooling into smoke, rather than an expanding particle shell. Domain-warped
+  density, spatial temperature contrast, and absorption preserve dark folds;
+  uniformly emissive density washed out under HDR rolloff in the first study.
+- A pressure wave reads more physically when it displaces the actual scene.
+  Reducing its emitted ring light kept attention on combustion. The 120 ms
+  compression, volume, and analytic gravity/drag embers share a reversible age.
+- Rendered `output/burst-impact.mp4`, `burst-entrance.mp4`, and `burst-rewind.mp4`
+  at 1080p60. Inspected exact full-scale frames, encoded impact/rewind strips at
+  40 ms, and the entrance strip at 100 ms. GPU out-of-order sampling reproduces
+  the same fire pixels after sampling smoke; this is not a real-time performance
+  measurement or a fluid simulation validation.
+- Label grouping exposed a serialization bug: Stage omitted centered alignment
+  but decoded missing alignment as left. A three-alignment round-trip regression
+  now protects it, and `output/burst-established.png` verifies the centered
+  service label and connections disappearing beneath the shell at full scale.
+- Perimeter sweeps are now opt-in channels rather than the default `connect`
+  choreography. Soft port reveals preserve the stagger without racing highlights.
+
 ## Next Question
 
 - The first kinetic Stage pass overused light: a whole-card halo, dense luminous

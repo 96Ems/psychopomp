@@ -201,6 +201,10 @@ is a pure function of time, so any frame renders identically in any order.
 An orb pulse is an illumination response, independent of its scale and attached
 ports. A card's content can settle after its body; its `content` channel controls
 the ink's presence, small vertical offset, and sharpening together.
+An orb's **Burst** is a reversible destruction clock: gravitational collapse,
+hot combustion, an expanding refractive pressure wave, cooling smoke, and
+ballistic embers. Its procedural volume and trajectories need no simulation
+history. Wires and arrivals pass beneath the intact orb's occluding shell.
 
 ## Caption
 

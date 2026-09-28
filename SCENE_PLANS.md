@@ -438,7 +438,7 @@ Components used by explainers:
   `bend` at 0 unless two beams need separating.
 - `StageActor` implements the `explainer-motion` beats: `settle_in` (a panel drifts
   16 px into place, scales from 1.035, and sharpens; its content follows 65 ms later),
-  `connect` (frame sweep, port pop, bead draw, surge and
+  `connect` (soft port reveal, bead draw, surge and
   twang), `send` (gather, flight, landing), `hit` (instant attack, convex decay),
   `twang`, and `land`. `bounce` and `to` spring any channel; `glide` moves between
   resting compositions with a minimum-jerk quintic curve. Use glides for staged
@@ -446,6 +446,13 @@ Components used by explainers:
   Orb `pulse` changes illumination, not geometry or attached beam ports. Card
   `flash` lifts ink and rim, not the entire fill. Connected wires can rest: the
   flagship stops `flow` after its brief connection beat.
+- Orb `rotation` is an angular offset in radians; animate it for a spin entrance
+  rather than changing the ambient `spin` multiplier. `blur` adds defocus in world
+  pixels. `burst` defaults to -1 (intact): set 0 on impact and ease linearly to
+  5.2 over 5.2 seconds for collapse, fire, smoke, and ballistic embers. Reverse
+  that clock to reassemble, then set -1 when it reaches zero. The first active
+  burst also supplies the composite's gravity pinch and refractive shockwave.
+  Volumes and sparks respect orb opacity; the pressure wave is a scene response.
 - Continuous channel events are `set`, `spring`, and `ease`
   (`{ "operation": "ease", "atNanos", "target", "durationNanos", "curve" }` with
   `curve` one of `linear`, `smoothstep`, `smootherstep`, `cubic-out`, `cubic-in-out`,

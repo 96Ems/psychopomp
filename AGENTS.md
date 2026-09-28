@@ -86,6 +86,7 @@ Do not run the full render as routine validation when unit tests and static chec
 - `crates/kinograph-render/src/render/sequence.rs` and `render/caption.rs`: Sequence Diagram and Caption pixels
 - `crates/kinograph-render/src/plan_runtime/stage.rs`: Stage root preflight and preparation
 - `crates/kinograph-render/src/render/stage.rs`, `stage.wgsl`, `stage_post.wgsl`: Stage primitives, HDR bloom, and composite; `KINOGRAPH_SHADER_DIR` loads the WGSL live
+- `crates/kinograph-render/src/render/stage_burst.wgsl`: deterministic procedural fire/smoke volume; shared ballistic ember motion lives in `kinograph::math::dynamics`
 - `crates/kinograph-render/src/render.rs`: concrete headless `wgpu` renderer, sprite compositor, and code annotations
 - `crates/kinograph-render/src/render/effects/`: independent pixel recipes for interchangeable short annotation effects
 - `crates/kinograph-render/src/render/task.rs`: concrete Effect Task recipe and compositing

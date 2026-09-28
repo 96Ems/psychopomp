@@ -166,21 +166,21 @@ fn stage_plan() -> StagePlan {
         },
         label(
             "service-name",
-            [SERVICE[0], 700.0, 0.0],
+            [SERVICE[0], 659.0, 0.0],
             24.0,
             CaptionAlign::Center,
             &[("opencode service", Tone::Plain)],
         ),
         label(
             "service-healthy",
-            [SERVICE[0], 738.0, 0.0],
+            [SERVICE[0], 691.0, 0.0],
             19.0,
             CaptionAlign::Center,
             &[("● healthy", Tone::Success)],
         ),
         label(
             "service-stopped",
-            [SERVICE[0], 738.0, 0.0],
+            [SERVICE[0], 691.0, 0.0],
             19.0,
             CaptionAlign::Center,
             &[("● stopped", Tone::Error)],
@@ -303,7 +303,10 @@ fn stage_film(narration: &Narration) -> Result<ScenePlan> {
     // their ink follows. The camera carries the composition without bouncing.
     s.glide(sc, "camera.z", -160.0, 0, 0.0, 2.8);
     s.set(sc, "camera.dof", 0.45, 0, 0.45);
-    s.bounce(sc, "service.scale", 0.9, ns(0.15), 1.0, 0.9, 0.08);
+    s.bounce(sc, "service.scale", 0.58, ns(0.15), 1.0, 0.85, 0.2);
+    s.to(sc, "service.blur", 11.0, ns(0.15), 0.0, 0.7);
+    let rotation = s.channel(sc, "service.rotation", -1.8);
+    sc.ease(&rotation, ns(0.15), 0.0, 1.25, Ease::CubicOut);
     s.to(sc, "service.opacity", 0.0, ns(0.15), 1.0, 0.6);
     for (index, name) in ["service-name", "service-healthy"].iter().enumerate() {
         s.to(
@@ -411,8 +414,11 @@ fn stage_film(narration: &Narration) -> Result<ScenePlan> {
     // explosion accelerate late, as though the service chose to fall apart.
     let shatter = s.channel(sc, "service.shatter", 0.0);
     sc.ease(&shatter, kill_arrival, 1.0, 1.65, Ease::CubicOut);
+    let burst = s.channel(sc, "service.burst", -1.0);
+    sc.set(&burst, kill_arrival, 0.0);
+    sc.ease(&burst, kill_arrival, 5.2, 5.2, Ease::Linear);
     s.to(sc, "service.hurt", 0.0, kill_arrival, 1.0, 0.2);
-    s.set(sc, "shock.opacity", 0.0, kill_arrival, 1.0);
+    s.set(sc, "shock.opacity", 0.0, kill_arrival, 0.0);
     s.set(sc, "shock.expand", 0.0, kill_arrival, 0.0);
     s.to(sc, "shock.expand", 0.0, kill_arrival, 1.0, 1.0);
     s.hit(sc, "post.chroma", kill_arrival, 0.16, 0.0);
@@ -474,6 +480,8 @@ fn stage_film(narration: &Narration) -> Result<ScenePlan> {
         -13.0,
     ));
     s.glide(sc, "service.shatter", 0.0, switch + ns(0.1), 0.0, 1.3);
+    sc.ease(&burst, switch + ns(0.1), 0.0, 1.3, Ease::Smootherstep);
+    sc.set(&burst, switch + ns(1.4), -1.0);
     s.to(sc, "service.hurt", 0.0, switch + ns(0.6), 0.0, 0.6);
     s.to(sc, "shock.opacity", 0.0, switch, 0.0, 0.3);
     s.hit(sc, "post.chroma", switch, 0.12, 0.0);

@@ -123,7 +123,7 @@ pub enum StageElement {
         id: String,
         at: [f32; 3],
         size: f32,
-        #[serde(default, skip_serializing_if = "is_center")]
+        #[serde(default = "center", skip_serializing_if = "is_center")]
         align: CaptionAlign,
         spans: Vec<CaptionSpanPlan>,
     },
@@ -152,6 +152,9 @@ fn accent() -> Tone {
 fn is_center(align: &CaptionAlign) -> bool {
     *align == CaptionAlign::Center
 }
+fn center() -> CaptionAlign {
+    CaptionAlign::Center
+}
 
 impl StageElement {
     pub fn id(&self) -> &str {
@@ -177,7 +180,7 @@ impl StageElement {
     }
 
     /// The outline beams attach to, around the element's projected `center`, at
-    /// its total on-screen `scale`. Beams stop just outside an orb's shell.
+    /// its total on-screen `scale`.
     pub fn outline(&self, center: Vec2, scale: f32) -> Shape {
         match self {
             Self::Card { size, .. } => {
@@ -185,7 +188,7 @@ impl StageElement {
             }
             Self::Orb { radius, .. } => Shape::Circle(Circle {
                 center,
-                radius: radius * scale * 1.08,
+                radius: radius * scale,
             }),
             Self::Ring { radius, .. } => Shape::Circle(Circle {
                 center,
@@ -203,7 +206,8 @@ impl StageElement {
                 "status", "content",
             ],
             Self::Orb { .. } => &[
-                "opacity", "x", "y", "z", "scale", "shatter", "pulse", "hurt", "spin",
+                "opacity", "x", "y", "z", "scale", "blur", "rotation", "burst", "shatter", "pulse",
+                "hurt", "spin",
             ],
             Self::Beam { .. } => &[
                 "opacity", "sweep", "port", "draw", "break", "flow", "emphasis", "surge", "twang",
@@ -665,8 +669,8 @@ impl StageActor {
         dispatch + millis(packet::GATHER) + millis(seconds)
     }
 
-    /// Plug `beam` in, starting at `at_nanos`: light sweeps once around its
-    /// source card, the port pops, the wire draws over `seconds` with a gentle
+    /// Plug `beam` in, starting at `at_nanos`: the port resolves softly,
+    /// the wire draws over `seconds` with a gentle
     /// start and stop, and on contact it surges and twangs taut while its target
     /// takes the energy; then data starts to flow. Returns the contact time.
     pub fn connect(
@@ -676,12 +680,9 @@ impl StageActor {
         at_nanos: u64,
         seconds: f32,
     ) -> u64 {
-        let sweep = self.channel(scene, &format!("{beam}.sweep"), 0.0);
-        scene.ease(&sweep, at_nanos, 1.0, SWEEP_SECONDS, DRAW_CURVE);
-        let pop = at_nanos + millis(SWEEP_SECONDS);
         let port = self.channel(scene, &format!("{beam}.port"), 0.0);
-        scene.ease(&port, pop, 1.0, PORT_POP_SECONDS, Ease::CubicOut);
-        let start = pop + millis(PORT_POP_SECONDS);
+        scene.ease(&port, at_nanos, 1.0, PORT_POP_SECONDS, Ease::Smootherstep);
+        let start = at_nanos + millis(PORT_POP_SECONDS);
         let draw = self.channel(scene, &format!("{beam}.draw"), 0.0);
         scene.set(&draw, start, 0.0);
         scene.ease(&draw, start, 1.0, seconds, DRAW_CURVE);
@@ -818,6 +819,25 @@ mod tests {
     }
 
     #[test]
+    fn label_alignment_survives_plan_serialization() {
+        for align in [
+            CaptionAlign::Left,
+            CaptionAlign::Center,
+            CaptionAlign::Right,
+        ] {
+            let label = StageElement::Label {
+                id: "name".into(),
+                at: [960.0, 640.0, 0.0],
+                size: 24.0,
+                align,
+                spans: vec![CaptionSpanPlan::new("service", Tone::Plain)],
+            };
+            let json = serde_json::to_value(&label).unwrap();
+            assert_eq!(serde_json::from_value::<StageElement>(json).unwrap(), label);
+        }
+    }
+
+    #[test]
     fn orbs_shatter_deterministically() {
         let points = orb_points(64);
         assert_eq!(points, orb_points(64));
@@ -831,7 +851,7 @@ mod tests {
     }
 
     #[test]
-    fn beams_attach_to_the_facing_side_of_a_card_and_just_outside_an_orb() {
+    fn beams_attach_to_the_facing_side_of_a_card_and_an_orb_outline() {
         use crate::math::{shapes::connect, vec2};
         let plan = plan();
         let card = plan
@@ -844,7 +864,7 @@ mod tests {
             .outline(vec2(960.0, 460.0), 1.0);
         let curve = connect(card, orb, 0.0);
         assert_eq!(curve.start, vec2(570.0, 300.0), "the card's right side");
-        assert!((curve.end.distance(vec2(960.0, 460.0)) - 162.0).abs() < 1e-3);
+        assert!((curve.end.distance(vec2(960.0, 460.0)) - 150.0).abs() < 1e-3);
     }
 
     #[test]
@@ -890,10 +910,7 @@ mod tests {
         let mut scene = PlanBuilder::new("stage-demo", 5_000_000_000);
         let mut stage = StageActor::declare(&mut scene, "stage", &plan()).unwrap();
         let contact = stage.connect(&mut scene, "link", 1_000_000_000, 0.6);
-        assert_eq!(
-            contact, 2_300_000_000,
-            "sweep 0.4 s, port 0.3 s, draw 0.6 s"
-        );
+        assert_eq!(contact, 1_900_000_000, "port 0.3 s, draw 0.6 s");
         let plan = scene.finish().unwrap();
         let channel = |property: &str| {
             plan.continuous_channels
@@ -904,14 +921,13 @@ mod tests {
         assert!(matches!(
             channel("link.draw").events[1],
             crate::plan::TrackEventPlan::Ease {
-                at_nanos: 1_700_000_000,
+                at_nanos: 1_300_000_000,
                 duration_nanos: 600_000_000,
                 curve: DRAW_CURVE,
                 ..
             }
         ));
         for property in [
-            "link.sweep",
             "link.port",
             "link.surge",
             "link.twang",
