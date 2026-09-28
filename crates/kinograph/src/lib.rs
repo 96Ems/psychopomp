@@ -6,6 +6,7 @@ pub mod composition;
 pub mod deployment;
 pub mod dsl;
 pub mod editor;
+pub mod effects;
 pub mod grid;
 pub mod highlight;
 pub mod math;

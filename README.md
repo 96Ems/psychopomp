@@ -96,6 +96,7 @@ approval. The browser experiment has separate build and proof commands.
 | How do I author, inspect, present, or export? | [SCENE_PLANS.md](SCENE_PLANS.md) |
 | What is in scope, and what comes next? | [PLAN.md](PLAN.md) |
 | Which references inform the motion? | [PRIOR_ART.md](PRIOR_ART.md) |
+| Where do composable particle and shader effects live? | [EFFECTS.md](EFFECTS.md) |
 | What did earlier experiments establish? | [NOTES.md](NOTES.md) and [perf/](perf/) |
 
 [AGENTS.md](AGENTS.md) records the engineering, stability, and verification rules.

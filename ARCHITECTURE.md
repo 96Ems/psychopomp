@@ -446,10 +446,10 @@ with its inverse in shared math providing trail crossing times.
 Orb `rotation` is an angular offset, independent of ambient `spin`; `blur` is a
 separate defocus pose. `burst` is an opt-in age in seconds (-1 means intact): a
 120 ms collapse, combustion, smoke, and embers over 5.2 seconds. The private
-`stage_burst.wgsl` is concatenated with the primitive shader and raymarches a
+`effects/combustion.wgsl` and `effects/noise.wgsl` are concatenated with the primitive shader and raymarch a
 domain-warped procedural density with emission and Beer-Lambert absorption.
 It is an analytic appearance, not a fluid simulation. Embers use shared
-`math::dynamics::ballistic` (constant gravity and linear drag), while the composite
+`effects::combustion::Burst` over `math::dynamics::ballistic` (constant gravity and linear drag), while the composite
 refracts the scene with an inward pinch and expanding pressure wave. The first
 active orb in element order drives this screen-space wave; volumes and embers
 render for every bursting orb. Reversing the age reconstructs the effect without
@@ -459,6 +459,9 @@ hands presence to the hot particles over a 55 ms ignition envelope. Combustion
 casts an age-driven local rim reflection through the existing light path; it
 does not wash card fills. The procedural density has compact support, reaching
 zero before the ray interval and screen-space rejection bounds.
+The binding-free `effects/pressure.wgsl` returns a displacement field for the
+composite. These concrete Modules form the initial [effects library](EFFECTS.md);
+effect physics and shader optics can be reused without Stage identities.
 
 ### Eased events
 

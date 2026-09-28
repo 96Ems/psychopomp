@@ -8,10 +8,10 @@ use std::f32::consts::{FRAC_PI_2, PI, TAU};
 use super::*;
 use kinograph::{
     caption::{CaptionAlign, CaptionSpanPlan},
+    effects::combustion::{self, Burst},
     math::{
         Quat, Vec2, Vec3,
         curve::Polyline,
-        dynamics::ballistic,
         easing::{cubic_out, quad_out},
         lerp, remap_clamp,
         shapes::{Box2, Shape, connect},
@@ -245,8 +245,12 @@ impl HeadlessRenderer {
             label: Some("stage primitives"),
             source: wgpu::ShaderSource::Wgsl(
                 format!(
-                    "{}\n{}",
-                    shader("stage_burst.wgsl", include_str!("stage_burst.wgsl")),
+                    "{}\n{}\n{}",
+                    shader("effects/noise.wgsl", include_str!("effects/noise.wgsl")),
+                    shader(
+                        "effects/combustion.wgsl",
+                        include_str!("effects/combustion.wgsl")
+                    ),
                     shader("stage.wgsl", include_str!("stage.wgsl")),
                 )
                 .into(),
@@ -310,10 +314,17 @@ impl HeadlessRenderer {
         });
         let post_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("stage post"),
-            source: wgpu::ShaderSource::Wgsl(shader(
-                "stage_post.wgsl",
-                include_str!("stage_post.wgsl"),
-            )),
+            source: wgpu::ShaderSource::Wgsl(
+                format!(
+                    "{}\n{}",
+                    shader(
+                        "effects/pressure.wgsl",
+                        include_str!("effects/pressure.wgsl")
+                    ),
+                    shader("stage_post.wgsl", include_str!("stage_post.wgsl")),
+                )
+                .into(),
+            ),
         });
         let post_pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: None,
@@ -1016,17 +1027,14 @@ impl Scene<'_> {
         match element {
             StageElement::Orb { id, radius, .. } => {
                 let age = self.v(id, "burst", -1.0);
-                let released = age - 0.12;
-                if !(0.0..2.4).contains(&released) {
+                let burst = Burst::sample(age);
+                if burst.rim_strength == 0.0 {
                     return;
                 }
                 let Some(place) = self.placements.get(id.as_str()) else {
                     return;
                 };
-                let strength = 0.8
-                    * smoothstep(released / 0.06)
-                    * (-2.5 * released).exp()
-                    * self.v(id, "opacity", 1.0).clamp(0.0, 1.0);
+                let strength = burst.rim_strength * self.v(id, "opacity", 1.0).clamp(0.0, 1.0);
                 lights.push(Light {
                     at: place.center,
                     tone: Tone::Accent,
@@ -1344,12 +1352,12 @@ impl<'a> Painter<'a> {
     ) {
         let (scene, look) = (self.scene, self.look);
         let bursting = age >= 0.0;
-        let ignition = smoothstep((age - 0.12) / 0.055);
-        let opacity = scene.v(id, "opacity", 1.0).clamp(0.0, 1.0) * (1.0 - ignition);
+        let burst = Burst::sample(age);
+        let opacity = scene.v(id, "opacity", 1.0).clamp(0.0, 1.0) * burst.shell_opacity;
         if opacity <= 0.001 {
             return;
         }
-        let collapse = 1.0 - 0.55 * smoothstep(age / 0.12);
+        let collapse = burst.shell_scale;
         place.scale *= collapse;
         let shatter = if bursting {
             0.0
@@ -1448,7 +1456,7 @@ impl<'a> Painter<'a> {
         age: f32,
         opacity: f32,
     ) {
-        if age >= 5.2 {
+        if age >= combustion::DURATION {
             return;
         }
         let scale = place.scale;
@@ -1464,8 +1472,7 @@ impl<'a> Painter<'a> {
             b: [age, opacity, 0.0, 0.0],
             ..Default::default()
         });
-        let released = (age - 0.12).max(0.0);
-        let collapse = 1.0 - 0.55 * smoothstep(age / 0.12);
+        let burst = Burst::sample(age);
         let rotation = Quat::from_rotation_x(0.42)
             * Quat::from_rotation_y(
                 self.scene.time * 0.14 * self.scene.v(id, "spin", 1.0)
@@ -1474,26 +1481,21 @@ impl<'a> Painter<'a> {
         let world_radius = radius * self.scene.v(id, "scale", 1.0).max(0.01) * self.scene.breath();
         for (index, point) in self.orbs[id].iter().enumerate() {
             let unit = rotation * point.unit;
-            let velocity = unit * (170.0 + 540.0 * point.seed.x);
-            let gravity = vec3(0.0, 150.0 + 90.0 * point.seed.y, 0.0);
-            let drag = 0.55 + 0.8 * point.seed.z;
-            let anchor = place.world + unit * (world_radius * collapse);
-            let position = anchor + ballistic(velocity, gravity, drag, released);
+            let ember = burst.ember(unit, point.seed);
+            let anchor = place.world + unit * (world_radius * burst.shell_scale);
+            let position = anchor + ember.offset;
             let Some((center, perspective)) = self.scene.camera.project(position) else {
                 continue;
             };
-            let life = 1.6 + 3.2 * point.seed.y;
-            let ignition = smoothstep(released / 0.055);
-            let fade =
-                (1.0 - smoothstep((released - life * 0.45) / (life * 0.55))) * opacity * ignition;
+            let ignition = burst.ignition;
+            let fade = ember.opacity * opacity;
             if fade <= 0.001 {
                 continue;
             }
-            let heat = (-released * (0.9 + point.seed.z)).exp();
-            let hot = vec3(4.5, 1.6, 0.35).lerp(vec3(0.8, 0.025, 0.006), 1.0 - heat);
+            let hot = vec3(4.5, 1.6, 0.35).lerp(vec3(0.8, 0.025, 0.006), 1.0 - ember.heat);
             let color = self.look.tone(Tone::Accent).lerp(hot, ignition);
-            if index % 4 == 0 && released > 0.0 {
-                let tail = anchor + ballistic(velocity, gravity, drag, (released - 0.045).max(0.0));
+            if index % 4 == 0 && ignition > 0.0 {
+                let tail = anchor + ember.tail_offset;
                 if let Some((tail, _)) = self.scene.camera.project(tail) {
                     self.frame.polyline(
                         &Polyline::new(vec![tail, center]),
@@ -1510,7 +1512,7 @@ impl<'a> Painter<'a> {
             }
             self.frame.circle(
                 center,
-                [(0.9 + 1.0 * point.seed.z) * perspective, 0.0],
+                [ember.radius * perspective, 0.0],
                 0.0,
                 Paint {
                     fill: rgba(color, fade),

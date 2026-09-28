@@ -1,36 +1,9 @@
+// Requires noise.wgsl. No bindings: local pixels, projected radius, age ->
+// premultiplied HDR emission and absorption coverage. Compose in any pixel recipe.
 // Deterministic procedural combustion, not a frame-integrated fluid simulation.
 // Domain-warped fBM shapes a rising volume; front-to-back Beer-Lambert
 // absorption carries hot emission through cool smoke (GPU Gems 3, chapter 30).
-fn burst_hash(p: vec3<f32>) -> f32 {
-    var q = fract(p * 0.1031);
-    q += dot(q, q.yzx + 33.33);
-    return fract((q.x + q.y) * q.z);
-}
-
-fn burst_noise(p: vec3<f32>) -> f32 {
-    let i = floor(p);
-    let f = fract(p);
-    let u = f * f * (3.0 - 2.0 * f);
-    return mix(
-        mix(mix(burst_hash(i), burst_hash(i + vec3<f32>(1, 0, 0)), u.x),
-            mix(burst_hash(i + vec3<f32>(0, 1, 0)), burst_hash(i + vec3<f32>(1, 1, 0)), u.x), u.y),
-        mix(mix(burst_hash(i + vec3<f32>(0, 0, 1)), burst_hash(i + vec3<f32>(1, 0, 1)), u.x),
-            mix(burst_hash(i + vec3<f32>(0, 1, 1)), burst_hash(i + vec3<f32>(1, 1, 1)), u.x), u.y), u.z);
-}
-
-fn burst_fbm(p: vec3<f32>) -> f32 {
-    var q = p;
-    var sum = 0.0;
-    var amplitude = 0.57;
-    for (var octave = 0; octave < 4; octave++) {
-        sum += burst_noise(q) * amplitude;
-        q = q.yzx * 2.03 + vec3<f32>(7.1, 3.7, 13.2);
-        amplitude *= 0.47;
-    }
-    return sum;
-}
-
-fn burst_volume(pixel: vec2<f32>, radius: f32, age: f32) -> vec4<f32> {
+fn combustion_volume(pixel: vec2<f32>, radius: f32, age: f32) -> vec4<f32> {
     let t = max(age - 0.12, 0.0);
     let ignite = smoothstep(0.0, 0.065, t);
     let fade = 1.0 - smoothstep(2.6, 5.2, age);
@@ -48,9 +21,9 @@ fn burst_volume(pixel: vec2<f32>, radius: f32, age: f32) -> vec4<f32> {
         let z = -growth * 1.25 + (f32(sample) + 0.5) * step_size;
         let p = vec3<f32>(xy, z) / growth;
         let advected = p * 3.2 + vec3<f32>(0.0, t * 0.75, t * 0.16);
-        let warp = vec3<f32>(burst_noise(advected + 9.0), burst_noise(advected.yzx + 23.0), burst_noise(advected.zxy + 41.0)) - 0.5;
-        let turbulence = burst_fbm(advected + warp * 1.8);
-        let lobes = burst_noise(p * 2.6 + vec3<f32>(4.0, 8.0, 1.0));
+        let warp = vec3<f32>(fx_noise3(advected + 9.0), fx_noise3(advected.yzx + 23.0), fx_noise3(advected.zxy + 41.0)) - 0.5;
+        let turbulence = fx_fbm3(advected + warp * 1.8);
+        let lobes = fx_noise3(p * 2.6 + vec3<f32>(4.0, 8.0, 1.0));
         let boundary = 0.67 + 0.60 * lobes;
         let distance = length(p * vec3<f32>(0.92, 1.0, 1.0));
         // Compact support reaches zero before the ray interval and screen-space

@@ -102,17 +102,9 @@ fn composite(in: VOut) -> @location(0) vec4<f32> {
     if post.shock.z >= 0.0 {
         let scale = max(post.shock.w, 0.01);
         let delta = in.position.xy - post.shock.xy;
-        let distance = length(delta) / scale;
-        let radial = delta / max(length(delta), 1.0);
-        let age = post.shock.z;
-        let t = max(age - 0.12, 0.0);
-        // Inward gravitational pinch, then an expanding bipolar pressure wave.
-        let pinch = sin(clamp(age / 0.12, 0.0, 1.0) * 3.14159265) * exp(-distance * distance / 70000.0);
-        let front = 55.0 + 760.0 * pow(t, 0.75);
-        let band = (distance - front) / (20.0 + 24.0 * t);
-        pressure = exp(-band * band) * exp(-t * 1.8) * smoothstep(0.0, 0.05, t);
-        let displacement = 15.0 * pinch + 25.0 * band * pressure;
-        uv += radial * displacement * scale / vec2<f32>(textureDimensions(source));
+        let wave = pressure_wave(delta, scale, post.shock.z);
+        pressure = wave.z;
+        uv += wave.xy / vec2<f32>(textureDimensions(source));
     }
     let offset = (in.uv - vec2<f32>(0.5)) * post.look.x * 0.006;
     let uv_r = uv + offset;

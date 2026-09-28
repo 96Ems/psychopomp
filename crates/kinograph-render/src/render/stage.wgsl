@@ -238,7 +238,7 @@ fn fs(in: VOut) -> @location(0) vec4<f32> {
         }
         // Raymarched fire and smoke: a = (kind, cx, cy, radius), b = (age, opacity, 0, 0)
         case 6u: {
-            return burst_volume(px - prim.a.yz, prim.a.w, prim.b.x) * prim.b.y;
+            return combustion_volume(px - prim.a.yz, prim.a.w, prim.b.x) * prim.b.y;
         }
         default: {}
     }

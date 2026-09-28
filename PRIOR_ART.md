@@ -89,7 +89,7 @@ informs the rendering: raymarch density, accumulate emission with front-to-back
 absorption, and let cooler smoke obscure the hot interior. Kinograph uses an
 analytic age-driven density rather than the chapter's simulated velocity and
 temperature fields, so arbitrary-time sampling and reverse reconstruction remain
-deterministic. `render/stage_burst.wgsl` owns the bounded volume; closed-form
+deterministic. `render/effects/combustion.wgsl` owns the bounded volume; closed-form
 gravity/drag embers and screen-space pressure refraction complete the impact.
 
 ## Manim
