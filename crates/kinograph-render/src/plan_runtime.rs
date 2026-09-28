@@ -1160,7 +1160,9 @@ fn compile_editor_channels(plan: &mut ScenePlan, editors: &[PreparedEditor]) -> 
             if std::iter::once(&channel.initial)
                 .chain(channel.events.iter().map(|event| match event {
                     TrackEventPlan::Set { value, .. } => value,
-                    TrackEventPlan::Spring { target, .. } => target,
+                    TrackEventPlan::Spring { target, .. } | TrackEventPlan::Ease { target, .. } => {
+                        target
+                    }
                 }))
                 .any(|value| matches!(value, ScalarPlan::Target(_)))
             {

@@ -6,7 +6,10 @@ use std::{
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::math::{easing::cubic_in_out, smoothstep, vec2};
+use crate::math::{
+    easing::{Ease, cubic_in_out},
+    smoothstep, vec2,
+};
 
 mod channels;
 pub use channels::{SpringPlan, compile_channels, destination_channel, effective_snapshots};
@@ -631,7 +634,7 @@ impl ScenePlan {
             },
             "continuousChannel": {
                 "required": ["id", "actorId", "property", "initial"],
-                "operations": ["set", "spring"],
+                "operations": ["set", "spring", "ease"],
                 "scalar": "literal number or semantic target component"
             },
             "stateChannel": {
@@ -752,12 +755,21 @@ pub enum TrackEventPlan {
         position_threshold: f32,
         velocity_threshold: f32,
     },
+    /// From the current value to `target` along `curve`, over an exact duration.
+    Ease {
+        at_nanos: u64,
+        target: ScalarPlan,
+        duration_nanos: u64,
+        curve: Ease,
+    },
 }
 
 impl TrackEventPlan {
     pub fn at_nanos(&self) -> u64 {
         match self {
-            Self::Set { at_nanos, .. } | Self::Spring { at_nanos, .. } => *at_nanos,
+            Self::Set { at_nanos, .. }
+            | Self::Spring { at_nanos, .. }
+            | Self::Ease { at_nanos, .. } => *at_nanos,
         }
     }
 }
@@ -1001,6 +1013,26 @@ fn validate_track_events(
                         "invalid-spring",
                         event_path,
                         "spring thresholds must be positive and finite",
+                    ));
+                }
+            }
+            TrackEventPlan::Ease {
+                target,
+                duration_nanos,
+                curve,
+                ..
+            } => {
+                validate_scalar(
+                    target,
+                    target_ids,
+                    &format!("{event_path}.target"),
+                    diagnostics,
+                );
+                if *duration_nanos == 0 || !curve.is_valid() {
+                    diagnostics.push(PlanDiagnostic::new(
+                        "invalid-ease",
+                        event_path,
+                        "an ease needs a positive duration and a curve that rises from 0 to 1",
                     ));
                 }
             }

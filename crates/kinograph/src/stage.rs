@@ -13,9 +13,10 @@ use crate::{
     caption::{CaptionAlign, CaptionSpanPlan},
     math::{
         Vec2, Vec3,
+        easing::Ease,
         random::hash,
         shapes::{Box2, Circle, Shape, fibonacci_sphere},
-        smoothstep, vec3,
+        vec3,
     },
     tone::Tone,
 };
@@ -198,13 +199,16 @@ impl StageElement {
     pub fn properties(&self) -> &'static [&'static str] {
         match self {
             Self::Card { .. } => &[
-                "opacity", "x", "y", "z", "scale", "glow", "flash", "alarm", "dim", "status",
+                "opacity", "x", "y", "z", "scale", "blur", "glow", "flash", "alarm", "dim",
+                "status",
             ],
             Self::Orb { .. } => &[
                 "opacity", "x", "y", "z", "scale", "shatter", "pulse", "hurt", "spin",
             ],
-            Self::Beam { .. } => &["opacity", "draw", "break", "flow", "emphasis"],
-            Self::Packet { .. } => &["opacity", "travel", "impact"],
+            Self::Beam { .. } => &[
+                "opacity", "sweep", "port", "draw", "break", "flow", "emphasis", "surge", "twang",
+            ],
+            Self::Packet { .. } => &["opacity", "age", "flight"],
             Self::Label { .. } => &["opacity", "x", "y", "z", "scale", "typed"],
             Self::Ring { .. } => &["opacity", "x", "y", "z", "scale", "sweep", "expand"],
         }
@@ -401,13 +405,80 @@ pub fn shatter_offset(point: OrbPoint, radius: f32, shatter: f32) -> Vec3 {
     point.unit * (radius * burst) + vec3(drift, fall, 0.0)
 }
 
+/// A packet's life, derived from one dispatch clock (`age`, in seconds) and its
+/// flight time, so every phase is exact at any sample time. Light gathers at the
+/// start port, the packet flies on a cubic ease (three times its average speed
+/// at the middle), then it is absorbed as a small ring while its trail cools.
+/// The constants follow the opencode-architecture diagrams.
+pub mod packet {
+    use crate::math::easing::{cubic_in_out, cubic_in_out_inverse};
+
+    pub const GATHER: f32 = 0.34;
+    pub const LANDING: f32 = 0.72;
+    /// How long the trail takes to cool behind the packet.
+    pub const COOLING: f32 = 0.45;
+    /// How long the glow left at the start port lasts.
+    pub const EMBER: f32 = 2.2;
+    /// How long light floods in from the end port.
+    pub const FLOOD: f32 = 1.2;
+    /// Every phase has finished by this age.
+    pub const LIFETIME: f32 = 4.0;
+
+    /// Progress (0..1) through the gather at `age`, if it is gathering.
+    pub fn gather(age: f32) -> Option<f32> {
+        window(age, 0.0, GATHER)
+    }
+
+    /// Progress (0..1) through the flight, before easing, if it is flying.
+    pub fn flight(age: f32, flight: f32) -> Option<f32> {
+        window(age, GATHER, flight)
+    }
+
+    /// Progress (0..1) through the landing, if it is landing.
+    pub fn landing(age: f32, flight: f32) -> Option<f32> {
+        window(age, GATHER + flight, LANDING)
+    }
+
+    /// Seconds since the packet arrived, if it has.
+    pub fn since_arrival(age: f32, flight: f32) -> Option<f32> {
+        (age >= GATHER + flight).then_some(age - GATHER - flight)
+    }
+
+    /// Where the packet is along its beam, as a fraction of the length.
+    pub fn travel(age: f32, flight: f32) -> f32 {
+        cubic_in_out(((age - GATHER) / flight).clamp(0.0, 1.0))
+    }
+
+    /// Seconds since the packet crossed the point at `fraction` of its beam, if
+    /// it has reached it.
+    pub fn since_crossing(age: f32, flight: f32, fraction: f32) -> Option<f32> {
+        let crossed = GATHER + flight * cubic_in_out_inverse(fraction);
+        (age >= crossed).then_some(age - crossed)
+    }
+
+    /// Heat of the trail at a point crossed `since` seconds ago.
+    pub fn heat(since: f32) -> f32 {
+        0.7 * (1.0 - (since / COOLING).clamp(0.0, 1.0)).powf(1.7)
+    }
+
+    fn window(age: f32, start: f32, length: f32) -> Option<f32> {
+        (age >= start && age < start + length).then(|| (age - start) / length)
+    }
+}
+
+/// Wire draw-on, after the blog diagrams: light sweeps the source card's frame,
+/// the port pops, then the wire draws with a gentle start and stop.
+pub const SWEEP_SECONDS: f32 = 0.4;
+pub const PORT_POP_SECONDS: f32 = 0.3;
+pub const DRAW_CURVE: Ease = Ease::CubicBezier([0.45, 0.0, 0.2, 1.0]);
+
 /// Authoring handle: declares each stage channel once, with the recipe default
 /// as its initial value.
 pub struct StageActor {
     actor: ActorHandle,
     channels: HashMap<String, ContinuousHandle>,
-    /// Characters in each label, for typing.
-    labels: HashMap<String, usize>,
+    /// The declared recipe, for helpers that follow a beam to its ends.
+    plan: StagePlan,
 }
 
 impl StageActor {
@@ -418,21 +489,10 @@ impl StageActor {
     ) -> Result<Self> {
         plan.validate()?;
         let actor = scene.actor(id, STAGE_RECIPE, plan)?;
-        let labels = plan
-            .elements
-            .iter()
-            .filter_map(|element| match element {
-                StageElement::Label { id, spans, .. } => Some((
-                    id.clone(),
-                    spans.iter().map(|span| span.text.chars().count()).sum(),
-                )),
-                _ => None,
-            })
-            .collect();
         Ok(Self {
             actor,
             channels: HashMap::new(),
-            labels,
+            plan: plan.clone(),
         })
     }
 
@@ -497,7 +557,8 @@ impl StageActor {
         scene.set(&channel, at_nanos, value);
     }
 
-    /// Rise to `peak` and settle back to `rest`: a flash, a hit, a pulse.
+    /// Light `property` to `peak` at once, then let it decay to `rest`, fast
+    /// and then with a long tail: how a flash, a hit, or a pulse behaves.
     pub fn hit(
         &mut self,
         scene: &mut PlanBuilder,
@@ -507,8 +568,28 @@ impl StageActor {
         rest: f32,
     ) {
         let channel = self.channel(scene, property, rest);
-        scene.spring(&channel, at_nanos, peak, 0.12, 0.0);
-        scene.spring(&channel, at_nanos + 140_000_000, rest, 0.7, 0.0);
+        scene.set(&channel, at_nanos, peak);
+        scene.ease(&channel, at_nanos, rest, 0.8, Ease::CubicOut);
+    }
+
+    /// `card` settles onto the stage: it drops from 1.12 times its size on a
+    /// lively spring, sharpens from a 6 px blur, and flashes as it lands.
+    /// Returns the landing time.
+    pub fn settle_in(&mut self, scene: &mut PlanBuilder, card: &str, at_nanos: u64) -> u64 {
+        let scale = self.channel(scene, &format!("{card}.scale"), 1.12);
+        scene.set(&scale, at_nanos, 1.12);
+        scene.spring(&scale, at_nanos, 1.0, 0.5, 0.3);
+        for (property, from, to, seconds) in
+            [("opacity", 0.0, 1.0, 0.126), ("blur", 6.0, 0.0, 0.22)]
+        {
+            let channel = self.channel(scene, &format!("{card}.{property}"), from);
+            scene.set(&channel, at_nanos, from);
+            scene.ease(&channel, at_nanos, to, seconds, Ease::Linear);
+        }
+        // The spring first reaches full size here.
+        let landing = at_nanos + 314_000_000;
+        self.hit(scene, &format!("{card}.flash"), landing, 1.0, 0.0);
+        landing
     }
 
     /// Type a label in at `chars_per_second`, one exact step per character.
@@ -520,7 +601,13 @@ impl StageActor {
         at_nanos: u64,
         chars_per_second: f32,
     ) -> u64 {
-        let chars = self.labels.get(label).copied().unwrap_or(0).max(1);
+        let chars = match self.plan.element(label) {
+            Some(StageElement::Label { spans, .. }) => {
+                spans.iter().map(|span| span.text.chars().count()).sum()
+            }
+            _ => 0,
+        }
+        .max(1);
         let opacity = self.channel(scene, &format!("{label}.opacity"), 0.0);
         let typed = self.channel(scene, &format!("{label}.typed"), 0.0);
         scene.set(&opacity, at_nanos, 1.0);
@@ -535,8 +622,9 @@ impl StageActor {
         at_nanos + per_char * chars as u64
     }
 
-    /// Send a packet along its beam over `seconds`, then ripple on arrival.
-    /// Returns the arrival time.
+    /// Send a packet so that it launches at `at_nanos` and flies for `seconds`.
+    /// Light gathers at its port just before, and after arriving it lands as a
+    /// small ring while its trail cools. Returns the arrival time.
     pub fn send(
         &mut self,
         scene: &mut PlanBuilder,
@@ -544,26 +632,87 @@ impl StageActor {
         at_nanos: u64,
         seconds: f32,
     ) -> u64 {
-        let travel = self.channel(scene, &format!("{packet}.travel"), 0.0);
-        scene.set(&travel, at_nanos, 0.0);
-        let steps = 24;
-        // Whole milliseconds: an f32 duration such as 0.8 is not exact in nanoseconds.
-        let span = (f64::from(seconds) * 1000.0).round() as u64 * 1_000_000;
-        // Ease in and out along the path with exact steps, so the packet
-        // accelerates away and decelerates into the target.
-        for step in 1..=steps {
-            let eased = smoothstep(step as f32 / steps as f32);
-            scene.set(&travel, at_nanos + span * step / steps, eased);
-        }
-        let arrival = at_nanos + span;
-        let impact = self.channel(scene, &format!("{packet}.impact"), 0.0);
-        scene.set(&impact, arrival, 0.0);
-        scene.spring(&impact, arrival, 1.0, 0.9, 0.0);
-        let opacity = self.channel(scene, &format!("{packet}.opacity"), 0.0);
-        scene.set(&opacity, at_nanos, 1.0);
-        scene.spring(&opacity, arrival + 350_000_000, 0.0, 0.3, 0.0);
-        arrival
+        let dispatch = at_nanos.saturating_sub(millis(packet::GATHER));
+        let age = self.channel(scene, &format!("{packet}.age"), -1.0);
+        scene.set(&age, dispatch, 0.0);
+        // The clock runs at real speed until every phase has finished.
+        scene.ease(
+            &age,
+            dispatch,
+            packet::LIFETIME,
+            packet::LIFETIME,
+            Ease::Linear,
+        );
+        let flight = self.channel(scene, &format!("{packet}.flight"), seconds);
+        scene.set(&flight, dispatch, seconds);
+        dispatch + millis(packet::GATHER) + millis(seconds)
     }
+
+    /// Plug `beam` in, starting at `at_nanos`: light sweeps once around its
+    /// source card, the port pops, the wire draws over `seconds` with a gentle
+    /// start and stop, and on contact it surges and twangs taut while its target
+    /// takes the energy; then data starts to flow. Returns the contact time.
+    pub fn connect(
+        &mut self,
+        scene: &mut PlanBuilder,
+        beam: &str,
+        at_nanos: u64,
+        seconds: f32,
+    ) -> u64 {
+        let sweep = self.channel(scene, &format!("{beam}.sweep"), 0.0);
+        scene.ease(&sweep, at_nanos, 1.0, SWEEP_SECONDS, DRAW_CURVE);
+        let pop = at_nanos + millis(SWEEP_SECONDS);
+        let port = self.channel(scene, &format!("{beam}.port"), 0.0);
+        scene.ease(&port, pop, 1.0, PORT_POP_SECONDS, Ease::CubicOut);
+        let start = pop + millis(PORT_POP_SECONDS);
+        let draw = self.channel(scene, &format!("{beam}.draw"), 0.0);
+        scene.set(&draw, start, 0.0);
+        scene.ease(&draw, start, 1.0, seconds, DRAW_CURVE);
+        let contact = start + millis(seconds);
+        self.hit(scene, &format!("{beam}.surge"), contact, 1.0, 0.0);
+        self.twang(scene, beam, contact);
+        if let Some(StageElement::Beam { to, .. }) = self.plan.element(beam) {
+            let to = to.clone();
+            self.land(scene, &to, contact);
+        }
+        self.to(
+            scene,
+            &format!("{beam}.flow"),
+            0.0,
+            contact + 180_000_000,
+            1.0,
+            0.6,
+        );
+        contact
+    }
+
+    /// `beam` is struck like a cable: it bows out over a few frames, then its
+    /// momentum carries into an underdamped spring that vibrates back to rest.
+    pub fn twang(&mut self, scene: &mut PlanBuilder, beam: &str, at_nanos: u64) {
+        let twang = self.channel(scene, &format!("{beam}.twang"), 0.0);
+        scene.spring(&twang, at_nanos, 1.0, 0.06, 0.0);
+        scene.spring(&twang, at_nanos + 60_000_000, 0.0, 0.32, 0.62);
+    }
+
+    /// Something arrives at `element`: a card's ink flashes, an orb swells.
+    /// Nothing scales on a hit; the arrival's own light floods in from its port.
+    pub fn land(&mut self, scene: &mut PlanBuilder, element: &str, at_nanos: u64) {
+        match self.plan.element(element) {
+            Some(StageElement::Card { .. }) => {
+                self.hit(scene, &format!("{element}.flash"), at_nanos, 0.6, 0.0);
+            }
+            Some(StageElement::Orb { .. }) => {
+                self.hit(scene, &format!("{element}.pulse"), at_nanos, 0.6, 0.0);
+            }
+            _ => {}
+        }
+    }
+}
+
+/// Whole milliseconds, like `PlanBuilder::ease`: an f32 duration such as 0.8 is
+/// not exact in nanoseconds.
+fn millis(seconds: f32) -> u64 {
+    (f64::from(seconds) * 1000.0).round() as u64 * 1_000_000
 }
 
 #[cfg(test)]
@@ -599,10 +748,10 @@ mod tests {
         assert!(
             plan.accepts("camera.z")
                 && plan.accepts("service.shatter")
-                && plan.accepts("probe.travel")
+                && plan.accepts("probe.age")
         );
         assert!(
-            !plan.accepts("service.travel")
+            !plan.accepts("probe.travel")
                 && !plan.accepts("missing.opacity")
                 && !plan.accepts("camera.roll")
         );
@@ -682,17 +831,106 @@ mod tests {
     }
 
     #[test]
-    fn packets_ease_along_their_beam_and_ripple_on_arrival() {
+    fn packets_gather_fly_and_land_on_one_clock() {
         let mut scene = PlanBuilder::new("stage-demo", 5_000_000_000);
         let mut stage = StageActor::declare(&mut scene, "stage", &plan()).unwrap();
         let arrival = stage.send(&mut scene, "probe", 1_000_000_000, 0.8);
-        assert_eq!(arrival, 1_800_000_000);
+        assert_eq!(
+            arrival, 1_800_000_000,
+            "it launches on time; the gather comes first"
+        );
         let plan = scene.finish().unwrap();
-        let travel = plan
+        let age = plan
             .continuous_channels
             .iter()
-            .find(|c| c.property == "probe.travel")
+            .find(|c| c.property == "probe.age")
             .unwrap();
-        assert_eq!(travel.events.len(), 25);
+        assert!(matches!(age.initial, crate::plan::ScalarPlan::Literal(value) if value == -1.0));
+        assert_eq!(
+            age.events[0].at_nanos(),
+            660_000_000,
+            "dispatched one gather early"
+        );
+        use packet::*;
+        assert_eq!(gather(0.17), Some(0.5));
+        assert_eq!((flight(0.34, 0.8), travel(0.34, 0.8)), (Some(0.0), 0.0));
+        assert!(
+            (travel(0.74, 0.8) - 0.5).abs() < 1e-6,
+            "halfway in time is halfway along"
+        );
+        assert_eq!(landing(1.14, 0.8), Some(0.0));
+        assert_eq!(since_crossing(0.74, 0.8, 0.9), None, "not there yet");
+        let since = since_crossing(0.74, 0.8, 0.5).unwrap();
+        assert!(
+            since.abs() < 1e-5 && (heat(since) - 0.7).abs() < 1e-4,
+            "hottest at the head"
+        );
+        assert_eq!(heat(COOLING), 0.0);
+    }
+
+    #[test]
+    fn connecting_sweeps_pops_draws_and_lands() {
+        let mut scene = PlanBuilder::new("stage-demo", 5_000_000_000);
+        let mut stage = StageActor::declare(&mut scene, "stage", &plan()).unwrap();
+        let contact = stage.connect(&mut scene, "link", 1_000_000_000, 0.6);
+        assert_eq!(
+            contact, 2_300_000_000,
+            "sweep 0.4 s, port 0.3 s, draw 0.6 s"
+        );
+        let plan = scene.finish().unwrap();
+        let channel = |property: &str| {
+            plan.continuous_channels
+                .iter()
+                .find(|c| c.property == property)
+                .unwrap_or_else(|| panic!("missing {property}"))
+        };
+        assert!(matches!(
+            channel("link.draw").events[1],
+            crate::plan::TrackEventPlan::Ease {
+                at_nanos: 1_700_000_000,
+                duration_nanos: 600_000_000,
+                curve: DRAW_CURVE,
+                ..
+            }
+        ));
+        for property in [
+            "link.sweep",
+            "link.port",
+            "link.surge",
+            "link.twang",
+            "link.flow",
+            "service.pulse",
+        ] {
+            channel(property);
+        }
+    }
+
+    #[test]
+    fn hits_strike_at_once_and_decay() {
+        let mut scene = PlanBuilder::new("stage-demo", 5_000_000_000);
+        let mut stage = StageActor::declare(&mut scene, "stage", &plan()).unwrap();
+        stage.hit(&mut scene, "client.flash", 1_000_000_000, 1.0, 0.0);
+        let landing = stage.settle_in(&mut scene, "client", 2_000_000_000);
+        assert_eq!(landing, 2_314_000_000);
+        let plan = scene.finish().unwrap();
+        let flash = plan
+            .continuous_channels
+            .iter()
+            .find(|c| c.property == "client.flash")
+            .unwrap();
+        assert!(matches!(
+            flash.events[0],
+            crate::plan::TrackEventPlan::Set {
+                at_nanos: 1_000_000_000,
+                ..
+            }
+        ));
+        assert!(matches!(
+            flash.events[1],
+            crate::plan::TrackEventPlan::Ease {
+                curve: Ease::CubicOut,
+                ..
+            }
+        ));
     }
 }

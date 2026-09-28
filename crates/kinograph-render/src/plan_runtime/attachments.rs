@@ -31,7 +31,9 @@ fn requests(plan: &ScenePlan) -> Vec<CompanionRequest<'_>> {
             std::iter::once(&channel.initial).chain(channel.events.iter().map(
                 |event| match event {
                     TrackEventPlan::Set { value, .. } => value,
-                    TrackEventPlan::Spring { target, .. } => target,
+                    TrackEventPlan::Spring { target, .. } | TrackEventPlan::Ease { target, .. } => {
+                        target
+                    }
                 },
             ));
         let mut seen = HashSet::new();
@@ -147,6 +149,17 @@ pub(super) fn compile(
                         damping_ratio: *damping_ratio,
                         position_threshold: (*position_threshold / scale).max(f32::MIN_POSITIVE),
                         velocity_threshold: (*velocity_threshold / scale).max(f32::MIN_POSITIVE),
+                    },
+                    TrackEventPlan::Ease {
+                        at_nanos,
+                        target,
+                        duration_nanos,
+                        curve,
+                    } => TrackEventPlan::Ease {
+                        at_nanos: *at_nanos,
+                        target: weight(target),
+                        duration_nanos: *duration_nanos,
+                        curve: *curve,
                     },
                 })
                 .collect(),

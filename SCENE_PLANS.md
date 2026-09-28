@@ -431,10 +431,20 @@ Components used by explainers:
   `packet` (`beam`, `reverse`, `label`), `label` (`at`, `size`, `spans`), and `ring`
   (`at`, `radius`, `thickness`), plus `post` (`bloom`, `grain`, `vignette`,
   `backdrop`). Channels are `<element>.<property>` (for example `service.shatter`,
-  `link.flow`, `probe.travel`, `client.alarm`) and `camera.x|y|z|focus|dof|shake`,
-  `post.bloom|chroma|exposure|vignette`. Use `StageActor`: `send` eases a packet and
-  ripples on arrival, `hit` flashes and settles, `bounce` overshoots. Beams choose
-  their own ports and curve; leave `bend` at 0 unless two beams need separating.
+  `link.draw`, `probe.age`, `client.blur`) and `camera.x|y|z|focus|dof|shake`,
+  `post.bloom|chroma|exposure|vignette`. A packet is one clock: `age` (seconds since
+  dispatch, -1 before) and `flight`; the renderer derives its gather, flight, trail,
+  landing ring, and light from them. Beams choose their own ports and curve; leave
+  `bend` at 0 unless two beams need separating.
+- `StageActor` implements the `explainer-motion` beats: `settle_in` (a card drops in,
+  sharpens, and flashes), `connect` (frame sweep, port pop, bead draw, surge and
+  twang), `send` (gather, flight, landing), `hit` (instant attack, convex decay),
+  `twang`, and `land`. `bounce` and `to` spring any channel.
+- Continuous channel events are `set`, `spring`, and `ease`
+  (`{ "operation": "ease", "atNanos", "target", "durationNanos", "curve" }` with
+  `curve` one of `linear`, `smoothstep`, `cubic-out`, `cubic-in-out`,
+  `{ "decelerate": s }`, or `{ "cubic-bezier": [x1, y1, x2, y2] }`). Use `ease` for
+  timed curves; never approximate one with stepped `set` events, which stutter.
 - Reusable math is `kinograph::math` (`lerp`, `remap_clamp`, `smoothstep`, `easing`,
   `curve::Polyline`, `shapes::connect`, glam vectors). Use it in Scene Programs too.
 

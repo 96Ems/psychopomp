@@ -2,7 +2,10 @@ use std::collections::HashMap;
 
 use anyhow::{Result, bail};
 
-use crate::motion::{MotionState, Spring};
+use crate::{
+    math::easing::Ease,
+    motion::{MotionState, Spring},
+};
 
 mod retarget;
 pub use retarget::{
@@ -111,6 +114,14 @@ pub enum Animation {
         target: f32,
         profile: SpringProfile,
     },
+    /// Moves from wherever the property is to `target` along `curve` over
+    /// `seconds`, independent of spring physics.
+    Ease {
+        property: PropertyId,
+        target: f32,
+        seconds: f32,
+        curve: Ease,
+    },
     Sequence(Vec<Animation>),
     Parallel(Vec<Animation>),
     Delay {
@@ -133,6 +144,10 @@ impl TimedEvent {
 
     pub fn spring(at: f64, property: PropertyId, target: f32, profile: SpringProfile) -> Self {
         Self::new(at, Animation::spring(property, target, profile))
+    }
+
+    pub fn ease(at: f64, property: PropertyId, target: f32, seconds: f32, curve: Ease) -> Self {
+        Self::new(at, Animation::ease(property, target, seconds, curve))
     }
 
     fn new(at: f64, animation: Animation) -> Self {
@@ -165,6 +180,15 @@ impl Animation {
         }
     }
 
+    pub fn ease(property: PropertyId, target: f32, seconds: f32, curve: Ease) -> Self {
+        Self::Ease {
+            property,
+            target,
+            seconds,
+            curve,
+        }
+    }
+
     pub fn sequence(animations: impl IntoIterator<Item = Animation>) -> Self {
         Self::Sequence(animations.into_iter().collect())
     }
@@ -190,6 +214,7 @@ impl Animation {
         match self {
             Self::Set { .. } => 0.0,
             Self::Spring { profile, .. } => profile.advance_time(),
+            Self::Ease { seconds, .. } => *seconds,
             Self::Sequence(animations) => animations.iter().map(Self::duration).sum(),
             Self::Parallel(animations) => animations.iter().map(Self::duration).fold(0.0, f32::max),
             Self::Delay { seconds, animation } => seconds + animation.duration(),
@@ -199,7 +224,9 @@ impl Animation {
 
     fn leaves_at<'a>(&'a self, start: f32, leaves: &mut Vec<(f32, &'a Self)>) {
         match self {
-            Self::Set { .. } | Self::Spring { .. } => leaves.push((start, self)),
+            Self::Set { .. } | Self::Spring { .. } | Self::Ease { .. } => {
+                leaves.push((start, self))
+            }
             Self::Sequence(animations) => {
                 let mut cursor = start;
                 for animation in animations {
@@ -221,12 +248,17 @@ impl Animation {
 
     fn validate_leaves(leaves: &[(f32, &Self)]) -> Result<()> {
         for (index, (start, leaf)) in leaves.iter().enumerate() {
-            let (Self::Set { property, .. } | Self::Spring { property, .. }) = leaf else {
+            let (Self::Set { property, .. }
+            | Self::Spring { property, .. }
+            | Self::Ease { property, .. }) = leaf
+            else {
                 unreachable!("only animation leaves are validated");
             };
             if leaves[..index].iter().any(|(other_start, other)| {
                 matches!(other,
-                    Self::Set { property: other, .. } | Self::Spring { property: other, .. }
+                    Self::Set { property: other, .. }
+                        | Self::Spring { property: other, .. }
+                        | Self::Ease { property: other, .. }
                     if other == property && other_start == start)
             }) {
                 bail!(
@@ -246,6 +278,11 @@ enum SegmentKind {
         spring: Spring,
         target: f32,
         settled_after: f64,
+    },
+    Ease {
+        target: f32,
+        seconds: f64,
+        curve: Ease,
     },
 }
 
@@ -272,6 +309,22 @@ impl Segment {
                     MotionState::at(target)
                 } else {
                     spring.sample(self.initial, target, elapsed as f32)
+                }
+            }
+            SegmentKind::Ease {
+                target,
+                seconds,
+                curve,
+            } => {
+                let elapsed = time - self.start;
+                if elapsed >= seconds {
+                    return MotionState::at(target);
+                }
+                let progress = (elapsed.max(0.0) / seconds) as f32;
+                let span = target - self.initial.position;
+                MotionState {
+                    position: self.initial.position + span * curve.sample(progress),
+                    velocity: span * curve.slope(progress) / seconds as f32,
                 }
             }
         }
@@ -412,6 +465,38 @@ impl Timeline {
                     },
                 );
             }
+            Animation::Ease {
+                property,
+                target,
+                seconds,
+                curve,
+            } => {
+                if !target.is_finite()
+                    || !seconds.is_finite()
+                    || *seconds <= 0.0
+                    || !curve.is_valid()
+                {
+                    bail!(
+                        "property '{}' ease needs a finite target, a positive duration, and a valid curve",
+                        property.as_str()
+                    );
+                }
+                let initial = self.sample_at(property, start).ok_or_else(|| {
+                    anyhow::anyhow!("property '{}' has no initial value", property.as_str())
+                })?;
+                self.push_segment(
+                    property,
+                    Segment {
+                        start,
+                        initial,
+                        kind: SegmentKind::Ease {
+                            target: *target,
+                            seconds: f64::from(*seconds),
+                            curve: *curve,
+                        },
+                    },
+                );
+            }
             Animation::Sequence(_)
             | Animation::Parallel(_)
             | Animation::Delay { .. }
@@ -460,6 +545,54 @@ impl Timeline {
 #[cfg(test)]
 mod tests {
     use super::{Animation, PropertyId, SpringProfile, TimedEvent, Timeline};
+    use crate::math::easing::Ease;
+
+    #[test]
+    fn eased_moves_follow_their_curve_and_hand_velocity_to_a_spring() {
+        let x = PropertyId::new("beam.draw");
+        let timeline = Timeline::compile_events(
+            [(x.clone(), 0.0)],
+            [
+                TimedEvent::ease(1.0, x.clone(), 1.0, 0.5, Ease::Decelerate(0.4)),
+                TimedEvent::spring(1.25, x.clone(), 0.2, profile()),
+            ],
+            4.0,
+        )
+        .unwrap();
+        assert_eq!(timeline.sample_at(&x, 0.5).unwrap().position, 0.0);
+        let launch = timeline.sample_at(&x, 1.0).unwrap();
+        assert_eq!(launch.position, 0.0);
+        assert!(
+            (launch.velocity - 3.2).abs() < 1e-5,
+            "fast launch: 1.6 x the average speed"
+        );
+        let middle = timeline.sample_at(&x, 1.2499).unwrap();
+        let retarget = timeline.sample_at(&x, 1.25).unwrap();
+        assert!((middle.position - retarget.position).abs() < 1e-3);
+        assert!(
+            (middle.velocity - retarget.velocity).abs() < 1e-2,
+            "the spring inherits velocity"
+        );
+        let settled = Timeline::compile_events(
+            [(x.clone(), 0.0)],
+            [TimedEvent::ease(0.0, x.clone(), 1.0, 0.5, Ease::CubicOut)],
+            1.0,
+        )
+        .unwrap();
+        assert_eq!(
+            settled.sample_at(&x, 0.5).unwrap(),
+            crate::motion::MotionState::at(1.0)
+        );
+        assert!(
+            Timeline::compile_events(
+                [(x.clone(), 0.0)],
+                [TimedEvent::ease(0.0, x, 1.0, 0.0, Ease::Linear)],
+                1.0,
+            )
+            .is_err(),
+            "an ease needs a positive duration"
+        );
+    }
 
     fn profile() -> SpringProfile {
         SpringProfile::new(0.5, 0.8, 0.02, 0.05)

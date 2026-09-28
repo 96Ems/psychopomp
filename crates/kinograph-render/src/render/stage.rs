@@ -3,7 +3,7 @@
 //! into an HDR target, blooms the bright light, and composites with highlight
 //! rolloff, chroma, vignette, and grain (stage.wgsl, stage_post.wgsl).
 use std::collections::HashMap;
-use std::f32::consts::{FRAC_PI_2, TAU};
+use std::f32::consts::{FRAC_PI_2, PI, TAU};
 
 use super::*;
 use kinograph::{
@@ -11,11 +11,14 @@ use kinograph::{
     math::{
         Quat, Vec2, Vec3,
         curve::Polyline,
+        easing::{cubic_out, quad_out},
         lerp, remap_clamp,
-        shapes::{Shape, connect},
-        vec2, vec3,
+        shapes::{Box2, Shape, connect},
+        smoothstep, stops, vec2, vec3,
     },
-    stage::{Camera, OrbPoint, StageElement, StagePlan, StatusText, orb_points, shatter_offset},
+    stage::{
+        Camera, OrbPoint, StageElement, StagePlan, StatusText, orb_points, packet, shatter_offset,
+    },
     tone::Tone,
 };
 
@@ -37,6 +40,12 @@ struct Prim {
     stroke: [f32; 4],
     glow: [f32; 4],
     uv: [f32; 4],
+    /// Rounded rects: a reflection on the edge (x, y, radius, strength) and a
+    /// pool of light in the glass, in the same form.
+    light: [f32; 4],
+    light_color: [f32; 4],
+    pool: [f32; 4],
+    pool_color: [f32; 4],
 }
 
 #[repr(C)]
@@ -765,6 +774,8 @@ struct Link {
     scale: [f32; 2],
     /// Ends that plug into a card side and show a socket there.
     socket: [bool; 2],
+    /// The source card's frame, for the light that sweeps it before drawing.
+    source: Option<Box2>,
 }
 
 impl Link {
@@ -781,6 +792,60 @@ impl Link {
     }
 }
 
+/// Light cast by something that moves. A reflection lights only the edges it
+/// nears (a packet gathering, flying, and landing, or a drawing beam's bead); a
+/// pool also enters a card's glass (the ember left at a port, the flood where a
+/// packet arrives, a beam's surge on contact).
+#[derive(Clone, Copy)]
+struct Light {
+    at: Vec2,
+    tone: Tone,
+    strength: f32,
+    /// Falloff radius in pixels at unit scale.
+    radius: f32,
+    pool: bool,
+    scale: f32,
+}
+
+impl Light {
+    /// How strongly it lights a point `distance` pixels away.
+    fn falloff(&self, distance: f32) -> f32 {
+        let r = distance / (self.radius * self.scale).max(1.0);
+        if self.pool {
+            0.5 * (-2.0 * r * r).exp()
+        } else {
+            stops(r, &REFLECTION)
+        }
+    }
+
+    /// The light in the form a primitive carries it.
+    fn uniform(&self, look: &Look, opacity: f32) -> ([f32; 4], [f32; 4]) {
+        (
+            [
+                self.at.x,
+                self.at.y,
+                self.radius * self.scale,
+                self.strength * opacity,
+            ],
+            rgba(look.tone(self.tone), 1.0),
+        )
+    }
+}
+
+/// The diagrams' reflection: full at the light, 0.65 at 0.3 of its radius,
+/// 0.16 at 0.7, gone at the radius. Mirrored in `stage.wgsl`.
+const REFLECTION: [(f32, f32); 4] = [(0.0, 1.0), (0.3, 0.65), (0.7, 0.16), (1.0, 0.0)];
+/// Diagram pixels to stage pixels: the diagrams sit about this much smaller
+/// than a 1080p frame.
+const DIAGRAM_SCALE: f32 = 1.4;
+const REFLECTION_RADIUS: f32 = 80.0 * DIAGRAM_SCALE;
+
+/// Opacity of a bead that travels a path: born as it leaves one end, gone as
+/// it reaches the other.
+fn bead(progress: f32) -> f32 {
+    smoothstep(progress / 0.08) * (1.0 - smoothstep((progress - 0.92) / 0.08))
+}
+
 /// Channel values, camera, placements, and beam paths of one sample.
 struct Scene<'a> {
     plan: &'a StagePlan,
@@ -791,6 +856,7 @@ struct Scene<'a> {
     dof: f32,
     placements: HashMap<&'a str, Placement>,
     links: HashMap<&'a str, Link>,
+    lights: Vec<Light>,
 }
 
 impl<'a> Scene<'a> {
@@ -821,6 +887,7 @@ impl<'a> Scene<'a> {
             dof: value("camera.dof", 0.0).max(0.0),
             placements: HashMap::new(),
             links: HashMap::new(),
+            lights: Vec::new(),
         };
         scene.placements = plan
             .elements
@@ -833,10 +900,15 @@ impl<'a> Scene<'a> {
             .filter_map(|element| match element {
                 StageElement::Beam {
                     id, from, to, bend, ..
-                } => Some((id.as_str(), scene.link(from, to, *bend)?)),
+                } => Some((id.as_str(), scene.link(id, from, to, *bend)?)),
                 _ => None,
             })
             .collect();
+        let mut lights = Vec::new();
+        for element in &plan.elements {
+            scene.lights_of(element, &mut lights);
+        }
+        scene.lights = lights;
         scene
     }
 
@@ -876,8 +948,16 @@ impl<'a> Scene<'a> {
         })
     }
 
-    fn link(&self, from: &str, to: &str, bend: f32) -> Option<Link> {
+    fn link(&self, id: &str, from: &str, to: &str, bend: f32) -> Option<Link> {
         let (a, b) = (self.placements.get(from)?, self.placements.get(to)?);
+        // A twang sags the curve downward, as if it had weight, then vibrates
+        // back to rest.
+        let downward = if (b.center - a.center).perp().y >= 0.0 {
+            1.0
+        } else {
+            -1.0
+        };
+        let bend = bend + 24.0 * downward * self.v(id, "twang", 0.0);
         let curve = connect(a.outline, b.outline, bend * (a.scale + b.scale) * 0.5);
         let card = |id: &str| matches!(self.plan.element(id), Some(StageElement::Card { .. }));
         Some(Link {
@@ -885,7 +965,110 @@ impl<'a> Scene<'a> {
             depth: [a.world.z, b.world.z],
             scale: [a.scale, b.scale],
             socket: [card(from), card(to)],
+            source: match a.outline {
+                Shape::Box(frame) if card(from) => Some(frame),
+                _ => None,
+            },
         })
+    }
+}
+
+impl Scene<'_> {
+    /// The lights a beam or a packet casts this sample.
+    fn lights_of(&self, element: &StageElement, lights: &mut Vec<Light>) {
+        match element {
+            StageElement::Beam { id, tone, .. } => {
+                let Some(link) = self.links.get(id.as_str()) else {
+                    return;
+                };
+                let opacity = self.v(id, "opacity", 1.0).clamp(0.0, 1.0);
+                let draw = self.v(id, "draw", 1.0).clamp(0.0, 1.0);
+                // The bead lights what it passes; on contact the surge pools in the target.
+                let (fraction, strength, pool) = if draw < 0.999 {
+                    (draw, bead(draw), false)
+                } else {
+                    (1.0, self.v(id, "surge", 0.0).clamp(0.0, 1.0) * 0.5, true)
+                };
+                if strength * opacity > 0.01 {
+                    lights.push(Light {
+                        at: link.path.at(fraction),
+                        tone: *tone,
+                        strength: strength * opacity,
+                        radius: if pool { 150.0 } else { REFLECTION_RADIUS },
+                        pool,
+                        scale: link.scale_at(fraction),
+                    });
+                }
+            }
+            StageElement::Packet {
+                id,
+                beam,
+                reverse,
+                tone,
+                ..
+            } => {
+                let Some(link) = self.links.get(beam.as_str()) else {
+                    return;
+                };
+                let age = self.v(id, "age", -1.0);
+                if !(0.0..packet::LIFETIME).contains(&age) {
+                    return;
+                }
+                let flight = self.v(id, "flight", 0.8).max(0.05);
+                let opacity = self.v(id, "opacity", 1.0).clamp(0.0, 1.0);
+                let mut cast = |fraction: f32, strength: f32, radius: f32, pool: bool| {
+                    let fraction = if *reverse { 1.0 - fraction } else { fraction };
+                    if strength * opacity > 0.01 {
+                        lights.push(Light {
+                            at: link.path.at(fraction),
+                            tone: *tone,
+                            strength: strength * opacity,
+                            radius,
+                            pool,
+                            scale: link.scale_at(fraction),
+                        });
+                    }
+                };
+                // The reflection rides the packet: it gathers at the port, flies,
+                // and fades as the packet is absorbed.
+                if let Some(g) = packet::gather(age) {
+                    cast(0.0, cubic_out(g).powf(1.5), REFLECTION_RADIUS, false);
+                }
+                if packet::flight(age, flight).is_some() {
+                    cast(packet::travel(age, flight), 1.0, REFLECTION_RADIUS, false);
+                }
+                if let Some(q) = packet::landing(age, flight) {
+                    cast(1.0, (1.0 - q).powi(2), REFLECTION_RADIUS, false);
+                }
+                // An ember glows where it left, seeping outward as it cools.
+                let t = age / packet::EMBER;
+                if t < 1.0 {
+                    let spread = (0.1 + 0.7 * t.sqrt()) * 210.0 * DIAGRAM_SCALE;
+                    let core = 0.6 * (t / 0.04).min(1.0) * (1.0 - t).powf(0.9);
+                    cast(0.0, core, spread, true);
+                }
+                // Light floods into whatever it reached, spreading and fading.
+                if let Some(since) = packet::since_arrival(age, flight) {
+                    let t = since / packet::FLOOD;
+                    if t < 1.0 {
+                        let travel = 1.0 - (1.0 - t).powi(4);
+                        let width = 0.07 + 0.6 * travel.sqrt();
+                        let fade = (-0.9 * t).exp() * (1.0 - smoothstep((t - 0.65) / 0.35));
+                        let strength =
+                            1.4 * smoothstep(t / 0.07) * (0.12 / (0.12 + width)).sqrt() * fade;
+                        cast(1.0, strength, width * 300.0 * DIAGRAM_SCALE, true);
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
+
+    /// The lights that can reach `outline`.
+    fn lights_on(&self, outline: Shape) -> impl Iterator<Item = &Light> + '_ {
+        self.lights
+            .iter()
+            .filter(move |light| outline.distance(light.at) < light.radius * light.scale)
     }
 }
 
@@ -984,16 +1167,26 @@ impl<'a> Painter<'a> {
         let flash = scene.v(id, "flash", 0.0).clamp(0.0, 1.5);
         let alarm = scene.v(id, "alarm", 0.0).clamp(0.0, 1.5);
         let dim = scene.v(id, "dim", 0.0).clamp(0.0, 1.0);
-        let blur = scene.blur_at(place.world.z);
         let scale = place.scale;
+        let blur = scene.blur_at(place.world.z) + scene.v(id, "blur", 0.0).max(0.0) * scale;
         let own = look.tone(tone);
         // A flash lights the card in its own tone; an alarm lights it red.
         let lit = (flash + alarm).min(1.5);
         let light = own.lerp(look.tone(Tone::Error), alarm / (flash + alarm).max(1e-3));
         let border = look.raised.lerp(look.muted, 0.35);
         let edge = border.lerp(if lit > glow { light } else { own }, (glow + lit).min(1.0));
-        let halo = own * (glow * 0.28 * (1.0 - alarm.min(1.0))) + light * (lit * 0.45);
+        let halo = own * (glow * 0.28 * (1.0 - alarm.min(1.0))) + light * (lit * 0.28);
         let half = size * 0.5 * scale;
+        // The strongest reflection on the edge, and the strongest pool in the glass.
+        let strongest = |pool: bool| {
+            scene
+                .lights_on(place.outline)
+                .filter(|light| light.pool == pool)
+                .max_by(|a, b| a.strength.total_cmp(&b.strength))
+                .map_or(([0.0; 4], [0.0; 4]), |light| light.uniform(&look, opacity))
+        };
+        let (reflection, reflection_color) = strongest(false);
+        let (pool, pool_color) = strongest(true);
         self.frame.rounded_rect(
             place.center,
             half,
@@ -1006,6 +1199,10 @@ impl<'a> Painter<'a> {
                 ),
                 stroke: rgba(edge, opacity * (1.0 - 0.5 * dim)),
                 glow: glow4(halo * opacity, 14.0 * scale),
+                light: reflection,
+                light_color: reflection_color,
+                pool,
+                pool_color,
             },
         );
         // A faint inner rim catches light along the edge, like glass.
@@ -1103,6 +1300,7 @@ impl<'a> Painter<'a> {
             .collect::<Vec<_>>();
         dots.sort_by(|a, b| b.0.z.total_cmp(&a.0.z));
         let fade = (1.0 - shatter).powf(0.7);
+        let lights = scene.lights_on(place.outline).collect::<Vec<_>>();
         for (point, near, seed) in dots {
             let Some((center, scale)) = scene.camera.project(point) else {
                 continue;
@@ -1111,9 +1309,14 @@ impl<'a> Painter<'a> {
             if alpha < 0.01 {
                 continue;
             }
+            let lit = lights.iter().fold(Vec3::ZERO, |sum, light| {
+                sum + look.tone(light.tone)
+                    * (light.strength * light.falloff(center.distance(light.at)))
+            });
             let color = own
                 .lerp(Vec3::ONE, 0.16 * near)
-                .lerp(red, (shatter * 2.4 + hurt * 0.8).min(1.0));
+                .lerp(red, (shatter * 2.4 + hurt * 0.8).min(1.0))
+                + lit * 0.85;
             self.frame.circle(
                 center,
                 [
@@ -1141,18 +1344,27 @@ impl<'a> Painter<'a> {
         let broken = scene.v(id, "break", 0.0).clamp(0.0, 1.0);
         let flow = scene.v(id, "flow", 0.0).clamp(0.0, 1.5);
         let emphasis = scene.v(id, "emphasis", 0.0).clamp(0.0, 1.0);
+        let surge = scene.v(id, "surge", 0.0).clamp(0.0, 1.5);
         let own = look.tone(tone);
         let scale = link.scale_at(0.5);
         let blur = scene.blur_at(link.far());
+        // A surge floods the line with its tone: brighter, wider, and glowing.
         let color = (look.muted * 0.7)
             .lerp(own, 0.35 + 0.65 * emphasis)
+            .lerp(own * 1.35, 0.45 * surge.min(1.0))
             .lerp(look.tone(Tone::Error), (broken * 3.0).min(1.0));
         let line = Paint {
-            stroke: rgba(color, 0.75 * opacity * (1.0 - 0.65 * broken)),
-            glow: glow4(color * (0.1 * (0.3 + emphasis) * opacity), 7.0 * scale),
+            stroke: rgba(
+                color,
+                0.75 * opacity * (1.0 - 0.65 * broken) * (1.0 + 0.3 * surge),
+            ),
+            glow: glow4(
+                color * (0.1 * (0.3 + emphasis + 2.0 * surge) * opacity),
+                7.0 * scale,
+            ),
             ..Default::default()
         };
-        let width = 2.0 * scale;
+        let width = 2.0 * scale * (1.0 + 0.4 * surge);
         if broken <= 0.001 {
             self.frame
                 .polyline(&link.path, draw, [width, blur], line, SOLID);
@@ -1162,6 +1374,33 @@ impl<'a> Painter<'a> {
             for half in [link.path.slice(0.0, keep), link.path.slice(1.0 - keep, 1.0)] {
                 self.frame.polyline(&half, 1.0, [width, blur], line, SOLID);
             }
+        }
+        if draw > 0.001 && draw < 0.999 && broken <= 0.001 {
+            // A bead of light draws the wire: born as it leaves the port, gone
+            // as it reaches the target.
+            let light = bead(draw) * opacity;
+            let head = 13.0 * DIAGRAM_SCALE * scale / link.path.length().max(1.0);
+            self.frame.polyline(
+                &link.path.slice(draw - head, draw),
+                1.0,
+                [2.8 * scale, blur],
+                Paint {
+                    stroke: rgba(own.lerp(Vec3::ONE, 0.45) * 1.4, light),
+                    glow: glow4(own * (0.35 * light), 8.0 * scale),
+                    ..Default::default()
+                },
+                COMET,
+            );
+            self.frame.circle(
+                link.path.at(draw),
+                [2.6 * scale, 0.0],
+                blur,
+                Paint {
+                    fill: rgba(own.lerp(Vec3::ONE, 0.6) * 1.5, light),
+                    glow: glow4(own * (0.5 * light), 10.0 * scale),
+                    ..Default::default()
+                },
+            );
         }
         if flow > 0.001 && broken <= 0.001 && draw > 0.98 {
             // Small beads of light travel toward the `to` end.
@@ -1176,18 +1415,55 @@ impl<'a> Painter<'a> {
         }
         // Behind both ends, so a beam never crosses the cards it connects.
         self.frame.close(link.far() + 1.0, order);
-        // A socket where the beam plugs into a card, in front of the card.
-        for (end, reached) in [(0, draw > 0.001), (1, draw > 0.999)] {
-            if !link.socket[end] || !reached {
+        // Before drawing, light runs once around the source card's frame, from
+        // its port back to it.
+        let sweep = scene.v(id, "sweep", 0.0);
+        if sweep > 0.001
+            && sweep < 0.999
+            && let Some(frame) = link.source
+        {
+            let scale = link.scale[0];
+            let trace = frame.perimeter_from(link.path.at(0.0), 14.0 * scale);
+            let dash = 36.0 * DIAGRAM_SCALE * scale / trace.length().max(1.0);
+            let light = bead(sweep) * opacity;
+            self.frame.polyline(
+                &trace.slice(sweep - dash, sweep),
+                1.0,
+                [1.5 * DIAGRAM_SCALE * scale, blur],
+                Paint {
+                    stroke: rgba(own.lerp(Vec3::ONE, 0.6) * 1.3, light),
+                    glow: glow4(own * (0.3 * light), 6.0 * scale),
+                    ..Default::default()
+                },
+                COMET,
+            );
+            self.frame.close(link.depth[0] - 0.3, order);
+        }
+        // Sockets where the beam plugs into cards, in front of them. The source
+        // port pops in (large and soft, then crisp) before the wire draws; the
+        // target's pops with the surge.
+        let popped = if draw > 0.001 {
+            1.0
+        } else {
+            scene.v(id, "port", 0.0).clamp(0.0, 1.0)
+        };
+        for end in [0, 1] {
+            let (shown, size, soft) = if end == 0 {
+                (popped, 1.6 - 0.6 * popped, 2.0 * (1.0 - popped))
+            } else {
+                (f32::from(u8::from(draw > 0.999)), 1.0 + 0.5 * surge, 0.0)
+            };
+            if !link.socket[end] || shown <= 0.001 {
                 continue;
             }
+            let scale = link.scale[end];
             self.frame.circle(
                 link.path.at(end as f32),
-                [4.4 * link.scale[end], 1.3 * link.scale[end]],
-                blur,
+                [4.4 * scale * size, 1.3 * scale],
+                blur + soft * scale,
                 Paint {
-                    fill: rgba(color, opacity),
-                    stroke: rgba(look.background, opacity),
+                    fill: rgba(color, opacity * shown),
+                    stroke: rgba(look.background, opacity * shown),
                     ..Default::default()
                 },
             );
@@ -1195,15 +1471,17 @@ impl<'a> Painter<'a> {
         }
     }
 
+    /// A packet's whole life from its clock: light gathers at the port, a solid
+    /// dot flies with a cooling trail, then it opens into a small ring as it is
+    /// absorbed. Its light on nearby edges comes from `Scene::lights_of`.
     fn packet(&mut self, order: usize, id: &str, reverse: bool, tone: Tone, link: &Link) {
         let scene = self.scene;
-        let opacity = scene.v(id, "opacity", 0.0).clamp(0.0, 1.0);
-        let travel = scene.v(id, "travel", 0.0).clamp(0.0, 1.0);
-        let impact = scene.v(id, "impact", 0.0).clamp(0.0, 1.0);
-        let landing = impact > 0.001 && impact < 0.999;
-        if opacity <= 0.001 && !landing {
+        let age = scene.v(id, "age", -1.0);
+        let opacity = scene.v(id, "opacity", 1.0).clamp(0.0, 1.0);
+        if !(0.0..packet::LIFETIME).contains(&age) || opacity <= 0.001 {
             return;
         }
+        let flight = scene.v(id, "flight", 0.8).max(0.05);
         let path = if reverse {
             link.path.reversed()
         } else {
@@ -1212,62 +1490,118 @@ impl<'a> Painter<'a> {
         let scale_at =
             |fraction: f32| link.scale_at(if reverse { 1.0 - fraction } else { fraction });
         let own = self.look.tone(tone);
-        if opacity > 0.001 {
-            let head = path.at(travel);
-            let scale = scale_at(travel);
-            // Comet trail: the last stretch of path, brightest at the head.
-            let trail = Paint {
-                stroke: rgba(own * 1.2, 0.85 * opacity),
-                glow: glow4(own * (0.25 * opacity), 8.0 * scale),
-                ..Default::default()
-            };
-            self.frame.polyline(
-                &path.slice(travel - 0.18, travel),
-                1.0,
-                [3.0 * scale, 0.0],
-                trail,
-                COMET,
-            );
+        // The dot is nearly white; its tone lives in the trail and its reflections.
+        let ink = own.lerp(Vec3::ONE, 0.55) * 1.3;
+        let dot = 4.0 * DIAGRAM_SCALE;
+        if let Some(g) = packet::gather(age) {
+            // A soft disc closes in on the port while the dot grows in.
+            let g = cubic_out(g);
+            let (port, scale) = (path.at(0.0), scale_at(0.0));
             self.frame.circle(
-                head,
-                [5.0 * scale, 0.0],
-                0.0,
+                port,
+                [(4.0 + 14.0 * (1.0 - g)) * DIAGRAM_SCALE * scale, 0.0],
+                6.0 * scale,
                 Paint {
-                    fill: rgba(own.lerp(Vec3::ONE, 0.35) * 1.5, opacity),
-                    glow: glow4(own * (0.55 * opacity), 11.0 * scale),
+                    fill: rgba(ink * 0.7, 0.5 * (PI * g).sin() * opacity),
                     ..Default::default()
                 },
             );
+            self.frame.circle(
+                port,
+                [dot * g * scale, 0.0],
+                0.0,
+                Paint {
+                    fill: rgba(ink, g.powf(1.5) * opacity),
+                    ..Default::default()
+                },
+            );
+        }
+        self.trail(&path, age, flight, own * opacity, scale_at(0.5));
+        let label_alpha = if packet::flight(age, flight).is_some() {
+            let travel = packet::travel(age, flight);
+            let (head, scale) = (path.at(travel), scale_at(travel));
+            self.frame.circle(
+                head,
+                [dot * scale, 0.0],
+                0.0,
+                Paint {
+                    fill: rgba(ink, opacity),
+                    glow: glow4(own * (0.3 * opacity), 6.0 * scale),
+                    ..Default::default()
+                },
+            );
+            remap_clamp(travel, [0.0, 0.1], [0.0, 1.0])
+        } else {
+            packet::landing(age, flight).map_or(0.0, |q| 1.0 - smoothstep(q / 0.4))
+        };
+        if label_alpha > 0.001 {
+            let travel = packet::travel(age, flight);
+            let scale = scale_at(travel);
             self.frame.text(
                 &text_key(id, "label"),
-                head - vec2(0.0, 28.0 * scale),
+                path.at(travel) - vec2(0.0, 26.0 * scale),
                 scale,
                 CaptionAlign::Center,
-                rgba(own, opacity * remap_clamp(travel, [0.0, 0.125], [0.0, 1.0])),
+                rgba(own, opacity * label_alpha),
                 f32::MAX,
                 0.0,
             );
         }
-        if landing {
-            // A ripple where the packet lands.
+        if let Some(q) = packet::landing(age, flight) {
+            // The dot is the ring: a 2 px ring with a 4 px stroke looks like the
+            // dot, then opens, grows a little, and fades out.
+            let opening = smoothstep(q / 0.24);
             let scale = scale_at(1.0);
-            let fade = (1.0 - impact).powf(1.5);
             self.frame.arc(
                 path.at(1.0),
                 [
-                    (10.0 + 90.0 * impact) * scale,
-                    (1.0 + 3.0 * (1.0 - impact)) * scale,
+                    (2.0 + 2.0 * opening + 9.1 * quad_out(q)) * DIAGRAM_SCALE * scale,
+                    (4.0 - 2.5 * opening) * DIAGRAM_SCALE * scale,
                 ],
                 1.0,
                 0.0,
                 Paint {
-                    stroke: rgba(own * 1.2, fade),
-                    glow: glow4(own * (0.35 * fade), 10.0 * scale),
+                    stroke: rgba(
+                        ink,
+                        (1.0 - 0.734 * opening) * (1.0 - q).powf(2.52) * opacity,
+                    ),
                     ..Default::default()
                 },
             );
         }
         self.frame.close(link.near() - 2.0, order);
+    }
+
+    /// Every point the packet crossed within the cooling time, dimming with
+    /// the time since it crossed: long and bright mid-flight, short near the
+    /// ends, and still cooling after it lands.
+    fn trail(&mut self, path: &Polyline, age: f32, flight: f32, color: Vec3, scale: f32) {
+        let head = packet::travel(age, flight);
+        let tail = packet::travel(age - packet::COOLING, flight);
+        if head - tail <= 1e-4 {
+            return;
+        }
+        let stretch = path.slice(tail, head);
+        let length = path.length().max(1.0);
+        let points = stretch
+            .points()
+            .iter()
+            .zip(stretch.lengths())
+            .map(|(point, along)| {
+                let fraction = (tail * length + along) / length;
+                let since = packet::since_crossing(age, flight, fraction);
+                (*point, since.map_or(0.0, packet::heat))
+            })
+            .collect::<Vec<_>>();
+        self.frame.trail(
+            &points,
+            [1.6 * DIAGRAM_SCALE * scale, 0.0],
+            Paint {
+                stroke: rgba(color * 1.25, 1.0),
+                glow: glow4(color * 0.2, 5.0 * scale),
+                ..Default::default()
+            },
+        );
     }
 
     fn label(
@@ -1371,6 +1705,11 @@ struct Paint {
     fill: [f32; 4],
     stroke: [f32; 4],
     glow: [f32; 4],
+    /// Rounded rects only: see `Prim::light` and `Prim::pool`.
+    light: [f32; 4],
+    light_color: [f32; 4],
+    pool: [f32; 4],
+    pool_color: [f32; 4],
 }
 
 /// The primitives of one sample, grouped into depth-sorted layers.
@@ -1439,6 +1778,10 @@ impl<'a> StageFrame<'a> {
             fill: paint.fill,
             stroke: paint.stroke,
             glow: paint.glow,
+            light: paint.light,
+            light_color: paint.light_color,
+            pool: paint.pool,
+            pool_color: paint.pool_color,
             ..Default::default()
         });
     }
@@ -1491,6 +1834,33 @@ impl<'a> StageFrame<'a> {
         paint: Paint,
         style: [f32; 4],
     ) {
+        self.path(
+            path,
+            &vec![1.0; path.points().len()],
+            fraction,
+            stroke,
+            paint,
+            style,
+        );
+    }
+
+    /// A path whose points each carry a heat that scales its light, such as a
+    /// trail cooling behind a packet.
+    fn trail(&mut self, points: &[(Vec2, f32)], stroke: [f32; 2], paint: Paint) {
+        let path = Polyline::new(points.iter().map(|(point, _)| *point).collect());
+        let heat = points.iter().map(|(_, heat)| *heat).collect::<Vec<_>>();
+        self.path(&path, &heat, 1.0, stroke, paint, SOLID);
+    }
+
+    fn path(
+        &mut self,
+        path: &Polyline,
+        heat: &[f32],
+        fraction: f32,
+        stroke: [f32; 2],
+        paint: Paint,
+        style: [f32; 4],
+    ) {
         let points = path.points();
         if points.len() < 2 || fraction <= 0.0 || paint.stroke[3] <= 0.001 {
             return;
@@ -1500,7 +1870,8 @@ impl<'a> StageFrame<'a> {
             points
                 .iter()
                 .zip(path.lengths())
-                .map(|(point, along)| [point.x, point.y, *along, 0.0]),
+                .zip(heat)
+                .map(|((point, along), heat)| [point.x, point.y, *along, *heat]),
         );
         let (low, high) = points
             .iter()
@@ -1636,8 +2007,8 @@ mod tests {
                 .render_stage(&plan, &gpu, time, |property, default| match property {
                     "service.shatter" => shatter,
                     "camera.z" => dolly,
-                    "probe.opacity" => 1.0,
-                    "probe.travel" => 0.5,
+                    "probe.age" => 0.74,
+                    "probe.flight" => 0.8,
                     _ => default,
                 })
                 .unwrap()

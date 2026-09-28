@@ -17,6 +17,10 @@ struct Prim {
     stroke: vec4<f32>, // straight linear RGBA
     glow: vec4<f32>,   // linear RGB intensity, radius in pixels
     uv: vec4<f32>,     // text atlas rectangle, or polyline point range
+    light: vec4<f32>,  // rounded rects: a reflection's x, y, radius, strength
+    light_color: vec4<f32>,
+    pool: vec4<f32>,   // rounded rects: a pool of light in the glass, same form
+    pool_color: vec4<f32>,
 };
 
 @group(0) @binding(0) var<uniform> globals: Globals;
@@ -69,6 +73,34 @@ fn halo(d: f32, radius: f32) -> f32 {
     return exp(-outside / radius) * exp(-outside / (radius * 3.0)) * 0.9;
 }
 
+// The diagrams' reflection falloff: full at the light, 0.65 at 0.3 of its
+// radius, 0.16 at 0.7, gone at the radius (REFLECTION in stage.rs).
+fn reflection(r: f32) -> f32 {
+    if r < 0.3 {
+        return mix(1.0, 0.65, r / 0.3);
+    }
+    if r < 0.7 {
+        return mix(0.65, 0.16, (r - 0.3) / 0.4);
+    }
+    return max(mix(0.16, 0.0, (r - 0.7) / 0.3), 0.0);
+}
+
+// Light from things that move. A reflection lights only the border near it;
+// a pool also enters the glass, and the border catches some of it.
+fn card_light(prim: Prim, px: vec2<f32>, band: f32, inside: f32) -> vec3<f32> {
+    var light = vec3<f32>(0.0);
+    if prim.light.w > 0.0 {
+        let r = length(px - prim.light.xy) / max(prim.light.z, 1.0);
+        light += prim.light_color.rgb * prim.light.w * reflection(r) * band * 0.6;
+    }
+    if prim.pool.w > 0.0 {
+        let r = length(px - prim.pool.xy) / max(prim.pool.z, 1.0);
+        let field = prim.pool.w * exp(-2.0 * r * r);
+        light += prim.pool_color.rgb * field * (inside * 0.12 + band * 0.4);
+    }
+    return light;
+}
+
 fn direction(angle: f32) -> vec2<f32> {
     return vec2<f32>(cos(angle), sin(angle));
 }
@@ -92,6 +124,7 @@ fn fs(in: VOut) -> @location(0) vec4<f32> {
             alpha = fill_a + stroke_a * (1.0 - fill_a);
             color = prim.fill.rgb * fill_a + prim.stroke.rgb * stroke_a * (1.0 - fill_a);
             color += prim.glow.rgb * halo(d, prim.glow.w) * smoothstep(-1.0, 1.5, d);
+            color += card_light(prim, px, max(outer - inner, 0.0), inner);
         }
         // Circle: a = (kind, cx, cy, radius), b = (border, 0, 0, blur)
         case 1u: {
@@ -131,6 +164,7 @@ fn fs(in: VOut) -> @location(0) vec4<f32> {
             let drawn = prim.a.z;
             var best = 1.0e9;
             var along = 0.0;
+            var heat = 1.0;
             for (var k = 0u; k + 1u < count; k = k + 1u) {
                 let a = points[first + k];
                 let b = points[first + k + 1u];
@@ -151,6 +185,8 @@ fn fs(in: VOut) -> @location(0) vec4<f32> {
                 if distance < best {
                     best = distance;
                     along = mix(a.z, end_length, h);
+                    // Points carry a heat (1 for ordinary lines): a cooling trail.
+                    heat = mix(a.w, b.w, h * (end_length - a.z) / max(b.z - a.z, 1.0e-4));
                 }
             }
             var d = best - prim.a.y * 0.5;
@@ -164,7 +200,7 @@ fn fs(in: VOut) -> @location(0) vec4<f32> {
                 d = length(vec2<f32>(best, gap)) - prim.a.y * 0.5;
             }
             // Fade toward the start: a comet trail brightest at its head.
-            let strength = mix(1.0, clamp(along / max(drawn, 1.0), 0.0, 1.0), prim.b.w);
+            let strength = mix(1.0, clamp(along / max(drawn, 1.0), 0.0, 1.0), prim.b.w) * heat;
             alpha = prim.stroke.a * coverage(d, prim.a.w) * strength;
             color = prim.stroke.rgb * alpha + prim.glow.rgb * halo(d, prim.glow.w) * strength;
         }

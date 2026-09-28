@@ -51,7 +51,7 @@ impl SpringPlan {
 impl TrackEventPlan {
     pub fn spring_plan(&self) -> Option<SpringPlan> {
         match *self {
-            Self::Set { .. } => None,
+            Self::Set { .. } | Self::Ease { .. } => None,
             Self::Spring {
                 response_seconds,
                 damping_ratio,
@@ -80,6 +80,18 @@ impl TrackEventPlan {
                 property,
                 resolve(target)?,
                 self.spring_plan().expect("spring event").profile(),
+            ),
+            Self::Ease {
+                target,
+                duration_nanos,
+                curve,
+                ..
+            } => TimedEvent::ease(
+                at,
+                property,
+                resolve(target)?,
+                (*duration_nanos as f64 / 1e9) as f32,
+                *curve,
             ),
         })
     }

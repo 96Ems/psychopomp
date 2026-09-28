@@ -318,11 +318,16 @@ fn stage_film(narration: &Narration) -> Result<ScenePlan> {
     let cards = ["client", "tui-1", "desktop", "tui-2"];
     let links = ["link", "b1", "b2", "b3"];
     for (index, (card, link)) in cards.iter().zip(links).enumerate() {
-        let at = ns(0.45 + index as f64 * 0.14);
-        s.to(sc, &format!("{card}.opacity"), 0.0, at, 1.0, 0.45);
-        s.bounce(sc, &format!("{card}.scale"), 0.9, at, 1.0, 0.7, 0.28);
-        s.to(sc, &format!("{link}.draw"), 0.0, at + ns(0.2), 1.0, 0.8);
-        s.to(sc, &format!("{link}.flow"), 0.0, at + ns(1.0), 1.0, 0.6);
+        // Each client settles in, then plugs into the service with a soft tick.
+        let landing = s.settle_in(sc, card, ns(0.45 + index as f64 * 0.14));
+        let contact = s.connect(sc, link, landing + ns(0.35), 0.6);
+        sc.media(sound(
+            &format!("connect-{index}"),
+            "visual-effects/task-running.wav",
+            0.13,
+            contact,
+            -15.0,
+        ));
     }
     for hidden in ["thought-before", "thought-after", "message"] {
         s.set(sc, &format!("{hidden}.opacity"), 0.0, 0, 0.0);
@@ -355,8 +360,9 @@ fn stage_film(narration: &Narration) -> Result<ScenePlan> {
 
     // The server answers 404; the old rule reads that as "outdated".
     let reply_arrival = s.send(sc, "reply", b("returns a 404"), 0.8);
-    s.hit(sc, "client.alarm", reply_arrival, 1.0, 0.0);
-    s.hit(sc, "post.chroma", reply_arrival, 0.7, 0.0);
+    // The 404 floods in red from the socket; the card itself only blushes.
+    s.hit(sc, "client.alarm", reply_arrival, 0.3, 0.0);
+    s.hit(sc, "post.chroma", reply_arrival, 0.4, 0.0);
     sc.media(sound(
         "reply-land",
         "visual-effects/task-failure.wav",
@@ -483,6 +489,9 @@ fn stage_film(narration: &Narration) -> Result<ScenePlan> {
     for (index, (card, link, _)) in OTHERS.iter().enumerate() {
         let at = switch + ns(0.35 + index as f64 * 0.1);
         s.to(sc, &format!("{link}.break"), 0.0, at, 0.0, 0.9);
+        // The halves meet: the line surges and snaps taut again.
+        s.hit(sc, &format!("{link}.surge"), at + ns(0.7), 0.8, 0.0);
+        s.twang(sc, link, at + ns(0.7));
         s.to(sc, &format!("{link}.flow"), 0.0, at + ns(1.0), 1.0, 0.6);
         s.to(sc, &format!("{card}.status"), 0.0, at, 0.0, 0.4);
         s.to(sc, &format!("{card}.dim"), 0.0, at, 0.0, 0.6);

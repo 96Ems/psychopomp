@@ -71,6 +71,14 @@ the dotted/card chrome entirely. The goo filter,
 web article, and unrelated architecture experiments are not ported. The original
 project remains unchanged.
 
+The blog's later light effects (`src/experiments/Pulse.tsx`, `CardGlow`, and
+`src/graphics/scenes/pluginLifecycleScene.ts`, from September) informed the Stage's
+packets and connections: a 340 ms gather, cubic-in-out flight, a cooling heat trail,
+a dot-to-ring landing, border reflections with an 80 px radial falloff, embers and
+floods, the frame sweep, port pop, and bead wire draw, settle-in entrances, and
+instant-attack flashes. Receivers never scale on a hit. The constants live in the
+`explainer-motion` skill's `TECHNIQUES.md`.
+
 ## Manim
 
 [Manim](https://docs.manim.community/en/stable/) is the strongest reference for semantic scene construction.

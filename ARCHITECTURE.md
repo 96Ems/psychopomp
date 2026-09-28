@@ -412,7 +412,14 @@ element kind; `StageFrame` owns primitive helpers and depth-sorted layers. A bea
 a `math::shapes::connect` connector between the two outlines on screen: it leaves the
 middle of the card side that faces the other end, perpendicular to it, and enters an
 orb radially just outside its shell, with a socket where it plugs into a card.
-Packets move along the same path by arc length, so their speed is steady. A beam
+A packet is one clock (`age`, `flight`); `stage::packet` derives its phases (gather,
+cubic-in-out flight by arc length, landing ring, and a trail whose points cool with
+the time since the packet crossed them, found by inverting the ease), so rewinding
+the clock un-cools the trail. Lights are collected per sample from packets and
+drawing beams: a reflection (edges only, the diagrams' radial falloff) and pools
+(ember, flood, surge) that also enter the glass. Each card takes its strongest
+reflection and strongest pool as two shader lights; the orb's shell points sum
+them. Polyline points carry a heat that scales their light. A beam
 sorts behind both of its ends, so it never crosses the cards it connects. The
 renderer emits depth-sorted signed-distance primitives (rounded rect, circle, arc, polyline with drawn length,
 dash, flow, and fade, atlas text, backdrop gradient) into one storage buffer;
@@ -425,6 +432,13 @@ output frame so temporal samples do not average it away. Stage text is rasterize
 once at twice its size into an R8 atlas and drawn with a soft background-colored
 backing for legibility over light. A stage root marks every temporal sample as
 distinct (`ambient_time`), because spin, flow, and grain always move.
+
+### Eased events
+
+`TrackEventPlan::Ease` lowers to `Animation::Ease` and a `SegmentKind::Ease`
+segment: position from `math::easing::Ease::sample`, velocity from its derivative
+`slope`, settled exactly at the end. It replaces stepped `set` approximations of
+timed curves, which stutter at 60 fps, and hands its velocity to a later spring.
 
 ### Math
 

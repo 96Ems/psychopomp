@@ -1,6 +1,12 @@
 //! Shapes that connectors attach to, the connector itself, and points on a
 //! sphere.
-use super::{Vec2, Vec3, curve::CubicBezier};
+use std::f32::consts::{FRAC_PI_2, PI};
+
+use super::{
+    Vec2, Vec3,
+    curve::{CubicBezier, Polyline},
+    lerp,
+};
 
 /// An axis-aligned box.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -24,6 +30,45 @@ impl Box2 {
     /// Half the size.
     pub fn extents(&self) -> Vec2 {
         (self.max - self.min) * 0.5
+    }
+
+    /// The frame as a closed path from `start`, a point on its edge, back to
+    /// `start`, turning counter-clockwise on screen (up a right side first),
+    /// with corners rounded at `corner`.
+    pub fn perimeter_from(&self, start: Vec2, corner: f32) -> Polyline {
+        let (min, max) = (self.min, self.max);
+        let r = corner.clamp(0.0, self.extents().min_element());
+        // Corner arcs in screen angles (y down), counter-clockwise from top right.
+        let corners = [
+            (Vec2::new(max.x - r, min.y + r), 0.0),
+            (Vec2::new(min.x + r, min.y + r), -FRAC_PI_2),
+            (Vec2::new(min.x + r, max.y - r), -PI),
+            (Vec2::new(max.x - r, max.y - r), -PI - FRAC_PI_2),
+        ];
+        // Right, top, left, bottom: the side `start` is on picks the first corner.
+        let first = [
+            (start.x - max.x).abs(),
+            (start.y - min.y).abs(),
+            (start.x - min.x).abs(),
+            (start.y - max.y).abs(),
+        ]
+        .iter()
+        .enumerate()
+        .min_by(|a, b| a.1.total_cmp(b.1))
+        .map_or(0, |(side, _)| side);
+        let arcs = (0..4).flat_map(|k| {
+            let (center, from) = corners[(first + k) % 4];
+            (0..=6).map(move |i| {
+                let angle = lerp(from, from - FRAC_PI_2, i as f32 / 6.0);
+                center + Vec2::new(angle.cos(), angle.sin()) * r
+            })
+        });
+        Polyline::new(
+            std::iter::once(start)
+                .chain(arcs)
+                .chain(std::iter::once(start))
+                .collect(),
+        )
     }
 }
 
@@ -54,6 +99,18 @@ impl Shape {
             Self::Box(bounds) => bounds.center(),
             Self::Circle(circle) => circle.center,
             Self::Point(point) => *point,
+        }
+    }
+
+    /// Signed distance from `point` to the outline: negative inside.
+    pub fn distance(&self, point: Vec2) -> f32 {
+        match self {
+            Self::Box(bounds) => {
+                let q = (point - bounds.center()).abs() - bounds.extents();
+                q.max(Vec2::ZERO).length() + q.x.max(q.y).min(0.0)
+            }
+            Self::Circle(circle) => point.distance(circle.center) - circle.radius,
+            Self::Point(center) => point.distance(*center),
         }
     }
 
@@ -152,6 +209,41 @@ mod tests {
         let surface = orb().port_toward(vec2(900.0, 0.0));
         assert_eq!(surface.point, vec2(900.0, 340.0));
         assert!(surface.normal.abs_diff_eq(Vec2::NEG_Y, 1e-6));
+    }
+
+    #[test]
+    fn perimeters_start_at_the_port_and_turn_up_first() {
+        let Shape::Box(bounds) = card() else {
+            unreachable!()
+        };
+        let port = vec2(400.0, 400.0);
+        let frame = bounds.perimeter_from(port, 0.0);
+        assert_eq!((frame.at(0.0), frame.at(1.0)), (port, port));
+        assert!(
+            (frame.length() - 600.0).abs() < 1e-3,
+            "a sharp frame is its perimeter"
+        );
+        assert!(frame.at_length(10.0).y < port.y, "up the right side first");
+        assert!(
+            frame.at_length(100.0).x < 400.0 - 40.0,
+            "then left along the top"
+        );
+        let rounded = bounds.perimeter_from(port, 14.0);
+        let expected = 600.0 - (8.0 - 2.0 * std::f32::consts::PI) * 14.0;
+        assert!(
+            (rounded.length() - expected).abs() < 1.0,
+            "{}",
+            rounded.length()
+        );
+    }
+
+    #[test]
+    fn distances_are_signed_from_the_outline() {
+        assert_eq!(card().distance(vec2(450.0, 400.0)), 50.0, "beside a side");
+        assert_eq!(card().distance(vec2(403.0, 454.0)), 5.0, "past a corner");
+        assert_eq!(card().distance(vec2(300.0, 390.0)), -40.0, "inside");
+        assert_eq!(orb().distance(vec2(900.0, 300.0)), 40.0);
+        assert_eq!(Shape::Point(Vec2::ZERO).distance(vec2(3.0, 4.0)), 5.0);
     }
 
     #[test]

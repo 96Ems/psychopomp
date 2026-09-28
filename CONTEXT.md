@@ -50,7 +50,7 @@ One compiled scalar source in a Scene Plan. It is either a finite literal or a r
 
 ## Continuous Channel
 
-One named scalar property of a stable actor. Ordered set and spring events compile into a deterministic Property Track while preserving equal-time source order.
+One named scalar property of a stable actor. Ordered set, spring, and ease events compile into a deterministic Property Track while preserving equal-time source order. An ease moves from the current value to a target along a named curve over an exact duration, carrying the curve's velocity so a later spring continues without a jump.
 
 ## State Channel
 
@@ -190,8 +190,10 @@ A 2.5D motion-graphics surface for explainers, rendered on the GPU. Elements sit
 world positions seen through a perspective camera: floating cards with status
 lines, a particle orb that spins, breathes, and can shatter, curved light beams (connectors that attach to the side of a card facing the other
 end and leave it head-on, and enter an orb radially)
-that draw, flow, and snap, packets that travel a beam with a comet trail and ripple
-on arrival, labels, and rings for timers and shockwaves. World x/y are canvas
+that draw, flow, and snap, packets whose light gathers at a port, travels with a
+cooling trail, and lands as a small ring, labels, and rings for timers and
+shockwaves. Light is local: a packet or a drawing beam lights only the borders it
+nears, and an arrival floods in from its socket. World x/y are canvas
 pixels at depth zero, so the default camera is pixel exact; depth gives parallax,
 depth of field, and draw order. Bright color blooms; the frame gets highlight
 rolloff, vignette, chromatic pulses, and grain. Ambient motion (spin, flow, grain)

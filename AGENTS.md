@@ -78,7 +78,7 @@ Do not run the full render as routine validation when unit tests and static chec
 - `crates/kinograph/src/sequence.rs`: Sequence Diagram recipe values, slot geometry, validation, and the `SequenceActor` authoring handle
 - `crates/kinograph/src/caption.rs`: Caption recipe values and the `CaptionActor` authoring handle (typing, show, hide)
 - `crates/kinograph/src/math.rs` and `math/`: shared motion and geometry math (glam vectors, lerp/remap/smoothstep, easing, arc-length curves, shape ports and connectors, deterministic hash)
-- `crates/kinograph/src/stage.rs`: Stage elements, strict channels, perspective camera, orb/beam geometry, and the `StageActor` authoring handle
+- `crates/kinograph/src/stage.rs`: Stage elements, strict channels, perspective camera, orb geometry, the packet clock (`stage::packet`), and the `StageActor` authoring handle (`settle_in`, `connect`, `send`, `hit`, `twang`, `land`)
 - `crates/kinograph/src/tone.rs`: semantic Tone roles shared by explainer recipes
 - `crates/kinograph/src/highlight.rs`: line-local TypeScript highlighting into editor spans
 - `crates/kinograph-render/src/plan_runtime/reel.rs`: Reel preparation, layer mixing, media retiming, and reel frame/video delivery

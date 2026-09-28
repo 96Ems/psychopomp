@@ -1,5 +1,6 @@
 use serde::Serialize;
 
+use crate::math::easing::Ease;
 use crate::plan::{
     ActorPlan, ContinuousChannelPlan, CuePlan, MediaPlan, PresentationStepPlan, ScalarPlan,
     ScenePlan, SemanticTargetPlan, StateChannelPlan, StateEventPlan, TargetComponentPlan,
@@ -194,6 +195,27 @@ impl PlanBuilder {
         let event =
             crate::plan::SpringPlan::visual(visual_duration, bounce).event(at_nanos, target);
         self.continuous_channel_mut(channel).events.push(event);
+    }
+
+    /// Move `channel` from its current value to `target` along `curve` over
+    /// `seconds` (rounded to whole milliseconds, so f32 durations stay exact).
+    pub fn ease(
+        &mut self,
+        channel: &ContinuousHandle,
+        at_nanos: u64,
+        target: f32,
+        seconds: f32,
+        curve: Ease,
+    ) {
+        let duration_nanos = (f64::from(seconds) * 1000.0).round() as u64 * 1_000_000;
+        self.continuous_channel_mut(channel)
+            .events
+            .push(TrackEventPlan::Ease {
+                at_nanos,
+                target: target.into(),
+                duration_nanos,
+                curve,
+            });
     }
 
     pub fn semantic_target(

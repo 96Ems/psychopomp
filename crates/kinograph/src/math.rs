@@ -36,6 +36,21 @@ pub fn remap_clamp(value: f32, from: [f32; 2], to: [f32; 2]) -> f32 {
     )
 }
 
+/// The piecewise-linear curve through `stops` (ascending x) at `x`, held flat
+/// beyond its ends: gradient stops, falloffs, and envelopes.
+pub fn stops(x: f32, stops: &[(f32, f32)]) -> f32 {
+    let Some(&(first_x, first_y)) = stops.first() else {
+        return 0.0;
+    };
+    if x <= first_x {
+        return first_y;
+    }
+    stops.windows(2).find(|pair| x <= pair[1].0).map_or_else(
+        || stops[stops.len() - 1].1,
+        |pair| lerp(pair[0].1, pair[1].1, inverse_lerp(pair[0].0, pair[1].0, x)),
+    )
+}
+
 /// Hermite ease from 0 to 1. Unlike the easing curves, it clamps `t`.
 pub fn smoothstep(t: f32) -> f32 {
     let t = t.clamp(0.0, 1.0);
@@ -56,6 +71,16 @@ mod tests {
         assert_eq!(remap(2.0, [0.0, 1.0], [100.0, 200.0]), 300.0);
         assert_eq!(remap_clamp(2.0, [0.0, 1.0], [100.0, 200.0]), 200.0);
         assert_eq!(remap_clamp(-1.0, [0.0, 1.0], [200.0, 100.0]), 200.0);
+    }
+
+    #[test]
+    fn stops_interpolate_and_hold_at_the_ends() {
+        let falloff = [(0.0, 1.0), (0.3, 0.65), (0.7, 0.16), (1.0, 0.0)];
+        assert_eq!(stops(-1.0, &falloff), 1.0);
+        assert_eq!(stops(0.15, &falloff), 0.825);
+        assert!((stops(0.5, &falloff) - 0.405).abs() < 1e-6);
+        assert_eq!(stops(2.0, &falloff), 0.0);
+        assert_eq!(stops(0.5, &[]), 0.0);
     }
 
     #[test]
