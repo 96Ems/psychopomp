@@ -200,7 +200,7 @@ impl StageElement {
         match self {
             Self::Card { .. } => &[
                 "opacity", "x", "y", "z", "scale", "blur", "glow", "flash", "alarm", "dim",
-                "status",
+                "status", "content",
             ],
             Self::Orb { .. } => &[
                 "opacity", "x", "y", "z", "scale", "shatter", "pulse", "hurt", "spin",
@@ -407,11 +407,11 @@ pub fn shatter_offset(point: OrbPoint, radius: f32, shatter: f32) -> Vec3 {
 
 /// A packet's life, derived from one dispatch clock (`age`, in seconds) and its
 /// flight time, so every phase is exact at any sample time. Light gathers at the
-/// start port, the packet flies on a cubic ease (three times its average speed
-/// at the middle), then it is absorbed as a small ring while its trail cools.
+/// start port, the packet flies on an acceleration-continuous quintic ease,
+/// then it is absorbed as a small ring while its trail cools.
 /// The constants follow the opencode-architecture diagrams.
 pub mod packet {
-    use crate::math::easing::{cubic_in_out, cubic_in_out_inverse};
+    use crate::math::easing::{smootherstep, smootherstep_inverse};
 
     pub const GATHER: f32 = 0.34;
     pub const LANDING: f32 = 0.72;
@@ -446,13 +446,13 @@ pub mod packet {
 
     /// Where the packet is along its beam, as a fraction of the length.
     pub fn travel(age: f32, flight: f32) -> f32 {
-        cubic_in_out(((age - GATHER) / flight).clamp(0.0, 1.0))
+        smootherstep(((age - GATHER) / flight).clamp(0.0, 1.0))
     }
 
     /// Seconds since the packet crossed the point at `fraction` of its beam, if
     /// it has reached it.
     pub fn since_crossing(age: f32, flight: f32, fraction: f32) -> Option<f32> {
-        let crossed = GATHER + flight * cubic_in_out_inverse(fraction);
+        let crossed = GATHER + flight * smootherstep_inverse(fraction);
         (age >= crossed).then_some(age - crossed)
     }
 
@@ -528,6 +528,21 @@ impl StageActor {
         scene.spring(&channel, at_nanos, target, seconds, 0.0);
     }
 
+    /// A deliberate camera move between resting compositions: no bounce or
+    /// acceleration discontinuity at either end.
+    pub fn glide(
+        &mut self,
+        scene: &mut PlanBuilder,
+        property: &str,
+        initial: f32,
+        at_nanos: u64,
+        target: f32,
+        seconds: f32,
+    ) {
+        let channel = self.channel(scene, property, initial);
+        scene.ease(&channel, at_nanos, target, seconds, Ease::Smootherstep);
+    }
+
     /// Like `to`, with overshoot: `bounce` 0.2 reads as a lively landing.
     #[allow(clippy::too_many_arguments)]
     pub fn bounce(
@@ -572,24 +587,26 @@ impl StageActor {
         scene.ease(&channel, at_nanos, rest, 0.8, Ease::CubicOut);
     }
 
-    /// `card` settles onto the stage: it drops from 1.12 times its size on a
-    /// lively spring, sharpens from a 6 px blur, and flashes as it lands.
-    /// Returns the landing time.
+    /// A rigid panel settles with a small vertical drift and restrained scale.
+    /// Its content follows 65 ms later, so the body leads and the ink settles.
+    /// Returns the time the panel is ready to connect.
     pub fn settle_in(&mut self, scene: &mut PlanBuilder, card: &str, at_nanos: u64) -> u64 {
-        let scale = self.channel(scene, &format!("{card}.scale"), 1.12);
-        scene.set(&scale, at_nanos, 1.12);
-        scene.spring(&scale, at_nanos, 1.0, 0.5, 0.3);
-        for (property, from, to, seconds) in
-            [("opacity", 0.0, 1.0, 0.126), ("blur", 6.0, 0.0, 0.22)]
+        let scale = self.channel(scene, &format!("{card}.scale"), 1.035);
+        scene.set(&scale, at_nanos, 1.035);
+        scene.spring(&scale, at_nanos, 1.0, 0.6, 0.12);
+        let y = self.channel(scene, &format!("{card}.y"), 16.0);
+        scene.set(&y, at_nanos, 16.0);
+        scene.spring(&y, at_nanos, 0.0, 0.55, 0.16);
+        let content = self.channel(scene, &format!("{card}.content"), 0.0);
+        scene.set(&content, at_nanos, 0.0);
+        scene.spring(&content, at_nanos + 65_000_000, 1.0, 0.36, 0.0);
+        for (property, from, to, seconds) in [("opacity", 0.0, 1.0, 0.18), ("blur", 3.0, 0.0, 0.3)]
         {
             let channel = self.channel(scene, &format!("{card}.{property}"), from);
             scene.set(&channel, at_nanos, from);
-            scene.ease(&channel, at_nanos, to, seconds, Ease::Linear);
+            scene.ease(&channel, at_nanos, to, seconds, Ease::Smootherstep);
         }
-        // The spring first reaches full size here.
-        let landing = at_nanos + 314_000_000;
-        self.hit(scene, &format!("{card}.flash"), landing, 1.0, 0.0);
-        landing
+        at_nanos + 500_000_000
     }
 
     /// Type a label in at `chars_per_second`, one exact step per character.
@@ -669,7 +686,7 @@ impl StageActor {
         scene.set(&draw, start, 0.0);
         scene.ease(&draw, start, 1.0, seconds, DRAW_CURVE);
         let contact = start + millis(seconds);
-        self.hit(scene, &format!("{beam}.surge"), contact, 1.0, 0.0);
+        self.hit(scene, &format!("{beam}.surge"), contact, 0.45, 0.0);
         self.twang(scene, beam, contact);
         if let Some(StageElement::Beam { to, .. }) = self.plan.element(beam) {
             let to = to.clone();
@@ -690,11 +707,11 @@ impl StageActor {
     /// momentum carries into an underdamped spring that vibrates back to rest.
     pub fn twang(&mut self, scene: &mut PlanBuilder, beam: &str, at_nanos: u64) {
         let twang = self.channel(scene, &format!("{beam}.twang"), 0.0);
-        scene.spring(&twang, at_nanos, 1.0, 0.06, 0.0);
-        scene.spring(&twang, at_nanos + 60_000_000, 0.0, 0.32, 0.62);
+        scene.spring(&twang, at_nanos, 1.0, 0.09, 0.0);
+        scene.spring(&twang, at_nanos + 90_000_000, 0.0, 0.42, 0.28);
     }
 
-    /// Something arrives at `element`: a card's ink flashes, an orb swells.
+    /// Something arrives at `element`: a card's ink flashes, an orb lights up.
     /// Nothing scales on a hit; the arrival's own light floods in from its port.
     pub fn land(&mut self, scene: &mut PlanBuilder, element: &str, at_nanos: u64) {
         match self.plan.element(element) {
@@ -911,7 +928,7 @@ mod tests {
         let mut stage = StageActor::declare(&mut scene, "stage", &plan()).unwrap();
         stage.hit(&mut scene, "client.flash", 1_000_000_000, 1.0, 0.0);
         let landing = stage.settle_in(&mut scene, "client", 2_000_000_000);
-        assert_eq!(landing, 2_314_000_000);
+        assert_eq!(landing, 2_500_000_000);
         let plan = scene.finish().unwrap();
         let flash = plan
             .continuous_channels

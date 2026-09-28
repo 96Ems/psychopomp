@@ -431,18 +431,24 @@ Components used by explainers:
   `packet` (`beam`, `reverse`, `label`), `label` (`at`, `size`, `spans`), and `ring`
   (`at`, `radius`, `thickness`), plus `post` (`bloom`, `grain`, `vignette`,
   `backdrop`). Channels are `<element>.<property>` (for example `service.shatter`,
-  `link.draw`, `probe.age`, `client.blur`) and `camera.x|y|z|focus|dof|shake`,
+  `link.draw`, `probe.age`, `client.blur|content`) and `camera.x|y|z|focus|dof|shake`,
   `post.bloom|chroma|exposure|vignette`. A packet is one clock: `age` (seconds since
   dispatch, -1 before) and `flight`; the renderer derives its gather, flight, trail,
   landing ring, and light from them. Beams choose their own ports and curve; leave
   `bend` at 0 unless two beams need separating.
-- `StageActor` implements the `explainer-motion` beats: `settle_in` (a card drops in,
-  sharpens, and flashes), `connect` (frame sweep, port pop, bead draw, surge and
+- `StageActor` implements the `explainer-motion` beats: `settle_in` (a panel drifts
+  16 px into place, scales from 1.035, and sharpens; its content follows 65 ms later),
+  `connect` (frame sweep, port pop, bead draw, surge and
   twang), `send` (gather, flight, landing), `hit` (instant attack, convex decay),
-  `twang`, and `land`. `bounce` and `to` spring any channel.
+  `twang`, and `land`. `bounce` and `to` spring any channel; `glide` moves between
+  resting compositions with a minimum-jerk quintic curve. Use glides for staged
+  camera moves, springs for panel settling, and instant-attack fades for light.
+  Orb `pulse` changes illumination, not geometry or attached beam ports. Card
+  `flash` lifts ink and rim, not the entire fill. Connected wires can rest: the
+  flagship stops `flow` after its brief connection beat.
 - Continuous channel events are `set`, `spring`, and `ease`
   (`{ "operation": "ease", "atNanos", "target", "durationNanos", "curve" }` with
-  `curve` one of `linear`, `smoothstep`, `cubic-out`, `cubic-in-out`,
+  `curve` one of `linear`, `smoothstep`, `smootherstep`, `cubic-out`, `cubic-in-out`,
   `{ "decelerate": s }`, or `{ "cubic-bezier": [x1, y1, x2, y2] }`). Use `ease` for
   timed curves; never approximate one with stepped `set` events, which stutter.
 - Reusable math is `kinograph::math` (`lerp`, `remap_clamp`, `smoothstep`, `easing`,

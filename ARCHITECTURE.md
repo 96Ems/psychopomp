@@ -413,7 +413,7 @@ a `math::shapes::connect` connector between the two outlines on screen: it leave
 middle of the card side that faces the other end, perpendicular to it, and enters an
 orb radially just outside its shell, with a socket where it plugs into a card.
 A packet is one clock (`age`, `flight`); `stage::packet` derives its phases (gather,
-cubic-in-out flight by arc length, landing ring, and a trail whose points cool with
+minimum-jerk quintic flight by arc length, landing ring, and a trail whose points cool with
 the time since the packet crossed them, found by inverting the ease), so rewinding
 the clock un-cools the trail. Lights are collected per sample from packets and
 drawing beams: a reflection (edges only, the diagrams' radial falloff) and pools
@@ -432,6 +432,14 @@ output frame so temporal samples do not average it away. Stage text is rasterize
 once at twice its size into an R8 atlas and drawn with a soft background-colored
 backing for legibility over light. A stage root marks every temporal sample as
 distinct (`ambient_time`), because spin, flow, and grain always move.
+
+The Stage separates material response from transforms: a pulse lights the orb
+without moving its shell or ports, and a card flash lifts ink and rim while its
+substrate stays dark. An overhead key shades panel fills and borders; moving
+reflections stay local. `settle_in` uses small, damped scale/position springs with
+a separate delayed content spring; `glide` uses `Ease::Smootherstep` for deliberate
+camera compositions. Packet travel uses the same acceleration-continuous quintic,
+with its inverse in shared math providing trail crossing times.
 
 ### Eased events
 

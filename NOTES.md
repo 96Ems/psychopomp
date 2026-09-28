@@ -523,4 +523,13 @@ The first four bullets below retain the **pre-fix review evidence**. Their unres
 
 ## Next Question
 
+- The first kinetic Stage pass overused light: a whole-card halo, dense luminous
+  orb points, and perpetual flow beads competed with the narrated packet. The
+  refinement keeps substrates dark, reserves light for local events, and stops
+  flow after the connection beat. Springs now express small panel settling and
+  cable recoil; minimum-jerk quintics carry packets and camera moves.
+- A pulse used to instantly enlarge the orb by 8%, displacing all attached ports.
+  The renderer now keeps pulse response in illumination; a geometry regression
+  test covers it. Camera composition tests cover the formerly clipped clients.
+
 Can native interactive playback retain its responsiveness and interruption semantics for more complex editor, UI Surface, and media-backed scenes without forking the authored visual model?

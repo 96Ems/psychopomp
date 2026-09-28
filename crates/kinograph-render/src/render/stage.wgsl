@@ -122,7 +122,12 @@ fn fs(in: VOut) -> @location(0) vec4<f32> {
             let fill_a = prim.fill.a * inner;
             let stroke_a = prim.stroke.a * max(outer - inner, 0.0);
             alpha = fill_a + stroke_a * (1.0 - fill_a);
-            color = prim.fill.rgb * fill_a + prim.stroke.rgb * stroke_a * (1.0 - fill_a);
+            // A restrained overhead key gives the panel thickness without an
+            // emissive outline. Socket light is added separately below.
+            let height = clamp((px.y - prim.a.z) / max(prim.b.y, 1.0), -1.0, 1.0);
+            let key = mix(1.08, 0.92, height * 0.5 + 0.5);
+            let rim = mix(1.2, 0.7, height * 0.5 + 0.5);
+            color = prim.fill.rgb * fill_a * key + prim.stroke.rgb * stroke_a * (1.0 - fill_a) * rim;
             color += prim.glow.rgb * halo(d, prim.glow.w) * smoothstep(-1.0, 1.5, d);
             color += card_light(prim, px, max(outer - inner, 0.0), inner);
         }
@@ -157,7 +162,7 @@ fn fs(in: VOut) -> @location(0) vec4<f32> {
             color = prim.stroke.rgb * alpha + prim.glow.rgb * halo(d, prim.glow.w);
         }
         // Polyline: a = (kind, width, drawn length, blur), b = (dash, gap, phase, fade)
-        // uv = (first point, point count). Points are (x, y, length so far, 0).
+        // uv = (first point, point count). Points are (x, y, length so far, heat).
         case 3u: {
             let first = u32(prim.uv.x + 0.5);
             let count = u32(prim.uv.y + 0.5);

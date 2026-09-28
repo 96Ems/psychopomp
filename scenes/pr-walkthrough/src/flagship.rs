@@ -8,7 +8,7 @@ use anyhow::{Context, Result};
 use kinograph::{
     author::PlanBuilder,
     caption::{CaptionAlign, CaptionSpanPlan},
-    math::{Vec2, Vec3, vec2},
+    math::{Vec2, Vec3, easing::Ease, vec2},
     plan::{
         MediaKindPlan, MediaPlan, MediaRolePlan, ReelPlan, ReelSegmentPlan, ReelTransitionStyle,
         ScenePlan,
@@ -144,9 +144,9 @@ fn ring(id: &str, radius: f32, thickness: f32, tone: Tone) -> StageElement {
 }
 
 const OTHERS: [(&str, &str, [f32; 3]); 3] = [
-    ("tui-1", "b1", [1640.0, 250.0, 80.0]),
-    ("desktop", "b2", [1700.0, 600.0, 30.0]),
-    ("tui-2", "b3", [1450.0, 900.0, 120.0]),
+    ("tui-1", "b1", [1490.0, 260.0, 80.0]),
+    ("desktop", "b2", [1520.0, 570.0, 30.0]),
+    ("tui-2", "b3", [1400.0, 830.0, 120.0]),
 ];
 
 fn stage_plan() -> StagePlan {
@@ -254,15 +254,15 @@ fn stage_plan() -> StagePlan {
                 ("update this client, or restart explicitly", Tone::Plain),
             ],
         ),
-        ring("shock", 160.0, 3.0, Tone::Error),
-        ring("safe", 182.0, 2.5, Tone::Success),
+        ring("shock", 160.0, 1.8, Tone::Error),
+        ring("safe", 182.0, 1.4, Tone::Success),
     ]);
     StagePlan {
         post: StagePost {
-            bloom: 0.35,
-            grain: 0.035,
-            vignette: 0.42,
-            backdrop: 0.4,
+            bloom: 0.18,
+            grain: 0.012,
+            vignette: 0.22,
+            backdrop: 0.24,
         },
         elements,
     }
@@ -299,10 +299,11 @@ fn stage_film(narration: &Narration) -> Result<ScenePlan> {
     let s = &mut stage;
     let sc = &mut scene;
 
-    // Entrance: dolly in; the orb swells into place; cards pop in; beams draw, then flow.
-    s.to(sc, "camera.z", -320.0, 0, 0.0, 2.6);
-    s.set(sc, "camera.dof", 0.9, 0, 0.9);
-    s.bounce(sc, "service.scale", 0.55, ns(0.15), 1.0, 1.0, 0.25);
+    // Establish the service, then its clients. Rigid panels drift into place;
+    // their ink follows. The camera carries the composition without bouncing.
+    s.glide(sc, "camera.z", -160.0, 0, 0.0, 2.8);
+    s.set(sc, "camera.dof", 0.45, 0, 0.45);
+    s.bounce(sc, "service.scale", 0.9, ns(0.15), 1.0, 0.9, 0.08);
     s.to(sc, "service.opacity", 0.0, ns(0.15), 1.0, 0.6);
     for (index, name) in ["service-name", "service-healthy"].iter().enumerate() {
         s.to(
@@ -319,14 +320,23 @@ fn stage_film(narration: &Narration) -> Result<ScenePlan> {
     let links = ["link", "b1", "b2", "b3"];
     for (index, (card, link)) in cards.iter().zip(links).enumerate() {
         // Each client settles in, then plugs into the service with a soft tick.
-        let landing = s.settle_in(sc, card, ns(0.45 + index as f64 * 0.14));
-        let contact = s.connect(sc, link, landing + ns(0.35), 0.6);
+        let landing = s.settle_in(sc, card, ns(0.48 + index as f64 * 0.16));
+        let contact = s.connect(sc, link, landing + ns(0.16), 0.68);
+        // One brief proof of connection, then stillness gives the narrator room.
+        s.to(
+            sc,
+            &format!("{link}.flow"),
+            0.0,
+            contact + ns(0.85),
+            0.0,
+            0.45,
+        );
         sc.media(sound(
             &format!("connect-{index}"),
             "visual-effects/task-running.wav",
             0.13,
             contact,
-            -15.0,
+            -20.0,
         ));
     }
     for hidden in ["thought-before", "thought-after", "message"] {
@@ -343,13 +353,13 @@ fn stage_film(narration: &Narration) -> Result<ScenePlan> {
     // A client reconnects and asks for the health endpoint.
     let reconnect = b("when a client reconnects");
     s.to(sc, "client.status", 0.0, reconnect, 1.0, 0.4);
-    s.to(sc, "client.glow", 0.0, reconnect, 0.7, 0.5);
+    s.to(sc, "client.glow", 0.0, reconnect, 0.45, 0.5);
     s.to(sc, "link.flow", 0.0, reconnect, 0.0, 0.4);
     s.to(sc, "link.emphasis", 0.0, reconnect, 1.0, 0.6);
-    s.to(sc, "camera.x", 0.0, reconnect, -110.0, 1.4);
-    s.to(sc, "camera.focus", 0.0, reconnect, -60.0, 1.2);
+    s.glide(sc, "camera.x", 0.0, reconnect, -110.0, 1.6);
+    s.glide(sc, "camera.focus", 0.0, reconnect, -60.0, 1.2);
     let probe_arrival = s.send(sc, "probe", b("health endpoint"), 0.95);
-    s.hit(sc, "service.pulse", probe_arrival, 1.0, 0.0);
+    s.hit(sc, "service.pulse", probe_arrival, 0.65, 0.0);
     sc.media(sound(
         "probe-send",
         "opencode-hot-reload/save.wav",
@@ -360,9 +370,8 @@ fn stage_film(narration: &Narration) -> Result<ScenePlan> {
 
     // The server answers 404; the old rule reads that as "outdated".
     let reply_arrival = s.send(sc, "reply", b("returns a 404"), 0.8);
-    // The 404 floods in red from the socket; the card itself only blushes.
-    s.hit(sc, "client.alarm", reply_arrival, 0.3, 0.0);
-    s.hit(sc, "post.chroma", reply_arrival, 0.4, 0.0);
+    // The socket takes the red; the whole frame stays steady and legible.
+    s.hit(sc, "client.alarm", reply_arrival, 0.18, 0.0);
     sc.media(sound(
         "reply-land",
         "visual-effects/task-failure.wav",
@@ -398,15 +407,18 @@ fn stage_film(narration: &Narration) -> Result<ScenePlan> {
         kill_arrival + ns(0.05),
         -7.0,
     ));
-    s.to(sc, "service.shatter", 0.0, kill_arrival, 1.0, 1.7);
+    // Decisive impact followed by a long release. A spring from rest made the
+    // explosion accelerate late, as though the service chose to fall apart.
+    let shatter = s.channel(sc, "service.shatter", 0.0);
+    sc.ease(&shatter, kill_arrival, 1.0, 1.65, Ease::CubicOut);
     s.to(sc, "service.hurt", 0.0, kill_arrival, 1.0, 0.2);
     s.set(sc, "shock.opacity", 0.0, kill_arrival, 1.0);
     s.set(sc, "shock.expand", 0.0, kill_arrival, 0.0);
     s.to(sc, "shock.expand", 0.0, kill_arrival, 1.0, 1.0);
-    s.hit(sc, "post.chroma", kill_arrival, 1.5, 0.0);
-    s.hit(sc, "camera.shake", kill_arrival, 14.0, 0.0);
-    s.hit(sc, "post.bloom", kill_arrival, 1.4, 0.45);
-    s.to(sc, "camera.focus", 0.0, kill_arrival, 0.0, 0.8);
+    s.hit(sc, "post.chroma", kill_arrival, 0.16, 0.0);
+    s.hit(sc, "camera.shake", kill_arrival, 3.0, 0.0);
+    s.hit(sc, "post.bloom", kill_arrival, 0.4, 0.18);
+    s.glide(sc, "camera.focus", 0.0, kill_arrival, 0.0, 0.8);
     s.to(
         sc,
         "service-healthy.opacity",
@@ -428,13 +440,13 @@ fn stage_film(narration: &Narration) -> Result<ScenePlan> {
         let at = kill_arrival + ns(0.3 + index as f64 * 0.14);
         s.to(sc, &format!("{link}.flow"), 0.0, kill_arrival, 0.0, 0.25);
         s.to(sc, &format!("{link}.break"), 0.0, at, 1.0, 0.9);
-        s.hit(sc, &format!("{card}.alarm"), at + ns(0.2), 1.0, 0.0);
+        s.hit(sc, &format!("{card}.alarm"), at + ns(0.2), 0.35, 0.0);
         s.to(sc, &format!("{card}.status"), 0.0, at + ns(0.25), 1.0, 0.4);
         s.to(sc, &format!("{card}.dim"), 0.0, at + ns(0.6), 0.55, 0.8);
     }
     let cut = b("cut off every other client");
-    s.to(sc, "camera.x", 0.0, cut - ns(0.4), 0.0, 1.6);
-    s.to(sc, "camera.z", -320.0, cut - ns(0.4), -150.0, 1.8);
+    s.glide(sc, "camera.x", 0.0, cut - ns(0.4), 0.0, 1.6);
+    s.glide(sc, "camera.z", -160.0, cut - ns(0.4), -100.0, 1.8);
     let mut footer_before = footer(
         sc,
         "footer-before",
@@ -461,12 +473,11 @@ fn stage_film(narration: &Narration) -> Result<ScenePlan> {
         switch - ns(0.1),
         -13.0,
     ));
-    s.to(sc, "service.shatter", 0.0, switch + ns(0.1), 0.0, 1.3);
+    s.glide(sc, "service.shatter", 0.0, switch + ns(0.1), 0.0, 1.3);
     s.to(sc, "service.hurt", 0.0, switch + ns(0.6), 0.0, 0.6);
     s.to(sc, "shock.opacity", 0.0, switch, 0.0, 0.3);
-    s.set(sc, "post.chroma", 0.0, switch, 1.6);
-    s.to(sc, "post.chroma", 0.0, switch + ns(0.2), 0.0, 1.2);
-    s.to(sc, "camera.z", -320.0, switch, 0.0, 1.8);
+    s.hit(sc, "post.chroma", switch, 0.12, 0.0);
+    s.glide(sc, "camera.z", -160.0, switch, 0.0, 1.8);
     s.to(sc, "thought-before.opacity", 0.0, switch, 0.0, 0.4);
     s.to(
         sc,
@@ -490,17 +501,18 @@ fn stage_film(narration: &Narration) -> Result<ScenePlan> {
         let at = switch + ns(0.35 + index as f64 * 0.1);
         s.to(sc, &format!("{link}.break"), 0.0, at, 0.0, 0.9);
         // The halves meet: the line surges and snaps taut again.
-        s.hit(sc, &format!("{link}.surge"), at + ns(0.7), 0.8, 0.0);
+        s.hit(sc, &format!("{link}.surge"), at + ns(0.7), 0.35, 0.0);
         s.twang(sc, link, at + ns(0.7));
-        s.to(sc, &format!("{link}.flow"), 0.0, at + ns(1.0), 1.0, 0.6);
+        s.to(sc, &format!("{link}.flow"), 0.0, at + ns(1.0), 0.3, 0.4);
+        s.to(sc, &format!("{link}.flow"), 0.0, at + ns(1.7), 0.0, 0.4);
         s.to(sc, &format!("{card}.status"), 0.0, at, 0.0, 0.4);
         s.to(sc, &format!("{card}.dim"), 0.0, at, 0.0, 0.6);
     }
 
     // The fix: the same 404, understood as a protocol mismatch.
     let now = a("now a 404");
-    s.to(sc, "camera.x", 0.0, now - ns(0.4), -110.0, 1.2);
-    s.to(sc, "camera.focus", 0.0, now - ns(0.4), -60.0, 1.0);
+    s.glide(sc, "camera.x", 0.0, now - ns(0.4), -110.0, 1.2);
+    s.glide(sc, "camera.focus", 0.0, now - ns(0.4), -60.0, 1.0);
     let probe_2 = s.send(sc, "probe-2", now - ns(0.1), 0.75);
     sc.media(sound(
         "probe-send-2",
@@ -509,9 +521,11 @@ fn stage_film(narration: &Narration) -> Result<ScenePlan> {
         now - ns(0.1),
         -8.0,
     ));
-    s.hit(sc, "service.pulse", probe_2, 1.0, 0.0);
-    let reply_2 = s.send(sc, "reply-2", probe_2 + ns(0.05), 0.7);
-    s.hit(sc, "client.flash", reply_2, 0.8, 0.0);
+    s.hit(sc, "service.pulse", probe_2, 0.65, 0.0);
+    // `send` includes pre-launch gathering: even that preparation must wait
+    // until the request has arrived (340 ms gather plus an 80 ms response beat).
+    let reply_2 = s.send(sc, "reply-2", probe_2 + ns(0.42), 0.7);
+    s.hit(sc, "client.flash", reply_2, 0.3, 0.0);
     s.type_in(sc, "thought-after", a("health protocols"), 44.0);
     let message = a("clear message");
     s.type_in(sc, "message", message, 52.0);
@@ -526,14 +540,15 @@ fn stage_film(narration: &Narration) -> Result<ScenePlan> {
 
     // Nothing gets killed: the camera finds the orb, whole and breathing.
     let safe = a("nothing gets killed");
-    s.to(sc, "camera.x", 0.0, safe - ns(0.2), 40.0, 1.6);
-    s.to(sc, "camera.z", 0.0, safe - ns(0.2), 170.0, 1.8);
-    s.to(sc, "camera.focus", 0.0, safe - ns(0.2), 0.0, 1.0);
-    s.hit(sc, "service.pulse", safe + ns(0.2), 1.4, 0.0);
-    s.set(sc, "safe.opacity", 0.0, safe, 1.0);
+    s.glide(sc, "camera.x", 0.0, safe - ns(0.2), 40.0, 1.6);
+    s.glide(sc, "camera.z", 0.0, safe - ns(0.2), 90.0, 1.8);
+    s.glide(sc, "camera.focus", 0.0, safe - ns(0.2), 0.0, 1.0);
+    s.hit(sc, "service.pulse", safe + ns(0.2), 0.75, 0.0);
+    s.to(sc, "safe.opacity", 0.0, safe, 0.7, 0.22);
     s.to(sc, "safe.sweep", 0.0, safe, 1.0, 1.3);
     for (_, link, _) in OTHERS {
-        s.to(sc, &format!("{link}.flow"), 0.0, safe, 1.4, 0.8);
+        s.to(sc, &format!("{link}.flow"), 0.0, safe, 0.45, 0.5);
+        s.to(sc, &format!("{link}.flow"), 0.0, safe + ns(1.3), 0.0, 0.5);
     }
     sc.media(sound(
         "safe",
@@ -555,11 +570,11 @@ fn stage_film(narration: &Narration) -> Result<ScenePlan> {
 
     // Return to the client card; the reel's zoom flies into its code.
     let close = after.end() + ns(0.3);
-    s.to(sc, "camera.x", 0.0, close, CLOSING_CAMERA[0], 1.2);
-    s.to(sc, "camera.y", 0.0, close, CLOSING_CAMERA[1], 1.2);
-    s.to(sc, "camera.z", 0.0, close, CLOSING_CAMERA[2], 1.2);
-    s.to(sc, "camera.focus", 0.0, close, -60.0, 1.0);
-    s.to(sc, "client.glow", 0.0, close, 1.0, 0.8);
+    s.glide(sc, "camera.x", 0.0, close, CLOSING_CAMERA[0], 1.2);
+    s.glide(sc, "camera.y", 0.0, close, CLOSING_CAMERA[1], 1.2);
+    s.glide(sc, "camera.z", 0.0, close, CLOSING_CAMERA[2], 1.2);
+    s.glide(sc, "camera.focus", 0.0, close, -60.0, 1.0);
+    s.to(sc, "client.glow", 0.0, close, 0.65, 0.8);
     after_chip.hide(sc, close);
     footer_after.hide(sc, close);
 
@@ -568,6 +583,37 @@ fn stage_film(narration: &Narration) -> Result<ScenePlan> {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn client_cards_fit_the_camera_compositions() {
+        use kinograph::math::{Vec3, vec2};
+        use kinograph::stage::{Camera, StageElement};
+
+        for position in [
+            [0.0, 0.0, -160.0],
+            [0.0, 0.0, 0.0],
+            [-110.0, 0.0, 0.0],
+            [40.0, 0.0, 90.0],
+            super::CLOSING_CAMERA,
+        ] {
+            let camera = Camera {
+                position: Vec3::from(position),
+                size: vec2(1920.0, 1080.0),
+            };
+            for element in super::stage_plan().elements {
+                if let StageElement::Card { id, at, size, .. } = element {
+                    let (center, scale) = camera.project(Vec3::from(at)).unwrap();
+                    let half = vec2(size[0], size[1]) * (0.5 * scale);
+                    let low = center - half;
+                    let high = center + half;
+                    assert!(
+                        low.x > 80.0 && high.x < 1840.0 && low.y > 160.0 && high.y < 970.0,
+                        "{id} clips the composition at camera {position:?}: {low:?}..{high:?}"
+                    );
+                }
+            }
+        }
+    }
+
     #[test]
     fn the_zoom_rectangle_matches_the_client_card() {
         let rect = super::client_rect();

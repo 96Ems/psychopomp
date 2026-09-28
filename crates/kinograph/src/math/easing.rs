@@ -35,6 +35,31 @@ pub fn cubic_in_out_inverse(p: f32) -> f32 {
     }
 }
 
+/// Minimum-jerk travel: position, velocity, and acceleration meet a resting
+/// hold continuously at both ends, without cubic-in-out's mid-flight jerk.
+pub fn smootherstep(t: f32) -> f32 {
+    t * t * t * (t * (6.0 * t - 15.0) + 10.0)
+}
+
+/// The crossing time of a minimum-jerk mover. Bisection remains well behaved
+/// near the zero-slope ends, where Newton iteration is poorly conditioned.
+pub fn smootherstep_inverse(p: f32) -> f32 {
+    let p = p.clamp(0.0, 1.0);
+    if p == 0.0 || p == 1.0 {
+        return p;
+    }
+    let (mut low, mut high) = (0.0, 1.0);
+    for _ in 0..24 {
+        let mid = (low + high) * 0.5;
+        if smootherstep(mid) < p {
+            low = mid;
+        } else {
+            high = mid;
+        }
+    }
+    (low + high) * 0.5
+}
+
 /// A CSS `cubic-bezier(x1, y1, x2, y2)` timing curve at `t`.
 pub fn cubic_bezier(t: f32, [x1, y1, x2, y2]: [f32; 4]) -> f32 {
     let t = t.clamp(0.0, 1.0);
@@ -92,6 +117,7 @@ pub fn decelerate(t: f32, final_speed: f32) -> f32 {
 pub enum Ease {
     Linear,
     Smoothstep,
+    Smootherstep,
     CubicOut,
     CubicInOut,
     /// Arrives at this fraction of the average speed, from 0 to 2.
@@ -106,6 +132,7 @@ impl Ease {
         match self {
             Self::Linear => t,
             Self::Smoothstep => smoothstep(t),
+            Self::Smootherstep => smootherstep(t),
             Self::CubicOut => cubic_out(t),
             Self::CubicInOut => cubic_in_out(t),
             Self::Decelerate(final_speed) => decelerate(t, final_speed),
@@ -119,6 +146,7 @@ impl Ease {
         match self {
             Self::Linear => 1.0,
             Self::Smoothstep => 6.0 * t * (1.0 - t),
+            Self::Smootherstep => 30.0 * t * t * (1.0 - t).powi(2),
             Self::CubicOut => 3.0 * (1.0 - t).powi(2),
             Self::CubicInOut if t < 0.5 => 12.0 * t * t,
             Self::CubicInOut => 3.0 * (2.0 - 2.0 * t).powi(2),
@@ -149,9 +177,10 @@ impl Ease {
 mod tests {
     use super::*;
 
-    const CURVES: [Ease; 6] = [
+    const CURVES: [Ease; 7] = [
         Ease::Linear,
         Ease::Smoothstep,
+        Ease::Smootherstep,
         Ease::CubicOut,
         Ease::CubicInOut,
         Ease::Decelerate(0.4),
@@ -217,5 +246,19 @@ mod tests {
         assert!(curve.is_valid() && !Ease::Decelerate(2.5).is_valid());
         let json = serde_json::to_string(&[Ease::CubicOut, Ease::Decelerate(0.4)]).unwrap();
         assert_eq!(json, r#"["cubic-out",{"decelerate":0.4}]"#);
+    }
+
+    #[test]
+    fn minimum_jerk_travel_joins_holds_and_preserves_crossing_times() {
+        let curve = Ease::Smootherstep;
+        assert_eq!(curve.slope(0.0), 0.0);
+        assert_eq!(curve.slope(1.0), 0.0);
+        let h = 1e-4;
+        assert!((curve.slope(h) / h).abs() < 0.004);
+        assert!((curve.slope(1.0 - h) / h).abs() < 0.004);
+        for p in [0.0, 0.0001, 0.01, 0.25, 0.5, 0.75, 0.99, 0.9999, 1.0] {
+            assert!((curve.sample(smootherstep_inverse(p)) - p).abs() < 2e-6);
+        }
+        assert!((curve.slope(0.5 - h) - curve.slope(0.5 + h)).abs() < 1e-5);
     }
 }

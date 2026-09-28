@@ -198,6 +198,9 @@ pixels at depth zero, so the default camera is pixel exact; depth gives parallax
 depth of field, and draw order. Bright color blooms; the frame gets highlight
 rolloff, vignette, chromatic pulses, and grain. Ambient motion (spin, flow, grain)
 is a pure function of time, so any frame renders identically in any order.
+An orb pulse is an illumination response, independent of its scale and attached
+ports. A card's content can settle after its body; its `content` channel controls
+the ink's presence, small vertical offset, and sharpening together.
 
 ## Caption
 

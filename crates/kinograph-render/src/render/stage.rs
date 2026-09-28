@@ -921,9 +921,10 @@ impl<'a> Scene<'a> {
         (self.dof * (z - self.focus).abs() / 100.0).min(24.0)
     }
 
-    /// An orb's slow breath, swelling with its `pulse` channel.
-    fn breath(&self, id: &str) -> f32 {
-        1.0 + 0.015 * (self.time * 2.1).sin() + 0.08 * self.v(id, "pulse", 0.0)
+    /// The shell barely breathes. A pulse is light, never a discontinuous scale
+    /// change: beam ports must stay attached when an arrival strikes.
+    fn breath(&self) -> f32 {
+        1.0 + 0.006 * (self.time * 1.4).sin()
     }
 
     fn place(&self, element: &StageElement) -> Option<Placement> {
@@ -936,7 +937,7 @@ impl<'a> Scene<'a> {
         let world = Vec3::from(element.anchor()?) + offset;
         let (center, perspective) = self.camera.project(world)?;
         let breath = match element {
-            StageElement::Orb { .. } => self.breath(id),
+            StageElement::Orb { .. } => self.breath(),
             _ => 1.0,
         };
         let scale = perspective * self.v(id, "scale", 1.0).max(0.01) * breath;
@@ -957,7 +958,7 @@ impl<'a> Scene<'a> {
         } else {
             -1.0
         };
-        let bend = bend + 24.0 * downward * self.v(id, "twang", 0.0);
+        let bend = bend + 10.0 * downward * self.v(id, "twang", 0.0);
         let curve = connect(a.outline, b.outline, bend * (a.scale + b.scale) * 0.5);
         let card = |id: &str| matches!(self.plan.element(id), Some(StageElement::Card { .. }));
         Some(Link {
@@ -1170,12 +1171,15 @@ impl<'a> Painter<'a> {
         let scale = place.scale;
         let blur = scene.blur_at(place.world.z) + scene.v(id, "blur", 0.0).max(0.0) * scale;
         let own = look.tone(tone);
-        // A flash lights the card in its own tone; an alarm lights it red.
+        // Ink and rim respond; the substrate stays dark. In linear light even
+        // a modest full-card tint overwhelms the directional socket reflection.
         let lit = (flash + alarm).min(1.5);
         let light = own.lerp(look.tone(Tone::Error), alarm / (flash + alarm).max(1e-3));
-        let border = look.raised.lerp(look.muted, 0.35);
-        let edge = border.lerp(if lit > glow { light } else { own }, (glow + lit).min(1.0));
-        let halo = own * (glow * 0.28 * (1.0 - alarm.min(1.0))) + light * (lit * 0.28);
+        let border = look.raised.lerp(look.muted, 0.22);
+        let edge = border.lerp(
+            if lit > glow { light } else { own },
+            (glow * 0.32 + lit * 0.28).min(0.65),
+        );
         let half = size * 0.5 * scale;
         // The strongest reflection on the edge, and the strongest pool in the glass.
         let strongest = |pool: bool| {
@@ -1190,15 +1194,12 @@ impl<'a> Painter<'a> {
         self.frame.rounded_rect(
             place.center,
             half,
-            [14.0 * scale, 1.5 * scale.max(0.5)],
+            [14.0 * scale, 1.0 * scale.max(0.5)],
             blur,
             Paint {
-                fill: rgba(
-                    look.surface.lerp(light, 0.2 * lit),
-                    0.97 * opacity * (1.0 - 0.45 * dim),
-                ),
+                fill: rgba(look.surface, 0.97 * opacity * (1.0 - 0.45 * dim)),
                 stroke: rgba(edge, opacity * (1.0 - 0.5 * dim)),
-                glow: glow4(halo * opacity, 14.0 * scale),
+                glow: glow4(own * (glow * 0.018 * opacity), 7.0 * scale),
                 light: reflection,
                 light_color: reflection_color,
                 pool,
@@ -1212,20 +1213,23 @@ impl<'a> Painter<'a> {
             [12.5 * scale, 1.0],
             blur,
             Paint {
-                stroke: rgba(Vec3::ONE, 0.045 * opacity * (1.0 - dim)),
+                stroke: rgba(Vec3::ONE, 0.014 * opacity * (1.0 - dim)),
                 ..Default::default()
             },
         );
-        let ink = opacity * (1.0 - 0.55 * dim);
+        let content = scene.v(id, "content", 1.0).clamp(0.0, 1.0);
+        let ink = opacity * content * (1.0 - 0.55 * dim);
+        let text_center = place.center + vec2(0.0, 7.0 * (1.0 - content) * scale);
+        let text_blur = blur + 1.5 * (1.0 - content) * scale;
         let title_lift = if status.is_empty() { 0.0 } else { 13.0 * scale };
         self.frame.text(
             &text_key(id, "title"),
-            place.center - vec2(0.0, title_lift),
+            text_center - vec2(0.0, title_lift),
             scale,
             CaptionAlign::Center,
-            rgba(look.text, ink),
+            rgba(look.text.lerp(Vec3::ONE, (flash * 0.35).min(1.0)), ink),
             f32::MAX,
-            blur,
+            text_blur,
         );
         if !status.is_empty() {
             // Statuses cross-fade by the fractional `status` channel.
@@ -1242,14 +1246,18 @@ impl<'a> Painter<'a> {
                     Tone::Plain => look.muted,
                     tone => look.tone(tone),
                 };
+                // Separate the outgoing and incoming ink instead of showing
+                // two readable words on top of each other at mid-transition.
+                let visibility = smoothstep((weight - 0.2) / 0.8);
+                let drift = if entry == low { -1.0 } else { 1.0 };
                 self.frame.text(
                     &text_key(id, &format!("status{entry}")),
-                    place.center + vec2(0.0, 19.0 * scale),
+                    text_center + vec2(0.0, (19.0 + drift * 6.0 * (1.0 - weight)) * scale),
                     scale,
                     CaptionAlign::Center,
-                    rgba(color, ink * weight),
+                    rgba(color, ink * visibility),
                     f32::MAX,
-                    blur,
+                    text_blur + (1.0 - weight) * 1.5,
                 );
             }
         }
@@ -1266,12 +1274,12 @@ impl<'a> Painter<'a> {
         let pulse = scene.v(id, "pulse", 0.0);
         let hurt = scene.v(id, "hurt", 0.0).clamp(0.0, 1.0);
         let spin = scene.v(id, "spin", 1.0);
-        let world_radius = radius * scene.v(id, "scale", 1.0).max(0.01) * scene.breath(id);
+        let world_radius = radius * scene.v(id, "scale", 1.0).max(0.01) * scene.breath();
         let own = look.tone(tone);
         let red = look.tone(Tone::Error);
         let blur = scene.blur_at(place.world.z);
         // Core light, fading as the orb breaks apart.
-        let core = (0.16 + 0.4 * pulse.max(0.0)) * (1.0 - shatter) * opacity;
+        let core = (0.025 + 0.075 * pulse.max(0.0)) * (1.0 - shatter) * opacity;
         self.frame.circle(
             place.center,
             [0.0, 0.0],
@@ -1282,7 +1290,7 @@ impl<'a> Painter<'a> {
             },
         );
         let rotation =
-            Quat::from_rotation_x(0.42) * Quat::from_rotation_y(scene.time * 0.35 * spin);
+            Quat::from_rotation_x(0.42) * Quat::from_rotation_y(scene.time * 0.14 * spin);
         let mut dots = self.orbs[id]
             .iter()
             .map(|point| {
@@ -1305,7 +1313,7 @@ impl<'a> Painter<'a> {
             let Some((center, scale)) = scene.camera.project(point) else {
                 continue;
             };
-            let alpha = (0.2 + 0.8 * near) * opacity * fade;
+            let alpha = (0.1 + 0.75 * near) * opacity * fade;
             if alpha < 0.01 {
                 continue;
             }
@@ -1320,13 +1328,13 @@ impl<'a> Painter<'a> {
             self.frame.circle(
                 center,
                 [
-                    (1.3 + 2.1 * near) * scale * (1.0 + 0.5 * shatter * seed),
+                    (0.85 + 1.15 * near) * scale * (1.0 + 0.25 * shatter * seed),
                     0.0,
                 ],
                 blur,
                 Paint {
-                    fill: rgba(color * (0.72 + 0.4 * near), alpha),
-                    glow: glow4(color * (0.24 * alpha), 4.0 * scale),
+                    fill: rgba(color * (0.6 + 0.3 * near + 0.15 * pulse), alpha),
+                    glow: glow4(color * (0.035 * alpha), 2.5 * scale),
                     ..Default::default()
                 },
             );
@@ -1348,23 +1356,20 @@ impl<'a> Painter<'a> {
         let own = look.tone(tone);
         let scale = link.scale_at(0.5);
         let blur = scene.blur_at(link.far());
-        // A surge floods the line with its tone: brighter, wider, and glowing.
+        // Idle wires are matte. Only a contact surge briefly emits light.
         let color = (look.muted * 0.7)
-            .lerp(own, 0.35 + 0.65 * emphasis)
-            .lerp(own * 1.35, 0.45 * surge.min(1.0))
+            .lerp(own, 0.12 + 0.45 * emphasis)
+            .lerp(own, 0.35 * surge.min(1.0))
             .lerp(look.tone(Tone::Error), (broken * 3.0).min(1.0));
         let line = Paint {
             stroke: rgba(
                 color,
                 0.75 * opacity * (1.0 - 0.65 * broken) * (1.0 + 0.3 * surge),
             ),
-            glow: glow4(
-                color * (0.1 * (0.3 + emphasis + 2.0 * surge) * opacity),
-                7.0 * scale,
-            ),
+            glow: glow4(color * (0.05 * surge * opacity), 4.0 * scale),
             ..Default::default()
         };
-        let width = 2.0 * scale * (1.0 + 0.4 * surge);
+        let width = 1.4 * scale * (1.0 + 0.25 * surge);
         if broken <= 0.001 {
             self.frame
                 .polyline(&link.path, draw, [width, blur], line, SOLID);
@@ -1385,8 +1390,8 @@ impl<'a> Painter<'a> {
                 1.0,
                 [2.8 * scale, blur],
                 Paint {
-                    stroke: rgba(own.lerp(Vec3::ONE, 0.45) * 1.4, light),
-                    glow: glow4(own * (0.35 * light), 8.0 * scale),
+                    stroke: rgba(own.lerp(Vec3::ONE, 0.45) * 1.1, light),
+                    glow: glow4(own * (0.1 * light), 4.0 * scale),
                     ..Default::default()
                 },
                 COMET,
@@ -1396,8 +1401,8 @@ impl<'a> Painter<'a> {
                 [2.6 * scale, 0.0],
                 blur,
                 Paint {
-                    fill: rgba(own.lerp(Vec3::ONE, 0.6) * 1.5, light),
-                    glow: glow4(own * (0.5 * light), 10.0 * scale),
+                    fill: rgba(own.lerp(Vec3::ONE, 0.6) * 1.1, light),
+                    glow: glow4(own * (0.12 * light), 4.0 * scale),
                     ..Default::default()
                 },
             );
@@ -1405,13 +1410,12 @@ impl<'a> Painter<'a> {
         if flow > 0.001 && broken <= 0.001 && draw > 0.98 {
             // Small beads of light travel toward the `to` end.
             let bead = Paint {
-                stroke: rgba(own * 1.2, (flow * opacity).min(1.0)),
-                glow: glow4(own * (0.28 * flow * opacity), 6.0 * scale),
+                stroke: rgba(own, (flow * opacity * 0.65).min(1.0)),
                 ..Default::default()
             };
-            let beads = [3.0 * scale, 40.0 * scale, -scene.time * 150.0 * scale, 0.0];
+            let beads = [7.0 * scale, 190.0 * scale, -scene.time * 90.0 * scale, 0.0];
             self.frame
-                .polyline(&link.path, 1.0, [2.4 * scale, blur], bead, beads);
+                .polyline(&link.path, 1.0, [1.8 * scale, blur], bead, beads);
         }
         // Behind both ends, so a beam never crosses the cards it connects.
         self.frame.close(link.far() + 1.0, order);
@@ -1690,7 +1694,7 @@ impl<'a> Painter<'a> {
             scene.blur_at(place.world.z),
             Paint {
                 stroke: rgba(own, alpha),
-                glow: glow4(own * (0.25 * alpha), 10.0 * place.scale),
+                glow: glow4(own * (0.035 * alpha), 5.0 * place.scale),
                 ..Default::default()
             },
         );
@@ -1978,9 +1982,41 @@ fn glow4(color: Vec3, radius: f32) -> [f32; 4] {
 
 #[cfg(test)]
 mod tests {
+    use super::Scene;
+    use kinograph::math::vec2;
     use kinograph::stage::StagePlan;
 
     use crate::render::HeadlessRenderer;
+
+    #[test]
+    fn an_orb_pulse_does_not_displace_attached_ports() {
+        let plan: StagePlan = serde_json::from_value(serde_json::json!({
+            "elements": [
+                { "kind": "orb", "id": "service", "at": [960, 480, 0], "radius": 150 },
+                { "kind": "card", "id": "client", "at": [420, 300, -40], "size": [300, 110], "title": "client" },
+                { "kind": "beam", "id": "link", "from": "client", "to": "service" }
+            ]
+        }))
+        .unwrap();
+        let quiet = |_: &str, default| default;
+        let pulse = |property: &str, default| {
+            if property == "service.pulse" {
+                1.0
+            } else {
+                default
+            }
+        };
+        let before = Scene::sample(&plan, &quiet, 1.0, vec2(1920.0, 1080.0));
+        let impact = Scene::sample(&plan, &pulse, 1.0, vec2(1920.0, 1080.0));
+        assert_eq!(
+            before.placements["service"].scale,
+            impact.placements["service"].scale
+        );
+        assert_eq!(
+            before.links["link"].path.points(),
+            impact.links["link"].path.points()
+        );
+    }
 
     #[test]
     #[ignore = "requires a headless GPU; stage frames are pure functions of time and channels"]
