@@ -1011,9 +1011,31 @@ impl<'a> Scene<'a> {
 }
 
 impl Scene<'_> {
-    /// The lights a beam or a packet casts this sample.
+    /// The lights a beam, packet, or combusting orb casts this sample.
     fn lights_of(&self, element: &StageElement, lights: &mut Vec<Light>) {
         match element {
+            StageElement::Orb { id, radius, .. } => {
+                let age = self.v(id, "burst", -1.0);
+                let released = age - 0.12;
+                if !(0.0..2.4).contains(&released) {
+                    return;
+                }
+                let Some(place) = self.placements.get(id.as_str()) else {
+                    return;
+                };
+                let strength = 0.8
+                    * smoothstep(released / 0.06)
+                    * (-2.5 * released).exp()
+                    * self.v(id, "opacity", 1.0).clamp(0.0, 1.0);
+                lights.push(Light {
+                    at: place.center,
+                    tone: Tone::Accent,
+                    strength,
+                    radius: radius * 4.4,
+                    pool: false,
+                    scale: place.scale,
+                });
+            }
             StageElement::Beam { id, tone, .. } => {
                 let Some(link) = self.links.get(id.as_str()) else {
                     return;
@@ -1301,21 +1323,43 @@ impl<'a> Painter<'a> {
     }
 
     fn orb(&mut self, order: usize, id: &str, radius: f32, tone: Tone, place: Placement) {
+        let age = self.scene.v(id, "burst", -1.0);
+        self.orb_shell(order, id, radius, tone, place, age);
+        if age >= 0.12 {
+            let opacity = self.scene.v(id, "opacity", 1.0).clamp(0.0, 1.0);
+            if opacity > 0.001 {
+                self.burst(order, id, radius, place, age, opacity);
+            }
+        }
+    }
+
+    fn orb_shell(
+        &mut self,
+        order: usize,
+        id: &str,
+        radius: f32,
+        tone: Tone,
+        mut place: Placement,
+        age: f32,
+    ) {
         let (scene, look) = (self.scene, self.look);
-        let opacity = scene.v(id, "opacity", 1.0).clamp(0.0, 1.0);
+        let bursting = age >= 0.0;
+        let ignition = smoothstep((age - 0.12) / 0.055);
+        let opacity = scene.v(id, "opacity", 1.0).clamp(0.0, 1.0) * (1.0 - ignition);
         if opacity <= 0.001 {
             return;
         }
-        let age = scene.v(id, "burst", -1.0);
-        if age >= 0.0 {
-            self.burst(order, id, radius, place, age, opacity);
-            return;
-        }
-        let shatter = scene.v(id, "shatter", 0.0).clamp(0.0, 1.0);
+        let collapse = 1.0 - 0.55 * smoothstep(age / 0.12);
+        place.scale *= collapse;
+        let shatter = if bursting {
+            0.0
+        } else {
+            scene.v(id, "shatter", 0.0).clamp(0.0, 1.0)
+        };
         let pulse = scene.v(id, "pulse", 0.0);
         let hurt = scene.v(id, "hurt", 0.0).clamp(0.0, 1.0);
         let spin = scene.v(id, "spin", 1.0);
-        let world_radius = radius * scene.v(id, "scale", 1.0).max(0.01) * scene.breath();
+        let world_radius = radius * scene.v(id, "scale", 1.0).max(0.01) * scene.breath() * collapse;
         let own = look.tone(tone);
         let red = look.tone(Tone::Error);
         let blur = scene.blur_at(place.world.z) + scene.v(id, "blur", 0.0).max(0.0) * place.scale;
@@ -1411,10 +1455,10 @@ impl<'a> Painter<'a> {
         let radius_px = radius * scale;
         self.frame.prims.push(Prim {
             bbox: [
-                place.center.x - radius_px * 4.0,
-                place.center.y - radius_px * 4.0,
-                place.center.x + radius_px * 4.0,
-                place.center.y + radius_px * 4.0,
+                place.center.x - radius_px * 4.4,
+                place.center.y - radius_px * 4.4,
+                place.center.x + radius_px * 4.4,
+                place.center.y + radius_px * 4.4,
             ],
             a: [6.0, place.center.x, place.center.y, radius_px],
             b: [age, opacity, 0.0, 0.0],
@@ -1439,11 +1483,12 @@ impl<'a> Painter<'a> {
                 continue;
             };
             let life = 1.6 + 3.2 * point.seed.y;
-            let fade = (1.0 - smoothstep((released - life * 0.45) / (life * 0.55))) * opacity;
+            let ignition = smoothstep(released / 0.055);
+            let fade =
+                (1.0 - smoothstep((released - life * 0.45) / (life * 0.55))) * opacity * ignition;
             if fade <= 0.001 {
                 continue;
             }
-            let ignition = smoothstep(released / 0.055);
             let heat = (-released * (0.9 + point.seed.z)).exp();
             let hot = vec3(4.5, 1.6, 0.35).lerp(vec3(0.8, 0.025, 0.006), 1.0 - heat);
             let color = self.look.tone(Tone::Accent).lerp(hot, ignition);
@@ -2171,6 +2216,36 @@ mod tests {
     }
 
     #[test]
+    fn combustion_light_is_local_and_cools_with_the_burst_clock() {
+        let plan: StagePlan = serde_json::from_value(serde_json::json!({
+            "elements": [{ "kind": "orb", "id": "service", "at": [960, 480, 0], "radius": 150 }]
+        }))
+        .unwrap();
+        let mut strengths = Vec::new();
+        for age in [-1.0, 0.0, 0.3, 1.0, 3.0] {
+            let values = |property: &str, default| {
+                if property == "service.burst" {
+                    age
+                } else {
+                    default
+                }
+            };
+            let scene = Scene::sample(&plan, &values, 2.0, vec2(1920.0, 1080.0));
+            strengths.push(scene.lights.iter().map(|light| light.strength).sum::<f32>());
+            for light in &scene.lights {
+                assert!(light.falloff(400.0) > 0.0);
+                assert_eq!(light.falloff(900.0), 0.0, "far rims remain dark");
+                assert!(
+                    !light.pool,
+                    "combustion lights rims without washing the card"
+                );
+            }
+        }
+        assert_eq!([strengths[0], strengths[1], strengths[4]], [0.0; 3]);
+        assert!(strengths[2] > strengths[3] && strengths[3] > 0.0);
+    }
+
+    #[test]
     #[ignore = "requires a headless GPU; stage frames are pure functions of time and channels"]
     fn stage_frames_are_deterministic_and_respond_to_channels() {
         let mut renderer = pollster::block_on(HeadlessRenderer::new(crate::render::RenderSpec {
@@ -2228,6 +2303,22 @@ mod tests {
                 .unwrap()
         };
         let fire = burst(&mut renderer, 0.45);
+        let intact = burst(&mut renderer, -1.0);
+        assert!(
+            burst(&mut renderer, 0.0) == intact,
+            "entering Burst preserves the intact pixels"
+        );
+        let early = burst(&mut renderer, 0.0001);
+        let error = intact
+            .iter()
+            .zip(&early)
+            .map(|(a, b)| a.abs_diff(*b) as f64)
+            .sum::<f64>()
+            / intact.len() as f64;
+        assert!(
+            error < 0.01,
+            "compression begins continuously, mean byte error {error}"
+        );
         let smoke = burst(&mut renderer, 2.8);
         assert!(fire != smoke, "combustion cools into smoke");
         assert!(

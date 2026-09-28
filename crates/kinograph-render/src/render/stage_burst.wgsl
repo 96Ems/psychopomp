@@ -52,7 +52,11 @@ fn burst_volume(pixel: vec2<f32>, radius: f32, age: f32) -> vec4<f32> {
         let turbulence = burst_fbm(advected + warp * 1.8);
         let lobes = burst_noise(p * 2.6 + vec3<f32>(4.0, 8.0, 1.0));
         let boundary = 0.67 + 0.60 * lobes;
-        let density = max(boundary - length(p * vec3<f32>(0.92, 1.0, 1.0)) + (turbulence - 0.48) * 1.05, 0.0);
+        let distance = length(p * vec3<f32>(0.92, 1.0, 1.0));
+        // Compact support reaches zero before the ray interval and screen-space
+        // rejection bounds. Otherwise positive density is cut into flat lobes.
+        let support = 1.0 - smoothstep(1.03, 1.22, distance);
+        let density = max(boundary - distance + (turbulence - 0.48) * 1.05, 0.0) * support;
         let absorb = (1.0 - exp(-density * step_size * 8.0)) * ignite * fade;
         // Cooler opaque folds interrupt the hot interior instead of making an
         // evenly emissive orange ball. Fine noise supplies glowing fissures.

@@ -541,6 +541,13 @@ The first four bullets below retain the **pre-fix review evidence**. Their unres
   service label and connections disappearing beneath the shell at full scale.
 - Perimeter sweeps are now opt-in channels rather than the default `connect`
   choreography. Soft port reveals preserve the stagger without racing highlights.
+- A bounded follow-up quality loop (`perf/stage-burst-quality.md`) measured three
+  concrete defects. Keeping shell material through compression reduced entry
+  pixel MAE from 9.35/255 to zero. Combustion now lifts the facing card rim by
+  6.17 RGB8 red levels in the fixed fixture while the far rim stays unchanged.
+  Compact density support removed straight-cut fire lobes; edge-step p99 in
+  the affected region fell from 33 to 17. These are defect-specific measurements,
+  not an overall art score; each version used seven deterministic measured pairs.
 
 ## Next Question
 

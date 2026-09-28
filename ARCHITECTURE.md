@@ -454,6 +454,11 @@ refracts the scene with an inward pinch and expanding pressure wave. The first
 active orb in element order drives this screen-space wave; volumes and embers
 render for every bursting orb. Reversing the age reconstructs the effect without
 simulation history; ambient spin remains on the scene clock.
+The intact shell keeps its material and occlusion through compression, then
+hands presence to the hot particles over a 55 ms ignition envelope. Combustion
+casts an age-driven local rim reflection through the existing light path; it
+does not wash card fills. The procedural density has compact support, reaching
+zero before the ray interval and screen-space rejection bounds.
 
 ### Eased events
 
