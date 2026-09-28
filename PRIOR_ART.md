@@ -79,6 +79,19 @@ floods, the frame sweep, port pop, and bead wire draw, settle-in entrances, and
 instant-attack flashes. Receivers never scale on a hit. The constants live in the
 `explainer-motion` skill's `TECHNIQUES.md`.
 
+## Procedural Fire And Smoke
+
+[Inigo Quilez's domain warping](https://iquilezles.org/articles/warp/) informs
+the Stage Burst's layered noise: distort the coordinates before evaluating
+density so the silhouette and internal folds read organically.
+[GPU Gems 3, chapter 30](https://developer.nvidia.com/gpugems/gpugems3/part-v-physics-simulation/chapter-30-real-time-simulation-and-rendering-3d-fluids)
+informs the rendering: raymarch density, accumulate emission with front-to-back
+absorption, and let cooler smoke obscure the hot interior. Kinograph uses an
+analytic age-driven density rather than the chapter's simulated velocity and
+temperature fields, so arbitrary-time sampling and reverse reconstruction remain
+deterministic. `render/stage_burst.wgsl` owns the bounded volume; closed-form
+gravity/drag embers and screen-space pressure refraction complete the impact.
+
 ## Manim
 
 [Manim](https://docs.manim.community/en/stable/) is the strongest reference for semantic scene construction.
