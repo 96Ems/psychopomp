@@ -657,6 +657,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "glam"
+version = "0.33.11"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "35b4e837a1d133645d1dcf283e146a4b9901e390a1c13545f959cfed3a72f24f"
+
+[[package]]
 name = "glow"
 version = "0.17.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -875,6 +881,7 @@ name = "kinograph"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "glam",
  "serde",
  "serde_json",
 ]

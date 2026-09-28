@@ -6,6 +6,8 @@ use std::{
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
+use crate::math::{easing::cubic_in_out, smoothstep, vec2};
+
 mod channels;
 pub use channels::{SpringPlan, compile_channels, destination_channel, effective_snapshots};
 
@@ -103,19 +105,13 @@ impl ReelZoom {
     /// `width` x `height` frame. The outgoing frame magnifies until `focus`
     /// fills the width; the incoming frame starts inside `focus`.
     pub fn at(focus: [f32; 4], width: f32, height: f32, progress: f32, incoming: bool) -> Self {
-        let p = progress.clamp(0.0, 1.0);
-        let eased = if p < 0.5 {
-            4.0 * p * p * p
-        } else {
-            1.0 - (-2.0 * p + 2.0).powi(3) / 2.0
-        };
-        let focus_center = [focus[0] + focus[2] * 0.5, focus[1] + focus[3] * 0.5];
-        let center = [width * 0.5, height * 0.5];
+        let eased = cubic_in_out(progress.clamp(0.0, 1.0));
+        let focus_center = vec2(focus[0] + focus[2] * 0.5, focus[1] + focus[3] * 0.5);
+        let center = vec2(width, height) * 0.5;
         let fill = width / focus[2].max(1.0);
         // The focus center travels to the screen center while the scale changes
         // geometrically, so the zoom speed feels constant.
-        let anchor: [f32; 2] =
-            std::array::from_fn(|i| focus_center[i] + (center[i] - focus_center[i]) * eased);
+        let anchor = focus_center.lerp(center, eased);
         let (scale, pivot) = if incoming {
             (fill.powf(eased - 1.0), center)
         } else {
@@ -123,7 +119,7 @@ impl ReelZoom {
         };
         Self {
             scale,
-            offset: [anchor[0] - pivot[0] * scale, anchor[1] - pivot[1] * scale],
+            offset: (anchor - pivot * scale).to_array(),
             radius: if incoming { 28.0 * (1.0 - eased) } else { 0.0 },
         }
     }
@@ -264,7 +260,7 @@ impl ReelPlan {
         let layer = |segment: usize, weight: f64| ReelLayer {
             segment,
             local_seconds: local(segment),
-            weight: smoothstep(weight) as f32,
+            weight: smoothstep(weight as f32),
             zoom: None,
         };
         if progress >= 1.0 || current == 0 {
@@ -302,11 +298,6 @@ impl ReelPlan {
             }
         }
     }
-}
-
-fn smoothstep(value: f64) -> f64 {
-    let value = value.clamp(0.0, 1.0);
-    value * value * (3.0 - 2.0 * value)
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]

@@ -6,6 +6,8 @@ use std::{
 use anyhow::{Context, Result, bail};
 use serde::{Deserialize, Serialize};
 
+use crate::math::lerp;
+
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct LineId(String);
 
@@ -564,10 +566,6 @@ impl CodeTransition {
             .find(|track| &track.line.id == id)
             .map(|track| track.sample(self.layout, progress))
     }
-}
-
-fn lerp(from: f32, to: f32, progress: f32) -> f32 {
-    from + (to - from) * progress
 }
 
 #[cfg(test)]

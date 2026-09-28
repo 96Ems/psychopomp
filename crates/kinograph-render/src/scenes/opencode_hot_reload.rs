@@ -5,6 +5,7 @@ use std::{
 };
 
 use anyhow::{Context, Result};
+use kinograph::math::smoothstep;
 use serde::Deserialize;
 
 use kinograph::{
@@ -194,9 +195,4 @@ fn spring_progress(age: f32, response: f32, damping: f32) -> f32 {
     Spring::new(response, damping)
         .sample(MotionState::at(0.0), 1.0, age)
         .position
-}
-
-fn smoothstep(value: f32) -> f32 {
-    let value = value.clamp(0.0, 1.0);
-    value * value * (3.0 - 2.0 * value)
 }

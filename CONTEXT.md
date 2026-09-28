@@ -188,7 +188,8 @@ depicts a protocol; it does not simulate one.
 
 A 2.5D motion-graphics surface for explainers, rendered on the GPU. Elements sit at
 world positions seen through a perspective camera: floating cards with status
-lines, a particle orb that spins, breathes, and can shatter, curved light beams
+lines, a particle orb that spins, breathes, and can shatter, curved light beams (connectors that attach to the side of a card facing the other
+end and leave it head-on, and enter an orb radially)
 that draw, flow, and snap, packets that travel a beam with a comet trail and ripple
 on arrival, labels, and rings for timers and shockwaves. World x/y are canvas
 pixels at depth zero, so the default camera is pixel exact; depth gives parallax,

@@ -1,3 +1,5 @@
+use kinograph::math::easing::cubic_out;
+
 use super::{Canvas, EffectTarget};
 
 pub(super) fn composite(canvas: &mut Canvas<'_>, target: EffectTarget, phase: f32, color: [u8; 3]) {
@@ -5,7 +7,7 @@ pub(super) fn composite(canvas: &mut Canvas<'_>, target: EffectTarget, phase: f3
     if !(0.0..1.0).contains(&phase) {
         return;
     }
-    let travel = 1.0 - (1.0 - phase).powi(3);
+    let travel = cubic_out(phase);
     let fade = (phase / 0.08).min(1.0) * (1.0 - phase).powf(1.35);
     let ring_radius = 22.0 + 112.0 * travel;
     let extent = 155_i32;

@@ -77,6 +77,7 @@ Do not run the full render as routine validation when unit tests and static chec
 - `crates/kinograph/src/transcript.rs`: word timing ingestion, word and phrase cue lookup
 - `crates/kinograph/src/sequence.rs`: Sequence Diagram recipe values, slot geometry, validation, and the `SequenceActor` authoring handle
 - `crates/kinograph/src/caption.rs`: Caption recipe values and the `CaptionActor` authoring handle (typing, show, hide)
+- `crates/kinograph/src/math.rs` and `math/`: shared motion and geometry math (glam vectors, lerp/remap/smoothstep, easing, arc-length curves, shape ports and connectors, deterministic hash)
 - `crates/kinograph/src/stage.rs`: Stage elements, strict channels, perspective camera, orb/beam geometry, and the `StageActor` authoring handle
 - `crates/kinograph/src/tone.rs`: semantic Tone roles shared by explainer recipes
 - `crates/kinograph/src/highlight.rs`: line-local TypeScript highlighting into editor spans
@@ -149,6 +150,7 @@ Preserve these boundaries unless a concrete scene or second implementation demon
 - Preserve deterministic arbitrary-time sampling. Do not replace trajectories with stateful frame-by-frame integration.
 - Carry both position and velocity when introducing interrupted or redirected motion.
 - Add abstractions only after a real second use or implementation exposes the seam.
+- Put reusable interpolation, easing, and geometry in `kinograph::math` and compose it; do not add private lerps, easings, or connector math to renderers or Scene Programs. Keep renderers as small per-element helpers, as in `render/stage.rs`.
 - Avoid unsafe code and codec bindings unless measured evidence shows the subprocess boundary is insufficient.
 - Treat output media and build artifacts as generated files; keep them under ignored `output/` and `target/` directories.
 

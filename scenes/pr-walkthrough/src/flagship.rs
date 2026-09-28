@@ -8,6 +8,7 @@ use anyhow::{Context, Result};
 use kinograph::{
     author::PlanBuilder,
     caption::{CaptionAlign, CaptionSpanPlan},
+    math::{Vec2, Vec3, vec2},
     plan::{
         MediaKindPlan, MediaPlan, MediaRolePlan, ReelPlan, ReelSegmentPlan, ReelTransitionStyle,
         ScenePlan,
@@ -21,6 +22,8 @@ use crate::{PRS, chip, code, diffs, footer, header, narration::Narration, ns, sp
 const CLIENT: [f32; 3] = [430.0, 420.0, -60.0];
 const CLIENT_SIZE: [f32; 2] = [340.0, 124.0];
 const SERVICE: [f32; 3] = [1060.0, 480.0, 0.0];
+/// Left edge of the notes under the client card, so they grow away from the orb.
+const NOTE_X: f32 = CLIENT[0] - CLIENT_SIZE[0] * 0.5 + 4.0;
 /// Where the camera settles before flying into the client card.
 const CLOSING_CAMERA: [f32; 3] = [-110.0, 0.0, 60.0];
 
@@ -54,22 +57,15 @@ pub fn build_flagship(narration_dir: &std::path::Path) -> Result<ReelPlan> {
 /// The client card's rectangle on screen once the closing camera settles.
 fn client_rect() -> [f32; 4] {
     let camera = Camera {
-        x: CLOSING_CAMERA[0],
-        y: CLOSING_CAMERA[1],
-        z: CLOSING_CAMERA[2],
-        width: 1920.0,
-        height: 1080.0,
+        position: Vec3::from(CLOSING_CAMERA),
+        size: vec2(1920.0, 1080.0),
     };
     let (center, scale) = camera
-        .project(CLIENT)
+        .project(Vec3::from(CLIENT))
         .expect("client is in front of the camera");
-    let size = [CLIENT_SIZE[0] * scale, CLIENT_SIZE[1] * scale];
-    [
-        center[0] - size[0] * 0.5,
-        center[1] - size[1] * 0.5,
-        size[0],
-        size[1],
-    ]
+    let size = Vec2::from(CLIENT_SIZE) * scale;
+    let corner = center - size * 0.5;
+    [corner.x, corner.y, size.x, size.y]
 }
 
 fn status(text: &str, tone: Tone) -> StatusText {
@@ -101,12 +97,12 @@ fn card(
     }
 }
 
-fn beam(id: &str, from: &str, to: &str, bend: f32, tone: Tone) -> StageElement {
+fn beam(id: &str, from: &str, to: &str, tone: Tone) -> StageElement {
     StageElement::Beam {
         id: id.into(),
         from: from.into(),
         to: to.into(),
-        bend,
+        bend: 0.0,
         tone,
     }
 }
@@ -121,12 +117,18 @@ fn packet(id: &str, reverse: bool, label: &str, tone: Tone) -> StageElement {
     }
 }
 
-fn label(id: &str, at: [f32; 3], size: f32, parts: &[(&str, Tone)]) -> StageElement {
+fn label(
+    id: &str,
+    at: [f32; 3],
+    size: f32,
+    align: CaptionAlign,
+    parts: &[(&str, Tone)],
+) -> StageElement {
     StageElement::Label {
         id: id.into(),
         at,
         size,
-        align: CaptionAlign::Center,
+        align,
         spans: spans(parts),
     }
 }
@@ -141,10 +143,10 @@ fn ring(id: &str, radius: f32, thickness: f32, tone: Tone) -> StageElement {
     }
 }
 
-const OTHERS: [(&str, &str, [f32; 3], f32); 3] = [
-    ("tui-1", "b1", [1640.0, 250.0, 80.0], 60.0),
-    ("desktop", "b2", [1700.0, 600.0, 30.0], -30.0),
-    ("tui-2", "b3", [1450.0, 900.0, 120.0], -60.0),
+const OTHERS: [(&str, &str, [f32; 3]); 3] = [
+    ("tui-1", "b1", [1640.0, 250.0, 80.0]),
+    ("desktop", "b2", [1700.0, 600.0, 30.0]),
+    ("tui-2", "b3", [1450.0, 900.0, 120.0]),
 ];
 
 fn stage_plan() -> StagePlan {
@@ -164,20 +166,23 @@ fn stage_plan() -> StagePlan {
         },
         label(
             "service-name",
-            [SERVICE[0], 690.0, 0.0],
+            [SERVICE[0], 700.0, 0.0],
             24.0,
+            CaptionAlign::Center,
             &[("opencode service", Tone::Plain)],
         ),
         label(
             "service-healthy",
-            [SERVICE[0], 728.0, 0.0],
+            [SERVICE[0], 738.0, 0.0],
             19.0,
+            CaptionAlign::Center,
             &[("● healthy", Tone::Success)],
         ),
         label(
             "service-stopped",
-            [SERVICE[0], 728.0, 0.0],
+            [SERVICE[0], 738.0, 0.0],
             19.0,
+            CaptionAlign::Center,
             &[("● stopped", Tone::Error)],
         ),
         card(
@@ -193,9 +198,9 @@ fn stage_plan() -> StagePlan {
             ],
             Tone::Request,
         ),
-        beam("link", "client", "service", -70.0, Tone::Request),
+        beam("link", "client", "service", Tone::Request),
     ];
-    for (id, link, at, bend) in OTHERS {
+    for (id, link, at) in OTHERS {
         let title = if id == "desktop" {
             "desktop app"
         } else {
@@ -209,7 +214,7 @@ fn stage_plan() -> StagePlan {
             connected(),
             Tone::Plain,
         ));
-        elements.push(beam(link, id, "service", bend, Tone::Success));
+        elements.push(beam(link, id, "service", Tone::Success));
     }
     elements.extend([
         packet("probe", false, "GET /api/info", Tone::Request),
@@ -219,8 +224,9 @@ fn stage_plan() -> StagePlan {
         packet("reply-2", true, "404", Tone::Warning),
         label(
             "thought-before",
-            [CLIENT[0], 560.0, CLIENT[2]],
+            [NOTE_X, 560.0, CLIENT[2]],
             21.0,
+            CaptionAlign::Left,
             &[
                 ("404", Tone::Error),
                 (" → outdated → ", Tone::Plain),
@@ -229,8 +235,9 @@ fn stage_plan() -> StagePlan {
         ),
         label(
             "thought-after",
-            [CLIENT[0], 560.0, CLIENT[2]],
+            [NOTE_X, 560.0, CLIENT[2]],
             21.0,
+            CaptionAlign::Left,
             &[
                 ("version ok", Tone::Success),
                 (" → ", Tone::Plain),
@@ -239,19 +246,20 @@ fn stage_plan() -> StagePlan {
         ),
         label(
             "message",
-            [CLIENT[0], 604.0, CLIENT[2]],
+            [NOTE_X, 604.0, CLIENT[2]],
             19.0,
+            CaptionAlign::Left,
             &[
                 ("error: ", Tone::Warning),
                 ("update this client, or restart explicitly", Tone::Plain),
             ],
         ),
         ring("shock", 160.0, 3.0, Tone::Error),
-        ring("safe", 205.0, 2.5, Tone::Success),
+        ring("safe", 182.0, 2.5, Tone::Success),
     ]);
     StagePlan {
         post: StagePost {
-            bloom: 0.45,
+            bloom: 0.35,
             grain: 0.035,
             vignette: 0.42,
             backdrop: 0.4,
@@ -389,7 +397,7 @@ fn stage_film(narration: &Narration) -> Result<ScenePlan> {
     s.set(sc, "shock.opacity", 0.0, kill_arrival, 1.0);
     s.set(sc, "shock.expand", 0.0, kill_arrival, 0.0);
     s.to(sc, "shock.expand", 0.0, kill_arrival, 1.0, 1.0);
-    s.hit(sc, "post.chroma", kill_arrival, 2.0, 0.0);
+    s.hit(sc, "post.chroma", kill_arrival, 1.5, 0.0);
     s.hit(sc, "camera.shake", kill_arrival, 14.0, 0.0);
     s.hit(sc, "post.bloom", kill_arrival, 1.4, 0.45);
     s.to(sc, "camera.focus", 0.0, kill_arrival, 0.0, 0.8);
@@ -410,7 +418,7 @@ fn stage_film(narration: &Narration) -> Result<ScenePlan> {
         0.3,
     );
     s.to(sc, "link.break", 0.0, kill_arrival + ns(0.15), 1.0, 0.9);
-    for (index, (card, link, _, _)) in OTHERS.iter().enumerate() {
+    for (index, (card, link, _)) in OTHERS.iter().enumerate() {
         let at = kill_arrival + ns(0.3 + index as f64 * 0.14);
         s.to(sc, &format!("{link}.flow"), 0.0, kill_arrival, 0.0, 0.25);
         s.to(sc, &format!("{link}.break"), 0.0, at, 1.0, 0.9);
@@ -472,7 +480,7 @@ fn stage_film(narration: &Narration) -> Result<ScenePlan> {
     );
     s.to(sc, "client.status", 0.0, switch + ns(0.6), 1.0, 0.3);
     s.to(sc, "link.break", 0.0, switch + ns(0.5), 0.0, 0.9);
-    for (index, (card, link, _, _)) in OTHERS.iter().enumerate() {
+    for (index, (card, link, _)) in OTHERS.iter().enumerate() {
         let at = switch + ns(0.35 + index as f64 * 0.1);
         s.to(sc, &format!("{link}.break"), 0.0, at, 0.0, 0.9);
         s.to(sc, &format!("{link}.flow"), 0.0, at + ns(1.0), 1.0, 0.6);
@@ -515,7 +523,7 @@ fn stage_film(narration: &Narration) -> Result<ScenePlan> {
     s.hit(sc, "service.pulse", safe + ns(0.2), 1.4, 0.0);
     s.set(sc, "safe.opacity", 0.0, safe, 1.0);
     s.to(sc, "safe.sweep", 0.0, safe, 1.0, 1.3);
-    for (_, link, _, _) in OTHERS {
+    for (_, link, _) in OTHERS {
         s.to(sc, &format!("{link}.flow"), 0.0, safe, 1.4, 0.8);
     }
     sc.media(sound(

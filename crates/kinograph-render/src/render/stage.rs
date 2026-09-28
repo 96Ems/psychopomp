@@ -3,12 +3,19 @@
 //! into an HDR target, blooms the bright light, and composites with highlight
 //! rolloff, chroma, vignette, and grain (stage.wgsl, stage_post.wgsl).
 use std::collections::HashMap;
-use std::f32::consts::TAU;
+use std::f32::consts::{FRAC_PI_2, TAU};
 
 use super::*;
 use kinograph::{
-    caption::CaptionAlign,
-    stage::{Camera, StageElement, StagePlan, beam_point, fibonacci_sphere, shatter_offset},
+    caption::{CaptionAlign, CaptionSpanPlan},
+    math::{
+        Quat, Vec2, Vec3,
+        curve::Polyline,
+        lerp, remap_clamp,
+        shapes::{Shape, connect},
+        vec2, vec3,
+    },
+    stage::{Camera, OrbPoint, StageElement, StagePlan, StatusText, orb_points, shatter_offset},
     tone::Tone,
 };
 
@@ -68,9 +75,6 @@ struct PostPass {
     target: Option<usize>,
 }
 
-/// Unit-sphere points and per-point seeds for one orb.
-type OrbPoints = Vec<([f32; 3], [f32; 3])>;
-
 pub(crate) struct StageGpu {
     primitives: wgpu::RenderPipeline,
     primitive_binding: wgpu::BindGroup,
@@ -84,7 +88,7 @@ pub(crate) struct StageGpu {
     composite: wgpu::RenderPipeline,
     passes: Vec<PostPass>,
     texts: HashMap<String, AtlasText>,
-    orbs: HashMap<String, OrbPoints>,
+    orbs: HashMap<String, Vec<OrbPoint>>,
 }
 
 /// A shader source: the file under `KINOGRAPH_SHADER_DIR` when set (live
@@ -427,9 +431,7 @@ impl HeadlessRenderer {
             .elements
             .iter()
             .filter_map(|element| match element {
-                StageElement::Orb { id, points, .. } => {
-                    Some((id.clone(), fibonacci_sphere(*points)))
-                }
+                StageElement::Orb { id, points, .. } => Some((id.clone(), orb_points(*points))),
                 _ => None,
             })
             .collect();
@@ -587,614 +589,62 @@ impl HeadlessRenderer {
         time: f64,
         value: impl Fn(&str, f32) -> f32,
     ) -> Result<Vec<u8>> {
-        let palette = self.theme.palette();
-        let lin = |rgb: [u8; 3]| super::theme::linear(rgb);
-        let background = lin(palette.background);
-        let mut frame = StageFrame {
-            prims: Vec::new(),
-            points: Vec::new(),
-            width: self.spec.width as f32,
-            height: self.spec.height as f32,
-            shade: [0.0; 3],
+        let look = Look::new(self.theme);
+        let size = vec2(self.spec.width as f32, self.spec.height as f32);
+        let scene = Scene::sample(plan, &value, time as f32, size);
+        let mut painter = Painter {
+            scene: &scene,
+            look,
+            orbs: &gpu.orbs,
+            frame: StageFrame::new(&gpu.texts, look.background),
         };
-        let t = time as f32;
-
-        // Backdrop: a faint neutral light behind the scene. Warmth comes from
-        // the bloom of what is actually lit.
-        let backdrop = plan.post.backdrop;
-        let lift = mix3(background, lin(palette.raised), backdrop);
-        frame.shade = background;
-        frame.prims.push(Prim {
-            bbox: [0.0, 0.0, frame.width, frame.height],
-            a: [
-                5.0,
-                frame.width * 0.5,
-                frame.height * 0.44,
-                frame.width * 0.72,
-            ],
-            fill: rgba(lift, 1.0),
-            stroke: rgba(background, 1.0),
-            ..Default::default()
-        });
-
-        let shake = value("camera.shake", 0.0);
-        let camera = Camera {
-            x: value("camera.x", 0.0)
-                + shake * ((t * 47.0).sin() * 0.6 + (t * 83.0 + 1.3).sin() * 0.4),
-            y: value("camera.y", 0.0)
-                + shake * ((t * 53.0 + 0.7).sin() * 0.6 + (t * 71.0 + 2.1).sin() * 0.4),
-            z: value("camera.z", 0.0),
-            width: frame.width,
-            height: frame.height,
-        };
-        let focus = value("camera.focus", 0.0);
-        let dof = value("camera.dof", 0.0).max(0.0);
-        let blur_at = |z: f32| (dof * (z - focus).abs() / 100.0).min(24.0);
-
-        // World position of positioned elements, including their offsets.
-        let world = |element: &StageElement| -> Option<[f32; 3]> {
-            let at = element.anchor()?;
-            let id = element.id();
-            Some([
-                at[0] + value(&format!("{id}.x"), 0.0),
-                at[1] + value(&format!("{id}.y"), 0.0),
-                at[2] + value(&format!("{id}.z"), 0.0),
-            ])
-        };
-
-        let mut layers: Vec<(f32, usize, usize, usize)> = Vec::new();
+        painter.backdrop(plan.post.backdrop);
         for (order, element) in plan.elements.iter().enumerate() {
-            let id = element.id();
-            let v = |property: &str, default: f32| value(&format!("{id}.{property}"), default);
-            let first = frame.prims.len();
-            let depth = match element {
-                StageElement::Card {
-                    size, status, tone, ..
-                } => {
-                    let position = world(element).expect("card has a position");
-                    let opacity = v("opacity", 1.0).clamp(0.0, 1.0);
-                    let Some((center, scale)) = camera.project(position) else {
-                        continue;
-                    };
-                    if opacity > 0.001 {
-                        let scale = scale * v("scale", 1.0).max(0.01);
-                        let blur = blur_at(position[2]);
-                        let glow = v("glow", 0.0).clamp(0.0, 1.5);
-                        let flash = v("flash", 0.0).clamp(0.0, 1.5);
-                        let alarm = v("alarm", 0.0).clamp(0.0, 1.5);
-                        let dim = v("dim", 0.0).clamp(0.0, 1.0);
-                        let tone_rgb = lin(self.theme.tone(*tone));
-                        let red = lin(self.theme.tone(Tone::Error));
-                        let surface = lin(palette.surface);
-                        let border = mix3(lin(palette.raised), lin(palette.muted), 0.35);
-                        let half = [size[0] * 0.5 * scale, size[1] * 0.5 * scale];
-                        let glow_radius = 26.0 * scale;
-                        let pad = glow_radius * 4.0 + blur + 2.0;
-                        // Alarm is a red flash, independent of the card's own tone.
-                        let accent_rgb =
-                            mix3(tone_rgb, red, (alarm / (flash + alarm).max(1e-3)).min(1.0));
-                        let lit = (flash + alarm).min(1.5);
-                        frame.prims.push(Prim {
-                            bbox: [
-                                center[0] - half[0] - pad,
-                                center[1] - half[1] - pad,
-                                center[0] + half[0] + pad,
-                                center[1] + half[1] + pad,
-                            ],
-                            a: [0.0, center[0], center[1], 14.0 * scale],
-                            b: [half[0], half[1], 1.5 * scale.max(0.5), blur],
-                            fill: rgba(
-                                mix3(surface, accent_rgb, 0.22 * lit),
-                                0.97 * opacity * (1.0 - 0.45 * dim),
-                            ),
-                            stroke: rgba(
-                                mix3(
-                                    border,
-                                    if lit > glow { accent_rgb } else { tone_rgb },
-                                    (glow + lit).min(1.0),
-                                ),
-                                opacity * (1.0 - 0.5 * dim),
-                            ),
-                            glow: glow4(
-                                add3(
-                                    scale3(tone_rgb, glow * 1.3 * opacity * (1.0 - alarm.min(1.0))),
-                                    scale3(accent_rgb, lit * 0.9 * opacity),
-                                ),
-                                glow_radius,
-                            ),
-                            ..Default::default()
-                        });
-                        // A faint inner rim catches light along the edge, like glass.
-                        let rim = [half[0] - 1.5 * scale, half[1] - 1.5 * scale];
-                        frame.prims.push(Prim {
-                            bbox: [
-                                center[0] - half[0],
-                                center[1] - half[1],
-                                center[0] + half[0],
-                                center[1] + half[1],
-                            ],
-                            a: [0.0, center[0], center[1], 12.5 * scale],
-                            b: [rim[0], rim[1], 1.0, blur],
-                            stroke: rgba([1.0, 1.0, 1.0], 0.045 * opacity * (1.0 - dim)),
-                            ..Default::default()
-                        });
-                        let text_alpha = opacity * (1.0 - 0.55 * dim);
-                        let has_status = !status.is_empty();
-                        let title_y = center[1] - if has_status { 13.0 * scale } else { 0.0 };
-                        frame.text(
-                            gpu,
-                            &text_key(id, "title"),
-                            26.0,
-                            [center[0], title_y],
-                            scale,
-                            CaptionAlign::Center,
-                            rgba(lin(palette.text), text_alpha),
-                            f32::MAX,
-                            blur,
-                        );
-                        if has_status {
-                            let index = v("status", 0.0).clamp(0.0, (status.len() - 1) as f32);
-                            let low = index.floor() as usize;
-                            let blend = index - low as f32;
-                            for (entry_index, weight) in
-                                [(low, 1.0 - blend), ((low + 1).min(status.len() - 1), blend)]
-                            {
-                                if weight <= 0.001 {
-                                    continue;
-                                }
-                                let entry = &status[entry_index];
-                                let color = if entry.tone == Tone::Plain {
-                                    lin(palette.muted)
-                                } else {
-                                    lin(self.theme.tone(entry.tone))
-                                };
-                                frame.text(
-                                    gpu,
-                                    &text_key(id, &format!("status{entry_index}")),
-                                    18.0,
-                                    [center[0], center[1] + 19.0 * scale],
-                                    scale,
-                                    CaptionAlign::Center,
-                                    rgba(color, text_alpha * weight),
-                                    f32::MAX,
-                                    blur,
-                                );
-                            }
-                        }
-                    }
-                    position[2]
-                }
-                StageElement::Orb { radius, tone, .. } => {
-                    let position = world(element).expect("orb has a position");
-                    let opacity = v("opacity", 1.0).clamp(0.0, 1.0);
-                    if opacity > 0.001 {
-                        let scale_value = v("scale", 1.0).max(0.01);
-                        let shatter = v("shatter", 0.0).clamp(0.0, 1.0);
-                        let pulse = v("pulse", 0.0);
-                        let hurt = v("hurt", 0.0).clamp(0.0, 1.0);
-                        let spin = v("spin", 1.0);
-                        let tone_rgb = lin(self.theme.tone(*tone));
-                        let red = lin(self.theme.tone(Tone::Error));
-                        let breathe = 1.0 + 0.015 * (t * 2.1).sin() + 0.08 * pulse;
-                        let yaw = t * 0.35 * spin;
-                        let (cy, sy) = (yaw.cos(), yaw.sin());
-                        let (cp, sp) = (0.42_f32.cos(), 0.42_f32.sin());
-                        let blur = blur_at(position[2]);
-                        // Core light, fading as the orb breaks apart.
-                        if let Some((center, scale)) = camera.project(position) {
-                            let r = radius * scale * scale_value;
-                            let core = (0.2 + 0.45 * pulse.max(0.0)) * (1.0 - shatter) * opacity;
-                            frame.prims.push(Prim {
-                                bbox: [
-                                    center[0] - r * 2.4,
-                                    center[1] - r * 2.4,
-                                    center[0] + r * 2.4,
-                                    center[1] + r * 2.4,
-                                ],
-                                a: [1.0, center[0], center[1], 0.0],
-                                glow: glow4(scale3(mix3(tone_rgb, red, hurt), core), r * 0.42),
-                                ..Default::default()
-                            });
-                        }
-                        let mut dots = gpu.orbs[id]
-                            .iter()
-                            .map(|&(unit, seed)| {
-                                let x1 = unit[0] * cy + unit[2] * sy;
-                                let z1 = -unit[0] * sy + unit[2] * cy;
-                                let rotated = [x1, unit[1] * cp - z1 * sp, unit[1] * sp + z1 * cp];
-                                let near = (1.0 - rotated[2]) * 0.5;
-                                let offset = shatter_offset(
-                                    rotated,
-                                    seed,
-                                    radius * breathe * scale_value,
-                                    shatter,
-                                );
-                                (
-                                    [
-                                        position[0] + offset[0],
-                                        position[1] + offset[1],
-                                        position[2] + offset[2],
-                                    ],
-                                    near,
-                                    seed,
-                                )
-                            })
-                            .collect::<Vec<_>>();
-                        dots.sort_by(|a, b| b.0[2].total_cmp(&a.0[2]));
-                        let fade = (1.0 - shatter).powf(0.7);
-                        for (point, near, seed) in dots {
-                            let Some((p, scale)) = camera.project(point) else {
-                                continue;
-                            };
-                            let alpha = (0.2 + 0.8 * near) * opacity * fade;
-                            if alpha < 0.01 {
-                                continue;
-                            }
-                            let r = (1.3 + 2.1 * near) * scale * (1.0 + 0.5 * shatter * seed[2]);
-                            let white = [1.0, 1.0, 1.0];
-                            let color = mix3(
-                                mix3(tone_rgb, white, 0.16 * near),
-                                red,
-                                (shatter * 2.4 + hurt * 0.8).min(1.0),
-                            );
-                            let emissive = scale3(color, 0.8 + 0.45 * near);
-                            let glow_radius = 4.0 * scale;
-                            let pad = r + glow_radius * 4.0 + blur + 1.0;
-                            frame.prims.push(Prim {
-                                bbox: [p[0] - pad, p[1] - pad, p[0] + pad, p[1] + pad],
-                                a: [1.0, p[0], p[1], r],
-                                b: [0.0, 0.0, 0.0, blur],
-                                fill: rgba(emissive, alpha),
-                                glow: glow4(scale3(color, 0.35 * alpha), glow_radius),
-                                ..Default::default()
-                            });
-                        }
-                    }
-                    position[2]
-                }
-                StageElement::Beam {
-                    from,
-                    to,
-                    bend,
-                    tone,
-                    ..
-                } => {
-                    let ends = plan
-                        .element(from)
-                        .and_then(&world)
-                        .zip(plan.element(to).and_then(&world));
-                    let opacity = v("opacity", 1.0).clamp(0.0, 1.0);
-                    let Some((a, b)) = ends else { continue };
-                    let depth = (a[2] + b[2]) * 0.5 + 1.0;
-                    if opacity > 0.001 {
-                        let draw = v("draw", 1.0).clamp(0.0, 1.0);
-                        let broken = v("break", 0.0).clamp(0.0, 1.0);
-                        let flow = v("flow", 0.0).clamp(0.0, 1.5);
-                        let emphasis = v("emphasis", 0.0).clamp(0.0, 1.0);
-                        let tone_rgb = lin(self.theme.tone(*tone));
-                        let red = lin(self.theme.tone(Tone::Error));
-                        let samples = (0..=BEAM_SAMPLES)
-                            .filter_map(|i| {
-                                camera.project(beam_point(
-                                    a,
-                                    b,
-                                    *bend,
-                                    i as f32 / BEAM_SAMPLES as f32,
-                                ))
-                            })
-                            .collect::<Vec<_>>();
-                        if samples.len() >= 2 {
-                            let scale =
-                                samples.iter().map(|(_, s)| s).sum::<f32>() / samples.len() as f32;
-                            let screen = samples.iter().map(|(p, _)| *p).collect::<Vec<_>>();
-                            let base = mix3(
-                                scale3(lin(palette.muted), 0.7),
-                                tone_rgb,
-                                0.35 + 0.65 * emphasis,
-                            );
-                            let color = mix3(base, red, (broken * 3.0).min(1.0));
-                            let alpha = 0.7 * opacity * (1.0 - 0.65 * broken);
-                            let glow = glow4(
-                                scale3(color, 0.22 * (0.4 + emphasis) * opacity),
-                                9.0 * scale,
-                            );
-                            let blur = blur_at(depth);
-                            if broken <= 0.001 {
-                                frame.polyline(
-                                    &screen,
-                                    draw,
-                                    2.2 * scale,
-                                    rgba(color, alpha),
-                                    glow,
-                                    blur,
-                                    [0.0; 4],
-                                );
-                            } else {
-                                // Snap in the middle; both halves recoil all the way to their ends.
-                                let keep = 0.5 * (1.0 - broken).powf(1.5);
-                                frame.polyline(
-                                    &screen,
-                                    keep,
-                                    2.2 * scale,
-                                    rgba(color, alpha),
-                                    glow,
-                                    blur,
-                                    [0.0; 4],
-                                );
-                                let reversed = screen.iter().rev().copied().collect::<Vec<_>>();
-                                frame.polyline(
-                                    &reversed,
-                                    keep,
-                                    2.2 * scale,
-                                    rgba(color, alpha),
-                                    glow,
-                                    blur,
-                                    [0.0; 4],
-                                );
-                            }
-                            if flow > 0.001 && broken <= 0.001 && draw > 0.98 {
-                                let bright = scale3(tone_rgb, 1.9);
-                                frame.polyline(
-                                    &screen,
-                                    1.0,
-                                    3.0 * scale,
-                                    rgba(bright, (flow * opacity).min(1.0)),
-                                    glow4(scale3(tone_rgb, 0.9 * flow * opacity), 10.0 * scale),
-                                    blur,
-                                    [6.0 * scale, 38.0 * scale, -t * 160.0 * scale, 0.0],
-                                );
-                            }
-                        }
-                    }
-                    depth
-                }
-                StageElement::Packet {
-                    beam,
-                    reverse,
-                    label,
-                    tone,
-                    ..
-                } => {
-                    let Some(StageElement::Beam { from, to, bend, .. }) = plan.element(beam) else {
-                        continue;
-                    };
-                    let ends = plan
-                        .element(from)
-                        .and_then(&world)
-                        .zip(plan.element(to).and_then(&world));
-                    let Some((a, b)) = ends else { continue };
-                    let opacity = v("opacity", 0.0).clamp(0.0, 1.0);
-                    let travel = v("travel", 0.0).clamp(0.0, 1.0);
-                    let impact = v("impact", 0.0).clamp(0.0, 1.0);
-                    let tone_rgb = lin(self.theme.tone(*tone));
-                    let at = |u: f32| beam_point(a, b, *bend, if *reverse { 1.0 - u } else { u });
-                    let head = at(travel);
-                    if opacity > 0.001 {
-                        // Comet trail: the last stretch of path, brightest at the head.
-                        let tail = (travel - 0.2).max(0.0);
-                        let trail = (0..=14)
-                            .filter_map(|i| {
-                                camera.project(at(tail + (travel - tail) * i as f32 / 14.0))
-                            })
-                            .map(|(p, _)| p)
-                            .collect::<Vec<_>>();
-                        if let Some((p, scale)) = camera.project(head) {
-                            if trail.len() >= 2 && travel > tail {
-                                frame.polyline(
-                                    &trail,
-                                    1.0,
-                                    3.4 * scale,
-                                    rgba(scale3(tone_rgb, 1.7), 0.9 * opacity),
-                                    glow4(scale3(tone_rgb, 0.6 * opacity), 10.0 * scale),
-                                    0.0,
-                                    [0.0, 0.0, 0.0, 1.0],
-                                );
-                            }
-                            let r = 5.5 * scale;
-                            let glow_radius = 16.0 * scale;
-                            let pad = r + glow_radius * 4.0;
-                            frame.prims.push(Prim {
-                                bbox: [p[0] - pad, p[1] - pad, p[0] + pad, p[1] + pad],
-                                a: [1.0, p[0], p[1], r],
-                                fill: rgba(scale3(mix3(tone_rgb, [1.0; 3], 0.45), 2.2), opacity),
-                                glow: glow4(scale3(tone_rgb, 1.3 * opacity), glow_radius),
-                                ..Default::default()
-                            });
-                            if !label.is_empty() {
-                                let label_alpha = opacity * (travel * 8.0).min(1.0);
-                                let color = if *tone == Tone::Plain {
-                                    lin(palette.text)
-                                } else {
-                                    tone_rgb
-                                };
-                                frame.text(
-                                    gpu,
-                                    &text_key(id, "label"),
-                                    19.0,
-                                    [p[0], p[1] - 28.0 * scale],
-                                    scale,
-                                    CaptionAlign::Center,
-                                    rgba(color, label_alpha),
-                                    f32::MAX,
-                                    0.0,
-                                );
-                            }
-                        }
-                    }
-                    if impact > 0.001
-                        && impact < 0.999
-                        && let Some((p, scale)) = camera.project(at(1.0))
-                    {
-                        let r = (10.0 + 90.0 * impact) * scale;
-                        let fade = (1.0 - impact).powf(1.5);
-                        let pad = r + 60.0 * scale;
-                        frame.prims.push(Prim {
-                            bbox: [p[0] - pad, p[1] - pad, p[0] + pad, p[1] + pad],
-                            a: [2.0, p[0], p[1], r],
-                            b: [(1.0 + 3.0 * (1.0 - impact)) * scale, 0.0, TAU, 0.0],
-                            stroke: rgba(scale3(tone_rgb, 1.6), fade),
-                            glow: glow4(scale3(tone_rgb, 0.8 * fade), 12.0 * scale),
-                            ..Default::default()
-                        });
-                    }
-                    head[2] - 2.0
-                }
-                StageElement::Label {
-                    size, align, spans, ..
-                } => {
-                    let position = world(element).expect("label has a position");
-                    let opacity = v("opacity", 1.0).clamp(0.0, 1.0);
-                    if opacity > 0.001
-                        && let Some((anchor, scale)) = camera.project(position)
-                    {
-                        let scale = scale * v("scale", 1.0).max(0.01);
-                        let typed = v("typed", 1.0).clamp(0.0, 1.0);
-                        let blur = blur_at(position[2]);
-                        let parts = spans
-                            .iter()
-                            .enumerate()
-                            .filter(|(_, span)| !span.text.is_empty())
-                            .map(|(index, span)| (text_key(id, &format!("span{index}")), span))
-                            .collect::<Vec<_>>();
-                        let widths = parts
-                            .iter()
-                            .map(|(key, _)| {
-                                gpu.texts.get(key).map_or(0.0, |text| {
-                                    (text.rect[2] - 4.0).max(0.0) / TEXT_RASTER * scale
-                                })
-                            })
-                            .collect::<Vec<_>>();
-                        let total: f32 = widths.iter().sum();
-                        let chars: usize = parts
-                            .iter()
-                            .map(|(_, span)| span.text.chars().count())
-                            .sum();
-                        let mut remaining = if typed >= 1.0 {
-                            usize::MAX
-                        } else {
-                            (typed * chars as f32 + 1e-3).floor() as usize
-                        };
-                        let mut x = match align {
-                            CaptionAlign::Left => anchor[0],
-                            CaptionAlign::Center => anchor[0] - total * 0.5,
-                            CaptionAlign::Right => anchor[0] - total,
-                        };
-                        for ((key, span), width) in parts.iter().zip(&widths) {
-                            let count = span.text.chars().count();
-                            let shown = remaining.min(count);
-                            let color = if span.tone == Tone::Plain {
-                                lin(palette.text)
-                            } else {
-                                lin(self.theme.tone(span.tone))
-                            };
-                            if shown > 0 {
-                                let reveal = if shown == count {
-                                    f32::MAX
-                                } else {
-                                    width * shown as f32 / count as f32
-                                };
-                                frame.text(
-                                    gpu,
-                                    key,
-                                    *size,
-                                    [x, anchor[1]],
-                                    scale,
-                                    CaptionAlign::Left,
-                                    rgba(color, opacity),
-                                    reveal,
-                                    blur,
-                                );
-                            }
-                            remaining -= shown;
-                            x += width;
-                        }
-                    }
-                    position[2] - 0.5
-                }
-                StageElement::Ring {
-                    radius,
-                    thickness,
-                    tone,
-                    ..
-                } => {
-                    let position = world(element).expect("ring has a position");
-                    let opacity = v("opacity", 1.0).clamp(0.0, 1.0);
-                    let expand = v("expand", 0.0).clamp(0.0, 1.0);
-                    let alpha = opacity * (1.0 - expand);
-                    if alpha > 0.001
-                        && let Some((center, scale)) = camera.project(position)
-                    {
-                        let scale = scale * v("scale", 1.0).max(0.01);
-                        let sweep = v("sweep", 1.0).clamp(0.0, 1.0);
-                        let tone_rgb = lin(self.theme.tone(*tone));
-                        let r = radius * (1.0 + 1.3 * expand) * scale;
-                        let pad = r + thickness * scale + 60.0 * scale;
-                        frame.prims.push(Prim {
-                            bbox: [
-                                center[0] - pad,
-                                center[1] - pad,
-                                center[0] + pad,
-                                center[1] + pad,
-                            ],
-                            a: [2.0, center[0], center[1], r],
-                            b: [
-                                thickness * scale,
-                                -std::f32::consts::FRAC_PI_2,
-                                TAU * sweep,
-                                blur_at(position[2]),
-                            ],
-                            stroke: rgba(tone_rgb, alpha),
-                            glow: glow4(scale3(tone_rgb, 0.45 * alpha), 10.0 * scale),
-                            ..Default::default()
-                        });
-                    }
-                    position[2]
-                }
-            };
-            layers.push((depth, order, first, frame.prims.len()));
+            painter.element(order, element);
         }
-
-        // Far elements first; the backdrop stays at the bottom.
-        layers.sort_by(|a, b| b.0.total_cmp(&a.0).then(a.1.cmp(&b.1)));
-        let mut prims = Vec::with_capacity(frame.prims.len());
-        prims.push(frame.prims[0]);
-        for (_, _, first, last) in &layers {
-            prims.extend_from_slice(&frame.prims[*first..*last]);
-        }
-        if prims.len() > MAX_PRIMS || frame.points.len() > MAX_POINTS {
-            bail!(
-                "stage frame needs {} primitives and {} points; limits are {MAX_PRIMS} and {MAX_POINTS}",
-                prims.len(),
-                frame.points.len()
-            );
-        }
-        self.queue
-            .write_buffer(&gpu.prims, 0, bytemuck::cast_slice(&prims));
-        if !frame.points.is_empty() {
-            self.queue
-                .write_buffer(&gpu.points, 0, bytemuck::cast_slice(&frame.points));
-        }
-
-        let bloom = value("post.bloom", plan.post.bloom).max(0.0);
-        let look = [
+        let (prims, points) = painter.frame.finish()?;
+        let params = [
+            value("post.bloom", plan.post.bloom).max(0.0),
+            0.95,
+            0.25,
+            value("post.exposure", 1.0).max(0.0),
+        ];
+        let post = [
             value("post.chroma", 0.0).max(0.0),
             value("post.vignette", plan.post.vignette).clamp(0.0, 1.0),
             plan.post.grain,
             ((time * 60.0).floor() % 997.0) as f32,
         ];
-        let exposure = value("post.exposure", 1.0).max(0.0);
+        self.draw_stage(gpu, &prims, &points, [params, post], look.background)
+    }
+
+    /// Draw the primitives into the HDR target, bloom, and composite into the
+    /// frame. `post` is the bloom parameters and the composite look.
+    fn draw_stage(
+        &mut self,
+        gpu: &StageGpu,
+        prims: &[Prim],
+        points: &[[f32; 4]],
+        post: [[f32; 4]; 2],
+        clear: Vec3,
+    ) -> Result<Vec<u8>> {
+        self.queue
+            .write_buffer(&gpu.prims, 0, bytemuck::cast_slice(prims));
+        if !points.is_empty() {
+            self.queue
+                .write_buffer(&gpu.points, 0, bytemuck::cast_slice(points));
+        }
         for pass in &gpu.passes {
             self.queue.write_buffer(
                 &pass.uniform,
                 0,
                 bytemuck::bytes_of(&PostUniform {
                     texel: [pass.texel[0], pass.texel[1], 0.0, 0.0],
-                    params: [bloom, 0.95, 0.25, exposure],
-                    look,
+                    params: post[0],
+                    look: post[1],
                 }),
             );
         }
-
         let mut encoder = self
             .device
             .create_command_encoder(&wgpu::CommandEncoderDescriptor {
@@ -1209,9 +659,9 @@ impl HeadlessRenderer {
                     resolve_target: None,
                     ops: wgpu::Operations {
                         load: wgpu::LoadOp::Clear(wgpu::Color {
-                            r: f64::from(background[0]),
-                            g: f64::from(background[1]),
-                            b: f64::from(background[2]),
+                            r: f64::from(clear.x),
+                            g: f64::from(clear.y),
+                            b: f64::from(clear.z),
                             a: 1.0,
                         }),
                         store: wgpu::StoreOp::Store,
@@ -1262,110 +712,871 @@ impl HeadlessRenderer {
     }
 }
 
-struct StageFrame {
-    prims: Vec<Prim>,
-    points: Vec<[f32; 4]>,
-    width: f32,
-    height: f32,
-    /// Background color for the soft backing behind text.
-    shade: [f32; 3],
+/// The theme's colors in linear light.
+#[derive(Clone, Copy)]
+struct Look {
+    theme: Theme,
+    background: Vec3,
+    surface: Vec3,
+    raised: Vec3,
+    text: Vec3,
+    muted: Vec3,
 }
 
-impl StageFrame {
-    /// A polyline through `screen`, drawn to `fraction` of its length.
-    /// `style` is dash, gap, phase, fade.
-    #[allow(clippy::too_many_arguments)]
-    fn polyline(
+impl Look {
+    fn new(theme: Theme) -> Self {
+        let palette = theme.palette();
+        Self {
+            theme,
+            background: linear3(palette.background),
+            surface: linear3(palette.surface),
+            raised: linear3(palette.raised),
+            text: linear3(palette.text),
+            muted: linear3(palette.muted),
+        }
+    }
+
+    fn tone(&self, tone: Tone) -> Vec3 {
+        linear3(self.theme.tone(tone))
+    }
+}
+
+fn linear3(rgb: [u8; 3]) -> Vec3 {
+    Vec3::from(super::theme::linear(rgb))
+}
+
+/// Where a positioned element sits this sample.
+#[derive(Clone, Copy)]
+struct Placement {
+    world: Vec3,
+    /// Projected center on screen.
+    center: Vec2,
+    /// Perspective times the element's own scale (and an orb's breath).
+    scale: f32,
+    /// The on-screen outline beams attach to.
+    outline: Shape,
+}
+
+/// A beam's path on screen and what sits at its ends.
+struct Link {
+    path: Polyline,
+    /// World depth and on-screen scale at the `from` and `to` ends.
+    depth: [f32; 2],
+    scale: [f32; 2],
+    /// Ends that plug into a card side and show a socket there.
+    socket: [bool; 2],
+}
+
+impl Link {
+    fn far(&self) -> f32 {
+        self.depth[0].max(self.depth[1])
+    }
+
+    fn near(&self) -> f32 {
+        self.depth[0].min(self.depth[1])
+    }
+
+    fn scale_at(&self, fraction: f32) -> f32 {
+        lerp(self.scale[0], self.scale[1], fraction)
+    }
+}
+
+/// Channel values, camera, placements, and beam paths of one sample.
+struct Scene<'a> {
+    plan: &'a StagePlan,
+    value: &'a dyn Fn(&str, f32) -> f32,
+    time: f32,
+    camera: Camera,
+    focus: f32,
+    dof: f32,
+    placements: HashMap<&'a str, Placement>,
+    links: HashMap<&'a str, Link>,
+}
+
+impl<'a> Scene<'a> {
+    fn sample(
+        plan: &'a StagePlan,
+        value: &'a dyn Fn(&str, f32) -> f32,
+        time: f32,
+        size: Vec2,
+    ) -> Self {
+        let wobble = vec2(
+            (time * 47.0).sin() * 0.6 + (time * 83.0 + 1.3).sin() * 0.4,
+            (time * 53.0 + 0.7).sin() * 0.6 + (time * 71.0 + 2.1).sin() * 0.4,
+        );
+        let position = vec3(
+            value("camera.x", 0.0),
+            value("camera.y", 0.0),
+            value("camera.z", 0.0),
+        );
+        let mut scene = Self {
+            plan,
+            value,
+            time,
+            camera: Camera {
+                position: position + (wobble * value("camera.shake", 0.0)).extend(0.0),
+                size,
+            },
+            focus: value("camera.focus", 0.0),
+            dof: value("camera.dof", 0.0).max(0.0),
+            placements: HashMap::new(),
+            links: HashMap::new(),
+        };
+        scene.placements = plan
+            .elements
+            .iter()
+            .filter_map(|element| Some((element.id(), scene.place(element)?)))
+            .collect();
+        scene.links = plan
+            .elements
+            .iter()
+            .filter_map(|element| match element {
+                StageElement::Beam {
+                    id, from, to, bend, ..
+                } => Some((id.as_str(), scene.link(from, to, *bend)?)),
+                _ => None,
+            })
+            .collect();
+        scene
+    }
+
+    fn v(&self, id: &str, property: &str, default: f32) -> f32 {
+        (self.value)(&format!("{id}.{property}"), default)
+    }
+
+    /// Depth-of-field blur, in pixels, of something at depth `z`.
+    fn blur_at(&self, z: f32) -> f32 {
+        (self.dof * (z - self.focus).abs() / 100.0).min(24.0)
+    }
+
+    /// An orb's slow breath, swelling with its `pulse` channel.
+    fn breath(&self, id: &str) -> f32 {
+        1.0 + 0.015 * (self.time * 2.1).sin() + 0.08 * self.v(id, "pulse", 0.0)
+    }
+
+    fn place(&self, element: &StageElement) -> Option<Placement> {
+        let id = element.id();
+        let offset = vec3(
+            self.v(id, "x", 0.0),
+            self.v(id, "y", 0.0),
+            self.v(id, "z", 0.0),
+        );
+        let world = Vec3::from(element.anchor()?) + offset;
+        let (center, perspective) = self.camera.project(world)?;
+        let breath = match element {
+            StageElement::Orb { .. } => self.breath(id),
+            _ => 1.0,
+        };
+        let scale = perspective * self.v(id, "scale", 1.0).max(0.01) * breath;
+        Some(Placement {
+            world,
+            center,
+            scale,
+            outline: element.outline(center, scale),
+        })
+    }
+
+    fn link(&self, from: &str, to: &str, bend: f32) -> Option<Link> {
+        let (a, b) = (self.placements.get(from)?, self.placements.get(to)?);
+        let curve = connect(a.outline, b.outline, bend * (a.scale + b.scale) * 0.5);
+        let card = |id: &str| matches!(self.plan.element(id), Some(StageElement::Card { .. }));
+        Some(Link {
+            path: curve.flatten(BEAM_SAMPLES),
+            depth: [a.world.z, b.world.z],
+            scale: [a.scale, b.scale],
+            socket: [card(from), card(to)],
+        })
+    }
+}
+
+/// Polyline styles: dash, gap, phase, and fade toward the start.
+const SOLID: [f32; 4] = [0.0; 4];
+const COMET: [f32; 4] = [0.0, 0.0, 0.0, 1.0];
+
+/// Draws each element of one sample into its frame.
+struct Painter<'a> {
+    scene: &'a Scene<'a>,
+    look: Look,
+    orbs: &'a HashMap<String, Vec<OrbPoint>>,
+    frame: StageFrame<'a>,
+}
+
+impl<'a> Painter<'a> {
+    /// A faint neutral light behind the scene. Warmth comes only from the bloom
+    /// of what is actually lit.
+    fn backdrop(&mut self, amount: f32) {
+        let size = self.scene.camera.size;
+        let look = self.look;
+        self.frame.prims.push(Prim {
+            bbox: [0.0, 0.0, size.x, size.y],
+            a: [5.0, size.x * 0.5, size.y * 0.44, size.x * 0.72],
+            fill: rgba(look.background.lerp(look.raised, amount), 1.0),
+            stroke: rgba(look.background, 1.0),
+            ..Default::default()
+        });
+        self.frame.close(f32::INFINITY, 0);
+    }
+
+    fn element(&mut self, order: usize, element: &StageElement) {
+        let scene = self.scene;
+        let id = element.id();
+        let place = scene.placements.get(id).copied();
+        match (element, place) {
+            (
+                StageElement::Card {
+                    size, status, tone, ..
+                },
+                Some(place),
+            ) => self.card(order, id, Vec2::from(*size), status, *tone, place),
+            (StageElement::Orb { radius, tone, .. }, Some(place)) => {
+                self.orb(order, id, *radius, *tone, place)
+            }
+            (StageElement::Label { align, spans, .. }, Some(place)) => {
+                self.label(order, id, *align, spans, place)
+            }
+            (
+                StageElement::Ring {
+                    radius,
+                    thickness,
+                    tone,
+                    ..
+                },
+                Some(place),
+            ) => self.ring(order, id, [*radius, *thickness], *tone, place),
+            (StageElement::Beam { tone, .. }, _) => {
+                if let Some(link) = scene.links.get(id) {
+                    self.beam(order, id, *tone, link);
+                }
+            }
+            (
+                StageElement::Packet {
+                    beam,
+                    reverse,
+                    tone,
+                    ..
+                },
+                _,
+            ) => {
+                if let Some(link) = scene.links.get(beam.as_str()) {
+                    self.packet(order, id, *reverse, *tone, link);
+                }
+            }
+            // A positioned element behind the camera.
+            _ => {}
+        }
+    }
+
+    fn card(
         &mut self,
-        screen: &[[f32; 2]],
-        fraction: f32,
-        width: f32,
-        stroke: [f32; 4],
-        glow: [f32; 4],
-        blur: f32,
-        style: [f32; 4],
+        order: usize,
+        id: &str,
+        size: Vec2,
+        status: &[StatusText],
+        tone: Tone,
+        place: Placement,
     ) {
-        if screen.len() < 2 || fraction <= 0.0 || stroke[3] <= 0.001 {
+        let (scene, look) = (self.scene, self.look);
+        let opacity = scene.v(id, "opacity", 1.0).clamp(0.0, 1.0);
+        if opacity <= 0.001 {
             return;
         }
-        let first = self.points.len();
-        let mut total = 0.0;
-        let mut bounds = [f32::MAX, f32::MAX, f32::MIN, f32::MIN];
-        for (index, point) in screen.iter().enumerate() {
-            if index > 0 {
-                let previous = screen[index - 1];
-                total += (point[0] - previous[0]).hypot(point[1] - previous[1]);
+        let glow = scene.v(id, "glow", 0.0).clamp(0.0, 1.5);
+        let flash = scene.v(id, "flash", 0.0).clamp(0.0, 1.5);
+        let alarm = scene.v(id, "alarm", 0.0).clamp(0.0, 1.5);
+        let dim = scene.v(id, "dim", 0.0).clamp(0.0, 1.0);
+        let blur = scene.blur_at(place.world.z);
+        let scale = place.scale;
+        let own = look.tone(tone);
+        // A flash lights the card in its own tone; an alarm lights it red.
+        let lit = (flash + alarm).min(1.5);
+        let light = own.lerp(look.tone(Tone::Error), alarm / (flash + alarm).max(1e-3));
+        let border = look.raised.lerp(look.muted, 0.35);
+        let edge = border.lerp(if lit > glow { light } else { own }, (glow + lit).min(1.0));
+        let halo = own * (glow * 0.28 * (1.0 - alarm.min(1.0))) + light * (lit * 0.45);
+        let half = size * 0.5 * scale;
+        self.frame.rounded_rect(
+            place.center,
+            half,
+            [14.0 * scale, 1.5 * scale.max(0.5)],
+            blur,
+            Paint {
+                fill: rgba(
+                    look.surface.lerp(light, 0.2 * lit),
+                    0.97 * opacity * (1.0 - 0.45 * dim),
+                ),
+                stroke: rgba(edge, opacity * (1.0 - 0.5 * dim)),
+                glow: glow4(halo * opacity, 14.0 * scale),
+            },
+        );
+        // A faint inner rim catches light along the edge, like glass.
+        self.frame.rounded_rect(
+            place.center,
+            half - 1.5 * scale,
+            [12.5 * scale, 1.0],
+            blur,
+            Paint {
+                stroke: rgba(Vec3::ONE, 0.045 * opacity * (1.0 - dim)),
+                ..Default::default()
+            },
+        );
+        let ink = opacity * (1.0 - 0.55 * dim);
+        let title_lift = if status.is_empty() { 0.0 } else { 13.0 * scale };
+        self.frame.text(
+            &text_key(id, "title"),
+            place.center - vec2(0.0, title_lift),
+            scale,
+            CaptionAlign::Center,
+            rgba(look.text, ink),
+            f32::MAX,
+            blur,
+        );
+        if !status.is_empty() {
+            // Statuses cross-fade by the fractional `status` channel.
+            let index = scene
+                .v(id, "status", 0.0)
+                .clamp(0.0, (status.len() - 1) as f32);
+            let low = index.floor() as usize;
+            let high = (low + 1).min(status.len() - 1);
+            for (entry, weight) in [(low, 1.0 - index.fract()), (high, index.fract())] {
+                if weight <= 0.001 {
+                    continue;
+                }
+                let color = match status[entry].tone {
+                    Tone::Plain => look.muted,
+                    tone => look.tone(tone),
+                };
+                self.frame.text(
+                    &text_key(id, &format!("status{entry}")),
+                    place.center + vec2(0.0, 19.0 * scale),
+                    scale,
+                    CaptionAlign::Center,
+                    rgba(color, ink * weight),
+                    f32::MAX,
+                    blur,
+                );
             }
-            self.points.push([point[0], point[1], total, 0.0]);
-            bounds = [
-                bounds[0].min(point[0]),
-                bounds[1].min(point[1]),
-                bounds[2].max(point[0]),
-                bounds[3].max(point[1]),
-            ];
         }
-        let pad = width + glow[3] * 4.0 + blur + 2.0;
+        self.frame.close(place.world.z, order);
+    }
+
+    fn orb(&mut self, order: usize, id: &str, radius: f32, tone: Tone, place: Placement) {
+        let (scene, look) = (self.scene, self.look);
+        let opacity = scene.v(id, "opacity", 1.0).clamp(0.0, 1.0);
+        if opacity <= 0.001 {
+            return;
+        }
+        let shatter = scene.v(id, "shatter", 0.0).clamp(0.0, 1.0);
+        let pulse = scene.v(id, "pulse", 0.0);
+        let hurt = scene.v(id, "hurt", 0.0).clamp(0.0, 1.0);
+        let spin = scene.v(id, "spin", 1.0);
+        let world_radius = radius * scene.v(id, "scale", 1.0).max(0.01) * scene.breath(id);
+        let own = look.tone(tone);
+        let red = look.tone(Tone::Error);
+        let blur = scene.blur_at(place.world.z);
+        // Core light, fading as the orb breaks apart.
+        let core = (0.16 + 0.4 * pulse.max(0.0)) * (1.0 - shatter) * opacity;
+        self.frame.circle(
+            place.center,
+            [0.0, 0.0],
+            0.0,
+            Paint {
+                glow: glow4(own.lerp(red, hurt) * core, radius * place.scale * 0.42),
+                ..Default::default()
+            },
+        );
+        let rotation =
+            Quat::from_rotation_x(0.42) * Quat::from_rotation_y(scene.time * 0.35 * spin);
+        let mut dots = self.orbs[id]
+            .iter()
+            .map(|point| {
+                let unit = rotation * point.unit;
+                let offset = shatter_offset(
+                    OrbPoint {
+                        unit,
+                        seed: point.seed,
+                    },
+                    world_radius,
+                    shatter,
+                );
+                (place.world + offset, (1.0 - unit.z) * 0.5, point.seed.z)
+            })
+            .collect::<Vec<_>>();
+        dots.sort_by(|a, b| b.0.z.total_cmp(&a.0.z));
+        let fade = (1.0 - shatter).powf(0.7);
+        for (point, near, seed) in dots {
+            let Some((center, scale)) = scene.camera.project(point) else {
+                continue;
+            };
+            let alpha = (0.2 + 0.8 * near) * opacity * fade;
+            if alpha < 0.01 {
+                continue;
+            }
+            let color = own
+                .lerp(Vec3::ONE, 0.16 * near)
+                .lerp(red, (shatter * 2.4 + hurt * 0.8).min(1.0));
+            self.frame.circle(
+                center,
+                [
+                    (1.3 + 2.1 * near) * scale * (1.0 + 0.5 * shatter * seed),
+                    0.0,
+                ],
+                blur,
+                Paint {
+                    fill: rgba(color * (0.72 + 0.4 * near), alpha),
+                    glow: glow4(color * (0.24 * alpha), 4.0 * scale),
+                    ..Default::default()
+                },
+            );
+        }
+        self.frame.close(place.world.z, order);
+    }
+
+    fn beam(&mut self, order: usize, id: &str, tone: Tone, link: &Link) {
+        let (scene, look) = (self.scene, self.look);
+        let opacity = scene.v(id, "opacity", 1.0).clamp(0.0, 1.0);
+        if opacity <= 0.001 {
+            return;
+        }
+        let draw = scene.v(id, "draw", 1.0).clamp(0.0, 1.0);
+        let broken = scene.v(id, "break", 0.0).clamp(0.0, 1.0);
+        let flow = scene.v(id, "flow", 0.0).clamp(0.0, 1.5);
+        let emphasis = scene.v(id, "emphasis", 0.0).clamp(0.0, 1.0);
+        let own = look.tone(tone);
+        let scale = link.scale_at(0.5);
+        let blur = scene.blur_at(link.far());
+        let color = (look.muted * 0.7)
+            .lerp(own, 0.35 + 0.65 * emphasis)
+            .lerp(look.tone(Tone::Error), (broken * 3.0).min(1.0));
+        let line = Paint {
+            stroke: rgba(color, 0.75 * opacity * (1.0 - 0.65 * broken)),
+            glow: glow4(color * (0.1 * (0.3 + emphasis) * opacity), 7.0 * scale),
+            ..Default::default()
+        };
+        let width = 2.0 * scale;
+        if broken <= 0.001 {
+            self.frame
+                .polyline(&link.path, draw, [width, blur], line, SOLID);
+        } else {
+            // Snapped in the middle, both halves recoil all the way to their ends.
+            let keep = 0.5 * (1.0 - broken).powf(1.5);
+            for half in [link.path.slice(0.0, keep), link.path.slice(1.0 - keep, 1.0)] {
+                self.frame.polyline(&half, 1.0, [width, blur], line, SOLID);
+            }
+        }
+        if flow > 0.001 && broken <= 0.001 && draw > 0.98 {
+            // Small beads of light travel toward the `to` end.
+            let bead = Paint {
+                stroke: rgba(own * 1.2, (flow * opacity).min(1.0)),
+                glow: glow4(own * (0.28 * flow * opacity), 6.0 * scale),
+                ..Default::default()
+            };
+            let beads = [3.0 * scale, 40.0 * scale, -scene.time * 150.0 * scale, 0.0];
+            self.frame
+                .polyline(&link.path, 1.0, [2.4 * scale, blur], bead, beads);
+        }
+        // Behind both ends, so a beam never crosses the cards it connects.
+        self.frame.close(link.far() + 1.0, order);
+        // A socket where the beam plugs into a card, in front of the card.
+        for (end, reached) in [(0, draw > 0.001), (1, draw > 0.999)] {
+            if !link.socket[end] || !reached {
+                continue;
+            }
+            self.frame.circle(
+                link.path.at(end as f32),
+                [4.4 * link.scale[end], 1.3 * link.scale[end]],
+                blur,
+                Paint {
+                    fill: rgba(color, opacity),
+                    stroke: rgba(look.background, opacity),
+                    ..Default::default()
+                },
+            );
+            self.frame.close(link.depth[end] - 0.25, order);
+        }
+    }
+
+    fn packet(&mut self, order: usize, id: &str, reverse: bool, tone: Tone, link: &Link) {
+        let scene = self.scene;
+        let opacity = scene.v(id, "opacity", 0.0).clamp(0.0, 1.0);
+        let travel = scene.v(id, "travel", 0.0).clamp(0.0, 1.0);
+        let impact = scene.v(id, "impact", 0.0).clamp(0.0, 1.0);
+        let landing = impact > 0.001 && impact < 0.999;
+        if opacity <= 0.001 && !landing {
+            return;
+        }
+        let path = if reverse {
+            link.path.reversed()
+        } else {
+            link.path.clone()
+        };
+        let scale_at =
+            |fraction: f32| link.scale_at(if reverse { 1.0 - fraction } else { fraction });
+        let own = self.look.tone(tone);
+        if opacity > 0.001 {
+            let head = path.at(travel);
+            let scale = scale_at(travel);
+            // Comet trail: the last stretch of path, brightest at the head.
+            let trail = Paint {
+                stroke: rgba(own * 1.2, 0.85 * opacity),
+                glow: glow4(own * (0.25 * opacity), 8.0 * scale),
+                ..Default::default()
+            };
+            self.frame.polyline(
+                &path.slice(travel - 0.18, travel),
+                1.0,
+                [3.0 * scale, 0.0],
+                trail,
+                COMET,
+            );
+            self.frame.circle(
+                head,
+                [5.0 * scale, 0.0],
+                0.0,
+                Paint {
+                    fill: rgba(own.lerp(Vec3::ONE, 0.35) * 1.5, opacity),
+                    glow: glow4(own * (0.55 * opacity), 11.0 * scale),
+                    ..Default::default()
+                },
+            );
+            self.frame.text(
+                &text_key(id, "label"),
+                head - vec2(0.0, 28.0 * scale),
+                scale,
+                CaptionAlign::Center,
+                rgba(own, opacity * remap_clamp(travel, [0.0, 0.125], [0.0, 1.0])),
+                f32::MAX,
+                0.0,
+            );
+        }
+        if landing {
+            // A ripple where the packet lands.
+            let scale = scale_at(1.0);
+            let fade = (1.0 - impact).powf(1.5);
+            self.frame.arc(
+                path.at(1.0),
+                [
+                    (10.0 + 90.0 * impact) * scale,
+                    (1.0 + 3.0 * (1.0 - impact)) * scale,
+                ],
+                1.0,
+                0.0,
+                Paint {
+                    stroke: rgba(own * 1.2, fade),
+                    glow: glow4(own * (0.35 * fade), 10.0 * scale),
+                    ..Default::default()
+                },
+            );
+        }
+        self.frame.close(link.near() - 2.0, order);
+    }
+
+    fn label(
+        &mut self,
+        order: usize,
+        id: &str,
+        align: CaptionAlign,
+        spans: &[CaptionSpanPlan],
+        place: Placement,
+    ) {
+        let (scene, look) = (self.scene, self.look);
+        let opacity = scene.v(id, "opacity", 1.0).clamp(0.0, 1.0);
+        if opacity <= 0.001 {
+            return;
+        }
+        let typed = scene.v(id, "typed", 1.0).clamp(0.0, 1.0);
+        let blur = scene.blur_at(place.world.z);
+        let parts = spans
+            .iter()
+            .enumerate()
+            .filter(|(_, span)| !span.text.is_empty())
+            .map(|(index, span)| (text_key(id, &format!("span{index}")), span))
+            .collect::<Vec<_>>();
+        let widths = parts
+            .iter()
+            .map(|(key, _)| self.frame.width(key, place.scale))
+            .collect::<Vec<_>>();
+        let total: f32 = widths.iter().sum();
+        let chars: usize = parts
+            .iter()
+            .map(|(_, span)| span.text.chars().count())
+            .sum();
+        let mut remaining = if typed >= 1.0 {
+            usize::MAX
+        } else {
+            (typed * chars as f32 + 1e-3).floor() as usize
+        };
+        let mut x = place.center.x
+            - match align {
+                CaptionAlign::Left => 0.0,
+                CaptionAlign::Center => total * 0.5,
+                CaptionAlign::Right => total,
+            };
+        for ((key, span), width) in parts.iter().zip(&widths) {
+            let count = span.text.chars().count();
+            let shown = remaining.min(count);
+            if shown > 0 {
+                let reveal = if shown == count {
+                    f32::MAX
+                } else {
+                    width * shown as f32 / count as f32
+                };
+                self.frame.text(
+                    key,
+                    vec2(x, place.center.y),
+                    place.scale,
+                    CaptionAlign::Left,
+                    rgba(look.tone(span.tone), opacity),
+                    reveal,
+                    blur,
+                );
+            }
+            remaining -= shown;
+            x += width;
+        }
+        self.frame.close(place.world.z - 0.5, order);
+    }
+
+    /// `size` is the radius and thickness.
+    fn ring(&mut self, order: usize, id: &str, size: [f32; 2], tone: Tone, place: Placement) {
+        let scene = self.scene;
+        let opacity = scene.v(id, "opacity", 1.0).clamp(0.0, 1.0);
+        let expand = scene.v(id, "expand", 0.0).clamp(0.0, 1.0);
+        let alpha = opacity * (1.0 - expand);
+        if alpha <= 0.001 {
+            return;
+        }
+        let own = self.look.tone(tone);
+        self.frame.arc(
+            place.center,
+            [
+                size[0] * (1.0 + 1.3 * expand) * place.scale,
+                size[1] * place.scale,
+            ],
+            scene.v(id, "sweep", 1.0).clamp(0.0, 1.0),
+            scene.blur_at(place.world.z),
+            Paint {
+                stroke: rgba(own, alpha),
+                glow: glow4(own * (0.25 * alpha), 10.0 * place.scale),
+                ..Default::default()
+            },
+        );
+        self.frame.close(place.world.z, order);
+    }
+}
+
+/// Colors of one primitive: straight linear RGBA fill and stroke, and glow as
+/// linear RGB intensity with its radius in pixels.
+#[derive(Clone, Copy, Default)]
+struct Paint {
+    fill: [f32; 4],
+    stroke: [f32; 4],
+    glow: [f32; 4],
+}
+
+/// The primitives of one sample, grouped into depth-sorted layers.
+struct StageFrame<'a> {
+    texts: &'a HashMap<String, AtlasText>,
+    prims: Vec<Prim>,
+    points: Vec<[f32; 4]>,
+    /// Depth, declaration order, and primitive range of each layer.
+    layers: Vec<(f32, usize, usize, usize)>,
+    /// First primitive of the layer being drawn.
+    open: usize,
+    /// Background color for the soft backing behind text.
+    shade: Vec3,
+}
+
+impl<'a> StageFrame<'a> {
+    fn new(texts: &'a HashMap<String, AtlasText>, shade: Vec3) -> Self {
+        Self {
+            texts,
+            prims: Vec::new(),
+            points: Vec::new(),
+            layers: Vec::new(),
+            open: 0,
+            shade,
+        }
+    }
+
+    /// End the layer drawn since the last close, at world depth `depth`.
+    fn close(&mut self, depth: f32, order: usize) {
+        self.layers
+            .push((depth, order, self.open, self.prims.len()));
+        self.open = self.prims.len();
+    }
+
+    /// Primitives far to near, keeping declaration order among equal depths.
+    fn finish(mut self) -> Result<(Vec<Prim>, Vec<[f32; 4]>)> {
+        self.layers
+            .sort_by(|a, b| b.0.total_cmp(&a.0).then(a.1.cmp(&b.1)));
+        let prims = self
+            .layers
+            .iter()
+            .flat_map(|&(_, _, first, last)| self.prims[first..last].iter().copied())
+            .collect::<Vec<_>>();
+        if prims.len() > MAX_PRIMS || self.points.len() > MAX_POINTS {
+            bail!(
+                "stage frame needs {} primitives and {} points; limits are {MAX_PRIMS} and {MAX_POINTS}",
+                prims.len(),
+                self.points.len()
+            );
+        }
+        Ok((prims, self.points))
+    }
+
+    /// `shape` is the corner radius and border width.
+    fn rounded_rect(&mut self, center: Vec2, half: Vec2, shape: [f32; 2], blur: f32, paint: Paint) {
+        let pad = half + Vec2::splat(paint.glow[3] * 4.0 + blur + 2.0);
         self.prims.push(Prim {
             bbox: [
-                bounds[0] - pad,
-                bounds[1] - pad,
-                bounds[2] + pad,
-                bounds[3] + pad,
+                center.x - pad.x,
+                center.y - pad.y,
+                center.x + pad.x,
+                center.y + pad.y,
             ],
-            a: [3.0, width, total * fraction.clamp(0.0, 1.0), blur],
-            b: style,
-            stroke,
-            glow,
-            uv: [first as f32, screen.len() as f32, 0.0, 0.0],
+            a: [0.0, center.x, center.y, shape[0]],
+            b: [half.x, half.y, shape[1], blur],
+            fill: paint.fill,
+            stroke: paint.stroke,
+            glow: paint.glow,
             ..Default::default()
         });
     }
 
-    /// One atlas string. `at` is the anchor on the text's vertical center.
+    /// `shape` is the radius and border width.
+    fn circle(&mut self, center: Vec2, shape: [f32; 2], blur: f32, paint: Paint) {
+        let pad = shape[0] + paint.glow[3] * 4.0 + blur + 1.0;
+        self.prims.push(Prim {
+            bbox: [
+                center.x - pad,
+                center.y - pad,
+                center.x + pad,
+                center.y + pad,
+            ],
+            a: [1.0, center.x, center.y, shape[0]],
+            b: [shape[1], 0.0, 0.0, blur],
+            fill: paint.fill,
+            stroke: paint.stroke,
+            glow: paint.glow,
+            ..Default::default()
+        });
+    }
+
+    /// A ring, or an arc clockwise from twelve o'clock over `sweep` of a turn.
+    /// `shape` is the radius and thickness.
+    fn arc(&mut self, center: Vec2, shape: [f32; 2], sweep: f32, blur: f32, paint: Paint) {
+        let pad = shape[0] + shape[1] + paint.glow[3] * 4.0 + blur + 2.0;
+        self.prims.push(Prim {
+            bbox: [
+                center.x - pad,
+                center.y - pad,
+                center.x + pad,
+                center.y + pad,
+            ],
+            a: [2.0, center.x, center.y, shape[0]],
+            b: [shape[1], -FRAC_PI_2, TAU * sweep, blur],
+            stroke: paint.stroke,
+            glow: paint.glow,
+            ..Default::default()
+        });
+    }
+
+    /// `path` drawn to `fraction` of its length. `stroke` is the width and blur;
+    /// `style` is dash, gap, phase, and fade toward the start.
+    fn polyline(
+        &mut self,
+        path: &Polyline,
+        fraction: f32,
+        stroke: [f32; 2],
+        paint: Paint,
+        style: [f32; 4],
+    ) {
+        let points = path.points();
+        if points.len() < 2 || fraction <= 0.0 || paint.stroke[3] <= 0.001 {
+            return;
+        }
+        let first = self.points.len();
+        self.points.extend(
+            points
+                .iter()
+                .zip(path.lengths())
+                .map(|(point, along)| [point.x, point.y, *along, 0.0]),
+        );
+        let (low, high) = points
+            .iter()
+            .fold((Vec2::MAX, Vec2::MIN), |(low, high), point| {
+                (low.min(*point), high.max(*point))
+            });
+        let pad = Vec2::splat(stroke[0] + paint.glow[3] * 4.0 + stroke[1] + 2.0);
+        let (low, high) = (low - pad, high + pad);
+        self.prims.push(Prim {
+            bbox: [low.x, low.y, high.x, high.y],
+            a: [
+                3.0,
+                stroke[0],
+                path.length() * fraction.clamp(0.0, 1.0),
+                stroke[1],
+            ],
+            b: style,
+            stroke: paint.stroke,
+            glow: paint.glow,
+            uv: [first as f32, points.len() as f32, 0.0, 0.0],
+            ..Default::default()
+        });
+    }
+
+    /// On-screen width of an atlas string's ink at `scale`.
+    fn width(&self, key: &str, scale: f32) -> f32 {
+        self.texts.get(key).map_or(0.0, |text| {
+            (text.rect[2] - 4.0).max(0.0) * scale / TEXT_RASTER
+        })
+    }
+
+    /// One atlas string at `scale`, anchored on its vertical center. `reveal`
+    /// clips it to a width, for typing.
     #[allow(clippy::too_many_arguments)]
     fn text(
         &mut self,
-        gpu: &StageGpu,
         key: &str,
-        size: f32,
-        at: [f32; 2],
+        at: Vec2,
         scale: f32,
         align: CaptionAlign,
         fill: [f32; 4],
         reveal: f32,
         blur: f32,
     ) {
-        let Some(text) = gpu.texts.get(key) else {
+        let Some(text) = self.texts.get(key) else {
             return;
         };
         if fill[3] <= 0.001 {
             return;
         }
-        let draw = scale * size / (size * TEXT_RASTER);
-        let width = text.rect[2] * draw;
-        let height = text.rect[3] * draw;
-        let left = match align {
-            CaptionAlign::Left => at[0],
-            CaptionAlign::Center => at[0] - (text.rect[2] - 4.0) * draw * 0.5,
-            CaptionAlign::Right => at[0] - (text.rect[2] - 4.0) * draw,
-        };
-        let top = at[1] - height * 0.5;
+        let size = vec2(text.rect[2], text.rect[3]) * (scale / TEXT_RASTER);
+        let ink = self.width(key, scale);
+        let left = at.x
+            - match align {
+                CaptionAlign::Left => 0.0,
+                CaptionAlign::Center => ink * 0.5,
+                CaptionAlign::Right => ink,
+            };
+        let top = at.y - size.y * 0.5;
         let uv = [
             text.rect[0],
             text.rect[1],
             text.rect[0] + text.rect[2],
             text.rect[1] + text.rect[3],
         ];
+        let reveal = reveal.min(size.x + 4.0);
         // A soft dark backing keeps text legible where it crosses beams and glow.
         self.prims.push(Prim {
             bbox: [
                 left - 8.0,
                 top - 8.0,
-                left + width + 8.0,
-                top + height + 8.0,
+                left + size.x + 8.0,
+                top + size.y + 8.0,
             ],
             a: [4.0, left, top, 5.0 + blur * 0.5],
-            b: [width, height, reveal.min(width + 4.0), 0.0],
+            b: [size.x, size.y, reveal, 0.0],
             fill: rgba(self.shade, fill[3] * 0.85),
             uv,
             ..Default::default()
@@ -1374,11 +1585,11 @@ impl StageFrame {
             bbox: [
                 left - 2.0,
                 top - 2.0,
-                left + width + 2.0,
-                top + height + 2.0,
+                left + size.x + 2.0,
+                top + size.y + 2.0,
             ],
             a: [4.0, left, top, blur * 0.5],
-            b: [width, height, reveal.min(width + 4.0), 0.0],
+            b: [size.x, size.y, reveal, 0.0],
             fill,
             uv,
             ..Default::default()
@@ -1386,25 +1597,12 @@ impl StageFrame {
     }
 }
 
-fn rgba(rgb: [f32; 3], alpha: f32) -> [f32; 4] {
-    [rgb[0], rgb[1], rgb[2], alpha.clamp(0.0, 1.0)]
+fn rgba(color: Vec3, alpha: f32) -> [f32; 4] {
+    color.extend(alpha.clamp(0.0, 1.0)).to_array()
 }
 
-fn glow4(rgb: [f32; 3], radius: f32) -> [f32; 4] {
-    [rgb[0], rgb[1], rgb[2], radius]
-}
-
-fn add3(a: [f32; 3], b: [f32; 3]) -> [f32; 3] {
-    std::array::from_fn(|i| a[i] + b[i])
-}
-
-fn scale3(rgb: [f32; 3], k: f32) -> [f32; 3] {
-    rgb.map(|c| c * k)
-}
-
-fn mix3(a: [f32; 3], b: [f32; 3], t: f32) -> [f32; 3] {
-    let t = t.clamp(0.0, 1.0);
-    std::array::from_fn(|i| a[i] + (b[i] - a[i]) * t)
+fn glow4(color: Vec3, radius: f32) -> [f32; 4] {
+    color.extend(radius).to_array()
 }
 
 #[cfg(test)]

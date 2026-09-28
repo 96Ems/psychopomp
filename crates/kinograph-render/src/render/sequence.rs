@@ -1,6 +1,7 @@
 //! Sequence Diagram pixels: participant headers, dashed lifelines, travelling
 //! messages, notes and termination marks. All geometry comes from the recipe and
 //! sampled channels; nothing is carried between frames.
+use kinograph::math::easing::cubic_out;
 use kinograph::{
     sequence::{SequencePlan, SequenceRowPlan},
     tone::Tone,
@@ -198,7 +199,7 @@ impl HeadlessRenderer {
                     Anchor::Right,
                     // Clear of notes, which extend 75 px past the outer lifelines.
                     [x_of(0) - 96.0, y],
-                    alpha * ease_out((reveal / 0.4).min(1.0)),
+                    alpha * cubic_out((reveal / 0.4).clamp(0.0, 1.0)),
                 );
             }
             match row {
@@ -274,9 +275,9 @@ impl HeadlessRenderer {
         strike: f32,
         alpha: f32,
     ) {
-        let label_alpha = alpha * ease_out(((reveal - 0.2) / 0.5).clamp(0.0, 1.0));
-        let travel = ease_out((reveal / 0.8).min(1.0));
-        let head = ease_out(((reveal - 0.7) / 0.3).clamp(0.0, 1.0));
+        let label_alpha = alpha * cubic_out(((reveal - 0.2) / 0.5).clamp(0.0, 1.0));
+        let travel = cubic_out((reveal / 0.8).clamp(0.0, 1.0));
+        let head = cubic_out(((reveal - 0.7) / 0.3).clamp(0.0, 1.0));
         if (to - from).abs() < 1.0 {
             // A message to itself: a small loop to the right of the lifeline.
             let path = [
@@ -435,7 +436,7 @@ impl HeadlessRenderer {
         alpha: f32,
     ) {
         let palette = self.theme.palette();
-        let appear = ease_out((reveal / 0.7).min(1.0));
+        let appear = cubic_out((reveal / 0.7).clamp(0.0, 1.0));
         let text_width = self.sequence_advance(text, NOTE_SIZE, color);
         let natural = text_width + 56.0;
         let span = if (max - min).abs() < 1.0 {
@@ -484,8 +485,8 @@ impl HeadlessRenderer {
         reveal: f32,
         alpha: f32,
     ) {
-        let first = ease_out((reveal / 0.45).min(1.0));
-        let second = ease_out(((reveal - 0.3) / 0.45).clamp(0.0, 1.0));
+        let first = cubic_out((reveal / 0.45).clamp(0.0, 1.0));
+        let second = cubic_out(((reveal - 0.3) / 0.45).clamp(0.0, 1.0));
         let size = 11.0;
         if first > 0.0 {
             self.composite_prototype_path(
@@ -515,7 +516,7 @@ impl HeadlessRenderer {
             );
         }
         if !label.is_empty() {
-            let label_alpha = alpha * ease_out(((reveal - 0.35) / 0.45).clamp(0.0, 1.0));
+            let label_alpha = alpha * cubic_out(((reveal - 0.35) / 0.45).clamp(0.0, 1.0));
             self.sequence_text(
                 pixels,
                 label,
@@ -599,11 +600,6 @@ fn mix(a: [u8; 3], b: [u8; 3], t: f32) -> [u8; 3] {
     std::array::from_fn(|i| {
         (f32::from(a[i]) + (f32::from(b[i]) - f32::from(a[i])) * t).round() as u8
     })
-}
-
-fn ease_out(t: f32) -> f32 {
-    let t = t.clamp(0.0, 1.0);
-    1.0 - (1.0 - t).powi(3)
 }
 
 fn path_length(points: &[[f32; 2]]) -> f32 {

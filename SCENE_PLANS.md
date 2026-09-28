@@ -433,7 +433,10 @@ Components used by explainers:
   `backdrop`). Channels are `<element>.<property>` (for example `service.shatter`,
   `link.flow`, `probe.travel`, `client.alarm`) and `camera.x|y|z|focus|dof|shake`,
   `post.bloom|chroma|exposure|vignette`. Use `StageActor`: `send` eases a packet and
-  ripples on arrival, `hit` flashes and settles, `bounce` overshoots.
+  ripples on arrival, `hit` flashes and settles, `bounce` overshoots. Beams choose
+  their own ports and curve; leave `bend` at 0 unless two beams need separating.
+- Reusable math is `kinograph::math` (`lerp`, `remap_clamp`, `smoothstep`, `easing`,
+  `curve::Polyline`, `shapes::connect`, glam vectors). Use it in Scene Programs too.
 
 `scenes/pr-walkthrough` also emits `pr-50825.reel.json`, a Stage film of #50825
 that zooms from the client card into its code:

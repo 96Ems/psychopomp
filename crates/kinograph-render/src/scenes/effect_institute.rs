@@ -7,6 +7,7 @@ use std::{
 };
 
 use anyhow::{Context, Result, bail};
+use kinograph::math::smoothstep;
 use serde::{
     Deserialize, Deserializer,
     de::{MapAccess, Visitor},
@@ -2303,10 +2304,6 @@ fn type_display_slideshow(component: &PublishedComponent) -> (PublishedSlideshow
         },
         component.step_times.clone(),
     )
-}
-
-fn smoothstep(value: f32) -> f32 {
-    value * value * (3.0 - 2.0 * value)
 }
 
 #[derive(Deserialize)]

@@ -8,6 +8,7 @@ pub mod dsl;
 pub mod editor;
 pub mod grid;
 pub mod highlight;
+pub mod math;
 pub mod motion;
 pub mod plan;
 pub mod playback;

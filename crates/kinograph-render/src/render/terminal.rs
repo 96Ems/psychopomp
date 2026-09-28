@@ -1,4 +1,5 @@
 use anyhow::{Result, bail};
+use kinograph::math::smoothstep;
 
 use super::{
     HeadlessRenderer, TextSprite, blend_pixel, composite_sprite,
@@ -798,11 +799,6 @@ fn reveal_characters(text: &str, characters: usize) -> &str {
         .nth(characters)
         .map_or(text.len(), |(index, _)| index);
     &text[..byte]
-}
-
-fn smoothstep(value: f32) -> f32 {
-    let value = value.clamp(0.0, 1.0);
-    value * value * (3.0 - 2.0 * value)
 }
 
 #[cfg(test)]

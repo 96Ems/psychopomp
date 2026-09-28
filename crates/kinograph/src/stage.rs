@@ -11,6 +11,12 @@ use serde::{Deserialize, Serialize};
 use crate::{
     author::{ActorHandle, ContinuousHandle, PlanBuilder},
     caption::{CaptionAlign, CaptionSpanPlan},
+    math::{
+        Vec2, Vec3,
+        random::hash,
+        shapes::{Box2, Circle, Shape, fibonacci_sphere},
+        smoothstep, vec3,
+    },
     tone::Tone,
 };
 
@@ -166,6 +172,25 @@ impl StageElement {
             | Self::Label { at, .. }
             | Self::Ring { at, .. } => Some(*at),
             Self::Beam { .. } | Self::Packet { .. } => None,
+        }
+    }
+
+    /// The outline beams attach to, around the element's projected `center`, at
+    /// its total on-screen `scale`. Beams stop just outside an orb's shell.
+    pub fn outline(&self, center: Vec2, scale: f32) -> Shape {
+        match self {
+            Self::Card { size, .. } => {
+                Shape::Box(Box2::from_center_size(center, Vec2::from(*size) * scale))
+            }
+            Self::Orb { radius, .. } => Shape::Circle(Circle {
+                center,
+                radius: radius * scale * 1.08,
+            }),
+            Self::Ring { radius, .. } => Shape::Circle(Circle {
+                center,
+                radius: radius * scale,
+            }),
+            Self::Label { .. } | Self::Beam { .. } | Self::Packet { .. } => Shape::Point(center),
         }
     }
 
@@ -326,89 +351,54 @@ fn line(id: &str, text: &str, max: usize) -> Result<()> {
 /// A sampled camera: where it looks and how far it has moved toward the scene.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Camera {
-    pub x: f32,
-    pub y: f32,
-    /// Dolly toward the scene; positive values make the z = 0 plane larger.
-    pub z: f32,
-    pub width: f32,
-    pub height: f32,
+    /// Pan in x/y; z dollies toward the scene, making the z = 0 plane larger.
+    pub position: Vec3,
+    /// The frame size in pixels.
+    pub size: Vec2,
 }
 
 impl Camera {
     /// Screen position and scale of a world point, or `None` behind the camera.
-    pub fn project(&self, [x, y, z]: [f32; 3]) -> Option<([f32; 2], f32)> {
-        let depth = FOCAL + z - self.z;
+    pub fn project(&self, point: Vec3) -> Option<(Vec2, f32)> {
+        let depth = FOCAL + point.z - self.position.z;
         if depth <= 1.0 {
             return None;
         }
         let scale = FOCAL / depth;
-        let [cx, cy] = [self.width * 0.5, self.height * 0.5];
+        let center = self.size * 0.5;
         Some((
-            [
-                cx + (x - cx - self.x) * scale,
-                cy + (y - cy - self.y) * scale,
-            ],
+            center + (point.truncate() - center - self.position.truncate()) * scale,
             scale,
         ))
     }
 }
 
-/// Unit-sphere points spread evenly by the golden angle, with per-point seeds.
-pub fn fibonacci_sphere(count: u32) -> Vec<([f32; 3], [f32; 3])> {
-    let n = count.max(2);
-    (0..n)
-        .map(|i| {
-            let y = 1.0 - (i as f32 / (n - 1) as f32) * 2.0;
-            let r = (1.0 - y * y).max(0.0).sqrt();
-            let theta = i as f32 * 2.399_963_1;
-            (
-                [theta.cos() * r, y, theta.sin() * r],
-                [hash(i, 3), hash(i, 7), hash(i, 11)],
-            )
+/// One point of an orb's shell and the seeds that shape its shatter.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct OrbPoint {
+    pub unit: Vec3,
+    pub seed: Vec3,
+}
+
+pub fn orb_points(count: u32) -> Vec<OrbPoint> {
+    fibonacci_sphere(count)
+        .into_iter()
+        .zip(0..)
+        .map(|(unit, i)| OrbPoint {
+            unit,
+            seed: vec3(hash(i, 3), hash(i, 7), hash(i, 11)),
         })
         .collect()
 }
 
-/// Deterministic 0..1 value for an integer and a salt.
-pub fn hash(value: u32, salt: u32) -> f32 {
-    let mut h = value.wrapping_mul(0x9E37_79B1) ^ salt.wrapping_mul(0x85EB_CA77);
-    h ^= h >> 15;
-    h = h.wrapping_mul(0x2C1B_3C6D);
-    h ^= h >> 12;
-    h = h.wrapping_mul(0x297A_2D39);
-    h ^= h >> 15;
-    (h >> 8) as f32 / (1 << 24) as f32
-}
-
-/// One point of a shattering orb, relative to its center, before projection.
+/// Where a shell point sits relative to the orb's center, before projection.
 /// Points burst outward by different amounts, then fall; `shatter` runs 0..1.
-pub fn shatter_offset(unit: [f32; 3], seed: [f32; 3], radius: f32, shatter: f32) -> [f32; 3] {
-    let burst = 1.0 + shatter * (0.6 + 2.4 * seed[0]);
-    let fall = shatter * shatter * (160.0 + 460.0 * seed[1]);
-    let drift = shatter * (seed[2] - 0.5) * 120.0;
-    [
-        unit[0] * radius * burst + drift,
-        unit[1] * radius * burst + fall,
-        unit[2] * radius * burst,
-    ]
-}
-
-/// A point on the quadratic curve from `a` to `b`, bowed sideways by `bend`.
-pub fn beam_point(a: [f32; 3], b: [f32; 3], bend: f32, t: f32) -> [f32; 3] {
-    let mid = [
-        (a[0] + b[0]) * 0.5,
-        (a[1] + b[1]) * 0.5,
-        (a[2] + b[2]) * 0.5,
-    ];
-    let (dx, dy) = (b[0] - a[0], b[1] - a[1]);
-    let length = (dx * dx + dy * dy).sqrt().max(1e-3);
-    let control = [
-        mid[0] - dy / length * bend,
-        mid[1] + dx / length * bend,
-        mid[2],
-    ];
-    let u = 1.0 - t;
-    std::array::from_fn(|i| u * u * a[i] + 2.0 * u * t * control[i] + t * t * b[i])
+pub fn shatter_offset(point: OrbPoint, radius: f32, shatter: f32) -> Vec3 {
+    let seed = point.seed;
+    let burst = 1.0 + shatter * (0.6 + 2.4 * seed.x);
+    let fall = shatter * shatter * (160.0 + 460.0 * seed.y);
+    let drift = shatter * (seed.z - 0.5) * 120.0;
+    point.unit * (radius * burst) + vec3(drift, fall, 0.0)
 }
 
 /// Authoring handle: declares each stage channel once, with the recipe default
@@ -562,8 +552,7 @@ impl StageActor {
         // Ease in and out along the path with exact steps, so the packet
         // accelerates away and decelerates into the target.
         for step in 1..=steps {
-            let t = step as f32 / steps as f32;
-            let eased = t * t * (3.0 - 2.0 * t);
+            let eased = smoothstep(step as f32 / steps as f32);
             scene.set(&travel, at_nanos + span * step / steps, eased);
         }
         let arrival = at_nanos + span;
@@ -640,51 +629,56 @@ mod tests {
 
     #[test]
     fn the_default_camera_is_pixel_exact_at_depth_zero() {
+        use crate::math::vec2;
         let camera = Camera {
-            x: 0.0,
-            y: 0.0,
-            z: 0.0,
-            width: 1920.0,
-            height: 1080.0,
+            position: Vec3::ZERO,
+            size: vec2(1920.0, 1080.0),
         };
         assert_eq!(
-            camera.project([300.0, 200.0, 0.0]),
-            Some(([300.0, 200.0], 1.0))
+            camera.project(vec3(300.0, 200.0, 0.0)),
+            Some((vec2(300.0, 200.0), 1.0))
         );
-        let (far, scale) = camera.project([300.0, 200.0, 700.0]).unwrap();
+        let (far, scale) = camera.project(vec3(300.0, 200.0, 700.0)).unwrap();
         assert!(
-            scale < 1.0 && far[0] > 300.0,
+            scale < 1.0 && far.x > 300.0,
             "farther points shrink toward the center"
         );
-        let dolly = Camera { z: 700.0, ..camera };
-        assert!(dolly.project([300.0, 200.0, 0.0]).unwrap().1 > 1.0);
-        assert!(camera.project([0.0, 0.0, -FOCAL]).is_none());
+        let dolly = Camera {
+            position: vec3(0.0, 0.0, 700.0),
+            ..camera
+        };
+        assert!(dolly.project(vec3(300.0, 200.0, 0.0)).unwrap().1 > 1.0);
+        assert!(camera.project(vec3(0.0, 0.0, -FOCAL)).is_none());
     }
 
     #[test]
-    fn orb_and_beam_geometry_is_deterministic() {
-        let points = fibonacci_sphere(64);
-        assert_eq!(points.len(), 64);
+    fn orbs_shatter_deterministically() {
+        let points = orb_points(64);
+        assert_eq!(points, orb_points(64));
+        let point = points[5];
+        assert_eq!(shatter_offset(point, 100.0, 0.0), point.unit * 100.0);
+        let burst = shatter_offset(point, 100.0, 1.0);
         assert!(
-            points.iter().all(
-                |(p, _)| ((p[0] * p[0] + p[1] * p[1] + p[2] * p[2]).sqrt() - 1.0).abs() < 1e-4
-            )
+            burst.y > point.unit.y * 100.0 + 100.0,
+            "shattered points fall"
         );
-        assert_eq!(points, fibonacci_sphere(64));
-        let (unit, seed) = points[5];
-        assert_eq!(
-            shatter_offset(unit, seed, 100.0, 0.0),
-            unit.map(|v| v * 100.0)
-        );
-        let burst = shatter_offset(unit, seed, 100.0, 1.0);
-        assert!(burst[1] > unit[1] * 100.0 + 100.0, "shattered points fall");
-        let (a, b) = ([0.0, 0.0, 0.0], [100.0, 0.0, 0.0]);
-        assert_eq!(beam_point(a, b, 40.0, 0.0), a);
-        assert_eq!(beam_point(a, b, 40.0, 1.0), b);
-        assert!(
-            beam_point(a, b, 40.0, 0.5)[1] > 0.0,
-            "positive bend bows to the right of travel"
-        );
+    }
+
+    #[test]
+    fn beams_attach_to_the_facing_side_of_a_card_and_just_outside_an_orb() {
+        use crate::math::{shapes::connect, vec2};
+        let plan = plan();
+        let card = plan
+            .element("client")
+            .unwrap()
+            .outline(vec2(420.0, 300.0), 1.0);
+        let orb = plan
+            .element("service")
+            .unwrap()
+            .outline(vec2(960.0, 460.0), 1.0);
+        let curve = connect(card, orb, 0.0);
+        assert_eq!(curve.start, vec2(570.0, 300.0), "the card's right side");
+        assert!((curve.end.distance(vec2(960.0, 460.0)) - 162.0).abs() < 1e-3);
     }
 
     #[test]

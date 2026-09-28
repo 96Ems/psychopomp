@@ -1,3 +1,5 @@
+use kinograph::math::easing::cubic_out;
+
 use super::{Canvas, EffectTarget};
 
 const PARTICLES: [(f32, f32, f32, [u8; 3]); 14] = [
@@ -22,13 +24,13 @@ pub(super) fn composite(canvas: &mut Canvas<'_>, target: EffectTarget, phase: f3
     if !(0.0..1.0).contains(&phase) {
         return;
     }
-    let travel = 1.0 - (1.0 - phase).powi(3);
+    let travel = cubic_out(phase);
     let fade = (phase / 0.10).min(1.0) * (1.0 - phase).powf(1.5);
 
     for (index, (angle, distance, size, color)) in PARTICLES.into_iter().enumerate() {
         let stagger = index as f32 % 3.0 * 0.025;
         let local = ((phase - stagger) / (1.0 - stagger)).clamp(0.0, 1.0);
-        let local_travel = 1.0 - (1.0 - local).powi(3);
+        let local_travel = cubic_out(local);
         let radius = 12.0 + distance * local_travel;
         let x = target.center[0] + angle.cos() * radius;
         let y = target.center[1] + angle.sin() * radius + 38.0 * local * local;

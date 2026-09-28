@@ -403,11 +403,18 @@ captions draw above rich text and below plain text. Semantic colors resolve thro
 ### Stage
 
 `stage` is an exclusive root recipe. The lightweight crate (`stage.rs`) owns the
-element model, strict channel names, the perspective `Camera`, and the deterministic
-geometry (Fibonacci orb points, shatter trajectories, beam curves), so authoring
+element model, strict channel names, the perspective `Camera`, element outlines, and
+the deterministic orb geometry (Fibonacci points, shatter trajectories), so authoring
 helpers (`StageActor`: `to`, `bounce`, `hit`, `send`, `type_in`) and tests need no GPU.
-`render/stage.rs` samples channels, projects every element, and emits depth-sorted
-signed-distance primitives (rounded rect, circle, arc, polyline with drawn length,
+`render/stage.rs` is small pieces: `Scene` samples the camera, every element's
+placement, and every beam's path once per sample; `Painter` has one method per
+element kind; `StageFrame` owns primitive helpers and depth-sorted layers. A beam is
+a `math::shapes::connect` connector between the two outlines on screen: it leaves the
+middle of the card side that faces the other end, perpendicular to it, and enters an
+orb radially just outside its shell, with a socket where it plugs into a card.
+Packets move along the same path by arc length, so their speed is steady. A beam
+sorts behind both of its ends, so it never crosses the cards it connects. The
+renderer emits depth-sorted signed-distance primitives (rounded rect, circle, arc, polyline with drawn length,
 dash, flow, and fade, atlas text, backdrop gradient) into one storage buffer;
 `stage.wgsl` draws them as instanced quads into an `Rgba16Float` target with
 premultiplied blending, where glow adds light at zero alpha. `stage_post.wgsl`
@@ -418,6 +425,16 @@ output frame so temporal samples do not average it away. Stage text is rasterize
 once at twice its size into an R8 atlas and drawn with a soft background-colored
 backing for legibility over light. A stage root marks every temporal sample as
 distinct (`ambient_time`), because spin, flow, and grain always move.
+
+### Math
+
+`kinograph::math` is the shared vocabulary for motion and geometry, grouped like
+pmndrs `math`: scalar `lerp`, `inverse_lerp`, `remap`, `remap_clamp`, and
+`smoothstep`; glam's `Vec2`, `Vec3`, and `Quat`; `easing` curves; `curve`
+(`CubicBezier`, and `Polyline` with arc-length sampling and slicing); `shapes`
+(`Box2`, `Circle`, `Shape` outlines with facing `Port`s, `connect`, and
+`fibonacci_sphere`); and `random::hash`. Renderers and Scene Programs compose these
+instead of carrying private lerps, easings, or geometry.
 
 Live shaders: when `KINOGRAPH_SHADER_DIR` is set, the stage reads `stage.wgsl` and
 `stage_post.wgsl` from that directory instead of the compiled-in copies, so each

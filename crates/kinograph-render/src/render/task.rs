@@ -5,6 +5,7 @@ use std::{
 };
 
 use anyhow::Result;
+use kinograph::math::smoothstep;
 
 use kinograph::dsl::{TaskFrame, TaskState};
 use kinograph::motion::{MotionState, Spring};
@@ -1311,10 +1312,6 @@ fn box_blur_pass(
             }
         }
     }
-}
-
-fn smoothstep(value: f32) -> f32 {
-    value * value * (3.0 - 2.0 * value)
 }
 
 fn spring_progress(age: f32, response: f32, damping_ratio: f32) -> f32 {
