@@ -1,0 +1,189 @@
+{
+ "wordTimings": [
+  {
+   "word": "In",
+   "start": 0,
+   "end": 0.1
+  },
+  {
+   "word": "the",
+   "start": 0.1,
+   "end": 0.18
+  },
+  {
+   "word": "code,",
+   "start": 0.18,
+   "end": 0.46
+  },
+  {
+   "word": "each",
+   "start": 0.68,
+   "end": 1.28
+  },
+  {
+   "word": "borrowed",
+   "start": 1.28,
+   "end": 1.7
+  },
+  {
+   "word": "call",
+   "start": 1.7,
+   "end": 1.98
+  },
+  {
+   "word": "becomes",
+   "start": 1.98,
+   "end": 2.32
+  },
+  {
+   "word": "one",
+   "start": 2.32,
+   "end": 2.94
+  },
+  {
+   "word": "direct",
+   "start": 2.94,
+   "end": 3.4
+  },
+  {
+   "word": "line.",
+   "start": 3.4,
+   "end": 3.82
+  },
+  {
+   "word": "The",
+   "start": 4.44,
+   "end": 4.82
+  },
+  {
+   "word": "attachment",
+   "start": 4.82,
+   "end": 5.2
+  },
+  {
+   "word": "decodes",
+   "start": 5.2,
+   "end": 6.02
+  },
+  {
+   "word": "straight",
+   "start": 6.02,
+   "end": 6.46
+  },
+  {
+   "word": "into",
+   "start": 6.46,
+   "end": 6.76
+  },
+  {
+   "word": "media.",
+   "start": 6.76,
+   "end": 7.1
+  },
+  {
+   "word": "Auto",
+   "start": 7.78,
+   "end": 8.16
+  },
+  {
+   "word": "-update",
+   "start": 8.16,
+   "end": 8.7
+  },
+  {
+   "word": "maps",
+   "start": 8.7,
+   "end": 8.94
+  },
+  {
+   "word": "to",
+   "start": 8.94,
+   "end": 9.34
+  },
+  {
+   "word": "an",
+   "start": 9.34,
+   "end": 9.5
+  },
+  {
+   "word": "update",
+   "start": 9.5,
+   "end": 9.76
+  },
+  {
+   "word": "policy.",
+   "start": 9.76,
+   "end": 10.16
+  },
+  {
+   "word": "And",
+   "start": 10.780000000000001,
+   "end": 11.16
+  },
+  {
+   "word": "the",
+   "start": 11.16,
+   "end": 11.26
+  },
+  {
+   "word": "small",
+   "start": 11.26,
+   "end": 11.52
+  },
+  {
+   "word": "model",
+   "start": 11.52,
+   "end": 11.84
+  },
+  {
+   "word": "uses",
+   "start": 11.84,
+   "end": 12.16
+  },
+  {
+   "word": "the",
+   "start": 12.16,
+   "end": 12.44
+  },
+  {
+   "word": "same",
+   "start": 12.44,
+   "end": 12.76
+  },
+  {
+   "word": "selection",
+   "start": 12.76,
+   "end": 13.22
+  },
+  {
+   "word": "helper.",
+   "start": 13.22,
+   "end": 13.64
+  },
+  {
+   "word": "About",
+   "start": 13.86,
+   "end": 14.26
+  },
+  {
+   "word": "470",
+   "start": 14.26,
+   "end": 15.16
+  },
+  {
+   "word": "lines",
+   "start": 15.16,
+   "end": 16.1
+  },
+  {
+   "word": "leave",
+   "start": 16.1,
+   "end": 16.84
+  },
+  {
+   "word": "production.",
+   "start": 16.84,
+   "end": 17.26
+  }
+ ]
+}

@@ -897,6 +897,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "kinograph-config-migration"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "kinograph",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "kinograph-data-modeling"
 version = "0.1.0"
 dependencies = [

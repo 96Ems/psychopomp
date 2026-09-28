@@ -1,0 +1,144 @@
+{
+ "wordTimings": [
+  {
+   "word": "The",
+   "start": 0,
+   "end": 0.14
+  },
+  {
+   "word": "fix",
+   "start": 0.14,
+   "end": 0.44
+  },
+  {
+   "word": "is",
+   "start": 0.44,
+   "end": 0.86
+  },
+  {
+   "word": "five",
+   "start": 0.86,
+   "end": 1.34
+  },
+  {
+   "word": "lines.",
+   "start": 1.34,
+   "end": 1.82
+  },
+  {
+   "word": "The",
+   "start": 2.6800000000000006,
+   "end": 3.04
+  },
+  {
+   "word": "model",
+   "start": 3.04,
+   "end": 3.38
+  },
+  {
+   "word": "leaves",
+   "start": 3.38,
+   "end": 3.86
+  },
+  {
+   "word": "the",
+   "start": 3.86,
+   "end": 4.1
+  },
+  {
+   "word": "shared",
+   "start": 4.1,
+   "end": 4.4
+  },
+  {
+   "word": "field",
+   "start": 4.4,
+   "end": 4.8
+  },
+  {
+   "word": "loop,",
+   "start": 4.8,
+   "end": 5.16
+  },
+  {
+   "word": "decodes",
+   "start": 5.36,
+   "end": 6.3
+  },
+  {
+   "word": "as",
+   "start": 6.3,
+   "end": 6.46
+  },
+  {
+   "word": "a",
+   "start": 6.46,
+   "end": 6.58
+  },
+  {
+   "word": "model",
+   "start": 6.58,
+   "end": 6.8
+  },
+  {
+   "word": "selection,",
+   "start": 6.8,
+   "end": 7.16
+  },
+  {
+   "word": "and",
+   "start": 7.52,
+   "end": 8.14
+  },
+  {
+   "word": "sends",
+   "start": 8.14,
+   "end": 8.5
+  },
+  {
+   "word": "its",
+   "start": 8.5,
+   "end": 8.74
+  },
+  {
+   "word": "provider",
+   "start": 8.74,
+   "end": 9.22
+  },
+  {
+   "word": "through",
+   "start": 9.22,
+   "end": 9.58
+  },
+  {
+   "word": "the",
+   "start": 9.58,
+   "end": 9.72
+  },
+  {
+   "word": "same",
+   "start": 9.72,
+   "end": 10.02
+  },
+  {
+   "word": "rename",
+   "start": 10.02,
+   "end": 10.5
+  },
+  {
+   "word": "the",
+   "start": 10.5,
+   "end": 10.96
+  },
+  {
+   "word": "agents",
+   "start": 10.96,
+   "end": 11.28
+  },
+  {
+   "word": "use.",
+   "start": 11.28,
+   "end": 11.64
+  }
+ ]
+}

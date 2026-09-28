@@ -1,0 +1,199 @@
+{
+ "wordTimings": [
+  {
+   "word": "Now",
+   "start": 0,
+   "end": 0.24
+  },
+  {
+   "word": "there",
+   "start": 0.24,
+   "end": 0.48
+  },
+  {
+   "word": "is",
+   "start": 0.48,
+   "end": 0.76
+  },
+  {
+   "word": "one",
+   "start": 0.76,
+   "end": 1.18
+  },
+  {
+   "word": "converter.",
+   "start": 1.18,
+   "end": 1.72
+  },
+  {
+   "word": "Normalize",
+   "start": 2.46,
+   "end": 3.26
+  },
+  {
+   "word": "handles",
+   "start": 3.26,
+   "end": 3.56
+  },
+  {
+   "word": "those",
+   "start": 3.56,
+   "end": 4.08
+  },
+  {
+   "word": "three",
+   "start": 4.08,
+   "end": 4.48
+  },
+  {
+   "word": "fields",
+   "start": 4.48,
+   "end": 4.96
+  },
+  {
+   "word": "directly,",
+   "start": 4.96,
+   "end": 5.42
+  },
+  {
+   "word": "and",
+   "start": 6.040000000000001,
+   "end": 6.44
+  },
+  {
+   "word": "Migrate",
+   "start": 6.44,
+   "end": 7.06
+  },
+  {
+   "word": "is",
+   "start": 7.06,
+   "end": 7.3
+  },
+  {
+   "word": "deleted.",
+   "start": 7.3,
+   "end": 7.8
+  },
+  {
+   "word": "The",
+   "start": 8.18,
+   "end": 8.9
+  },
+  {
+   "word": "old",
+   "start": 8.9,
+   "end": 9.06
+  },
+  {
+   "word": "schema",
+   "start": 9.06,
+   "end": 9.46
+  },
+  {
+   "word": "moves",
+   "start": 9.46,
+   "end": 9.84
+  },
+  {
+   "word": "into",
+   "start": 9.84,
+   "end": 10.2
+  },
+  {
+   "word": "the",
+   "start": 10.2,
+   "end": 10.36
+  },
+  {
+   "word": "tests,",
+   "start": 10.36,
+   "end": 10.8
+  },
+  {
+   "word": "where",
+   "start": 10.96,
+   "end": 11.42
+  },
+  {
+   "word": "it",
+   "start": 11.42,
+   "end": 11.52
+  },
+  {
+   "word": "generates",
+   "start": 11.52,
+   "end": 11.94
+  },
+  {
+   "word": "random",
+   "start": 11.94,
+   "end": 12.32
+  },
+  {
+   "word": "configs.",
+   "start": 12.32,
+   "end": 13.12
+  },
+  {
+   "word": "Every",
+   "start": 13.16,
+   "end": 13.66
+  },
+  {
+   "word": "migration",
+   "start": 13.66,
+   "end": 14.06
+  },
+  {
+   "word": "test",
+   "start": 14.06,
+   "end": 14.5
+  },
+  {
+   "word": "now",
+   "start": 14.5,
+   "end": 14.92
+  },
+  {
+   "word": "runs",
+   "start": 14.92,
+   "end": 15.28
+  },
+  {
+   "word": "through",
+   "start": 15.28,
+   "end": 15.64
+  },
+  {
+   "word": "Normalize,",
+   "start": 15.64,
+   "end": 16.44
+  },
+  {
+   "word": "the",
+   "start": 16.48,
+   "end": 16.88
+  },
+  {
+   "word": "path",
+   "start": 16.88,
+   "end": 17.16
+  },
+  {
+   "word": "you",
+   "start": 17.16,
+   "end": 17.46
+  },
+  {
+   "word": "actually",
+   "start": 17.46,
+   "end": 17.92
+  },
+  {
+   "word": "hit.",
+   "start": 17.92,
+   "end": 18.26
+  }
+ ]
+}

@@ -1,0 +1,52 @@
+{
+  "clips": [
+    {
+      "id": "dup-before",
+      "file": "dup-before.mp3",
+      "words": "dup-before.words.json",
+      "durationNanos": 28967979166,
+      "textHash": "73e4c3d5001aae83",
+      "engine": "fish"
+    },
+    {
+      "id": "dup-after",
+      "file": "dup-after.mp3",
+      "words": "dup-after.words.json",
+      "durationNanos": 18667854166,
+      "textHash": "9a945f9ab3defb51",
+      "engine": "fish"
+    },
+    {
+      "id": "dup-code",
+      "file": "dup-code.mp3",
+      "words": "dup-code.words.json",
+      "durationNanos": 17831979166,
+      "textHash": "c677bdb54e134636",
+      "engine": "fish"
+    },
+    {
+      "id": "rename-before",
+      "file": "rename-before.mp3",
+      "words": "rename-before.words.json",
+      "durationNanos": 26912541666,
+      "textHash": "3232b6cdeb45eb14",
+      "engine": "fish"
+    },
+    {
+      "id": "rename-after",
+      "file": "rename-after.mp3",
+      "words": "rename-after.words.json",
+      "durationNanos": 10447979166,
+      "textHash": "c02636ffc23d67eb",
+      "engine": "fish"
+    },
+    {
+      "id": "rename-code",
+      "file": "rename-code.mp3",
+      "words": "rename-code.words.json",
+      "durationNanos": 12119979166,
+      "textHash": "5cf879c1097f6509",
+      "engine": "fish"
+    }
+  ]
+}

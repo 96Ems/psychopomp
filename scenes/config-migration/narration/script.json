@@ -1,0 +1,28 @@
+{
+  "clips": [
+    {
+      "id": "dup-before",
+      "text": "[warm and conversational] When OpenCode loads an old version one config, it has to convert it to version two. There were two converters. Normalize is the one that runs, field by field. Migrate converted a whole config at once, but production only borrowed it for three single fields. The rest was a second copy, and the copies had already drifted apart. And most of the migration tests checked the copy nobody runs."
+    },
+    {
+      "id": "dup-after",
+      "text": "[confident] Now there is one converter. Normalize handles those three fields directly, and migrate is deleted. The old schema moves into the tests, where it generates random configs. Every migration test now runs through normalize, the path you actually hit."
+    },
+    {
+      "id": "dup-code",
+      "text": "In the code, each borrowed call becomes one direct line. The attachment decodes straight into media. Auto update maps to an update policy. And the small model uses the same selection helper. About four hundred and seventy lines leave production."
+    },
+    {
+      "id": "rename-before",
+      "text": "[warm and conversational] Two providers were renamed. Azure cognitive services became Azure, and Google Vertex Anthropic became Google Vertex. When an old config loads, normalize renames them for agents, commands, and provider settings. But not for the top level model. So your agents keep working, while your default model fails with: this provider has been deprecated."
+    },
+    {
+      "id": "rename-after",
+      "text": "[confident] Now the top level model gets the same rename. The old Azure name becomes plain Azure, and your default model loads like everything else."
+    },
+    {
+      "id": "rename-code",
+      "text": "The fix is five lines. The model leaves the shared field loop, decodes as a model selection, and sends its provider through the same rename the agents use."
+    }
+  ]
+}

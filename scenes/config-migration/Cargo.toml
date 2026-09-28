@@ -1,0 +1,10 @@
+[package]
+name = "kinograph-config-migration"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+anyhow = "1.0"
+kinograph = { path = "../../crates/kinograph" }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"

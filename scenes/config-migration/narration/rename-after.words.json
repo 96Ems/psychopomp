@@ -1,0 +1,124 @@
+{
+ "wordTimings": [
+  {
+   "word": "Now",
+   "start": 0,
+   "end": 0.22
+  },
+  {
+   "word": "the",
+   "start": 0.22,
+   "end": 0.42
+  },
+  {
+   "word": "top",
+   "start": 0.42,
+   "end": 0.7
+  },
+  {
+   "word": "-level",
+   "start": 0.7,
+   "end": 0.96
+  },
+  {
+   "word": "model",
+   "start": 0.96,
+   "end": 1.26
+  },
+  {
+   "word": "gets",
+   "start": 1.26,
+   "end": 1.58
+  },
+  {
+   "word": "the",
+   "start": 1.58,
+   "end": 1.82
+  },
+  {
+   "word": "same",
+   "start": 1.82,
+   "end": 2.12
+  },
+  {
+   "word": "rename.",
+   "start": 2.12,
+   "end": 2.56
+  },
+  {
+   "word": "The",
+   "start": 3,
+   "end": 3.6
+  },
+  {
+   "word": "old",
+   "start": 3.6,
+   "end": 3.9
+  },
+  {
+   "word": "Azure",
+   "start": 3.9,
+   "end": 4.38
+  },
+  {
+   "word": "name",
+   "start": 4.38,
+   "end": 4.74
+  },
+  {
+   "word": "becomes",
+   "start": 4.74,
+   "end": 5.38
+  },
+  {
+   "word": "plain",
+   "start": 5.38,
+   "end": 5.9
+  },
+  {
+   "word": "Azure,",
+   "start": 5.9,
+   "end": 6.5
+  },
+  {
+   "word": "and",
+   "start": 7.26,
+   "end": 7.56
+  },
+  {
+   "word": "your",
+   "start": 7.56,
+   "end": 7.7
+  },
+  {
+   "word": "default",
+   "start": 7.7,
+   "end": 8
+  },
+  {
+   "word": "model",
+   "start": 8,
+   "end": 8.44
+  },
+  {
+   "word": "loads",
+   "start": 8.44,
+   "end": 9
+  },
+  {
+   "word": "like",
+   "start": 9,
+   "end": 9.28
+  },
+  {
+   "word": "everything",
+   "start": 9.28,
+   "end": 9.66
+  },
+  {
+   "word": "else.",
+   "start": 9.66,
+   "end": 10.06
+  }
+ ]
+}
