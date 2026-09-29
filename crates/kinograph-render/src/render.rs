@@ -23,6 +23,7 @@ mod diagram;
 mod effects;
 mod grid;
 mod header;
+mod line_marks;
 mod rich_text;
 mod sequence;
 mod stage;
@@ -945,6 +946,53 @@ impl HeadlessRenderer {
         let width = self.spec.width as f32;
         let (left, right) = (width * 0.11 + 12.0, width * 0.89 - 12.0);
         let sign_x = width * 0.145 - 30.0;
+        let bands = frame
+            .line_marks
+            .iter()
+            .filter_map(|mark| {
+                let placed = frame
+                    .lines
+                    .iter()
+                    .find(|line| line.line.id.as_str() == mark.line_id)?;
+                let center = top + placed.y + LINE_HEIGHT * 0.5;
+                let band = line_marks::Band {
+                    top: (center - mark.row_height * 0.5).max(top),
+                    bottom: (center + mark.row_height * 0.5).min(bottom),
+                    opacity: mark.presence.clamp(0.0, 1.0) * placed.opacity.clamp(0.0, 1.0),
+                    kind: usize::from(mark.mark == kinograph::editor::LineMarkPlan::Removed),
+                };
+                (band.bottom > band.top && band.opacity > 0.001).then_some(band)
+            })
+            .collect::<Vec<_>>();
+        let rows = line_marks::row_coverage(&bands, self.spec.height);
+        let mut canvas = ui::card::UiCanvas::new(pixels, [self.spec.width, self.spec.height]);
+        for (y, row) in rows.iter().enumerate() {
+            for (kind, opacity) in row.iter().enumerate() {
+                if *opacity <= 0.001 {
+                    continue;
+                }
+                let [r, g, b] = line_marks::COLORS[kind];
+                let fill = ui::card::Fill::Solid(ui::card::UiColor::srgb8(r, g, b, 255));
+                canvas.fill(
+                    ui::Bounds {
+                        origin: [left, y as f32],
+                        size: [right - left, 1.0],
+                    },
+                    0.0,
+                    fill,
+                    opacity * 0.12,
+                );
+                canvas.fill(
+                    ui::Bounds {
+                        origin: [left, y as f32],
+                        size: [3.0, 1.0],
+                    },
+                    0.0,
+                    fill,
+                    opacity * 0.85,
+                );
+            }
+        }
         for mark in frame.line_marks {
             let Some(placed) = frame
                 .lines
@@ -967,27 +1015,6 @@ impl HeadlessRenderer {
                 kinograph::editor::LineMarkPlan::Added => [127, 216, 143],
                 kinograph::editor::LineMarkPlan::Removed => [224, 108, 117],
             };
-            {
-                let mut canvas =
-                    ui::card::UiCanvas::new(pixels, [self.spec.width, self.spec.height]);
-                let band = ui::Bounds {
-                    origin: [left, band_top],
-                    size: [right - left, band_bottom - band_top],
-                };
-                let solid = |a: u8| {
-                    ui::card::Fill::Solid(ui::card::UiColor::srgb8(color[0], color[1], color[2], a))
-                };
-                canvas.fill(band, 0.0, solid(255), alpha * 0.12);
-                canvas.fill(
-                    ui::Bounds {
-                        origin: [left, band_top],
-                        size: [3.0, band_bottom - band_top],
-                    },
-                    0.0,
-                    solid(255),
-                    alpha * 0.85,
-                );
-            }
             let half = 7.0;
             self.composite_prototype_path(
                 pixels,
