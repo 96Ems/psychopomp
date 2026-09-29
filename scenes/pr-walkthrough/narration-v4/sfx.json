@@ -1,0 +1,33 @@
+{
+  "model": "eleven_text_to_sound_v2",
+  "effects": [
+    {
+      "id": "pressure-impact",
+      "text": "One isolated cinematic energy impact, instantly on contact. A compact deep dry pressure thump with a sharp electric snap, then a low airy decay. Physical and weighty, restrained, not a huge trailer boom. No voice, no music, no repeated hits.",
+      "duration": 1.2,
+      "gainDb": -8,
+      "replaces": ["kill-impact"]
+    },
+    {
+      "id": "combustion-tail",
+      "text": "A short burst of hot fine electrical crackle and tiny metallic fragments falling away into cooling smoky air. Starts immediately, rapid fine detail, soft dissipating tail. Dry close perspective. No bass impact, no voice, no music.",
+      "duration": 2.3,
+      "gainDb": -17,
+      "replaces": ["shatter"]
+    },
+    {
+      "id": "rewind",
+      "text": "A single science fiction time reversal: backwards rushing air with a fast descending granular tape rewind texture, small reverse electric sparks drawing inward, ending in a precise soft click and silence. One continuous 1.4 second gesture. Subtle and tactile, not a melody. No speech, no music.",
+      "duration": 1.4,
+      "gainDb": -13,
+      "replaces": ["rewind"]
+    },
+    {
+      "id": "resolution",
+      "text": "One understated warm electronic confirmation: a soft rounded glass plink with two closely spaced sympathetic harmonics, a subtle airy shimmer that resolves and fades quickly. Calm relief, precise software interface, no jingle, no music, no voice.",
+      "duration": 0.9,
+      "gainDb": -16,
+      "replaces": ["safe"]
+    }
+  ]
+}

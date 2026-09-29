@@ -110,6 +110,20 @@ impl Spoken<'_> {
         self.cue(phrase, 0.0).0
     }
 
+    /// Explicit spelling/segmentation alternatives from speech recognition.
+    pub fn at_any(&self, phrases: &[&str]) -> u64 {
+        phrases
+            .iter()
+            .find_map(|phrase| self.clip.transcript.phrase_after(phrase, 0.0).ok())
+            .map(|cue| self.start + cue.start().as_nanos())
+            .unwrap_or_else(|| {
+                panic!(
+                    "clip '{}': transcript contains none of {phrases:?}",
+                    self.clip.id
+                )
+            })
+    }
+
     /// `phrase`, searching only after `earlier` is said.
     pub fn at_after(&self, phrase: &str, earlier: &str) -> u64 {
         let from = self.cue(earlier, 0.0).0 - self.start;

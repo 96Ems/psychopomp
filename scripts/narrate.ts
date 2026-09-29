@@ -1,4 +1,4 @@
-// Narration for a Scene Program: synthesize each clip of a script with Fish Audio,
+// Narration for a Scene Program: synthesize each clip with Fish Audio or ElevenLabs,
 // loudness-normalize it, transcribe word timings with Whisper, and write a manifest
 // with exact durations. Only clips whose text changed are regenerated.
 //
@@ -7,7 +7,9 @@
 //   bun scripts/narrate.ts <script.json> --only intro,outro   # force selected clips
 //   bun scripts/narrate.ts <script.json> --draft               # macOS `say`, no credentials
 //
-// script.json: { "voice"?: string, "speed"?: number, "clips": [{ "id": string, "text": string }] }
+// script.json: { "engine"?: "fish" | "elevenlabs", "voice"?: string, "speed"?: number,
+//   "model"?: string, "settings"?: { "stability": number, "similarity": number },
+//   "clips": [{ "id": string, "text": string }] }
 // Writes next to the script: <id>.mp3, <id>.words.json ({ wordTimings: [...] }), narration.json.
 // Bracketed delivery cues such as "[confident]" are spoken as direction, not words.
 import { createHash } from "node:crypto"
@@ -15,8 +17,15 @@ import { mkdtemp, rm } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import path from "node:path"
 
-type Script = { voice?: string; speed?: number; clips: { id: string; text: string }[] }
-type Clip = { id: string; file: string; words: string; durationNanos: number; textHash: string; engine: string }
+type Script = {
+  engine?: "fish" | "elevenlabs"
+  voice?: string
+  speed?: number
+  model?: string
+  settings?: { stability: number; similarity: number }
+  clips: { id: string; text: string }[]
+}
+type Clip = { id: string; file: string; words: string; durationNanos: number; textHash: string; engine: string; model?: string; requestId?: string }
 
 const args = Bun.argv.slice(2)
 const scriptPath = args.find((arg) => !arg.startsWith("--"))
@@ -24,12 +33,18 @@ if (!scriptPath) throw new Error("usage: bun scripts/narrate.ts <script.json> [-
 const only = new Set(args.includes("--only") ? args[args.indexOf("--only") + 1].split(",") : [])
 // Draft narration lets a scene be timed before the final voice exists. Phrase-keyed
 // cues re-derive themselves when final clips replace the drafts.
-const engine = args.includes("--draft") ? "say" : "fish"
 const fishSay = process.env.FISH_SAY ?? path.join(process.env.HOME!, ".opencode/skill/fish-audio/scripts/fish-say.ts")
 const whisperModel = process.env.WHISPER_MODEL ?? "mlx-community/whisper-large-v3-mlx"
 
 const dir = path.dirname(path.resolve(scriptPath))
 const script: Script = await Bun.file(scriptPath).json()
+const engine = args.includes("--draft") ? "say" : script.engine ?? "fish"
+if (!["say", "fish", "elevenlabs"].includes(engine)) throw new Error(`unknown narration engine '${engine}'`)
+if (engine === "elevenlabs" && (!script.voice || !process.env.ELEVENLABS_API_KEY))
+  throw new Error("ElevenLabs requires script.voice and ELEVENLABS_API_KEY")
+if (engine === "elevenlabs" && script.speed !== undefined)
+  throw new Error("Eleven v4 uses text directions for pace; speed is not supported")
+const model = engine === "elevenlabs" ? script.model ?? "eleven_v4" : undefined
 const manifestPath = path.join(dir, "narration.json")
 const previous: Record<string, Clip> = Object.fromEntries(
   ((await Bun.file(manifestPath).exists()) ? (await Bun.file(manifestPath).json()).clips : []).map((clip: Clip) => [
@@ -45,13 +60,15 @@ for (const clip of script.clips) {
   ids.add(clip.id)
   const textHash = createHash("sha256")
     .update(`${engine}|${script.voice ?? ""}|${script.speed ?? 1}|${clip.text}`)
+  if (engine === "elevenlabs") textHash.update(JSON.stringify({ model, settings: script.settings }))
+  const hash = textHash
     .digest("hex")
     .slice(0, 16)
   const file = `${clip.id}.mp3`
   const words = `${clip.id}.words.json`
   const cached = previous[clip.id]
   const fresh =
-    cached?.textHash === textHash &&
+    cached?.textHash === hash &&
     !only.has(clip.id) &&
     (await Bun.file(path.join(dir, file)).exists()) &&
     (await Bun.file(path.join(dir, words)).exists())
@@ -64,10 +81,28 @@ for (const clip of script.clips) {
   try {
     const text = path.join(work, "text.txt")
     const raw = path.join(work, "raw.wav")
+    let requestId: string | undefined
     await Bun.write(text, engine === "say" ? clip.text.replace(/\[[^\]]*\]\s*/g, "") : clip.text)
     if (engine === "say")
       run(["say", "-v", process.env.SAY_VOICE ?? "Samantha", "-f", text, "-o", raw, "--data-format=LEI16@48000"])
-    else
+    else if (engine === "elevenlabs") {
+      // One speaker through Text to Dialogue: the same endpoint supports future
+      // multi-voice scenes, but this script deliberately owns one narrator.
+      if (clip.text.length > 2000) throw new Error(`clip '${clip.id}' exceeds the reliable 2,000-character dialogue limit`)
+      const response = await fetch("https://api.elevenlabs.io/v1/text-to-dialogue?output_format=mp3_44100_192", {
+        method: "POST",
+        headers: { "xi-api-key": process.env.ELEVENLABS_API_KEY!, "Content-Type": "application/json" },
+        body: JSON.stringify({ model_id: model, inputs: [{ voice_id: script.voice, text: clip.text }], settings: script.settings, use_pvc_as_ivc: false }),
+        signal: AbortSignal.timeout(120_000),
+      })
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({})) as { detail?: { status?: string } }
+        throw new Error(`ElevenLabs HTTP ${response.status}: ${error.detail?.status ?? "generation failed"}`)
+      }
+      if (!response.headers.get("content-type")?.startsWith("audio/")) throw new Error("ElevenLabs did not return audio")
+      requestId = response.headers.get("request-id") ?? undefined
+      await Bun.write(raw, await response.arrayBuffer())
+    } else
       run([
         "bun",
         fishSay,
@@ -96,7 +131,13 @@ for (const clip of script.clips) {
         return { word: word.word.trim(), start, end }
       })
     await Bun.write(path.join(dir, words), JSON.stringify({ wordTimings }, null, 1) + "\n")
-    clips.push({ id: clip.id, file, words, durationNanos: durationNanos(path.join(dir, file)), textHash, engine })
+    clips.push({ id: clip.id, file, words, durationNanos: durationNanos(path.join(dir, file)), textHash: hash, engine, model, requestId })
+    // Preserve completed paid generations if a later clip fails.
+    const checkpoint = script.clips.flatMap(({ id }) => {
+      const saved = clips.find((item) => item.id === id) ?? previous[id]
+      return saved ? [saved] : []
+    })
+    await Bun.write(manifestPath, JSON.stringify({ clips: checkpoint }, null, 2) + "\n")
   } finally {
     await rm(work, { recursive: true, force: true })
   }
