@@ -487,7 +487,7 @@ fn stage_film(narration: &Narration) -> Result<ScenePlan> {
     s.to(sc, "client.status", 0.0, outdated + ns(1.0), 2.0, 0.4);
 
     // SIGTERM: the orb shatters, the shockwave spreads, every connection snaps.
-    let kill_send = b("sig term");
+    let kill_send = before.at_any(&["sig term", "sigterm"]);
     let kill_arrival = s.send(sc, "kill", kill_send, 0.55);
     sc.media(sound(
         "kill-send",
@@ -565,6 +565,9 @@ fn stage_film(narration: &Narration) -> Result<ScenePlan> {
 
     // Rewind: everything returns to the moment before the probe.
     let switch = before.end() + ns(0.5);
+    let scan = s.channel(sc, "post.rewind", -1.0);
+    sc.set(&scan, switch, 0.0);
+    sc.ease(&scan, switch, 1.4, 1.4, Ease::Linear);
     before_chip.hide(sc, switch);
     footer_before.hide(sc, switch);
     let mut rewind_chip = chip(sc, "chip-rewind", Tone::Accent, "◀◀ rewind")?;

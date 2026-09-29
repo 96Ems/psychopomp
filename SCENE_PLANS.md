@@ -403,9 +403,30 @@ cargo run --release -- plan render scenes/pr-walkthrough/pr-walkthrough.reel.jso
 cargo run --release -- plan render scenes/pr-walkthrough/pr-walkthrough.reel.json output/pr-walkthrough.mp4 --theme opencode
 ```
 
-`narrate.ts` regenerates only clips whose text (or engine) changed and writes
+`narrate.ts` regenerates only clips whose text, voice, engine, or settings changed and writes
 `narration.json` with exact decoded durations. Draft and final clips share file
 names, so switching voices re-times the reel without touching the Scene Program.
+
+For ElevenLabs v4, use `"engine": "elevenlabs"`, `"model": "eleven_v4"`, the
+voice ID, and optional `"settings": { "stability": 0.5, "similarity": 0.7 }` in
+the script. Inject `ELEVENLABS_API_KEY`; `speed` is unsupported. Directions in
+square brackets guide performance; Whisper timestamps the resulting speech.
+The script records model/request IDs and checkpoints completed clips. The
+flagship's directed example is `scenes/pr-walkthrough/narration-v4/script.json`.
+Copy it under `output/` before generating to keep alternate audio there:
+
+```sh
+mkdir -p output/eleven-v4/narration
+cp scenes/pr-walkthrough/narration-v4/script.json output/eleven-v4/narration/script.json
+2password run --env 'ELEVENLABS_API_KEY=op://…' -- bun scripts/narrate.ts output/eleven-v4/narration/script.json
+cargo run -p kinograph-pr-walkthrough -- pr-50825 --narration output/eleven-v4/narration --output output/eleven-v4/reel.json
+```
+
+The selected reel is built lazily, so a flagship-only script needs only its three
+clips. Alternate exports resolve audio against the selected narration directory
+and original scene assets. The explicit `sig term`/`sigterm` cue alternatives
+handle ASR word segmentation without changing recorded timings. Rebuild and
+review the new clock before rendering; replacing just the audio desynchronizes it.
 
 A reel is `{ "version": 1, "id", "segments": [{ "transitionNanos", "transitionStyle": "crossfade" | "dip" | "zoom", "transitionFocus"?, "plan" }] }`.
 A `zoom` needs `transitionFocus: [x, y, width, height]` in the outgoing frame; compute
@@ -432,7 +453,9 @@ Components used by explainers:
   (`at`, `radius`, `thickness`), plus `post` (`bloom`, `grain`, `vignette`,
   `backdrop`). Channels are `<element>.<property>` (for example `service.shatter`,
   `link.draw`, `probe.age`, `client.blur|content`) and `camera.x|y|z|focus|dof|shake`,
-  `post.bloom|chroma|exposure|vignette`. A packet is one clock: `age` (seconds since
+   `post.bloom|chroma|exposure|vignette|rewind`. `post.rewind` is a 1.4-second local
+   age for reverse-scan distortion and RGB separation (-1 inactive).
+   A packet is one clock: `age` (seconds since
   dispatch, -1 before) and `flight`; the renderer derives its gather, flight, trail,
   landing ring, and light from them. Beams choose their own ports and curve; leave
   `bend` at 0 unless two beams need separating.

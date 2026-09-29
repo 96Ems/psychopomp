@@ -220,7 +220,7 @@ impl StageElement {
 }
 
 /// Channels that belong to the whole stage rather than an element.
-pub const STAGE_PROPERTIES: [&str; 10] = [
+pub const STAGE_PROPERTIES: [&str; 11] = [
     "camera.x",
     "camera.y",
     "camera.z",
@@ -231,6 +231,7 @@ pub const STAGE_PROPERTIES: [&str; 10] = [
     "post.chroma",
     "post.exposure",
     "post.vignette",
+    "post.rewind",
 ];
 
 impl StagePlan {

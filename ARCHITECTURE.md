@@ -462,6 +462,8 @@ zero before the ray interval and screen-space rejection bounds.
 The binding-free `effects/pressure.wgsl` returns a displacement field for the
 composite. These concrete Modules form the initial [effects library](EFFECTS.md);
 effect physics and shader optics can be reused without Stage identities.
+`effects/rewind.wgsl` adds an age-driven reverse-scan field to the same composite,
+controlled by `post.rewind`; it needs no previous-frame textures or feedback.
 Incoming packets also sample `effects::surface` from the first visible-shell
 contact, found by `Circle::entry_fraction` and the inverse packet travel curve.
 The local dimple, particle emission, and hemisphere-masked spherical trace travel

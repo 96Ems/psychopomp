@@ -9,6 +9,7 @@ struct Post {
     params: vec4<f32>, // bloom intensity, threshold, knee, exposure
     look: vec4<f32>,   // chroma, vignette, grain, frame seed
     shock: vec4<f32>,  // center pixels, burst age (-1 inactive), projected scale
+    rewind: vec4<f32>, // local reverse-scan age (-1 inactive), reserved
 };
 
 @group(0) @binding(0) var<uniform> post: Post;
@@ -106,7 +107,10 @@ fn composite(in: VOut) -> @location(0) vec4<f32> {
         pressure = wave.z;
         uv += wave.xy / vec2<f32>(textureDimensions(source));
     }
-    let offset = (in.uv - vec2<f32>(0.5)) * post.look.x * 0.006;
+    let size = vec2<f32>(textureDimensions(source));
+    let scan = rewind_field(in.uv, size, post.rewind.x);
+    uv += scan.xy / size;
+    let offset = (in.uv - vec2<f32>(0.5)) * post.look.x * 0.006 + vec2<f32>(scan.z / size.x, 0.0);
     let uv_r = uv + offset;
     let uv_b = uv - offset;
     let hdr = vec3<f32>(
@@ -120,6 +124,8 @@ fn composite(in: VOut) -> @location(0) vec4<f32> {
         textureSampleLevel(bloom, linear_sampler, uv_b, 0.0).b,
     );
     var color = (hdr + glow * post.params.x) * post.params.w;
+    // A faint cold scan, not a white flash; the scene's local lights still win.
+    color = color * (1.0 - 0.12 * scan.w) + vec3<f32>(0.008, 0.014, 0.022) * scan.w;
     color += vec3<f32>(0.035, 0.028, 0.021) * pressure;
     color = rolloff(color);
 

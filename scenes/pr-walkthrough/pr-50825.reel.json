@@ -3433,6 +3433,26 @@
             ]
           },
           {
+            "id": "stage.post.rewind",
+            "actorId": "stage",
+            "property": "post.rewind",
+            "initial": -1.0,
+            "events": [
+              {
+                "operation": "set",
+                "atNanos": 28929520833,
+                "value": 0.0
+              },
+              {
+                "operation": "ease",
+                "atNanos": 28929520833,
+                "target": 1.4,
+                "durationNanos": 1400000000,
+                "curve": "linear"
+              }
+            ]
+          },
+          {
             "id": "chip-rewind.opacity",
             "actorId": "chip-rewind",
             "property": "opacity",

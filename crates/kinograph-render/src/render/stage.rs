@@ -63,6 +63,7 @@ struct PostUniform {
     params: [f32; 4],
     look: [f32; 4],
     shock: [f32; 4],
+    rewind: [f32; 4],
 }
 
 struct AtlasText {
@@ -317,11 +318,12 @@ impl HeadlessRenderer {
             label: Some("stage post"),
             source: wgpu::ShaderSource::Wgsl(
                 format!(
-                    "{}\n{}",
+                    "{}\n{}\n{}",
                     shader(
                         "effects/pressure.wgsl",
                         include_str!("effects/pressure.wgsl")
                     ),
+                    shader("effects/rewind.wgsl", include_str!("effects/rewind.wgsl")),
                     shader("stage_post.wgsl", include_str!("stage_post.wgsl")),
                 )
                 .into(),
@@ -662,7 +664,14 @@ impl HeadlessRenderer {
                 ])
             })
             .unwrap_or([0.0, 0.0, -1.0, 0.0]);
-        self.draw_stage(gpu, &prims, &points, [params, post, shock], look.background)
+        let rewind = [value("post.rewind", -1.0), 0.0, 0.0, 0.0];
+        self.draw_stage(
+            gpu,
+            &prims,
+            &points,
+            [params, post, shock, rewind],
+            look.background,
+        )
     }
 
     /// Draw the primitives into the HDR target, bloom, and composite into the
@@ -672,7 +681,7 @@ impl HeadlessRenderer {
         gpu: &StageGpu,
         prims: &[Prim],
         points: &[[f32; 4]],
-        post: [[f32; 4]; 3],
+        post: [[f32; 4]; 4],
         clear: Vec3,
     ) -> Result<Vec<u8>> {
         self.queue
@@ -690,6 +699,7 @@ impl HeadlessRenderer {
                     params: post[0],
                     look: post[1],
                     shock: post[2],
+                    rewind: post[3],
                 }),
             );
         }
@@ -2409,6 +2419,31 @@ mod tests {
         };
         let fire = burst(&mut renderer, 0.45);
         let intact = burst(&mut renderer, -1.0);
+        let rewind = |renderer: &mut HeadlessRenderer, age: f32| {
+            renderer
+                .render_stage(&plan, &gpu, 2.0, |property, default| {
+                    if property == "post.rewind" {
+                        age
+                    } else {
+                        default
+                    }
+                })
+                .unwrap()
+        };
+        assert!(
+            rewind(&mut renderer, 0.0) == intact,
+            "rewind starts without a cut"
+        );
+        let scanned = rewind(&mut renderer, 0.4);
+        assert!(scanned != intact, "reverse scan reaches pixels");
+        assert!(
+            rewind(&mut renderer, 1.4) == intact,
+            "rewind settles exactly"
+        );
+        assert!(
+            rewind(&mut renderer, 0.4) == scanned,
+            "rewind is independent of sampling order"
+        );
         assert!(
             burst(&mut renderer, 0.0) == intact,
             "entering Burst preserves the intact pixels"

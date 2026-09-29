@@ -13,6 +13,7 @@ they happen; effect Modules own their physical pose and optical response.
 | `render/effects/noise.wgsl` | `fx_noise3(p)`, `fx_fbm3(p)` | Deterministic 3D noise; caller-owned coordinate transforms |
 | `render/effects/combustion.wgsl` | `combustion_volume(pixel, radius, age)` | Domain-warped fire/smoke, emission and absorption; requires noise |
 | `render/effects/pressure.wgsl` | `pressure_wave(delta, scale, age)` | Inward pinch and outward refraction; returns displacement and ring intensity |
+| `render/effects/rewind.wgsl` | `rewind_field(uv, size, age)` | Upward reverse-scan displacement and RGB separation, with smooth protected margins |
 
 The WGSL Modules have no bindings, texture ownership, entry points, or Stage
 identifiers. Concatenate dependencies before the consuming shader. The Stage is
@@ -25,6 +26,11 @@ crossing time from the packet's travel curve, and samples the wave by geodesic
 angle. `math::shapes::sphere_ring` supplies a continuous surface trace; the
 renderer hides its rear hemisphere. This preserves the attached outline while
 the local particle skin deforms.
+
+The Stage's `post.rewind` channel is a local age in seconds: negative is inactive,
+zero starts without a cut, and 1.4 seconds returns exactly to the original image.
+Animate the age linearly. The field is history-free and composes with the pressure
+wave; its smooth scan bands protect the title/footer and avoid frame-random jumps.
 
 `Burst` uses seconds and world pixels. Negative age is intact; zero preserves
 the shell pose; 5.2 seconds is spent. Direction is a unit vector and each seed
