@@ -442,10 +442,14 @@ Components used by explainers:
   twang), `send` (gather, flight, landing), `hit` (instant attack, convex decay),
   `twang`, and `land`. `bounce` and `to` spring any channel; `glide` moves between
   resting compositions with a minimum-jerk quintic curve. Use glides for staged
-  camera moves, springs for panel settling, and instant-attack fades for light.
+  camera moves with exact timing, springs for responsive camera/panel settling,
+  and instant-attack fades for light.
   Orb `pulse` changes illumination, not geometry or attached beam ports. Card
   `flash` lifts ink and rim, not the entire fill. Connected wires can rest: the
   flagship stops `flow` after its brief connection beat.
+  Packets entering an orb trigger a directional surface ripple at the visible
+  shell, before reaching the submerged endpoint. The flagship now uses critical
+  `to` springs for camera moves; `glide` remains available for minimum-jerk timing.
 - Orb `rotation` is an angular offset in radians; animate it for a spin entrance
   rather than changing the ambient `spin` multiplier. `blur` adds defocus in world
   pixels. `burst` defaults to -1 (intact): set 0 on impact and ease linearly to

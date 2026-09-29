@@ -502,39 +502,49 @@
             "initial": -160.0,
             "events": [
               {
-                "operation": "ease",
+                "operation": "spring",
                 "atNanos": 0,
                 "target": 0.0,
-                "durationNanos": 2800000000,
-                "curve": "smootherstep"
+                "responseSeconds": 2.64,
+                "dampingRatio": 1.0,
+                "positionThreshold": 0.001,
+                "velocityThreshold": 0.001
               },
               {
-                "operation": "ease",
+                "operation": "spring",
                 "atNanos": 26000000000,
                 "target": -100.0,
-                "durationNanos": 1800000000,
-                "curve": "smootherstep"
+                "responseSeconds": 2.16,
+                "dampingRatio": 1.0,
+                "positionThreshold": 0.001,
+                "velocityThreshold": 0.001
               },
               {
-                "operation": "ease",
+                "operation": "spring",
                 "atNanos": 28929520833,
                 "target": 0.0,
-                "durationNanos": 1800000000,
-                "curve": "smootherstep"
+                "responseSeconds": 2.16,
+                "dampingRatio": 1.0,
+                "positionThreshold": 0.001,
+                "velocityThreshold": 0.001
               },
               {
-                "operation": "ease",
+                "operation": "spring",
                 "atNanos": 45129520833,
                 "target": 90.0,
-                "durationNanos": 1800000000,
-                "curve": "smootherstep"
+                "responseSeconds": 2.16,
+                "dampingRatio": 1.0,
+                "positionThreshold": 0.001,
+                "velocityThreshold": 0.001
               },
               {
-                "operation": "ease",
+                "operation": "spring",
                 "atNanos": 47382499999,
                 "target": 60.0,
-                "durationNanos": 1200000000,
-                "curve": "smootherstep"
+                "responseSeconds": 1.44,
+                "dampingRatio": 1.0,
+                "positionThreshold": 0.001,
+                "velocityThreshold": 0.001
               }
             ]
           },
@@ -948,30 +958,6 @@
               {
                 "operation": "ease",
                 "atNanos": 2600000000,
-                "target": 0.0,
-                "durationNanos": 800000000,
-                "curve": "cubic-out"
-              },
-              {
-                "operation": "set",
-                "atNanos": 10850000000,
-                "value": 0.65
-              },
-              {
-                "operation": "ease",
-                "atNanos": 10850000000,
-                "target": 0.0,
-                "durationNanos": 800000000,
-                "curve": "cubic-out"
-              },
-              {
-                "operation": "set",
-                "atNanos": 31479520833,
-                "value": 0.65
-              },
-              {
-                "operation": "ease",
-                "atNanos": 31479520833,
                 "target": 0.0,
                 "durationNanos": 800000000,
                 "curve": "cubic-out"
@@ -2399,39 +2385,49 @@
             "initial": 0.0,
             "events": [
               {
-                "operation": "ease",
+                "operation": "spring",
                 "atNanos": 6460000000,
                 "target": -110.0,
-                "durationNanos": 1600000000,
-                "curve": "smootherstep"
+                "responseSeconds": 1.9200001,
+                "dampingRatio": 1.0,
+                "positionThreshold": 0.001,
+                "velocityThreshold": 0.001
               },
               {
-                "operation": "ease",
+                "operation": "spring",
                 "atNanos": 26000000000,
                 "target": 0.0,
-                "durationNanos": 1600000000,
-                "curve": "smootherstep"
+                "responseSeconds": 1.9200001,
+                "dampingRatio": 1.0,
+                "positionThreshold": 0.001,
+                "velocityThreshold": 0.001
               },
               {
-                "operation": "ease",
+                "operation": "spring",
                 "atNanos": 30429520833,
                 "target": -110.0,
-                "durationNanos": 1200000000,
-                "curve": "smootherstep"
+                "responseSeconds": 1.44,
+                "dampingRatio": 1.0,
+                "positionThreshold": 0.001,
+                "velocityThreshold": 0.001
               },
               {
-                "operation": "ease",
+                "operation": "spring",
                 "atNanos": 45129520833,
                 "target": 40.0,
-                "durationNanos": 1600000000,
-                "curve": "smootherstep"
+                "responseSeconds": 1.9200001,
+                "dampingRatio": 1.0,
+                "positionThreshold": 0.001,
+                "velocityThreshold": 0.001
               },
               {
-                "operation": "ease",
+                "operation": "spring",
                 "atNanos": 47382499999,
                 "target": -110.0,
-                "durationNanos": 1200000000,
-                "curve": "smootherstep"
+                "responseSeconds": 1.44,
+                "dampingRatio": 1.0,
+                "positionThreshold": 0.001,
+                "velocityThreshold": 0.001
               }
             ]
           },
@@ -2442,39 +2438,49 @@
             "initial": 0.0,
             "events": [
               {
-                "operation": "ease",
+                "operation": "spring",
                 "atNanos": 6460000000,
                 "target": -60.0,
-                "durationNanos": 1200000000,
-                "curve": "smootherstep"
+                "responseSeconds": 1.44,
+                "dampingRatio": 1.0,
+                "positionThreshold": 0.001,
+                "velocityThreshold": 0.001
               },
               {
-                "operation": "ease",
+                "operation": "spring",
                 "atNanos": 18630000000,
                 "target": 0.0,
-                "durationNanos": 800000000,
-                "curve": "smootherstep"
+                "responseSeconds": 0.96000004,
+                "dampingRatio": 1.0,
+                "positionThreshold": 0.001,
+                "velocityThreshold": 0.001
               },
               {
-                "operation": "ease",
+                "operation": "spring",
                 "atNanos": 30429520833,
                 "target": -60.0,
-                "durationNanos": 1000000000,
-                "curve": "smootherstep"
+                "responseSeconds": 1.2,
+                "dampingRatio": 1.0,
+                "positionThreshold": 0.001,
+                "velocityThreshold": 0.001
               },
               {
-                "operation": "ease",
+                "operation": "spring",
                 "atNanos": 45129520833,
                 "target": 0.0,
-                "durationNanos": 1000000000,
-                "curve": "smootherstep"
+                "responseSeconds": 1.2,
+                "dampingRatio": 1.0,
+                "positionThreshold": 0.001,
+                "velocityThreshold": 0.001
               },
               {
-                "operation": "ease",
+                "operation": "spring",
                 "atNanos": 47382499999,
                 "target": -60.0,
-                "durationNanos": 1000000000,
-                "curve": "smootherstep"
+                "responseSeconds": 1.2,
+                "dampingRatio": 1.0,
+                "positionThreshold": 0.001,
+                "velocityThreshold": 0.001
               }
             ]
           },
@@ -4243,11 +4249,13 @@
             "initial": 0.0,
             "events": [
               {
-                "operation": "ease",
+                "operation": "spring",
                 "atNanos": 47382499999,
                 "target": 0.0,
-                "durationNanos": 1200000000,
-                "curve": "smootherstep"
+                "responseSeconds": 1.44,
+                "dampingRatio": 1.0,
+                "positionThreshold": 0.001,
+                "velocityThreshold": 0.001
               }
             ]
           }
@@ -4490,12 +4498,30 @@
             "id": "editor",
             "recipe": "editor",
             "data": {
+              "additionalInlineReveals": [
+                {
+                  "channel": "version-split",
+                  "lineId": "line-1",
+                  "rangeId": "rhs"
+                },
+                {
+                  "channel": "version-split",
+                  "lineId": "line-2",
+                  "rangeId": "old-prefix",
+                  "reversed": true
+                },
+                {
+                  "channel": "version-split",
+                  "lineId": "line-2",
+                  "rangeId": "new-prefix"
+                }
+              ],
               "enteringOffsetX": 0.0,
               "fileName": "client/effect/service.ts",
               "finalLineIds": [
                 "line-0",
-                "line-3",
-                "line-4",
+                "line-2",
+                "line-1",
                 "line-5",
                 "line-6",
                 "line-7",
@@ -4549,10 +4575,10 @@
                 },
                 {
                   "id": "line-1",
-                  "mark": "removed",
+                  "mark": "added",
                   "parts": [
                     {
-                      "id": "code",
+                      "id": "declaration",
                       "spans": [
                         {
                           "style": "plain",
@@ -4567,45 +4593,50 @@
                           "text": " compatible ="
                         }
                       ]
-                    }
-                  ],
-                  "semanticRanges": []
-                },
-                {
-                  "id": "line-2",
-                  "mark": "removed",
-                  "parts": [
+                    },
                     {
-                      "id": "code",
+                      "id": "rhs",
                       "spans": [
                         {
                           "style": "plain",
-                          "text": "    service.compatible && "
-                        },
-                        {
-                          "style": "accent",
-                          "text": "matchesVersion"
-                        },
-                        {
-                          "style": "plain",
-                          "text": "(service.version, options)"
+                          "text": " service.compatible && versionMatches"
                         }
                       ]
                     }
                   ],
-                  "semanticRanges": []
+                  "semanticRanges": [
+                    {
+                      "firstPartId": "rhs",
+                      "id": "rhs",
+                      "lastPartId": "rhs"
+                    }
+                  ]
                 },
                 {
-                  "id": "line-3",
+                  "id": "line-2",
                   "mark": "added",
                   "parts": [
                     {
-                      "id": "code",
+                      "id": "indent",
                       "spans": [
                         {
                           "style": "plain",
                           "text": "  "
-                        },
+                        }
+                      ]
+                    },
+                    {
+                      "id": "old-prefix",
+                      "spans": [
+                        {
+                          "style": "plain",
+                          "text": "  service.compatible && "
+                        }
+                      ]
+                    },
+                    {
+                      "id": "new-prefix",
+                      "spans": [
                         {
                           "style": "keyword",
                           "text": "const"
@@ -4613,7 +4644,12 @@
                         {
                           "style": "plain",
                           "text": " versionMatches = "
-                        },
+                        }
+                      ]
+                    },
+                    {
+                      "id": "expression",
+                      "spans": [
                         {
                           "style": "accent",
                           "text": "matchesVersion"
@@ -4625,31 +4661,18 @@
                       ]
                     }
                   ],
-                  "semanticRanges": []
-                },
-                {
-                  "id": "line-4",
-                  "mark": "added",
-                  "parts": [
+                  "semanticRanges": [
                     {
-                      "id": "code",
-                      "spans": [
-                        {
-                          "style": "plain",
-                          "text": "  "
-                        },
-                        {
-                          "style": "keyword",
-                          "text": "const"
-                        },
-                        {
-                          "style": "plain",
-                          "text": " compatible = service.compatible && versionMatches"
-                        }
-                      ]
+                      "firstPartId": "old-prefix",
+                      "id": "old-prefix",
+                      "lastPartId": "old-prefix"
+                    },
+                    {
+                      "firstPartId": "new-prefix",
+                      "id": "new-prefix",
+                      "lastPartId": "new-prefix"
                     }
-                  ],
-                  "semanticRanges": []
+                  ]
                 },
                 {
                   "id": "line-5",
@@ -4942,8 +4965,8 @@
                   "atNanos": 2360000000,
                   "lineIds": [
                     "line-0",
-                    "line-3",
-                    "line-4",
+                    "line-2",
+                    "line-1",
                     "line-9",
                     "line-10",
                     "line-11",
@@ -4955,8 +4978,8 @@
                   "atNanos": 4740000000,
                   "lineIds": [
                     "line-0",
-                    "line-3",
-                    "line-4",
+                    "line-2",
+                    "line-1",
                     "line-5",
                     "line-6",
                     "line-7",
@@ -5028,40 +5051,6 @@
             ]
           },
           {
-            "id": "editor.mark.line-1",
-            "actorId": "editor",
-            "property": "mark.line-1",
-            "initial": 0.0,
-            "events": [
-              {
-                "operation": "spring",
-                "atNanos": 1460000000,
-                "target": 1.0,
-                "responseSeconds": 0.42000002,
-                "dampingRatio": 1.0,
-                "positionThreshold": 0.001,
-                "velocityThreshold": 0.001
-              }
-            ]
-          },
-          {
-            "id": "editor.mark.line-2",
-            "actorId": "editor",
-            "property": "mark.line-2",
-            "initial": 0.0,
-            "events": [
-              {
-                "operation": "spring",
-                "atNanos": 1460000000,
-                "target": 1.0,
-                "responseSeconds": 0.42000002,
-                "dampingRatio": 1.0,
-                "positionThreshold": 0.001,
-                "velocityThreshold": 0.001
-              }
-            ]
-          },
-          {
             "id": "footer.opacity",
             "actorId": "footer",
             "property": "opacity",
@@ -5089,6 +5078,57 @@
                 "atNanos": 600000000,
                 "target": 0.0,
                 "responseSeconds": 0.54,
+                "dampingRatio": 1.0,
+                "positionThreshold": 0.001,
+                "velocityThreshold": 0.001
+              }
+            ]
+          },
+          {
+            "id": "editor.version-split",
+            "actorId": "editor",
+            "property": "version-split",
+            "initial": 0.0,
+            "events": [
+              {
+                "operation": "spring",
+                "atNanos": 2360000000,
+                "target": 1.0,
+                "responseSeconds": 0.48000002,
+                "dampingRatio": 1.0,
+                "positionThreshold": 0.001,
+                "velocityThreshold": 0.001
+              }
+            ]
+          },
+          {
+            "id": "editor.mark.line-1",
+            "actorId": "editor",
+            "property": "mark.line-1",
+            "initial": 0.0,
+            "events": [
+              {
+                "operation": "spring",
+                "atNanos": 2360000000,
+                "target": 1.0,
+                "responseSeconds": 0.48000002,
+                "dampingRatio": 1.0,
+                "positionThreshold": 0.001,
+                "velocityThreshold": 0.001
+              }
+            ]
+          },
+          {
+            "id": "editor.mark.line-2",
+            "actorId": "editor",
+            "property": "mark.line-2",
+            "initial": 0.0,
+            "events": [
+              {
+                "operation": "spring",
+                "atNanos": 2360000000,
+                "target": 1.0,
+                "responseSeconds": 0.48000002,
                 "dampingRatio": 1.0,
                 "positionThreshold": 0.001,
                 "velocityThreshold": 0.001

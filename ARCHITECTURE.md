@@ -462,6 +462,15 @@ zero before the ray interval and screen-space rejection bounds.
 The binding-free `effects/pressure.wgsl` returns a displacement field for the
 composite. These concrete Modules form the initial [effects library](EFFECTS.md);
 effect physics and shader optics can be reused without Stage identities.
+Incoming packets also sample `effects::surface` from the first visible-shell
+contact, found by `Circle::entry_fraction` and the inverse packet travel curve.
+The local dimple, particle emission, and hemisphere-masked spherical trace travel
+outward from that contact; they do not scale the receiver or shift its ports.
+
+Editor diff backgrounds union their weighted vertical intervals before pixel
+coverage (`render/line_marks.rs`). Adjacent fractional rows therefore share a
+single tint instead of double-blending an antialiased seam. Gutter signs remain
+attached to the sampled line positions.
 
 ### Eased events
 

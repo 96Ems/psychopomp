@@ -72,3 +72,40 @@ Entry MAE and rim-light locality are unchanged. The volume quad also grows from
 Stop after these three concrete defect fixes. Further brightness/detail tuning
 would be an aesthetic choice without a demonstrated defect; keep the restrained
 scene and inspect the complete narrated film next.
+
+## Effects extraction verification
+
+The extracted CPU and binding-free WGSL Modules preserved all three benchmark
+metrics (`effects-module`, seven pairs). Decoded full-resolution PNGs at 3.8,
+18.67, 19.08, 21.5, and 29.9 seconds had a maximum channel difference of **zero**
+against the pre-extraction build. This covers the intact shell, ignition, fire,
+smoke, and rewind; it is a finite parity check, not proof for every input.
+
+## Follow-up: contact, code, and camera
+
+The next review identified three separate issues:
+
+- Request arrival read as a vague center pulse. `effects::surface` now samples a
+  local dimple and an emissive wave from the packet's visible-shell crossing.
+  The encoded 10.3–11.7 s study, inspected at 40 ms intervals, shows the wave
+  starting on the left and traveling across the orb before cooling.
+- Adjacent diff backgrounds double-blended fractional row edges. Weighted
+  interval union removes the seam: at the 58 s hold, the blank stripe
+  x263..268/y335..591 changed from **6 to 0 RGB8** green variation and maximum
+  adjacent-channel step. Fractional adjacency and unequal-opacity overlap have
+  CPU regression tests.
+- Camera glides felt stiff. The flagship now uses critically damped camera
+  springs. The encoded 45–49.9 s study was inspected at 200 ms intervals for
+  framing and the client-card zoom handoff; subjective playback approval remains
+  with the viewer.
+
+The encoded code study (50.3–54.9 s, inspected at 100 ms intervals) also exposed
+the opportunity to retain the declaration and version-check expression through
+the first edit. The two lines retain identity while exchanging positions;
+only their edited inline parts change. `plan steps` on the extracted code plan
+reports no warnings at two-second holds, and a regression test checks that the
+common parts are absent from changed-part IDs. This film review does not establish
+interactive reverse/skipped-step navigation behavior.
+
+Workspace tests, formatting, strict Clippy, and both ignored Stage GPU tests pass.
+Local artifacts and validation logs are under ignored `output/`.

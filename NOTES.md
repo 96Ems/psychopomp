@@ -551,6 +551,20 @@ The first four bullets below retain the **pre-fix review evidence**. Their unres
 
 ## Next Question
 
+- Follow-up contact/code studies made the packet's visible-shell intersection
+  the source of an emissive surface wave and local dimple. The request no longer
+  relies on an extra center pulse. Camera channels in the flagship now use
+  critically damped springs; minimum-jerk packet travel is unchanged.
+- Diff row seams were doubled antialias coverage, not authored separators.
+  Weighted interval union reduced the blank-gutter green variation from 6 RGB8
+  levels to zero at the final code hold. Unit tests cover fractional adjacency
+  and overlapping marks with different opacity.
+- The first version-check edit now retains its declaration and expression parts
+  while their lines trade places. The diagnostic copy of the video code scene
+  uses its actual snapshot times as presentation steps; `plan steps` reports no
+  common-text or unsettled-hold warnings at two-second holds. This checks authored
+  identity and destinations, not a claim of interactive navigation QA.
+
 - The first kinetic Stage pass overused light: a whole-card halo, dense luminous
   orb points, and perpetual flow beads competed with the narrated packet. The
   refinement keeps substrates dark, reserves light for local events, and stops

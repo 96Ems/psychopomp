@@ -31,7 +31,7 @@ pub fn build_flagship(narration_dir: &std::path::Path) -> Result<ReelPlan> {
     let narration = Narration::load(narration_dir)?;
     let pr = &PRS[1];
     let stage = stage_film(&narration)?;
-    let code = code(pr, &narration, diffs(1), false)?;
+    let code = stable_code(code(pr, &narration, diffs(1), false)?)?;
     let reel = ReelPlan {
         version: ReelPlan::VERSION,
         id: "pr-50825".to_owned(),
@@ -52,6 +52,107 @@ pub fn build_flagship(narration_dir: &std::path::Path) -> Result<ReelPlan> {
     };
     reel.validate()?;
     Ok(reel)
+}
+
+/// Keep the compatible declaration and version-check expression alive while
+/// splitting the computation. Their lines trade places; only edited slots fade.
+fn stable_code(mut plan: ScenePlan) -> Result<ScenePlan> {
+    use kinograph::{
+        editor::{
+            EditorInlineRevealPlan, EditorPartPlan, EditorRecipePlan, EditorSemanticRangePlan,
+            LineMarkPlan,
+        },
+        highlight,
+        plan::{SpringPlan, destination_channel},
+    };
+    let actor = plan
+        .actors
+        .iter_mut()
+        .find(|actor| actor.id == "editor")
+        .context("flagship editor")?;
+    let mut recipe: EditorRecipePlan = serde_json::from_value(actor.data.clone())?;
+    let at = recipe
+        .snapshots
+        .first()
+        .context("version split snapshot")?
+        .at_nanos;
+    let part = |id: &str, text: &str| EditorPartPlan {
+        id: id.into(),
+        spans: highlight::typescript(text),
+    };
+    recipe
+        .lines
+        .retain(|line| line.id != "line-3" && line.id != "line-4");
+    for line in &mut recipe.lines {
+        if line.id == "line-1" {
+            line.parts = vec![
+                part("declaration", "  const compatible ="),
+                part("rhs", " service.compatible && versionMatches"),
+            ];
+            line.mark = Some(LineMarkPlan::Added);
+        }
+        if line.id == "line-2" {
+            line.parts = vec![
+                part("indent", "  "),
+                part("old-prefix", "  service.compatible && "),
+                part("new-prefix", "const versionMatches = "),
+                part("expression", "matchesVersion(service.version, options)"),
+            ];
+            line.mark = Some(LineMarkPlan::Added);
+        }
+    }
+    for (line_id, part_id, reversed) in [
+        ("line-1", "rhs", false),
+        ("line-2", "old-prefix", true),
+        ("line-2", "new-prefix", false),
+    ] {
+        let line = recipe
+            .lines
+            .iter_mut()
+            .find(|line| line.id == line_id)
+            .context("stable split line")?;
+        line.semantic_ranges.push(EditorSemanticRangePlan {
+            id: part_id.into(),
+            first_part_id: part_id.into(),
+            last_part_id: part_id.into(),
+        });
+        recipe
+            .additional_inline_reveals
+            .push(EditorInlineRevealPlan {
+                line_id: line_id.into(),
+                range_id: part_id.into(),
+                channel: Some("version-split".into()),
+                reversed,
+            });
+    }
+    for order in recipe
+        .snapshots
+        .iter_mut()
+        .map(|snapshot| &mut snapshot.line_ids)
+        .chain(std::iter::once(&mut recipe.final_line_ids))
+    {
+        for id in order {
+            if id == "line-3" {
+                *id = "line-2".into();
+            } else if id == "line-4" {
+                *id = "line-1".into();
+            }
+        }
+    }
+    recipe.compile()?;
+    actor.data = serde_json::to_value(recipe)?;
+    plan.continuous_channels
+        .retain(|channel| channel.id != "editor.mark.line-1" && channel.id != "editor.mark.line-2");
+    for property in ["version-split", "mark.line-1", "mark.line-2"] {
+        plan.continuous_channels.push(destination_channel(
+            "editor",
+            property,
+            0.0,
+            [(at, 1.0)],
+            |_, _| SpringPlan::visual(0.4, 0.0),
+        ));
+    }
+    Ok(plan)
 }
 
 /// The client card's rectangle on screen once the closing camera settles.
@@ -301,7 +402,7 @@ fn stage_film(narration: &Narration) -> Result<ScenePlan> {
 
     // Establish the service, then its clients. Rigid panels drift into place;
     // their ink follows. The camera carries the composition without bouncing.
-    s.glide(sc, "camera.z", -160.0, 0, 0.0, 2.8);
+    s.to(sc, "camera.z", -160.0, 0, 0.0, 2.2);
     s.set(sc, "camera.dof", 0.45, 0, 0.45);
     s.bounce(sc, "service.scale", 0.58, ns(0.15), 1.0, 0.85, 0.2);
     s.to(sc, "service.blur", 11.0, ns(0.15), 0.0, 0.7);
@@ -359,10 +460,9 @@ fn stage_film(narration: &Narration) -> Result<ScenePlan> {
     s.to(sc, "client.glow", 0.0, reconnect, 0.45, 0.5);
     s.to(sc, "link.flow", 0.0, reconnect, 0.0, 0.4);
     s.to(sc, "link.emphasis", 0.0, reconnect, 1.0, 0.6);
-    s.glide(sc, "camera.x", 0.0, reconnect, -110.0, 1.6);
-    s.glide(sc, "camera.focus", 0.0, reconnect, -60.0, 1.2);
-    let probe_arrival = s.send(sc, "probe", b("health endpoint"), 0.95);
-    s.hit(sc, "service.pulse", probe_arrival, 0.65, 0.0);
+    s.to(sc, "camera.x", 0.0, reconnect, -110.0, 1.6);
+    s.to(sc, "camera.focus", 0.0, reconnect, -60.0, 1.2);
+    s.send(sc, "probe", b("health endpoint"), 0.95);
     sc.media(sound(
         "probe-send",
         "opencode-hot-reload/save.wav",
@@ -424,7 +524,7 @@ fn stage_film(narration: &Narration) -> Result<ScenePlan> {
     s.hit(sc, "post.chroma", kill_arrival, 0.16, 0.0);
     s.hit(sc, "camera.shake", kill_arrival, 3.0, 0.0);
     s.hit(sc, "post.bloom", kill_arrival, 0.4, 0.18);
-    s.glide(sc, "camera.focus", 0.0, kill_arrival, 0.0, 0.8);
+    s.to(sc, "camera.focus", 0.0, kill_arrival, 0.0, 0.8);
     s.to(
         sc,
         "service-healthy.opacity",
@@ -451,8 +551,8 @@ fn stage_film(narration: &Narration) -> Result<ScenePlan> {
         s.to(sc, &format!("{card}.dim"), 0.0, at + ns(0.6), 0.55, 0.8);
     }
     let cut = b("cut off every other client");
-    s.glide(sc, "camera.x", 0.0, cut - ns(0.4), 0.0, 1.6);
-    s.glide(sc, "camera.z", -160.0, cut - ns(0.4), -100.0, 1.8);
+    s.to(sc, "camera.x", 0.0, cut - ns(0.4), 0.0, 1.6);
+    s.to(sc, "camera.z", -160.0, cut - ns(0.4), -100.0, 1.8);
     let mut footer_before = footer(
         sc,
         "footer-before",
@@ -485,7 +585,7 @@ fn stage_film(narration: &Narration) -> Result<ScenePlan> {
     s.to(sc, "service.hurt", 0.0, switch + ns(0.6), 0.0, 0.6);
     s.to(sc, "shock.opacity", 0.0, switch, 0.0, 0.3);
     s.hit(sc, "post.chroma", switch, 0.12, 0.0);
-    s.glide(sc, "camera.z", -160.0, switch, 0.0, 1.8);
+    s.to(sc, "camera.z", -160.0, switch, 0.0, 1.8);
     s.to(sc, "thought-before.opacity", 0.0, switch, 0.0, 0.4);
     s.to(
         sc,
@@ -519,8 +619,8 @@ fn stage_film(narration: &Narration) -> Result<ScenePlan> {
 
     // The fix: the same 404, understood as a protocol mismatch.
     let now = a("now a 404");
-    s.glide(sc, "camera.x", 0.0, now - ns(0.4), -110.0, 1.2);
-    s.glide(sc, "camera.focus", 0.0, now - ns(0.4), -60.0, 1.0);
+    s.to(sc, "camera.x", 0.0, now - ns(0.4), -110.0, 1.2);
+    s.to(sc, "camera.focus", 0.0, now - ns(0.4), -60.0, 1.0);
     let probe_2 = s.send(sc, "probe-2", now - ns(0.1), 0.75);
     sc.media(sound(
         "probe-send-2",
@@ -529,7 +629,6 @@ fn stage_film(narration: &Narration) -> Result<ScenePlan> {
         now - ns(0.1),
         -8.0,
     ));
-    s.hit(sc, "service.pulse", probe_2, 0.65, 0.0);
     // `send` includes pre-launch gathering: even that preparation must wait
     // until the request has arrived (340 ms gather plus an 80 ms response beat).
     let reply_2 = s.send(sc, "reply-2", probe_2 + ns(0.42), 0.7);
@@ -548,9 +647,9 @@ fn stage_film(narration: &Narration) -> Result<ScenePlan> {
 
     // Nothing gets killed: the camera finds the orb, whole and breathing.
     let safe = a("nothing gets killed");
-    s.glide(sc, "camera.x", 0.0, safe - ns(0.2), 40.0, 1.6);
-    s.glide(sc, "camera.z", 0.0, safe - ns(0.2), 90.0, 1.8);
-    s.glide(sc, "camera.focus", 0.0, safe - ns(0.2), 0.0, 1.0);
+    s.to(sc, "camera.x", 0.0, safe - ns(0.2), 40.0, 1.6);
+    s.to(sc, "camera.z", 0.0, safe - ns(0.2), 90.0, 1.8);
+    s.to(sc, "camera.focus", 0.0, safe - ns(0.2), 0.0, 1.0);
     s.hit(sc, "service.pulse", safe + ns(0.2), 0.75, 0.0);
     s.to(sc, "safe.opacity", 0.0, safe, 0.7, 0.22);
     s.to(sc, "safe.sweep", 0.0, safe, 1.0, 1.3);
@@ -578,10 +677,10 @@ fn stage_film(narration: &Narration) -> Result<ScenePlan> {
 
     // Return to the client card; the reel's zoom flies into its code.
     let close = after.end() + ns(0.3);
-    s.glide(sc, "camera.x", 0.0, close, CLOSING_CAMERA[0], 1.2);
-    s.glide(sc, "camera.y", 0.0, close, CLOSING_CAMERA[1], 1.2);
-    s.glide(sc, "camera.z", 0.0, close, CLOSING_CAMERA[2], 1.2);
-    s.glide(sc, "camera.focus", 0.0, close, -60.0, 1.0);
+    s.to(sc, "camera.x", 0.0, close, CLOSING_CAMERA[0], 1.2);
+    s.to(sc, "camera.y", 0.0, close, CLOSING_CAMERA[1], 1.2);
+    s.to(sc, "camera.z", 0.0, close, CLOSING_CAMERA[2], 1.2);
+    s.to(sc, "camera.focus", 0.0, close, -60.0, 1.0);
     s.to(sc, "client.glow", 0.0, close, 0.65, 0.8);
     after_chip.hide(sc, close);
     footer_after.hide(sc, close);
@@ -619,6 +718,46 @@ mod tests {
                     );
                 }
             }
+        }
+    }
+
+    #[test]
+    fn the_version_split_preserves_common_parts_and_has_no_stability_warnings() {
+        use kinograph::{author::PlanBuilder, editor::inspect_steps, plan::PresentationStepPlan};
+        let mut builder = PlanBuilder::new("stable-split", super::ns(8.0));
+        crate::diffs(1)
+            .0
+            .declare(
+                &mut builder,
+                &[super::ns(2.0), super::ns(5.0)],
+                super::ns(0.8),
+                false,
+            )
+            .unwrap();
+        let mut plan = super::stable_code(builder.finish().unwrap()).unwrap();
+        plan.presentation_steps = [(0.0, 1.0), (2.0, 4.0), (5.0, 7.0)]
+            .into_iter()
+            .enumerate()
+            .map(|(i, (start, hold))| PresentationStepPlan {
+                id: format!("step-{i}"),
+                title: format!("Step {i}"),
+                start_nanos: super::ns(start),
+                hold_nanos: super::ns(hold),
+            })
+            .collect();
+        let inspection = serde_json::to_value(inspect_steps(&plan).unwrap()).unwrap();
+        assert_eq!(inspection["warnings"], serde_json::json!([]));
+        for line in inspection["steps"][1]["editors"][0]["lines"]
+            .as_array()
+            .unwrap()
+        {
+            let changed = line["changedPartIds"].as_array().unwrap();
+            assert!(
+                !changed
+                    .iter()
+                    .any(|part| part == "declaration" || part == "expression" || part == "indent"),
+                "common text must retain identity"
+            );
         }
     }
 
