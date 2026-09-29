@@ -9,12 +9,13 @@ use super::*;
 use kinograph::{
     caption::{CaptionAlign, CaptionSpanPlan},
     effects::combustion::{self, Burst},
+    effects::surface,
     math::{
         Quat, Vec2, Vec3,
         curve::Polyline,
         easing::{cubic_out, quad_out},
         lerp, remap_clamp,
-        shapes::{Box2, Shape, connect},
+        shapes::{Box2, Shape, connect, sphere_ring},
         smoothstep, stops, vec2, vec3,
     },
     stage::{
@@ -1022,6 +1023,58 @@ impl<'a> Scene<'a> {
 }
 
 impl Scene<'_> {
+    /// Packet contact begins at the visible shell, before the submerged endpoint.
+    fn orb_contacts(&self, id: &str, place: Placement) -> Vec<(Vec3, f32, Tone, f32)> {
+        let Shape::Circle(circle) = place.outline else {
+            return Vec::new();
+        };
+        self.plan
+            .elements
+            .iter()
+            .filter_map(|element| {
+                let StageElement::Packet {
+                    id: packet_id,
+                    beam,
+                    reverse,
+                    tone,
+                    ..
+                } = element
+                else {
+                    return None;
+                };
+                let StageElement::Beam { from, to, .. } = self.plan.element(beam)? else {
+                    return None;
+                };
+                if (if *reverse { from } else { to }) != id {
+                    return None;
+                }
+                let link = self.links.get(beam.as_str())?;
+                let path = if *reverse {
+                    link.path.reversed()
+                } else {
+                    link.path.clone()
+                };
+                let fraction = circle.entry_fraction(&path)?;
+                let since = packet::since_crossing(
+                    self.v(packet_id, "age", -1.0),
+                    self.v(packet_id, "flight", 0.8).max(0.05),
+                    fraction,
+                )?;
+                if since >= 1.4 {
+                    return None;
+                }
+                let normal = (path.at(fraction) - place.center).normalize_or(Vec2::X);
+                let direction = vec3(normal.x, normal.y, -0.34).normalize();
+                Some((
+                    direction,
+                    since,
+                    *tone,
+                    self.v(packet_id, "opacity", 1.0).clamp(0.0, 1.0),
+                ))
+            })
+            .collect()
+    }
+
     /// The lights a beam, packet, or combusting orb casts this sample.
     fn lights_of(&self, element: &StageElement, lights: &mut Vec<Light>) {
         match element {
@@ -1394,10 +1447,25 @@ impl<'a> Painter<'a> {
         );
         let rotation = Quat::from_rotation_x(0.42)
             * Quat::from_rotation_y(scene.time * 0.14 * spin + scene.v(id, "rotation", 0.0));
+        let contacts = scene.orb_contacts(id, place);
         let mut dots = self.orbs[id]
             .iter()
             .map(|point| {
                 let unit = rotation * point.unit;
+                let (displacement, emission) = contacts.iter().fold(
+                    (0.0, Vec3::ZERO),
+                    |(offset, light), (direction, age, tone, strength)| {
+                        let response =
+                            surface::impact(*age, unit.dot(*direction).clamp(-1.0, 1.0).acos());
+                        (
+                            offset + response.displacement * strength,
+                            light
+                                + look.tone(*tone).lerp(Vec3::ONE, 0.35)
+                                    * response.light
+                                    * strength,
+                        )
+                    },
+                );
                 let offset = shatter_offset(
                     OrbPoint {
                         unit,
@@ -1405,14 +1473,19 @@ impl<'a> Painter<'a> {
                     },
                     world_radius,
                     shatter,
-                );
-                (place.world + offset, (1.0 - unit.z) * 0.5, point.seed.z)
+                ) + unit * (displacement * world_radius / 150.0);
+                (
+                    place.world + offset,
+                    (1.0 - unit.z) * 0.5,
+                    point.seed.z,
+                    emission,
+                )
             })
             .collect::<Vec<_>>();
         dots.sort_by(|a, b| b.0.z.total_cmp(&a.0.z));
         let fade = (1.0 - shatter).powf(0.7);
         let lights = scene.lights_on(place.outline).collect::<Vec<_>>();
-        for (point, near, seed) in dots {
+        for (point, near, seed, emission) in dots {
             let Some((center, scale)) = scene.camera.project(point) else {
                 continue;
             };
@@ -1427,7 +1500,8 @@ impl<'a> Painter<'a> {
             let color = own
                 .lerp(Vec3::ONE, 0.16 * near)
                 .lerp(red, (shatter * 2.4 + hurt * 0.8).min(1.0))
-                + lit * 0.85;
+                + lit * 0.85
+                + emission;
             self.frame.circle(
                 center,
                 [
@@ -1437,7 +1511,36 @@ impl<'a> Painter<'a> {
                 blur,
                 Paint {
                     fill: rgba(color * (0.6 + 0.3 * near + 0.15 * pulse), alpha),
-                    glow: glow4(color * (0.035 * alpha), 2.5 * scale),
+                    glow: glow4(
+                        color * (0.035 * alpha) + emission * (0.10 * alpha),
+                        2.5 * scale,
+                    ),
+                    ..Default::default()
+                },
+            );
+        }
+        for (direction, age, tone, strength) in contacts {
+            let (angle, emission) = surface::wavefront(age);
+            if angle >= PI || emission * strength < 0.01 {
+                continue;
+            }
+            let points = sphere_ring(direction, angle, 72)
+                .into_iter()
+                .filter_map(|unit| {
+                    scene
+                        .camera
+                        .project(place.world + unit * world_radius)
+                        .map(|(point, _)| (point, smoothstep(-unit.z / 0.20)))
+                })
+                .collect::<Vec<_>>();
+            let ink = look.tone(tone).lerp(Vec3::ONE, 0.4);
+            let energy = emission * strength * opacity;
+            self.frame.trail(
+                &points,
+                [1.15 * place.scale, 0.0],
+                Paint {
+                    stroke: rgba(ink * 1.1, energy * 0.55),
+                    glow: glow4(ink * energy * 0.055, 4.0 * place.scale),
                     ..Default::default()
                 },
             );

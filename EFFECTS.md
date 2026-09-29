@@ -8,6 +8,7 @@ they happen; effect Modules own their physical pose and optical response.
 | Module | Interface | Responsibility |
 |---|---|---|
 | `kinograph::effects::combustion` | `Burst::sample(age).ember(direction, seed)` | Compression, ignition, rim-light envelope, gravity/drag embers, cooling |
+| `kinograph::effects::surface` | `impact(age, angle)`, `wavefront(age)` | Local contact dimple and a damped emissive wave over a sphere |
 | `kinograph::math::dynamics` | `ballistic(velocity, acceleration, drag, seconds)` | Closed-form reusable particle displacement |
 | `render/effects/noise.wgsl` | `fx_noise3(p)`, `fx_fbm3(p)` | Deterministic 3D noise; caller-owned coordinate transforms |
 | `render/effects/combustion.wgsl` | `combustion_volume(pixel, radius, age)` | Domain-warped fire/smoke, emission and absorption; requires noise |
@@ -17,6 +18,13 @@ The WGSL Modules have no bindings, texture ownership, entry points, or Stage
 identifiers. Concatenate dependencies before the consuming shader. The Stage is
 one Adapter: it supplies projected coordinates, draws particles, and applies the
 pressure displacement to its HDR scene and bloom textures.
+
+Surface responses start at physical contact. The Stage finds a packet path's
+first intersection with the visible orb (`Circle::entry_fraction`), derives the
+crossing time from the packet's travel curve, and samples the wave by geodesic
+angle. `math::shapes::sphere_ring` supplies a continuous surface trace; the
+renderer hides its rear hemisphere. This preserves the attached outline while
+the local particle skin deforms.
 
 `Burst` uses seconds and world pixels. Negative age is intact; zero preserves
 the shell pose; 5.2 seconds is spent. Direction is a unit vector and each seed

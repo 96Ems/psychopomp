@@ -78,6 +78,49 @@ pub struct Circle {
     pub radius: f32,
 }
 
+impl Circle {
+    /// First intersection while following an arc-length path, as a 0..1 fraction.
+    /// A path starting inside is already in contact; a miss returns None.
+    pub fn entry_fraction(self, path: &Polyline) -> Option<f32> {
+        if path.points().first()?.distance(self.center) <= self.radius {
+            return Some(0.0);
+        }
+        for (index, pair) in path.points().windows(2).enumerate() {
+            let offset = pair[0] - self.center;
+            let delta = pair[1] - pair[0];
+            let a = delta.length_squared();
+            if a <= f32::EPSILON {
+                continue;
+            }
+            let b = offset.dot(delta);
+            let c = offset.length_squared() - self.radius * self.radius;
+            let discriminant = b * b - a * c;
+            if discriminant < 0.0 {
+                continue;
+            }
+            let t = (-b - discriminant.sqrt()) / a;
+            if (0.0..=1.0).contains(&t) {
+                return Some(
+                    (path.lengths()[index] + delta.length() * t) / path.length().max(f32::EPSILON),
+                );
+            }
+        }
+        None
+    }
+}
+
+/// A closed small circle on the unit sphere, `angle` radians from a unit `axis`.
+pub fn sphere_ring(axis: Vec3, angle: f32, segments: usize) -> Vec<Vec3> {
+    let u = axis.any_orthonormal_vector();
+    let v = axis.cross(u);
+    (0..=segments.max(3))
+        .map(|i| {
+            let phase = std::f32::consts::TAU * i as f32 / segments.max(3) as f32;
+            axis * angle.cos() + (u * phase.cos() + v * phase.sin()) * angle.sin()
+        })
+        .collect()
+}
+
 /// Where a connector meets a shape, and the outward direction it leaves along.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Port {
@@ -194,6 +237,31 @@ mod tests {
             center: vec2(900.0, 460.0),
             radius: 120.0,
         })
+    }
+
+    #[test]
+    fn circle_contact_uses_arc_length_and_finds_crossings_between_samples() {
+        let circle = Circle {
+            center: Vec2::ZERO,
+            radius: 1.0,
+        };
+        let through = Polyline::new(vec![vec2(-2.0, 0.0), vec2(2.0, 0.0)]);
+        assert_eq!(circle.entry_fraction(&through), Some(0.25));
+        let miss = Polyline::new(vec![vec2(-2.0, 2.0), vec2(2.0, 2.0)]);
+        assert_eq!(circle.entry_fraction(&miss), None);
+        let uneven = Polyline::new(vec![vec2(-3.0, 0.0), vec2(-2.0, 0.0), Vec2::ZERO]);
+        assert!((circle.entry_fraction(&uneven).unwrap() - 2.0 / 3.0).abs() < 1e-6);
+    }
+
+    #[test]
+    fn sphere_ring_stays_on_the_surface_and_at_the_requested_angle() {
+        let axis = Vec3::new(-1.0, 0.2, -0.34).normalize();
+        let ring = sphere_ring(axis, 0.7, 72);
+        for point in &ring {
+            assert!((point.length() - 1.0).abs() < 1e-6);
+            assert!((point.dot(axis) - 0.7_f32.cos()).abs() < 1e-6);
+        }
+        assert!(ring[0].distance(*ring.last().unwrap()) < 1e-6);
     }
 
     #[test]
