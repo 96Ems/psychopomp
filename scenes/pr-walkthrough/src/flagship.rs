@@ -593,7 +593,7 @@ fn stage_film(narration: &Narration) -> Result<ScenePlan> {
     footer_before.hide(sc, switch);
     let mut rewind_chip = chip(sc, "chip-rewind", Tone::Accent, "◀◀ rewind")?;
     // The outgoing chip is mostly gone before the next rises: one label at a time.
-    rewind_chip.show(sc, switch + ns(0.15));
+    rewind_chip.show(sc, switch + ns(0.25));
     rewind_chip.hide(sc, switch + ns(1.5));
     let mut after_chip = chip(sc, "chip-after", Tone::Success, "after the fix")?;
     after_chip.show(sc, switch + ns(1.65));
