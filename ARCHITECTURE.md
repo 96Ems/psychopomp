@@ -398,7 +398,7 @@ live in the lightweight crate (`sequence.rs`, `caption.rs`), so authoring helper
 CommitMono plain-text sprites, `UiCanvas` fills, and the analytic polyline stroke.
 Sequences draw with the other diagram surfaces (after Venn and Value Tokens);
 captions draw above rich text and below plain text. Semantic colors resolve through
-`Theme::tone`, the one place status colors are fixed.
+`Theme::tone`, the one place status colors are fixed (Neutral overrides them).
 
 ### Stage
 
@@ -462,8 +462,13 @@ zero before the ray interval and screen-space rejection bounds.
 The binding-free `effects/pressure.wgsl` returns a displacement field for the
 composite. These concrete Modules form the initial [effects library](EFFECTS.md);
 effect physics and shader optics can be reused without Stage identities.
-`effects/rewind.wgsl` adds an age-driven reverse-scan field to the same composite,
-controlled by `post.rewind`; it needs no previous-frame textures or feedback.
+`effects/rewind.wgsl` adds the blog's VHS tape interference (tear, snow on ink,
+scanlines) to the same composite, controlled by `post.rewind`; it needs no
+previous-frame textures or feedback. Card deletion (glitch bands, hairline cut)
+clips copies of the card's primitives by their bounding quads, since every
+primitive rasterizes only inside its box. `Theme::Neutral` is the blog's "clear
+neutral" palette: quiet frames and wires, ivory signals, and desaturated
+semantic inks; it is the one theme whose status tones differ.
 Incoming packets also sample `effects::surface` from the first visible-shell
 contact, found by `Circle::entry_fraction` and the inverse packet travel curve.
 The local dimple, particle emission, and hemisphere-masked spherical trace travel

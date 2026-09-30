@@ -11,6 +11,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     author::{ActorHandle, ContinuousHandle, PlanBuilder},
     caption::{CaptionAlign, CaptionSpanPlan},
+    effects::spinner::Mark,
     math::{
         Vec2, Vec3,
         easing::Ease,
@@ -80,6 +81,9 @@ pub enum StageElement {
         status: Vec<StatusText>,
         #[serde(default, skip_serializing_if = "Tone::is_default")]
         tone: Tone,
+        /// What the card's status spinner resolves into (`mark` channel).
+        #[serde(default, skip_serializing_if = "Mark::is_check")]
+        mark: Mark,
     },
     /// A sphere of glowing points that spins, breathes, and can shatter.
     #[serde(rename_all = "camelCase")]
@@ -203,7 +207,8 @@ impl StageElement {
         match self {
             Self::Card { .. } => &[
                 "opacity", "x", "y", "z", "scale", "blur", "glow", "flash", "alarm", "dim",
-                "status", "content",
+                "status", "content", "cool", "damage", "glitch", "cut", "ghost", "spinner",
+                "release", "mark",
             ],
             Self::Orb { .. } => &[
                 "opacity", "x", "y", "z", "scale", "blur", "rotation", "burst", "shatter", "pulse",

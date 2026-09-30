@@ -9,11 +9,12 @@ they happen; effect Modules own their physical pose and optical response.
 |---|---|---|
 | `kinograph::effects::combustion` | `Burst::sample(age).ember(direction, seed)` | Compression, ignition, rim-light envelope, gravity/drag embers, cooling |
 | `kinograph::effects::surface` | `impact(age, angle)`, `wavefront(age)` | Local contact dimple and a damped emissive wave over a sphere |
+| `kinograph::effects::spinner` | `sample(age, release, mark, shape)`, `handoff(after)` | The blog's radial spinner: closed-form critically damped motor, speed-driven wake, and a mark route drawn from a top-right handoff |
 | `kinograph::math::dynamics` | `ballistic(velocity, acceleration, drag, seconds)` | Closed-form reusable particle displacement |
 | `render/effects/noise.wgsl` | `fx_noise3(p)`, `fx_fbm3(p)` | Deterministic 3D noise; caller-owned coordinate transforms |
 | `render/effects/combustion.wgsl` | `combustion_volume(pixel, radius, age)` | Domain-warped fire/smoke, emission and absorption; requires noise |
 | `render/effects/pressure.wgsl` | `pressure_wave(delta, scale, age)` | Inward pinch and outward refraction; returns displacement and ring intensity |
-| `render/effects/rewind.wgsl` | `rewind_field(uv, size, age)` | Upward reverse-scan displacement and RGB separation, with smooth protected margins |
+| `render/effects/rewind.wgsl` | `rewind_envelope(age)`, `rewind_tear(pixel, size, age, amount)`, `rewind_snow(...)` | VHS tape rewind: tracking band and seam tear, 30 fps grain, dropouts, scanlines |
 
 The WGSL Modules have no bindings, texture ownership, entry points, or Stage
 identifiers. Concatenate dependencies before the consuming shader. The Stage is
@@ -29,8 +30,22 @@ the local particle skin deforms.
 
 The Stage's `post.rewind` channel is a local age in seconds: negative is inactive,
 zero starts without a cut, and 1.4 seconds returns exactly to the original image.
-Animate the age linearly. The field is history-free and composes with the pressure
-wave; its smooth scan bands protect the title/footer and avoid frame-random jumps.
+Animate the age linearly. The port follows the OpenCode blog's `vhsRewind.wgsl`:
+one scrolling tape coordinate places a tracking band (tape 0.22) and a thin seam
+(0.66); quintic 0.3-second edges give zero slope at both clean endpoints. Snow is
+multiplied by an ink mask (luminance above the background), so the empty canvas
+stays clean, and its base grain is lighter than the web rig's so lit smoke reads
+as tape rather than broadcast snow.
+
+Stage cards carry the blog's deletion vocabulary as ordinary channels: `cool`
+(inks toward the frame gray), `damage` (red in one frame), integer `glitch` seeds
+(banded horizontal displacement; zero is off), `cut` (0..0.4 a red hairline
+draws between title and status, 0.4..1 the halves part 3 px and fade), and
+`ghost` (the red outline left in the slot). Every step is a function of its
+channels, so the rewind plays the deletion backwards. Banding and parting clip
+copies of the card's primitives by their bounding quads; no offscreen target is
+needed. The card's `spinner`, `release`, and `mark` clocks drive
+`effects::spinner`; its `mark` field chooses a check or a cross.
 
 `Burst` uses seconds and world pixels. Negative age is intact; zero preserves
 the shell pose; 5.2 seconds is spent. Direction is a unit vector and each seed

@@ -9,12 +9,15 @@ use super::*;
 use kinograph::{
     caption::{CaptionAlign, CaptionSpanPlan},
     effects::combustion::{self, Burst},
+    effects::spinner::{self, Mark},
     effects::surface,
     math::{
         Quat, Vec2, Vec3,
         curve::Polyline,
         easing::{cubic_out, quad_out},
-        lerp, remap_clamp,
+        lerp,
+        random::hash,
+        remap_clamp,
         shapes::{Box2, Shape, connect, sphere_ring},
         smoothstep, stops, vec2, vec3,
     },
@@ -664,7 +667,12 @@ impl HeadlessRenderer {
                 ])
             })
             .unwrap_or([0.0, 0.0, -1.0, 0.0]);
-        let rewind = [value("post.rewind", -1.0), 0.0, 0.0, 0.0];
+        let rewind = [
+            value("post.rewind", -1.0),
+            look.background.dot(Vec3::new(0.2126, 0.7152, 0.0722)),
+            0.0,
+            0.0,
+        ];
         self.draw_stage(
             gpu,
             &prims,
@@ -1237,10 +1245,14 @@ impl<'a> Painter<'a> {
         match (element, place) {
             (
                 StageElement::Card {
-                    size, status, tone, ..
+                    size,
+                    status,
+                    tone,
+                    mark,
+                    ..
                 },
                 Some(place),
-            ) => self.card(order, id, Vec2::from(*size), status, *tone, place),
+            ) => self.card(order, id, Vec2::from(*size), status, *tone, *mark, place),
             (StageElement::Orb { radius, tone, .. }, Some(place)) => {
                 self.orb(order, id, *radius, *tone, place)
             }
@@ -1279,6 +1291,7 @@ impl<'a> Painter<'a> {
         }
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn card(
         &mut self,
         order: usize,
@@ -1286,30 +1299,57 @@ impl<'a> Painter<'a> {
         size: Vec2,
         status: &[StatusText],
         tone: Tone,
+        mark: Mark,
         place: Placement,
     ) {
         let (scene, look) = (self.scene, self.look);
         let opacity = scene.v(id, "opacity", 1.0).clamp(0.0, 1.0);
+        let scale = place.scale;
+        let half = size * 0.5 * scale;
+        let blur = scene.blur_at(place.world.z) + scene.v(id, "blur", 0.0).max(0.0) * scale;
+        let red = look.tone(Tone::Error);
+        // The afterimage: the slot a deleted card leaves, drawn beneath it.
+        let ghost = scene.v(id, "ghost", 0.0).clamp(0.0, 1.0);
+        if ghost > 0.001 {
+            for (inset, strength) in [(0.0, 0.55), (3.0 * scale, 0.33)] {
+                self.frame.rounded_rect(
+                    place.center,
+                    half - inset,
+                    [14.0 * scale - inset, 1.0],
+                    blur,
+                    Paint {
+                        stroke: rgba(red, strength * ghost),
+                        ..Default::default()
+                    },
+                );
+            }
+        }
         if opacity <= 0.001 {
+            self.frame.close(place.world.z, order);
             return;
         }
+        let first = self.frame.prims.len();
         let glow = scene.v(id, "glow", 0.0).clamp(0.0, 1.5);
         let flash = scene.v(id, "flash", 0.0).clamp(0.0, 1.5);
         let alarm = scene.v(id, "alarm", 0.0).clamp(0.0, 1.5);
         let dim = scene.v(id, "dim", 0.0).clamp(0.0, 1.0);
-        let scale = place.scale;
-        let blur = scene.blur_at(place.world.z) + scene.v(id, "blur", 0.0).max(0.0) * scale;
+        // Deletion: inks cool toward the frame gray, then snap to red at once.
+        let cool = scene.v(id, "cool", 0.0).clamp(0.0, 1.0);
+        let damage = scene.v(id, "damage", 0.0).clamp(0.0, 1.0);
+        let condemn = |ink: Vec3| {
+            ink.lerp(vec3(0.042, 0.042, 0.042), 0.6 * cool)
+                .lerp(red, damage)
+        };
         let own = look.tone(tone);
         // Ink and rim respond; the substrate stays dark. In linear light even
         // a modest full-card tint overwhelms the directional socket reflection.
         let lit = (flash + alarm).min(1.5);
-        let light = own.lerp(look.tone(Tone::Error), alarm / (flash + alarm).max(1e-3));
+        let light = own.lerp(red, alarm / (flash + alarm).max(1e-3));
         let border = look.raised.lerp(look.muted, 0.22);
-        let edge = border.lerp(
+        let edge = condemn(border.lerp(
             if lit > glow { light } else { own },
             (glow * 0.32 + lit * 0.28).min(0.65),
-        );
-        let half = size * 0.5 * scale;
+        ));
         // The strongest reflection on the edge, and the strongest pool in the glass.
         let strongest = |pool: bool| {
             scene
@@ -1335,14 +1375,17 @@ impl<'a> Painter<'a> {
                 pool_color,
             },
         );
-        // A faint inner rim catches light along the edge, like glass.
+        // The diagrams' double frame: a quiet rule 3 px inside the edge.
         self.frame.rounded_rect(
             place.center,
-            half - 1.5 * scale,
-            [12.5 * scale, 1.0],
+            half - 3.0 * scale,
+            [11.0 * scale, 1.0],
             blur,
             Paint {
-                stroke: rgba(Vec3::ONE, 0.014 * opacity * (1.0 - dim)),
+                stroke: rgba(
+                    condemn(look.raised.lerp(look.muted, 0.06)),
+                    opacity * (1.0 - 0.6 * dim),
+                ),
                 ..Default::default()
             },
         );
@@ -1356,7 +1399,10 @@ impl<'a> Painter<'a> {
             text_center - vec2(0.0, title_lift),
             scale,
             CaptionAlign::Center,
-            rgba(look.text.lerp(Vec3::ONE, (flash * 0.35).min(1.0)), ink),
+            rgba(
+                condemn(look.text.lerp(Vec3::ONE, (flash * 0.35).min(1.0))),
+                ink,
+            ),
             f32::MAX,
             text_blur,
         );
@@ -1367,30 +1413,164 @@ impl<'a> Painter<'a> {
                 .clamp(0.0, (status.len() - 1) as f32);
             let low = index.floor() as usize;
             let high = (low + 1).min(status.len() - 1);
-            for (entry, weight) in [(low, 1.0 - index.fract()), (high, index.fract())] {
+            let entries = [(low, 1.0 - index.fract()), (high, index.fract())];
+            let tone_of = |entry: usize| match status[entry].tone {
+                Tone::Plain => look.muted,
+                tone => look.tone(tone),
+            };
+            // The icon clears the incoming line before its ink is readable.
+            let widths = entries.map(|(entry, _)| {
+                self.frame
+                    .width(&text_key(id, &format!("status{entry}")), scale)
+            });
+            let width = lerp(widths[0], widths[1], smoothstep(entries[1].1 / 0.45));
+            let color = entries.iter().fold(Vec3::ZERO, |sum, (entry, weight)| {
+                sum + tone_of(*entry) * *weight
+            });
+            // A status spinner leads the line; the pair stays centered.
+            let spinner = spinner::sample(
+                scene.v(id, "spinner", -1.0),
+                scene.v(id, "release", -1.0),
+                scene.v(id, "mark", -1.0),
+                mark,
+            );
+            let unit = 18.0 / 16.0 * scale;
+            let gap = 8.0 * scale;
+            let lead = (16.0 * unit + gap) * spinner.opacity;
+            let line_y = text_center.y + 19.0 * scale;
+            let icon = vec2(text_center.x - (width + lead) * 0.5 + 8.0 * unit, line_y);
+            let ink_color = condemn(
+                color
+                    .lerp(look.text, 0.3)
+                    .lerp(Vec3::ONE, spinner.flash * 0.8),
+            );
+            for stroke in &spinner.strokes {
+                let points = stroke
+                    .iter()
+                    .map(|(point, weight)| (icon + (*point - vec2(8.0, 8.0)) * unit, *weight))
+                    .collect::<Vec<_>>();
+                self.frame.trail(
+                    &points,
+                    [1.5 * unit, text_blur],
+                    Paint {
+                        stroke: rgba(ink_color, ink * spinner.opacity),
+                        glow: glow4(ink_color * (0.03 * spinner.flash * ink), 3.0 * unit),
+                        ..Default::default()
+                    },
+                );
+            }
+            for (entry, weight) in entries {
                 if weight <= 0.001 {
                     continue;
                 }
-                let color = match status[entry].tone {
-                    Tone::Plain => look.muted,
-                    tone => look.tone(tone),
-                };
                 // Separate the outgoing and incoming ink instead of showing
                 // two readable words on top of each other at mid-transition.
                 let visibility = smoothstep((weight - 0.2) / 0.8);
                 let drift = if entry == low { -1.0 } else { 1.0 };
                 self.frame.text(
                     &text_key(id, &format!("status{entry}")),
-                    text_center + vec2(0.0, (19.0 + drift * 6.0 * (1.0 - weight)) * scale),
+                    vec2(
+                        text_center.x + lead * 0.5,
+                        line_y + drift * 6.0 * (1.0 - weight) * scale,
+                    ),
                     scale,
                     CaptionAlign::Center,
-                    rgba(color, ink * visibility),
+                    rgba(condemn(tone_of(entry)), ink * visibility),
                     f32::MAX,
                     text_blur + (1.0 - weight) * 1.5,
                 );
             }
         }
+        self.glitch(first, id, place.center, half, scale);
+        self.cut(first, id, place.center, half, scale, red, blur);
         self.frame.close(place.world.z, order);
+    }
+
+    /// A few frames of horizontal band displacement, one layout per integer
+    /// `glitch` seed; zero is off. Seeds step, then hold still: no noise loop.
+    fn glitch(&mut self, first: usize, id: &str, center: Vec2, half: Vec2, scale: f32) {
+        let seed = self.scene.v(id, "glitch", 0.0).round();
+        if seed < 1.0 {
+            return;
+        }
+        let seed = seed as u32;
+        let top = center.y - half.y - 16.0 * scale;
+        let height = 2.0 * half.y + 32.0 * scale;
+        let weights = (0..7)
+            .map(|band| 0.35 + hash(seed, band))
+            .collect::<Vec<_>>();
+        let total: f32 = weights.iter().sum();
+        let original = self.frame.prims.drain(first..).collect::<Vec<_>>();
+        let mut y = top;
+        for (band, weight) in weights.iter().enumerate() {
+            let next = y + height * weight / total;
+            let roll = hash(seed.wrapping_mul(31), band as u32 + 11);
+            let shift = if roll < 0.35 {
+                0.0
+            } else {
+                (roll - 0.675) * 16.0 * scale
+            };
+            self.frame.echo(
+                &original,
+                [f32::MIN, y, f32::MAX, next],
+                vec2(shift, 0.0),
+                1.0,
+            );
+            y = next;
+        }
+    }
+
+    /// Deletion by a red hairline drawn left to right across the card, then
+    /// the halves part 3 px in total and fade. `cut` runs 0..1.
+    #[allow(clippy::too_many_arguments)]
+    fn cut(
+        &mut self,
+        first: usize,
+        id: &str,
+        center: Vec2,
+        half: Vec2,
+        scale: f32,
+        red: Vec3,
+        blur: f32,
+    ) {
+        let cut = self.scene.v(id, "cut", 0.0).clamp(0.0, 1.0);
+        if cut <= 0.0 {
+            return;
+        }
+        let draw = cubic_out((cut / 0.4).min(1.0));
+        let part = smoothstep((cut - 0.4) / 0.6);
+        // Between the title and status lines, so the hairline crosses no ink.
+        let seam = center.y + 4.5 * scale;
+        if part > 0.0 {
+            let original = self.frame.prims.drain(first..).collect::<Vec<_>>();
+            let gap = 1.5 * part * scale;
+            let fade = 1.0 - part;
+            self.frame.echo(
+                &original,
+                [f32::MIN, f32::MIN, f32::MAX, seam],
+                vec2(0.0, -gap),
+                fade,
+            );
+            self.frame.echo(
+                &original,
+                [f32::MIN, seam, f32::MAX, f32::MAX],
+                vec2(0.0, gap),
+                fade,
+            );
+        }
+        let left = center.x - half.x - 6.0 * scale;
+        let right = center.x + half.x + 6.0 * scale;
+        self.frame.polyline(
+            &Polyline::new(vec![vec2(left, seam), vec2(right, seam)]),
+            draw,
+            [1.0 * scale.max(0.75), blur],
+            Paint {
+                stroke: rgba(red, 1.0 - part),
+                glow: glow4(red * (0.04 * (1.0 - part)), 3.0 * scale),
+                ..Default::default()
+            },
+            SOLID,
+        );
     }
 
     fn orb(&mut self, order: usize, id: &str, radius: f32, tone: Tone, place: Placement) {
@@ -2204,6 +2384,47 @@ impl<'a> StageFrame<'a> {
             uv: [first as f32, points.len() as f32, 0.0, 0.0],
             ..Default::default()
         });
+    }
+
+    /// Push copies of `prims` clipped to `clip`, then moved by `offset` with
+    /// their opacity scaled by `alpha`. Clipping is the quad itself: every
+    /// primitive rasterizes only inside its bounding box.
+    fn echo(&mut self, prims: &[Prim], clip: [f32; 4], offset: Vec2, alpha: f32) {
+        for prim in prims {
+            let mut copy = *prim;
+            copy.bbox = [
+                prim.bbox[0].max(clip[0]) + offset.x,
+                prim.bbox[1].max(clip[1]) + offset.y,
+                prim.bbox[2].min(clip[2]) + offset.x,
+                prim.bbox[3].min(clip[3]) + offset.y,
+            ];
+            if copy.bbox[0] >= copy.bbox[2] || copy.bbox[1] >= copy.bbox[3] {
+                continue;
+            }
+            if prim.a[0] as u32 == 3 {
+                let first = prim.uv[0] as usize;
+                let count = prim.uv[1] as usize;
+                copy.uv[0] = self.points.len() as f32;
+                for index in first..first + count {
+                    let [x, y, along, heat] = self.points[index];
+                    self.points.push([x + offset.x, y + offset.y, along, heat]);
+                }
+            } else {
+                copy.a[1] += offset.x;
+                copy.a[2] += offset.y;
+            }
+            for light in [&mut copy.light, &mut copy.pool] {
+                light[0] += offset.x;
+                light[1] += offset.y;
+                light[3] *= alpha;
+            }
+            copy.fill[3] *= alpha;
+            copy.stroke[3] *= alpha;
+            for channel in &mut copy.glow[..3] {
+                *channel *= alpha;
+            }
+            self.prims.push(copy);
+        }
     }
 
     /// On-screen width of an atlas string's ink at `scale`.

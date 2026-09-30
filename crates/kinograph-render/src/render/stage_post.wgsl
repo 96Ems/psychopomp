@@ -9,7 +9,7 @@ struct Post {
     params: vec4<f32>, // bloom intensity, threshold, knee, exposure
     look: vec4<f32>,   // chroma, vignette, grain, frame seed
     shock: vec4<f32>,  // center pixels, burst age (-1 inactive), projected scale
-    rewind: vec4<f32>, // local reverse-scan age (-1 inactive), reserved
+    rewind: vec4<f32>, // VHS rewind age (-1 inactive), background luminance, reserved
 };
 
 @group(0) @binding(0) var<uniform> post: Post;
@@ -108,9 +108,9 @@ fn composite(in: VOut) -> @location(0) vec4<f32> {
         uv += wave.xy / vec2<f32>(textureDimensions(source));
     }
     let size = vec2<f32>(textureDimensions(source));
-    let scan = rewind_field(in.uv, size, post.rewind.x);
-    uv += scan.xy / size;
-    let offset = (in.uv - vec2<f32>(0.5)) * post.look.x * 0.006 + vec2<f32>(scan.z / size.x, 0.0);
+    let tape = rewind_envelope(post.rewind.x);
+    uv.x += rewind_tear(in.position.xy, size, post.rewind.x, tape) / size.x;
+    let offset = (in.uv - vec2<f32>(0.5)) * post.look.x * 0.006;
     let uv_r = uv + offset;
     let uv_b = uv - offset;
     let hdr = vec3<f32>(
@@ -124,8 +124,15 @@ fn composite(in: VOut) -> @location(0) vec4<f32> {
         textureSampleLevel(bloom, linear_sampler, uv_b, 0.0).b,
     );
     var color = (hdr + glow * post.params.x) * post.params.w;
-    // A faint cold scan, not a white flash; the scene's local lights still win.
-    color = color * (1.0 - 0.12 * scan.w) + vec3<f32>(0.008, 0.014, 0.022) * scan.w;
+    if tape > 0.0 {
+        // Snow sits only on ink, so the empty canvas stays clean; shade darkens
+        // the tracking band and scanlines everywhere (invisible on black).
+        let vhs = rewind_snow(in.position.xy, size, post.rewind.x, tape);
+        let luma = dot(color, vec3<f32>(0.2126, 0.7152, 0.0722));
+        let ink = smoothstep(0.004, 0.03, luma - post.rewind.y);
+        let alpha = clamp(vhs.x * ink + vhs.y, 0.0, 0.7);
+        color = color * (1.0 - alpha) + vec3<f32>(0.71, 0.75, 0.81) * (vhs.x * ink);
+    }
     color += vec3<f32>(0.035, 0.028, 0.021) * pressure;
     color = rolloff(color);
 
