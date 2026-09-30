@@ -1,6 +1,7 @@
 // Stage post-processing: a physically inspired bloom (13-tap downsample,
-// tent upsample) and a composite with highlight rolloff, chromatic aberration,
-// vignette, and frame-locked film grain.
+// tent upsample) and a composite with the burst's pressure wave, VHS rewind
+// interference, highlight rolloff, chromatic aberration, vignette, and
+// frame-locked film grain. Concatenated after effects/noise, pressure, rewind.
 //
 // Live editing: set KINOGRAPH_SHADER_DIR to this directory and re-render.
 
@@ -81,12 +82,6 @@ fn up(in: VOut) -> @location(0) vec4<f32> {
     return vec4<f32>(sum / 16.0, 1.0);
 }
 
-fn hash(p: vec2<f32>) -> f32 {
-    let q = fract(p * vec2<f32>(0.1031, 0.1030));
-    let r = q + dot(q, q.yx + 33.33);
-    return fract((r.x + r.y) * r.x);
-}
-
 // Identity below the knee so authored UI colors stay exact; bright light
 // rolls off smoothly instead of clipping.
 fn rolloff(c: vec3<f32>) -> vec3<f32> {
@@ -99,15 +94,15 @@ fn rolloff(c: vec3<f32>) -> vec3<f32> {
 @fragment
 fn composite(in: VOut) -> @location(0) vec4<f32> {
     var uv = in.uv;
+    let size = vec2<f32>(textureDimensions(source));
     var pressure = 0.0;
     if post.shock.z >= 0.0 {
         let scale = max(post.shock.w, 0.01);
         let delta = in.position.xy - post.shock.xy;
         let wave = pressure_wave(delta, scale, post.shock.z);
         pressure = wave.z;
-        uv += wave.xy / vec2<f32>(textureDimensions(source));
+        uv += wave.xy / size;
     }
-    let size = vec2<f32>(textureDimensions(source));
     let tape = rewind_envelope(post.rewind.x);
     uv.x += rewind_tear(in.position.xy, size, post.rewind.x, tape) / size.x;
     let offset = (in.uv - vec2<f32>(0.5)) * post.look.x * 0.006;
@@ -142,7 +137,7 @@ fn composite(in: VOut) -> @location(0) vec4<f32> {
 
     // Grain in display space, identical for every temporal sample of a frame.
     let pixel = in.position.xy;
-    let noise = hash(pixel + vec2<f32>(post.look.w * 17.0, post.look.w * 29.0)) - 0.5;
+    let noise = fx_hash2(pixel + vec2<f32>(post.look.w * 17.0, post.look.w * 29.0)) - 0.5;
     var display = pow(max(color, vec3<f32>(0.0)), vec3<f32>(1.0 / 2.2));
     display = display + vec3<f32>(noise * post.look.z);
     color = pow(max(display, vec3<f32>(0.0)), vec3<f32>(2.2));

@@ -43,7 +43,7 @@ pub struct StagePost {
     pub bloom: f32,
     pub grain: f32,
     pub vignette: f32,
-    /// A soft accent-tinted light behind the scene, 0 for none.
+    /// A soft neutral light behind the scene, 0 for none.
     pub backdrop: f32,
 }
 

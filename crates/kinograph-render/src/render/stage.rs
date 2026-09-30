@@ -321,7 +321,8 @@ impl HeadlessRenderer {
             label: Some("stage post"),
             source: wgpu::ShaderSource::Wgsl(
                 format!(
-                    "{}\n{}\n{}",
+                    "{}\n{}\n{}\n{}",
+                    shader("effects/noise.wgsl", include_str!("effects/noise.wgsl")),
                     shader(
                         "effects/pressure.wgsl",
                         include_str!("effects/pressure.wgsl")
@@ -843,6 +844,24 @@ impl Link {
     fn scale_at(&self, fraction: f32) -> f32 {
         lerp(self.scale[0], self.scale[1], fraction)
     }
+
+    /// The link as a packet travels it: from its `to` end when `reverse`.
+    fn toward(&self, reverse: bool) -> Link {
+        fn ends<T: Copy>([a, b]: [T; 2], reverse: bool) -> [T; 2] {
+            if reverse { [b, a] } else { [a, b] }
+        }
+        Link {
+            path: if reverse {
+                self.path.reversed()
+            } else {
+                self.path.clone()
+            },
+            depth: ends(self.depth, reverse),
+            scale: ends(self.scale, reverse),
+            socket: ends(self.socket, reverse),
+            source: if reverse { None } else { self.source },
+        }
+    }
 }
 
 /// Light cast by something that moves. A reflection lights only the edges it
@@ -969,6 +988,24 @@ impl<'a> Scene<'a> {
         (self.value)(&format!("{id}.{property}"), default)
     }
 
+    /// A channel clamped to 0..1: opacities, progress, and amounts.
+    fn unit(&self, id: &str, property: &str, default: f32) -> f32 {
+        self.v(id, property, default).clamp(0.0, 1.0)
+    }
+
+    /// An orb's spin: ambient drift plus its authored `rotation` offset.
+    fn orb_rotation(&self, id: &str) -> Quat {
+        Quat::from_rotation_x(0.42)
+            * Quat::from_rotation_y(
+                self.time * 0.14 * self.v(id, "spin", 1.0) + self.v(id, "rotation", 0.0),
+            )
+    }
+
+    /// An orb's world radius before any collapse.
+    fn orb_radius(&self, id: &str, radius: f32) -> f32 {
+        radius * self.v(id, "scale", 1.0).max(0.01) * self.breath()
+    }
+
     /// Depth-of-field blur, in pixels, of something at depth `z`.
     fn blur_at(&self, z: f32) -> f32 {
         (self.dof * (z - self.focus).abs() / 100.0).min(24.0)
@@ -1066,12 +1103,7 @@ impl Scene<'_> {
                 if (if *reverse { from } else { to }) != id {
                     return None;
                 }
-                let link = self.links.get(beam.as_str())?;
-                let path = if *reverse {
-                    link.path.reversed()
-                } else {
-                    link.path.clone()
-                };
+                let path = self.links.get(beam.as_str())?.toward(*reverse).path;
                 let fraction = circle.entry_fraction(&path)?;
                 let since = packet::since_crossing(
                     self.v(packet_id, "age", -1.0),
@@ -1087,7 +1119,7 @@ impl Scene<'_> {
                     direction,
                     since,
                     *tone,
-                    self.v(packet_id, "opacity", 1.0).clamp(0.0, 1.0),
+                    self.unit(packet_id, "opacity", 1.0),
                 ))
             })
             .collect()
@@ -1105,7 +1137,7 @@ impl Scene<'_> {
                 let Some(place) = self.placements.get(id.as_str()) else {
                     return;
                 };
-                let strength = burst.rim_strength * self.v(id, "opacity", 1.0).clamp(0.0, 1.0);
+                let strength = burst.rim_strength * self.unit(id, "opacity", 1.0);
                 lights.push(Light {
                     at: place.center,
                     tone: Tone::Accent,
@@ -1119,13 +1151,13 @@ impl Scene<'_> {
                 let Some(link) = self.links.get(id.as_str()) else {
                     return;
                 };
-                let opacity = self.v(id, "opacity", 1.0).clamp(0.0, 1.0);
-                let draw = self.v(id, "draw", 1.0).clamp(0.0, 1.0);
+                let opacity = self.unit(id, "opacity", 1.0);
+                let draw = self.unit(id, "draw", 1.0);
                 // The bead lights what it passes; on contact the surge pools in the target.
                 let (fraction, strength, pool) = if draw < 0.999 {
                     (draw, bead(draw), false)
                 } else {
-                    (1.0, self.v(id, "surge", 0.0).clamp(0.0, 1.0) * 0.5, true)
+                    (1.0, self.unit(id, "surge", 0.0) * 0.5, true)
                 };
                 if strength * opacity > 0.01 {
                     lights.push(Light {
@@ -1152,10 +1184,10 @@ impl Scene<'_> {
                 if !(0.0..packet::LIFETIME).contains(&age) {
                     return;
                 }
+                let link = link.toward(*reverse);
                 let flight = self.v(id, "flight", 0.8).max(0.05);
-                let opacity = self.v(id, "opacity", 1.0).clamp(0.0, 1.0);
+                let opacity = self.unit(id, "opacity", 1.0);
                 let mut cast = |fraction: f32, strength: f32, radius: f32, pool: bool| {
-                    let fraction = if *reverse { 1.0 - fraction } else { fraction };
                     if strength * opacity > 0.01 {
                         lights.push(Light {
                             at: link.path.at(fraction),
@@ -1213,6 +1245,32 @@ impl Scene<'_> {
 /// Polyline styles: dash, gap, phase, and fade toward the start.
 const SOLID: [f32; 4] = [0.0; 4];
 const COMET: [f32; 4] = [0.0, 0.0, 0.0, 1.0];
+
+/// How a card's ink is painted this sample: where its text sits, and how
+/// deletion cools and reddens every ink.
+#[derive(Clone, Copy)]
+struct CardInk {
+    center: Vec2,
+    scale: f32,
+    /// Text ink opacity, and the card's own.
+    alpha: f32,
+    opacity: f32,
+    /// Text blur, and the frame's.
+    blur: f32,
+    edge_blur: f32,
+    cool: f32,
+    damage: f32,
+    gray: Vec3,
+    red: Vec3,
+}
+
+impl CardInk {
+    /// Inks cool toward the frame gray, then snap to red at once.
+    fn condemn(&self, ink: Vec3) -> Vec3 {
+        ink.lerp(self.gray, 0.6 * self.cool)
+            .lerp(self.red, self.damage)
+    }
+}
 
 /// Draws each element of one sample into its frame.
 struct Painter<'a> {
@@ -1303,13 +1361,13 @@ impl<'a> Painter<'a> {
         place: Placement,
     ) {
         let (scene, look) = (self.scene, self.look);
-        let opacity = scene.v(id, "opacity", 1.0).clamp(0.0, 1.0);
+        let opacity = scene.unit(id, "opacity", 1.0);
         let scale = place.scale;
         let half = size * 0.5 * scale;
         let blur = scene.blur_at(place.world.z) + scene.v(id, "blur", 0.0).max(0.0) * scale;
         let red = look.tone(Tone::Error);
         // The afterimage: the slot a deleted card leaves, drawn beneath it.
-        let ghost = scene.v(id, "ghost", 0.0).clamp(0.0, 1.0);
+        let ghost = scene.unit(id, "ghost", 0.0);
         if ghost > 0.001 {
             for (inset, strength) in [(0.0, 0.55), (3.0 * scale, 0.33)] {
                 self.frame.rounded_rect(
@@ -1332,24 +1390,28 @@ impl<'a> Painter<'a> {
         let glow = scene.v(id, "glow", 0.0).clamp(0.0, 1.5);
         let flash = scene.v(id, "flash", 0.0).clamp(0.0, 1.5);
         let alarm = scene.v(id, "alarm", 0.0).clamp(0.0, 1.5);
-        let dim = scene.v(id, "dim", 0.0).clamp(0.0, 1.0);
+        let dim = scene.unit(id, "dim", 0.0);
         // Deletion: inks cool toward the frame gray, then snap to red at once.
-        let cool = scene.v(id, "cool", 0.0).clamp(0.0, 1.0);
-        let damage = scene.v(id, "damage", 0.0).clamp(0.0, 1.0);
-        let condemn = |ink: Vec3| {
-            ink.lerp(vec3(0.042, 0.042, 0.042), 0.6 * cool)
-                .lerp(red, damage)
+        let content = scene.unit(id, "content", 1.0);
+        let pen = CardInk {
+            center: place.center + vec2(0.0, 7.0 * (1.0 - content) * scale),
+            scale,
+            alpha: opacity * content * (1.0 - 0.55 * dim),
+            opacity,
+            blur: blur + 1.5 * (1.0 - content) * scale,
+            edge_blur: blur,
+            cool: scene.unit(id, "cool", 0.0),
+            damage: scene.unit(id, "damage", 0.0),
+            gray: look.raised.lerp(look.muted, 0.22),
+            red,
         };
         let own = look.tone(tone);
         // Ink and rim respond; the substrate stays dark. In linear light even
         // a modest full-card tint overwhelms the directional socket reflection.
+        // The rim reddens by the alarm's share of all its light, continuously.
         let lit = (flash + alarm).min(1.5);
-        let light = own.lerp(red, alarm / (flash + alarm).max(1e-3));
-        let border = look.raised.lerp(look.muted, 0.22);
-        let edge = condemn(border.lerp(
-            if lit > glow { light } else { own },
-            (glow * 0.32 + lit * 0.28).min(0.65),
-        ));
+        let hue = own.lerp(red, alarm / (glow + flash + alarm).max(1e-3));
+        let edge = pen.condemn(pen.gray.lerp(hue, (glow * 0.32 + lit * 0.28).min(0.65)));
         // The strongest reflection on the edge, and the strongest pool in the glass.
         let strongest = |pool: bool| {
             scene
@@ -1383,145 +1445,150 @@ impl<'a> Painter<'a> {
             blur,
             Paint {
                 stroke: rgba(
-                    condemn(look.raised.lerp(look.muted, 0.06)),
+                    pen.condemn(look.raised.lerp(look.muted, 0.06)),
                     opacity * (1.0 - 0.6 * dim),
                 ),
                 ..Default::default()
             },
         );
-        let content = scene.v(id, "content", 1.0).clamp(0.0, 1.0);
-        let ink = opacity * content * (1.0 - 0.55 * dim);
-        let text_center = place.center + vec2(0.0, 7.0 * (1.0 - content) * scale);
-        let text_blur = blur + 1.5 * (1.0 - content) * scale;
         let title_lift = if status.is_empty() { 0.0 } else { 13.0 * scale };
         self.frame.text(
             &text_key(id, "title"),
-            text_center - vec2(0.0, title_lift),
+            pen.center - vec2(0.0, title_lift),
             scale,
             CaptionAlign::Center,
             rgba(
-                condemn(look.text.lerp(Vec3::ONE, (flash * 0.35).min(1.0))),
-                ink,
+                pen.condemn(look.text.lerp(Vec3::ONE, (flash * 0.35).min(1.0))),
+                pen.alpha,
             ),
             f32::MAX,
-            text_blur,
+            pen.blur,
         );
         if !status.is_empty() {
-            // Statuses cross-fade by the fractional `status` channel.
-            let index = scene
-                .v(id, "status", 0.0)
-                .clamp(0.0, (status.len() - 1) as f32);
-            let low = index.floor() as usize;
-            let high = (low + 1).min(status.len() - 1);
-            let entries = [(low, 1.0 - index.fract()), (high, index.fract())];
-            let tone_of = |entry: usize| match status[entry].tone {
-                Tone::Plain => look.muted,
-                tone => look.tone(tone),
-            };
-            // The icon clears the incoming line before its ink is readable.
-            let widths = entries.map(|(entry, _)| {
-                self.frame
-                    .width(&text_key(id, &format!("status{entry}")), scale)
-            });
-            let width = lerp(widths[0], widths[1], smoothstep(entries[1].1 / 0.45));
-            let color = entries.iter().fold(Vec3::ZERO, |sum, (entry, weight)| {
-                sum + tone_of(*entry) * *weight
-            });
-            // A status spinner leads the line; the pair stays centered.
-            let spinner = spinner::sample(
-                scene.v(id, "spinner", -1.0),
-                scene.v(id, "release", -1.0),
-                scene.v(id, "mark", -1.0),
-                mark,
+            self.card_status(id, status, mark, &pen);
+        }
+        self.glitch(first, id, place, half);
+        self.cut(first, id, place, half, &pen);
+        self.frame.close(place.world.z, order);
+    }
+
+    /// The status line: statuses cross-fade by the fractional `status`
+    /// channel, led by the card's spinner while it waits.
+    fn card_status(&mut self, id: &str, status: &[StatusText], mark: Mark, pen: &CardInk) {
+        let (scene, look, scale) = (self.scene, self.look, pen.scale);
+        let index = scene
+            .v(id, "status", 0.0)
+            .clamp(0.0, (status.len() - 1) as f32);
+        let low = index.floor() as usize;
+        let high = (low + 1).min(status.len() - 1);
+        let entries = [(low, 1.0 - index.fract()), (high, index.fract())];
+        let tone_of = |entry: usize| match status[entry].tone {
+            Tone::Plain => look.muted,
+            tone => look.tone(tone),
+        };
+        // The icon clears the incoming line before its ink is readable.
+        let widths = entries.map(|(entry, _)| {
+            self.frame
+                .width(&text_key(id, &format!("status{entry}")), scale)
+        });
+        let width = lerp(widths[0], widths[1], smoothstep(entries[1].1 / 0.45));
+        let color = entries.iter().fold(Vec3::ZERO, |sum, (entry, weight)| {
+            sum + tone_of(*entry) * *weight
+        });
+        // A status spinner leads the line; the pair stays centered.
+        let spinner = spinner::sample(
+            scene.v(id, "spinner", -1.0),
+            scene.v(id, "release", -1.0),
+            scene.v(id, "mark", -1.0),
+            mark,
+        );
+        let unit = 18.0 / 16.0 * scale;
+        let gap = 8.0 * scale;
+        let lead = (16.0 * unit + gap) * spinner.opacity;
+        let line_y = pen.center.y + 19.0 * scale;
+        let icon = vec2(pen.center.x - (width + lead) * 0.5 + 8.0 * unit, line_y);
+        let ink_color = pen.condemn(
+            color
+                .lerp(look.text, 0.3)
+                .lerp(Vec3::ONE, spinner.flash * 0.8),
+        );
+        for stroke in &spinner.strokes {
+            let points = stroke
+                .iter()
+                .map(|(point, weight)| (icon + (*point - vec2(8.0, 8.0)) * unit, *weight))
+                .collect::<Vec<_>>();
+            self.frame.trail(
+                &points,
+                [1.5 * unit, pen.blur],
+                Paint {
+                    stroke: rgba(ink_color, pen.alpha * spinner.opacity),
+                    glow: glow4(ink_color * (0.03 * spinner.flash * pen.alpha), 3.0 * unit),
+                    ..Default::default()
+                },
             );
-            let unit = 18.0 / 16.0 * scale;
-            let gap = 8.0 * scale;
-            let lead = (16.0 * unit + gap) * spinner.opacity;
-            let line_y = text_center.y + 19.0 * scale;
-            let icon = vec2(text_center.x - (width + lead) * 0.5 + 8.0 * unit, line_y);
-            let ink_color = condemn(
-                color
-                    .lerp(look.text, 0.3)
-                    .lerp(Vec3::ONE, spinner.flash * 0.8),
-            );
-            for stroke in &spinner.strokes {
-                let points = stroke
-                    .iter()
-                    .map(|(point, weight)| (icon + (*point - vec2(8.0, 8.0)) * unit, *weight))
-                    .collect::<Vec<_>>();
-                self.frame.trail(
-                    &points,
-                    [1.5 * unit, text_blur],
-                    Paint {
-                        stroke: rgba(ink_color, ink * spinner.opacity),
-                        glow: glow4(ink_color * (0.03 * spinner.flash * ink), 3.0 * unit),
-                        ..Default::default()
-                    },
-                );
+        }
+        // While the motor waits, a sheen sweeps the status: the blog's
+        // ShimmerText, phased by the same clock so it never resets.
+        let shimmer = if scene.v(id, "mark", -1.0) < 0.0 {
+            [scene.v(id, "spinner", -1.0) / 1.6, spinner.opacity]
+        } else {
+            [0.0; 2]
+        };
+        for (entry, weight) in entries {
+            if weight <= 0.001 {
+                continue;
             }
-            // While the motor waits, a sheen sweeps the status: the blog's
-            // ShimmerText, phased by the same clock so it never resets.
-            let shimmer = if scene.v(id, "mark", -1.0) < 0.0 {
-                [scene.v(id, "spinner", -1.0) / 1.6, spinner.opacity]
-            } else {
-                [0.0; 2]
-            };
-            for (entry, weight) in entries {
-                if weight <= 0.001 {
-                    continue;
-                }
-                // Separate the outgoing and incoming ink instead of showing
-                // two readable words on top of each other at mid-transition.
-                let visibility = smoothstep((weight - 0.2) / 0.8);
-                let drift = if entry == low { -1.0 } else { 1.0 };
-                if let Some(glyphs) = self.frame.text(
-                    &text_key(id, &format!("status{entry}")),
-                    vec2(
-                        text_center.x + lead * 0.5,
-                        line_y + drift * 6.0 * (1.0 - weight) * scale,
-                    ),
-                    scale,
-                    CaptionAlign::Center,
-                    rgba(condemn(tone_of(entry)), ink * visibility),
-                    f32::MAX,
-                    text_blur + (1.0 - weight) * 1.5,
-                ) {
-                    glyphs.light = [shimmer[0], shimmer[1], 0.0, 0.0];
-                }
+            // Separate the outgoing and incoming ink instead of showing
+            // two readable words on top of each other at mid-transition.
+            let visibility = smoothstep((weight - 0.2) / 0.8);
+            let drift = if entry == low { -1.0 } else { 1.0 };
+            if let Some(glyphs) = self.frame.text(
+                &text_key(id, &format!("status{entry}")),
+                vec2(
+                    pen.center.x + lead * 0.5,
+                    line_y + drift * 6.0 * (1.0 - weight) * scale,
+                ),
+                scale,
+                CaptionAlign::Center,
+                rgba(pen.condemn(tone_of(entry)), pen.alpha * visibility),
+                f32::MAX,
+                pen.blur + (1.0 - weight) * 1.5,
+            ) {
+                glyphs.light = [shimmer[0], shimmer[1], 0.0, 0.0];
             }
         }
-        self.glitch(first, id, place.center, half, scale);
-        self.cut(first, id, place.center, half, scale, red, blur);
-        self.frame.close(place.world.z, order);
     }
 
     /// A few frames of horizontal band displacement, one layout per integer
     /// `glitch` seed; zero is off. Seeds step, then hold still: no noise loop.
-    fn glitch(&mut self, first: usize, id: &str, center: Vec2, half: Vec2, scale: f32) {
+    fn glitch(&mut self, first: usize, id: &str, place: Placement, half: Vec2) {
         let seed = self.scene.v(id, "glitch", 0.0).round();
         if seed < 1.0 {
             return;
         }
-        let seed = seed as u32;
-        let top = center.y - half.y - 16.0 * scale;
-        let height = 2.0 * half.y + 32.0 * scale;
-        let weights = (0..7)
-            .map(|band| 0.35 + hash(seed, band))
-            .collect::<Vec<_>>();
+        let (seed, scale) = (seed as u32, place.scale);
+        let weights: [f32; 7] = std::array::from_fn(|band| 0.35 + hash(seed, band as u32));
         let total: f32 = weights.iter().sum();
         let original = self.frame.prims.drain(first..).collect::<Vec<_>>();
-        let mut y = top;
+        let mut y = place.center.y - half.y - 16.0 * scale;
         for (band, weight) in weights.iter().enumerate() {
-            let next = y + height * weight / total;
+            let next = y + (2.0 * half.y + 32.0 * scale) * weight / total;
             let roll = hash(seed.wrapping_mul(31), band as u32 + 11);
             let shift = if roll < 0.35 {
                 0.0
             } else {
                 (roll - 0.675) * 16.0 * scale
             };
+            // The outer bands run on, so the card's halo is never clipped.
+            let top = if band == 0 { f32::MIN } else { y };
+            let bottom = if band == weights.len() - 1 {
+                f32::MAX
+            } else {
+                next
+            };
             self.frame.echo(
                 &original,
-                [f32::MIN, y, f32::MAX, next],
+                [f32::MIN, top, f32::MAX, bottom],
                 vec2(shift, 0.0),
                 1.0,
             );
@@ -1531,51 +1598,40 @@ impl<'a> Painter<'a> {
 
     /// Deletion by a red hairline drawn left to right across the card, then
     /// the halves part 3 px in total and fade. `cut` runs 0..1.
-    #[allow(clippy::too_many_arguments)]
-    fn cut(
-        &mut self,
-        first: usize,
-        id: &str,
-        center: Vec2,
-        half: Vec2,
-        scale: f32,
-        red: Vec3,
-        blur: f32,
-    ) {
-        let cut = self.scene.v(id, "cut", 0.0).clamp(0.0, 1.0);
+    fn cut(&mut self, first: usize, id: &str, place: Placement, half: Vec2, pen: &CardInk) {
+        let cut = self.scene.unit(id, "cut", 0.0);
         if cut <= 0.0 {
             return;
         }
+        let (center, scale) = (place.center, place.scale);
         let draw = cubic_out((cut / 0.4).min(1.0));
         let part = smoothstep((cut - 0.4) / 0.6);
         // Between the title and status lines, so the hairline crosses no ink.
         let seam = center.y + 4.5 * scale;
         if part > 0.0 {
             let original = self.frame.prims.drain(first..).collect::<Vec<_>>();
+            if part >= 1.0 {
+                return;
+            }
             let gap = 1.5 * part * scale;
-            let fade = 1.0 - part;
-            self.frame.echo(
-                &original,
-                [f32::MIN, f32::MIN, f32::MAX, seam],
-                vec2(0.0, -gap),
-                fade,
-            );
-            self.frame.echo(
-                &original,
-                [f32::MIN, seam, f32::MAX, f32::MAX],
-                vec2(0.0, gap),
-                fade,
-            );
+            for (clip, offset) in [(f32::MIN, seam, -gap), (seam, f32::MAX, gap)]
+                .map(|(top, bottom, dy)| ([f32::MIN, top, f32::MAX, bottom], vec2(0.0, dy)))
+            {
+                self.frame.echo(&original, clip, offset, 1.0 - part);
+            }
         }
-        let left = center.x - half.x - 6.0 * scale;
-        let right = center.x + half.x + 6.0 * scale;
+        let reach = half.x + 6.0 * scale;
+        let alpha = (1.0 - part) * pen.opacity;
         self.frame.polyline(
-            &Polyline::new(vec![vec2(left, seam), vec2(right, seam)]),
+            &Polyline::new(vec![
+                vec2(center.x - reach, seam),
+                vec2(center.x + reach, seam),
+            ]),
             draw,
-            [1.0 * scale.max(0.75), blur],
+            [1.0 * scale.max(0.75), pen.edge_blur],
             Paint {
-                stroke: rgba(red, 1.0 - part),
-                glow: glow4(red * (0.04 * (1.0 - part)), 3.0 * scale),
+                stroke: rgba(pen.red, alpha),
+                glow: glow4(pen.red * (0.04 * alpha), 3.0 * scale),
                 ..Default::default()
             },
             SOLID,
@@ -1585,8 +1641,8 @@ impl<'a> Painter<'a> {
     fn orb(&mut self, order: usize, id: &str, radius: f32, tone: Tone, place: Placement) {
         let age = self.scene.v(id, "burst", -1.0);
         self.orb_shell(order, id, radius, tone, place, age);
-        if age >= 0.12 {
-            let opacity = self.scene.v(id, "opacity", 1.0).clamp(0.0, 1.0);
+        if age >= combustion::COLLAPSE {
+            let opacity = self.scene.unit(id, "opacity", 1.0);
             if opacity > 0.001 {
                 self.burst(order, id, radius, place, age, opacity);
             }
@@ -1605,7 +1661,7 @@ impl<'a> Painter<'a> {
         let (scene, look) = (self.scene, self.look);
         let bursting = age >= 0.0;
         let burst = Burst::sample(age);
-        let opacity = scene.v(id, "opacity", 1.0).clamp(0.0, 1.0) * burst.shell_opacity;
+        let opacity = scene.unit(id, "opacity", 1.0) * burst.shell_opacity;
         if opacity <= 0.001 {
             return;
         }
@@ -1614,12 +1670,11 @@ impl<'a> Painter<'a> {
         let shatter = if bursting {
             0.0
         } else {
-            scene.v(id, "shatter", 0.0).clamp(0.0, 1.0)
+            scene.unit(id, "shatter", 0.0)
         };
         let pulse = scene.v(id, "pulse", 0.0);
-        let hurt = scene.v(id, "hurt", 0.0).clamp(0.0, 1.0);
-        let spin = scene.v(id, "spin", 1.0);
-        let world_radius = radius * scene.v(id, "scale", 1.0).max(0.01) * scene.breath() * collapse;
+        let hurt = scene.unit(id, "hurt", 0.0);
+        let world_radius = scene.orb_radius(id, radius) * collapse;
         let own = look.tone(tone);
         let red = look.tone(Tone::Error);
         let blur = scene.blur_at(place.world.z) + scene.v(id, "blur", 0.0).max(0.0) * place.scale;
@@ -1644,8 +1699,7 @@ impl<'a> Painter<'a> {
                 ..Default::default()
             },
         );
-        let rotation = Quat::from_rotation_x(0.42)
-            * Quat::from_rotation_y(scene.time * 0.14 * spin + scene.v(id, "rotation", 0.0));
+        let rotation = scene.orb_rotation(id);
         let contacts = scene.orb_contacts(id, place);
         let mut dots = self.orbs[id]
             .iter()
@@ -1764,23 +1818,14 @@ impl<'a> Painter<'a> {
         let scale = place.scale;
         let radius_px = radius * scale;
         self.frame.prims.push(Prim {
-            bbox: [
-                place.center.x - radius_px * 4.4,
-                place.center.y - radius_px * 4.4,
-                place.center.x + radius_px * 4.4,
-                place.center.y + radius_px * 4.4,
-            ],
+            bbox: around(place.center, Vec2::splat(radius_px * 4.4)),
             a: [6.0, place.center.x, place.center.y, radius_px],
             b: [age, opacity, 0.0, 0.0],
             ..Default::default()
         });
         let burst = Burst::sample(age);
-        let rotation = Quat::from_rotation_x(0.42)
-            * Quat::from_rotation_y(
-                self.scene.time * 0.14 * self.scene.v(id, "spin", 1.0)
-                    + self.scene.v(id, "rotation", 0.0),
-            );
-        let world_radius = radius * self.scene.v(id, "scale", 1.0).max(0.01) * self.scene.breath();
+        let rotation = self.scene.orb_rotation(id);
+        let world_radius = self.scene.orb_radius(id, radius);
         for (index, point) in self.orbs[id].iter().enumerate() {
             let unit = rotation * point.unit;
             let ember = burst.ember(unit, point.seed);
@@ -1828,14 +1873,14 @@ impl<'a> Painter<'a> {
 
     fn beam(&mut self, order: usize, id: &str, tone: Tone, link: &Link) {
         let (scene, look) = (self.scene, self.look);
-        let opacity = scene.v(id, "opacity", 1.0).clamp(0.0, 1.0);
+        let opacity = scene.unit(id, "opacity", 1.0);
         if opacity <= 0.001 {
             return;
         }
-        let draw = scene.v(id, "draw", 1.0).clamp(0.0, 1.0);
-        let broken = scene.v(id, "break", 0.0).clamp(0.0, 1.0);
+        let draw = scene.unit(id, "draw", 1.0);
+        let broken = scene.unit(id, "break", 0.0);
         let flow = scene.v(id, "flow", 0.0).clamp(0.0, 1.5);
-        let emphasis = scene.v(id, "emphasis", 0.0).clamp(0.0, 1.0);
+        let emphasis = scene.unit(id, "emphasis", 0.0);
         let surge = scene.v(id, "surge", 0.0).clamp(0.0, 1.5);
         let own = look.tone(tone);
         let scale = link.scale_at(0.5);
@@ -1933,7 +1978,7 @@ impl<'a> Painter<'a> {
         let popped = if draw > 0.001 {
             1.0
         } else {
-            scene.v(id, "port", 0.0).clamp(0.0, 1.0)
+            scene.unit(id, "port", 0.0)
         };
         for end in [0, 1] {
             let (shown, size, soft) = if end == 0 {
@@ -1965,18 +2010,13 @@ impl<'a> Painter<'a> {
     fn packet(&mut self, order: usize, id: &str, reverse: bool, tone: Tone, link: &Link) {
         let scene = self.scene;
         let age = scene.v(id, "age", -1.0);
-        let opacity = scene.v(id, "opacity", 1.0).clamp(0.0, 1.0);
+        let opacity = scene.unit(id, "opacity", 1.0);
         if !(0.0..packet::LIFETIME).contains(&age) || opacity <= 0.001 {
             return;
         }
         let flight = scene.v(id, "flight", 0.8).max(0.05);
-        let path = if reverse {
-            link.path.reversed()
-        } else {
-            link.path.clone()
-        };
-        let scale_at =
-            |fraction: f32| link.scale_at(if reverse { 1.0 - fraction } else { fraction });
+        let link = link.toward(reverse);
+        let (path, scale_at) = (&link.path, |fraction| link.scale_at(fraction));
         let own = self.look.tone(tone);
         // The dot is nearly white; its tone lives in the trail and its reflections.
         let ink = own.lerp(Vec3::ONE, 0.55) * 1.3;
@@ -2004,7 +2044,7 @@ impl<'a> Painter<'a> {
                 },
             );
         }
-        self.trail(&path, age, flight, own * opacity, scale_at(0.5));
+        self.trail(path, age, flight, own * opacity, scale_at(0.5));
         let label_alpha = if packet::flight(age, flight).is_some() {
             let travel = packet::travel(age, flight);
             let (head, scale) = (path.at(travel), scale_at(travel));
@@ -2019,13 +2059,13 @@ impl<'a> Painter<'a> {
                 },
             );
             let label = remap_clamp(travel, [0.0, 0.1], [0.0, 1.0]);
-            if link.socket[usize::from(!reverse)] {
+            if link.socket[1] {
                 label
             } else {
                 label * (1.0 - smoothstep((travel - 0.65) / 0.25))
             }
         } else {
-            if link.socket[usize::from(!reverse)] {
+            if link.socket[1] {
                 packet::landing(age, flight).map_or(0.0, |q| 1.0 - smoothstep(q / 0.4))
             } else {
                 0.0
@@ -2045,7 +2085,7 @@ impl<'a> Painter<'a> {
             );
         }
         if let Some(q) = packet::landing(age, flight)
-            && link.socket[usize::from(!reverse)]
+            && link.socket[1]
         {
             // The dot is the ring: a 2 px ring with a 4 px stroke looks like the
             // dot, then opens, grows a little, and fades out.
@@ -2112,11 +2152,11 @@ impl<'a> Painter<'a> {
         place: Placement,
     ) {
         let (scene, look) = (self.scene, self.look);
-        let opacity = scene.v(id, "opacity", 1.0).clamp(0.0, 1.0);
+        let opacity = scene.unit(id, "opacity", 1.0);
         if opacity <= 0.001 {
             return;
         }
-        let typed = scene.v(id, "typed", 1.0).clamp(0.0, 1.0);
+        let typed = scene.unit(id, "typed", 1.0);
         let blur = scene.blur_at(place.world.z);
         let parts = spans
             .iter()
@@ -2172,8 +2212,8 @@ impl<'a> Painter<'a> {
     /// `size` is the radius and thickness.
     fn ring(&mut self, order: usize, id: &str, size: [f32; 2], tone: Tone, place: Placement) {
         let scene = self.scene;
-        let opacity = scene.v(id, "opacity", 1.0).clamp(0.0, 1.0);
-        let expand = scene.v(id, "expand", 0.0).clamp(0.0, 1.0);
+        let opacity = scene.unit(id, "opacity", 1.0);
+        let expand = scene.unit(id, "expand", 0.0);
         let alpha = opacity * (1.0 - expand);
         if alpha <= 0.001 {
             return;
@@ -2185,7 +2225,7 @@ impl<'a> Painter<'a> {
                 size[0] * (1.0 + 1.3 * expand) * place.scale,
                 size[1] * place.scale,
             ],
-            scene.v(id, "sweep", 1.0).clamp(0.0, 1.0),
+            scene.unit(id, "sweep", 1.0),
             scene.blur_at(place.world.z),
             Paint {
                 stroke: rgba(own, alpha),
@@ -2264,14 +2304,8 @@ impl<'a> StageFrame<'a> {
 
     /// `shape` is the corner radius and border width.
     fn rounded_rect(&mut self, center: Vec2, half: Vec2, shape: [f32; 2], blur: f32, paint: Paint) {
-        let pad = half + Vec2::splat(paint.glow[3] * 4.0 + blur + 2.0);
         self.prims.push(Prim {
-            bbox: [
-                center.x - pad.x,
-                center.y - pad.y,
-                center.x + pad.x,
-                center.y + pad.y,
-            ],
+            bbox: around(center, half + Vec2::splat(paint.glow[3] * 4.0 + blur + 2.0)),
             a: [0.0, center.x, center.y, shape[0]],
             b: [half.x, half.y, shape[1], blur],
             fill: paint.fill,
@@ -2287,14 +2321,11 @@ impl<'a> StageFrame<'a> {
 
     /// `shape` is the radius and border width.
     fn circle(&mut self, center: Vec2, shape: [f32; 2], blur: f32, paint: Paint) {
-        let pad = shape[0] + paint.glow[3] * 4.0 + blur + 1.0;
         self.prims.push(Prim {
-            bbox: [
-                center.x - pad,
-                center.y - pad,
-                center.x + pad,
-                center.y + pad,
-            ],
+            bbox: around(
+                center,
+                Vec2::splat(shape[0] + paint.glow[3] * 4.0 + blur + 1.0),
+            ),
             a: [1.0, center.x, center.y, shape[0]],
             b: [shape[1], 0.0, 0.0, blur],
             fill: paint.fill,
@@ -2307,14 +2338,11 @@ impl<'a> StageFrame<'a> {
     /// A ring, or an arc clockwise from twelve o'clock over `sweep` of a turn.
     /// `shape` is the radius and thickness.
     fn arc(&mut self, center: Vec2, shape: [f32; 2], sweep: f32, blur: f32, paint: Paint) {
-        let pad = shape[0] + shape[1] + paint.glow[3] * 4.0 + blur + 2.0;
         self.prims.push(Prim {
-            bbox: [
-                center.x - pad,
-                center.y - pad,
-                center.x + pad,
-                center.y + pad,
-            ],
+            bbox: around(
+                center,
+                Vec2::splat(shape[0] + shape[1] + paint.glow[3] * 4.0 + blur + 2.0),
+            ),
             a: [2.0, center.x, center.y, shape[0]],
             b: [shape[1], -FRAC_PI_2, TAU * sweep, blur],
             stroke: paint.stroke,
@@ -2469,6 +2497,7 @@ impl<'a> StageFrame<'a> {
                 CaptionAlign::Right => ink,
             };
         let top = at.y - size.y * 0.5;
+        let center = vec2(left, top) + size * 0.5;
         let uv = [
             text.rect[0],
             text.rect[1],
@@ -2477,34 +2506,33 @@ impl<'a> StageFrame<'a> {
         ];
         let reveal = reveal.min(size.x + 4.0);
         // A soft dark backing keeps text legible where it crosses beams and glow.
-        self.prims.push(Prim {
-            bbox: [
-                left - 8.0,
-                top - 8.0,
-                left + size.x + 8.0,
-                top + size.y + 8.0,
-            ],
+        let backing = Prim {
+            bbox: around(center, size * 0.5 + 8.0),
             a: [4.0, left, top, 5.0 + blur * 0.5],
             b: [size.x, size.y, reveal, 0.0],
             fill: rgba(self.shade, fill[3] * 0.85),
             uv,
             ..Default::default()
-        });
+        };
+        self.prims.push(backing);
         self.prims.push(Prim {
-            bbox: [
-                left - 2.0,
-                top - 2.0,
-                left + size.x + 2.0,
-                top + size.y + 2.0,
-            ],
+            bbox: around(center, size * 0.5 + 2.0),
             a: [4.0, left, top, blur * 0.5],
-            b: [size.x, size.y, reveal, 0.0],
             fill,
-            uv,
-            ..Default::default()
+            ..backing
         });
         self.prims.last_mut()
     }
+}
+
+/// The screen rectangle `pad` around `center`.
+fn around(center: Vec2, pad: Vec2) -> [f32; 4] {
+    [
+        center.x - pad.x,
+        center.y - pad.y,
+        center.x + pad.x,
+        center.y + pad.y,
+    ]
 }
 
 fn rgba(color: Vec3, alpha: f32) -> [f32; 4] {

@@ -2,6 +2,8 @@
 use crate::math::{Vec3, dynamics::ballistic, smoothstep, vec3};
 
 pub const DURATION: f32 = 5.2;
+/// The shell compresses for this long before it ignites.
+pub const COLLAPSE: f32 = 0.12;
 
 /// A sampled effect pose. Negative age means intact; age >= DURATION is spent.
 /// Sample the same age in any order, including backwards, without retained state.
@@ -26,15 +28,15 @@ pub struct Ember {
 
 impl Burst {
     pub fn sample(age_seconds: f32) -> Self {
-        let released = (age_seconds - 0.12).max(0.0);
+        let released = (age_seconds - COLLAPSE).max(0.0);
         let ignition = smoothstep(released / 0.055);
-        let rim_strength = if (0.0..2.4).contains(&(age_seconds - 0.12)) {
+        let rim_strength = if (0.0..2.4).contains(&released) {
             0.8 * smoothstep(released / 0.06) * (-2.5 * released).exp()
         } else {
             0.0
         };
         Self {
-            shell_scale: 1.0 - 0.55 * smoothstep(age_seconds / 0.12),
+            shell_scale: 1.0 - 0.55 * smoothstep(age_seconds / COLLAPSE),
             shell_opacity: 1.0 - ignition,
             ignition,
             rim_strength,

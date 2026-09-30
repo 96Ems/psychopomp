@@ -1,5 +1,11 @@
 // Binding-free deterministic 3D value noise and four-octave fBM.
 // Coordinates are caller-owned: scale, advect, and domain-warp before sampling.
+fn fx_hash2(p: vec2<f32>) -> f32 {
+    let q = fract(p * vec2<f32>(0.1031, 0.1030));
+    let r = q + dot(q, q.yx + 33.33);
+    return fract((r.x + r.y) * r.x);
+}
+
 fn fx_hash3(p: vec3<f32>) -> f32 {
     var q = fract(p * 0.1031);
     q += dot(q, q.yzx + 33.33);

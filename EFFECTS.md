@@ -11,10 +11,10 @@ they happen; effect Modules own their physical pose and optical response.
 | `kinograph::effects::surface` | `impact(age, angle)`, `wavefront(age)` | Local contact dimple and a damped emissive wave over a sphere |
 | `kinograph::effects::spinner` | `sample(age, release, mark, shape)`, `handoff(after)` | The blog's radial spinner: closed-form critically damped motor, speed-driven wake, and a mark route drawn from a top-right handoff |
 | `kinograph::math::dynamics` | `ballistic(velocity, acceleration, drag, seconds)` | Closed-form reusable particle displacement |
-| `render/effects/noise.wgsl` | `fx_noise3(p)`, `fx_fbm3(p)` | Deterministic 3D noise; caller-owned coordinate transforms |
+| `render/effects/noise.wgsl` | `fx_hash2(p)`, `fx_noise3(p)`, `fx_fbm3(p)` | Deterministic 3D noise; caller-owned coordinate transforms |
 | `render/effects/combustion.wgsl` | `combustion_volume(pixel, radius, age)` | Domain-warped fire/smoke, emission and absorption; requires noise |
 | `render/effects/pressure.wgsl` | `pressure_wave(delta, scale, age)` | Inward pinch and outward refraction; returns displacement and ring intensity |
-| `render/effects/rewind.wgsl` | `rewind_envelope(age)`, `rewind_tear(pixel, size, age, amount)`, `rewind_snow(...)` | VHS tape rewind: tracking band and seam tear, 30 fps grain, dropouts, scanlines |
+| `render/effects/rewind.wgsl` | `rewind_envelope(age)`, `rewind_tear(pixel, size, age, amount)`, `rewind_snow(...)` | VHS tape rewind: tracking band and seam tear, 30 fps grain, dropouts, scanlines; requires noise |
 
 The WGSL Modules have no bindings, texture ownership, entry points, or Stage
 identifiers. Concatenate dependencies before the consuming shader. The Stage is

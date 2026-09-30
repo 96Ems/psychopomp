@@ -1,6 +1,7 @@
 // Binding-free VHS rewind interference, after the OpenCode blog's tape rewind
 // (`vhsRewind.wgsl` and its tracking map). Every function is a pure function of
 // pixel and local age in seconds, so shutter samples and seeks agree exactly.
+// Requires noise.wgsl (`fx_hash2`).
 
 const REWIND_SECONDS: f32 = 1.4;
 
@@ -29,10 +30,6 @@ fn rewind_seam(tape: f32) -> f32 {
     return exp(-pow((tape - 0.66) / 0.018, 2.0));
 }
 
-fn rewind_hash(p: vec2<f32>) -> f32 {
-    return fract(sin(dot(p, vec2<f32>(127.1, 311.7))) * 43758.5453);
-}
-
 // Horizontal tear in pixels: the tracking band pulls one way with a per-row
 // wobble on the tape's 512-row grid, and the thin seam snaps the other way.
 fn rewind_tear(pixel: vec2<f32>, size: vec2<f32>, age: f32, amount: f32) -> f32 {
@@ -51,8 +48,8 @@ fn rewind_snow(pixel: vec2<f32>, size: vec2<f32>, age: f32, amount: f32) -> vec2
     let unit = max(1.0, size.y / 1080.0);
     let tick = floor(age * 30.0);
     let row = floor(pixel.y / (2.0 * unit));
-    let grain = rewind_hash(vec2<f32>(floor(pixel.x / (2.0 * unit)), row + tick * 97.0));
-    let streak = rewind_hash(vec2<f32>(floor(pixel.x / (28.0 * unit)) + tick, row));
+    let grain = fx_hash2(vec2<f32>(floor(pixel.x / (2.0 * unit)), row + tick * 97.0));
+    let streak = fx_hash2(vec2<f32>(floor(pixel.x / (28.0 * unit)) + tick, row));
     let dropout = step(0.92, streak) * tracking;
     // The web rig's base grain is lighter here: large lit volumes (smoke)
     // would otherwise read as broadcast snow rather than tape.
