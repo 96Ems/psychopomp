@@ -476,14 +476,12 @@ pub mod packet {
     }
 }
 
-/// Wire draw-on, after the blog diagrams: light sweeps the source card's frame,
-/// the port pops, then the wire draws with a gentle start and stop.
-pub const SWEEP_SECONDS: f32 = 0.4;
+/// Wire draw-on, after the blog diagrams: the port pops, then the wire draws
+/// with a gentle start and stop. (A frame `sweep` before it is opt-in.)
 pub const PORT_POP_SECONDS: f32 = 0.3;
 pub const DRAW_CURVE: Ease = Ease::CubicBezier([0.45, 0.0, 0.2, 1.0]);
 
-/// Authoring handle: declares each stage channel once, with the recipe default
-/// as its initial value.
+/// Authoring handle: declares each stage channel once, on first use.
 pub struct StageActor {
     actor: ActorHandle,
     channels: HashMap<String, ContinuousHandle>,
@@ -523,63 +521,64 @@ impl StageActor {
             .clone()
     }
 
-    /// Spring `property` to `target` at `at_nanos`. `initial` applies only when
-    /// this is the channel's first use.
+    /// Spring `property` to `target` at `at_nanos`. Channels not declared
+    /// with [`Self::channel`] start at 0.
     pub fn to(
         &mut self,
         scene: &mut PlanBuilder,
         property: &str,
-        initial: f32,
         at_nanos: u64,
         target: f32,
         seconds: f32,
     ) {
-        let channel = self.channel(scene, property, initial);
-        scene.spring(&channel, at_nanos, target, seconds, 0.0);
-    }
-
-    /// A deliberate camera move between resting compositions: no bounce or
-    /// acceleration discontinuity at either end.
-    pub fn glide(
-        &mut self,
-        scene: &mut PlanBuilder,
-        property: &str,
-        initial: f32,
-        at_nanos: u64,
-        target: f32,
-        seconds: f32,
-    ) {
-        let channel = self.channel(scene, property, initial);
-        scene.ease(&channel, at_nanos, target, seconds, Ease::Smootherstep);
+        self.bounce(scene, property, at_nanos, target, seconds, 0.0);
     }
 
     /// Like `to`, with overshoot: `bounce` 0.2 reads as a lively landing.
-    #[allow(clippy::too_many_arguments)]
     pub fn bounce(
         &mut self,
         scene: &mut PlanBuilder,
         property: &str,
-        initial: f32,
         at_nanos: u64,
         target: f32,
         seconds: f32,
         bounce: f32,
     ) {
-        let channel = self.channel(scene, property, initial);
+        let channel = self.channel(scene, property, 0.0);
         scene.spring(&channel, at_nanos, target, seconds, bounce);
     }
 
-    /// Jump `property` to `value` at `at_nanos`.
-    pub fn set(
+    /// Ease `property` to `target` over `seconds` along `curve`.
+    pub fn ease(
         &mut self,
         scene: &mut PlanBuilder,
         property: &str,
-        initial: f32,
         at_nanos: u64,
-        value: f32,
+        target: f32,
+        seconds: f32,
+        curve: Ease,
     ) {
-        let channel = self.channel(scene, property, initial);
+        let channel = self.channel(scene, property, 0.0);
+        scene.ease(&channel, at_nanos, target, seconds, curve);
+    }
+
+    /// Jump `property` to `value` at `at_nanos`.
+    pub fn set(&mut self, scene: &mut PlanBuilder, property: &str, at_nanos: u64, value: f32) {
+        let channel = self.channel(scene, property, 0.0);
         scene.set(&channel, at_nanos, value);
+    }
+
+    /// Start a clock of elapsed seconds at `at_nanos` that runs to the end of
+    /// the scene; before it starts the channel reads -1 ("not yet"). Effect
+    /// rigs sample their own poses from it.
+    pub fn clock(&mut self, scene: &mut PlanBuilder, property: &str, at_nanos: u64) {
+        let channel = self.channel(scene, property, -1.0);
+        // Whole milliseconds, as `ease` durations are, so the slope is exactly 1.
+        let seconds = (scene.duration_nanos().saturating_sub(at_nanos) / 1_000_000) as f32 / 1000.0;
+        scene.set(&channel, at_nanos, 0.0);
+        if seconds > 0.0 {
+            scene.ease(&channel, at_nanos, seconds, seconds, Ease::Linear);
+        }
     }
 
     /// Light `property` to `peak` at once, then let it decay to `rest`, fast
@@ -702,7 +701,6 @@ impl StageActor {
         self.to(
             scene,
             &format!("{beam}.flow"),
-            0.0,
             contact + 180_000_000,
             1.0,
             0.6,

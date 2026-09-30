@@ -7,7 +7,11 @@
 //! Poses live in a 16-unit box centered on (8, 8), the web rig's coordinates.
 use std::f32::consts::PI;
 
-use crate::math::{Vec2, smoothstep, vec2};
+use crate::math::{
+    Vec2,
+    curve::{CubicBezier, Polyline},
+    smoothstep, vec2,
+};
 
 /// Cruise speed in degrees per second.
 pub const CRUISE: f32 = 900.0;
@@ -102,9 +106,9 @@ pub enum Mark {
 
 struct Route {
     /// Tangent turn then first arm, one continuous stroke.
-    first: Vec<Vec2>,
+    first: Polyline,
     /// A second, separately lifted arm (the cross's).
-    second: Vec<Vec2>,
+    second: Polyline,
     /// Length of the temporary turn at the start of `first`.
     turn: f32,
 }
@@ -129,53 +133,19 @@ impl Mark {
             ),
         };
         // The turn leaves along the circle's clockwise tangent at the handoff.
-        let c1 = start + vec2(0.6, 0.6);
-        let c2 = tip + vec2(0.39, -0.42);
-        let mut first = (0..=24)
-            .map(|index| {
-                let t = index as f32 / 24.0;
-                let u = 1.0 - t;
-                start * (u * u * u)
-                    + c1 * (3.0 * u * u * t)
-                    + c2 * (3.0 * u * t * t)
-                    + tip * (t * t * t)
-            })
-            .collect::<Vec<_>>();
-        let turn = length(&first);
-        first.extend(arm);
+        let turn = CubicBezier {
+            start,
+            control_a: start + vec2(0.6, 0.6),
+            control_b: tip + vec2(0.39, -0.42),
+            end: tip,
+        }
+        .flatten(24);
         Route {
-            first,
-            second,
-            turn,
+            turn: turn.length(),
+            first: Polyline::new(turn.points().iter().copied().chain(arm).collect()),
+            second: Polyline::new(second),
         }
     }
-}
-
-fn length(points: &[Vec2]) -> f32 {
-    points
-        .windows(2)
-        .map(|pair| pair[0].distance(pair[1]))
-        .sum()
-}
-
-/// `points` trimmed to `[from, to]` along its length.
-fn slice(points: &[Vec2], from: f32, to: f32) -> Vec<Vec2> {
-    let mut out = Vec::new();
-    let mut along = 0.0;
-    for pair in points.windows(2) {
-        let segment = pair[0].distance(pair[1]).max(1e-6);
-        let (a, b) = (along, along + segment);
-        along = b;
-        if b <= from || a >= to {
-            continue;
-        }
-        let at = |d: f32| pair[0].lerp(pair[1], ((d - a) / segment).clamp(0.0, 1.0));
-        if out.is_empty() {
-            out.push(at(from.max(a)));
-        }
-        out.push(at(to.min(b)));
-    }
-    out
 }
 
 /// One sampled spinner. Strokes are polylines with an ink weight per point.
@@ -205,8 +175,8 @@ pub fn sample(age: f32, release: f32, mark: f32, shape: Mark) -> SpinnerPose {
     if mark >= 0.0 {
         let arrival = loading(age - mark);
         let route = shape.route();
-        let first = length(&route.first);
-        let total = first + length(&route.second);
+        let first = route.first.length();
+        let total = first + route.second.length();
         // Hermite spacing carries the motor's speed into the stroke and
         // arrives at rest; the slope cap keeps long strokes monotone.
         let speed = (arrival.velocity * PI / 180.0 * RADIUS * DRAW / total).min(2.8);
@@ -215,7 +185,16 @@ pub fn sample(age: f32, release: f32, mark: f32, shape: Mark) -> SpinnerPose {
         let remaining = 1.0 - (progress / 0.45).clamp(0.0, 1.0);
         let trim = route.turn * ((progress - 0.45) / 0.25).clamp(0.0, 1.0);
         let distance = total * progress;
-        let mut strokes = Vec::new();
+        let inked = |path: &Polyline, from: f32, to: f32| {
+            let length = path.length().max(1e-6);
+            path.slice(from / length, to / length)
+                .points()
+                .iter()
+                .map(|point| (*point, 1.0))
+                .collect::<Vec<_>>()
+        };
+        // The ring's wake drains into the tip; the slice starts at the ring's
+        // own head, so the shared point is dropped from the arc.
         let mut head = if remaining > 0.0 {
             let mut arc = ring(
                 HANDOFF_ANGLE,
@@ -227,20 +206,10 @@ pub fn sample(age: f32, release: f32, mark: f32, shape: Mark) -> SpinnerPose {
         } else {
             Vec::new()
         };
-        let drawn = slice(&route.first, trim, distance.min(first));
-        if drawn.is_empty() {
-            // The ring's own head, before the tip has moved.
-            head.push((route.first[0], 1.0));
-        }
-        head.extend(drawn.into_iter().map(|point| (point, 1.0)));
-        strokes.push(head);
+        head.extend(inked(&route.first, trim, distance.min(first)));
+        let mut strokes = vec![head];
         if distance > first {
-            strokes.push(
-                slice(&route.second, 0.0, distance - first)
-                    .into_iter()
-                    .map(|point| (point, 1.0))
-                    .collect(),
-            );
+            strokes.push(inked(&route.second, 0.0, distance - first));
         }
         let since = mark - DRAW;
         let flash = if since <= 0.0 {
@@ -304,18 +273,23 @@ mod tests {
         assert!(head.distance(starting.strokes[0].last().unwrap().0) < 1e-3);
         let done = sample(at + 1.0, -1.0, 1.0, Mark::Cross);
         assert_eq!(done.strokes.len(), 2, "both arms of the cross");
-        assert!(done.strokes[0].len() <= 3, "the temporary turn has drained");
+        assert!(
+            done.strokes[0][0].0.distance(vec2(11.6, 4.4)) < 1e-3,
+            "the temporary turn has drained to the cross's tip"
+        );
+        let before = sample(at + 0.001, -1.0, -1.0, Mark::Cross).opacity;
+        assert!(
+            (before - starting.opacity).abs() < 0.01,
+            "no opacity jump at handoff"
+        );
         assert!(done.opacity > 0.999);
         assert_eq!(sample(at + 3.0, -1.0, 3.0, Mark::Cross).flash, 0.0);
     }
 
     #[test]
-    fn a_released_spinner_fades_out_and_samples_deterministically() {
+    fn a_released_spinner_fades_out() {
         assert!(sample(4.0, 3.0, -1.0, Mark::Check).strokes.is_empty());
-        assert_eq!(
-            sample(1.3, 0.2, -1.0, Mark::Check),
-            sample(1.3, 0.2, -1.0, Mark::Check)
-        );
+        assert!(sample(1.3, 0.2, -1.0, Mark::Check).opacity > 0.0);
         assert!(sample(-0.1, -1.0, -1.0, Mark::Check).strokes.is_empty());
     }
 }

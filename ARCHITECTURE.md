@@ -405,7 +405,7 @@ captions draw above rich text and below plain text. Semantic colors resolve thro
 `stage` is an exclusive root recipe. The lightweight crate (`stage.rs`) owns the
 element model, strict channel names, the perspective `Camera`, element outlines, and
 the deterministic orb geometry (Fibonacci points, shatter trajectories), so authoring
-helpers (`StageActor`: `to`, `bounce`, `hit`, `send`, `type_in`) and tests need no GPU.
+helpers (`StageActor`: `to`, `ease`, `clock`, `hit`, `send`, `type_in`) and tests need no GPU.
 `render/stage.rs` is small pieces: `Scene` samples the camera, every element's
 placement, and every beam's path once per sample; `Painter` has one method per
 element kind; `StageFrame` owns primitive helpers and depth-sorted layers. A beam is
@@ -439,8 +439,8 @@ The Stage separates material response from transforms: a pulse lights the orb
 without moving its shell or ports, and a card flash lifts ink and rim while its
 substrate stays dark. An overhead key shades panel fills and borders; moving
 reflections stay local. `settle_in` uses small, damped scale/position springs with
-a separate delayed content spring; `glide` uses `Ease::Smootherstep` for deliberate
-camera compositions. Packet travel uses the same acceleration-continuous quintic,
+a separate delayed content spring; `ease(.., Ease::Smootherstep)` suits deliberate
+camera compositions, and `clock` starts an effect rig's elapsed-seconds channel. Packet travel uses the same acceleration-continuous quintic,
 with its inverse in shared math providing trail crossing times.
 
 Orb `rotation` is an angular offset, independent of ambient `spin`; `blur` is a

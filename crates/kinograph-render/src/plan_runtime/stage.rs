@@ -78,9 +78,9 @@ mod tests {
         let mut scene = PlanBuilder::new("stage-preflight", 3_000_000_000);
         let mut stage = StageActor::declare(&mut scene, "stage", &recipe).unwrap();
         stage.send(&mut scene, "probe", 500_000_000, 0.6);
-        stage.to(&mut scene, "camera.z", 0.0, 0, 120.0, 1.0);
+        stage.to(&mut scene, "camera.z", 0, 120.0, 1.0);
         if let Some(property) = extra {
-            stage.to(&mut scene, property, 0.0, 0, 1.0, 0.3);
+            stage.to(&mut scene, property, 0, 1.0, 0.3);
         }
         scene.finish().unwrap()
     }

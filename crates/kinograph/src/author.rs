@@ -163,6 +163,10 @@ impl PlanBuilder {
         handle
     }
 
+    pub fn duration_nanos(&self) -> u64 {
+        self.plan.duration_nanos
+    }
+
     pub fn set(&mut self, channel: &ContinuousHandle, at_nanos: u64, value: f32) {
         self.set_to(channel, at_nanos, value.into());
     }

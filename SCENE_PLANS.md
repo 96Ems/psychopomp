@@ -466,8 +466,10 @@ Components used by explainers:
   16 px into place, scales from 1.035, and sharpens; its content follows 65 ms later),
   `connect` (soft port reveal, bead draw, surge and
   twang), `send` (gather, flight, landing), `hit` (instant attack, convex decay),
-  `twang`, and `land`. `bounce` and `to` spring any channel; `glide` moves between
-  resting compositions with a minimum-jerk quintic curve. Use glides for staged
+  `twang`, and `land`. `bounce` and `to` spring any channel (undeclared
+  channels start at 0; declare other starting poses with `channel`), `ease` follows
+  any curve, and `clock` starts an elapsed-seconds channel that runs to the scene's
+  end for effect rigs such as the card spinner. Use a `Smootherstep` ease for staged
   camera moves with exact timing, springs for responsive camera/panel settling,
   and instant-attack fades for light.
   Orb `pulse` changes illumination, not geometry or attached beam ports. Card
@@ -475,7 +477,8 @@ Components used by explainers:
   flagship stops `flow` after its brief connection beat.
   Packets entering an orb trigger a directional surface ripple at the visible
   shell, before reaching the submerged endpoint. The flagship now uses critical
-  `to` springs for camera moves; `glide` remains available for minimum-jerk timing.
+  `to` springs for camera moves; a `Smootherstep` ease remains available for
+  minimum-jerk timing.
 - Orb `rotation` is an angular offset in radians; animate it for a spin entrance
   rather than changing the ambient `spin` multiplier. `blur` adds defocus in world
   pixels. `burst` defaults to -1 (intact): set 0 on impact and ease linearly to
