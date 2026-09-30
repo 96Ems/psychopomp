@@ -25,7 +25,7 @@
                   "kind": "orb",
                   "points": 900,
                   "radius": 150.0,
-                  "tone": "accent"
+                  "tone": "plain"
                 },
                 {
                   "at": [
@@ -53,8 +53,12 @@
                   "size": 19.0,
                   "spans": [
                     {
-                      "text": "● healthy",
+                      "text": "●",
                       "tone": "success"
+                    },
+                    {
+                      "text": " healthy",
+                      "tone": "muted"
                     }
                   ]
                 },
@@ -69,8 +73,12 @@
                   "size": 19.0,
                   "spans": [
                     {
-                      "text": "● stopped",
+                      "text": "●",
                       "tone": "error"
+                    },
+                    {
+                      "text": " stopped",
+                      "tone": "muted"
                     }
                   ]
                 },
@@ -82,6 +90,7 @@
                   ],
                   "id": "client",
                   "kind": "card",
+                  "mark": "cross",
                   "size": [
                     340.0,
                     124.0
@@ -89,7 +98,7 @@
                   "status": [
                     {
                       "text": "connected",
-                      "tone": "success"
+                      "tone": "muted"
                     },
                     {
                       "text": "reconnecting"
@@ -97,6 +106,9 @@
                     {
                       "text": "replacing the server",
                       "tone": "error"
+                    },
+                    {
+                      "text": "reconnecting"
                     },
                     {
                       "text": "stopped with an error",
@@ -129,7 +141,7 @@
                   "status": [
                     {
                       "text": "connected",
-                      "tone": "success"
+                      "tone": "muted"
                     },
                     {
                       "text": "disconnected",
@@ -143,8 +155,7 @@
                   "from": "tui-1",
                   "id": "b1",
                   "kind": "beam",
-                  "to": "service",
-                  "tone": "success"
+                  "to": "service"
                 },
                 {
                   "at": [
@@ -161,7 +172,7 @@
                   "status": [
                     {
                       "text": "connected",
-                      "tone": "success"
+                      "tone": "muted"
                     },
                     {
                       "text": "disconnected",
@@ -175,8 +186,7 @@
                   "from": "desktop",
                   "id": "b2",
                   "kind": "beam",
-                  "to": "service",
-                  "tone": "success"
+                  "to": "service"
                 },
                 {
                   "at": [
@@ -193,7 +203,7 @@
                   "status": [
                     {
                       "text": "connected",
-                      "tone": "success"
+                      "tone": "muted"
                     },
                     {
                       "text": "disconnected",
@@ -207,8 +217,7 @@
                   "from": "tui-2",
                   "id": "b3",
                   "kind": "beam",
-                  "to": "service",
-                  "tone": "success"
+                  "to": "service"
                 },
                 {
                   "beam": "link",
@@ -223,7 +232,7 @@
                   "kind": "packet",
                   "label": "404",
                   "reverse": true,
-                  "tone": "error"
+                  "tone": "request"
                 },
                 {
                   "beam": "link",
@@ -245,7 +254,7 @@
                   "kind": "packet",
                   "label": "404",
                   "reverse": true,
-                  "tone": "warning"
+                  "tone": "request"
                 },
                 {
                   "align": "left",
@@ -259,11 +268,11 @@
                   "size": 21.0,
                   "spans": [
                     {
-                      "text": "404",
-                      "tone": "error"
+                      "text": "404"
                     },
                     {
-                      "text": " → outdated → "
+                      "text": " → outdated → ",
+                      "tone": "muted"
                     },
                     {
                       "text": "replace it",
@@ -283,11 +292,11 @@
                   "size": 21.0,
                   "spans": [
                     {
-                      "text": "version ok",
-                      "tone": "success"
+                      "text": "version ok"
                     },
                     {
-                      "text": " → "
+                      "text": " → ",
+                      "tone": "muted"
                     },
                     {
                       "text": "protocol mismatch",
@@ -311,7 +320,8 @@
                       "tone": "warning"
                     },
                     {
-                      "text": "update this client, or restart explicitly"
+                      "text": "update this client, or restart explicitly",
+                      "tone": "muted"
                     }
                   ]
                 },
@@ -335,13 +345,23 @@
                   ],
                   "id": "safe",
                   "kind": "ring",
-                  "radius": 162.0,
-                  "thickness": 1.399999976158142,
-                  "tone": "success"
+                  "radius": 160.0,
+                  "thickness": 1.2999999523162842
+                },
+                {
+                  "at": [
+                    1060.0,
+                    480.0,
+                    0.0
+                  ],
+                  "id": "safe-outer",
+                  "kind": "ring",
+                  "radius": 166.0,
+                  "thickness": 1.2999999523162842
                 }
               ],
               "post": {
-                "backdrop": 0.23999999463558197,
+                "backdrop": 0.11999999731779099,
                 "bloom": 0.18000000715255737,
                 "grain": 0.012000000104308128,
                 "vignette": 0.2199999988079071
@@ -383,7 +403,7 @@
                 [
                   {
                     "text": "● ",
-                    "tone": "error"
+                    "tone": "muted"
                   },
                   {
                     "text": "before"
@@ -2000,8 +2020,17 @@
               {
                 "operation": "spring",
                 "atNanos": 45329520833,
-                "target": 0.7,
+                "target": 0.3,
                 "responseSeconds": 0.264,
+                "dampingRatio": 1.0,
+                "positionThreshold": 0.001,
+                "velocityThreshold": 0.001
+              },
+              {
+                "operation": "spring",
+                "atNanos": 47462499999,
+                "target": 0.0,
+                "responseSeconds": 0.72,
                 "dampingRatio": 1.0,
                 "positionThreshold": 0.001,
                 "velocityThreshold": 0.001
@@ -2009,9 +2038,9 @@
             ]
           },
           {
-            "id": "stage.safe.sweep",
+            "id": "stage.safe-outer.opacity",
             "actorId": "stage",
-            "property": "safe.sweep",
+            "property": "safe-outer.opacity",
             "initial": 0.0,
             "events": [
               {
@@ -2021,12 +2050,118 @@
               },
               {
                 "operation": "spring",
-                "atNanos": 45329520833,
-                "target": 1.0,
-                "responseSeconds": 1.5600001,
+                "atNanos": 45389520833,
+                "target": 0.45,
+                "responseSeconds": 0.264,
                 "dampingRatio": 1.0,
                 "positionThreshold": 0.001,
                 "velocityThreshold": 0.001
+              },
+              {
+                "operation": "spring",
+                "atNanos": 47382499999,
+                "target": 0.0,
+                "responseSeconds": 0.72,
+                "dampingRatio": 1.0,
+                "positionThreshold": 0.001,
+                "velocityThreshold": 0.001
+              }
+            ]
+          },
+          {
+            "id": "stage.client.spinner",
+            "actorId": "stage",
+            "property": "client.spinner",
+            "initial": -1.0,
+            "events": [
+              {
+                "operation": "set",
+                "atNanos": 0,
+                "value": -1.0
+              },
+              {
+                "operation": "set",
+                "atNanos": 6460000000,
+                "value": 0.0
+              },
+              {
+                "operation": "ease",
+                "atNanos": 6460000000,
+                "target": 60.0,
+                "durationNanos": 60000000000,
+                "curve": "linear"
+              },
+              {
+                "operation": "set",
+                "atNanos": 28929520833,
+                "value": -1.0
+              },
+              {
+                "operation": "set",
+                "atNanos": 29529520833,
+                "value": 0.0
+              },
+              {
+                "operation": "ease",
+                "atNanos": 29529520833,
+                "target": 60.0,
+                "durationNanos": 60000000000,
+                "curve": "linear"
+              }
+            ]
+          },
+          {
+            "id": "stage.client.release",
+            "actorId": "stage",
+            "property": "client.release",
+            "initial": -1.0,
+            "events": [
+              {
+                "operation": "set",
+                "atNanos": 0,
+                "value": -1.0
+              },
+              {
+                "operation": "set",
+                "atNanos": 15780000000,
+                "value": 0.0
+              },
+              {
+                "operation": "ease",
+                "atNanos": 15780000000,
+                "target": 60.0,
+                "durationNanos": 60000000000,
+                "curve": "linear"
+              },
+              {
+                "operation": "set",
+                "atNanos": 28929520833,
+                "value": -1.0
+              }
+            ]
+          },
+          {
+            "id": "stage.client.mark",
+            "actorId": "stage",
+            "property": "client.mark",
+            "initial": -1.0,
+            "events": [
+              {
+                "operation": "set",
+                "atNanos": 0,
+                "value": -1.0
+              },
+              {
+                "operation": "set",
+                "atNanos": 40222952687,
+                "value": 0.0
+              },
+              {
+                "operation": "ease",
+                "atNanos": 40222952687,
+                "target": 60.0,
+                "durationNanos": 60000000000,
+                "curve": "linear"
               }
             ]
           },
@@ -2318,7 +2453,7 @@
               {
                 "operation": "spring",
                 "atNanos": 29529520833,
-                "target": 1.0,
+                "target": 3.0,
                 "responseSeconds": 0.36,
                 "dampingRatio": 1.0,
                 "positionThreshold": 0.001,
@@ -2327,7 +2462,7 @@
               {
                 "operation": "spring",
                 "atNanos": 39849520833,
-                "target": 3.0,
+                "target": 4.0,
                 "responseSeconds": 0.48000002,
                 "dampingRatio": 1.0,
                 "positionThreshold": 0.001,
@@ -2973,22 +3108,88 @@
             ]
           },
           {
-            "id": "stage.tui-1.alarm",
+            "id": "stage.tui-1.cool",
             "actorId": "stage",
-            "property": "tui-1.alarm",
+            "property": "tui-1.cool",
+            "initial": 0.0,
+            "events": [
+              {
+                "operation": "ease",
+                "atNanos": 19010000000,
+                "target": 1.0,
+                "durationNanos": 120000000,
+                "curve": "cubic-out"
+              },
+              {
+                "operation": "set",
+                "atNanos": 29679520833,
+                "value": 0.0
+              }
+            ]
+          },
+          {
+            "id": "stage.tui-1.damage",
+            "actorId": "stage",
+            "property": "tui-1.damage",
             "initial": 0.0,
             "events": [
               {
                 "operation": "set",
                 "atNanos": 19130000000,
-                "value": 0.35
+                "value": 1.0
               },
               {
-                "operation": "ease",
+                "operation": "set",
+                "atNanos": 29679520833,
+                "value": 0.0
+              }
+            ]
+          },
+          {
+            "id": "stage.tui-1.glitch",
+            "actorId": "stage",
+            "property": "tui-1.glitch",
+            "initial": 0.0,
+            "events": [
+              {
+                "operation": "set",
                 "atNanos": 19130000000,
-                "target": 0.0,
-                "durationNanos": 800000000,
-                "curve": "cubic-out"
+                "value": 7.0
+              },
+              {
+                "operation": "set",
+                "atNanos": 19157000000,
+                "value": 9.0
+              },
+              {
+                "operation": "set",
+                "atNanos": 19184000000,
+                "value": 8.0
+              },
+              {
+                "operation": "set",
+                "atNanos": 19211000000,
+                "value": 0.0
+              },
+              {
+                "operation": "set",
+                "atNanos": 29599520833,
+                "value": 8.0
+              },
+              {
+                "operation": "set",
+                "atNanos": 29626520833,
+                "value": 9.0
+              },
+              {
+                "operation": "set",
+                "atNanos": 29653520833,
+                "value": 7.0
+              },
+              {
+                "operation": "set",
+                "atNanos": 29680520833,
+                "value": 0.0
               }
             ]
           },
@@ -3000,18 +3201,18 @@
             "events": [
               {
                 "operation": "spring",
-                "atNanos": 19180000000,
+                "atNanos": 19130000000,
                 "target": 1.0,
-                "responseSeconds": 0.48000002,
+                "responseSeconds": 0.21600002,
                 "dampingRatio": 1.0,
                 "positionThreshold": 0.001,
                 "velocityThreshold": 0.001
               },
               {
                 "operation": "spring",
-                "atNanos": 29279520833,
+                "atNanos": 29679520833,
                 "target": 0.0,
-                "responseSeconds": 0.48000002,
+                "responseSeconds": 0.21600002,
                 "dampingRatio": 1.0,
                 "positionThreshold": 0.001,
                 "velocityThreshold": 0.001
@@ -3027,7 +3228,7 @@
               {
                 "operation": "spring",
                 "atNanos": 19530000000,
-                "target": 0.55,
+                "target": 0.45,
                 "responseSeconds": 0.96000004,
                 "dampingRatio": 1.0,
                 "positionThreshold": 0.001,
@@ -3038,6 +3239,54 @@
                 "atNanos": 29279520833,
                 "target": 0.0,
                 "responseSeconds": 0.72,
+                "dampingRatio": 1.0,
+                "positionThreshold": 0.001,
+                "velocityThreshold": 0.001
+              }
+            ]
+          },
+          {
+            "id": "stage.tui-1.cut",
+            "actorId": "stage",
+            "property": "tui-1.cut",
+            "initial": 0.0,
+            "events": [
+              {
+                "operation": "ease",
+                "atNanos": 26400000000,
+                "target": 1.0,
+                "durationNanos": 450000000,
+                "curve": "linear"
+              },
+              {
+                "operation": "ease",
+                "atNanos": 29049520833,
+                "target": 0.0,
+                "durationNanos": 450000000,
+                "curve": "linear"
+              }
+            ]
+          },
+          {
+            "id": "stage.tui-1.ghost",
+            "actorId": "stage",
+            "property": "tui-1.ghost",
+            "initial": 0.0,
+            "events": [
+              {
+                "operation": "spring",
+                "atNanos": 26580000000,
+                "target": 0.7,
+                "responseSeconds": 0.36,
+                "dampingRatio": 1.0,
+                "positionThreshold": 0.001,
+                "velocityThreshold": 0.001
+              },
+              {
+                "operation": "spring",
+                "atNanos": 29049520833,
+                "target": 0.0,
+                "responseSeconds": 0.3,
                 "dampingRatio": 1.0,
                 "positionThreshold": 0.001,
                 "velocityThreshold": 0.001
@@ -3071,22 +3320,88 @@
             ]
           },
           {
-            "id": "stage.desktop.alarm",
+            "id": "stage.desktop.cool",
             "actorId": "stage",
-            "property": "desktop.alarm",
+            "property": "desktop.cool",
+            "initial": 0.0,
+            "events": [
+              {
+                "operation": "ease",
+                "atNanos": 19150000000,
+                "target": 1.0,
+                "durationNanos": 120000000,
+                "curve": "cubic-out"
+              },
+              {
+                "operation": "set",
+                "atNanos": 29759520833,
+                "value": 0.0
+              }
+            ]
+          },
+          {
+            "id": "stage.desktop.damage",
+            "actorId": "stage",
+            "property": "desktop.damage",
             "initial": 0.0,
             "events": [
               {
                 "operation": "set",
                 "atNanos": 19270000000,
-                "value": 0.35
+                "value": 1.0
               },
               {
-                "operation": "ease",
+                "operation": "set",
+                "atNanos": 29759520833,
+                "value": 0.0
+              }
+            ]
+          },
+          {
+            "id": "stage.desktop.glitch",
+            "actorId": "stage",
+            "property": "desktop.glitch",
+            "initial": 0.0,
+            "events": [
+              {
+                "operation": "set",
                 "atNanos": 19270000000,
-                "target": 0.0,
-                "durationNanos": 800000000,
-                "curve": "cubic-out"
+                "value": 7.0
+              },
+              {
+                "operation": "set",
+                "atNanos": 19297000000,
+                "value": 9.0
+              },
+              {
+                "operation": "set",
+                "atNanos": 19324000000,
+                "value": 8.0
+              },
+              {
+                "operation": "set",
+                "atNanos": 19351000000,
+                "value": 0.0
+              },
+              {
+                "operation": "set",
+                "atNanos": 29679520833,
+                "value": 8.0
+              },
+              {
+                "operation": "set",
+                "atNanos": 29706520833,
+                "value": 9.0
+              },
+              {
+                "operation": "set",
+                "atNanos": 29733520833,
+                "value": 7.0
+              },
+              {
+                "operation": "set",
+                "atNanos": 29760520833,
+                "value": 0.0
               }
             ]
           },
@@ -3098,18 +3413,18 @@
             "events": [
               {
                 "operation": "spring",
-                "atNanos": 19320000000,
+                "atNanos": 19270000000,
                 "target": 1.0,
-                "responseSeconds": 0.48000002,
+                "responseSeconds": 0.21600002,
                 "dampingRatio": 1.0,
                 "positionThreshold": 0.001,
                 "velocityThreshold": 0.001
               },
               {
                 "operation": "spring",
-                "atNanos": 29379520833,
+                "atNanos": 29759520833,
                 "target": 0.0,
-                "responseSeconds": 0.48000002,
+                "responseSeconds": 0.21600002,
                 "dampingRatio": 1.0,
                 "positionThreshold": 0.001,
                 "velocityThreshold": 0.001
@@ -3125,7 +3440,7 @@
               {
                 "operation": "spring",
                 "atNanos": 19670000000,
-                "target": 0.55,
+                "target": 0.45,
                 "responseSeconds": 0.96000004,
                 "dampingRatio": 1.0,
                 "positionThreshold": 0.001,
@@ -3136,6 +3451,54 @@
                 "atNanos": 29379520833,
                 "target": 0.0,
                 "responseSeconds": 0.72,
+                "dampingRatio": 1.0,
+                "positionThreshold": 0.001,
+                "velocityThreshold": 0.001
+              }
+            ]
+          },
+          {
+            "id": "stage.desktop.cut",
+            "actorId": "stage",
+            "property": "desktop.cut",
+            "initial": 0.0,
+            "events": [
+              {
+                "operation": "ease",
+                "atNanos": 26500000000,
+                "target": 1.0,
+                "durationNanos": 450000000,
+                "curve": "linear"
+              },
+              {
+                "operation": "ease",
+                "atNanos": 29129520833,
+                "target": 0.0,
+                "durationNanos": 450000000,
+                "curve": "linear"
+              }
+            ]
+          },
+          {
+            "id": "stage.desktop.ghost",
+            "actorId": "stage",
+            "property": "desktop.ghost",
+            "initial": 0.0,
+            "events": [
+              {
+                "operation": "spring",
+                "atNanos": 26680000000,
+                "target": 0.7,
+                "responseSeconds": 0.36,
+                "dampingRatio": 1.0,
+                "positionThreshold": 0.001,
+                "velocityThreshold": 0.001
+              },
+              {
+                "operation": "spring",
+                "atNanos": 29129520833,
+                "target": 0.0,
+                "responseSeconds": 0.3,
                 "dampingRatio": 1.0,
                 "positionThreshold": 0.001,
                 "velocityThreshold": 0.001
@@ -3169,22 +3532,88 @@
             ]
           },
           {
-            "id": "stage.tui-2.alarm",
+            "id": "stage.tui-2.cool",
             "actorId": "stage",
-            "property": "tui-2.alarm",
+            "property": "tui-2.cool",
+            "initial": 0.0,
+            "events": [
+              {
+                "operation": "ease",
+                "atNanos": 19290000000,
+                "target": 1.0,
+                "durationNanos": 120000000,
+                "curve": "cubic-out"
+              },
+              {
+                "operation": "set",
+                "atNanos": 29839520833,
+                "value": 0.0
+              }
+            ]
+          },
+          {
+            "id": "stage.tui-2.damage",
+            "actorId": "stage",
+            "property": "tui-2.damage",
             "initial": 0.0,
             "events": [
               {
                 "operation": "set",
                 "atNanos": 19410000000,
-                "value": 0.35
+                "value": 1.0
               },
               {
-                "operation": "ease",
+                "operation": "set",
+                "atNanos": 29839520833,
+                "value": 0.0
+              }
+            ]
+          },
+          {
+            "id": "stage.tui-2.glitch",
+            "actorId": "stage",
+            "property": "tui-2.glitch",
+            "initial": 0.0,
+            "events": [
+              {
+                "operation": "set",
                 "atNanos": 19410000000,
-                "target": 0.0,
-                "durationNanos": 800000000,
-                "curve": "cubic-out"
+                "value": 7.0
+              },
+              {
+                "operation": "set",
+                "atNanos": 19437000000,
+                "value": 9.0
+              },
+              {
+                "operation": "set",
+                "atNanos": 19464000000,
+                "value": 8.0
+              },
+              {
+                "operation": "set",
+                "atNanos": 19491000000,
+                "value": 0.0
+              },
+              {
+                "operation": "set",
+                "atNanos": 29759520833,
+                "value": 8.0
+              },
+              {
+                "operation": "set",
+                "atNanos": 29786520833,
+                "value": 9.0
+              },
+              {
+                "operation": "set",
+                "atNanos": 29813520833,
+                "value": 7.0
+              },
+              {
+                "operation": "set",
+                "atNanos": 29840520833,
+                "value": 0.0
               }
             ]
           },
@@ -3196,18 +3625,18 @@
             "events": [
               {
                 "operation": "spring",
-                "atNanos": 19460000000,
+                "atNanos": 19410000000,
                 "target": 1.0,
-                "responseSeconds": 0.48000002,
+                "responseSeconds": 0.21600002,
                 "dampingRatio": 1.0,
                 "positionThreshold": 0.001,
                 "velocityThreshold": 0.001
               },
               {
                 "operation": "spring",
-                "atNanos": 29479520833,
+                "atNanos": 29839520833,
                 "target": 0.0,
-                "responseSeconds": 0.48000002,
+                "responseSeconds": 0.21600002,
                 "dampingRatio": 1.0,
                 "positionThreshold": 0.001,
                 "velocityThreshold": 0.001
@@ -3223,7 +3652,7 @@
               {
                 "operation": "spring",
                 "atNanos": 19810000000,
-                "target": 0.55,
+                "target": 0.45,
                 "responseSeconds": 0.96000004,
                 "dampingRatio": 1.0,
                 "positionThreshold": 0.001,
@@ -3234,6 +3663,54 @@
                 "atNanos": 29479520833,
                 "target": 0.0,
                 "responseSeconds": 0.72,
+                "dampingRatio": 1.0,
+                "positionThreshold": 0.001,
+                "velocityThreshold": 0.001
+              }
+            ]
+          },
+          {
+            "id": "stage.tui-2.cut",
+            "actorId": "stage",
+            "property": "tui-2.cut",
+            "initial": 0.0,
+            "events": [
+              {
+                "operation": "ease",
+                "atNanos": 26600000000,
+                "target": 1.0,
+                "durationNanos": 450000000,
+                "curve": "linear"
+              },
+              {
+                "operation": "ease",
+                "atNanos": 29209520833,
+                "target": 0.0,
+                "durationNanos": 450000000,
+                "curve": "linear"
+              }
+            ]
+          },
+          {
+            "id": "stage.tui-2.ghost",
+            "actorId": "stage",
+            "property": "tui-2.ghost",
+            "initial": 0.0,
+            "events": [
+              {
+                "operation": "spring",
+                "atNanos": 26780000000,
+                "target": 0.7,
+                "responseSeconds": 0.36,
+                "dampingRatio": 1.0,
+                "positionThreshold": 0.001,
+                "velocityThreshold": 0.001
+              },
+              {
+                "operation": "spring",
+                "atNanos": 29209520833,
+                "target": 0.0,
+                "responseSeconds": 0.3,
                 "dampingRatio": 1.0,
                 "positionThreshold": 0.001,
                 "velocityThreshold": 0.001
@@ -4405,6 +4882,72 @@
             "gainDb": -7.0
           },
           {
+            "id": "glitch-0",
+            "path": "../../assets/pr-walkthrough/glitch.wav",
+            "kind": "audio",
+            "role": "layer",
+            "sourceStartNanos": 0,
+            "sourceEndNanos": 200000000,
+            "timelineStartNanos": 19130000000,
+            "timelineEndNanos": 19330000000,
+            "gainDb": -21.0
+          },
+          {
+            "id": "sever-0",
+            "path": "../../assets/pr-walkthrough/sever.wav",
+            "kind": "audio",
+            "role": "layer",
+            "sourceStartNanos": 0,
+            "sourceEndNanos": 576000000,
+            "timelineStartNanos": 26200000000,
+            "timelineEndNanos": 26776000000,
+            "gainDb": -17.0
+          },
+          {
+            "id": "glitch-1",
+            "path": "../../assets/pr-walkthrough/glitch.wav",
+            "kind": "audio",
+            "role": "layer",
+            "sourceStartNanos": 0,
+            "sourceEndNanos": 200000000,
+            "timelineStartNanos": 19270000000,
+            "timelineEndNanos": 19470000000,
+            "gainDb": -23.0
+          },
+          {
+            "id": "sever-1",
+            "path": "../../assets/pr-walkthrough/sever.wav",
+            "kind": "audio",
+            "role": "layer",
+            "sourceStartNanos": 0,
+            "sourceEndNanos": 576000000,
+            "timelineStartNanos": 26300000000,
+            "timelineEndNanos": 26876000000,
+            "gainDb": -19.5
+          },
+          {
+            "id": "glitch-2",
+            "path": "../../assets/pr-walkthrough/glitch.wav",
+            "kind": "audio",
+            "role": "layer",
+            "sourceStartNanos": 0,
+            "sourceEndNanos": 200000000,
+            "timelineStartNanos": 19410000000,
+            "timelineEndNanos": 19610000000,
+            "gainDb": -25.0
+          },
+          {
+            "id": "sever-2",
+            "path": "../../assets/pr-walkthrough/sever.wav",
+            "kind": "audio",
+            "role": "layer",
+            "sourceStartNanos": 0,
+            "sourceEndNanos": 576000000,
+            "timelineStartNanos": 26400000000,
+            "timelineEndNanos": 26976000000,
+            "gainDb": -22.0
+          },
+          {
             "id": "rewind",
             "path": "../../assets/opencode-hot-reload/launch.wav",
             "kind": "audio",
@@ -4416,6 +4959,39 @@
             "gainDb": -13.0
           },
           {
+            "id": "restore-0",
+            "path": "../../assets/pr-walkthrough/glitch.wav",
+            "kind": "audio",
+            "role": "layer",
+            "sourceStartNanos": 0,
+            "sourceEndNanos": 200000000,
+            "timelineStartNanos": 29599520833,
+            "timelineEndNanos": 29799520833,
+            "gainDb": -25.0
+          },
+          {
+            "id": "restore-1",
+            "path": "../../assets/pr-walkthrough/glitch.wav",
+            "kind": "audio",
+            "role": "layer",
+            "sourceStartNanos": 0,
+            "sourceEndNanos": 200000000,
+            "timelineStartNanos": 29679520833,
+            "timelineEndNanos": 29879520833,
+            "gainDb": -27.0
+          },
+          {
+            "id": "restore-2",
+            "path": "../../assets/pr-walkthrough/glitch.wav",
+            "kind": "audio",
+            "role": "layer",
+            "sourceStartNanos": 0,
+            "sourceEndNanos": 200000000,
+            "timelineStartNanos": 29759520833,
+            "timelineEndNanos": 29959520833,
+            "gainDb": -29.0
+          },
+          {
             "id": "probe-send-2",
             "path": "../../assets/opencode-hot-reload/save.wav",
             "kind": "audio",
@@ -4425,6 +5001,17 @@
             "timelineStartNanos": 30729520833,
             "timelineEndNanos": 30879520833,
             "gainDb": -8.0
+          },
+          {
+            "id": "mark",
+            "path": "../../assets/pr-walkthrough/mark.wav",
+            "kind": "audio",
+            "role": "layer",
+            "sourceStartNanos": 0,
+            "sourceEndNanos": 300000000,
+            "timelineStartNanos": 40682952695,
+            "timelineEndNanos": 40982952695,
+            "gainDb": -19.0
           },
           {
             "id": "message",

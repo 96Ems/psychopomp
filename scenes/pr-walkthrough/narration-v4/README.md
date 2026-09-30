@@ -19,7 +19,7 @@ cp scenes/pr-walkthrough/narration-v4/script.json output/eleven-v4/narration/scr
 bun scripts/narrate.ts output/eleven-v4/narration/script.json
 cargo run -p kinograph-pr-walkthrough -- pr-50825 --narration output/eleven-v4/narration --output output/eleven-v4/reel.json
 bun scenes/pr-walkthrough/narration-v4/sound-design.ts
-cargo run --release -- plan render output/eleven-v4/reel-sound.json output/pr-50825-eleven-v4.mp4 --theme opencode
+cargo run --release -- plan render output/eleven-v4/reel-sound.json output/pr-50825-eleven-v4.mp4 --theme neutral
 ```
 
 The four prompts in `sfx.json` use **Sound Effects v2**, independently of v4

@@ -8,6 +8,7 @@ use anyhow::{Context, Result};
 use kinograph::{
     author::PlanBuilder,
     caption::{CaptionAlign, CaptionSpanPlan},
+    effects::spinner::{self, Mark},
     math::{Vec2, Vec3, easing::Ease, vec2},
     plan::{
         MediaKindPlan, MediaPlan, MediaRolePlan, ReelPlan, ReelSegmentPlan, ReelTransitionStyle,
@@ -195,6 +196,11 @@ fn card(
         title: title.into(),
         status,
         tone,
+        mark: if id == "client" {
+            Mark::Cross
+        } else {
+            Mark::Check
+        },
     }
 }
 
@@ -253,7 +259,7 @@ const OTHERS: [(&str, &str, [f32; 3]); 3] = [
 fn stage_plan() -> StagePlan {
     let connected = || {
         vec![
-            status("connected", Tone::Success),
+            status("connected", Tone::Muted),
             status("disconnected", Tone::Error),
         ]
     };
@@ -263,7 +269,7 @@ fn stage_plan() -> StagePlan {
             at: SERVICE,
             radius: 150.0,
             points: 900,
-            tone: Tone::Accent,
+            tone: Tone::Plain,
         },
         label(
             "service-name",
@@ -277,14 +283,14 @@ fn stage_plan() -> StagePlan {
             [SERVICE[0], 691.0, 0.0],
             19.0,
             CaptionAlign::Center,
-            &[("● healthy", Tone::Success)],
+            &[("●", Tone::Success), (" healthy", Tone::Muted)],
         ),
         label(
             "service-stopped",
             [SERVICE[0], 691.0, 0.0],
             19.0,
             CaptionAlign::Center,
-            &[("● stopped", Tone::Error)],
+            &[("●", Tone::Error), (" stopped", Tone::Muted)],
         ),
         card(
             "client",
@@ -292,9 +298,12 @@ fn stage_plan() -> StagePlan {
             CLIENT_SIZE,
             "client",
             vec![
-                status("connected", Tone::Success),
+                status("connected", Tone::Muted),
                 status("reconnecting", Tone::Plain),
                 status("replacing the server", Tone::Error),
+                // Reconnecting again after the rewind: statuses cross-fade
+                // through their neighbours, so the fix never passes "replacing".
+                status("reconnecting", Tone::Plain),
                 status("stopped with an error", Tone::Warning),
             ],
             Tone::Request,
@@ -315,22 +324,22 @@ fn stage_plan() -> StagePlan {
             connected(),
             Tone::Plain,
         ));
-        elements.push(beam(link, id, "service", Tone::Success));
+        elements.push(beam(link, id, "service", Tone::Plain));
     }
     elements.extend([
         packet("probe", false, "GET /api/info", Tone::Request),
-        packet("reply", true, "404", Tone::Error),
+        packet("reply", true, "404", Tone::Request),
         packet("kill", false, "SIGTERM", Tone::Error),
         packet("probe-2", false, "GET /api/info", Tone::Request),
-        packet("reply-2", true, "404", Tone::Warning),
+        packet("reply-2", true, "404", Tone::Request),
         label(
             "thought-before",
             [NOTE_X, 560.0, CLIENT[2]],
             21.0,
             CaptionAlign::Left,
             &[
-                ("404", Tone::Error),
-                (" → outdated → ", Tone::Plain),
+                ("404", Tone::Plain),
+                (" → outdated → ", Tone::Muted),
                 ("replace it", Tone::Error),
             ],
         ),
@@ -340,8 +349,8 @@ fn stage_plan() -> StagePlan {
             21.0,
             CaptionAlign::Left,
             &[
-                ("version ok", Tone::Success),
-                (" → ", Tone::Plain),
+                ("version ok", Tone::Plain),
+                (" → ", Tone::Muted),
                 ("protocol mismatch", Tone::Warning),
             ],
         ),
@@ -352,21 +361,43 @@ fn stage_plan() -> StagePlan {
             CaptionAlign::Left,
             &[
                 ("error: ", Tone::Warning),
-                ("update this client, or restart explicitly", Tone::Plain),
+                ("update this client, or restart explicitly", Tone::Muted),
             ],
         ),
         ring("shock", 160.0, 1.8, Tone::Error),
-        ring("safe", 162.0, 1.4, Tone::Success),
+        ring("safe", 160.0, 1.3, Tone::Plain),
+        ring("safe-outer", 166.0, 1.3, Tone::Plain),
     ]);
     StagePlan {
         post: StagePost {
             bloom: 0.18,
             grain: 0.012,
             vignette: 0.22,
-            backdrop: 0.24,
+            backdrop: 0.12,
         },
         elements,
     }
+}
+
+/// A linear clock of elapsed seconds from `at`, for the renderer's effect rigs.
+fn start_clock(s: &mut StageActor, sc: &mut PlanBuilder, property: &str, at: u64) {
+    let clock = s.channel(sc, property, -1.0);
+    sc.set(&clock, at, 0.0);
+    sc.ease(&clock, at, 60.0, 60.0, Ease::Linear);
+}
+
+/// Three glitch layouts about a frame and a half apart, then still.
+fn glitch(s: &mut StageActor, sc: &mut PlanBuilder, card: &str, at: u64, seeds: [f32; 3]) {
+    for (index, seed) in seeds.into_iter().enumerate() {
+        s.set(
+            sc,
+            &format!("{card}.glitch"),
+            0.0,
+            at + ns(index as f64 * 0.027),
+            seed,
+        );
+    }
+    s.set(sc, &format!("{card}.glitch"), 0.0, at + ns(0.081), 0.0);
 }
 
 fn sound(id: &str, file: &str, seconds: f64, at: u64, gain_db: f32) -> MediaPlan {
@@ -446,17 +477,22 @@ fn stage_film(narration: &Narration) -> Result<ScenePlan> {
     for hidden in ["thought-before", "thought-after", "message"] {
         s.set(sc, &format!("{hidden}.opacity"), 0.0, 0, 0.0);
     }
-    for hidden in ["shock", "safe"] {
+    for hidden in ["shock", "safe", "safe-outer"] {
         s.set(sc, &format!("{hidden}.opacity"), 0.0, 0, 0.0);
     }
-    s.set(sc, "safe.sweep", 0.0, 0, 0.0);
+    // The client's status spinner: a motor clock, a release clock, and the
+    // handoff clock for the mark it resolves into. Negative is "not yet".
+    for clock in ["spinner", "release", "mark"] {
+        s.set(sc, &format!("client.{clock}"), -1.0, 0, -1.0);
+    }
     header(sc, pr, Some(ns(0.4)))?;
-    let mut before_chip = chip(sc, "chip-before", Tone::Error, "before")?;
+    let mut before_chip = chip(sc, "chip-before", Tone::Muted, "before")?;
     before_chip.show(sc, ns(0.7));
 
     // A client reconnects and asks for the health endpoint.
     let reconnect = b("when a client reconnects");
     s.to(sc, "client.status", 0.0, reconnect, 1.0, 0.4);
+    start_clock(s, sc, "client.spinner", reconnect);
     s.to(sc, "client.glow", 0.0, reconnect, 0.45, 0.5);
     s.to(sc, "link.flow", 0.0, reconnect, 0.0, 0.4);
     s.to(sc, "link.emphasis", 0.0, reconnect, 1.0, 0.6);
@@ -485,6 +521,8 @@ fn stage_film(narration: &Narration) -> Result<ScenePlan> {
     let outdated = b("assumed the server was outdated");
     s.type_in(sc, "thought-before", outdated, 42.0);
     s.to(sc, "client.status", 0.0, outdated + ns(1.0), 2.0, 0.4);
+    // It stops waiting and commits: the motor coasts out as the verdict lands.
+    start_clock(s, sc, "client.release", outdated + ns(1.0));
 
     // SIGTERM: the orb shatters, the shockwave spreads, every connection snaps.
     let kill_send = before.at_any(&["sig term", "sigterm"]);
@@ -542,15 +580,49 @@ fn stage_film(narration: &Narration) -> Result<ScenePlan> {
         0.3,
     );
     s.to(sc, "link.break", 0.0, kill_arrival + ns(0.15), 1.0, 0.9);
+    let cut = b("cut off every other client");
     for (index, (card, link, _)) in OTHERS.iter().enumerate() {
         let at = kill_arrival + ns(0.3 + index as f64 * 0.14);
         s.to(sc, &format!("{link}.flow"), 0.0, kill_arrival, 0.0, 0.25);
         s.to(sc, &format!("{link}.break"), 0.0, at, 1.0, 0.9);
-        s.hit(sc, &format!("{card}.alarm"), at + ns(0.2), 0.35, 0.0);
-        s.to(sc, &format!("{card}.status"), 0.0, at + ns(0.25), 1.0, 0.4);
-        s.to(sc, &format!("{card}.dim"), 0.0, at + ns(0.6), 0.55, 0.8);
+        // Anticipation cools every ink; then red arrives in one frame, with
+        // three glitch layouts, and holds.
+        let snap = at + ns(0.2);
+        let cool = s.channel(sc, &format!("{card}.cool"), 0.0);
+        sc.ease(&cool, snap - ns(0.12), 1.0, 0.12, Ease::CubicOut);
+        s.set(sc, &format!("{card}.damage"), 0.0, snap, 1.0);
+        glitch(s, sc, card, snap, [7.0, 9.0, 8.0]);
+        sc.media(sound(
+            &format!("glitch-{index}"),
+            "pr-walkthrough/glitch.wav",
+            0.2,
+            snap,
+            -21.0 - index as f32 * 2.0,
+        ));
+        s.to(sc, &format!("{card}.status"), 0.0, snap, 1.0, 0.18);
+        s.to(sc, &format!("{card}.dim"), 0.0, at + ns(0.6), 0.45, 0.8);
+        // On "cut off", a red hairline severs each client, whose halves
+        // part and fade, leaving a red outline in the empty slot.
+        let sever = cut + ns(index as f64 * 0.1);
+        let cut_clock = s.channel(sc, &format!("{card}.cut"), 0.0);
+        sc.ease(&cut_clock, sever, 1.0, 0.45, Ease::Linear);
+        s.to(
+            sc,
+            &format!("{card}.ghost"),
+            0.0,
+            sever + ns(0.18),
+            0.7,
+            0.3,
+        );
+        // The slice peaks about 0.38 s in; land it as the hairline completes.
+        sc.media(sound(
+            &format!("sever-{index}"),
+            "pr-walkthrough/sever.wav",
+            0.576,
+            sever.saturating_sub(ns(0.2)),
+            -17.0 - index as f32 * 2.5,
+        ));
     }
-    let cut = b("cut off every other client");
     s.to(sc, "camera.x", 0.0, cut - ns(0.4), 0.0, 1.6);
     s.to(sc, "camera.z", -160.0, cut - ns(0.4), -100.0, 1.8);
     let mut footer_before = footer(
@@ -606,9 +678,39 @@ fn stage_film(narration: &Narration) -> Result<ScenePlan> {
         1.0,
         0.3,
     );
-    s.to(sc, "client.status", 0.0, switch + ns(0.6), 1.0, 0.3);
+    s.to(sc, "client.status", 0.0, switch + ns(0.6), 3.0, 0.3);
+    for clock in ["spinner", "release"] {
+        s.set(sc, &format!("client.{clock}"), -1.0, switch, -1.0);
+    }
+    // Back to reconnecting: the motor starts again from rest.
+    start_clock(s, sc, "client.spinner", switch + ns(0.6));
     s.to(sc, "link.break", 0.0, switch + ns(0.5), 0.0, 0.9);
     for (index, (card, link, _)) in OTHERS.iter().enumerate() {
+        // The deletion plays backwards: halves close, the hairline withdraws,
+        // then the red glitches out of the rebuilt card.
+        let rejoin = switch + ns(0.12 + index as f64 * 0.08);
+        let cut_clock = s.channel(sc, &format!("{card}.cut"), 0.0);
+        sc.ease(&cut_clock, rejoin, 0.0, 0.45, Ease::Linear);
+        s.to(sc, &format!("{card}.ghost"), 0.0, rejoin, 0.0, 0.25);
+        let restore = rejoin + ns(0.55);
+        glitch(s, sc, card, restore, [8.0, 9.0, 7.0]);
+        sc.media(sound(
+            &format!("restore-{index}"),
+            "pr-walkthrough/glitch.wav",
+            0.2,
+            restore,
+            -25.0 - index as f32 * 2.0,
+        ));
+        s.set(sc, &format!("{card}.damage"), 0.0, restore + ns(0.08), 0.0);
+        s.set(sc, &format!("{card}.cool"), 0.0, restore + ns(0.08), 0.0);
+        s.to(
+            sc,
+            &format!("{card}.status"),
+            0.0,
+            restore + ns(0.08),
+            0.0,
+            0.18,
+        );
         let at = switch + ns(0.35 + index as f64 * 0.1);
         s.to(sc, &format!("{link}.break"), 0.0, at, 0.0, 0.9);
         // The halves meet: the line surges and snaps taut again.
@@ -616,7 +718,6 @@ fn stage_film(narration: &Narration) -> Result<ScenePlan> {
         s.twang(sc, link, at + ns(0.7));
         s.to(sc, &format!("{link}.flow"), 0.0, at + ns(1.0), 0.3, 0.4);
         s.to(sc, &format!("{link}.flow"), 0.0, at + ns(1.7), 0.0, 0.4);
-        s.to(sc, &format!("{card}.status"), 0.0, at, 0.0, 0.4);
         s.to(sc, &format!("{card}.dim"), 0.0, at, 0.0, 0.6);
     }
 
@@ -639,7 +740,18 @@ fn stage_film(narration: &Narration) -> Result<ScenePlan> {
     s.type_in(sc, "thought-after", a("health protocols"), 44.0);
     let message = a("clear message");
     s.type_in(sc, "message", message, 52.0);
-    s.to(sc, "client.status", 0.0, message, 3.0, 0.4);
+    s.to(sc, "client.status", 0.0, message, 4.0, 0.4);
+    // The spinner resolves into the error's mark at its next top-right crossing.
+    let spun = switch + ns(0.6);
+    let handoff = spun + ns(f64::from(spinner::handoff((message - spun) as f32 / 1e9)));
+    start_clock(s, sc, "client.mark", handoff);
+    sc.media(sound(
+        "mark",
+        "pr-walkthrough/mark.wav",
+        0.3,
+        handoff + ns(f64::from(spinner::DRAW)),
+        -19.0,
+    ));
     sc.media(sound(
         "message",
         "visual-effects/task-reset.wav",
@@ -654,8 +766,9 @@ fn stage_film(narration: &Narration) -> Result<ScenePlan> {
     s.to(sc, "camera.z", 0.0, safe - ns(0.2), 90.0, 1.8);
     s.to(sc, "camera.focus", 0.0, safe - ns(0.2), 0.0, 1.0);
     s.hit(sc, "service.pulse", safe + ns(0.2), 0.75, 0.0);
-    s.to(sc, "safe.opacity", 0.0, safe, 0.7, 0.22);
-    s.to(sc, "safe.sweep", 0.0, safe, 1.0, 1.3);
+    // The blog's tile glow: the inner ring rises first, the outer 60 ms later.
+    s.to(sc, "safe.opacity", 0.0, safe, 0.3, 0.22);
+    s.to(sc, "safe-outer.opacity", 0.0, safe + ns(0.06), 0.45, 0.22);
     for (_, link, _) in OTHERS {
         s.to(sc, &format!("{link}.flow"), 0.0, safe, 0.45, 0.5);
         s.to(sc, &format!("{link}.flow"), 0.0, safe + ns(1.3), 0.0, 0.5);
@@ -687,6 +800,9 @@ fn stage_film(narration: &Narration) -> Result<ScenePlan> {
     s.to(sc, "client.glow", 0.0, close, 0.65, 0.8);
     after_chip.hide(sc, close);
     footer_after.hide(sc, close);
+    // Release order is reversed: outer first, the inner 80 ms later.
+    s.to(sc, "safe-outer.opacity", 0.0, close, 0.0, 0.6);
+    s.to(sc, "safe.opacity", 0.0, close + ns(0.08), 0.0, 0.6);
 
     scene.finish().context("mismatch-stage")
 }

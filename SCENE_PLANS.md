@@ -446,7 +446,8 @@ Components used by explainers:
   one exact step per character; `show` and `hide` fade.
 - Editor Line Marks: `"mark": "added" | "removed"` on a line, with presence
   channel `mark.<line-id>`; `panel-x` and `panel-opacity` move and fade the card.
-- `--theme opencode` renders with the OpenCode TUI's tokens.
+- `--theme opencode` renders with the OpenCode TUI's tokens; `--theme neutral`
+  with the OpenCode blog's clear-neutral diagram palette (the #50825 film's look).
 - `stage` (root): `elements` of `kind` `card` (`at`, `size`, `title`, `status`,
   `tone`), `orb` (`at`, `radius`, `points`), `beam` (`from`, `to`, `bend`),
   `packet` (`beam`, `reverse`, `label`), `label` (`at`, `size`, `spans`), and `ring`
@@ -454,7 +455,9 @@ Components used by explainers:
   `backdrop`). Channels are `<element>.<property>` (for example `service.shatter`,
   `link.draw`, `probe.age`, `client.blur|content`) and `camera.x|y|z|focus|dof|shake`,
    `post.bloom|chroma|exposure|vignette|rewind`. `post.rewind` is a 1.4-second local
-   age for reverse-scan distortion and RGB separation (-1 inactive).
+   age for VHS rewind interference (-1 inactive). Cards also take the deletion
+   channels `cool|damage|glitch|cut|ghost` and the status-spinner clocks
+   `spinner|release|mark` (seconds; -1 inactive), with `mark: "check" | "cross"`.
    A packet is one clock: `age` (seconds since
   dispatch, -1 before) and `flight`; the renderer derives its gather, flight, trail,
   landing ring, and light from them. Beams choose their own ports and curve; leave
@@ -494,8 +497,8 @@ that zooms from the client card into its code:
 ```sh
 cargo run -p kinograph-pr-walkthrough pr-50825
 KINOGRAPH_SHADER_DIR=crates/kinograph-render/src/render \
-  bun scripts/sheet.ts scenes/pr-walkthrough/pr-50825.reel.json 2,13,19,46 --theme opencode
-cargo run --release -- plan render scenes/pr-walkthrough/pr-50825.reel.json output/pr-50825.mp4 --theme opencode
+  bun scripts/sheet.ts scenes/pr-walkthrough/pr-50825.reel.json 2,13,19,46 --theme neutral
+cargo run --release -- plan render scenes/pr-walkthrough/pr-50825.reel.json output/pr-50825.mp4 --theme neutral
 ```
 
 ## Keep The Renderer Running
