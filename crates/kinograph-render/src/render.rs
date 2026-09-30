@@ -971,7 +971,7 @@ impl HeadlessRenderer {
                 if *opacity <= 0.001 {
                     continue;
                 }
-                let [r, g, b] = line_marks::COLORS[kind];
+                let [r, g, b] = self.theme.tone(line_marks::TONES[kind]);
                 let fill = ui::card::Fill::Solid(ui::card::UiColor::srgb8(r, g, b, 255));
                 canvas.fill(
                     ui::Bounds {
@@ -1011,10 +1011,10 @@ impl HeadlessRenderer {
             if band_bottom <= band_top {
                 continue;
             }
-            let color = match mark.mark {
-                kinograph::editor::LineMarkPlan::Added => [127, 216, 143],
-                kinograph::editor::LineMarkPlan::Removed => [224, 108, 117],
-            };
+            let color = self.theme.tone(match mark.mark {
+                kinograph::editor::LineMarkPlan::Added => kinograph::tone::Tone::Success,
+                kinograph::editor::LineMarkPlan::Removed => kinograph::tone::Tone::Error,
+            });
             let half = 7.0;
             self.composite_prototype_path(
                 pixels,

@@ -1,6 +1,9 @@
 //! Coverage union for diff backgrounds. Adjacent fractional rows share one
 //! coverage field, instead of independently antialiasing and blending their seam.
-pub(super) const COLORS: [[u8; 3]; 2] = [[127, 216, 143], [224, 108, 117]];
+use kinograph::tone::Tone;
+
+/// Added and removed inks, in `Band::kind` order.
+pub(super) const TONES: [Tone; 2] = [Tone::Success, Tone::Error];
 
 pub(super) struct Band {
     pub top: f32,

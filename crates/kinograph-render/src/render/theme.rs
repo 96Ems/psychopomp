@@ -14,6 +14,9 @@ pub enum Theme {
     /// The OpenCode TUI's dark tokens (packages/tui theme `opencode`).
     #[serde(rename = "opencode")]
     OpenCode,
+    /// The OpenCode blog's "clear neutral" diagrams: quiet frames and wires,
+    /// warm ivory signals, and desaturated semantic inks used only for change.
+    Neutral,
 }
 
 #[derive(Clone, Copy)]
@@ -30,12 +33,13 @@ pub struct Palette {
 }
 
 impl Theme {
-    pub const ALL: [Self; 5] = [
+    pub const ALL: [Self; 6] = [
         Self::Original,
         Self::Evergreen,
         Self::TokyoNight,
         Self::Black,
         Self::OpenCode,
+        Self::Neutral,
     ];
     pub fn name(self) -> &'static str {
         match self {
@@ -44,6 +48,7 @@ impl Theme {
             Self::TokyoNight => "Tokyo Night",
             Self::Black => "Pure Black",
             Self::OpenCode => "OpenCode",
+            Self::Neutral => "Clear Neutral",
         }
     }
     pub fn cycle(self, reverse: bool) -> Self {
@@ -57,8 +62,9 @@ impl Theme {
             "tokyo-night" => Ok(Self::TokyoNight),
             "black" => Ok(Self::Black),
             "opencode" => Ok(Self::OpenCode),
+            "neutral" => Ok(Self::Neutral),
             _ => anyhow::bail!(
-                "unknown theme '{value}'; use original, evergreen, tokyo-night, black, or opencode"
+                "unknown theme '{value}'; use original, evergreen, tokyo-night, black, opencode, or neutral"
             ),
         }
     }
@@ -119,12 +125,35 @@ impl Theme {
                 types: [229, 192, 123],
                 string: [127, 216, 143],
             },
+            Self::Neutral => Palette {
+                background: [8, 8, 7],
+                surface: [14, 14, 13],
+                raised: [34, 34, 33],
+                text: [226, 223, 217],
+                muted: [133, 133, 133],
+                accent: [224, 179, 90],
+                keyword: [176, 160, 204],
+                types: [214, 192, 146],
+                string: [168, 186, 150],
+            },
         }
     }
-    /// A semantic tone's color. Status tones are identical in every theme.
+    /// A semantic tone's color. Status tones are identical in every theme
+    /// except Neutral, whose desaturated inks are reserved for change.
     pub fn tone(self, tone: kinograph::tone::Tone) -> [u8; 3] {
         use kinograph::tone::Tone;
         let palette = self.palette();
+        if self == Self::Neutral {
+            return match tone {
+                Tone::Plain => palette.text,
+                Tone::Request => [236, 233, 228],
+                Tone::Success => [165, 173, 147],
+                Tone::Error => [237, 129, 126],
+                Tone::Warning => [224, 179, 90],
+                Tone::Muted => palette.muted,
+                Tone::Accent => palette.accent,
+            };
+        }
         match tone {
             Tone::Plain => palette.text,
             Tone::Request => [92, 156, 245],
@@ -214,5 +243,11 @@ mod tests {
         assert_eq!(Theme::parse("opencode").unwrap(), Theme::OpenCode);
         assert_eq!(Theme::OpenCode.palette().accent, [250, 178, 131]);
         assert!(Theme::parse("missing").is_err());
+        assert_eq!(Theme::parse("neutral").unwrap(), Theme::Neutral);
+        assert_eq!(
+            Theme::OpenCode.tone(kinograph::tone::Tone::Success),
+            [127, 216, 143],
+            "existing themes keep their status inks"
+        );
     }
 }
