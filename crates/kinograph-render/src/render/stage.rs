@@ -1459,6 +1459,13 @@ impl<'a> Painter<'a> {
                     },
                 );
             }
+            // While the motor waits, a sheen sweeps the status: the blog's
+            // ShimmerText, phased by the same clock so it never resets.
+            let shimmer = if scene.v(id, "mark", -1.0) < 0.0 {
+                [scene.v(id, "spinner", -1.0) / 1.6, spinner.opacity]
+            } else {
+                [0.0; 2]
+            };
             for (entry, weight) in entries {
                 if weight <= 0.001 {
                     continue;
@@ -1467,7 +1474,7 @@ impl<'a> Painter<'a> {
                 // two readable words on top of each other at mid-transition.
                 let visibility = smoothstep((weight - 0.2) / 0.8);
                 let drift = if entry == low { -1.0 } else { 1.0 };
-                self.frame.text(
+                if let Some(glyphs) = self.frame.text(
                     &text_key(id, &format!("status{entry}")),
                     vec2(
                         text_center.x + lead * 0.5,
@@ -1478,7 +1485,9 @@ impl<'a> Painter<'a> {
                     rgba(condemn(tone_of(entry)), ink * visibility),
                     f32::MAX,
                     text_blur + (1.0 - weight) * 1.5,
-                );
+                ) {
+                    glyphs.light = [shimmer[0], shimmer[1], 0.0, 0.0];
+                }
             }
         }
         self.glitch(first, id, place.center, half, scale);
@@ -2446,12 +2455,10 @@ impl<'a> StageFrame<'a> {
         fill: [f32; 4],
         reveal: f32,
         blur: f32,
-    ) {
-        let Some(text) = self.texts.get(key) else {
-            return;
-        };
+    ) -> Option<&mut Prim> {
+        let text = self.texts.get(key)?;
         if fill[3] <= 0.001 {
-            return;
+            return None;
         }
         let size = vec2(text.rect[2], text.rect[3]) * (scale / TEXT_RASTER);
         let ink = self.width(key, scale);
@@ -2496,6 +2503,7 @@ impl<'a> StageFrame<'a> {
             uv,
             ..Default::default()
         });
+        self.prims.last_mut()
     }
 }
 

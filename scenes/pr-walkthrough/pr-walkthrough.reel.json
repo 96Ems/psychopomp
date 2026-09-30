@@ -5855,6 +5855,66 @@
                     }
                   ],
                   "semanticRanges": []
+                },
+                {
+                  "id": "gap-0",
+                  "parts": [
+                    {
+                      "id": "code",
+                      "spans": [
+                        {
+                          "style": "plain",
+                          "text": " "
+                        }
+                      ]
+                    }
+                  ],
+                  "semanticRanges": []
+                },
+                {
+                  "id": "gap-1",
+                  "parts": [
+                    {
+                      "id": "code",
+                      "spans": [
+                        {
+                          "style": "plain",
+                          "text": " "
+                        }
+                      ]
+                    }
+                  ],
+                  "semanticRanges": []
+                },
+                {
+                  "id": "gap-2",
+                  "parts": [
+                    {
+                      "id": "code",
+                      "spans": [
+                        {
+                          "style": "plain",
+                          "text": " "
+                        }
+                      ]
+                    }
+                  ],
+                  "semanticRanges": []
+                },
+                {
+                  "id": "gap-3",
+                  "parts": [
+                    {
+                      "id": "code",
+                      "spans": [
+                        {
+                          "style": "plain",
+                          "text": " "
+                        }
+                      ]
+                    }
+                  ],
+                  "semanticRanges": []
                 }
               ],
               "snapshots": [
@@ -5873,6 +5933,23 @@
                 },
                 {
                   "atNanos": 4740000000,
+                  "lineIds": [
+                    "line-0",
+                    "line-3",
+                    "line-4",
+                    "gap-0",
+                    "gap-1",
+                    "gap-2",
+                    "gap-3",
+                    "line-9",
+                    "line-10",
+                    "line-11",
+                    "line-12",
+                    "line-13"
+                  ]
+                },
+                {
+                  "atNanos": 5040000000,
                   "lineIds": [
                     "line-0",
                     "line-3",

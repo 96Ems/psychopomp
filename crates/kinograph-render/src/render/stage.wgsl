@@ -210,7 +210,7 @@ fn fs(in: VOut) -> @location(0) vec4<f32> {
             color = prim.stroke.rgb * alpha + prim.glow.rgb * halo(d, prim.glow.w) * strength;
         }
         // Text: a = (kind, left, top, blur), b = (width, height, revealed width, 0)
-        // uv = atlas rectangle in texels.
+        // uv = atlas rectangle in texels. light = (shimmer phase, strength, 0, 0).
         case 4u: {
             let local = (px - prim.a.yz) / prim.b.xy;
             if all(local >= vec2<f32>(0.0)) && all(local <= vec2<f32>(1.0)) && px.x <= prim.a.y + prim.b.z {
@@ -227,6 +227,18 @@ fn fs(in: VOut) -> @location(0) vec4<f32> {
                 }
                 alpha = prim.fill.a * cov;
                 color = prim.fill.rgb * alpha;
+                if prim.light.y > 0.0 {
+                    // The blog's "broad" ShimmerText: the ink dims by 40% and a
+                    // raised-cosine sheen 0.84 text widths wide sweeps left to
+                    // right once per phase unit.
+                    let strength = prim.light.y;
+                    let band = (fract(local.x - prim.light.x) - 0.5) / 0.84 + 0.5;
+                    let sheen = select(0.0, 0.5 - 0.5 * cos(band * 6.2831853), band > 0.0 && band < 1.0);
+                    let base = 1.0 - 0.4 * strength;
+                    let lit = 0.85 * strength * sheen;
+                    color = alpha * (prim.fill.rgb * base * (1.0 - lit) + vec3<f32>(0.8) * lit);
+                    alpha = alpha * (base + lit * (1.0 - base));
+                }
             }
         }
         // Backdrop: a radial gradient from fill (center) to stroke (edge).
