@@ -2,7 +2,7 @@ use std::{
     cell::OnceCell,
     collections::{BTreeMap, HashMap, HashSet},
     fs,
-    path::{Path, PathBuf},
+    path::Path,
     process::Command,
 };
 
@@ -30,7 +30,7 @@ use crate::render::{
     SquiggleFrame, TaskLinkFrame, TaskSceneFrame, TextRangeBounds, TokenHighlight,
 };
 
-use super::{FONT_PATH, HEIGHT, WIDTH, WORKSPACE_ROOT, encode_video_with_samples};
+use super::{HEIGHT, WIDTH, WORKSPACE_ROOT, encode_video_with_samples};
 
 const LINE_HEIGHT: f32 = 44.0;
 const OPENER_DURATION: f64 = 3.0;
@@ -46,7 +46,6 @@ pub(crate) async fn render(chapter_id: &str, output: &Path) -> Result<()> {
     let mut renderer = HeadlessRenderer::new(RenderSpec {
         width: WIDTH,
         height: HEIGHT,
-        font_path: PathBuf::from(FONT_PATH),
         file_name: chapter.title.clone(),
     })
     .await?;
@@ -81,7 +80,6 @@ pub(crate) async fn render_section(
     let mut renderer = HeadlessRenderer::new(RenderSpec {
         width: WIDTH,
         height: HEIGHT,
-        font_path: PathBuf::from(FONT_PATH),
         file_name: format!("{chapter_id}/{section_id}.ts"),
     })
     .await?;
@@ -2608,7 +2606,6 @@ mod tests {
         let mut renderer = pollster::block_on(super::HeadlessRenderer::new(super::RenderSpec {
             width: super::WIDTH,
             height: super::HEIGHT,
-            font_path: super::FONT_PATH.into(),
             file_name: "published-overlay-proof".into(),
         }))
         .unwrap();

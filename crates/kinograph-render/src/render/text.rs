@@ -110,7 +110,7 @@ mod tests {
 
     #[test]
     fn every_plain_text_policy_matches_direct_raster_bytes_and_crop_rules() {
-        let mut fonts = FontSystem::new();
+        let mut fonts = crate::render::fonts::font_system();
         let mut swash = SwashCache::new();
         let mut cache = PlainTextCache::default();
         let long = "An immutable value ".repeat(25);
@@ -212,15 +212,7 @@ mod tests {
         let info = reader.next_frame(&mut atlas).unwrap();
         assert_eq!(info.color_type, png::ColorType::Rgba);
         assert_eq!(info.bit_depth, png::BitDepth::Eight);
-        let mut fonts = FontSystem::new();
-        fonts
-            .db_mut()
-            .load_font_file(
-                std::env::var_os("KINOGRAPH_FONT")
-                    .map(PathBuf::from)
-                    .unwrap_or_else(|| PathBuf::from(crate::scenes::FONT_PATH)),
-            )
-            .unwrap();
+        let mut fonts = crate::render::fonts::font_system();
         let mut swash = SwashCache::new();
         for entry in entries {
             let mut key = entry.key.rsplitn(5, '/');
@@ -279,7 +271,7 @@ mod tests {
     }
     #[test]
     fn keys_include_all_raster_inputs_and_cache_hits_reuse_pixels() {
-        let mut fonts = FontSystem::new();
+        let mut fonts = crate::render::fonts::font_system();
         let mut swash = SwashCache::new();
         let mut cache = PlainTextCache::default();
         let base = PlainTextSpec {

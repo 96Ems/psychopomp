@@ -51,7 +51,7 @@ cargo run --release -- plan snapshot <plan-or-reel.json> <times> <dir> [--compar
 
 - a working headless `wgpu` adapter
 - `ffmpeg` with `libx264` on `PATH`
-- CommitMono at the path currently declared in `crates/kinograph-render/src/scenes/mod.rs`; rendering falls back to the system monospace font if it is unavailable
+- nothing for fonts: CommitMono (400/700, roman and italic) is bundled in `assets/fonts` and compiled in by `render/fonts.rs`; installed fonts only fill glyphs it lacks
 
 Do not run the full render as routine validation when unit tests and static checks cover the change. Run it when changing rendering, typography, choreography, temporal sampling, readback, or encoding behavior.
 

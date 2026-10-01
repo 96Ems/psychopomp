@@ -889,7 +889,6 @@ mod tests {
         let mut renderer = pollster::block_on(HeadlessRenderer::new(RenderSpec {
             width: 1920,
             height: 1080,
-            font_path: PathBuf::from(crate::scenes::FONT_PATH),
             file_name: "heading-alpha-proof".into(),
         }))
         .unwrap();
@@ -994,7 +993,6 @@ mod tests {
         let mut renderer = pollster::block_on(HeadlessRenderer::new(RenderSpec {
             width: 1920,
             height: 1080,
-            font_path: PathBuf::from(crate::scenes::FONT_PATH),
             file_name: "crease-width-proof".into(),
         }))
         .unwrap();
@@ -1087,7 +1085,6 @@ mod tests {
         let mut renderer = pollster::block_on(HeadlessRenderer::new(RenderSpec {
             width: 1920,
             height: 1080,
-            font_path: PathBuf::from(crate::scenes::FONT_PATH),
             file_name: "line-width-proof".into(),
         }))
         .unwrap();
@@ -1168,7 +1165,7 @@ mod tests {
 
     #[test]
     fn long_tuple_labels_fit_before_rasterization() {
-        let mut fonts = FontSystem::new();
+        let mut fonts = crate::render::fonts::font_system();
         let mut cache = SwashCache::new();
         let sprite = label_sprite(
             &mut fonts,
@@ -1187,7 +1184,6 @@ mod tests {
         let mut renderer = pollster::block_on(HeadlessRenderer::new(RenderSpec {
             width: 1920,
             height: 1080,
-            font_path: PathBuf::from(crate::scenes::FONT_PATH),
             file_name: "feather-proof".into(),
         }))
         .unwrap();
@@ -1318,7 +1314,6 @@ mod tests {
         let mut renderer = pollster::block_on(HeadlessRenderer::new(RenderSpec {
             width: 1920,
             height: 1080,
-            font_path: PathBuf::from(crate::scenes::FONT_PATH),
             file_name: "cell-edge-proof".into(),
         }))
         .unwrap();
@@ -1433,7 +1428,6 @@ mod tests {
         let mut renderer = pollster::block_on(HeadlessRenderer::new(RenderSpec {
             width: 1920,
             height: 1080,
-            font_path: PathBuf::from(crate::scenes::FONT_PATH),
             file_name: "grid-center".into(),
         }))
         .unwrap();
@@ -1529,7 +1523,6 @@ mod tests {
         let mut renderer = pollster::block_on(HeadlessRenderer::new(RenderSpec {
             width: 1920,
             height: 1080,
-            font_path: PathBuf::from(crate::scenes::FONT_PATH),
             file_name: "grid-depth".into(),
         }))
         .unwrap();

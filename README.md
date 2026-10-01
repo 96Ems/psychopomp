@@ -21,8 +21,9 @@ This opens the four-step Daemon diagram. **1 / 2** selects Flat / Isometric;
 **← / →** changes steps; **R** replays; **P** pauses; **S** slows motion.
 
 You need a recent Rust toolchain, a working `wgpu` adapter, and a desktop display.
-The prototype has been exercised on macOS/Metal. CommitMono is preferred; the
-renderer falls back to system monospace when its configured font is unavailable.
+The prototype has been exercised on macOS/Metal. CommitMono is bundled
+(`assets/fonts`, SIL OFL) and compiled in, so text renders identically on every
+machine; installed fonts only supply glyphs CommitMono lacks, such as CJK or emoji.
 
 For the typography, table, and component showroom, see
 [Scene Programs and presentations](SCENE_PLANS.md).

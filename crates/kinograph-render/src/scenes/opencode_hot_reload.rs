@@ -1,8 +1,4 @@
-use std::{
-    collections::HashMap,
-    fs,
-    path::{Path, PathBuf},
-};
+use std::{collections::HashMap, fs, path::Path};
 
 use anyhow::{Context, Result};
 use kinograph::math::smoothstep;
@@ -22,7 +18,7 @@ use crate::{
     video::VideoFrameCache,
 };
 
-use super::{FONT_PATH, HEIGHT, WIDTH, WORKSPACE_ROOT, encode_video_with_samples};
+use super::{HEIGHT, WIDTH, WORKSPACE_ROOT, encode_video_with_samples};
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -105,7 +101,6 @@ pub(crate) async fn render(output: &Path) -> Result<()> {
     let mut renderer = HeadlessRenderer::new(RenderSpec {
         width: WIDTH,
         height: HEIGHT,
-        font_path: PathBuf::from(FONT_PATH),
         file_name: "opencode-v2".to_owned(),
     })
     .await?;

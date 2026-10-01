@@ -1,7 +1,6 @@
 use std::{
     collections::{HashMap, VecDeque, hash_map::DefaultHasher},
     hash::{Hash, Hasher},
-    path::PathBuf,
     sync::mpsc,
 };
 
@@ -21,6 +20,7 @@ mod debug;
 mod deployment_queue;
 mod diagram;
 mod effects;
+mod fonts;
 mod grid;
 mod header;
 mod line_marks;
@@ -63,7 +63,6 @@ const LINE_HEIGHT: f32 = 44.0;
 pub struct RenderSpec {
     pub width: u32,
     pub height: u32,
-    pub font_path: PathBuf,
     pub file_name: String,
 }
 
@@ -351,13 +350,7 @@ impl HeadlessRenderer {
             }],
         });
 
-        let mut font_system = FontSystem::new();
-        if let Err(error) = font_system.db_mut().load_font_file(&spec.font_path) {
-            eprintln!(
-                "Could not load {}: {error}; using the system monospace font",
-                spec.font_path.display()
-            );
-        }
+        let mut font_system = fonts::font_system();
         let mut swash_cache = SwashCache::new();
         let title_sprite = make_title_sprite(&mut font_system, &mut swash_cache, &spec.file_name);
         let pointer_sprite = make_pointer_sprite()?;
@@ -1960,7 +1953,7 @@ mod tests {
 
         #[test]
         fn shaping_matches_raster_advance_and_independent_range_reference() {
-            let mut fonts = FontSystem::new();
+            let mut fonts = fonts::font_system();
             let mut swash = SwashCache::new();
             let mut cases = [
                 "",
@@ -2030,7 +2023,7 @@ mod tests {
 
         #[test]
         fn invalid_byte_ranges_keep_the_validation_error() {
-            let mut fonts = FontSystem::new();
+            let mut fonts = fonts::font_system();
             for (text, start, end) in [
                 ("", 0, 0),
                 ("", 0, 1),
@@ -2066,7 +2059,6 @@ mod tests {
             let mut renderer = pollster::block_on(HeadlessRenderer::new(RenderSpec {
                 width: 1920,
                 height: 1080,
-                font_path: PathBuf::from(crate::scenes::FONT_PATH),
                 file_name: "code-measurement-proof".into(),
             }))
             .unwrap();

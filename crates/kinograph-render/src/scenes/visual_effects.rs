@@ -1,7 +1,4 @@
-use std::{
-    collections::HashMap,
-    path::{Path, PathBuf},
-};
+use std::{collections::HashMap, path::Path};
 
 use anyhow::Result;
 use serde::Deserialize;
@@ -15,7 +12,7 @@ use kinograph::{
 
 use crate::render::{HeadlessRenderer, QuoteFrame, RenderSpec, TaskLinkFrame, TaskSceneFrame};
 
-use super::{FONT_PATH, HEIGHT, WIDTH, WORKSPACE_ROOT, encode_video};
+use super::{HEIGHT, WIDTH, WORKSPACE_ROOT, encode_video};
 
 pub(crate) async fn render(output: &Path) -> Result<()> {
     let asset_directory = Path::new(WORKSPACE_ROOT)
@@ -42,7 +39,6 @@ pub(crate) async fn render(output: &Path) -> Result<()> {
     let mut renderer = HeadlessRenderer::new(RenderSpec {
         width: WIDTH,
         height: HEIGHT,
-        font_path: PathBuf::from(FONT_PATH),
         file_name: "effect-simulacra".to_owned(),
     })
     .await?;

@@ -21,7 +21,7 @@ use serde_json::{Value, json};
 
 use crate::{
     render::{HeadlessRenderer, RenderSpec, Theme},
-    scenes::{FONT_PATH, HEIGHT, WIDTH},
+    scenes::{HEIGHT, WIDTH},
 };
 
 mod attachments;
@@ -359,7 +359,6 @@ async fn new_renderer(file_name: &str) -> Result<HeadlessRenderer> {
     HeadlessRenderer::new(RenderSpec {
         width: WIDTH,
         height: HEIGHT,
-        font_path: PathBuf::from(FONT_PATH),
         file_name: file_name.to_owned(),
     })
     .await
@@ -1054,7 +1053,6 @@ async fn serve() -> Result<()> {
     let mut renderer = HeadlessRenderer::new(RenderSpec {
         width: WIDTH,
         height: HEIGHT,
-        font_path: PathBuf::from(FONT_PATH),
         file_name: "scene-plan".to_owned(),
     })
     .await?;

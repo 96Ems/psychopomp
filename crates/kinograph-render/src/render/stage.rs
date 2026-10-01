@@ -2729,7 +2729,6 @@ mod tests {
         let mut renderer = pollster::block_on(HeadlessRenderer::new(crate::render::RenderSpec {
             width: 1920,
             height: 1080,
-            font_path: std::path::PathBuf::from(crate::scenes::FONT_PATH),
             file_name: "stage-proof".into(),
         }))
         .unwrap();

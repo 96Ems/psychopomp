@@ -1,7 +1,4 @@
-use std::{
-    collections::HashMap,
-    path::{Path, PathBuf},
-};
+use std::{collections::HashMap, path::Path};
 
 use anyhow::Result;
 
@@ -21,8 +18,8 @@ use kinograph::{
 use crate::render::{EditorFrame, HeadlessRenderer, InlineRevealFrame, RenderSpec, TokenHighlight};
 
 use super::{
-    CodeTarget, FONT_PATH, HEIGHT, WIDTH, WORKSPACE_ROOT, encode_video, measure_target,
-    measure_text_width, sample_pointer_frame, span,
+    CodeTarget, HEIGHT, WIDTH, WORKSPACE_ROOT, encode_video, measure_target, measure_text_width,
+    sample_pointer_frame, span,
 };
 
 const PROMISES_AUDIO_DURATION: f64 = 31.107;
@@ -36,7 +33,6 @@ pub(crate) async fn render(output: &Path) -> Result<()> {
     let mut renderer = HeadlessRenderer::new(RenderSpec {
         width: WIDTH,
         height: HEIGHT,
-        font_path: PathBuf::from(FONT_PATH),
         file_name: "checkout.ts".to_owned(),
     })
     .await?;

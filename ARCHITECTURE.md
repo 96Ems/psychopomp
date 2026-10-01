@@ -379,7 +379,9 @@ The Adapter keeps these details private:
 
 - headless Metal adapter and device creation
 - WGSL pipeline and uniforms
-- CommitMono loading and raster-sprite caching by stable line ID
+- bundled CommitMono (`render/fonts.rs`: compiled-in faces replace any installed
+  CommitMono; system fonts are glyph fallback only) and raster-sprite caching by
+  stable line ID
 - texture-to-buffer row alignment
 - asynchronous mapping and GPU polling
 - the flat dark editor treatment

@@ -218,12 +218,16 @@ fn fs(in: VOut) -> @location(0) vec4<f32> {
                 var cov = textureSampleLevel(atlas, atlas_sampler, uv, 0.0).r;
                 let blur = prim.a.w;
                 if blur > 0.25 {
+                    // A 3x3 tent (4-2-1 weights): round where a cross goes boxy.
                     let step = vec2<f32>(blur, blur) / globals.viewport.zw * 1.5;
-                    cov = (cov * 2.0
-                        + textureSampleLevel(atlas, atlas_sampler, uv + vec2<f32>(step.x, 0.0), 0.0).r
-                        + textureSampleLevel(atlas, atlas_sampler, uv - vec2<f32>(step.x, 0.0), 0.0).r
-                        + textureSampleLevel(atlas, atlas_sampler, uv + vec2<f32>(0.0, step.y), 0.0).r
-                        + textureSampleLevel(atlas, atlas_sampler, uv - vec2<f32>(0.0, step.y), 0.0).r) / 6.0;
+                    var sum = cov * 4.0;
+                    for (var i = 0; i < 8; i = i + 1) {
+                        let angle = f32(i) * 0.7853982;
+                        let offset = vec2<f32>(round(cos(angle)), round(sin(angle)));
+                        let weight = select(1.0, 2.0, abs(offset.x) + abs(offset.y) < 1.5);
+                        sum = sum + weight * textureSampleLevel(atlas, atlas_sampler, uv + offset * step, 0.0).r;
+                    }
+                    cov = sum / 16.0;
                 }
                 alpha = prim.fill.a * cov;
                 color = prim.fill.rgb * alpha;

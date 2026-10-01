@@ -1,7 +1,4 @@
-use std::{
-    collections::HashMap,
-    path::{Path, PathBuf},
-};
+use std::{collections::HashMap, path::Path};
 
 use anyhow::Result;
 
@@ -21,8 +18,8 @@ use crate::render::{
 };
 
 use super::{
-    CodeTarget, FONT_PATH, HEIGHT, WIDTH, WORKSPACE_ROOT, encode_video_with_samples,
-    measure_target, measure_text_width, sample_pointer_frame, span,
+    CodeTarget, HEIGHT, WIDTH, WORKSPACE_ROOT, encode_video_with_samples, measure_target,
+    measure_text_width, sample_pointer_frame, span,
 };
 
 const DESCRIPTION_AUDIO_DURATION: f64 = 30.366;
@@ -36,7 +33,6 @@ pub(crate) async fn render(output: &Path) -> Result<()> {
     let mut renderer = HeadlessRenderer::new(RenderSpec {
         width: WIDTH,
         height: HEIGHT,
-        font_path: PathBuf::from(FONT_PATH),
         file_name: "effect.ts".to_owned(),
     })
     .await?;

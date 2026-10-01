@@ -26,7 +26,6 @@ const FPS: u32 = 60;
 const TEMPORAL_SAMPLES: u32 = 8;
 const ENTRANCE_TEMPORAL_SAMPLES: u32 = 16;
 const SHUTTER_ANGLE: f32 = 180.0;
-pub(crate) const FONT_PATH: &str = "/Users/kit/Library/Fonts/CommitMono-400-Regular.otf";
 const WORKSPACE_ROOT: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../..");
 const _: () = assert!(TEMPORAL_SAMPLES > 0);
 
