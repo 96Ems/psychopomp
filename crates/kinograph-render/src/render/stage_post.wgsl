@@ -32,6 +32,13 @@ fn vs(@builtin(vertex_index) vertex: u32) -> VOut {
     return out;
 }
 
+// One shutter sample, weighted by `params.x`, added into the exposure.
+@fragment
+fn accumulate(in: VOut) -> @location(0) vec4<f32> {
+    let light = textureLoad(source, vec2<i32>(in.position.xy), 0).rgb;
+    return vec4<f32>(light * post.params.x, 1.0);
+}
+
 fn tap(uv: vec2<f32>, offset: vec2<f32>) -> vec3<f32> {
     return textureSampleLevel(source, linear_sampler, uv + offset * post.texel.xy, 0.0).rgb;
 }

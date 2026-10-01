@@ -329,7 +329,7 @@ An immutable recording of a real terminal interaction used as source pixels insi
 
 ## Temporal Sample
 
-One evaluation of the complete scene within an output frame's shutter interval. Kinograph averages temporal samples to produce motion blur from real scene movement.
+One evaluation of the complete scene within an output frame's shutter interval. Kinograph combines a frame's weighted temporal samples (its exposure) to produce motion blur from real scene movement; a Stage adds their light on the GPU before developing the frame.
 
 ## Editor Frame
 

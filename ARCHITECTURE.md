@@ -430,10 +430,22 @@ premultiplied blending, where glow adds light at zero alpha. `stage_post.wgsl`
 thresholds and blooms that light through a five-level 13-tap downsample and tent
 upsample, then composites with highlight rolloff (identity below 0.8, so authored
 UI colors stay exact), chromatic aberration, vignette, and grain locked to the
-output frame so temporal samples do not average it away. Stage text is rasterized
+output frame. A Stage exposes a frame on the GPU: each of its 24 temporal samples
+draws into the HDR target and adds, weighted, into an HDR exposure target; bloom,
+rolloff, and grain then develop that exposure once, with the post settings of the
+central sample. Light therefore integrates before the response curve (a bright
+ember keeps its streak's energy), and no sample is read back. Plan overlays drawn
+over a Stage (headers, chips, captions) are composited once, or averaged on the
+CPU only across samples where their own state differs. Stage text is rasterized
 once at twice its size into an R8 atlas and drawn with a soft background-colored
 backing for legibility over light. A stage root marks every temporal sample as
 distinct (`ambient_time`), because spin, flow, and grain always move.
+
+Every root renders a frame from one exposure, `scenes::exposure`: stratified
+times across a 180-degree shutter whose weights ease off over the outer quarter
+at each end, so streaks fade rather than ending on a hard copy. Samples with
+equal visual keys merge their weights. Roots without their own exposure average
+sRGB samples in linear light on the CPU (`scenes::accumulate`).
 
 The Stage separates material response from transforms: a pulse lights the orb
 without moving its shell or ports, and a card flash lifts ink and rim while its
@@ -518,9 +530,11 @@ the one or two segments visible at a time with eased mix weights. `plan_runtime/
 prepares every segment once on one renderer, samples each visible layer at its local
 time, and mixes opaque frames (a dip mixes over the theme's empty background). Each
 segment's media placements are shifted onto the reel clock with
-`MediaPlacement::shifted` and encoded through `scenes::encode_media_window_by_key`,
-the same temporal sampler and FFmpeg path as a single plan. `plan render`, `frame`,
-`validate`, and `inspect` recognize a reel by its `segments` key; `--cue` selects
+`MediaPlacement::shifted` and encoded through `scenes::encode_exposures`, the same
+exposure and FFmpeg path as a single plan. A segment shown alone through a frame
+renders its own exposure (so a Stage keeps its GPU shutter); mixes and zooms take
+16 samples averaged on the CPU. `plan render`, `frame`, `snapshot`, `validate`,
+and `inspect` recognize a reel by its `segments` key; `--cue` selects
 one segment by scene ID. A zoom transition resolves each layer's
 `ReelZoom` transform (geometric scale, focus-to-center travel, rounded corners on
 the incoming card) and warps the rendered frames bilinearly before mixing; zoom

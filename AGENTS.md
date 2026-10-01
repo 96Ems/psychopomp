@@ -42,7 +42,9 @@ cargo run --release -- plan present target/slideshow-components/deck.json
 cargo run -p kinograph-pr-walkthrough
 cargo run --release -- plan render scenes/pr-walkthrough/pr-walkthrough.reel.json output/pr-walkthrough.mp4 --theme opencode
 bun scripts/narrate.ts <scene>/narration/script.json [--draft]
-bun scripts/sheet.ts <plan-or-reel.json> <from:to:step | t1,t2,...> [--theme NAME]
+bun scripts/sheet.ts <plan-or-reel.json> <from:to:step | t1,t2,...> [--theme NAME] [--crop x,y,w,h] [--shutter]
+cargo run --release -- plan frame <plan-or-reel.json> <seconds> out.png --shutter
+cargo run --release -- plan snapshot <plan-or-reel.json> <times> <dir> [--compare] [--shutter]
 ```
 
 `cargo run --release` renders `output/kinograph-prototype.mp4` by default. Pass an output path as the first argument to override it. A full render requires:
@@ -199,5 +201,6 @@ This is the default for every code presentation and video, not only Effect Insti
 - Test observable invariants such as stable identity, endpoint placement, velocity continuity, validation failures, and deterministic out-of-order sampling.
 - For renderer or encoder changes, supplement automated checks with a targeted artifact render and inspect the result at full scale.
 - When performance changes, compare the same resolution, frame count, temporal sample count, and build profile before claiming an improvement.
+- For behavior-preserving renderer refactors, write `plan snapshot` frames before the change and run `--compare` after; rendering is deterministic, so any changed pixel is a real change. Use `--shutter` stills to judge motion blur instead of encoding a whole film.
 
 Before finishing a code change, run `cargo test --workspace`, `cargo fmt --check`, and strict workspace Clippy. State explicitly if GPU, font, or FFmpeg constraints prevented artifact-level verification.

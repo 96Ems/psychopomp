@@ -47,6 +47,25 @@ impl PreparedStage {
         Ok(Self { id, plan, gpu })
     }
 
+    pub(super) fn id(&self) -> &str {
+        &self.id
+    }
+
+    /// One frame exposed through weighted shutter samples, accumulated on the GPU.
+    pub(super) fn render_exposure(
+        &self,
+        renderer: &mut HeadlessRenderer,
+        exposure: &[(f64, f32)],
+        value: impl Fn(&str, &str, f64, f32) -> f32,
+    ) -> Result<Vec<u8>> {
+        renderer.render_stage_exposure(
+            &self.plan,
+            &self.gpu,
+            exposure,
+            |time, property, default| value(&self.id, property, time, default),
+        )
+    }
+
     pub(super) fn render(
         &self,
         renderer: &mut HeadlessRenderer,

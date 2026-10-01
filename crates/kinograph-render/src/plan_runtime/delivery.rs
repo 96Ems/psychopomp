@@ -7,7 +7,7 @@ use kinograph::composition::{Time, TimeRange};
 use super::{PreparedPlan, reel::PreparedReel};
 use crate::{
     render::HeadlessRenderer,
-    scenes::{HEIGHT, WIDTH, encode_media_window_by_key, encode_video_window_by_key},
+    scenes::{HEIGHT, WIDTH, encode_exposures},
 };
 
 pub(super) fn render_video(
@@ -17,13 +17,15 @@ pub(super) fn render_video(
     window: TimeRange,
 ) -> Result<()> {
     renderer.set_file_name(prepared.file_name());
-    encode_video_window_by_key(
+    encode_exposures(
         renderer,
         output,
-        &prepared.scene,
+        prepared.scene.duration(),
+        prepared.scene.media(),
         window,
+        |center| prepared.temporal_samples(center),
         |time| prepared.visual_sample_key(time),
-        |renderer, time| prepared.render_sample(renderer, time),
+        |renderer, exposure| prepared.render_exposure(renderer, exposure),
     )
 }
 
@@ -33,14 +35,15 @@ pub(super) fn render_reel(
     output: &Path,
     window: TimeRange,
 ) -> Result<()> {
-    encode_media_window_by_key(
+    encode_exposures(
         renderer,
         output,
         prepared.duration(),
         prepared.media(),
         window,
+        |center| prepared.temporal_samples(center),
         |time| prepared.visual_sample_key(time),
-        |renderer, time| prepared.render_sample(renderer, time),
+        |renderer, exposure| prepared.render_exposure(renderer, exposure),
     )
 }
 

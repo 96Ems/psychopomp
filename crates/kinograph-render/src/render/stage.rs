@@ -76,6 +76,7 @@ struct AtlasText {
 
 #[derive(Clone, Copy, PartialEq)]
 enum PassKind {
+    Accumulate,
     Prefilter,
     Down,
     Up,
@@ -97,6 +98,10 @@ pub(crate) struct StageGpu {
     prims: wgpu::Buffer,
     points: wgpu::Buffer,
     hdr: wgpu::TextureView,
+    /// The weighted sum of a frame's shutter samples, in linear HDR light.
+    exposure: wgpu::TextureView,
+    accumulate: wgpu::RenderPipeline,
+    accumulation: PostPass,
     bloom: Vec<wgpu::TextureView>,
     prefilter: wgpu::RenderPipeline,
     down: wgpu::RenderPipeline,
@@ -148,6 +153,7 @@ impl HeadlessRenderer {
                 .create_view(&Default::default())
         };
         let hdr = texture("stage HDR", [width, height], HDR_FORMAT);
+        let exposure = texture("stage exposure", [width, height], HDR_FORMAT);
         let sizes = (0..BLOOM_LEVELS)
             .map(|level| [width >> (level + 1), height >> (level + 1)])
             .collect::<Vec<_>>();
@@ -373,18 +379,18 @@ impl HeadlessRenderer {
                 cache: None,
             })
         };
+        let accumulate = post("accumulate", HDR_FORMAT, Some(additive));
         let prefilter = post("prefilter", HDR_FORMAT, None);
         let down = post("down", HDR_FORMAT, None);
         let up = post("up", HDR_FORMAT, Some(additive));
         let composite = post("composite", FORMAT, None);
 
         // Passes: prefilter HDR → level 0, down 0→1…, up …→0, composite.
-        let mut passes = Vec::new();
-        let mut add = |kind,
-                       source: &wgpu::TextureView,
-                       second: &wgpu::TextureView,
-                       texel: [f32; 2],
-                       target| {
+        let pass = |kind,
+                    source: &wgpu::TextureView,
+                    second: &wgpu::TextureView,
+                    texel: [f32; 2],
+                    target| {
             let uniform = buffer(
                 "stage post pass",
                 std::mem::size_of::<PostUniform>(),
@@ -412,49 +418,58 @@ impl HeadlessRenderer {
                     },
                 ],
             });
-            passes.push(PostPass {
+            PostPass {
                 kind,
                 bind,
                 uniform,
                 texel,
                 target,
-            });
+            }
         };
         let texel = |size: [u32; 2]| [1.0 / size[0].max(1) as f32, 1.0 / size[1].max(1) as f32];
         // The second texture is only read by the composite; other passes bind the
         // atlas there so no pass reads the texture it writes.
-        add(
-            PassKind::Prefilter,
+        // Each shutter sample adds the HDR target into the exposure; bloom and
+        // the composite then read the finished exposure once.
+        let accumulation = pass(
+            PassKind::Accumulate,
             &hdr,
             &atlas_view,
             texel([width, height]),
-            Some(0),
+            None,
         );
+        let mut passes = vec![pass(
+            PassKind::Prefilter,
+            &exposure,
+            &atlas_view,
+            texel([width, height]),
+            Some(0),
+        )];
         for level in 1..BLOOM_LEVELS {
-            add(
+            passes.push(pass(
                 PassKind::Down,
                 &bloom[level - 1],
                 &atlas_view,
                 texel(sizes[level - 1]),
                 Some(level),
-            );
+            ));
         }
         for level in (1..BLOOM_LEVELS).rev() {
-            add(
+            passes.push(pass(
                 PassKind::Up,
                 &bloom[level],
                 &atlas_view,
                 texel(sizes[level]),
                 Some(level - 1),
-            );
+            ));
         }
-        add(
+        passes.push(pass(
             PassKind::Composite,
-            &hdr,
+            &exposure,
             &bloom[0],
             texel([width, height]),
             None,
-        );
+        ));
 
         self.queue.write_buffer(
             &globals,
@@ -477,6 +492,9 @@ impl HeadlessRenderer {
             prims,
             points,
             hdr,
+            exposure,
+            accumulate,
+            accumulation,
             bloom,
             prefilter,
             down,
@@ -625,93 +643,89 @@ impl HeadlessRenderer {
         time: f64,
         value: impl Fn(&str, f32) -> f32,
     ) -> Result<Vec<u8>> {
-        let look = Look::new(self.theme);
-        let size = vec2(self.spec.width as f32, self.spec.height as f32);
-        let scene = Scene::sample(plan, &value, time as f32, size);
-        let mut painter = Painter {
-            scene: &scene,
-            look,
-            orbs: &gpu.orbs,
-            frame: StageFrame::new(&gpu.texts, look.background),
-        };
-        painter.backdrop(plan.post.backdrop);
-        for (order, element) in plan.elements.iter().enumerate() {
-            painter.element(order, element);
-        }
-        let (prims, points) = painter.frame.finish()?;
-        let params = [
-            value("post.bloom", plan.post.bloom).max(0.0),
-            0.95,
-            0.25,
-            value("post.exposure", 1.0).max(0.0),
-        ];
-        let post = [
-            value("post.chroma", 0.0).max(0.0),
-            value("post.vignette", plan.post.vignette).clamp(0.0, 1.0),
-            plan.post.grain,
-            ((time * 60.0).floor() % 997.0) as f32,
-        ];
-        let shock = plan
-            .elements
-            .iter()
-            .find_map(|element| {
-                let StageElement::Orb { id, .. } = element else {
-                    return None;
-                };
-                let age = scene.v(id, "burst", -1.0);
-                let place = scene.placements.get(id.as_str())?;
-                (0.0..2.4).contains(&age).then_some([
-                    place.center.x,
-                    place.center.y,
-                    age,
-                    place.scale,
-                ])
-            })
-            .unwrap_or([0.0, 0.0, -1.0, 0.0]);
-        let rewind = [
-            value("post.rewind", -1.0),
-            look.background.dot(Vec3::new(0.2126, 0.7152, 0.0722)),
-            0.0,
-            0.0,
-        ];
-        self.draw_stage(
-            gpu,
-            &prims,
-            &points,
-            [params, post, shock, rewind],
-            look.background,
-        )
+        self.render_stage_exposure(plan, gpu, &[(time, 1.0)], |_, property, default| {
+            value(property, default)
+        })
     }
 
-    /// Draw the primitives into the HDR target, bloom, and composite into the
-    /// frame. `post` is the bloom parameters and the composite look.
-    fn draw_stage(
+    /// One frame exposed through weighted shutter samples. Each sample's
+    /// light adds into a linear HDR exposure on the GPU, so a bright streak
+    /// keeps its energy; bloom, rolloff, and grain then develop the frame
+    /// once, with the post settings of its central sample.
+    pub(crate) fn render_stage_exposure(
+        &mut self,
+        plan: &StagePlan,
+        gpu: &StageGpu,
+        exposure: &[(f64, f32)],
+        value: impl Fn(f64, &str, f32) -> f32,
+    ) -> Result<Vec<u8>> {
+        let look = Look::new(self.theme);
+        let size = vec2(self.spec.width as f32, self.spec.height as f32);
+        let mean = exposure
+            .iter()
+            .map(|(time, weight)| time * f64::from(*weight))
+            .sum::<f64>()
+            / exposure
+                .iter()
+                .map(|(_, weight)| f64::from(*weight))
+                .sum::<f64>()
+                .max(1e-9);
+        let central = exposure
+            .iter()
+            .map(|(time, _)| *time)
+            .min_by(|a, b| (a - mean).abs().total_cmp(&(b - mean).abs()))
+            .context("an exposure needs at least one sample")?;
+        let mut post = [[0.0; 4]; 4];
+        for (index, &(time, weight)) in exposure.iter().enumerate() {
+            let value = |property: &str, default: f32| value(time, property, default);
+            let scene = Scene::sample(plan, &value, time as f32, size);
+            let mut painter = Painter {
+                scene: &scene,
+                look,
+                orbs: &gpu.orbs,
+                frame: StageFrame::new(&gpu.texts, look.background),
+            };
+            painter.backdrop(plan.post.backdrop);
+            for (order, element) in plan.elements.iter().enumerate() {
+                painter.element(order, element);
+            }
+            let (prims, points) = painter.frame.finish()?;
+            if time == central {
+                post = post_settings(plan, &scene, &value, look, time);
+            }
+            self.draw_sample(gpu, &prims, &points, look.background, weight, index == 0);
+        }
+        self.develop(gpu, post)
+    }
+
+    /// Draw one sample's primitives into the HDR target and add it, weighted,
+    /// into the exposure (cleared by the first sample).
+    fn draw_sample(
         &mut self,
         gpu: &StageGpu,
         prims: &[Prim],
         points: &[[f32; 4]],
-        post: [[f32; 4]; 4],
         clear: Vec3,
-    ) -> Result<Vec<u8>> {
+        weight: f32,
+        first: bool,
+    ) {
         self.queue
             .write_buffer(&gpu.prims, 0, bytemuck::cast_slice(prims));
         if !points.is_empty() {
             self.queue
                 .write_buffer(&gpu.points, 0, bytemuck::cast_slice(points));
         }
-        for pass in &gpu.passes {
-            self.queue.write_buffer(
-                &pass.uniform,
-                0,
-                bytemuck::bytes_of(&PostUniform {
-                    texel: [pass.texel[0], pass.texel[1], 0.0, 0.0],
-                    params: post[0],
-                    look: post[1],
-                    shock: post[2],
-                    rewind: post[3],
-                }),
-            );
-        }
+        self.queue.write_buffer(
+            &gpu.accumulation.uniform,
+            0,
+            bytemuck::bytes_of(&PostUniform {
+                texel: [0.0; 4],
+                params: [weight, 0.0, 0.0, 0.0],
+                look: [0.0; 4],
+                shock: [0.0; 4],
+                rewind: [0.0; 4],
+            }),
+        );
         let mut encoder = self
             .device
             .create_command_encoder(&wgpu::CommandEncoderDescriptor {
@@ -743,40 +757,133 @@ impl HeadlessRenderer {
             pass.set_bind_group(0, &gpu.primitive_binding, &[]);
             pass.draw(0..4, 0..prims.len() as u32);
         }
+        fullscreen(
+            &mut encoder,
+            &gpu.exposure,
+            &gpu.accumulate,
+            &gpu.accumulation.bind,
+            if first {
+                wgpu::LoadOp::Clear(wgpu::Color::BLACK)
+            } else {
+                wgpu::LoadOp::Load
+            },
+        );
+        // Buffer writes land before their submission runs, so each sample
+        // submits before the next overwrites its primitives.
+        self.queue.submit([encoder.finish()]);
+    }
+
+    /// Bloom and composite the finished exposure into the frame. `post` is
+    /// the bloom parameters and the composite look.
+    fn develop(&mut self, gpu: &StageGpu, post: [[f32; 4]; 4]) -> Result<Vec<u8>> {
+        for pass in &gpu.passes {
+            self.queue.write_buffer(
+                &pass.uniform,
+                0,
+                bytemuck::bytes_of(&PostUniform {
+                    texel: [pass.texel[0], pass.texel[1], 0.0, 0.0],
+                    params: post[0],
+                    look: post[1],
+                    shock: post[2],
+                    rewind: post[3],
+                }),
+            );
+        }
+        let mut encoder = self
+            .device
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: Some("stage develop"),
+            });
         for post in &gpu.passes {
             let target = post.target.map_or(&self.view, |level| &gpu.bloom[level]);
             let pipeline = match post.kind {
+                PassKind::Accumulate => &gpu.accumulate,
                 PassKind::Prefilter => &gpu.prefilter,
                 PassKind::Down => &gpu.down,
                 PassKind::Up => &gpu.up,
                 PassKind::Composite => &gpu.composite,
             };
-            let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-                label: Some("stage post"),
-                color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                    view: target,
-                    depth_slice: None,
-                    resolve_target: None,
-                    ops: wgpu::Operations {
-                        load: if post.kind == PassKind::Up {
-                            wgpu::LoadOp::Load
-                        } else {
-                            wgpu::LoadOp::Clear(wgpu::Color::BLACK)
-                        },
-                        store: wgpu::StoreOp::Store,
-                    },
-                })],
-                depth_stencil_attachment: None,
-                timestamp_writes: None,
-                occlusion_query_set: None,
-                multiview_mask: None,
-            });
-            pass.set_pipeline(pipeline);
-            pass.set_bind_group(0, &post.bind, &[]);
-            pass.draw(0..3, 0..1);
+            let load = if post.kind == PassKind::Up {
+                wgpu::LoadOp::Load
+            } else {
+                wgpu::LoadOp::Clear(wgpu::Color::BLACK)
+            };
+            fullscreen(&mut encoder, target, pipeline, &post.bind, load);
         }
         self.read_frame(encoder)
     }
+}
+
+/// One fullscreen triangle into `target`.
+fn fullscreen(
+    encoder: &mut wgpu::CommandEncoder,
+    target: &wgpu::TextureView,
+    pipeline: &wgpu::RenderPipeline,
+    bind: &wgpu::BindGroup,
+    load: wgpu::LoadOp<wgpu::Color>,
+) {
+    let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+        label: Some("stage post"),
+        color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+            view: target,
+            depth_slice: None,
+            resolve_target: None,
+            ops: wgpu::Operations {
+                load,
+                store: wgpu::StoreOp::Store,
+            },
+        })],
+        depth_stencil_attachment: None,
+        timestamp_writes: None,
+        occlusion_query_set: None,
+        multiview_mask: None,
+    });
+    pass.set_pipeline(pipeline);
+    pass.set_bind_group(0, bind, &[]);
+    pass.draw(0..3, 0..1);
+}
+
+/// Bloom, look, pressure wave, and rewind settings at one sample.
+fn post_settings(
+    plan: &StagePlan,
+    scene: &Scene,
+    value: &dyn Fn(&str, f32) -> f32,
+    look: Look,
+    time: f64,
+) -> [[f32; 4]; 4] {
+    let params = [
+        value("post.bloom", plan.post.bloom).max(0.0),
+        0.95,
+        0.25,
+        value("post.exposure", 1.0).max(0.0),
+    ];
+    let grade = [
+        value("post.chroma", 0.0).max(0.0),
+        value("post.vignette", plan.post.vignette).clamp(0.0, 1.0),
+        plan.post.grain,
+        ((time * 60.0).floor() % 997.0) as f32,
+    ];
+    let shock = plan
+        .elements
+        .iter()
+        .find_map(|element| {
+            let StageElement::Orb { id, .. } = element else {
+                return None;
+            };
+            let age = scene.v(id, "burst", -1.0);
+            let place = scene.placements.get(id.as_str())?;
+            (0.0..2.4)
+                .contains(&age)
+                .then_some([place.center.x, place.center.y, age, place.scale])
+        })
+        .unwrap_or([0.0, 0.0, -1.0, 0.0]);
+    let rewind = [
+        value("post.rewind", -1.0),
+        look.background.dot(Vec3::new(0.2126, 0.7152, 0.0722)),
+        0.0,
+        0.0,
+    ];
+    [params, grade, shock, rewind]
 }
 
 /// The theme's colors in linear light.

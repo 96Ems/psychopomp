@@ -62,6 +62,9 @@ Compare two validated plans or render one exact PNG frame:
 ```bash
 cargo run -- plan diff target/before.json target/after.json
 cargo run --release -- plan frame target/agent-demo.json 1.25 output/frame.png
+cargo run --release -- plan frame target/agent-demo.json 1.25 output/frame.png --shutter  # as exported, with motion blur
+cargo run --release -- plan snapshot target/agent-demo.json 0:4:0.5 output/snap           # write frames
+cargo run --release -- plan snapshot target/agent-demo.json 0:4:0.5 output/snap --compare # fail if any pixel changed
 ```
 
 Render only one cue or exact range on the original scene clock:

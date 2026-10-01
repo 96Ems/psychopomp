@@ -45,6 +45,7 @@ mod sequence;
 #[cfg(test)]
 mod stability_tests;
 mod stage;
+mod still;
 mod task;
 mod terminal;
 mod value;
@@ -54,6 +55,9 @@ use deployment_queue::{DeploymentQueueVisualKey, PreparedDeploymentQueue};
 use editor::PreparedEditor;
 use terminal::PreparedTerminal;
 
+/// Shutter samples per Stage frame: enough that a fast ember draws a
+/// continuous streak rather than a row of copies.
+const STAGE_TEMPORAL_SAMPLES: u32 = 24;
 const BUILTIN_HERO_PLAN: &str = include_str!("../../../scenes/hero/hero.plan.json");
 
 pub(crate) async fn render_builtin_hero(output: &Path) -> Result<()> {
@@ -70,6 +74,24 @@ pub(crate) fn command(arguments: &[String]) -> Result<()> {
     if arguments.first().is_some_and(|command| command == "frame") {
         let (arguments, theme) = delivery_theme(&arguments[1..])?;
         return frame_command(&arguments, theme);
+    }
+    if arguments
+        .first()
+        .is_some_and(|command| command == "snapshot")
+    {
+        let (arguments, theme) = delivery_theme(&arguments[1..])?;
+        let (arguments, flags) = flags(&arguments, &["--compare", "--shutter"]);
+        let [path, times, dir] = arguments.as_slice() else {
+            bail!("usage: {SNAPSHOT_USAGE}");
+        };
+        return still::snapshot(
+            Path::new(path),
+            &still::parse_times(times)?,
+            Path::new(dir),
+            flags[0],
+            flags[1],
+            theme,
+        );
     }
     if arguments
         .first()
@@ -147,7 +169,8 @@ pub(crate) fn command(arguments: &[String]) -> Result<()> {
         _ => bail!(
             "usage: kinograph plan serve | kinograph plan schema | kinograph plan validate <plan.json> | \
              kinograph plan inspect <plan.json> | kinograph plan steps <plan.json> | kinograph plan diff <before.json> <after.json> | \
-             kinograph plan frame <plan.json> <seconds> [output.png] [--theme NAME] | \
+             kinograph plan frame <plan-or-reel.json> <seconds> [output.png] [--shutter] [--theme NAME] | \
+             kinograph plan snapshot <plan-or-reel.json> <a,b,c | from:to:step> <dir> [--compare] [--shutter] [--theme NAME] | \
               kinograph plan render <plan-or-reel.json> [output] [--cue ID | --range START..END] [--theme NAME] | \
                kinograph plan present <plan.json> [--theme NAME] [--speed 1|0.5|0.25|0.1] [--debug] [--reduced-motion] [--full-quality] [--fps FPS] [--benchmark | --benchmark-gpu]"
         ),
@@ -171,22 +194,43 @@ fn delivery_theme(arguments: &[String]) -> Result<(Vec<String>, Theme)> {
     Ok((args, theme.unwrap_or_default()))
 }
 
+const FRAME_USAGE: &str =
+    "kinograph plan frame <plan-or-reel.json> <seconds> [output.png] [--shutter] [--theme NAME]";
+const SNAPSHOT_USAGE: &str = "kinograph plan snapshot <plan-or-reel.json> <a,b,c | from:to:step> <dir> [--compare] [--shutter] [--theme NAME]";
+
+/// Remove boolean `names` from `arguments`, reporting which were present.
+fn flags<const N: usize>(arguments: &[String], names: &[&str; N]) -> (Vec<String>, [bool; N]) {
+    let present = names.map(|name| arguments.iter().any(|argument| argument == name));
+    let rest = arguments
+        .iter()
+        .filter(|argument| !names.contains(&argument.as_str()))
+        .cloned()
+        .collect();
+    (rest, present)
+}
+
 fn frame_command(arguments: &[String], theme: Theme) -> Result<()> {
-    let [plan, seconds, rest @ ..] = arguments else {
-        bail!("usage: kinograph plan frame <plan.json> <seconds> [output.png] [--theme NAME]");
+    let (arguments, [shutter]) = flags(arguments, &["--shutter"]);
+    let [plan, seconds, rest @ ..] = arguments.as_slice() else {
+        bail!("usage: {FRAME_USAGE}");
     };
     if rest.len() > 1 {
-        bail!("usage: kinograph plan frame <plan.json> <seconds> [output.png] [--theme NAME]");
+        bail!("usage: {FRAME_USAGE}");
     }
     let seconds = seconds
         .parse::<f64>()
         .context("parse frame time in seconds")?;
-    let at = Time::try_seconds(seconds)
+    Time::try_seconds(seconds)
         .context("frame time must be finite, non-negative, and representable")?;
     let output = rest
         .first()
         .map_or_else(|| PathBuf::from("output/scene-plan.png"), PathBuf::from);
-    render_frame(Path::new(plan), &output, at, theme)
+    if let Some(parent) = output.parent() {
+        fs::create_dir_all(parent)
+            .with_context(|| format!("create output directory {}", parent.display()))?;
+    }
+    let (loaded, mut renderer) = pollster::block_on(still::Loaded::load(Path::new(plan), theme))?;
+    delivery::write_png(&output, &loaded.still(&mut renderer, seconds, shutter)?)
 }
 
 fn render_command(arguments: &[String], theme: Theme) -> Result<()> {
@@ -297,28 +341,6 @@ fn render_plan(path: &Path, output: &Path, selection: WindowSelection, theme: Th
     pollster::block_on(render_loaded_plan(plan, &base, output, window, theme))
 }
 
-fn render_frame(path: &Path, output: &Path, at: Time, theme: Theme) -> Result<()> {
-    if let Some(parent) = output.parent() {
-        fs::create_dir_all(parent)
-            .with_context(|| format!("create output directory {}", parent.display()))?;
-    }
-    if reel::is_reel(path)? {
-        let reel = reel::read(path)?;
-        let base = path.parent().unwrap_or_else(|| Path::new(".")).to_owned();
-        return pollster::block_on(reel::frame(reel, &base, output, at, theme));
-    }
-    let plan = read_plan(path)?;
-    if at.as_nanos() > plan.duration_nanos {
-        bail!(
-            "frame time {} exceeds scene duration {}",
-            at,
-            Time::from_nanos(plan.duration_nanos)
-        );
-    }
-    let base = path.parent().unwrap_or_else(|| Path::new(".")).to_owned();
-    pollster::block_on(render_loaded_frame(plan, &base, output, at, theme))
-}
-
 async fn render_loaded_plan(
     plan: ScenePlan,
     base: &Path,
@@ -331,20 +353,6 @@ async fn render_loaded_plan(
     renderer.set_theme(theme);
     let prepared = PreparedPlan::prepare_preflight(input, base, &mut renderer)?;
     delivery::render_video(&prepared, &mut renderer, output, window)
-}
-
-async fn render_loaded_frame(
-    plan: ScenePlan,
-    base: &Path,
-    output: &Path,
-    at: Time,
-    theme: Theme,
-) -> Result<()> {
-    let input = preflight::Plan::new(plan)?;
-    let mut renderer = new_renderer(&input.plan.id).await?;
-    renderer.set_theme(theme);
-    let prepared = PreparedPlan::prepare_preflight(input, base, &mut renderer)?;
-    delivery::render_frame(&prepared, &mut renderer, output, at)
 }
 
 async fn new_renderer(file_name: &str) -> Result<HeadlessRenderer> {
@@ -766,6 +774,60 @@ impl PreparedPlan {
         self.render_sample_using(renderer, time, &self.timeline)
     }
 
+    /// Shutter samples for a frame centered at `center`.
+    fn temporal_samples(&self, center: f64) -> u32 {
+        match &self.root {
+            // Samples accumulate on the GPU without a readback each.
+            PreparedRoot::Stage(_) => STAGE_TEMPORAL_SAMPLES,
+            _ => crate::scenes::plan_temporal_samples(center),
+        }
+    }
+
+    /// One exposed frame from weighted shutter samples. A Stage accumulates
+    /// its light on the GPU; overlays drawn over it are averaged only across
+    /// samples where they differ.
+    fn render_exposure(
+        &self,
+        renderer: &mut HeadlessRenderer,
+        exposure: &[(f64, f32)],
+    ) -> Result<Vec<u8>> {
+        let PreparedRoot::Stage(stage) = &self.root else {
+            return crate::scenes::accumulate(renderer, exposure, |renderer, time| {
+                self.render_sample(renderer, time)
+            });
+        };
+        let timeline = &self.timeline;
+        let base =
+            stage.render_exposure(renderer, exposure, |actor, property, time, default| {
+                self.property_value(timeline, actor, property, time, default)
+            })?;
+        let overlays = crate::scenes::merge_equal_samples(exposure.iter().copied(), |time| {
+            self.overlay_key(time, stage.id())
+        })?;
+        crate::scenes::accumulate(renderer, &overlays, |renderer, time| {
+            let mut pixels = base.clone();
+            self.render_overlays(&mut pixels, renderer, time, timeline)?;
+            Ok(pixels)
+        })
+    }
+
+    /// The visual state of everything but the root `stage` actor.
+    fn overlay_key(&self, time: f64, stage: &str) -> Result<VisualSampleKey> {
+        let mut key = self
+            .compiled
+            .visual_sample_key_using(time, &self.timeline)?;
+        for (motion, channel) in key
+            .motion
+            .iter_mut()
+            .zip(&self.compiled.plan.continuous_channels)
+        {
+            if channel.actor_id == stage {
+                *motion = [0; 4];
+            }
+        }
+        Ok(key)
+    }
+
     fn render_sample_using(
         &self,
         renderer: &mut HeadlessRenderer,
@@ -808,45 +870,57 @@ impl PreparedPlan {
             ),
             PreparedRoot::Blank => renderer.render_title_card("", None, 0.0),
         };
+        self.render_overlays(&mut pixels, renderer, time, timeline)?;
+        Ok(pixels)
+    }
+
+    /// Everything a plan draws over its root, in its fixed layer order.
+    fn render_overlays(
+        &self,
+        pixels: &mut [u8],
+        renderer: &mut HeadlessRenderer,
+        time: f64,
+        timeline: &Timeline,
+    ) -> Result<()> {
         // Value tiles are diagram surfaces; ordinary text is their foreground
         // annotation layer, regardless of declaration order.
         for diagram in &self.venn {
-            diagram.render(&mut pixels, renderer, |a, p, d| {
+            diagram.render(pixels, renderer, |a, p, d| {
                 self.property_value(timeline, a, p, time, d)
             });
         }
         for token in &self.value_tokens {
-            token.render(&mut pixels, renderer, |actor, property, default| {
+            token.render(pixels, renderer, |actor, property, default| {
                 self.property_value(timeline, actor, property, time, default)
             });
         }
         for sequence in &self.sequences {
-            sequence.render(&mut pixels, renderer, |actor, property, default| {
+            sequence.render(pixels, renderer, |actor, property, default| {
                 self.property_value(timeline, actor, property, time, default)
             });
         }
         self.components
-            .render(&mut pixels, renderer, |actor, property, default| {
+            .render(pixels, renderer, |actor, property, default| {
                 self.property_value(timeline, actor, property, time, default)
             })?;
         for header in &self.headers {
-            header.render(&mut pixels, renderer, |a, p, d| {
+            header.render(pixels, renderer, |a, p, d| {
                 self.property_value(timeline, a, p, time, d)
             });
         }
         for text in &self.rich_text {
-            text.render(&mut pixels, renderer, |a, p, d| {
+            text.render(pixels, renderer, |a, p, d| {
                 self.property_value(timeline, a, p, time, d)
             });
         }
         for caption in &self.captions {
-            caption.render(&mut pixels, renderer, |actor, property, default| {
+            caption.render(pixels, renderer, |actor, property, default| {
                 self.property_value(timeline, actor, property, time, default)
             });
         }
         for text in &self.texts {
             renderer.composite_centered_text_masked(
-                &mut pixels,
+                pixels,
                 text.content.sample_at(time).current,
                 [
                     self.property_value(timeline, &text.id, "x", time, text.center[0]),
@@ -860,11 +934,11 @@ impl PreparedPlan {
             );
         }
         for task in &self.tasks {
-            task.render(&mut pixels, renderer, time, |actor, property| {
+            task.render(pixels, renderer, time, |actor, property| {
                 self.motion_value(timeline, actor, property, time)
             })?;
         }
-        Ok(pixels)
+        Ok(())
     }
 
     fn property_value(

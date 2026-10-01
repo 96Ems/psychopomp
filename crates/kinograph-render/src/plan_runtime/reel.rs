@@ -3,7 +3,7 @@
 //! and every segment's media is retimed onto the reel clock for one audio mix.
 use std::{fs, path::Path};
 
-use anyhow::{Context, Result, bail};
+use anyhow::{Context, Result};
 use kinograph::{
     composition::{Duration, MediaPlacement, Time, TimeRange},
     plan::{ReelPlan, ReelZoom},
@@ -138,6 +138,51 @@ impl PreparedReel {
             })
             .collect::<Result<Vec<_>>>()
             .map(ReelSampleKey)
+    }
+
+    /// The segment shown alone through a whole exposure, with its local
+    /// times, or `None` while segments mix or zoom.
+    fn sole_segment(&self, exposure: &[(f64, f32)]) -> Option<(usize, Vec<(f64, f32)>)> {
+        let mut segment = None;
+        let mut local = Vec::with_capacity(exposure.len());
+        for &(time, weight) in exposure {
+            let layers = self.reel.layers_at(time);
+            let [layer] = layers.as_slice() else {
+                return None;
+            };
+            if layer.weight < 1.0
+                || layer.zoom.is_some()
+                || *segment.get_or_insert(layer.segment) != layer.segment
+            {
+                return None;
+            }
+            local.push((layer.local_seconds, weight));
+        }
+        Some((segment?, local))
+    }
+
+    pub(super) fn temporal_samples(&self, center: f64) -> u32 {
+        match self.sole_segment(&[(center, 1.0)]) {
+            Some((segment, local)) => self.segments[segment].temporal_samples(local[0].0),
+            None => crate::scenes::plan_temporal_samples(center).max(16),
+        }
+    }
+
+    /// One exposed frame. A segment shown alone renders its own exposure (a
+    /// Stage accumulates on the GPU); mixes and zooms average on the CPU.
+    pub(super) fn render_exposure(
+        &self,
+        renderer: &mut HeadlessRenderer,
+        exposure: &[(f64, f32)],
+    ) -> Result<Vec<u8>> {
+        if let Some((segment, local)) = self.sole_segment(exposure) {
+            let prepared = &self.segments[segment];
+            renderer.set_file_name(prepared.file_name());
+            return prepared.render_exposure(renderer, &local);
+        }
+        crate::scenes::accumulate(renderer, exposure, |renderer, time| {
+            self.render_sample(renderer, time)
+        })
     }
 
     pub(super) fn render_sample(
@@ -279,27 +324,6 @@ pub(super) async fn render(
     let window =
         window.unwrap_or_else(|| TimeRange::new(Time::ZERO, Time::ZERO.after(prepared.duration())));
     delivery::render_reel(&prepared, &mut renderer, output, window)
-}
-
-pub(super) async fn frame(
-    reel: ReelPlan,
-    base: &Path,
-    output: &Path,
-    at: Time,
-    theme: Theme,
-) -> Result<()> {
-    if at.as_nanos() > reel.duration_nanos() {
-        bail!(
-            "frame time {} exceeds reel duration {}",
-            at,
-            Time::from_nanos(reel.duration_nanos())
-        );
-    }
-    let mut renderer = super::new_renderer(&reel.id).await?;
-    renderer.set_theme(theme);
-    let prepared = PreparedReel::prepare(reel, base, &mut renderer)?;
-    let pixels = prepared.render_sample(&mut renderer, at.as_seconds())?;
-    delivery::write_png(output, &pixels)
 }
 
 #[cfg(test)]

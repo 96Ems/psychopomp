@@ -47,6 +47,8 @@ pub(crate) fn encode_video(
     )
 }
 
+/// Legacy scenes: `temporal_samples` per frame, `entrance_temporal_samples`
+/// inside `high_sample_ranges` (scene seconds), averaged on the CPU.
 pub(crate) fn encode_video_with_samples(
     renderer: &mut HeadlessRenderer,
     output: &Path,
@@ -56,102 +58,58 @@ pub(crate) fn encode_video_with_samples(
     high_sample_ranges: &[std::ops::Range<f32>],
     mut render_sample: impl FnMut(&mut HeadlessRenderer, f32) -> Result<Vec<u8>>,
 ) -> Result<()> {
-    let window = TimeRange::new(Time::ZERO, Time::ZERO.after(scene.duration()));
-    encode_video_window_with_samples(
-        renderer,
-        output,
-        scene,
-        window,
-        temporal_samples,
-        entrance_temporal_samples,
-        high_sample_ranges,
-        |renderer, time| render_sample(renderer, time as f32),
-    )
-}
-
-pub(crate) fn encode_video_window_by_key<K: PartialEq>(
-    renderer: &mut HeadlessRenderer,
-    output: &Path,
-    scene: &CompiledScene,
-    window: TimeRange,
-    sample_key: impl FnMut(f64) -> Result<K>,
-    render_sample: impl FnMut(&mut HeadlessRenderer, f64) -> Result<Vec<u8>>,
-) -> Result<()> {
-    encode_media_window_by_key(
-        renderer,
-        output,
-        scene.duration(),
-        scene.media(),
-        window,
-        sample_key,
-        render_sample,
-    )
-}
-
-/// Encode an arbitrary timeline, such as a reel of several Scene Plans, whose
-/// duration and media placements do not come from one compiled scene.
-pub(crate) fn encode_media_window_by_key<K: PartialEq>(
-    renderer: &mut HeadlessRenderer,
-    output: &Path,
-    duration: Duration,
-    media: &[MediaPlacement],
-    window: TimeRange,
-    sample_key: impl FnMut(f64) -> Result<K>,
-    render_sample: impl FnMut(&mut HeadlessRenderer, f64) -> Result<Vec<u8>>,
-) -> Result<()> {
-    encode_video_window_with_samples_by_key(
-        renderer,
-        output,
-        duration,
-        media,
-        window,
-        TEMPORAL_SAMPLES,
-        ENTRANCE_TEMPORAL_SAMPLES,
-        &[0.0..1.0],
-        sample_key,
-        render_sample,
-    )
-}
-
-#[allow(clippy::too_many_arguments)]
-fn encode_video_window_with_samples(
-    renderer: &mut HeadlessRenderer,
-    output: &Path,
-    scene: &CompiledScene,
-    window: TimeRange,
-    temporal_samples: u32,
-    entrance_temporal_samples: u32,
-    high_sample_ranges: &[std::ops::Range<f32>],
-    render_sample: impl FnMut(&mut HeadlessRenderer, f64) -> Result<Vec<u8>>,
-) -> Result<()> {
-    encode_video_window_with_samples_by_key(
-        renderer,
-        output,
-        scene.duration(),
-        scene.media(),
-        window,
-        temporal_samples,
-        entrance_temporal_samples,
-        high_sample_ranges,
-        |time| Ok(time.to_bits()),
-        render_sample,
-    )
-}
-
-#[allow(clippy::too_many_arguments)]
-fn encode_video_window_with_samples_by_key<K: PartialEq>(
-    renderer: &mut HeadlessRenderer,
-    output: &Path,
-    duration: Duration,
-    media: &[MediaPlacement],
-    window: TimeRange,
-    temporal_samples: u32,
-    entrance_temporal_samples: u32,
-    high_sample_ranges: &[std::ops::Range<f32>],
-    mut sample_key: impl FnMut(f64) -> Result<K>,
-    mut render_sample: impl FnMut(&mut HeadlessRenderer, f64) -> Result<Vec<u8>>,
-) -> Result<()> {
     assert!(temporal_samples > 0 && entrance_temporal_samples > 0);
+    let window = TimeRange::new(Time::ZERO, Time::ZERO.after(scene.duration()));
+    encode_exposures(
+        renderer,
+        output,
+        scene.duration(),
+        scene.media(),
+        window,
+        |center| {
+            if high_sample_ranges
+                .iter()
+                .any(|range| range.contains(&(center as f32)))
+            {
+                entrance_temporal_samples
+            } else {
+                temporal_samples
+            }
+        },
+        |time| Ok(time.to_bits()),
+        |renderer, exposure| {
+            accumulate(renderer, exposure, |renderer, time| {
+                render_sample(renderer, time as f32)
+            })
+        },
+    )
+}
+
+/// Samples per frame for Scene Plans: more in the first second, where
+/// entrances move fastest.
+pub(crate) fn plan_temporal_samples(center: f64) -> u32 {
+    if center < 1.0 {
+        ENTRANCE_TEMPORAL_SAMPLES
+    } else {
+        TEMPORAL_SAMPLES
+    }
+}
+
+/// Encode a timeline one exposed frame at a time. `samples_at` chooses how
+/// many shutter samples a frame centered at a time takes; samples with equal
+/// `sample_key`s merge their weights; `render_exposure` turns one frame's
+/// weighted samples into pixels.
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn encode_exposures<K: PartialEq>(
+    renderer: &mut HeadlessRenderer,
+    output: &Path,
+    duration: Duration,
+    media: &[MediaPlacement],
+    window: TimeRange,
+    mut samples_at: impl FnMut(f64) -> u32,
+    mut sample_key: impl FnMut(f64) -> Result<K>,
+    mut render_exposure: impl FnMut(&mut HeadlessRenderer, &[(f64, f32)]) -> Result<Vec<u8>>,
+) -> Result<()> {
     if window.duration() == kinograph::composition::Duration::ZERO {
         bail!("render window must have positive duration");
     }
@@ -179,88 +137,25 @@ fn encode_video_window_with_samples_by_key<K: PartialEq>(
         },
         &media,
     )?;
-
-    let frame_byte_count = WIDTH as usize * HEIGHT as usize * 4;
-    let srgb_to_linear = std::array::from_fn::<_, 256, _>(|value| {
-        let encoded = value as f32 / 255.0;
-        if encoded <= 0.04045 {
-            encoded / 12.92
-        } else {
-            ((encoded + 0.055) / 1.055).powf(2.4)
-        }
-    });
-    let linear_to_srgb = std::array::from_fn::<_, 65536, _>(|value| {
-        let linear = value as f32 / 65535.0;
-        let encoded = if linear <= 0.003_130_8 {
-            linear * 12.92
-        } else {
-            1.055 * linear.powf(1.0 / 2.4) - 0.055
-        };
-        (encoded * 255.0).round() as u8
-    });
-    let mut accumulation = vec![0.0_f32; frame_byte_count];
-    let mut blended_frame = vec![0_u8; frame_byte_count];
-
     for frame in 0..frame_count {
-        accumulation.fill(0.0);
         let frame_start = window.start().as_seconds() + frame as f64 / f64::from(FPS);
         let frame_end = (window.start().as_seconds() + (frame + 1) as f64 / f64::from(FPS))
             .min(window.end().as_seconds());
-        let center_time = (frame_start + frame_end) * 0.5;
-        let frame_temporal_samples = if high_sample_ranges
-            .iter()
-            .any(|range| range.contains(&(center_time as f32)))
-        {
-            entrance_temporal_samples
-        } else {
-            temporal_samples
-        };
-        let samples = unique_sample_times(
-            temporal_sample_times(frame_start, frame_end, frame_temporal_samples),
+        let center = (frame_start + frame_end) * 0.5;
+        let samples = samples_at(center).max(1);
+        let exposure = merge_equal_samples(
+            exposure(center, frame_end - frame_start, samples),
             &mut sample_key,
         )?;
-        let unique_samples = samples.len();
-        for (time, multiplicity) in samples {
-            let pixels = render_sample(renderer, time)?;
-            if pixels.len() != frame_byte_count {
-                bail!(
-                    "renderer returned {} bytes for a {frame_byte_count}-byte RGBA frame",
-                    pixels.len()
-                );
-            }
-
-            let weight = multiplicity as f32;
-            for (sum, pixel) in accumulation.chunks_exact_mut(4).zip(pixels.chunks_exact(4)) {
-                sum[0] += srgb_to_linear[pixel[0] as usize] * weight;
-                sum[1] += srgb_to_linear[pixel[1] as usize] * weight;
-                sum[2] += srgb_to_linear[pixel[2] as usize] * weight;
-                sum[3] += f32::from(pixel[3]) / 255.0 * weight;
-            }
-        }
-
-        let inverse_samples = 1.0 / frame_temporal_samples as f32;
-        for (output, sum) in blended_frame
-            .chunks_exact_mut(4)
-            .zip(accumulation.chunks_exact(4))
-        {
-            for channel in 0..3 {
-                let linear = (sum[channel] * inverse_samples).clamp(0.0, 1.0);
-                output[channel] = linear_to_srgb[(linear * 65535.0).round() as usize];
-            }
-            output[3] = (sum[3] * inverse_samples * 255.0).round() as u8;
-        }
-
-        encoder.write_frame(&blended_frame)?;
-
+        encoder.write_frame(&render_exposure(renderer, &exposure)?)?;
         if frame % u64::from(FPS) == 0 || frame + 1 == frame_count {
             eprintln!(
-                "Rendered {:>3}/{frame_count} frames ({:.1}s, {frame_temporal_samples} samples, {unique_samples} unique)",
+                "Rendered {:>3}/{frame_count} frames ({center:.1}s, {samples} samples, {} unique)",
                 frame + 1,
-                center_time,
+                exposure.len(),
             );
         }
     }
-
     encoder.finish()?;
     eprintln!(
         "Wrote {} in {:.1}s",
@@ -270,37 +165,123 @@ fn encode_video_window_with_samples_by_key<K: PartialEq>(
     Ok(())
 }
 
-fn unique_sample_times<K: PartialEq>(
-    times: impl IntoIterator<Item = f64>,
+/// One frame's shutter: `samples` stratified times across a 180-degree
+/// shutter centered on `center` (clamped to `span`), with weights summing
+/// to 1. The weights ease off over the outer quarter at each end, so a fast
+/// highlight's streak fades out instead of ending on a hard copy.
+pub(crate) fn exposure(center: f64, span: f64, samples: u32) -> Vec<(f64, f32)> {
+    let shutter = (f64::from(SHUTTER_ANGLE) / 360.0 / f64::from(FPS)).min(span);
+    let (start, end) = (center - span * 0.5, center + span * 0.5);
+    let mut weighted = (0..samples)
+        .map(|sample| {
+            let phase = (f64::from(sample) + 0.5) / f64::from(samples) - 0.5;
+            let edge = ((0.5 - phase.abs()) / 0.25).clamp(0.0, 1.0);
+            let weight = if samples < 4 {
+                1.0
+            } else {
+                edge * edge * (3.0 - 2.0 * edge)
+            };
+            ((center + phase * shutter).clamp(start, end), weight as f32)
+        })
+        .collect::<Vec<_>>();
+    let total: f32 = weighted.iter().map(|(_, weight)| weight).sum();
+    for (_, weight) in &mut weighted {
+        *weight /= total;
+    }
+    weighted
+}
+
+/// Merge samples whose visual state is identical, keeping the first time and
+/// the summed weight, so a still frame renders once.
+pub(crate) fn merge_equal_samples<K: PartialEq>(
+    samples: impl IntoIterator<Item = (f64, f32)>,
     mut sample_key: impl FnMut(f64) -> Result<K>,
-) -> Result<Vec<(f64, u32)>> {
-    let mut samples: Vec<(K, f64, u32)> = Vec::new();
-    for time in times {
+) -> Result<Vec<(f64, f32)>> {
+    let mut merged: Vec<(K, f64, f32)> = Vec::new();
+    for (time, weight) in samples {
         let key = sample_key(time)?;
-        if let Some((_, _, multiplicity)) = samples
-            .iter_mut()
-            .find(|(candidate, _, _)| candidate == &key)
-        {
-            *multiplicity += 1;
-        } else {
-            samples.push((key, time, 1));
+        match merged.iter_mut().find(|(candidate, ..)| candidate == &key) {
+            Some((_, _, total)) => *total += weight,
+            None => merged.push((key, time, weight)),
         }
     }
-    Ok(samples
+    Ok(merged
         .into_iter()
-        .map(|(_, time, multiplicity)| (time, multiplicity))
+        .map(|(_, time, weight)| (time, weight))
         .collect())
 }
 
-fn temporal_sample_times(frame_start: f64, frame_end: f64, samples: u32) -> Vec<f64> {
-    let center = (frame_start + frame_end) * 0.5;
-    let shutter = (f64::from(SHUTTER_ANGLE) / 360.0 / f64::from(FPS)).min(frame_end - frame_start);
-    (0..samples)
-        .map(|sample| {
-            let phase = (f64::from(sample) + 0.5) / f64::from(samples) - 0.5;
-            (center + phase * shutter).clamp(frame_start, frame_end)
+/// Average sRGB frames in linear light by weight: the CPU exposure every
+/// root supports.
+pub(crate) fn accumulate(
+    renderer: &mut HeadlessRenderer,
+    exposure: &[(f64, f32)],
+    mut render_sample: impl FnMut(&mut HeadlessRenderer, f64) -> Result<Vec<u8>>,
+) -> Result<Vec<u8>> {
+    if let [(time, _)] = exposure {
+        return render_sample(renderer, *time);
+    }
+    let frame_byte_count = WIDTH as usize * HEIGHT as usize * 4;
+    let tables = linear_tables();
+    let mut sum = vec![0.0_f32; frame_byte_count];
+    for &(time, weight) in exposure {
+        let pixels = render_sample(renderer, time)?;
+        if pixels.len() != frame_byte_count {
+            bail!(
+                "renderer returned {} bytes for a {frame_byte_count}-byte RGBA frame",
+                pixels.len()
+            );
+        }
+        for (sum, pixel) in sum.chunks_exact_mut(4).zip(pixels.chunks_exact(4)) {
+            for channel in 0..3 {
+                sum[channel] += tables.to_linear[pixel[channel] as usize] * weight;
+            }
+            sum[3] += f32::from(pixel[3]) / 255.0 * weight;
+        }
+    }
+    Ok(sum
+        .chunks_exact(4)
+        .flat_map(|sum| {
+            let encode =
+                |linear: f32| tables.to_srgb[(linear.clamp(0.0, 1.0) * 65535.0).round() as usize];
+            [
+                encode(sum[0]),
+                encode(sum[1]),
+                encode(sum[2]),
+                (sum[3] * 255.0).round() as u8,
+            ]
         })
-        .collect()
+        .collect())
+}
+
+struct LinearTables {
+    to_linear: [f32; 256],
+    to_srgb: Vec<u8>,
+}
+
+fn linear_tables() -> &'static LinearTables {
+    static TABLES: std::sync::OnceLock<LinearTables> = std::sync::OnceLock::new();
+    TABLES.get_or_init(|| LinearTables {
+        to_linear: std::array::from_fn(|value| {
+            let encoded = value as f32 / 255.0;
+            if encoded <= 0.04045 {
+                encoded / 12.92
+            } else {
+                ((encoded + 0.055) / 1.055).powf(2.4)
+            }
+        }),
+        to_srgb: (0..65536)
+            .map(|value| {
+                let linear = value as f32 / 65535.0;
+                let encoded = if linear <= 0.003_130_8 {
+                    linear * 12.92
+                } else {
+                    1.055 * linear.powf(1.0 / 2.4) - 0.055
+                };
+                (encoded * 255.0).round() as u8
+            })
+            .collect(),
+    })
 }
 
 #[derive(Clone, Copy)]
@@ -376,24 +357,35 @@ fn span(text: &str, style: SyntaxStyle) -> StyledSpan {
 
 #[cfg(test)]
 mod tests {
-    use super::{temporal_sample_times, unique_sample_times};
+    use super::{exposure, merge_equal_samples};
 
     #[test]
     fn partial_frame_samples_stay_inside_the_render_window() {
-        let samples = temporal_sample_times(12.0, 12.001, 8);
+        let samples = exposure(12.0005, 0.001, 8);
+        assert!(
+            samples
+                .iter()
+                .all(|(time, _)| (12.0..=12.001).contains(time))
+        );
+        let total: f32 = samples.iter().map(|(_, weight)| weight).sum();
+        assert!((total - 1.0).abs() < 1e-5);
+    }
 
-        assert!(samples.iter().all(|time| (12.0..=12.001).contains(time)));
-        assert!(samples[0] > 12.0);
-        assert!(samples[7] < 12.001);
+    #[test]
+    fn the_shutter_eases_off_at_both_ends() {
+        let samples = exposure(1.0, 1.0 / 60.0, 16);
+        assert!(samples[0].1 < samples[8].1 * 0.2);
+        assert!((samples[0].1 - samples[15].1).abs() < 1e-6, "symmetric");
+        assert!(samples.windows(2).all(|pair| pair[0].0 < pair[1].0));
     }
 
     #[test]
     fn identical_temporal_states_are_weighted_once() {
-        let samples = unique_sample_times([0.1, 0.2, 0.3, 0.4], |time| {
-            Ok::<_, anyhow::Error>((time * 10.0_f64).round() as u32 % 2)
-        })
+        let samples = merge_equal_samples(
+            [(0.1, 0.25), (0.2, 0.25), (0.3, 0.25), (0.4, 0.25)],
+            |time| Ok::<_, anyhow::Error>((time * 10.0_f64).round() as u32 % 2),
+        )
         .unwrap();
-
-        assert_eq!(samples, vec![(0.1, 2), (0.2, 2)]);
+        assert_eq!(samples, vec![(0.1, 0.5), (0.2, 0.5)]);
     }
 }
