@@ -456,7 +456,7 @@ Components used by explainers:
   `packet` (`beam`, `reverse`, `label`), `label` (`at`, `size`, `spans`), and `ring`
   (`at`, `radius`, `thickness`), plus `post` (`bloom`, `grain`, `vignette`,
   `backdrop`). Channels are `<element>.<property>` (for example `service.shatter`,
-  `link.draw`, `probe.age`, `client.blur|content`) and `camera.x|y|z|focus|dof|shake`,
+  `link.draw`, `probe.age`, `client.blur|content`) and `camera.x|y|z|focus|dof|shake|kick-x|kick-y|punch`,
    `post.bloom|chroma|exposure|vignette|rewind`. `post.rewind` is a 1.4-second local
    age for VHS rewind interference (-1 inactive). Cards also take the deletion
    channels `cool|damage|glitch|cut|ghost` and the status-spinner clocks
@@ -469,6 +469,9 @@ Components used by explainers:
   16 px into place, scales from 1.035, and sharpens; its content follows 65 ms later),
   `connect` (soft port reveal, bead draw, surge and
   twang), `send` (gather, flight, landing), `hit` (instant attack, convex decay),
+  `kick` (a two-frame shove that springs back past rest), `jolt` (an impact: the
+  camera kicks along the blow, a squared-trauma noise rumble with slight roll
+  decays, and the frame punches in about 2%),
   `twang`, and `land`. `bounce` and `to` spring any channel (undeclared
   channels start at 0; declare other starting poses with `channel`), `ease` follows
   any curve, and `clock` starts an elapsed-seconds channel that runs to the scene's

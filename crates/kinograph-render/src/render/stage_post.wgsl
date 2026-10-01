@@ -10,7 +10,7 @@ struct Post {
     params: vec4<f32>, // bloom intensity, threshold, knee, exposure
     look: vec4<f32>,   // chroma, vignette, grain, frame seed
     shock: vec4<f32>,  // center pixels, burst age (-1 inactive), projected scale
-    rewind: vec4<f32>, // VHS rewind age (-1 inactive), background luminance, reserved
+    rewind: vec4<f32>, // VHS rewind age (-1 inactive), background luminance, camera roll (radians), punch-in
 };
 
 @group(0) @binding(0) var<uniform> post: Post;
@@ -100,8 +100,17 @@ fn rolloff(c: vec3<f32>) -> vec3<f32> {
 
 @fragment
 fn composite(in: VOut) -> @location(0) vec4<f32> {
-    var uv = in.uv;
     let size = vec2<f32>(textureDimensions(source));
+    // Camera roll and punch-in, about the frame center in square pixels. The
+    // punch also covers the corners a roll would otherwise expose.
+    let roll = post.rewind.z;
+    let zoom = 1.0 + post.rewind.w + abs(roll) * 0.6;
+    let from_center = (in.uv - vec2<f32>(0.5)) * size;
+    let turned = vec2<f32>(
+        from_center.x * cos(roll) + from_center.y * sin(roll),
+        -from_center.x * sin(roll) + from_center.y * cos(roll),
+    );
+    var uv = turned / zoom / size + vec2<f32>(0.5);
     var pressure = 0.0;
     if post.shock.z >= 0.0 {
         let scale = max(post.shock.w, 0.01);

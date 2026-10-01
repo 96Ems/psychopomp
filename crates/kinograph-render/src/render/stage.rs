@@ -9,6 +9,7 @@ use super::*;
 use kinograph::{
     caption::{CaptionAlign, CaptionSpanPlan},
     effects::combustion::{self, Burst},
+    effects::shake,
     effects::spinner::{self, Mark},
     effects::surface,
     math::{
@@ -877,11 +878,12 @@ fn post_settings(
                 .then_some([place.center.x, place.center.y, age, place.scale])
         })
         .unwrap_or([0.0, 0.0, -1.0, 0.0]);
+    // Roll and the punch-in transform the whole developed frame.
     let rewind = [
         value("post.rewind", -1.0),
         look.background.dot(Vec3::new(0.2126, 0.7152, 0.0722)),
-        0.0,
-        0.0,
+        shake::rumble(time as f32, value("camera.shake", 0.0)).roll,
+        value("camera.punch", 0.0).max(0.0),
     ];
     [params, grade, shock, rewind]
 }
@@ -1045,23 +1047,19 @@ impl<'a> Scene<'a> {
         time: f32,
         size: Vec2,
     ) -> Self {
-        let wobble = vec2(
-            (time * 47.0).sin() * 0.6 + (time * 83.0 + 1.3).sin() * 0.4,
-            (time * 53.0 + 0.7).sin() * 0.6 + (time * 71.0 + 2.1).sin() * 0.4,
-        );
+        // A jolt's spring-loaded shove plus its trauma rumble, sampled per
+        // shutter sample so the shake itself motion-blurs.
+        let rumble = shake::rumble(time, value("camera.shake", 0.0));
         let position = vec3(
-            value("camera.x", 0.0),
-            value("camera.y", 0.0),
+            value("camera.x", 0.0) + value("camera.kick-x", 0.0) + rumble.offset.x,
+            value("camera.y", 0.0) + value("camera.kick-y", 0.0) + rumble.offset.y,
             value("camera.z", 0.0),
         );
         let mut scene = Self {
             plan,
             value,
             time,
-            camera: Camera {
-                position: position + (wobble * value("camera.shake", 0.0)).extend(0.0),
-                size,
-            },
+            camera: Camera { position, size },
             focus: value("camera.focus", 0.0),
             dof: value("camera.dof", 0.0).max(0.0),
             placements: HashMap::new(),
@@ -1647,7 +1645,8 @@ impl<'a> Painter<'a> {
             }
             // Separate the outgoing and incoming ink instead of showing
             // two readable words on top of each other at mid-transition.
-            let visibility = smoothstep((weight - 0.2) / 0.8);
+            // Each word fades in only past the midpoint: never two at once.
+            let visibility = smoothstep((weight - 0.45) / 0.55);
             let drift = if entry == low { -1.0 } else { 1.0 };
             if let Some(glyphs) = self.frame.text(
                 &text_key(id, &format!("status{entry}")),

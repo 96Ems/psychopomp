@@ -515,22 +515,41 @@ fn stage_film(narration: &Narration) -> Result<ScenePlan> {
     s.ease(sc, "service.burst", kill_arrival, life, life, Ease::Linear);
     s.to(sc, "service.hurt", kill_arrival, 1.0, 0.2);
     s.hit(sc, "post.chroma", kill_arrival, 0.16, 0.0);
-    s.hit(sc, "camera.shake", kill_arrival, 3.0, 0.0);
+    // The blow pushes the frame the way the SIGTERM travelled; then each
+    // card is knocked outward as the pressure front passes it.
+    let blow = Vec3::from(SERVICE) - Vec3::from(CLIENT);
+    s.jolt(sc, kill_arrival, [blow.x, blow.y], 1.0);
+    for (card, at) in [("client", CLIENT)]
+        .into_iter()
+        .chain(OTHERS.map(|(card, _, _, at)| (card, at)))
+    {
+        let away = Vec3::from(at) - Vec3::from(SERVICE);
+        let reach = away.truncate().length();
+        let push = away.truncate().normalize() * 9.0 * (480.0 / reach).min(1.0);
+        let passes = kill_arrival + ns(f64::from(combustion::shock_arrival(reach)));
+        s.kick(
+            sc,
+            [&format!("{card}.x"), &format!("{card}.y")],
+            passes,
+            push.into(),
+        );
+    }
     s.hit(sc, "post.bloom", kill_arrival, 0.4, 0.18);
     s.to(sc, "camera.focus", kill_arrival, 0.0, 0.8);
+    // One status at a time: "healthy" is gone before "stopped" rises.
     s.to(
         sc,
         "service-healthy.opacity",
-        kill_arrival + ns(0.2),
+        kill_arrival + ns(0.15),
         0.0,
-        0.3,
+        0.15,
     );
     s.to(
         sc,
         "service-stopped.opacity",
-        kill_arrival + ns(0.3),
+        kill_arrival + ns(0.4),
         1.0,
-        0.3,
+        0.25,
     );
     s.to(sc, "link.break", kill_arrival + ns(0.15), 1.0, 0.9);
     let cut = b("cut off every other client");
@@ -611,8 +630,8 @@ fn stage_film(narration: &Narration) -> Result<ScenePlan> {
     s.hit(sc, "post.chroma", switch, 0.12, 0.0);
     s.to(sc, "camera.z", switch, 0.0, 1.8);
     s.to(sc, "thought-before.opacity", switch, 0.0, 0.4);
-    s.to(sc, "service-stopped.opacity", switch + ns(0.9), 0.0, 0.3);
-    s.to(sc, "service-healthy.opacity", switch + ns(1.0), 1.0, 0.3);
+    s.to(sc, "service-stopped.opacity", switch + ns(0.9), 0.0, 0.15);
+    s.to(sc, "service-healthy.opacity", switch + ns(1.15), 1.0, 0.25);
     let respin = switch + ns(0.6);
     s.to(sc, "client.status", respin, 3.0, 0.3);
     for clock in ["spinner", "release"] {

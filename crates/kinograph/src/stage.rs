@@ -225,13 +225,16 @@ impl StageElement {
 }
 
 /// Channels that belong to the whole stage rather than an element.
-pub const STAGE_PROPERTIES: [&str; 11] = [
+pub const STAGE_PROPERTIES: [&str; 14] = [
     "camera.x",
     "camera.y",
     "camera.z",
     "camera.focus",
     "camera.dof",
     "camera.shake",
+    "camera.kick-x",
+    "camera.kick-y",
+    "camera.punch",
     "post.bloom",
     "post.chroma",
     "post.exposure",
@@ -594,6 +597,44 @@ impl StageActor {
         let channel = self.channel(scene, property, rest);
         scene.set(&channel, at_nanos, peak);
         scene.ease(&channel, at_nanos, rest, 0.8, Ease::CubicOut);
+    }
+
+    /// Shove the `x`/`y` channel pair by `offset` in about two frames, then let
+    /// it spring back past rest and settle: a hit with weight.
+    pub fn kick(
+        &mut self,
+        scene: &mut PlanBuilder,
+        [x, y]: [&str; 2],
+        at_nanos: u64,
+        offset: [f32; 2],
+    ) {
+        for (property, amount) in [(x, offset[0]), (y, offset[1])] {
+            self.to(scene, property, at_nanos, amount, 0.04);
+            self.bounce(scene, property, at_nanos + 40_000_000, 0.0, 0.6, 0.35);
+        }
+    }
+
+    /// An impact jolts the camera: the frame is shoved along `direction` (the
+    /// way the blow pushes the scene) and rebounds, a trauma rumble decays, and
+    /// the frame punches in slightly. `strength` 1 is a full hit.
+    pub fn jolt(
+        &mut self,
+        scene: &mut PlanBuilder,
+        at_nanos: u64,
+        direction: [f32; 2],
+        strength: f32,
+    ) {
+        let length = direction[0].hypot(direction[1]).max(1e-6);
+        // The camera moves against the push, so the scene moves with it.
+        let shove = -16.0 * strength / length;
+        self.kick(
+            scene,
+            ["camera.kick-x", "camera.kick-y"],
+            at_nanos,
+            [direction[0] * shove, direction[1] * shove],
+        );
+        self.hit(scene, "camera.shake", at_nanos, strength.min(1.0), 0.0);
+        self.hit(scene, "camera.punch", at_nanos, 0.022 * strength, 0.0);
     }
 
     /// A rigid panel settles with a small vertical drift and restrained scale.

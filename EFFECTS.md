@@ -9,6 +9,8 @@ they happen; effect Modules own their physical pose and optical response.
 |---|---|---|
 | `kinograph::effects::combustion` | `Burst::sample(age).ember(direction, seed)` | Compression, ignition, rim-light envelope, gravity/drag embers, cooling |
 | `kinograph::effects::surface` | `impact(age, angle)`, `wavefront(age)` | Local contact dimple and a damped emissive wave over a sphere |
+| `kinograph::effects::shake` | `rumble(time, trauma)` | Squared-trauma camera rumble from two octaves of smooth noise: offset and roll |
+| `kinograph::effects::combustion` | `shock_arrival(distance)` | When the burst's pressure front reaches a distance, mirroring `pressure.wgsl` |
 | `kinograph::effects::spinner` | `sample(age, release, mark, shape)`, `handoff(after)` | The blog's radial spinner: closed-form critically damped motor, speed-driven wake, and a mark route drawn from a top-right handoff |
 | `kinograph::math::dynamics` | `ballistic(velocity, acceleration, drag, seconds)` | Closed-form reusable particle displacement |
 | `render/effects/noise.wgsl` | `fx_hash2(p)`, `fx_noise3(p)`, `fx_fbm3(p)` | Deterministic 3D noise; caller-owned coordinate transforms |
@@ -68,3 +70,11 @@ concrete scene and a small study first, composing the noise, curves, motion, and
 optics that already fit. Extract a shared solver or new crate when those uses
 demonstrate its Interface. Preserve independent timing, spatial coordinates,
 seed identity, and deterministic sampling across every composition.
+
+`camera.shake` is trauma in 0..1; `StageActor::jolt` sets it with a `hit` and adds
+the spring-loaded `camera.kick-x|y` shove and a `camera.punch` zoom. The renderer
+moves the camera by kick plus rumble in every shutter sample, so the shake
+motion-blurs; roll and punch transform the developed frame in the composite, and
+the punch also covers corners a roll would expose. Plan overlays (headers,
+captions) stay still, like a HUD. Time per-element reactions with
+`combustion::shock_arrival` so they land as the pressure front passes.

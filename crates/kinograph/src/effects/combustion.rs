@@ -5,6 +5,13 @@ pub const DURATION: f32 = 5.2;
 /// The shell compresses for this long before it ignites.
 pub const COLLAPSE: f32 = 0.12;
 
+/// When the burst's pressure front reaches `distance` world pixels from the
+/// center, in seconds of burst age. Mirrors `pressure_wave` in pressure.wgsl:
+/// the front sits at 55 + 760 t^0.75 pixels, t seconds after the collapse.
+pub fn shock_arrival(distance: f32) -> f32 {
+    COLLAPSE + ((distance - 55.0).max(0.0) / 760.0).powf(4.0 / 3.0)
+}
+
 /// A sampled effect pose. Negative age means intact; age >= DURATION is spent.
 /// Sample the same age in any order, including backwards, without retained state.
 #[derive(Clone, Copy, Debug, PartialEq)]
