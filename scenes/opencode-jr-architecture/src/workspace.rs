@@ -7,9 +7,8 @@ use kinograph::{
 };
 
 use crate::{
-    Film, MARK, RESET, SUCCESS, arrive, beam, begin, card, chip, footer, header, hide, label,
-    narration::Narration, orb, orb_in, packet, plug, post, ring, seconds, send, show, sound,
-    status,
+    Film, MARK, Narration, RESET, SUCCESS, arrive, beam, begin, card, chip, footer, header, hide,
+    label, orb, orb_in, packet, plug, post, ring, seconds, send, show, sound, status,
 };
 
 const SESSION: [f32; 3] = [330.0, 580.0, 0.0];

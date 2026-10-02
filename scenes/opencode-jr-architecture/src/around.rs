@@ -6,9 +6,8 @@ use kinograph::{
 };
 
 use crate::{
-    BLOOM, CONFIRM, Film, MARK, SUCCESS, beam, begin, card, chip, footer, header, label,
-    narration::Narration, orb, orb_in, packet, plug, post, ring, seconds, send, show, sound,
-    status,
+    BLOOM, CONFIRM, Film, MARK, Narration, SUCCESS, beam, begin, card, chip, footer, header, label,
+    orb, orb_in, packet, plug, post, ring, seconds, send, show, sound, status,
 };
 
 const SESSION: [f32; 3] = [960.0, 470.0, 0.0];

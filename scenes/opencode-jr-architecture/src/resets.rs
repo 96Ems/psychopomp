@@ -12,9 +12,9 @@ use kinograph::{
 };
 
 use crate::{
-    DEATH, Film, GLITCH, IMPACT, LAUNCH, MARK, RESET, arrive, beam, begin, card, chip, footer,
-    header, hide, label, narration::Narration, orb, orb_in, packet, post, ring, seconds, send,
-    show, sound, status,
+    DEATH, Film, GLITCH, IMPACT, LAUNCH, MARK, Narration, RESET, arrive, beam, begin, card, chip,
+    footer, header, hide, label, orb, orb_in, packet, post, ring, seconds, send, show, sound,
+    status,
 };
 
 const SESSION: [f32; 3] = [640.0, 460.0, 0.0];

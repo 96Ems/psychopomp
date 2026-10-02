@@ -10,8 +10,8 @@ use kinograph::{
 };
 
 use crate::{
-    CONFIRM, Film, SUCCESS, arrive, beam, begin, card, chip, footer, header, label,
-    narration::Narration, packet, post, seconds, send, sound, status,
+    CONFIRM, Film, Narration, SUCCESS, arrive, beam, begin, card, chip, footer, header, label,
+    packet, post, seconds, send, sound, status,
 };
 
 const SLACK: [f32; 3] = [330.0, 440.0, 0.0];

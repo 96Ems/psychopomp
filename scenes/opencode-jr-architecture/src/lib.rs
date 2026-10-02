@@ -9,7 +9,6 @@ mod around;
 mod code;
 mod edge;
 mod intro;
-mod narration;
 mod outro;
 mod publish;
 mod resets;
@@ -23,6 +22,7 @@ use kinograph::{
     author::{PlanBuilder, seconds},
     caption::{CaptionActor, CaptionAlign, CaptionPlan, CaptionSpanPlan},
     effects::spinner::Mark,
+    narration::{Narration, Spoken},
     plan::{
         MediaKindPlan, MediaPlan, MediaRolePlan, ReelPlan, ReelSegmentPlan, ReelTransitionStyle,
         ScenePlan,
@@ -30,7 +30,6 @@ use kinograph::{
     stage::{StageActor, StageElement, StagePlan, StagePost, StatusText},
     tone::Tone,
 };
-use narration::{Narration, Spoken};
 
 const TRANSITION: f64 = 0.7;
 const LEFT: f32 = 140.0;

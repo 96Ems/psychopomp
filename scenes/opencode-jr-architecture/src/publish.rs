@@ -6,8 +6,8 @@ use anyhow::{Context, Result};
 use kinograph::{caption::CaptionAlign, plan::ScenePlan, stage::StagePlan, tone::Tone};
 
 use crate::{
-    Film, GLITCH, IMPACT, MARK, SUCCESS, arrive, beam, begin, card, chip, footer, header, label,
-    narration::Narration, orb, orb_in, packet, plug, post, seconds, send, show, sound, status,
+    Film, GLITCH, IMPACT, MARK, Narration, SUCCESS, arrive, beam, begin, card, chip, footer,
+    header, label, orb, orb_in, packet, plug, post, seconds, send, show, sound, status,
 };
 
 const RUNTIME: [f32; 3] = [260.0, 510.0, 0.0];

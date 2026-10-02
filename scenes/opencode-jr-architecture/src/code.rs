@@ -9,7 +9,7 @@ use kinograph::{
     tone::Tone,
 };
 
-use crate::{chip_at, footer, header_at, narration::Narration, seconds};
+use crate::{Narration, chip_at, footer, header_at, seconds};
 
 /// The widest line that fits the editor card at 28 px CommitMono.
 const MAX_COLUMNS: usize = 76;

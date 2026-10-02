@@ -76,7 +76,7 @@ fn stage() -> StagePlan {
     }
 }
 
-pub fn film(narration: &crate::narration::Narration) -> Result<ScenePlan> {
+pub fn film(narration: &crate::Narration) -> Result<ScenePlan> {
     let Film {
         sc: mut scene,
         s: mut actor,
