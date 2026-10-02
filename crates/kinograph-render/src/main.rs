@@ -1,6 +1,7 @@
 //! PROTOTYPE: deterministic motion-graphics scenes rendered headlessly with wgpu.
 
 mod encode;
+mod exposure;
 mod plan_runtime;
 mod render;
 mod scenes;

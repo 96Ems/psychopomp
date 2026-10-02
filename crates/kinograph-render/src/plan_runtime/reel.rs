@@ -12,8 +12,8 @@ use serde_json::{Value, json};
 
 use super::{PreparedPlan, VisualSampleKey, inspect_plan, validate_renderer_plan};
 use crate::{
+    exposure::{HEIGHT, WIDTH},
     render::HeadlessRenderer,
-    scenes::{HEIGHT, WIDTH},
 };
 
 pub(super) fn validate(reel: &ReelPlan) -> Result<()> {
@@ -146,7 +146,7 @@ impl PreparedReel {
     pub(super) fn temporal_samples(&self, center: f64) -> u32 {
         match self.sole_segment(&[(center, 1.0)]) {
             Some((segment, local)) => self.segments[segment].temporal_samples(local[0].0),
-            None => crate::scenes::plan_temporal_samples(center).max(16),
+            None => crate::exposure::plan_temporal_samples(center).max(16),
         }
     }
 
@@ -162,7 +162,7 @@ impl PreparedReel {
             renderer.set_file_name(prepared.file_name());
             return prepared.render_exposure(renderer, &local);
         }
-        crate::scenes::accumulate(renderer, exposure, |renderer, time| {
+        crate::exposure::accumulate(renderer, exposure, |renderer, time| {
             self.render_sample(renderer, time)
         })
     }

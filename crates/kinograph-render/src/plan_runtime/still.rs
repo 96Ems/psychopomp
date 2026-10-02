@@ -12,8 +12,8 @@ use super::{
     DECK_UNSUPPORTED, PlanFile, PreparedPlan, Theme, delivery, new_renderer, preflight, reel,
 };
 use crate::{
+    exposure::{HEIGHT, WIDTH, exposure, merge_equal_samples},
     render::HeadlessRenderer,
-    scenes::{HEIGHT, WIDTH, exposure, merge_equal_samples},
 };
 
 /// A loaded plan or reel, ready to sample.

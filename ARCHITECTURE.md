@@ -456,11 +456,11 @@ once at twice its size into an R8 atlas and drawn with a soft background-colored
 backing for legibility over light. A stage root marks every temporal sample as
 distinct (`ambient_time`), because spin, flow, and grain always move.
 
-Every root renders a frame from one exposure, `scenes::exposure`: stratified
+Every root renders a frame from one exposure, `exposure::exposure`: stratified
 times across a 180-degree shutter whose weights ease off over the outer quarter
 at each end, so streaks fade rather than ending on a hard copy. Samples with
 equal visual keys merge their weights. Roots without their own exposure average
-sRGB samples in linear light on the CPU (`scenes::accumulate`).
+sRGB samples in linear light on the CPU (`exposure::accumulate`).
 
 The Stage separates material response from transforms: a pulse lights the orb
 without moving its shell or ports, and a card flash lifts ink and rim while its
@@ -548,7 +548,7 @@ the one or two segments visible at a time with eased mix weights. `plan_runtime/
 prepares every segment once on one renderer, samples each visible layer at its local
 time, and mixes opaque frames (a dip mixes over the theme's empty background). Each
 segment's media placements are shifted onto the reel clock with
-`MediaPlacement::shifted` and encoded through `scenes::encode_exposures`, the same
+`MediaPlacement::shifted` and encoded through `exposure::encode_exposures`, the same
 exposure and FFmpeg path as a single plan. A segment shown alone through a frame
 renders its own exposure (so a Stage keeps its GPU shutter); mixes and zooms take
 16 samples averaged on the CPU. `plan render`, `frame`, `snapshot`, `validate`,
@@ -607,7 +607,7 @@ FFmpeg remains a subprocess because it avoids unsafe bindings and codec linkage 
 
 ## Scene Modules Own Choreography
 
-`crates/kinograph-render/src/main.rs` parses the command, selects an output, and dispatches to one concrete Module under `crates/kinograph-render/src/scenes/`. Each scene Module keeps its assets, documents, snapshots, semantic targets, choreography, and sample rendering local behind one `render(output)` interface. `crates/kinograph-render/src/scenes/mod.rs` contains only mechanics shared by demonstrated scenes: delivery dimensions, temporal accumulation, semantic target measurement, pointer sampling, and styled-span construction.
+`crates/kinograph-render/src/main.rs` parses the command, selects an output, and dispatches to one concrete Module under `crates/kinograph-render/src/scenes/`. Each scene Module keeps its assets, documents, snapshots, semantic targets, choreography, and sample rendering local behind one `render(output)` interface. `crates/kinograph-render/src/scenes/mod.rs` contains only mechanics shared by these scenes: the `encode_scene` entry, semantic target measurement, the editor frame, pointer sampling, and styled-span construction. Delivery dimensions, shutter exposure, and accumulation live in `crates/kinograph-render/src/exposure.rs`, shared with Scene Plans and reels.
 
 This is a locality seam, not a scene framework: there is no scene trait, registry, or generic lifecycle. Shared authoring operations should move into the DSL only when repeated usage reveals a deeper interface.
 

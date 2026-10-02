@@ -22,9 +22,9 @@ use crate::{
 };
 
 use super::{
-    WORKSPACE_ROOT, encode_scene, measure_target, measure_text_width, plan_temporal_samples,
-    sample_pointer_frame, span,
+    WORKSPACE_ROOT, encode_scene, measure_target, measure_text_width, sample_pointer_frame, span,
 };
+use crate::exposure::plan_temporal_samples;
 
 const LESSON_AUDIO_DURATION: f64 = 31.708;
 

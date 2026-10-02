@@ -112,7 +112,8 @@ Do not run the full render as routine validation when unit tests and static chec
 - `crates/kinograph-render/src/render/ui.rs`: private bounds, inset, split, and terminal line-flow primitives for pixel UI
 - `crates/kinograph-render/src/render/ui/card.rs`: shared immediate-mode RGBA composition and projected card presentation used by editor, recorded-video, and simulated-UI producers
 - `crates/kinograph-render/src/encode.rs`: concrete FFmpeg subprocess, raw RGBA protocol, and compiled audio placement
-- `crates/kinograph-render/src/scenes/`: one concrete choreography Module per renderable scene plus shared sampling and encoding mechanics
+- `crates/kinograph-render/src/exposure.rs`: delivery dimensions, shutter samples and weights, linear-light accumulation, and encoding a timeline one exposed frame at a time
+- `crates/kinograph-render/src/scenes/`: one concrete choreography Module per renderable legacy scene plus their shared target measurement, editor frame, and pointer sampling
 - `crates/kinograph-render/src/scenes/effect_institute.rs`: private adapter from pinned published lesson artifacts into stable code, Task overlays, and stitched chapter schedules
 - `crates/kinograph-render/src/main.rs`: command parsing, output selection, and scene dispatch
 - `crates/kinograph/src/lib.rs`: lightweight public library boundary used by Rust Scene Programs

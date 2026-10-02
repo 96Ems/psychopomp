@@ -24,8 +24,8 @@ use winit::{
 
 use super::{PreparedPlan, new_renderer};
 use crate::{
+    exposure::{HEIGHT, WIDTH},
     render::{GridLinePalette, Theme},
-    scenes::{HEIGHT, WIDTH},
 };
 mod benchmark;
 mod debug;

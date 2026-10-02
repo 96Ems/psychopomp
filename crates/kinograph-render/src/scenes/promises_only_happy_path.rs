@@ -21,10 +21,8 @@ use crate::{
     render::{HeadlessRenderer, InlineRevealFrame},
 };
 
-use super::{
-    WORKSPACE_ROOT, editor_frame, encode_scene, measure_target, measure_text_width,
-    plan_temporal_samples, span,
-};
+use super::{WORKSPACE_ROOT, editor_frame, encode_scene, measure_target, measure_text_width, span};
+use crate::exposure::plan_temporal_samples;
 
 const PROMISES_AUDIO_DURATION: f64 = 31.107;
 

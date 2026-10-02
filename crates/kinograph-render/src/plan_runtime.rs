@@ -20,8 +20,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
 use crate::{
+    exposure::{HEIGHT, WIDTH},
     render::{HeadlessRenderer, RenderSpec, Theme},
-    scenes::{HEIGHT, WIDTH},
 };
 
 mod attachments;
@@ -801,7 +801,7 @@ impl PreparedPlan {
         match &self.root {
             // Samples accumulate on the GPU without a readback each.
             PreparedRoot::Stage(_) => STAGE_TEMPORAL_SAMPLES,
-            _ => crate::scenes::plan_temporal_samples(center),
+            _ => crate::exposure::plan_temporal_samples(center),
         }
     }
 
@@ -814,7 +814,7 @@ impl PreparedPlan {
         exposure: &[(f64, f32)],
     ) -> Result<Vec<u8>> {
         let PreparedRoot::Stage(stage) = &self.root else {
-            return crate::scenes::accumulate(renderer, exposure, |renderer, time| {
+            return crate::exposure::accumulate(renderer, exposure, |renderer, time| {
                 self.render_sample(renderer, time)
             });
         };
@@ -823,10 +823,10 @@ impl PreparedPlan {
             stage.render_exposure(renderer, exposure, |actor, property, time, default| {
                 self.property_value(timeline, actor, property, time, default)
             })?;
-        let overlays = crate::scenes::merge_equal_samples(exposure.iter().copied(), |time| {
+        let overlays = crate::exposure::merge_equal_samples(exposure.iter().copied(), |time| {
             self.overlay_key(time, stage.id())
         })?;
-        crate::scenes::accumulate(renderer, &overlays, |renderer, time| {
+        crate::exposure::accumulate(renderer, &overlays, |renderer, time| {
             let mut pixels = base.clone();
             self.render_overlays(&mut pixels, renderer, time, timeline)?;
             Ok(pixels)

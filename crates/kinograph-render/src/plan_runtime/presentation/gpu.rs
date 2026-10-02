@@ -9,7 +9,7 @@ use anyhow::{Context, Result, bail};
 use winit::window::Window;
 
 use super::{Filter, viewport};
-use crate::scenes::{HEIGHT, WIDTH};
+use crate::exposure::{HEIGHT, WIDTH};
 
 pub(super) enum Paint {
     Presented(Timing),

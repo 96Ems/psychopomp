@@ -14,7 +14,8 @@ use crate::{
     render::{QuoteFrame, TaskLinkFrame, TaskSceneFrame},
 };
 
-use super::{HEIGHT, WIDTH, WORKSPACE_ROOT, encode_scene, plan_temporal_samples};
+use super::{WORKSPACE_ROOT, encode_scene};
+use crate::exposure::{HEIGHT, WIDTH, plan_temporal_samples};
 
 pub(crate) async fn render(output: &Path) -> Result<()> {
     let asset_directory = Path::new(WORKSPACE_ROOT)

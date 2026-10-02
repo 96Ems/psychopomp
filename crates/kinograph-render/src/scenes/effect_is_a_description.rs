@@ -22,9 +22,10 @@ use crate::{
 };
 
 use super::{
-    WIDTH, WORKSPACE_ROOT, boosted_samples, editor_frame, encode_scene, measure_target,
+    WORKSPACE_ROOT, boosted_samples, editor_frame, encode_scene, measure_target,
     measure_text_width, span,
 };
+use crate::exposure::WIDTH;
 
 const DESCRIPTION_AUDIO_DURATION: f64 = 30.366;
 

@@ -30,7 +30,8 @@ use crate::render::{
     TaskLinkFrame, TaskSceneFrame, TokenHighlight,
 };
 
-use super::{HEIGHT, WIDTH, WORKSPACE_ROOT, encode_scene};
+use super::{WORKSPACE_ROOT, encode_scene};
+use crate::exposure::{HEIGHT, WIDTH};
 use crate::plan_runtime::new_renderer;
 
 const LINE_HEIGHT: f32 = 44.0;

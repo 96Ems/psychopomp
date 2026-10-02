@@ -6,8 +6,8 @@ use kinograph::composition::{Time, TimeRange};
 
 use super::{PreparedPlan, reel::PreparedReel};
 use crate::{
+    exposure::{HEIGHT, WIDTH, encode_exposures},
     render::HeadlessRenderer,
-    scenes::{HEIGHT, WIDTH, encode_exposures},
 };
 
 pub(super) fn render_video(
