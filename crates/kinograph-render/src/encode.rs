@@ -209,12 +209,9 @@ impl Drop for FfmpegEncoder {
 mod tests {
     use std::path::Path;
 
-    use std::collections::HashMap;
-
     use kinograph::{
         composition::{Asset, Composition, Duration, Time, TimeRange},
-        dsl::{Scalar, Scene},
-        timeline::PropertyId,
+        dsl::CompiledScene,
     };
 
     use super::{audio_clip_filter, temporary_output_path};
@@ -224,11 +221,10 @@ mod tests {
         let clip = Asset::audio("cue", "cue.wav")
             .clip(TimeRange::new(Time::seconds(0.25), Time::seconds(0.75)))
             .gain_db(12.0);
-        let scene = Scene::new(
-            Vec::<(PropertyId, Scalar)>::new(),
-            Composition::delay(Duration::milliseconds(1_234.5), Composition::layer(clip)),
-        )
-        .compile(&HashMap::new())
+        let scene = CompiledScene::from_composition(Composition::delay(
+            Duration::milliseconds(1_234.5),
+            Composition::layer(clip),
+        ))
         .unwrap();
         let filter = audio_clip_filter(2, 3, &scene.media()[0]);
 

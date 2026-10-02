@@ -17,8 +17,8 @@ use kinograph::{
     code::{CodeLine, PlacedLine, StyledSpan, SyntaxStyle},
     composition::{Asset, Clip, Composition, Duration, Time, TimeRange},
     dsl::{
-        AnnotationEffect, AnnotationFrame, CompiledScene, Scalar, Scene, TargetGeometry, TaskFrame,
-        TaskId, TaskState,
+        AnnotationEffect, AnnotationFrame, CompiledScene, TargetGeometry, TaskFrame, TaskId,
+        TaskState,
     },
     motion::MotionState,
     state::{StateTrack, TimedState},
@@ -75,8 +75,7 @@ pub(crate) async fn render_section(
         .iter()
         .find(|section| section.id == section_id)
         .with_context(|| format!("chapter '{chapter_id}' has no section '{section_id}'"))?;
-    let scene = Scene::new(Vec::<(PropertyId, Scalar)>::new(), section.composition())
-        .compile(&HashMap::new())?;
+    let scene = CompiledScene::from_composition(section.composition())?;
     let mut renderer = HeadlessRenderer::new(RenderSpec {
         width: WIDTH,
         height: HEIGHT,
@@ -213,11 +212,7 @@ impl PublishedChapter {
             }
         });
 
-        let scene = Scene::new(
-            Vec::<(PropertyId, Scalar)>::new(),
-            Composition::sequence(composition),
-        )
-        .compile(&HashMap::new())?;
+        let scene = CompiledScene::from_composition(Composition::sequence(composition))?;
         Ok(Self {
             title: manifest.title,
             scene,

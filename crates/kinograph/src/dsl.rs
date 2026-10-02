@@ -497,6 +497,11 @@ struct CompiledAnnotation {
 }
 
 impl CompiledScene {
+    /// A scene with no initial property values or semantic targets.
+    pub fn from_composition(composition: impl Into<Composition>) -> Result<Self> {
+        Scene::new([], composition).compile(&HashMap::new())
+    }
+
     pub fn timeline(&self) -> &Timeline {
         &self.timeline
     }
