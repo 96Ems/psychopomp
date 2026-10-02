@@ -1,5 +1,5 @@
 use anyhow::{Result, bail};
-use kinograph::math::smoothstep;
+use kinograph::math::{lerp, smoothstep};
 
 use super::{
     HeadlessRenderer, TextSprite, blend_pixel, blend_pixel_at, composite_sprite,
@@ -653,10 +653,7 @@ fn draw_line(
     let steps = length.ceil() as usize;
     for step in 0..=steps {
         let phase = step as f32 / steps as f32;
-        let point = [
-            from[0] + (to[0] - from[0]) * phase,
-            from[1] + (to[1] - from[1]) * phase,
-        ];
+        let point = [lerp(from[0], to[0], phase), lerp(from[1], to[1], phase)];
         draw_glow(pixels, width, height, point, thickness, color, opacity);
     }
 }

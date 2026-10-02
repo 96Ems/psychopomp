@@ -5,7 +5,7 @@ use std::{
 };
 
 use anyhow::Result;
-use kinograph::math::smoothstep;
+use kinograph::math::{lerp, smoothstep};
 
 use kinograph::dsl::{TaskFrame, TaskState};
 use kinograph::motion::{MotionState, Spring};
@@ -1390,7 +1390,7 @@ fn ambient_running_jitter(id: &str, time: f64) -> [f32; 3] {
         let progress = smoothstep(phase.fract() as f32);
         let a = jitter_target(id, index, axis);
         let b = jitter_target(id, index.wrapping_add(1), axis);
-        a + (b - a) * progress
+        lerp(a, b, progress)
     };
     std::array::from_fn(|axis| {
         (noise(0.085, axis as u32) * 0.75 + noise(0.137, axis as u32 + 4) * 0.25)

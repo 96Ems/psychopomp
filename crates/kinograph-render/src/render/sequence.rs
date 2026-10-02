@@ -1,7 +1,7 @@
 //! Sequence Diagram pixels: participant headers, dashed lifelines, travelling
 //! messages, notes and termination marks. All geometry comes from the recipe and
 //! sampled channels; nothing is carried between frames.
-use kinograph::math::easing::cubic_out;
+use kinograph::math::{easing::cubic_out, lerp};
 use kinograph::{
     sequence::{SequencePlan, SequenceRowPlan},
     tone::Tone,
@@ -318,7 +318,7 @@ impl HeadlessRenderer {
         let direction = (to - from).signum();
         let start = from + direction * 7.0;
         let end = to - direction * 5.0;
-        let tip = start + (end - start) * travel;
+        let tip = lerp(start, end, travel);
         self.stroke_path(pixels, &[[start, y], [tip, y]], reply, color, alpha);
         if head > 0.0 {
             self.composite_prototype_path(
