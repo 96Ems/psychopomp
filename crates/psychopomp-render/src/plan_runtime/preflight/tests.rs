@@ -206,10 +206,6 @@ fn pointers_bind_after_parsing_and_reject_dangling_or_duplicate_owners() {
 
 #[test]
 fn every_root_pair_is_exclusive_without_opening_media_or_a_gpu() {
-    let mut terminal = psychopomp_opencode_session_tool::build_plan().unwrap();
-    for media in &mut terminal.media {
-        media.path = "preflight-does-not-open-this-file.mp4".into();
-    }
     let sources = vec![
         plan("title-card", json!({"title":"Title"})),
         psychopomp_hero::build_plan().unwrap(),
@@ -220,7 +216,6 @@ fn every_root_pair_is_exclusive_without_opening_media_or_a_gpu() {
             .plan,
         psychopomp_opencode_architecture::build_scene().unwrap(),
         psychopomp_deployment_queue::build_plan().unwrap(),
-        terminal,
     ];
     for left in &sources {
         for right in &sources {
@@ -238,31 +233,28 @@ fn every_root_pair_is_exclusive_without_opening_media_or_a_gpu() {
 }
 
 #[test]
-fn terminal_bindings_and_selections_fail_before_cache_opening() {
-    let good = psychopomp_opencode_session_tool::build_plan().unwrap();
-    for mutation in 0..5 {
+fn video_bindings_and_channels_fail_before_cache_opening() {
+    let mut good = psychopomp_opencode_session_tool::build_plan().unwrap();
+    for media in &mut good.media {
+        media.path = "preflight-does-not-open-this-file.mp4".into();
+    }
+    assert!(Plan::new(good.clone()).is_ok());
+    for mutation in 0..4 {
         let mut p = good.clone();
         let actor = p
             .actors
             .iter_mut()
-            .find(|a| a.recipe == TERMINAL_RECORDING_RECIPE)
+            .find(|a| a.recipe == VIDEO_RECIPE)
             .unwrap();
         match mutation {
-            0 => actor.data["recordings"] = json!([]),
-            1 => actor.data["recordings"][0]["fps"] = json!(0),
-            2 => actor.data["recordings"][0]["mediaId"] = json!("missing"),
-            3 => p.state_channels.retain(|c| c.state != "recording"),
-            _ => {
-                p.state_channels
-                    .iter_mut()
-                    .find(|c| c.state == "recording")
-                    .unwrap()
-                    .initial = json!("missing")
-            }
+            0 => actor.data["fps"] = json!(0),
+            1 => actor.data["mediaId"] = json!("missing"),
+            2 => actor.data["extra"] = json!(1),
+            _ => p.continuous_channels[0].property = "panel-y".into(),
         }
         assert!(
             Plan::new(p).is_err(),
-            "accepted invalid terminal mutation {mutation}"
+            "accepted invalid video mutation {mutation}"
         );
     }
 }

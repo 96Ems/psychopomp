@@ -18,6 +18,7 @@ members = [
   "scenes/config-migration",
   "scenes/opencode-jr-architecture",
   "scenes/pr-50231",
+  "scenes/video",
   "scenes/compare",
 ]
 default-members = ["crates/psychopomp-render"]

@@ -12,7 +12,7 @@ use psychopomp::{
 
 use crate::{
     plan_runtime::new_renderer,
-    render::{CommandFileFrame, TerminalBackground, TerminalSceneFrame},
+    render::{CommandFileFrame, TerminalSceneFrame},
     video::VideoFrameCache,
 };
 
@@ -148,7 +148,6 @@ fn opencode_hot_reload_frame<'a>(
     TerminalSceneFrame {
         source_pixels,
         source_size,
-        background: TerminalBackground::Aurora,
         panel_center: [
             960.0 + (570.0 - 960.0) * split,
             520.0 + (1.0 - enter) * 96.0 + (500.0 - 520.0) * focus + 40.0 * split,

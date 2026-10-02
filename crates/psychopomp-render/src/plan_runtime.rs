@@ -48,13 +48,12 @@ mod stability_tests;
 mod stage;
 mod still;
 mod task;
-mod terminal;
 mod value;
 mod venn;
+mod video;
 
 use deployment_queue::{DeploymentQueueVisualKey, PreparedDeploymentQueue};
 use editor::PreparedEditor;
-use terminal::PreparedTerminal;
 
 /// Shutter samples per Stage frame: enough that a fast ember draws a
 /// continuous streak rather than a row of copies.
@@ -413,7 +412,6 @@ enum PreparedRoot {
         editor: Box<PreparedEditor>,
         pointer: Option<String>,
     },
-    Terminal(Box<PreparedTerminal>),
     Deployment(Box<PreparedDeploymentQueue>),
     Grid(Box<grid::PreparedGrid>),
     Diagram(Box<diagram::PreparedDiagram>),
@@ -435,6 +433,7 @@ struct PreparedPlan {
     captions: Vec<caption::PreparedCaption>,
     rolling: Vec<rolling::PreparedRollingNumber>,
     headers: Vec<header::PreparedHeader>,
+    videos: Vec<video::PreparedVideo>,
 }
 
 // A prepared scene exposes a read-only view of its compiled data. There is no
@@ -450,7 +449,7 @@ impl std::ops::Deref for PreparedPlan {
 struct VisualSampleKey {
     motion: Vec<[u32; 4]>,
     states: Vec<Value>,
-    video_frame: Option<u64>,
+    video_frames: Vec<u64>,
     deployment_queue: Option<DeploymentQueueVisualKey>,
     ambient_time: Option<u64>,
 }
@@ -503,6 +502,7 @@ impl PreparedPlan {
             sequences,
             captions,
             rolling,
+            videos,
         } = input;
         let components = component_prototype::PreparedComponents::prepare_inputs(
             &mut plan, components, renderer,
@@ -546,15 +546,16 @@ impl PreparedPlan {
             .into_iter()
             .map(|input| input.prepare(renderer))
             .collect();
+        let videos = videos
+            .into_iter()
+            .map(|input| input.open(base))
+            .collect::<Result<Vec<_>>>()?;
         let root = match root {
             preflight::RootPlan::Blank => PreparedRoot::Blank,
             preflight::RootPlan::Title(title) => PreparedRoot::Title(title),
             preflight::RootPlan::Editor {
                 editor, pointer, ..
             } => PreparedRoot::Editor { editor, pointer },
-            preflight::RootPlan::Terminal(input) => {
-                PreparedRoot::Terminal(Box::new(PreparedTerminal::open(*input, base)?))
-            }
             preflight::RootPlan::Deployment(queue) => PreparedRoot::Deployment(queue),
             preflight::RootPlan::Grid(grid) => PreparedRoot::Grid(grid),
             preflight::RootPlan::Stage { id, recipe } => PreparedRoot::Stage(Box::new(
@@ -584,6 +585,7 @@ impl PreparedPlan {
             captions,
             rolling,
             headers,
+            videos,
         })
     }
 }
@@ -671,7 +673,6 @@ impl PreparedPlan {
     fn file_name(&self) -> &str {
         match &self.root {
             PreparedRoot::Editor { editor, .. } => editor.file_name(),
-            PreparedRoot::Terminal(terminal) => terminal.file_name(),
             PreparedRoot::Deployment(queue) => queue.file_name(),
             _ => &self.plan.id,
         }
@@ -725,7 +726,7 @@ impl CompiledPlan {
         Ok(VisualSampleKey {
             motion,
             states,
-            video_frame: None,
+            video_frames: Vec::new(),
             deployment_queue: None,
             ambient_time: None,
         })
@@ -764,10 +765,7 @@ impl PreparedPlan {
     }
     fn visual_sample_key_using(&self, time: f64, timeline: &Timeline) -> Result<VisualSampleKey> {
         let mut key = self.compiled.visual_sample_key_using(time, timeline)?;
-        key.video_frame = match &self.root {
-            PreparedRoot::Terminal(terminal) => Some(terminal.frame_index_at(time)?),
-            _ => None,
-        };
+        key.video_frames = self.video_frames(time);
         key.deployment_queue = match &self.root {
             PreparedRoot::Deployment(queue) => Some(queue.visual_key(time)),
             _ => None,
@@ -848,8 +846,18 @@ impl PreparedPlan {
                 *motion = [0; 4];
             }
         }
+        key.video_frames = self.video_frames(time);
         key.ambient_time = self.rolling_moves(time).then_some(time.to_bits());
         Ok(key)
+    }
+
+    /// The source frame each video card shows: footage changes pixels
+    /// without any channel moving.
+    fn video_frames(&self, time: f64) -> Vec<u64> {
+        self.videos
+            .iter()
+            .map(|video| video.frame_index_at(time))
+            .collect()
     }
 
     /// A settling Rolling Number changes every sample without a channel moving.
@@ -872,11 +880,6 @@ impl PreparedPlan {
             PreparedRoot::Editor { editor, pointer } => {
                 editor.render(renderer, time, pointer.as_deref(), |actor, property, at| {
                     self.motion_value(timeline, actor, property, at)
-                })?
-            }
-            PreparedRoot::Terminal(terminal) => {
-                terminal.render(renderer, time, |property, default| {
-                    value(terminal.actor_id(), property, default)
                 })?
             }
             PreparedRoot::Deployment(deployment) => {
@@ -912,8 +915,12 @@ impl PreparedPlan {
         let value = |actor: &str, property: &str, default: f32| {
             self.property_value(timeline, actor, property, time, default)
         };
-        // Value tiles are diagram surfaces; ordinary text is their foreground
-        // annotation layer, regardless of declaration order.
+        // Video cards are the bottom media surface. Value tiles are diagram
+        // surfaces; ordinary text is their foreground annotation layer,
+        // regardless of declaration order.
+        for video in &self.videos {
+            video.render(pixels, renderer, time, value)?;
+        }
         for diagram in &self.venn {
             diagram.render(pixels, renderer, value);
         }
