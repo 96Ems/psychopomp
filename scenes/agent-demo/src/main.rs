@@ -1,5 +1,3 @@
-use std::{env, fs, path::Path};
-
 use kinograph::{
     author::{PlanBuilder, SECOND},
     plan::ScenePlan,
@@ -9,15 +7,7 @@ use serde_json::json;
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let plan = build_plan();
     plan.validate()?;
-    let json = plan.to_json_pretty()?;
-    if let Some(path) = env::args().nth(1) {
-        if let Some(parent) = Path::new(&path).parent() {
-            fs::create_dir_all(parent)?;
-        }
-        fs::write(path, json)?;
-    } else {
-        println!("{json}");
-    }
+    plan.write_or_print(std::env::args().nth(1))?;
     Ok(())
 }
 

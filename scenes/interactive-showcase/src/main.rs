@@ -1,4 +1,4 @@
-use std::{env, fs, path::PathBuf};
+use std::{env, path::PathBuf};
 
 fn main() -> anyhow::Result<()> {
     let deck = kinograph_interactive_showcase::build_deck()?;
@@ -6,15 +6,7 @@ fn main() -> anyhow::Result<()> {
         .nth(1)
         .map(PathBuf::from)
         .unwrap_or_else(|| PathBuf::from("target/interactive-showcase/deck.json"));
-    let parent = output.parent().unwrap_or_else(|| std::path::Path::new("."));
-    fs::create_dir_all(parent)?;
-    fs::write(&output, serde_json::to_string_pretty(&deck)?)?;
-    for slide in &deck.slides {
-        fs::write(
-            parent.join(format!("{}.json", slide.plan.id)),
-            slide.plan.to_json_pretty()?,
-        )?;
-    }
+    deck.write_with_slides(&output)?;
     eprintln!("Wrote {} slides to {}", deck.slides.len(), output.display());
     Ok(())
 }

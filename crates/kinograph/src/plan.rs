@@ -1,6 +1,7 @@
 use std::{
     collections::{BTreeSet, HashSet},
-    fmt,
+    fmt, fs, io,
+    path::Path,
 };
 
 use serde::{Deserialize, Serialize};
@@ -48,6 +49,21 @@ impl DeckPlan {
                     "deck slides need a title, presentation steps, and distinct scene IDs"
                 );
             }
+        }
+        Ok(())
+    }
+
+    /// Write the deck to `path` and each slide's plan beside it as
+    /// `<scene id>.json`, creating the directory.
+    pub fn write_with_slides(&self, path: &Path) -> io::Result<()> {
+        let parent = path.parent().unwrap_or_else(|| Path::new("."));
+        fs::create_dir_all(parent)?;
+        fs::write(path, serde_json::to_string_pretty(self)?)?;
+        for slide in &self.slides {
+            fs::write(
+                parent.join(format!("{}.json", slide.plan.id)),
+                slide.plan.to_json_pretty()?,
+            )?;
         }
         Ok(())
     }
@@ -612,6 +628,20 @@ impl ScenePlan {
 
     pub fn to_json_pretty(&self) -> Result<String, serde_json::Error> {
         serde_json::to_string_pretty(self)
+    }
+
+    /// Write the plan's pretty JSON to `path`, creating its directory, or print
+    /// it to stdout when there is no path: a Scene Program's usual output.
+    pub fn write_or_print(&self, path: Option<impl AsRef<Path>>) -> io::Result<()> {
+        let json = self.to_json_pretty()?;
+        let Some(path) = path else {
+            println!("{json}");
+            return Ok(());
+        };
+        if let Some(parent) = path.as_ref().parent() {
+            fs::create_dir_all(parent)?;
+        }
+        fs::write(path, json)
     }
 
     pub fn from_json(json: &str) -> Result<Self, ReadPlanError> {

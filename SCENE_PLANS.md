@@ -43,6 +43,11 @@ cargo run -p kinograph-quark-before-after -- \
   scenes/quark-before-after/quark-before-after.plan.json
 ```
 
+A Scene Program's `main` is usually one line:
+`build_plan()?.write_or_print(std::env::args().nth(1))?` writes the plan to the
+given path (or stdout), and `DeckPlan::write_with_slides(path)` writes a deck plus
+one `<scene id>.json` per slide beside it.
+
 Inspect or validate the result without initializing a GPU:
 
 ```bash
