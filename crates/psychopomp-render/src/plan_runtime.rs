@@ -35,6 +35,8 @@ mod generated;
 mod grid;
 mod header;
 mod keyed_layout;
+mod lanes;
+mod plot;
 mod preflight;
 mod presentation;
 #[cfg(test)]
@@ -434,6 +436,8 @@ struct PreparedPlan {
     sequences: Vec<sequence::PreparedSequence>,
     captions: Vec<caption::PreparedCaption>,
     rolling: Vec<rolling::PreparedRollingNumber>,
+    plots: Vec<plot::PreparedPlot>,
+    lanes: Vec<lanes::PreparedLanes>,
     headers: Vec<header::PreparedHeader>,
 }
 
@@ -503,6 +507,8 @@ impl PreparedPlan {
             sequences,
             captions,
             rolling,
+            plots,
+            lanes,
         } = input;
         let components = component_prototype::PreparedComponents::prepare_inputs(
             &mut plan, components, renderer,
@@ -583,6 +589,8 @@ impl PreparedPlan {
             sequences,
             captions,
             rolling,
+            plots,
+            lanes,
             headers,
         })
     }
@@ -922,6 +930,12 @@ impl PreparedPlan {
         }
         for sequence in &self.sequences {
             sequence.render(pixels, renderer, value);
+        }
+        for plot in &self.plots {
+            plot.render(pixels, renderer, value);
+        }
+        for lanes in &self.lanes {
+            lanes.render(pixels, renderer, value);
         }
         self.components.render(pixels, renderer, value)?;
         for header in &self.headers {
