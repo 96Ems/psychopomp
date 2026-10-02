@@ -226,6 +226,17 @@ and suffix spans slide with the layout. The values and their times belong to the
 recipe; a later change redirects wheels from their current position and velocity.
 It is a display of authored values, not a numeric tween.
 
+## Callout
+
+A short label on a crisp leader line pinned to something on screen: a dot and
+ring mark the Callout Anchor, the leader draws out from it, and the label rises
+in at its end. A **Callout Anchor** is a fixed canvas point, an edge of a
+positioned Stage element seen through the camera, or an edge of an editor
+Semantic Target. Anchors are resolved by the root recipe at every Temporal
+Sample, so the callout follows its target with no lag; moving to another
+anchor springs weight channels that blend the two resolved positions. Labels
+slide back inside the frame rather than leave it, and the leader follows.
+
 ## Tone
 
 A semantic color role shared by explainer recipes: plain, request, success,

@@ -1,0 +1,635 @@
+//! Callouts: a short label on a crisp leader line pinned to something on
+//! screen. A callout names its anchors (a fixed point, a Stage element's edge,
+//! or an editor Semantic Target) and blends between them with `anchor.<id>`
+//! weight channels. Where an anchor is at a given time is layout only the
+//! renderer knows (Stage projection, editor glyph geometry), so the renderer
+//! resolves every anchor at every sample and the leader never lags its target.
+use std::collections::HashSet;
+
+use anyhow::{Result, bail, ensure};
+use serde::{Deserialize, Serialize};
+
+use crate::{
+    author::{ActorHandle, ContinuousHandle, PlanBuilder},
+    caption::CaptionSpanPlan,
+    math::{
+        Vec2,
+        easing::Ease,
+        shapes::{Box2, Shape},
+        vec2,
+    },
+    plan::SpringPlan,
+    stage::DRAW_CURVE,
+    tone::Tone,
+};
+
+pub const CALLOUT_RECIPE: &str = "callout";
+
+/// Horizontal run of an elbowed leader into its label.
+pub const SHELF: f32 = 28.0;
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct CalloutPlan {
+    /// Where the callout can point. The first is where it starts.
+    pub anchors: Vec<CalloutAnchorPlan>,
+    pub lines: Vec<Vec<CaptionSpanPlan>>,
+    #[serde(default = "default_size")]
+    pub size: f32,
+    /// Where the label sits relative to its anchor.
+    #[serde(default = "default_side")]
+    pub side: CalloutSide,
+    /// Length of the leader's first leg, in pixels.
+    #[serde(default = "default_reach")]
+    pub reach: f32,
+    /// Diagonal leaders turn into a short horizontal shelf before the label.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub elbow: bool,
+    /// Color of the leader and the anchor mark.
+    #[serde(default = "accent", skip_serializing_if = "is_accent")]
+    pub tone: Tone,
+    /// A rounded surface behind the label, for legibility over busy frames.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub chip: bool,
+}
+
+/// One place a callout can point. `edge` picks the point on the target's
+/// outline; `side` optionally overrides where the label sits for this anchor,
+/// so moving between anchors can also swing the label around.
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[serde(tag = "kind", rename_all = "kebab-case", deny_unknown_fields)]
+pub enum CalloutAnchorPlan {
+    /// A fixed canvas point.
+    #[serde(rename_all = "camelCase")]
+    Point {
+        id: String,
+        at: [f32; 2],
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        side: Option<CalloutSide>,
+    },
+    /// A positioned element of the plan's Stage root, through its camera.
+    #[serde(rename_all = "camelCase")]
+    Stage {
+        id: String,
+        element: String,
+        #[serde(default, skip_serializing_if = "CalloutSide::is_center")]
+        edge: CalloutSide,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        side: Option<CalloutSide>,
+    },
+    /// A Semantic Target of the plan's editor root: a logical code range.
+    #[serde(rename_all = "camelCase")]
+    Editor {
+        id: String,
+        target: String,
+        #[serde(default, skip_serializing_if = "CalloutSide::is_center")]
+        edge: CalloutSide,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        side: Option<CalloutSide>,
+    },
+}
+
+/// A compass direction: as an anchor `edge`, a point on an outline; as a label
+/// `side`, the direction from the anchor to the label (never `center`).
+#[derive(Clone, Copy, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum CalloutSide {
+    #[default]
+    Center,
+    Top,
+    Bottom,
+    Left,
+    Right,
+    TopLeft,
+    TopRight,
+    BottomLeft,
+    BottomRight,
+}
+
+fn default_size() -> f32 {
+    24.0
+}
+fn default_side() -> CalloutSide {
+    CalloutSide::TopRight
+}
+fn default_reach() -> f32 {
+    64.0
+}
+fn accent() -> Tone {
+    Tone::Accent
+}
+fn is_accent(tone: &Tone) -> bool {
+    *tone == Tone::Accent
+}
+
+impl CalloutSide {
+    pub fn is_center(&self) -> bool {
+        *self == Self::Center
+    }
+
+    /// Unit direction on screen (y down); zero for `center`.
+    pub fn unit(self) -> Vec2 {
+        let [x, y] = self.signs();
+        vec2(x, y).normalize_or_zero()
+    }
+
+    fn signs(self) -> [f32; 2] {
+        match self {
+            Self::Center => [0.0, 0.0],
+            Self::Top => [0.0, -1.0],
+            Self::Bottom => [0.0, 1.0],
+            Self::Left => [-1.0, 0.0],
+            Self::Right => [1.0, 0.0],
+            Self::TopLeft => [-1.0, -1.0],
+            Self::TopRight => [1.0, -1.0],
+            Self::BottomLeft => [-1.0, 1.0],
+            Self::BottomRight => [1.0, 1.0],
+        }
+    }
+
+    /// This edge of `shape`: a box's side midpoint or corner, the circle's
+    /// surface in this direction, or the point itself.
+    pub fn on(self, shape: Shape) -> Vec2 {
+        match shape {
+            Shape::Box(bounds) => bounds.center() + Vec2::from(self.signs()) * bounds.extents(),
+            Shape::Circle(circle) => circle.center + self.unit() * circle.radius,
+            Shape::Point(point) => point,
+        }
+    }
+}
+
+impl CalloutAnchorPlan {
+    pub fn id(&self) -> &str {
+        match self {
+            Self::Point { id, .. } | Self::Stage { id, .. } | Self::Editor { id, .. } => id,
+        }
+    }
+
+    fn side(&self) -> Option<CalloutSide> {
+        match self {
+            Self::Point { side, .. } | Self::Stage { side, .. } | Self::Editor { side, .. } => {
+                *side
+            }
+        }
+    }
+}
+
+/// The shape of a leader relative to its anchor: the knee and end of the line,
+/// which point of the label meets it (`attach`, a fraction of the label's
+/// size), and the direction from the leader's end to the label (`away`).
+/// Every field is linear, so anchors with different sides blend smoothly.
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct CalloutLeg {
+    pub knee: Vec2,
+    pub end: Vec2,
+    pub attach: Vec2,
+    pub away: Vec2,
+}
+
+impl CalloutLeg {
+    pub fn new(side: CalloutSide, reach: f32, elbow: bool) -> Self {
+        let direction = side.unit();
+        let [x, y] = side.signs();
+        if y == 0.0 || x == 0.0 {
+            // Straight out: the label meets the line at its facing edge.
+            let end = direction * reach;
+            return Self {
+                knee: end * 0.5,
+                end,
+                attach: vec2(0.5 - 0.5 * x, 0.5 - 0.5 * y),
+                away: vec2(x, y),
+            };
+        }
+        // Diagonals meet the label at its side, vertically centered.
+        let knee = direction * reach;
+        let (knee, end) = if elbow {
+            (knee, knee + vec2(x * SHELF, 0.0))
+        } else {
+            (knee * 0.5, knee)
+        };
+        Self {
+            knee,
+            end,
+            attach: vec2(0.5 - 0.5 * x, 0.5),
+            away: vec2(x, 0.0),
+        }
+    }
+
+    /// The weighted mean of `legs`, or `None` when the weights vanish.
+    pub fn blend(legs: impl IntoIterator<Item = (Self, f32)>) -> Option<Self> {
+        let mut sum = Self::default();
+        let mut total = 0.0;
+        for (leg, weight) in legs {
+            sum.knee += leg.knee * weight;
+            sum.end += leg.end * weight;
+            sum.attach += leg.attach * weight;
+            sum.away += leg.away * weight;
+            total += weight;
+        }
+        (total.abs() > 1e-6).then(|| Self {
+            knee: sum.knee / total,
+            end: sum.end / total,
+            attach: sum.attach / total,
+            away: sum.away / total,
+        })
+    }
+}
+
+/// A callout laid out on the canvas: the leader from the anchor through the
+/// knee to its end, and the label's box.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct CalloutLayout {
+    pub leader: [Vec2; 3],
+    pub label: Box2,
+}
+
+/// Place a label of `size` at the end of `leg` from `anchor`, `gap` pixels
+/// beyond the line. A label that would leave `frame` slides back inside and
+/// the leader's knee and end follow it, so line and label stay joined.
+pub fn layout(anchor: Vec2, leg: CalloutLeg, size: Vec2, gap: f32, frame: Box2) -> CalloutLayout {
+    let end = anchor + leg.end;
+    let origin = end + leg.away * gap - leg.attach * size;
+    let clamped = origin.clamp(frame.min, (frame.max - size).max(frame.min));
+    let shift = clamped - origin;
+    CalloutLayout {
+        leader: [anchor, anchor + leg.knee + shift, end + shift],
+        label: Box2 {
+            min: clamped,
+            max: clamped + size,
+        },
+    }
+}
+
+impl CalloutPlan {
+    /// A one-line callout of `spans` pinned to `anchor`.
+    pub fn new(anchor: CalloutAnchorPlan, spans: Vec<CaptionSpanPlan>) -> Self {
+        Self {
+            anchors: vec![anchor],
+            lines: vec![spans],
+            size: default_size(),
+            side: default_side(),
+            reach: default_reach(),
+            elbow: false,
+            tone: accent(),
+            chip: false,
+        }
+    }
+
+    pub fn anchor(mut self, anchor: CalloutAnchorPlan) -> Self {
+        self.anchors.push(anchor);
+        self
+    }
+
+    pub fn side(mut self, side: CalloutSide) -> Self {
+        self.side = side;
+        self
+    }
+
+    pub fn reach(mut self, reach: f32) -> Self {
+        self.reach = reach;
+        self
+    }
+
+    pub fn elbow(mut self) -> Self {
+        self.elbow = true;
+        self
+    }
+
+    pub fn tone(mut self, tone: Tone) -> Self {
+        self.tone = tone;
+        self
+    }
+
+    pub fn chip(mut self) -> Self {
+        self.chip = true;
+        self
+    }
+
+    pub fn line_height(&self) -> f32 {
+        self.size * 1.4
+    }
+
+    /// The leader shape while pinned to `anchor`.
+    pub fn leg(&self, anchor: &CalloutAnchorPlan) -> CalloutLeg {
+        CalloutLeg::new(anchor.side().unwrap_or(self.side), self.reach, self.elbow)
+    }
+
+    /// The weight channel that pins the callout to `anchor`.
+    pub fn weight_property(anchor: &str) -> String {
+        format!("anchor.{anchor}")
+    }
+
+    /// True when `property` names one of this callout's channels.
+    pub fn accepts(&self, property: &str) -> bool {
+        matches!(property, "opacity" | "draw" | "label" | "emphasis")
+            || property
+                .strip_prefix("anchor.")
+                .is_some_and(|id| self.anchors.iter().any(|anchor| anchor.id() == id))
+    }
+
+    pub fn validate(&self) -> Result<()> {
+        ensure!(
+            (1..=8).contains(&self.anchors.len()),
+            "a callout has one to eight anchors"
+        );
+        let mut ids = HashSet::new();
+        for anchor in &self.anchors {
+            let id = anchor.id();
+            ensure!(
+                !id.is_empty() && !id.chars().any(|c| c.is_whitespace() || c == '.'),
+                "callout anchor ID '{id}' must be non-empty, without whitespace or dots"
+            );
+            ensure!(ids.insert(id), "callout anchor '{id}' is declared twice");
+            ensure!(
+                anchor.side() != Some(CalloutSide::Center),
+                "callout anchor '{id}' cannot put its label at the center"
+            );
+            match anchor {
+                CalloutAnchorPlan::Point { at, .. } => ensure!(
+                    at.iter().all(|v| v.is_finite()),
+                    "callout anchor '{id}' must be finite"
+                ),
+                CalloutAnchorPlan::Stage { element, .. } => ensure!(
+                    !element.is_empty(),
+                    "callout anchor '{id}' needs a stage element"
+                ),
+                CalloutAnchorPlan::Editor { target, .. } => ensure!(
+                    !target.is_empty(),
+                    "callout anchor '{id}' needs a semantic target"
+                ),
+            }
+        }
+        ensure!(
+            self.side != CalloutSide::Center,
+            "a callout label cannot sit at its anchor's center"
+        );
+        ensure!(
+            (12.0..=72.0).contains(&self.size),
+            "callout size must be between 12 and 72"
+        );
+        ensure!(
+            (16.0..=600.0).contains(&self.reach),
+            "callout reach must be between 16 and 600 pixels"
+        );
+        ensure!(
+            (1..=3).contains(&self.lines.len()),
+            "a callout has one to three lines"
+        );
+        let mut chars = 0;
+        for line in &self.lines {
+            ensure!(
+                line.iter().any(|span| !span.text.is_empty()),
+                "callout lines cannot be empty"
+            );
+            for span in line {
+                if span.text.contains(['\n', '\r']) {
+                    bail!("callout spans are single-line; use another line instead");
+                }
+                chars += span.text.chars().count();
+            }
+        }
+        ensure!(chars <= 160, "callouts are limited to 160 characters");
+        Ok(())
+    }
+}
+
+/// Authoring handle for one callout. Channels are declared on first use.
+pub struct CalloutActor {
+    actor: ActorHandle,
+    anchors: Vec<String>,
+}
+
+/// How long the leader takes to draw on, and when the label follows it.
+const DRAW_SECONDS: f32 = 0.42;
+const LABEL_DELAY: u64 = 280_000_000;
+
+impl CalloutActor {
+    pub fn declare(
+        scene: &mut PlanBuilder,
+        id: impl Into<String>,
+        plan: &CalloutPlan,
+    ) -> Result<Self> {
+        plan.validate()?;
+        let actor = scene.actor(id, CALLOUT_RECIPE, plan)?;
+        Ok(Self {
+            actor,
+            anchors: plan.anchors.iter().map(|a| a.id().to_owned()).collect(),
+        })
+    }
+
+    pub fn id(&self) -> &str {
+        self.actor.id()
+    }
+
+    /// The channel for `property`, declared on first use with `initial`.
+    pub fn channel(
+        &mut self,
+        scene: &mut PlanBuilder,
+        property: &str,
+        initial: f32,
+    ) -> ContinuousHandle {
+        scene.channel(&self.actor, property, initial)
+    }
+
+    /// The anchor mark appears, the leader draws out from it, and the label
+    /// lands at its end. A callout with a `show` starts hidden. Returns when
+    /// the leader reaches the label.
+    pub fn show(&mut self, scene: &mut PlanBuilder, at_nanos: u64) -> u64 {
+        let draw = self.channel(scene, "draw", 0.0);
+        let label = self.channel(scene, "label", 0.0);
+        scene.ease(&draw, at_nanos, 1.0, DRAW_SECONDS, DRAW_CURVE);
+        scene.spring(&label, at_nanos + LABEL_DELAY, 1.0, 0.3, 0.0);
+        at_nanos + crate::author::whole_millis(DRAW_SECONDS)
+    }
+
+    /// The label fades, then the leader retracts into its anchor.
+    pub fn hide(&mut self, scene: &mut PlanBuilder, at_nanos: u64) {
+        let draw = self.channel(scene, "draw", 0.0);
+        let label = self.channel(scene, "label", 0.0);
+        scene.spring(&label, at_nanos, 0.0, 0.2, 0.0);
+        scene.ease(&draw, at_nanos + 100_000_000, 0.0, 0.32, DRAW_CURVE);
+    }
+
+    /// Glide to `anchor`. Every weight springs on one critically damped
+    /// profile, so they keep summing to one, an interrupted move carries its
+    /// velocity into the next, and the blended anchor follows both targets.
+    pub fn move_to(&mut self, scene: &mut PlanBuilder, anchor: &str, at_nanos: u64) -> Result<()> {
+        ensure!(
+            self.anchors.iter().any(|id| id == anchor),
+            "callout '{}' has no anchor '{anchor}'",
+            self.actor.id()
+        );
+        let spring = SpringPlan {
+            position_threshold: 1e-5,
+            velocity_threshold: 1e-5,
+            ..SpringPlan::visual(0.6, 0.0)
+        };
+        for (index, id) in self.anchors.clone().iter().enumerate() {
+            let initial = if index == 0 { 1.0 } else { 0.0 };
+            let weight = self.channel(scene, &CalloutPlan::weight_property(id), initial);
+            scene.spring_with(&weight, at_nanos, f32::from(id == anchor), spring);
+        }
+        Ok(())
+    }
+
+    /// Strike the callout: the anchor ring flares and the leader brightens at
+    /// once, then decay with a long tail.
+    pub fn emphasize(&mut self, scene: &mut PlanBuilder, at_nanos: u64) {
+        let emphasis = self.channel(scene, "emphasis", 0.0);
+        scene.set(&emphasis, at_nanos, 1.0);
+        scene.ease(&emphasis, at_nanos, 0.0, 1.1, Ease::CubicOut);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{math::shapes::Circle, plan::ScalarPlan};
+
+    fn plan() -> CalloutPlan {
+        CalloutPlan::new(
+            CalloutAnchorPlan::Stage {
+                id: "api".into(),
+                element: "api".into(),
+                edge: CalloutSide::Top,
+                side: None,
+            },
+            vec![CaptionSpanPlan::new("retries here", Tone::Plain)],
+        )
+        .anchor(CalloutAnchorPlan::Point {
+            id: "corner".into(),
+            at: [200.0, 200.0],
+            side: Some(CalloutSide::BottomRight),
+        })
+    }
+
+    #[test]
+    fn callouts_round_trip_with_compact_defaults() {
+        let plan = plan();
+        plan.validate().unwrap();
+        let json = serde_json::to_value(&plan).unwrap();
+        assert!(json.get("tone").is_none() && json.get("elbow").is_none());
+        assert_eq!(json["anchors"][0]["kind"], "stage");
+        assert_eq!(json["anchors"][0]["edge"], "top");
+        assert_eq!(json["anchors"][1]["side"], "bottom-right");
+        assert_eq!(serde_json::from_value::<CalloutPlan>(json).unwrap(), plan);
+    }
+
+    #[test]
+    fn invalid_callouts_are_rejected() {
+        let mut centered = plan();
+        centered.side = CalloutSide::Center;
+        assert!(centered.validate().is_err());
+        let mut twice = plan();
+        twice.anchors.push(twice.anchors[0].clone());
+        assert!(twice.validate().is_err());
+        let mut empty = plan();
+        empty.lines = vec![vec![CaptionSpanPlan::new("", Tone::Plain)]];
+        assert!(empty.validate().is_err());
+        assert!(plan().accepts("anchor.corner") && !plan().accepts("anchor.nowhere"));
+    }
+
+    #[test]
+    fn edges_sit_on_outlines() {
+        let card = Shape::Box(Box2::from_center_size(
+            vec2(300.0, 200.0),
+            vec2(200.0, 100.0),
+        ));
+        assert_eq!(CalloutSide::Top.on(card), vec2(300.0, 150.0));
+        assert_eq!(CalloutSide::BottomLeft.on(card), vec2(200.0, 250.0));
+        assert_eq!(CalloutSide::Center.on(card), vec2(300.0, 200.0));
+        let orb = Shape::Circle(Circle {
+            center: Vec2::ZERO,
+            radius: 10.0,
+        });
+        assert!(
+            CalloutSide::TopRight
+                .on(orb)
+                .abs_diff_eq(vec2(7.071_068, -7.071_068), 1e-4)
+        );
+    }
+
+    #[test]
+    fn labels_meet_the_leader_at_their_facing_edge() {
+        let frame = Box2 {
+            min: Vec2::ZERO,
+            max: vec2(1920.0, 1080.0),
+        };
+        let size = vec2(200.0, 40.0);
+        let elbow = CalloutLeg::new(CalloutSide::TopRight, 64.0, true);
+        let placed = layout(vec2(500.0, 500.0), elbow, size, 10.0, frame);
+        let [anchor, knee, end] = placed.leader;
+        assert_eq!(anchor, vec2(500.0, 500.0));
+        assert_eq!(knee.y, end.y, "the shelf is horizontal");
+        assert_eq!(placed.label.min.x, end.x + 10.0);
+        assert_eq!(placed.label.center().y, end.y);
+        let top = layout(
+            vec2(500.0, 500.0),
+            CalloutLeg::new(CalloutSide::Top, 64.0, false),
+            size,
+            10.0,
+            frame,
+        );
+        assert_eq!(top.label.max.y, 500.0 - 64.0 - 10.0);
+        assert_eq!(top.label.center().x, 500.0);
+    }
+
+    #[test]
+    fn labels_stay_in_frame_and_the_leader_follows() {
+        let frame = Box2 {
+            min: vec2(40.0, 40.0),
+            max: vec2(1880.0, 1040.0),
+        };
+        let leg = CalloutLeg::new(CalloutSide::TopRight, 64.0, true);
+        let placed = layout(vec2(1800.0, 60.0), leg, vec2(300.0, 40.0), 10.0, frame);
+        assert!(placed.label.min.cmpge(frame.min).all() && placed.label.max.cmple(frame.max).all());
+        let [_, _, end] = placed.leader;
+        assert_eq!(
+            placed.label.min.x,
+            end.x + 10.0,
+            "line and label stay joined"
+        );
+        assert_eq!(placed.label.center().y, end.y);
+    }
+
+    #[test]
+    fn legs_blend_linearly_between_sides() {
+        let left = CalloutLeg::new(CalloutSide::Left, 60.0, false);
+        let right = CalloutLeg::new(CalloutSide::Right, 60.0, false);
+        let middle = CalloutLeg::blend([(left, 0.5), (right, 0.5)]).unwrap();
+        assert_eq!(middle.end, Vec2::ZERO);
+        assert_eq!(middle.attach, vec2(0.5, 0.5));
+        assert!(CalloutLeg::blend([(left, 0.0)]).is_none());
+    }
+
+    #[test]
+    fn moving_springs_every_weight_on_one_profile() {
+        let mut scene = PlanBuilder::new("callout-demo", 4_000_000_000);
+        let mut callout = CalloutActor::declare(&mut scene, "note", &plan()).unwrap();
+        let drawn = callout.show(&mut scene, 500_000_000);
+        assert_eq!(drawn, 920_000_000);
+        callout
+            .move_to(&mut scene, "corner", 1_000_000_000)
+            .unwrap();
+        assert!(
+            callout
+                .move_to(&mut scene, "nowhere", 2_000_000_000)
+                .is_err()
+        );
+        callout.emphasize(&mut scene, 2_000_000_000);
+        callout.hide(&mut scene, 3_000_000_000);
+        let plan = scene.finish().unwrap();
+        let weight = |id: &str| {
+            plan.continuous_channels
+                .iter()
+                .find(|channel| channel.property == format!("anchor.{id}"))
+                .unwrap()
+        };
+        assert!(matches!(weight("api").initial, ScalarPlan::Literal(1.0)));
+        assert!(matches!(weight("corner").initial, ScalarPlan::Literal(0.0)));
+        assert_eq!(
+            weight("api").events[0].spring_plan(),
+            weight("corner").events[0].spring_plan()
+        );
+    }
+}

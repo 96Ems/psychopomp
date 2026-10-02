@@ -7,6 +7,7 @@ use std::f32::consts::{FRAC_PI_2, PI, TAU};
 
 use super::*;
 use psychopomp::{
+    callout::CalloutSide,
     caption::{CaptionAlign, CaptionSpanPlan},
     effects::combustion::{self, Burst},
     effects::shake,
@@ -823,6 +824,31 @@ fn fullscreen(
     pass.draw(0..3, 0..1);
 }
 
+/// Where `edge` of a positioned element lands on the delivered frame at
+/// `time`: its outline as beams see it, then the develop pass's roll and
+/// punch-in about the frame center, so an overlay pinned there moves with the
+/// element through camera moves, jolts, and settles. The develop pass uses its
+/// exposure's central sample; an overlay uses its own sample, which differs by
+/// far less than a pixel within one shutter.
+pub(crate) fn stage_anchor(
+    plan: &StagePlan,
+    value: &dyn Fn(&str, f32) -> f32,
+    time: f64,
+    size: Vec2,
+    element: &str,
+    edge: CalloutSide,
+) -> Option<Vec2> {
+    let element = plan.element(element)?;
+    let point = edge.on(Scene::camera(plan, value, time as f32, size)
+        .place(element)?
+        .outline);
+    let roll = shake::rumble(time as f32, value("camera.shake", 0.0)).roll;
+    // Mirrors `composite` in stage_post.wgsl, which samples the inverse.
+    let zoom = 1.0 + value("camera.punch", 0.0).max(0.0) + roll.abs() * 0.6;
+    let center = size * 0.5;
+    Some(center + Vec2::from_angle(roll).rotate(point - center) * zoom)
+}
+
 /// Bloom, look, pressure wave, and rewind settings at one sample.
 fn post_settings(
     plan: &StagePlan,
@@ -1020,7 +1046,8 @@ struct Scene<'a> {
 }
 
 impl<'a> Scene<'a> {
-    fn sample(
+    /// The sample's channels and camera, before anything is placed.
+    fn camera(
         plan: &'a StagePlan,
         value: &'a dyn Fn(&str, f32) -> f32,
         time: f32,
@@ -1034,7 +1061,7 @@ impl<'a> Scene<'a> {
             value("camera.y", 0.0) + value("camera.kick-y", 0.0) + rumble.offset.y,
             value("camera.z", 0.0),
         );
-        let mut scene = Self {
+        Self {
             plan,
             value,
             time,
@@ -1044,7 +1071,16 @@ impl<'a> Scene<'a> {
             placements: HashMap::new(),
             links: HashMap::new(),
             lights: Vec::new(),
-        };
+        }
+    }
+
+    fn sample(
+        plan: &'a StagePlan,
+        value: &'a dyn Fn(&str, f32) -> f32,
+        time: f32,
+        size: Vec2,
+    ) -> Self {
+        let mut scene = Self::camera(plan, value, time, size);
         scene.placements = plan
             .elements
             .iter()
@@ -2635,6 +2671,42 @@ mod tests {
     use psychopomp::stage::StagePlan;
 
     use crate::render::HeadlessRenderer;
+
+    #[test]
+    fn stage_anchors_follow_the_camera_and_the_developed_punch() {
+        let plan: StagePlan = serde_json::from_value(serde_json::json!({
+            "elements": [
+                { "kind": "card", "id": "api", "at": [1160, 540, 0], "size": [300, 100], "title": "api" }
+            ]
+        }))
+        .unwrap();
+        let size = vec2(1920.0, 1080.0);
+        let anchor = |value: &dyn Fn(&str, f32) -> f32| {
+            super::stage_anchor(&plan, value, 1.0, size, "api", super::CalloutSide::Top).unwrap()
+        };
+        assert_eq!(anchor(&|_, default| default), vec2(1160.0, 490.0));
+        // Dollying in 700 px doubles the z = 0 plane about the frame center.
+        let dolly = anchor(&|property, default| match property {
+            "camera.z" => 700.0,
+            _ => default,
+        });
+        assert!(dolly.abs_diff_eq(vec2(1360.0, 440.0), 1e-3), "{dolly}");
+        // The develop pass's punch-in scales the frame about its center too.
+        let punch = anchor(&|property, default| match property {
+            "camera.punch" => 0.1,
+            _ => default,
+        });
+        assert!(punch.abs_diff_eq(vec2(1180.0, 485.0), 1e-3), "{punch}");
+        let missing = super::stage_anchor(
+            &plan,
+            &|_, default| default,
+            1.0,
+            size,
+            "ghost",
+            super::CalloutSide::Top,
+        );
+        assert!(missing.is_none());
+    }
 
     #[test]
     fn an_orb_pulse_does_not_displace_attached_ports() {

@@ -25,6 +25,7 @@ use crate::{
 };
 
 mod attachments;
+mod callout;
 mod caption;
 mod component_prototype;
 pub(crate) mod delivery;
@@ -434,6 +435,7 @@ struct PreparedPlan {
     sequences: Vec<sequence::PreparedSequence>,
     captions: Vec<caption::PreparedCaption>,
     rolling: Vec<rolling::PreparedRollingNumber>,
+    callouts: Vec<callout::PreparedCallout>,
     headers: Vec<header::PreparedHeader>,
 }
 
@@ -453,6 +455,8 @@ struct VisualSampleKey {
     video_frame: Option<u64>,
     deployment_queue: Option<DeploymentQueueVisualKey>,
     ambient_time: Option<u64>,
+    /// Stage-pinned callout anchors, which move with the camera.
+    anchors: Vec<[u32; 2]>,
 }
 
 impl PreparedPlan {
@@ -503,6 +507,7 @@ impl PreparedPlan {
             sequences,
             captions,
             rolling,
+            callouts,
         } = input;
         let components = component_prototype::PreparedComponents::prepare_inputs(
             &mut plan, components, renderer,
@@ -583,6 +588,7 @@ impl PreparedPlan {
             sequences,
             captions,
             rolling,
+            callouts,
             headers,
         })
     }
@@ -728,6 +734,7 @@ impl CompiledPlan {
             video_frame: None,
             deployment_queue: None,
             ambient_time: None,
+            anchors: Vec::new(),
         })
     }
 
@@ -824,8 +831,9 @@ impl PreparedPlan {
             stage.render_exposure(renderer, exposure, |actor, property, time, default| {
                 self.property_value(timeline, actor, property, time, default)
             })?;
+        let size = renderer.size();
         let overlays = crate::exposure::merge_equal_samples(exposure.iter().copied(), |time| {
-            self.overlay_key(time, stage.id())
+            self.overlay_key(time, stage.id(), size)
         })?;
         crate::exposure::accumulate(renderer, &overlays, |renderer, time| {
             let mut pixels = base.clone();
@@ -834,8 +842,9 @@ impl PreparedPlan {
         })
     }
 
-    /// The visual state of everything but the root `stage` actor.
-    fn overlay_key(&self, time: f64, stage: &str) -> Result<VisualSampleKey> {
+    /// The visual state of everything but the root `stage` actor, plus where
+    /// any callout pinned to it lands.
+    fn overlay_key(&self, time: f64, stage: &str, size: [u32; 2]) -> Result<VisualSampleKey> {
         let mut key = self
             .compiled
             .visual_sample_key_using(time, &self.timeline)?;
@@ -849,7 +858,36 @@ impl PreparedPlan {
             }
         }
         key.ambient_time = self.rolling_moves(time).then_some(time.to_bits());
+        key.anchors = self
+            .callouts
+            .iter()
+            .filter(|callout| callout.on_stage())
+            .filter_map(|callout| self.callout_pose(callout, time, &self.timeline, size))
+            .map(|pose| pose.anchor.to_array().map(f32::to_bits))
+            .collect();
         Ok(key)
+    }
+
+    fn callout_pose(
+        &self,
+        callout: &callout::PreparedCallout,
+        time: f64,
+        timeline: &Timeline,
+        size: [u32; 2],
+    ) -> Option<crate::render::CalloutPose> {
+        let value = |actor: &str, property: &str, default: f32| {
+            self.property_value(timeline, actor, property, time, default)
+        };
+        callout.pose(value, |anchor| {
+            callout::resolve(
+                &self.root,
+                anchor,
+                size,
+                value,
+                |actor, property| self.raw_motion_value(timeline, actor, property, time),
+                time,
+            )
+        })
     }
 
     /// A settling Rolling Number changes every sample without a channel moving.
@@ -935,6 +973,11 @@ impl PreparedPlan {
         }
         for number in &self.rolling {
             number.render(pixels, renderer, time, value);
+        }
+        for callout in &self.callouts {
+            if let Some(pose) = self.callout_pose(callout, time, timeline, renderer.size()) {
+                callout.render(pixels, renderer, pose);
+            }
         }
         for text in &self.texts {
             renderer.composite_centered_text_masked(

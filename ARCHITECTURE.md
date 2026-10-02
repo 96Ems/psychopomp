@@ -415,6 +415,31 @@ outside Continuous Channels, a settling number marks its samples distinct
 (`ambient_time`), including over a Stage, so shutter samples are not merged. Its
 schedule follows the authored clock, so plans using it are export-only.
 
+### Callouts
+
+A `callout` overlay (drawn after Rolling Numbers, below plain text) points at
+something whose position only the renderer knows: a Stage element seen through
+the sampled camera, or an editor code range after `cosmic-text` measurement,
+line motion, and the panel's card projection. The seam is the prepared root.
+The lightweight `callout.rs` owns the payload, validation, anchor edges on a
+`math::shapes::Shape`, the linear leader shape (`CalloutLeg`), frame-avoiding
+`layout`, and `CalloutActor`; none of it needs a GPU. `plan_runtime/callout.rs`
+validates anchors against the root at preflight and, at every sample, asks the
+prepared root for each weighted anchor's canvas point: `render::stage_anchor`
+projects the element through the same `Scene` camera and placement the Stage
+paints with, then applies the develop pass's roll and punch-in (at the overlay's
+own sample rather than the exposure's central one, a sub-pixel difference);
+`PreparedEditor::anchor` samples the Semantic Target's companion geometry and
+maps it through `render::editor_canvas_point`, which shares `EditorCard` and
+`CardProjection::project` with the editor compositor. Unlike editor attachments,
+callouts compile no companion tracks: the anchor is resolved fresh each sample,
+and `move_to` springs ordinary `anchor.<id>` weights whose normalized blend
+carries velocity across redirects. `render/callout.rs` paints the mark, the
+analytic leader (`composite_prototype_path`), and the label. Over a Stage, the
+overlay sample key includes each stage-pinned callout's resolved anchor, so
+overlays re-render per shutter sample exactly while the camera moves and merge
+again once it rests. Sequence Diagram anchors are not implemented.
+
 ### Stage
 
 `stage` is an exclusive root recipe. The lightweight crate (`stage.rs`) owns the

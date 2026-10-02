@@ -242,6 +242,19 @@ impl PlanBuilder {
         self.continuous_channel_mut(channel).events.push(event);
     }
 
+    /// Spring with an explicit profile, as when a dimensionless weight needs
+    /// tighter settling thresholds than a pixel channel.
+    pub fn spring_with(
+        &mut self,
+        channel: &ContinuousHandle,
+        at_nanos: u64,
+        target: f32,
+        spring: crate::plan::SpringPlan,
+    ) {
+        let event = spring.event(at_nanos, target);
+        self.continuous_channel_mut(channel).events.push(event);
+    }
+
     /// Move `channel` from its current value to `target` along `curve` over
     /// `seconds` (rounded to whole milliseconds, so f32 durations stay exact).
     pub fn ease(

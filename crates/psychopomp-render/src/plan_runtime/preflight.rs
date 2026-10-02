@@ -1,6 +1,7 @@
 //! Pure, typed recipe preflight. Each payload is decoded once and retained for
 //! resource preparation; sampling never interprets immutable actor JSON again.
 use super::{
+    callout::PreparedCallout,
     caption::PreparedCaption,
     component_prototype::{self, ComponentInput},
     deployment_queue::PreparedDeploymentQueue,
@@ -18,6 +19,7 @@ use super::{
 use crate::render::{RichTextSource, VerticalMask};
 use anyhow::{Context, Result, bail};
 use psychopomp::{
+    callout::CALLOUT_RECIPE,
     caption::CAPTION_RECIPE,
     component_prototype::{
         COLLECTION, CONNECTOR, DIAGRAM, DiagramPlan, HEADER, HeaderPlan, RICH_TEXT, TYPESET, VENN,
@@ -52,6 +54,7 @@ pub(super) struct Plan {
     pub sequences: Vec<PreparedSequence>,
     pub captions: Vec<PreparedCaption>,
     pub rolling: Vec<RollingNumberInput>,
+    pub callouts: Vec<PreparedCallout>,
 }
 pub(super) enum RootPlan {
     Blank,
@@ -349,6 +352,7 @@ impl Plan {
         let mut sequences = Vec::new();
         let mut captions = Vec::new();
         let mut rolling = Vec::new();
+        let mut callouts = Vec::new();
         for actor in &plan.actors {
             match actor.recipe.as_str() {
                 "title-card" => put_root(&mut root, RootPlan::Title(Title::new(actor, &plan)?))?,
@@ -440,6 +444,9 @@ impl Plan {
                     &plan.continuous_channels,
                     plan.duration_nanos,
                 )?),
+                CALLOUT_RECIPE => {
+                    callouts.push(PreparedCallout::new(actor, &plan.continuous_channels)?)
+                }
                 recipe => bail!("unsupported actor recipe '{recipe}'"),
             }
         }
@@ -480,6 +487,9 @@ impl Plan {
             let selection = editor.select(&target.id, &selector)?;
             selectors.push((target.id.clone(), selection));
         }
+        for callout in &callouts {
+            callout.validate_anchors(&root, &plan.semantic_targets)?;
+        }
         let consumed = match &root {
             RootPlan::Terminal(input) => input.media_ids().collect::<HashSet<_>>(),
             _ => HashSet::new(),
@@ -511,6 +521,7 @@ impl Plan {
             sequences,
             captions,
             rolling,
+            callouts,
         };
         match &result.root {
             RootPlan::Editor { editor, .. } => editor.compile_channels(&mut result.plan)?,
