@@ -5,7 +5,7 @@ use kinograph::component_prototype::{Font, TextPart};
 
 pub(crate) struct PrototypeGlyphs {
     sprite: TextSprite,
-    themed: std::cell::RefCell<Option<(Theme, TextSprite)>>,
+    themed: theme::ThemedCache<TextSprite>,
 }
 
 impl PrototypeGlyphs {
@@ -105,16 +105,16 @@ impl HeadlessRenderer {
         opacity: f32,
         blur: f32,
     ) {
-        let mut cached = glyphs.themed.borrow_mut();
-        if self.theme != Theme::Original && cached.as_ref().is_none_or(|(t, _)| *t != self.theme) {
-            let mut sprite = glyphs.sprite.clone();
-            self.theme.sprite(&mut sprite);
-            *cached = Some((self.theme, sprite));
-        }
+        let themed;
         let sprite = if self.theme == Theme::Original {
             &glyphs.sprite
         } else {
-            &cached.as_ref().unwrap().1
+            themed = glyphs.themed.get(self.theme, || {
+                let mut sprite = glyphs.sprite.clone();
+                self.theme.sprite(&mut sprite);
+                sprite
+            });
+            &*themed
         };
         let visible = if presence >= 1. {
             glyphs.sprite.width as f32

@@ -215,7 +215,7 @@ struct ShapedBlock {
 pub(crate) struct RichTextGlyphs {
     blocks: Vec<ShapedBlock>,
     width: u32,
-    cached: RefCell<Option<(Theme, Vec<TextSprite>)>>,
+    cached: theme::ThemedCache<Vec<TextSprite>>,
     mask: Option<VerticalMask>,
     fade_blur: f32,
 }
@@ -329,13 +329,9 @@ impl HeadlessRenderer {
         origin: [f32; 2],
         sample: impl Fn(&str, f32) -> f32,
     ) {
-        let mut cached = glyphs.cached.borrow_mut();
-        if cached
-            .as_ref()
-            .is_none_or(|(theme, _)| *theme != self.theme)
-        {
+        let sprites = glyphs.cached.get(self.theme, || {
             let p = self.theme.palette();
-            let sprites = glyphs
+            glyphs
                 .blocks
                 .iter()
                 .map(|b| {
@@ -456,17 +452,11 @@ impl HeadlessRenderer {
                         pixels,
                     }
                 })
-                .collect();
-            *cached = Some((self.theme, sprites));
-        }
+                .collect()
+        });
         let opacity = sample("opacity", 1.).clamp(0., 1.);
         let reveal = sample("reveal", 1.).clamp(0., 1.);
-        for (index, (block, sprite)) in glyphs
-            .blocks
-            .iter()
-            .zip(&cached.as_ref().unwrap().1)
-            .enumerate()
-        {
+        for (index, (block, sprite)) in glyphs.blocks.iter().zip(sprites.iter()).enumerate() {
             let alpha = opacity * sample(&format!("block.{index}.opacity"), 1.).clamp(0., 1.);
             let y = sample(&format!("block.{index}.y"), block.y);
             composite_text_region(

@@ -2,6 +2,7 @@
 //! clocks, recorded pixels, or semantic state changes live in a theme.
 use super::TextSprite;
 use serde::{Deserialize, Serialize};
+use std::cell::{Ref, RefCell};
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
@@ -212,6 +213,30 @@ impl Theme {
                 p[..3].copy_from_slice(&rgb);
             }
         }
+    }
+}
+
+/// Prepared glyphs recolored for the last theme they were drawn with.
+pub(super) struct ThemedCache<T>(RefCell<Option<(Theme, T)>>);
+
+impl<T> Default for ThemedCache<T> {
+    fn default() -> Self {
+        Self(RefCell::new(None))
+    }
+}
+
+impl<T> ThemedCache<T> {
+    /// The value for `theme`, rebuilt by `make` only when the theme changed.
+    pub(super) fn get(&self, theme: Theme, make: impl FnOnce() -> T) -> Ref<'_, T> {
+        if self
+            .0
+            .borrow()
+            .as_ref()
+            .is_none_or(|(cached, _)| *cached != theme)
+        {
+            *self.0.borrow_mut() = Some((theme, make()));
+        }
+        Ref::map(self.0.borrow(), |cached| &cached.as_ref().unwrap().1)
     }
 }
 
