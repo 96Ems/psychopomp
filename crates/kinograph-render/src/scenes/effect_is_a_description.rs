@@ -8,7 +8,10 @@ use kinograph::{
         TransitionProgress,
     },
     composition::{Asset, Clip, Composition, Time, TimeRange},
-    dsl::{Code, CodeEdit, CompiledScene, Motion, Pointer, Scalar, Scene, Task},
+    dsl::{
+        Code, CodeEdit, CompiledScene, Motion, Pointer, Scalar, Scene, TargetGeometry, Task,
+        TextTarget,
+    },
     timeline::{PropertyId, SpringProfile},
     transcript::Transcript,
 };
@@ -18,7 +21,7 @@ use crate::render::{
 };
 
 use super::{
-    CodeTarget, HEIGHT, WIDTH, WORKSPACE_ROOT, boosted_samples, encode_scene, measure_target,
+    HEIGHT, WIDTH, WORKSPACE_ROOT, boosted_samples, encode_scene, measure_target,
     measure_text_width, sample_pointer_frame, span,
 };
 
@@ -61,28 +64,31 @@ pub(crate) async fn render(output: &Path) -> Result<()> {
     let hidden_effect_subject_width = measure_text_width(&mut renderer, "Effects")?;
     let mut function_impl =
         measure_target(&mut renderer, &function, "definition", "() => Date.now()")?;
-    function_impl.bounds.x -= hidden_definition_width;
-    let mut function_call = measure_target(&mut renderer, &function, "run", "getTime")?;
-    function_call.bounds.x -= hidden_run_prefix_width;
-    function_call.bounds.width += function_call_suffix_width;
+    function_impl.1.x -= hidden_definition_width;
+    let (_, mut function_call) = measure_target(&mut renderer, &function, "run", "getTime")?;
+    function_call.x -= hidden_run_prefix_width;
+    function_call.width += function_call_suffix_width;
     let mut function_lazy = measure_target(&mut renderer, &function_comment, "comment", "LAZY")?;
-    function_lazy.bounds.x -= hidden_effect_subject_width;
-    let mut run_effect =
+    function_lazy.1.x -= hidden_effect_subject_width;
+    let (_, mut run_effect) =
         measure_target(&mut renderer, &effect_run, "run", "Effect.runSync(getTime")?;
-    run_effect.bounds.width += measure_text_width(&mut renderer, ")")?;
-    let targets = DescriptionTargets {
-        effect_type: measure_target(
+    run_effect.width += measure_text_width(&mut renderer, ")")?;
+    let targets = HashMap::from([
+        measure_target(
             &mut renderer,
             &initial,
             "definition",
             "Effect.Effect<number>",
         )?,
-        run_sync: measure_target(&mut renderer, &effect_run, "run", "Effect.runSync")?,
-        run_effect,
+        measure_target(&mut renderer, &effect_run, "run", "Effect.runSync")?,
+        (
+            TextTarget::new("run", "Effect.runSync(getTime)"),
+            run_effect,
+        ),
         function_impl,
-        function_call,
+        (TextTarget::new("run", "getTime()"), function_call),
         function_lazy,
-    };
+    ]);
     let narration = Asset::audio(
         "effect-is-a-description",
         asset_directory.join("narration.webm"),
@@ -115,7 +121,7 @@ pub(crate) async fn render(output: &Path) -> Result<()> {
     let timestamp_width = renderer.measure_task_result_width("1736078400000");
     let choreography = effect_is_a_description_choreography(
         &transcript,
-        targets,
+        &targets,
         timestamp_width,
         narration,
         running_sound,
@@ -139,16 +145,6 @@ pub(crate) async fn render(output: &Path) -> Result<()> {
             render_effect_is_a_description_sample(renderer, &transitions, &choreography, time)
         },
     )
-}
-
-#[derive(Clone, Copy)]
-struct DescriptionTargets {
-    effect_type: CodeTarget,
-    run_sync: CodeTarget,
-    run_effect: CodeTarget,
-    function_impl: CodeTarget,
-    function_call: CodeTarget,
-    function_lazy: CodeTarget,
 }
 
 struct EffectIsADescriptionChoreography {
@@ -180,7 +176,7 @@ struct EffectIsADescriptionChoreography {
 
 fn effect_is_a_description_choreography(
     transcript: &Transcript,
-    measured: DescriptionTargets,
+    targets: &HashMap<TextTarget, TargetGeometry>,
     timestamp_width: f32,
     narration: Clip,
     running_sound: Clip,
@@ -212,14 +208,6 @@ fn effect_is_a_description_choreography(
     let function_impl = code.text("definition", "() => Date.now()");
     let function_call = code.text("run", "getTime()");
     let function_lazy = code.text("comment", "LAZY");
-    let targets = HashMap::from([
-        (effect_type.clone(), measured.effect_type.into()),
-        (run_sync.clone(), measured.run_sync.into()),
-        (run_effect.clone(), measured.run_effect.into()),
-        (function_impl.clone(), measured.function_impl.into()),
-        (function_call.clone(), measured.function_call.into()),
-        (function_lazy.clone(), measured.function_lazy.into()),
-    ]);
     let get_time = Task::new("get-time", "getTime")
         .at(WIDTH as f32 * 0.5, 742.0)
         .with_result_width(timestamp_width);
@@ -351,7 +339,7 @@ fn effect_is_a_description_choreography(
     .chain(effect_run_edit.initial_values())
     .chain(function_edit.initial_values())
     .chain(function_comment_edit.initial_values());
-    let scene = Scene::new(initial_values, composition).compile(&targets)?;
+    let scene = Scene::new(initial_values, composition).compile(targets)?;
 
     Ok(EffectIsADescriptionChoreography {
         scene,

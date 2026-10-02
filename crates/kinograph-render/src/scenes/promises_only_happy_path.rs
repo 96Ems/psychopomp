@@ -9,7 +9,8 @@ use kinograph::{
     },
     composition::{Asset, Composition, Time, TimeRange},
     dsl::{
-        Annotation, AnnotationEffect, Code, CodeEdit, CompiledScene, Motion, Pointer, Scalar, Scene,
+        Annotation, AnnotationEffect, Code, CodeEdit, CompiledScene, Motion, Pointer, Scalar,
+        Scene, TargetGeometry, TextTarget,
     },
     timeline::{PropertyId, SpringProfile},
     transcript::Transcript,
@@ -18,7 +19,7 @@ use kinograph::{
 use crate::render::{EditorFrame, HeadlessRenderer, InlineRevealFrame, RenderSpec, TokenHighlight};
 
 use super::{
-    CodeTarget, HEIGHT, WIDTH, WORKSPACE_ROOT, encode_scene, measure_target, measure_text_width,
+    HEIGHT, WIDTH, WORKSPACE_ROOT, encode_scene, measure_target, measure_text_width,
     plan_temporal_samples, sample_pointer_frame, span,
 };
 
@@ -41,19 +42,20 @@ pub(crate) async fn render(output: &Path) -> Result<()> {
         content: 1.0,
     });
     let question_width = measure_text_width(&mut renderer, " // ???")?;
-    let mut error = measure_target(&mut renderer, &settled_lines, "call", "SomeError")?;
-    error.bounds.x -= question_width;
-    let targets = PromiseTargets {
-        checkout: measure_target(&mut renderer, &settled_lines, "sig", "checkout")?,
-        promise: measure_target(&mut renderer, &settled_lines, "sig", "Promise<Order>")?,
-        get_cart: measure_target(&mut renderer, &settled_lines, "cart", "getCart")?,
-        charge: measure_target(&mut renderer, &settled_lines, "payment", "charge")?,
-        ship: measure_target(&mut renderer, &settled_lines, "shipment", "ship(payment)")?,
-        call: measure_target(&mut renderer, &settled_lines, "call", "cart-123")?,
-        order: measure_target(&mut renderer, &settled_lines, "sig", "Order")?,
-        question: measure_target(&mut renderer, &settled_lines, "call", "???")?,
-        error,
-    };
+    let (error_target, mut error) =
+        measure_target(&mut renderer, &settled_lines, "call", "SomeError")?;
+    error.x -= question_width;
+    let targets = HashMap::from([
+        measure_target(&mut renderer, &settled_lines, "sig", "checkout")?,
+        measure_target(&mut renderer, &settled_lines, "sig", "Promise<Order>")?,
+        measure_target(&mut renderer, &settled_lines, "cart", "getCart")?,
+        measure_target(&mut renderer, &settled_lines, "payment", "charge")?,
+        measure_target(&mut renderer, &settled_lines, "shipment", "ship(payment)")?,
+        measure_target(&mut renderer, &settled_lines, "call", "cart-123")?,
+        measure_target(&mut renderer, &settled_lines, "sig", "Order")?,
+        measure_target(&mut renderer, &settled_lines, "call", "???")?,
+        (error_target, error),
+    ]);
     let narration = Asset::audio(
         "promises-only-happy-path",
         asset_directory.join("narration.webm"),
@@ -64,7 +66,8 @@ pub(crate) async fn render(output: &Path) -> Result<()> {
     ));
     let sad = Asset::audio("sad", asset_directory.join("sad.wav"))
         .clip(TimeRange::new(Time::ZERO, Time::seconds(0.67)));
-    let choreography = promises_only_happy_path_choreography(&transcript, targets, narration, sad)?;
+    let choreography =
+        promises_only_happy_path_choreography(&transcript, &targets, narration, sad)?;
 
     encode_scene(
         &mut renderer,
@@ -75,19 +78,6 @@ pub(crate) async fn render(output: &Path) -> Result<()> {
             render_promises_only_happy_path_sample(renderer, &transition, &choreography, time)
         },
     )
-}
-
-#[derive(Clone, Copy)]
-struct PromiseTargets {
-    checkout: CodeTarget,
-    promise: CodeTarget,
-    get_cart: CodeTarget,
-    charge: CodeTarget,
-    ship: CodeTarget,
-    call: CodeTarget,
-    order: CodeTarget,
-    question: CodeTarget,
-    error: CodeTarget,
 }
 
 struct PromisesOnlyHappyPathChoreography {
@@ -112,7 +102,7 @@ struct PromisesOnlyHappyPathChoreography {
 
 fn promises_only_happy_path_choreography(
     transcript: &Transcript,
-    measured: PromiseTargets,
+    targets: &HashMap<TextTarget, TargetGeometry>,
     narration: kinograph::composition::Clip,
     sad: kinograph::composition::Clip,
 ) -> Result<PromisesOnlyHappyPathChoreography> {
@@ -136,17 +126,6 @@ fn promises_only_happy_path_choreography(
     let order = code.text("sig", "Order");
     let question_target = code.text("call", "???");
     let error_target = code.text("call", "SomeError");
-    let targets = HashMap::from([
-        (checkout.clone(), measured.checkout.into()),
-        (promise.clone(), measured.promise.into()),
-        (get_cart.clone(), measured.get_cart.into()),
-        (charge.clone(), measured.charge.into()),
-        (ship.clone(), measured.ship.into()),
-        (call.clone(), measured.call.into()),
-        (order.clone(), measured.order.into()),
-        (question_target.clone(), measured.question.into()),
-        (error_target.clone(), measured.error.into()),
-    ]);
     let forthcoming = transcript.word("forthcoming")?;
     let at = |cue: kinograph::composition::Cue, motion| cue.at(motion);
     let focus_cursor_at = |target: kinograph::dsl::TextTarget, cue: kinograph::composition::Cue| {
@@ -282,7 +261,7 @@ fn promises_only_happy_path_choreography(
     ]
     .into_iter()
     .chain(call_edit.initial_values());
-    let scene = Scene::new(initial_values, composition).compile(&targets)?;
+    let scene = Scene::new(initial_values, composition).compile(targets)?;
 
     Ok(PromisesOnlyHappyPathChoreography {
         scene,

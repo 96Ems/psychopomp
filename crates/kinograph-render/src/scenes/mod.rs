@@ -5,12 +5,12 @@ use anyhow::{Context, Result, bail};
 use kinograph::{
     code::{CodeLine, PlacedLine, StyledSpan, SyntaxStyle},
     composition::{Duration, MediaPlacement, Time, TimeRange},
-    dsl::{CompiledScene, Pointer, TargetGeometry},
+    dsl::{CompiledScene, Pointer, TargetGeometry, TextTarget},
 };
 
 use crate::{
     encode::{FfmpegEncoder, VideoSpec},
-    render::{HeadlessRenderer, PointerFrame, TextRangeBounds},
+    render::{HeadlessRenderer, PointerFrame},
 };
 
 pub(crate) mod effect_institute;
@@ -264,36 +264,26 @@ fn linear_tables() -> &'static LinearTables {
     })
 }
 
-#[derive(Clone, Copy)]
-struct CodeTarget {
-    bounds: TextRangeBounds,
-    line_y: f32,
-}
-
-impl From<CodeTarget> for TargetGeometry {
-    fn from(target: CodeTarget) -> Self {
-        Self {
-            x: target.bounds.x,
-            width: target.bounds.width,
-            line_y: target.line_y,
-        }
-    }
-}
-
+/// Measure `text` on a placed line, keyed by that same target.
 fn measure_target(
     renderer: &mut HeadlessRenderer,
     lines: &[PlacedLine<'_>],
     line_id: &str,
     text: &str,
-) -> Result<CodeTarget> {
+) -> Result<(TextTarget, TargetGeometry)> {
     let placed = lines
         .iter()
         .find(|placed| placed.line.id.as_str() == line_id)
         .with_context(|| format!("code target line '{line_id}' is not in the settled scene"))?;
-    Ok(CodeTarget {
-        bounds: renderer.measure_text_range(placed.line, text)?,
-        line_y: placed.y,
-    })
+    let bounds = renderer.measure_text_range(placed.line, text)?;
+    Ok((
+        TextTarget::new(line_id, text),
+        TargetGeometry {
+            x: bounds.x,
+            width: bounds.width,
+            line_y: placed.y,
+        },
+    ))
 }
 
 fn measure_text_width(renderer: &mut HeadlessRenderer, text: &str) -> Result<f32> {

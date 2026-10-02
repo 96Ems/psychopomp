@@ -8,7 +8,10 @@ use kinograph::{
         TransitionProgress,
     },
     composition::{Asset, Composition, Time, TimeRange},
-    dsl::{Annotation, Code, CodeEdit, CompiledScene, Motion, Pointer, Scalar, Scene},
+    dsl::{
+        Annotation, Code, CodeEdit, CompiledScene, Motion, Pointer, Scalar, Scene, TargetGeometry,
+        TextTarget,
+    },
     timeline::{PropertyId, SpringProfile},
     transcript::Transcript,
 };
@@ -18,7 +21,7 @@ use crate::render::{
 };
 
 use super::{
-    CodeTarget, HEIGHT, WIDTH, WORKSPACE_ROOT, encode_scene, measure_target, measure_text_width,
+    HEIGHT, WIDTH, WORKSPACE_ROOT, encode_scene, measure_target, measure_text_width,
     plan_temporal_samples, sample_pointer_frame, span,
 };
 
@@ -47,38 +50,37 @@ pub(crate) async fn render(output: &Path) -> Result<()> {
     let hidden_indent_width = measure_text_width(&mut renderer, "  ")?;
     let hidden_ellipsis_width = measure_text_width(&mut renderer, "...")?;
     let closing_angle_width = measure_text_width(&mut renderer, ">")?;
-    let mut effect_target =
-        measure_target(&mut renderer, &initial_lines, "sig", "Effect.Effect<number")?;
-    effect_target.bounds.width += closing_angle_width;
-    let mut random_target = measure_target(
+    let mut effect = measure_target(&mut renderer, &initial_lines, "sig", "Effect.Effect<number")?;
+    effect.1.width += closing_angle_width;
+    let mut random = measure_target(
         &mut renderer,
         &initial_lines,
         "random",
         "Random.nextIntBetween",
     )?;
-    random_target.bounds.x -= hidden_indent_width;
-    let mut sleep_target = measure_target(&mut renderer, &initial_lines, "sleep", "Effect.sleep")?;
-    sleep_target.bounds.x -= hidden_indent_width;
+    random.1.x -= hidden_indent_width;
+    let mut sleep = measure_target(&mut renderer, &initial_lines, "sleep", "Effect.sleep")?;
+    sleep.1.x -= hidden_indent_width;
     let mut bad_roll_fail = measure_target(&mut renderer, &settled_lines, "fail", "VeryBadRoll")?;
-    bad_roll_fail.bounds.x -= hidden_ellipsis_width;
+    bad_roll_fail.1.x -= hidden_ellipsis_width;
     let mut fail_call = measure_target(&mut renderer, &settled_lines, "fail", "Effect.fail")?;
-    fail_call.bounds.x -= hidden_ellipsis_width;
-    let targets = LessonTargets {
-        effect: effect_target,
-        slow_die: measure_target(&mut renderer, &initial_lines, "sig", "slowDie")?,
-        random: random_target,
-        sleep: sleep_target,
-        roll: measure_target(&mut renderer, &settled_lines, "fail", "(n === 4)")?,
+    fail_call.1.x -= hidden_ellipsis_width;
+    let targets = HashMap::from([
+        effect,
+        measure_target(&mut renderer, &initial_lines, "sig", "slowDie")?,
+        random,
+        sleep,
+        measure_target(&mut renderer, &settled_lines, "fail", "(n === 4)")?,
         bad_roll_fail,
         fail_call,
-        error: measure_target(
+        measure_target(
             &mut renderer,
             &settled_lines,
             "comment",
             "VeryBadRoll is not assignable to never",
         )?,
-        bad_roll_type: measure_target(&mut renderer, &settled_lines, "sig", "VeryBadRoll")?,
-    };
+        measure_target(&mut renderer, &settled_lines, "sig", "VeryBadRoll")?,
+    ]);
     let narration = Asset::audio(
         "effect-shows-errors",
         asset_directory.join("narration.webm"),
@@ -93,7 +95,7 @@ pub(crate) async fn render(output: &Path) -> Result<()> {
     )
     .clip(TimeRange::new(Time::ZERO, Time::seconds(0.795)))
     .gain_db(-10.0);
-    let choreography = effect_shows_errors_choreography(&transcript, targets, narration, success)?;
+    let choreography = effect_shows_errors_choreography(&transcript, &targets, narration, success)?;
 
     encode_scene(
         &mut renderer,
@@ -104,19 +106,6 @@ pub(crate) async fn render(output: &Path) -> Result<()> {
             render_effect_shows_errors_sample(renderer, &transitions, &choreography, time)
         },
     )
-}
-
-#[derive(Clone, Copy)]
-struct LessonTargets {
-    effect: CodeTarget,
-    slow_die: CodeTarget,
-    random: CodeTarget,
-    sleep: CodeTarget,
-    roll: CodeTarget,
-    bad_roll_fail: CodeTarget,
-    fail_call: CodeTarget,
-    error: CodeTarget,
-    bad_roll_type: CodeTarget,
 }
 
 struct EffectShowsErrorsChoreography {
@@ -139,12 +128,12 @@ struct EffectShowsErrorsChoreography {
     indent: PropertyId,
     ellipsis: PropertyId,
     squiggle: PropertyId,
-    squiggle_target: CodeTarget,
+    squiggle_target: TargetGeometry,
 }
 
 fn effect_shows_errors_choreography(
     transcript: &Transcript,
-    measured: LessonTargets,
+    targets: &HashMap<TextTarget, TargetGeometry>,
     narration: kinograph::composition::Clip,
     success: kinograph::composition::Clip,
 ) -> Result<EffectShowsErrorsChoreography> {
@@ -167,25 +156,14 @@ fn effect_shows_errors_choreography(
     let pointer_scale = 24.0 / 36.0;
 
     let effect = code.text("sig", "Effect.Effect<number");
+    let squiggle_target = targets[&effect];
     let slow_die = code.text("sig", "slowDie");
     let random = code.text("random", "Random.nextIntBetween");
     let sleep = code.text("sleep", "Effect.sleep");
     let roll = code.text("fail", "(n === 4)");
     let bad_roll_fail = code.text("fail", "VeryBadRoll");
     let fail_call = code.text("fail", "Effect.fail");
-    let error = code.text("comment", "VeryBadRoll is not assignable to never");
     let bad_roll_type = code.text("sig", "VeryBadRoll");
-    let targets = HashMap::from([
-        (effect.clone(), measured.effect.into()),
-        (slow_die.clone(), measured.slow_die.into()),
-        (random.clone(), measured.random.into()),
-        (sleep.clone(), measured.sleep.into()),
-        (roll.clone(), measured.roll.into()),
-        (bad_roll_fail.clone(), measured.bad_roll_fail.into()),
-        (fail_call.clone(), measured.fail_call.into()),
-        (error.clone(), measured.error.into()),
-        (bad_roll_type.clone(), measured.bad_roll_type.into()),
-    ]);
     let reckon = transcript.word("reckon")?;
     let success_annotation = Annotation::on(bad_roll_type.clone());
 
@@ -355,7 +333,7 @@ fn effect_shows_errors_choreography(
     .into_iter()
     .chain(split_edit.initial_values())
     .chain(fail_edit.initial_values());
-    let scene = Scene::new(initial_values, composition).compile(&targets)?;
+    let scene = Scene::new(initial_values, composition).compile(targets)?;
 
     Ok(EffectShowsErrorsChoreography {
         scene,
@@ -377,7 +355,7 @@ fn effect_shows_errors_choreography(
         indent,
         ellipsis,
         squiggle,
-        squiggle_target: measured.effect,
+        squiggle_target,
     })
 }
 
@@ -464,9 +442,9 @@ fn render_effect_shows_errors_sample(
         },
     ];
     let squiggles = [SquiggleFrame {
-        x: choreography.squiggle_target.bounds.x,
+        x: choreography.squiggle_target.x,
         y: choreography.squiggle_target.line_y,
-        width: choreography.squiggle_target.bounds.width,
+        width: choreography.squiggle_target.width,
         opacity: sample(&choreography.squiggle),
     }];
     let annotations = choreography.scene.annotations_at(time).collect::<Vec<_>>();

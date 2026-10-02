@@ -27,7 +27,7 @@ use kinograph::{
 
 use crate::render::{
     BrightTextFrame, EditorFrame, HeadlessRenderer, InlineRevealFrame, PointerFrame, RenderSpec,
-    SquiggleFrame, TaskLinkFrame, TaskSceneFrame, TextRangeBounds, TokenHighlight,
+    SquiggleFrame, TaskLinkFrame, TaskSceneFrame, TokenHighlight,
 };
 
 use super::{HEIGHT, WIDTH, WORKSPACE_ROOT, encode_scene};
@@ -1245,9 +1245,9 @@ impl PublishedCode {
                 self.measure_overlay(renderer, frame, &order, overlay.clone(), time)?
             {
                 squiggles.push(SquiggleFrame {
-                    x: target.bounds.x,
+                    x: target.x,
                     y: target.line_y,
-                    width: target.bounds.width,
+                    width: target.width,
                     opacity: 1.0,
                 });
             }
@@ -1269,26 +1269,18 @@ impl PublishedCode {
                     };
                     match range.status.as_str() {
                         "error" | "interrupted" => squiggles.push(SquiggleFrame {
-                            x: target.bounds.x,
+                            x: target.x,
                             y: target.line_y,
-                            width: target.bounds.width,
+                            width: target.width,
                             opacity: 1.0,
                         }),
                         "running" => annotations.push(AnnotationFrame {
-                            target: TargetGeometry {
-                                x: target.bounds.x,
-                                width: target.bounds.width,
-                                line_y: target.line_y,
-                            },
+                            target,
                             effect: AnnotationEffect::FocusPulse,
                             phase: (time * 0.7).fract(),
                         }),
                         "success" => annotations.push(AnnotationFrame {
-                            target: TargetGeometry {
-                                x: target.bounds.x,
-                                width: target.bounds.width,
-                                line_y: target.line_y,
-                            },
+                            target,
                             effect: AnnotationEffect::PrismaticBloom,
                             phase: ((time
                                 - status_started_at(
@@ -1313,11 +1305,7 @@ impl PublishedCode {
                     self.measure_overlay(renderer, frame, &order, burst.as_overlay(), time)?
                 {
                     annotations.push(AnnotationFrame {
-                        target: TargetGeometry {
-                            x: target.bounds.x,
-                            width: target.bounds.width,
-                            line_y: target.line_y,
-                        },
+                        target,
                         effect: burst.effect(),
                         phase: burst_phase,
                     });
@@ -1350,7 +1338,7 @@ impl PublishedCode {
         order: &[(String, usize)],
         overlay: PublishedOverlay,
         time: f32,
-    ) -> Result<Option<MeasuredOverlay>> {
+    ) -> Result<Option<TargetGeometry>> {
         let Some(key) = order.get(overlay.line_index) else {
             return Ok(None);
         };
@@ -1368,16 +1356,12 @@ impl PublishedCode {
         let bounds = renderer.measure_text_byte_range(&measure_line, start, end)?;
         let sampled_y = self.timeline.sample(&prepared.y, time).unwrap().position
             - self.overlays.scroll_y.sample(time).position.max(0.0);
-        Ok(Some(MeasuredOverlay {
-            bounds,
+        Ok(Some(TargetGeometry {
+            x: bounds.x,
+            width: bounds.width,
             line_y: sampled_y,
         }))
     }
-}
-
-struct MeasuredOverlay {
-    bounds: TextRangeBounds,
-    line_y: f32,
 }
 
 fn append_variant(
@@ -2718,8 +2702,8 @@ mod tests {
                     expected_text,
                 )
                 .unwrap();
-            assert_eq!(selected.bounds.x, expected_bounds.x);
-            assert_eq!(selected.bounds.width, expected_bounds.width);
+            assert_eq!(selected.x, expected_bounds.x);
+            assert_eq!(selected.width, expected_bounds.width);
             assert_eq!(
                 selected.line_y,
                 code.timeline.sample(&line.y, time).unwrap().position
