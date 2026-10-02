@@ -4,7 +4,7 @@ use super::HeadlessRenderer;
 use cosmic_text::{Attrs, Color, Family, FontSystem, Metrics, SwashCache, Weight};
 use std::collections::HashMap;
 mod raster;
-pub(super) use raster::{TextSprite, blend_pixel, make_sprite, paint_rect};
+pub(super) use raster::{TextSprite, blend_pixel, blend_pixel_at, make_sprite, paint_rect};
 
 #[derive(Clone, Copy)]
 pub(super) struct PlainTextSpec {

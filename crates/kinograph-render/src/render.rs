@@ -35,7 +35,7 @@ mod theme;
 mod ui;
 mod value;
 mod venn;
-use text::{PlainTextSpec, TextSprite, blend_pixel, make_sprite, paint_rect};
+use text::{PlainTextSpec, TextSprite, blend_pixel, blend_pixel_at, make_sprite, paint_rect};
 
 pub(crate) use component_prototype::PrototypeGlyphs;
 pub(crate) use deployment_queue::deployment_row_center_y;
@@ -1953,17 +1953,15 @@ fn composite_squiggle(
     for offset_x in 0..width.max(0.0).round() as i32 {
         let wave_y = ((offset_x as f32 * 0.48).sin() * 2.0).round() as i32;
         for thickness in 0..2 {
-            let target_x = x.round() as i32 + offset_x;
-            let target_y = y.round() as i32 + wave_y + thickness;
-            if target_x < 0
-                || target_y < 0
-                || target_x >= canvas_width as i32
-                || target_y >= canvas_height as i32
-            {
-                continue;
-            }
-            let index = (target_y as usize * canvas_width as usize + target_x as usize) * 4;
-            blend_pixel(&mut canvas[index..index + 4], [248, 113, 113, 255], opacity);
+            blend_pixel_at(
+                canvas,
+                canvas_width,
+                canvas_height,
+                x.round() as i32 + offset_x,
+                y.round() as i32 + wave_y + thickness,
+                [248, 113, 113, 255],
+                opacity,
+            );
         }
     }
 }

@@ -11,7 +11,7 @@ use kinograph::dsl::{TaskFrame, TaskState};
 use kinograph::motion::{MotionState, Spring};
 
 use super::{
-    HeadlessRenderer, TextSprite, blend_pixel, composite_sprite_rotated,
+    HeadlessRenderer, TextSprite, blend_pixel_at, composite_sprite_rotated,
     composite_sprite_rotated_with_coverage, rasterize_svg, text::PlainTextSpec,
 };
 
@@ -1067,7 +1067,7 @@ fn draw_bubble_tail(pixels: &mut [u8], width: u32, height: u32, center: [f32; 2]
             let distance = ((dx + dy - 6.) * std::f32::consts::FRAC_1_SQRT_2)
                 .max(-dy)
                 .max(dy - 6.);
-            paint(
+            blend_pixel_at(
                 pixels,
                 width,
                 height,
@@ -1090,7 +1090,7 @@ fn draw_task_link(pixels: &mut [u8], width: u32, height: u32, link: TaskLinkFram
         let x = link.from[0] + dx * phase;
         let y = link.from[1] + dy * phase;
         for offset in -1..=1 {
-            paint(
+            blend_pixel_at(
                 pixels,
                 width,
                 height,
@@ -1111,7 +1111,7 @@ fn draw_task_link(pixels: &mut [u8], width: u32, height: u32, link: TaskLinkFram
             let distance = (x as f32).hypot(y as f32);
             let alpha = (-distance.powi(2) / (2.0 * 6.0_f32.powi(2))).exp() * 0.55;
             if alpha > 0.003 {
-                paint(
+                blend_pixel_at(
                     pixels,
                     width,
                     height,
@@ -1462,7 +1462,7 @@ fn draw_soft_rect_glow(
             let distance = rounded_rect_distance(local_x, local_y, size).max(0.0);
             let alpha = (-distance * distance / (2.0 * radius * radius)).exp() * opacity;
             if alpha > 0.002 {
-                paint(pixels, width, height, x, y, color, alpha);
+                blend_pixel_at(pixels, width, height, x, y, color, alpha);
             }
         }
     }
@@ -1497,7 +1497,7 @@ fn draw_energy_sweep(
             let band = 1.0 - smoothstep(((distance - 1.0) / 39.0).clamp(0.0, 1.0));
             let alpha = band * 0.5 * coverage * opacity;
             if alpha > 0.002 {
-                paint(pixels, width, height, x, y, [150, 215, 255, 255], alpha);
+                blend_pixel_at(pixels, width, height, x, y, [150, 215, 255, 255], alpha);
             }
         }
     }
@@ -1548,7 +1548,7 @@ fn draw_state_pulse(
                 * intensity
                 * coverage;
             if alpha > 0.003 {
-                paint(pixels, width, height, x, y, color, alpha);
+                blend_pixel_at(pixels, width, height, x, y, color, alpha);
             }
         }
     }
@@ -1571,7 +1571,7 @@ fn fill_rect(
         for x in min_x..=max_x {
             let coverage =
                 rounded_rect_coverage(x as f32 + 0.5 - center[0], y as f32 + 0.5 - center[1], size);
-            paint(pixels, width, height, x, y, color, opacity * coverage);
+            blend_pixel_at(pixels, width, height, x, y, color, opacity * coverage);
         }
     }
 }
@@ -1593,7 +1593,7 @@ fn fill_rotated_rect(
             let [local_x, local_y] = rotated_local(center, rotation, x, y);
             let coverage = rounded_rect_coverage(local_x, local_y, size);
             if coverage > 0.0 {
-                paint(pixels, width, height, x, y, color, opacity * coverage);
+                blend_pixel_at(pixels, width, height, x, y, color, opacity * coverage);
             }
         }
     }
@@ -1622,7 +1622,7 @@ fn stroke_rotated_rect(
             );
             let coverage = (outer - inner).clamp(0.0, 1.0);
             if coverage > 0.0 {
-                paint(pixels, width, height, x, y, color, opacity * coverage);
+                blend_pixel_at(pixels, width, height, x, y, color, opacity * coverage);
             }
         }
     }
@@ -1689,7 +1689,7 @@ fn draw_face(pixels: &mut [u8], width: u32, height: u32, center: [f32; 2], radiu
     let wobble = (time * 2.0).sin() * 3.0;
     for x in -24..=24 {
         let y = center[1] + 18.0 + (x as f32 / 24.0).powi(2) * -10.0 + wobble;
-        paint(
+        blend_pixel_at(
             pixels,
             width,
             height,
@@ -1714,7 +1714,7 @@ fn draw_disc(
     for y in -radius_i..=radius_i {
         for x in -radius_i..=radius_i {
             if (x * x + y * y) as f32 <= radius * radius {
-                paint(
+                blend_pixel_at(
                     pixels,
                     width,
                     height,
@@ -1742,7 +1742,7 @@ fn draw_ring(
         let angle = step as f32 / steps as f32 * std::f32::consts::TAU;
         let x = center[0] + angle.cos() * radius;
         let y = center[1] + angle.sin() * radius;
-        paint(
+        blend_pixel_at(
             pixels,
             width,
             height,
@@ -1752,14 +1752,6 @@ fn draw_ring(
             opacity,
         );
     }
-}
-
-fn paint(pixels: &mut [u8], width: u32, height: u32, x: i32, y: i32, color: [u8; 4], opacity: f32) {
-    if !(0..width as i32).contains(&x) || !(0..height as i32).contains(&y) {
-        return;
-    }
-    let index = (y as usize * width as usize + x as usize) * 4;
-    blend_pixel(&mut pixels[index..index + 4], color, opacity);
 }
 
 #[cfg(test)]
