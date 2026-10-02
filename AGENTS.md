@@ -42,6 +42,10 @@ cargo run --release -- plan present target/slideshow-components/deck.json
 cargo run -p psychopomp-pr-walkthrough
 cargo run -p psychopomp-rolling-number
 cargo run --release -- plan render target/rolling-number.json output/rolling-number.mp4 --theme opencode
+cargo run -p psychopomp-video
+cargo run --release -- plan render target/video.json output/video.mp4 --theme neutral
+cargo run -p psychopomp-compare
+cargo run --release -- plan render target/compare.json output/compare.mp4 --theme neutral
 cargo run --release -- plan render scenes/pr-walkthrough/pr-walkthrough.reel.json output/pr-walkthrough.mp4 --theme opencode
 bun scripts/narrate.ts <scene>/narration/script.json [--draft]
 bun scripts/sheet.ts <plan-or-reel.json> <from:to:step | t1,t2,...> [--theme NAME] [--crop x,y,w,h] [--shutter]
@@ -74,7 +78,8 @@ Do not run the full render as routine validation when unit tests and static chec
 - `crates/psychopomp/src/plan/channels.rs`: exact scalar-event lowering and opt-in snapshot-destination reduction; raw event ordering remains distinct
 - `crates/psychopomp/src/state.rs`: deterministic arbitrary-time discrete State Tracks
 - `crates/psychopomp/src/playback.rs`: interruptible step destinations, continuous track retargeting, and a pausable local presentation clock
-- `crates/psychopomp/src/terminal.rs`: lightweight terminal-recording recipe values for planned video media
+- `crates/psychopomp/src/video.rs`: Video Card recipe values (footage size, card rect, title), focus-window math, placement helper, and the `VideoActor` handle (`fly_in`, `focus`, `unfocus`, `hide`)
+- `crates/psychopomp/src/plan/wipe.rs`: Reel wipe values (direction, mid-frame holds, labels) and the closed-form divider position
 - `crates/psychopomp/src/deployment.rs`: typed deployment-queue recipe values, semantic snapshots, and authoring handle
 - `crates/psychopomp/src/timeline.rs`: relative Animation and explicit-time continuous Property Track compilation
 - `crates/psychopomp/src/timeline/retarget.rs`: shared cancellation-safe numeric schedule for Playback and authored resting entrances
@@ -107,7 +112,9 @@ Do not run the full render as routine validation when unit tests and static chec
 - `crates/psychopomp-render/src/render/text.rs` and `text/raster.rs`: typed plain-text cache and exact native glyph rasterization shared with the experimental bake
 - `crates/psychopomp-render/src/render/venn.rs`: sampled rounded-set geometry and exact intersection hatching
 - `crates/psychopomp-render/src/render/header.rs`: fixed-edge line/word rises and mirrored, fading reflection ink
-- `crates/psychopomp-render/src/render/terminal.rs`: concrete terminal recording and command-file presentation
+- `crates/psychopomp-render/src/render/terminal.rs`: the legacy `opencode-hot-reload` scene's terminal recording, command-file, and missile presentation
+- `crates/psychopomp-render/src/plan_runtime/video.rs` and `render/video.rs`: Video Card preflight, frame caches, source-time mapping, and projected card pixels with a focus window
+- `crates/psychopomp-render/src/render/wipe.rs`: Reel wipe pixels: antialiased split, divider line and shadow, riding labels
 - `crates/psychopomp-render/src/render/deployment_queue.rs`: concrete state-driven deployment dashboard UI Surface
 - `crates/psychopomp-render/src/render/ui.rs`: private bounds, inset, split, and terminal line-flow primitives for pixel UI
 - `crates/psychopomp-render/src/render/ui/card.rs`: shared immediate-mode RGBA composition and projected card presentation used by editor, recorded-video, and simulated-UI producers
@@ -135,7 +142,6 @@ Do not run the full render as routine validation when unit tests and static chec
 - `crates/psychopomp-render/src/plan_runtime/header.rs`: header word tracks and opt-in resting-entrance delays with cancellation
 - `crates/psychopomp-render/src/plan_runtime/diagram.rs`: finite box/wire preflight and recipe-owned native start delays
 - `crates/psychopomp-render/src/render/diagram.rs` and `diagram.wgsl`: shared native/browser GPU boxes, sampled ports, wire traces and bare flat/isometric views
-- `crates/psychopomp-render/src/plan_runtime/terminal.rs`: concrete planned terminal-recording recipe and video source-time mapping
 - `crates/psychopomp-render/src/plan_runtime/deployment_queue.rs`: deployment snapshot validation, private track compilation, and rendering adapter
 - `crates/psychopomp-render/src/plan_runtime/keyed_layout.rs`: private stable keyed position and presence track compiler
 - `scenes/`: lightweight Rust Scene Programs that emit Scene Plans
@@ -149,7 +155,9 @@ Do not run the full render as routine validation when unit tests and static chec
 - `scenes/component-prototypes/`: provisional reusable Typeset, Collection, and Connector showroom; payloads and adapters remain in the three `component_prototype.rs` modules until visual approval
 - `scenes/opencode-architecture/`: four-step Daemon / merge port using the provisional box-and-wire diagram surface
 - `scenes/opencode-jr-architecture/`: narrated Stage-film teaching reel of the OpenCode Jr Slack bot, with one condensed code zoom
-- `scenes/opencode-session-tool/`: rapid-fire OpenCode v2 hot-reload proof using split Vim/OpenCode terminal video, layered SFX, text, and discrete state
+- `scenes/opencode-session-tool/`: rapid-fire OpenCode v2 hot-reload proof using a split Vim/OpenCode Video Card, layered SFX, and text
+- `scenes/video/`: Video Card showroom: a screen recording flies in, zooms into the prompt, and back out
+- `scenes/compare/`: wipe showroom: a held before/after wipe between two Stage frames, then a plain wipe
 - `scenes/deployment-queue/`: canonical state-driven simulated UI proof with keyed insertion, phase replacement, failure focus, and retry
 - `scenes/pr-walkthrough/`: narrated PR explainer reels; `src/film.rs` is the shared PR-film template (header, chips, behavior and code segments) that `scenes/config-migration/` also uses
 - `scenes/rolling-number/`: Rolling Number showroom: roll up and down, a mid-roll redirect, a carry into a new place, and a shrink

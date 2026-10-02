@@ -126,7 +126,10 @@ segment with its predecessor: a crossfade mixes the incoming frame over the
 outgoing one, while a dip fades the outgoing segment to the empty background before
 the incoming one appears, so dense frames never overlap. A zoom flies into a focus
 rectangle of the outgoing frame, such as a card, while the incoming segment grows
-out of it, so a detail visibly becomes the next scene. At most two segments are
+out of it, so a detail visibly becomes the next scene. A wipe sweeps a divider
+across the frame with the incoming segment behind it; its holds rest the divider
+mid-frame so a before/after comparison shows both segments side by side, each on
+its own running clock, before the sweep goes on. At most two segments are
 visible at any instant. Segment media is retimed onto the reel clock for one audio
 mix. Unlike a Presentation Deck, a reel is delivered rather than navigated.
 
@@ -338,9 +341,15 @@ Planned interactive Tasks lower state changes into continuous geometry and conte
 
 The renderer-independent position of one Task. Pose changes are composition leaves distinct from semantic Task State changes, so row recentering cannot replay state feedback. Compiled x/y property tracks preserve position and velocity when layout movement is interrupted or redirected.
 
-## Terminal Recording
+## Video Card
 
-An immutable recording of a real terminal interaction used as source pixels inside authored choreography. Psychopomp samples the recording by media time, while a terminal frame supplies presentation such as rounded clipping, whole-card camera motion, explanatory split views, and effects. The recording remains evidence of the actual product behavior rather than a reconstructed terminal simulation.
+One planned video media placement played inside a framed card: rounded corners,
+a theme-aware material, border, and shadow, and an optional title bar. The plan
+clock maps through the placement into source time, so a cue or range render shows
+the same footage frame as the full film. Its focus window crops into a region of
+the frame (a zoom into part of a screen recording) while the card itself can move,
+scale, and tilt. Recordings remain evidence of actual product behavior rather than
+a reconstructed simulation; explanatory text is ordinary overlay actors.
 
 ## Temporal Sample
 
