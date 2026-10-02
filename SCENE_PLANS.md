@@ -397,6 +397,19 @@ Diagram plays the broken behavior and replays the fix in the same slots, then an
 editor animates the actual change as a diff with Line Marks. The workflow is
 reusable for any code explainer:
 
+- `kinograph::narration::Narration::load(dir)` reads `narration.json`;
+  `clip(id)?.place(&mut scene, start)` adds the Script Clip and returns a
+  `Spoken` whose `at(phrase)`, `at_any`, and `at_after` give plan-clock times.
+- `kinograph::editor::diff::Diff` of `keep`/`add(step, ..)`/`remove(step, ..)`
+  lines declares the stepped editor; `declare(scene, step_times, warning, entrance)`.
+- `SequenceRowPlan::message|reply|note|end(..)` with `.in_slot(n)` and
+  `.with_aside(text)` build rows; `SequenceParticipantPlan::new(id, label, detail)`
+  builds participants; `SequenceActor::row_channel`/`participant_channel` address
+  their channels.
+- `ReelPlan::dipped(id, plans, transition_nanos)` joins segments with dips.
+- `kinograph_pr_walkthrough::film` is the PR-film template itself (`header`,
+  `chip`, `footer`, `behavior`, `code`); `scenes/config-migration` reuses it.
+
 ```sh
 # 1. Voice the script (Fish Audio via 1Password; --draft uses macOS `say`).
 2password run --env 'FISH_AUDIO_API_KEY=op://…' -- \

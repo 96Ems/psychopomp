@@ -4,36 +4,28 @@
 //! then replays the fixed behavior in the same slots, and an editor that animates
 //! the actual change as a diff. Every visual moment is keyed to a phrase in the
 //! narration, so re-voicing the script re-times the film.
-mod diff;
+pub mod film;
 mod flagship;
-mod narration;
 
 pub use flagship::build_flagship;
 
 use std::path::Path;
 
 use anyhow::{Context, Result};
-use diff::{Diff, add, keep, remove};
+use film::{
+    Flow, HEADER_Y, LEFT, Pr, TRANSITION, after, after_following, before, behavior, code, span,
+};
 use kinograph::{
     author::{PlanBuilder, seconds},
-    caption::{CaptionActor, CaptionAlign, CaptionPlan, CaptionSpanPlan},
-    plan::{ReelPlan, ReelSegmentPlan, ReelTransitionStyle, ScenePlan},
-    sequence::{SequenceActor, SequenceParticipantPlan, SequencePlan, SequenceRowPlan},
+    caption::{CaptionActor, CaptionAlign, CaptionPlan},
+    editor::diff::{Diff, add, keep, remove},
+    narration::Narration,
+    plan::{ReelPlan, ScenePlan},
+    sequence::{
+        SequenceActor, SequenceParticipantPlan as Participant, SequencePlan, SequenceRowPlan as Row,
+    },
     tone::Tone,
 };
-use narration::Narration;
-
-const TRANSITION: u64 = 700_000_000;
-const LEFT: f32 = 140.0;
-const RIGHT: f32 = 1780.0;
-const HEADER_Y: f32 = 96.0;
-const FOOTER_Y: f32 = 1004.0;
-
-struct Pr {
-    number: &'static str,
-    title: &'static str,
-    slug: &'static str,
-}
 
 const PRS: [Pr; 5] = [
     Pr {
@@ -71,306 +63,7 @@ pub fn build_reel(narration_dir: &Path) -> Result<ReelPlan> {
         plans.push(code(pr, &narration, diffs(index), true)?);
     }
     plans.push(outro(&narration)?);
-    let reel = ReelPlan {
-        version: ReelPlan::VERSION,
-        id: "pr-walkthrough".to_owned(),
-        segments: plans
-            .into_iter()
-            .enumerate()
-            .map(|(index, plan)| ReelSegmentPlan {
-                transition_nanos: if index == 0 { 0 } else { TRANSITION },
-                transition_style: ReelTransitionStyle::Dip,
-                transition_focus: None,
-                plan,
-            })
-            .collect(),
-    };
-    reel.validate()?;
-    Ok(reel)
-}
-
-// ---------------------------------------------------------------------------
-// Shared pieces
-// ---------------------------------------------------------------------------
-
-fn span(text: &str, tone: Tone) -> CaptionSpanPlan {
-    CaptionSpanPlan::new(text, tone)
-}
-
-/// `#50784  keep the real startup error`, top left.
-fn header(scene: &mut PlanBuilder, pr: &Pr, type_at: Option<u64>) -> Result<()> {
-    let plan = CaptionPlan::line(
-        [LEFT, HEADER_Y],
-        30.0,
-        vec![
-            span(pr.number, Tone::Accent),
-            span("  ", Tone::Plain),
-            span(pr.title, Tone::Plain),
-        ],
-    );
-    let mut caption = CaptionActor::declare(scene, "header", &plan)?;
-    if let Some(at) = type_at {
-        caption.type_in(scene, at, 55.0, 0.6);
-    }
-    Ok(())
-}
-
-/// A status chip, top right: `● before`.
-fn chip(scene: &mut PlanBuilder, id: &str, dot: Tone, text: &str) -> Result<CaptionActor> {
-    let plan = CaptionPlan::line(
-        [RIGHT, HEADER_Y],
-        22.0,
-        vec![span("● ", dot), span(text, Tone::Plain)],
-    )
-    .aligned(CaptionAlign::Right)
-    .chip();
-    CaptionActor::declare(scene, id, &plan)
-}
-
-fn footer(scene: &mut PlanBuilder, id: &str, spans: Vec<CaptionSpanPlan>) -> Result<CaptionActor> {
-    CaptionActor::declare(scene, id, &CaptionPlan::line([LEFT, FOOTER_Y], 28.0, spans))
-}
-
-fn participant(id: &str, label: &str, detail: &str) -> SequenceParticipantPlan {
-    SequenceParticipantPlan {
-        id: id.to_owned(),
-        label: label.to_owned(),
-        detail: detail.to_owned(),
-    }
-}
-
-fn message(id: &str, from: &str, to: &str, label: &str, tone: Tone) -> SequenceRowPlan {
-    SequenceRowPlan::Message {
-        id: id.to_owned(),
-        slot: None,
-        from: from.to_owned(),
-        to: to.to_owned(),
-        label: label.to_owned(),
-        tone,
-        reply: false,
-        aside: String::new(),
-    }
-}
-
-fn reply(id: &str, from: &str, to: &str, label: &str, tone: Tone) -> SequenceRowPlan {
-    match message(id, from, to, label, tone) {
-        SequenceRowPlan::Message {
-            id,
-            slot,
-            from,
-            to,
-            label,
-            tone,
-            aside,
-            ..
-        } => SequenceRowPlan::Message {
-            id,
-            slot,
-            from,
-            to,
-            label,
-            tone,
-            reply: true,
-            aside,
-        },
-        row => row,
-    }
-}
-
-fn note(id: &str, over: &[&str], text: &str, tone: Tone) -> SequenceRowPlan {
-    SequenceRowPlan::Note {
-        id: id.to_owned(),
-        slot: None,
-        over: over.iter().map(|p| (*p).to_owned()).collect(),
-        text: text.to_owned(),
-        tone,
-        aside: String::new(),
-    }
-}
-
-fn end(id: &str, participant: &str, label: &str, tone: Tone) -> SequenceRowPlan {
-    SequenceRowPlan::End {
-        id: id.to_owned(),
-        slot: None,
-        participant: participant.to_owned(),
-        label: label.to_owned(),
-        tone,
-        aside: String::new(),
-    }
-}
-
-trait RowExt {
-    fn slot(self, slot: u32) -> Self;
-    fn aside(self, text: &str) -> Self;
-}
-
-impl RowExt for SequenceRowPlan {
-    fn slot(mut self, value: u32) -> Self {
-        match &mut self {
-            SequenceRowPlan::Message { slot, .. }
-            | SequenceRowPlan::Note { slot, .. }
-            | SequenceRowPlan::End { slot, .. } => *slot = Some(value),
-        }
-        self
-    }
-
-    fn aside(mut self, text: &str) -> Self {
-        match &mut self {
-            SequenceRowPlan::Message { aside, .. }
-            | SequenceRowPlan::Note { aside, .. }
-            | SequenceRowPlan::End { aside, .. } => *aside = text.to_owned(),
-        }
-        self
-    }
-}
-
-/// A moment in a behavior segment: a phrase in the before or after clip.
-#[derive(Clone, Copy)]
-enum When {
-    Before(&'static str),
-    After(&'static str),
-    /// A phrase in the after clip, after another phrase has been said.
-    AfterFollowing(&'static str, &'static str),
-}
-
-#[derive(Clone, Copy)]
-struct At(When, f64);
-
-fn before(phrase: &'static str) -> At {
-    At(When::Before(phrase), 0.0)
-}
-
-fn after(phrase: &'static str) -> At {
-    At(When::After(phrase), 0.0)
-}
-
-impl At {
-    fn plus(self, seconds: f64) -> Self {
-        At(self.0, self.1 + seconds)
-    }
-}
-
-/// One PR's behavior story.
-struct Flow {
-    sequence: SequencePlan,
-    /// Rows that only exist in the broken behavior; they fade when the fix replays.
-    before_only: &'static [&'static str],
-    reveals: Vec<(&'static str, At)>,
-    strikes: Vec<(&'static str, At)>,
-    /// Participant emphasis on and off.
-    emphasis: Vec<(&'static str, At, At)>,
-    /// Participants that start hidden: when they appear, and their opacity after the fix.
-    late: Vec<(&'static str, At, f32)>,
-    footer_before: (Vec<CaptionSpanPlan>, At),
-    footer_after: (Vec<CaptionSpanPlan>, At),
-}
-
-// ---------------------------------------------------------------------------
-// Segments
-// ---------------------------------------------------------------------------
-
-fn behavior(pr: &Pr, narration: &Narration, flow: Flow) -> Result<ScenePlan> {
-    let before_clip = narration.clip(&format!("{}-before", pr.slug))?;
-    let after_clip = narration.clip(&format!("{}-after", pr.slug))?;
-    let lead = seconds(1.0);
-    let gap = seconds(1.6);
-    let duration = lead + before_clip.duration() + gap + after_clip.duration() + seconds(1.4);
-    let mut scene = PlanBuilder::new(format!("{}-behavior", pr.slug), duration);
-    let spoken_before = before_clip.place(&mut scene, lead);
-    let spoken_after = after_clip.place(&mut scene, spoken_before.end() + gap);
-    let switch = spoken_before.end() + seconds(0.4);
-    let time = |at: At| -> u64 {
-        let base = match at.0 {
-            When::Before(phrase) => spoken_before.at(phrase),
-            When::After(phrase) => spoken_after.at(phrase),
-            When::AfterFollowing(phrase, earlier) => spoken_after.at_after(phrase, earlier),
-        };
-        (base as i64 + (at.1 * 1e9) as i64).max(0) as u64
-    };
-
-    header(&mut scene, pr, Some(seconds(0.25)))?;
-    let mut before_chip = chip(&mut scene, "chip-before", Tone::Error, "before")?;
-    before_chip.show(&mut scene, seconds(0.5));
-    before_chip.hide(&mut scene, switch);
-    let mut after_chip = chip(&mut scene, "chip-after", Tone::Success, "after the fix")?;
-    after_chip.show(&mut scene, switch + seconds(0.25));
-
-    let mut sequence = SequenceActor::declare(&mut scene, "flow", &flow.sequence)?;
-    sequence.animate(&mut scene, "opacity", 0.0, seconds(0.2), 1.0, 0.5);
-    sequence.animate(&mut scene, "lifelines", 0.0, seconds(0.35), 1.0, 0.9);
-    for (row, at) in &flow.reveals {
-        sequence.reveal(&mut scene, row, time(*at));
-    }
-    for (row, at) in &flow.strikes {
-        sequence.strike(&mut scene, row, time(*at));
-        // The fix replays the same story: shared rows return unstruck.
-        let strike = sequence.channel(&mut scene, &format!("row.{row}.strike"), 0.0);
-        scene.spring(&strike, switch, 0.0, 0.4, 0.0);
-    }
-    for row in flow.before_only {
-        sequence.fade(&mut scene, row, switch, 0.0);
-    }
-    for (participant, on, off) in &flow.emphasis {
-        let emphasis = sequence.channel(
-            &mut scene,
-            &format!("participant.{participant}.emphasis"),
-            0.0,
-        );
-        let (on, off) = (time(*on), time(*off));
-        scene.spring(&emphasis, on, 1.0, 0.35, 0.0);
-        // Emphasis from the broken story never outlives it.
-        let off = if on < switch { off.min(switch) } else { off };
-        scene.spring(&emphasis, off.max(on), 0.0, 0.45, 0.0);
-    }
-    for (participant, appear, fixed_opacity) in &flow.late {
-        let opacity = sequence.channel(
-            &mut scene,
-            &format!("participant.{participant}.opacity"),
-            0.0,
-        );
-        let appear = time(*appear);
-        if appear < switch {
-            // Introduced by the broken story; the fixed story sets its own presence.
-            scene.spring(&opacity, appear, 1.0, 0.5, 0.0);
-            scene.spring(&opacity, switch, *fixed_opacity, 0.45, 0.0);
-        } else {
-            scene.spring(&opacity, appear, *fixed_opacity, 0.5, 0.0);
-        }
-    }
-
-    let mut footer_before = footer(&mut scene, "footer-before", flow.footer_before.0)?;
-    footer_before.type_in(&mut scene, time(flow.footer_before.1), 42.0, 0.8);
-    footer_before.hide(&mut scene, switch);
-    let mut footer_after = footer(&mut scene, "footer-after", flow.footer_after.0)?;
-    footer_after.type_in(&mut scene, time(flow.footer_after.1), 42.0, 0.8);
-    scene
-        .finish()
-        .with_context(|| format!("{}-behavior", pr.slug))
-}
-
-/// `entrance`: the editor rises into place. Skip it when a zoom opens into the code.
-fn code(
-    pr: &Pr,
-    narration: &Narration,
-    (diff, steps, note): (Diff, Vec<&'static str>, &'static str),
-    entrance: bool,
-) -> Result<ScenePlan> {
-    let clip = narration.clip(&format!("{}-code", pr.slug))?;
-    let lead = seconds(0.9);
-    let duration = lead + clip.duration() + seconds(1.6);
-    let mut scene = PlanBuilder::new(format!("{}-code", pr.slug), duration);
-    let spoken = clip.place(&mut scene, lead);
-    header(&mut scene, pr, None)?;
-    let mut change = chip(&mut scene, "chip-change", Tone::Accent, "the change")?;
-    change.show(&mut scene, seconds(0.2));
-    let times = steps
-        .iter()
-        .map(|phrase| spoken.at(phrase))
-        .collect::<Vec<_>>();
-    diff.declare(&mut scene, &times, seconds(0.9), entrance)?;
-    let mut caption = footer(&mut scene, "footer", vec![span(note, Tone::Muted)])?;
-    caption.show(&mut scene, seconds(0.6));
-    scene.finish().with_context(|| format!("{}-code", pr.slug))
+    ReelPlan::dipped("pr-walkthrough", plans, TRANSITION)
 }
 
 fn intro(narration: &Narration) -> Result<ScenePlan> {
@@ -401,23 +94,23 @@ fn intro(narration: &Narration) -> Result<ScenePlan> {
         row_height: 84.0,
         slots: Some(6),
         participants: vec![
-            participant("tui", "TUI", "terminal 1"),
-            participant("desktop", "desktop app", ""),
-            participant("service", "opencode service", "one per machine"),
-            participant("tui2", "TUI", "terminal 2"),
+            Participant::new("tui", "TUI", "terminal 1"),
+            Participant::new("desktop", "desktop app", ""),
+            Participant::new("service", "opencode service", "one per machine"),
+            Participant::new("tui2", "TUI", "terminal 2"),
         ],
         rows: vec![
-            message("tui", "tui", "service", "connect", Tone::Request),
-            message("desktop", "desktop", "service", "connect", Tone::Request),
-            message("tui2", "tui2", "service", "connect", Tone::Request),
-            note(
+            Row::message("tui", "tui", "service", "connect", Tone::Request),
+            Row::message("desktop", "desktop", "service", "connect", Tone::Request),
+            Row::message("tui2", "tui2", "service", "connect", Tone::Request),
+            Row::note(
                 "timeout",
                 &["tui", "tui2"],
                 "failed to start → \"Timed out waiting…\"",
                 Tone::Error,
             )
-            .slot(4),
-            end("killed", "service", "a healthy server, killed", Tone::Error).slot(5),
+            .in_slot(4),
+            Row::end("killed", "service", "a healthy server, killed", Tone::Error).in_slot(5),
         ],
     };
     let mut sequence = SequenceActor::declare(&mut scene, "flow", &flow)?;
@@ -538,67 +231,67 @@ fn errors_flow() -> Flow {
         row_height: 80.0,
         slots: Some(8),
         participants: vec![
-            participant("client", "client", "Service.ensure"),
-            participant("a", "contender A", ""),
-            participant("b", "contender B", ""),
-            participant("c", "contender C", ""),
+            Participant::new("client", "client", "Service.ensure"),
+            Participant::new("a", "contender A", ""),
+            Participant::new("b", "contender B", ""),
+            Participant::new("c", "contender C", ""),
         ],
         rows: vec![
-            message("spawn-a", "client", "a", "spawn", Tone::Request).aside("0 s"),
-            message("spawn-b", "client", "b", "spawn", Tone::Request).aside("5 s"),
-            reply(
+            Row::message("spawn-a", "client", "a", "spawn", Tone::Request).with_aside("0 s"),
+            Row::message("spawn-b", "client", "b", "spawn", Tone::Request).with_aside("5 s"),
+            Row::reply(
                 "fail-a",
                 "a",
                 "client",
                 "error: port 49374 in use",
                 Tone::Error,
             ),
-            end("end-a", "a", "exits", Tone::Muted),
-            message(
+            Row::end("end-a", "a", "exits", Tone::Muted),
+            Row::message(
                 "drop",
                 "client",
                 "client",
                 "B is alive → drop it",
                 Tone::Warning,
             ),
-            message(
+            Row::message(
                 "spawn-c",
                 "client",
                 "c",
                 "spawn a replacement",
                 Tone::Request,
             )
-            .aside("10 s"),
-            note(
+            .with_aside("10 s"),
+            Row::note(
                 "repeat",
                 &["a", "c"],
                 "…again, and every failure is dropped",
                 Tone::Muted,
             ),
-            note(
+            Row::note(
                 "timeout",
                 &["client", "c"],
                 "Timed out waiting for the background service to start",
                 Tone::Error,
             )
-            .aside("120 s"),
-            message(
+            .with_aside("120 s"),
+            Row::message(
                 "keep",
                 "client",
                 "client",
                 "keep the first error",
                 Tone::Success,
             )
-            .slot(4),
-            note("no-new", &["b", "c"], "no new contenders", Tone::Success).slot(5),
-            reply("b-exits", "b", "client", "exits too", Tone::Muted).slot(6),
-            note(
+            .in_slot(4),
+            Row::note("no-new", &["b", "c"], "no new contenders", Tone::Success).in_slot(5),
+            Row::reply("b-exits", "b", "client", "exits too", Tone::Muted).in_slot(6),
+            Row::note(
                 "real",
                 &["client", "c"],
                 "reported: port 49374 is already in use",
                 Tone::Error,
             )
-            .slot(7),
+            .in_slot(7),
         ],
     };
     Flow {
@@ -646,50 +339,50 @@ fn mismatch_flow() -> Flow {
         row_height: 96.0,
         slots: Some(6),
         participants: vec![
-            participant("client", "client", "reconnecting"),
-            participant("service", "opencode service", "healthy"),
-            participant("others", "other clients", ""),
+            Participant::new("client", "client", "reconnecting"),
+            Participant::new("service", "opencode service", "healthy"),
+            Participant::new("others", "other clients", ""),
         ],
         rows: vec![
-            message("probe", "client", "service", "GET /api/info", Tone::Request),
-            reply("missing", "service", "client", "404", Tone::Error),
-            message(
+            Row::message("probe", "client", "service", "GET /api/info", Tone::Request),
+            Row::reply("missing", "service", "client", "404", Tone::Error),
+            Row::message(
                 "assume",
                 "client",
                 "client",
                 "404 → outdated → replace it",
                 Tone::Warning,
             ),
-            message("kill", "client", "service", "SIGTERM", Tone::Error),
-            end("stopped", "service", "stopped", Tone::Error),
-            note(
+            Row::message("kill", "client", "service", "SIGTERM", Tone::Error),
+            Row::end("stopped", "service", "stopped", Tone::Error),
+            Row::note(
                 "cut",
                 &["service", "others"],
                 "every other client disconnects",
                 Tone::Error,
             ),
-            message(
+            Row::message(
                 "decide",
                 "client",
                 "client",
                 "version ok → protocol mismatch",
                 Tone::Success,
             )
-            .slot(2),
-            note(
+            .in_slot(2),
+            Row::note(
                 "refuse",
                 &["client"],
                 "error: update this client, or restart explicitly",
                 Tone::Warning,
             )
-            .slot(3),
-            note(
+            .in_slot(3),
+            Row::note(
                 "alive",
                 &["service", "others"],
                 "the server keeps running",
                 Tone::Success,
             )
-            .slot(4),
+            .in_slot(4),
         ],
     };
     Flow {
@@ -738,41 +431,41 @@ fn bind_flow() -> Flow {
         row_height: 88.0,
         slots: Some(7),
         participants: vec![
-            participant("new", "new server", "starting"),
-            participant("port", "port 49374", ""),
-            participant("old", "old server", "exiting"),
+            Participant::new("new", "new server", "starting"),
+            Participant::new("port", "port 49374", ""),
+            Participant::new("old", "old server", "exiting"),
         ],
         rows: vec![
-            message("bind", "new", "port", "bind", Tone::Request),
-            reply("in-use", "port", "new", "EADDRINUSE", Tone::Error),
-            message(
+            Row::message("bind", "new", "port", "bind", Tone::Request),
+            Row::reply("in-use", "port", "new", "EADDRINUSE", Tone::Error),
+            Row::message(
                 "wait",
                 "new",
                 "new",
                 "wait for an owner to register",
                 Tone::Warning,
             )
-            .aside("0 s"),
-            message("release", "old", "port", "release", Tone::Muted),
-            end("exited", "old", "exited", Tone::Muted),
-            message("still", "new", "new", "still waiting…", Tone::Warning).aside("5 s"),
-            note(
+            .with_aside("0 s"),
+            Row::message("release", "old", "port", "release", Tone::Muted),
+            Row::end("exited", "old", "exited", Tone::Muted),
+            Row::message("still", "new", "new", "still waiting…", Tone::Warning).with_aside("5 s"),
+            Row::note(
                 "fail",
                 &["new", "port"],
                 "port 49374 is in use by another process",
                 Tone::Error,
             )
-            .aside("15 s"),
-            message(
+            .with_aside("15 s"),
+            Row::message(
                 "retry",
                 "new",
                 "new",
                 "retry the bind every 100 ms",
                 Tone::Success,
             )
-            .slot(2),
-            message("bind-again", "new", "port", "bind", Tone::Success).slot(5),
-            reply("listening", "port", "new", "listening", Tone::Success).slot(6),
+            .in_slot(2),
+            Row::message("bind-again", "new", "port", "bind", Tone::Success).in_slot(5),
+            Row::reply("listening", "port", "new", "listening", Tone::Success).in_slot(6),
         ],
     };
     Flow {
@@ -817,44 +510,45 @@ fn stop_flow() -> Flow {
         row_height: 82.0,
         slots: Some(8),
         participants: vec![
-            participant("client", "client", "restart"),
-            participant("old", "old server", "pid 4127"),
-            participant("file", "service.json", ""),
-            participant("new", "new server", ""),
+            Participant::new("client", "client", "restart"),
+            Participant::new("old", "old server", "pid 4127"),
+            Participant::new("file", "service.json", ""),
+            Participant::new("new", "new server", ""),
         ],
         rows: vec![
-            message("term", "client", "old", "SIGTERM", Tone::Error),
-            message("grace", "client", "client", "wait up to 5 s", Tone::Plain).aside("0 s"),
-            message("unregister", "old", "file", "unregister", Tone::Muted),
-            message("check", "client", "file", "still ours?", Tone::Request).aside("5 s"),
-            reply("gone", "file", "client", "gone", Tone::Muted),
-            message(
+            Row::message("term", "client", "old", "SIGTERM", Tone::Error),
+            Row::message("grace", "client", "client", "wait up to 5 s", Tone::Plain)
+                .with_aside("0 s"),
+            Row::message("unregister", "old", "file", "unregister", Tone::Muted),
+            Row::message("check", "client", "file", "still ours?", Tone::Request).with_aside("5 s"),
+            Row::reply("gone", "file", "client", "gone", Tone::Muted),
+            Row::message(
                 "assume",
                 "client",
                 "client",
                 "assume it stopped",
                 Tone::Warning,
             ),
-            message("start", "client", "new", "start", Tone::Request),
-            note(
+            Row::message("start", "client", "new", "start", Tone::Request),
+            Row::note(
                 "clash",
                 &["old", "new"],
                 "the old process still holds the port",
                 Tone::Error,
             ),
-            message(
+            Row::message(
                 "watch",
                 "client",
                 "client",
                 "watch pid 4127, not the file",
                 Tone::Success,
             )
-            .slot(3)
-            .aside("5 s"),
-            message("kill", "client", "old", "SIGKILL", Tone::Error).slot(4),
-            end("exited", "old", "exited", Tone::Muted).slot(5),
-            message("start-clean", "client", "new", "start", Tone::Success).slot(6),
-            note("clean", &["new"], "the port is free", Tone::Success).slot(7),
+            .in_slot(3)
+            .with_aside("5 s"),
+            Row::message("kill", "client", "old", "SIGKILL", Tone::Error).in_slot(4),
+            Row::end("exited", "old", "exited", Tone::Muted).in_slot(5),
+            Row::message("start-clean", "client", "new", "start", Tone::Success).in_slot(6),
+            Row::note("clean", &["new"], "the port is free", Tone::Success).in_slot(7),
         ],
     };
     Flow {
@@ -900,11 +594,6 @@ fn stop_flow() -> Flow {
     }
 }
 
-/// A phrase in the after clip that is only searched once `earlier` has been said.
-fn after_following(phrase: &'static str, earlier: &'static str) -> At {
-    At(When::AfterFollowing(phrase, earlier), 0.0)
-}
-
 fn bootstrap_flow() -> Flow {
     let sequence = SequencePlan {
         origin: [250.0, 168.0],
@@ -912,34 +601,34 @@ fn bootstrap_flow() -> Flow {
         row_height: 76.0,
         slots: Some(9),
         participants: vec![
-            participant("tui", "TUI", "startup"),
-            participant("a", "server A", ""),
-            participant("ensure", "Service.ensure", ""),
-            participant("b", "server B", ""),
+            Participant::new("tui", "TUI", "startup"),
+            Participant::new("a", "server A", ""),
+            Participant::new("ensure", "Service.ensure", ""),
+            Participant::new("b", "server B", ""),
         ],
         rows: vec![
-            message("probe", "tui", "a", "GET /api/info", Tone::Request),
-            reply("ready", "a", "tui", "200 · ready", Tone::Success),
-            end("gone", "a", "goes away", Tone::Error),
-            message("list", "tui", "a", "file.list", Tone::Request),
-            note(
+            Row::message("probe", "tui", "a", "GET /api/info", Tone::Request),
+            Row::reply("ready", "a", "tui", "200 · ready", Tone::Success),
+            Row::end("gone", "a", "goes away", Tone::Error),
+            Row::message("list", "tui", "a", "file.list", Tone::Request),
+            Row::note(
                 "crash",
                 &["tui", "a"],
                 "ClientError: Transport → the TUI exits",
                 Tone::Error,
             ),
-            message(
+            Row::message(
                 "reconnect",
                 "tui",
                 "ensure",
                 "reconnect, once",
                 Tone::Accent,
             )
-            .slot(4),
-            message("start", "ensure", "b", "start", Tone::Request).slot(5),
-            reply("endpoint", "ensure", "tui", "endpoint B", Tone::Success).slot(6),
-            message("retry", "tui", "b", "file.list", Tone::Request).slot(7),
-            reply("home", "b", "tui", "location → home screen", Tone::Success).slot(8),
+            .in_slot(4),
+            Row::message("start", "ensure", "b", "start", Tone::Request).in_slot(5),
+            Row::reply("endpoint", "ensure", "tui", "endpoint B", Tone::Success).in_slot(6),
+            Row::message("retry", "tui", "b", "file.list", Tone::Request).in_slot(7),
+            Row::reply("home", "b", "tui", "location → home screen", Tone::Success).in_slot(8),
         ],
     };
     Flow {

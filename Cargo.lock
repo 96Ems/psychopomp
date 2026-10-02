@@ -902,6 +902,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "kinograph",
+ "kinograph-pr-walkthrough",
  "serde",
  "serde_json",
 ]

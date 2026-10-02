@@ -117,7 +117,9 @@ Transcript parsing does not understand code, actors, or rendering. It only conne
 punctuation, and number words versus digits are ignored). `scripts/narrate.ts`
 produces clips, loudness-normalized MP3s, Whisper word timings, and a manifest of
 exact durations; its `--draft` mode uses macOS `say` so a scene can be timed before
-the final voice exists. The `pr-walkthrough` Scene Program keys every reveal to a
+the final voice exists. `kinograph::narration` loads that manifest and places each
+clip as a Script Clip whose phrase lookups return plan-clock times. The
+`pr-walkthrough` Scene Program keys every reveal to a
 phrase and fails with the clip and phrase when narration no longer says it.
 
 ## Rendering Is One Concrete Adapter
@@ -535,6 +537,9 @@ opacity disables the preview shortcut. `inlineReveal` is optional.
 
 `kinograph::highlight::typescript` compiles one TypeScript line into styled spans
 for editor recipes. It is a line-local approximation for explainers, not a parser.
+`kinograph::editor::diff` builds a Stepped Diff on top of it: an `editor` actor
+whose lines keep identity across steps, with room-opening snapshots and removed
+lines' `mark.*` channels turning red just before they leave.
 
 ## Encoding Is One Concrete Adapter
 

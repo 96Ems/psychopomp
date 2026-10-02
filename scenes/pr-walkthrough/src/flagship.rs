@@ -6,13 +6,14 @@ use std::path::PathBuf;
 
 use anyhow::{Context, Result};
 use kinograph::{
-    author::PlanBuilder,
+    author::{PlanBuilder, seconds},
     caption::{CaptionAlign, CaptionSpanPlan},
     effects::{
         combustion,
         spinner::{self, Mark},
     },
     math::{Vec2, Vec3, easing::Ease, vec2},
+    narration::Narration,
     plan::{
         MediaKindPlan, MediaPlan, MediaRolePlan, ReelPlan, ReelSegmentPlan, ReelTransitionStyle,
         ScenePlan,
@@ -21,7 +22,10 @@ use kinograph::{
     tone::Tone,
 };
 
-use crate::{PRS, chip, code, diffs, footer, header, narration::Narration, seconds, span};
+use crate::{
+    PRS, diffs,
+    film::{chip, code, footer, header, span},
+};
 
 const CLIENT: [f32; 3] = [430.0, 420.0, -60.0];
 const CLIENT_SIZE: [f32; 2] = [340.0, 124.0];

@@ -16,7 +16,9 @@ cargo run --release -- plan render scenes/pr-walkthrough/pr-walkthrough.reel.jso
 - `narration/script.json` is the spoken script, one clip per segment part.
 - `src/lib.rs` holds the stories: participants, rows, and the phrase each row
   waits for. Changing a line of narration usually means changing its phrase here.
-- `src/diff.rs` turns a unified-diff style list (`keep`, `add(step)`,
+- `src/film.rs` is the PR-film template (header, chips, footers, the behavior
+  and code segments); `scenes/config-migration` reuses it.
+- `kinograph::editor::diff` turns a unified-diff style list (`keep`, `add(step)`,
   `remove(step)`) into keyed editor snapshots. Code is condensed for display; the
   footer says so.
 - The generated `pr-walkthrough.reel.json` is checked in and compared with the

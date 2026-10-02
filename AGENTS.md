@@ -65,6 +65,7 @@ Do not run the full render as routine validation when unit tests and static chec
 - `crates/kinograph/src/editor.rs`: typed editor recipe data lowering stable inline parts and logical ranges into Code Transitions
 - `crates/kinograph/src/editor/compiled.rs`: shared validated catalog, reveal ranges, and legacy/keyed placement used by inspection and rendering
 - `crates/kinograph/src/editor/stability.rs`: GPU-free step deltas and heuristic common-text stability warnings
+- `crates/kinograph/src/editor/diff.rs`: Stepped Diff recipe builder (keep/add/remove lines, room-opening snapshots, Line Mark warnings)
 - `crates/kinograph/src/task.rs`: typed planned Task state schedules
 - `crates/kinograph/src/grid.rs`: finite keyed product catalogs and semantic Grid Snapshots
 - `crates/kinograph/src/value.rs`: immutable Value Token recipe data for finite teaching diagrams
@@ -79,7 +80,8 @@ Do not run the full render as routine validation when unit tests and static chec
 - `crates/kinograph/src/timeline/retarget.rs`: shared cancellation-safe numeric schedule for Playback and authored resting entrances
 - `crates/kinograph/src/motion.rs`: deterministic arbitrary-time analytic spring sampling with position and velocity
 - `crates/kinograph/src/transcript.rs`: word timing ingestion, word and phrase cue lookup
-- `crates/kinograph/src/sequence.rs`: Sequence Diagram recipe values, slot geometry, validation, and the `SequenceActor` authoring handle
+- `crates/kinograph/src/narration.rs`: `scripts/narrate.ts` manifests loaded as narration clips, placed as Script Clips, with panicking phrase lookups
+- `crates/kinograph/src/sequence.rs`: Sequence Diagram recipe values and row constructors, slot geometry, validation, and the `SequenceActor` authoring handle
 - `crates/kinograph/src/caption.rs`: Caption recipe values and the `CaptionActor` authoring handle (typing, show, hide)
 - `crates/kinograph/src/rolling.rs`: Rolling Number recipe values, value tokenization, the closed-form roll compiler, and the `RollingNumberActor` handle (`roll`, show, hide)
 - `crates/kinograph/src/math.rs` and `math/`: shared motion and geometry math (glam vectors, lerp/remap/smoothstep, easing, closed-form dynamics such as the settling spring, arc-length curves, shape ports and connectors, deterministic hash)
@@ -146,6 +148,7 @@ Do not run the full render as routine validation when unit tests and static chec
 - `scenes/opencode-jr-architecture/`: narrated Stage-film teaching reel of the OpenCode Jr Slack bot, with one condensed code zoom
 - `scenes/opencode-session-tool/`: rapid-fire OpenCode v2 hot-reload proof using split Vim/OpenCode terminal video, layered SFX, text, and discrete state
 - `scenes/deployment-queue/`: canonical state-driven simulated UI proof with keyed insertion, phase replacement, failure focus, and retry
+- `scenes/pr-walkthrough/`: narrated PR explainer reels; `src/film.rs` is the shared PR-film template (header, chips, behavior and code segments) that `scenes/config-migration/` also uses
 - `scenes/rolling-number/`: Rolling Number showroom: roll up and down, a mid-roll redirect, a carry into a new place, and a shrink
 - `crates/kinograph-render/src/scene.wgsl`: editor geometry and focus shader
 
