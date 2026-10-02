@@ -3,13 +3,12 @@ use std::{collections::HashMap, ops::Range};
 use anyhow::{Context, Result, bail};
 use psychopomp::{
     code::RangeId,
-    dsl::TargetGeometry,
     editor::{CompiledEditor, EditorRecipePlan, EditorTargetSelector},
     motion::MotionState,
     plan::{ActorPlan, ScalarPlan, ScenePlan, TrackEventPlan},
 };
 
-use super::generated;
+use super::{TargetGeometry, generated};
 use crate::render::{
     EditorFrame, HeadlessRenderer, InlineRangeMetrics, InlineRevealFrame, LineMarkFrame,
     PointerFrame, TokenHighlight,
@@ -305,11 +304,8 @@ impl PreparedEditor {
             focus_line_y,
             focus_height: self.editor.focus_height(),
             token_highlight,
-            bright_text: &[],
             pointer,
             inline_reveals: &inline_reveals,
-            squiggles: &[],
-            annotations: &[],
             lines: &lines,
         })
     }

@@ -1,7 +1,9 @@
 use crate::render::{BubblePose, ContentPose, HeadlessRenderer, TaskContentFrame, TaskVisualFrame};
 use anyhow::{Context, Result, bail};
 use psychopomp::{
-    dsl::TaskState, motion::MotionState, plan::ContinuousChannelPlan, task::TaskRecipePlan,
+    motion::MotionState,
+    plan::ContinuousChannelPlan,
+    task::{TaskRecipePlan, TaskState},
 };
 
 pub(super) struct PreparedTask {

@@ -31,7 +31,6 @@ pub struct TerminalSceneFrame<'a> {
 
 #[derive(Clone, Copy)]
 pub enum TerminalBackground {
-    Aurora,
     Neutral,
 }
 
@@ -57,18 +56,6 @@ impl HeadlessRenderer {
         }
 
         let mut pixels = match frame.background {
-            TerminalBackground::Aurora => {
-                if self.terminal_background_pixels.is_empty() {
-                    self.terminal_background_pixels =
-                        vec![0_u8; self.spec.width as usize * self.spec.height as usize * 4];
-                    draw_background(
-                        &mut self.terminal_background_pixels,
-                        self.spec.width,
-                        self.spec.height,
-                    );
-                }
-                self.terminal_background_pixels.clone()
-            }
             TerminalBackground::Neutral => {
                 if self.terminal_neutral_background_pixels.is_empty() {
                     self.terminal_neutral_background_pixels =
@@ -412,22 +399,6 @@ impl HeadlessRenderer {
 enum TextAlign {
     Left,
     Center,
-}
-
-fn draw_background(pixels: &mut [u8], width: u32, height: u32) {
-    for y in 0..height as usize {
-        let phase = y as f32 / height as f32;
-        let color = [
-            (4.0 + phase * 2.0) as u8,
-            (7.0 + phase * 3.0) as u8,
-            (13.0 + phase * 6.0) as u8,
-            255,
-        ];
-        for x in 0..width as usize {
-            let index = (y * width as usize + x) * 4;
-            pixels[index..index + 4].copy_from_slice(&color);
-        }
-    }
 }
 
 fn draw_neutral_background(pixels: &mut [u8], width: u32, height: u32) {

@@ -7,8 +7,7 @@ use std::{
 
 use anyhow::{Context, Result, bail};
 use psychopomp::{
-    composition::{Asset, Composition, Duration, Time, TimeRange},
-    dsl::{CompiledScene, TargetGeometry},
+    composition::{Asset, Duration, MediaPlacement, MediaRole, Time, TimeRange},
     plan::{
         DeckPlan, MediaKindPlan, MediaRolePlan, ReadPlanError, ReelPlan, ScalarPlan, ScenePlan,
         TargetComponentPlan,
@@ -60,6 +59,20 @@ use terminal::PreparedTerminal;
 /// continuous streak rather than a row of copies.
 const STAGE_TEMPORAL_SAMPLES: u32 = 24;
 const BUILTIN_HERO_PLAN: &str = include_str!("../../../scenes/hero/hero.plan.json");
+
+/// Measured placement of a semantic code target within the editor body.
+#[derive(Clone, Copy, Debug)]
+pub(crate) struct TargetGeometry {
+    pub x: f32,
+    pub width: f32,
+    pub line_y: f32,
+}
+
+impl TargetGeometry {
+    pub fn center_x(self) -> f32 {
+        self.x + self.width * 0.5
+    }
+}
 
 pub(crate) async fn render_builtin_hero(output: &Path) -> Result<()> {
     let plan = ScenePlan::from_json(BUILTIN_HERO_PLAN)?;
@@ -403,7 +416,7 @@ struct CompiledPlan {
     timeline: Timeline,
     properties: HashMap<String, PropertyId>,
     state_tracks: HashMap<String, StateTrack<serde_json::Value>>,
-    scene: psychopomp::dsl::CompiledScene,
+    media: Vec<MediaPlacement>,
 }
 
 enum PreparedRoot {
@@ -626,37 +639,36 @@ impl CompiledPlan {
             })
             .collect::<Result<HashMap<_, _>>>()?;
 
-        let mut composition = vec![Composition::hold(Duration::from_nanos(plan.duration_nanos))];
         // Preflight rejected media no recipe consumes; video belongs to its recipe.
-        for media in &plan.media {
-            if !matches!(media.kind, MediaKindPlan::Audio) {
-                continue;
-            }
-            let path = resolve_media_path(base, media);
-            let asset = Asset::audio(media.id.clone(), path);
-            let clip = asset
-                .clip(TimeRange::new(
-                    Time::from_nanos(media.source_start_nanos),
-                    Time::from_nanos(media.source_end_nanos),
-                ))
-                .gain_db(media.gain_db);
-            let placement = match media.role {
-                MediaRolePlan::Script => Composition::script(clip),
-                MediaRolePlan::Layer => Composition::layer(clip),
-            };
-            composition.push(Composition::delay(
-                Duration::from_nanos(media.timeline_start_nanos),
-                placement,
-            ));
-        }
-        let scene = CompiledScene::from_composition(Composition::parallel(composition))?;
+        let media = plan
+            .media
+            .iter()
+            .filter(|media| matches!(media.kind, MediaKindPlan::Audio))
+            .map(|media| {
+                let clip = Asset::audio(media.id.clone(), resolve_media_path(base, media))
+                    .clip(TimeRange::new(
+                        Time::from_nanos(media.source_start_nanos),
+                        Time::from_nanos(media.source_end_nanos),
+                    ))
+                    .gain_db(media.gain_db);
+                let role = match media.role {
+                    MediaRolePlan::Script => MediaRole::Script,
+                    MediaRolePlan::Layer => MediaRole::Layer,
+                };
+                MediaPlacement::new(clip, role, Time::from_nanos(media.timeline_start_nanos))
+            })
+            .collect();
         Ok(Self {
             plan,
             timeline,
             properties,
             state_tracks,
-            scene,
+            media,
         })
+    }
+
+    fn duration(&self) -> Duration {
+        Duration::from_nanos(self.plan.duration_nanos)
     }
 }
 
@@ -1244,16 +1256,15 @@ fn seconds_f64(nanos: u64) -> f64 {
 mod tests {
     use std::collections::HashMap;
 
-    use psychopomp::{
-        dsl::TargetGeometry,
-        plan::{
-            ActorPlan, ContinuousChannelPlan, MediaKindPlan, MediaPlan, MediaRolePlan, ScalarPlan,
-            ScenePlan, SemanticTargetPlan, TargetComponentPlan, TargetScalarPlan, TrackEventPlan,
-        },
+    use psychopomp::plan::{
+        ActorPlan, ContinuousChannelPlan, MediaKindPlan, MediaPlan, MediaRolePlan, ScalarPlan,
+        ScenePlan, SemanticTargetPlan, TargetComponentPlan, TargetScalarPlan, TrackEventPlan,
     };
     use serde_json::json;
 
-    use super::{BUILTIN_HERO_PLAN, CompiledPlan, parse_range, validate_renderer_plan};
+    use super::{
+        BUILTIN_HERO_PLAN, CompiledPlan, TargetGeometry, parse_range, validate_renderer_plan,
+    };
 
     #[test]
     fn plan_channels_compile_through_the_shared_timeline() {
@@ -1472,7 +1483,7 @@ mod tests {
         plan.validate().unwrap();
 
         let prepared = CompiledPlan::compile(plan, std::path::Path::new(".")).unwrap();
-        let source = prepared.scene.media()[0].clip().source_range();
+        let source = prepared.media[0].clip().source_range();
         assert_eq!(source.start().as_nanos(), u64::MAX - 1);
         assert_eq!(source.end().as_nanos(), u64::MAX);
     }

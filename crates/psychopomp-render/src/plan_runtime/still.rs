@@ -67,7 +67,7 @@ impl Loaded {
 
     fn duration_seconds(&self) -> f64 {
         match self {
-            Self::Plan(plan) => plan.scene.duration().as_seconds(),
+            Self::Plan(plan) => plan.duration().as_seconds(),
             Self::Reel(reel) => reel.duration().as_seconds(),
         }
     }

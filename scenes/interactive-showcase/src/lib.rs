@@ -3,13 +3,12 @@ use anyhow::Result;
 use psychopomp::{
     author::{PlanBuilder, SECOND},
     code::{StyledSpan, SyntaxStyle},
-    dsl::TaskState,
     editor::{
         EditorInlineRevealPlan, EditorLinePlan, EditorPartPlan, EditorRecipePlan,
         EditorSemanticRangePlan, EditorSnapshotPlan, EditorTargetSelector,
     },
     plan::{DeckPlan, ScenePlan, SlidePlan},
-    task::{TASK_RECIPE, TaskEventPlan, TaskRecipePlan},
+    task::{TASK_RECIPE, TaskEventPlan, TaskRecipePlan, TaskState},
 };
 use serde_json::json;
 

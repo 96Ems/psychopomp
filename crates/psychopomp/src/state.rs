@@ -27,7 +27,6 @@ struct StateSegment<T> {
 #[derive(Clone, Debug)]
 pub struct StateTrack<T> {
     initial: T,
-    initial_at: f64,
     events: Vec<StateSegment<T>>,
 }
 
@@ -46,20 +45,8 @@ impl<T: Clone + PartialEq> StateTrack<T> {
         events: impl IntoIterator<Item = TimedState<T>>,
         duration: f64,
     ) -> Result<Self> {
-        Self::compile_at(0.0, initial, events, duration)
-    }
-
-    pub fn compile_at(
-        initial_at: f64,
-        initial: T,
-        events: impl IntoIterator<Item = TimedState<T>>,
-        duration: f64,
-    ) -> Result<Self> {
         if !duration.is_finite() || duration < 0.0 {
             bail!("state track duration must be finite and non-negative");
-        }
-        if !initial_at.is_finite() || initial_at < 0.0 || initial_at > duration {
-            bail!("state track initial time must be within its duration");
         }
         let mut events = events.into_iter().enumerate().collect::<Vec<_>>();
         events.sort_by(|(left_index, left), (right_index, right)| {
@@ -69,11 +56,8 @@ impl<T: Clone + PartialEq> StateTrack<T> {
         });
         let mut segments = Vec::new();
         let mut previous_value = initial.clone();
-        let mut previous_at = initial_at;
+        let mut previous_at = 0.0;
         for (_, event) in events {
-            if event.at < initial_at {
-                bail!("state event cannot precede the initial state");
-            }
             if event.at > duration {
                 bail!(
                     "state event at {:.3}s exceeds duration {duration:.3}s",
@@ -94,7 +78,6 @@ impl<T: Clone + PartialEq> StateTrack<T> {
         }
         Ok(Self {
             initial,
-            initial_at,
             events: segments,
         })
     }
@@ -118,28 +101,10 @@ impl<T: Clone + PartialEq> StateTrack<T> {
                 previous: &self.initial,
                 current: &self.initial,
                 previous_duration: 0.0,
-                age: (time - self.initial_at).max(0.0) as f32,
-                transition_at: self.initial_at as f32,
+                age: time as f32,
+                transition_at: 0.0,
             }
         }
-    }
-
-    pub fn last_interval_start(
-        &self,
-        time: f32,
-        mut predicate: impl FnMut(&T) -> bool,
-    ) -> Option<f32> {
-        let time = f64::from(time.max(0.0));
-        let mut active = predicate(&self.initial);
-        let mut last_start = active.then_some(self.initial_at);
-        for event in self.events.iter().filter(|event| event.at <= time) {
-            let next = predicate(&event.value);
-            if next && !active {
-                last_start = Some(event.at);
-            }
-            active = next;
-        }
-        last_start.map(|start| start as f32)
     }
 }
 
@@ -250,8 +215,7 @@ mod tests {
 
     #[test]
     fn every_sample_field_retains_equal_time_history_and_ignores_repeated_values() {
-        let track = StateTrack::compile_at(
-            1.0,
+        let track = StateTrack::compile(
             "initial",
             [
                 TimedState::new(6.0, "done"),
@@ -270,15 +234,15 @@ mod tests {
         // the previous state even though it was never current for positive time.
         for (time, expected) in [
             (9.0, ("initial", "done", [2.0, 3.0, 6.0])),
-            (0.0, ("initial", "initial", [0.0, 0.0, 1.0])),
+            (0.0, ("initial", "initial", [0.0, 0.0, 0.0])),
             (4.0, ("done", "initial", [0.0, 0.0, 4.0])),
-            (3.5, ("initial", "running", [1.0, 1.5, 2.0])),
-            (-2.0, ("initial", "initial", [0.0, 0.0, 1.0])),
+            (3.5, ("initial", "running", [2.0, 1.5, 2.0])),
+            (-2.0, ("initial", "initial", [0.0, 0.0, 0.0])),
             (6.0, ("initial", "done", [2.0, 0.0, 6.0])),
             (4.5, ("done", "initial", [0.0, 0.5, 4.0])),
-            (1.0, ("initial", "initial", [0.0, 0.0, 1.0])),
-            (2.0, ("initial", "running", [1.0, 0.0, 2.0])),
-            (1.5, ("initial", "initial", [0.0, 0.5, 1.0])),
+            (1.0, ("initial", "initial", [0.0, 1.0, 0.0])),
+            (2.0, ("initial", "running", [2.0, 0.0, 2.0])),
+            (1.5, ("initial", "initial", [0.0, 1.5, 0.0])),
             (4.0, ("done", "initial", [0.0, 0.0, 4.0])),
         ] {
             assert_sample(track.sample_at(time), expected);
@@ -287,15 +251,14 @@ mod tests {
     }
 
     #[test]
-    fn empty_and_initial_only_tracks_keep_the_original_initial_time() {
+    fn empty_and_initial_only_tracks_age_from_the_start() {
         for events in [
             Vec::new(),
             vec![TimedState::new(2.0, "idle"), TimedState::new(3.0, "idle")],
         ] {
-            let track = StateTrack::compile_at(2.0, "idle", events, 4.0).unwrap();
-            for (time, age) in [(10.0, 8.0), (-1.0, 0.0), (2.0, 0.0), (3.0, 1.0)] {
-                assert_sample(track.sample_at(time), ("idle", "idle", [0.0, age, 2.0]));
-                assert_eq!(track.last_interval_start(time as f32, |_| true), Some(2.0));
+            let track = StateTrack::compile("idle", events, 4.0).unwrap();
+            for (time, age) in [(10.0, 10.0), (-1.0, 0.0), (2.0, 2.0), (3.0, 3.0)] {
+                assert_sample(track.sample_at(time), ("idle", "idle", [0.0, age, 0.0]));
             }
         }
     }
@@ -346,91 +309,21 @@ mod tests {
     }
 
     #[test]
-    fn interval_queries_preserve_last_start_and_predicate_order() {
-        let track = StateTrack::compile_at(
-            1.0,
-            "hidden",
-            [
-                TimedState::new(2.0, "idle"),
-                TimedState::new(3.0, "running"),
-                TimedState::new(3.5, "running"),
-                TimedState::new(4.0, "hidden"),
-                TimedState::new(4.0, "idle"),
-                TimedState::new(5.0, "hidden"),
-                TimedState::new(6.0, "idle"),
-                TimedState::new(7.0, "running"),
-            ],
-            8.0,
-        )
-        .unwrap();
-        let cases = [
+    fn invalid_state_times_are_checked_before_deduplication() {
+        for (duration, events, expected) in [
             (
-                8.0,
-                Some(6.0),
-                &[
-                    "hidden", "idle", "running", "hidden", "idle", "hidden", "idle", "running",
-                ][..],
-            ),
-            (
-                5.5,
-                Some(4.0),
-                &["hidden", "idle", "running", "hidden", "idle", "hidden"],
-            ),
-            (0.0, None, &["hidden"]),
-            (3.5, Some(2.0), &["hidden", "idle", "running"]),
-            (
-                4.0,
-                Some(4.0),
-                &["hidden", "idle", "running", "hidden", "idle"],
-            ),
-            (2.0, Some(2.0), &["hidden", "idle"]),
-        ];
-        for (time, interval_start, expected_calls) in cases {
-            let mut calls = Vec::new();
-            assert_eq!(
-                track.last_interval_start(time, |state| {
-                    calls.push(*state);
-                    *state != "hidden"
-                }),
-                interval_start
-            );
-            assert_eq!(calls, expected_calls);
-        }
-    }
-
-    #[test]
-    fn invalid_state_times_are_checked_before_deduplication_in_existing_order() {
-        for (initial_at, duration, events, expected) in [
-            (
-                f64::NAN,
                 f64::NAN,
                 vec![TimedState::new(3.0, "initial")],
                 "state track duration must be finite and non-negative",
             ),
             (
-                3.0,
-                2.0,
-                vec![TimedState::new(0.5, "initial")],
-                "state track initial time must be within its duration",
-            ),
-            (
-                1.0,
-                2.0,
-                vec![
-                    TimedState::new(3.0, "initial"),
-                    TimedState::new(0.5, "initial"),
-                ],
-                "state event cannot precede the initial state",
-            ),
-            (
-                1.0,
                 2.0,
                 vec![TimedState::new(3.0, "initial")],
                 "state event at 3.000s exceeds duration 2.000s",
             ),
         ] {
             assert_eq!(
-                StateTrack::compile_at(initial_at, "initial", events, duration)
+                StateTrack::compile("initial", events, duration)
                     .unwrap_err()
                     .to_string(),
                 expected

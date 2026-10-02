@@ -68,11 +68,6 @@ impl VideoFrameCache {
         frame_index(seconds, self.fps, self.frame_count)
     }
 
-    pub fn frame_at(&mut self, seconds: f32) -> Result<&[u8]> {
-        let index = self.frame_index_at(seconds);
-        self.frame_at_index(index)
-    }
-
     pub(crate) fn frame_at_index(&mut self, index: u64) -> Result<&[u8]> {
         anyhow::ensure!(
             index < self.frame_count,

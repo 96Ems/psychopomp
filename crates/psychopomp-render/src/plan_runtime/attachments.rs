@@ -4,10 +4,11 @@
 use std::collections::{HashMap, HashSet};
 
 use anyhow::{Result, bail};
-use psychopomp::{
-    dsl::TargetGeometry,
-    plan::{ContinuousChannelPlan, ScalarPlan, ScenePlan, TargetComponentPlan, TrackEventPlan},
+use psychopomp::plan::{
+    ContinuousChannelPlan, ScalarPlan, ScenePlan, TargetComponentPlan, TrackEventPlan,
 };
+
+use super::TargetGeometry;
 
 pub(super) struct Attachment {
     pub channel: String,

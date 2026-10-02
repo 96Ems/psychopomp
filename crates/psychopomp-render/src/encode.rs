@@ -209,10 +209,7 @@ impl Drop for FfmpegEncoder {
 mod tests {
     use std::path::Path;
 
-    use psychopomp::{
-        composition::{Asset, Composition, Duration, Time, TimeRange},
-        dsl::CompiledScene,
-    };
+    use psychopomp::composition::{Asset, MediaPlacement, MediaRole, Time, TimeRange};
 
     use super::{audio_clip_filter, temporary_output_path};
 
@@ -221,12 +218,8 @@ mod tests {
         let clip = Asset::audio("cue", "cue.wav")
             .clip(TimeRange::new(Time::seconds(0.25), Time::seconds(0.75)))
             .gain_db(12.0);
-        let scene = CompiledScene::from_composition(Composition::delay(
-            Duration::milliseconds(1_234.5),
-            Composition::layer(clip),
-        ))
-        .unwrap();
-        let filter = audio_clip_filter(2, 3, &scene.media()[0]);
+        let placement = MediaPlacement::new(clip, MediaRole::Layer, Time::seconds(1.2345));
+        let filter = audio_clip_filter(2, 3, &placement);
 
         assert_eq!(
             filter,
