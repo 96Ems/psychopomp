@@ -8,7 +8,7 @@ use std::{
 
 use anyhow::{Context, Result, bail};
 
-use kinograph::composition::{AssetKind, MediaPlacement};
+use kinograph::composition::MediaPlacement;
 
 static NEXT_TEMPORARY_OUTPUT: AtomicU64 = AtomicU64::new(0);
 
@@ -61,13 +61,6 @@ impl FfmpegEncoder {
         let mut filters = Vec::with_capacity(media.len());
         for (index, placement) in media.iter().enumerate() {
             let asset = placement.clip().asset();
-            if asset.kind() != AssetKind::Audio {
-                bail!(
-                    "FFmpeg media assembly currently supports audio clips, not {:?} asset '{}'",
-                    asset.kind(),
-                    asset.id().as_str()
-                );
-            }
             arguments.push("-i".to_owned());
             arguments.push(asset.path().to_string_lossy().into_owned());
             filters.push(audio_clip_filter(index, index + 1, placement));
@@ -216,12 +209,9 @@ impl Drop for FfmpegEncoder {
 mod tests {
     use std::path::Path;
 
-    use std::collections::HashMap;
-
     use kinograph::{
         composition::{Asset, Composition, Duration, Time, TimeRange},
-        dsl::{Scalar, Scene},
-        timeline::PropertyId,
+        dsl::CompiledScene,
     };
 
     use super::{audio_clip_filter, temporary_output_path};
@@ -231,11 +221,10 @@ mod tests {
         let clip = Asset::audio("cue", "cue.wav")
             .clip(TimeRange::new(Time::seconds(0.25), Time::seconds(0.75)))
             .gain_db(12.0);
-        let scene = Scene::new(
-            Vec::<(PropertyId, Scalar)>::new(),
-            Composition::delay(Duration::milliseconds(1_234.5), Composition::layer(clip)),
-        )
-        .compile(&HashMap::new())
+        let scene = CompiledScene::from_composition(Composition::delay(
+            Duration::milliseconds(1_234.5),
+            Composition::layer(clip),
+        ))
         .unwrap();
         let filter = audio_clip_filter(2, 3, &scene.media()[0]);
 

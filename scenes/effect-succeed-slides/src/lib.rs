@@ -194,7 +194,6 @@ fn reveal(line: &str, range: &str, channel: &str, reversed: bool) -> EditorInlin
 mod tests {
     use super::*;
     use kinograph::{
-        code::TransitionProgress,
         editor::inspect_steps,
         plan::{ScalarPlan, compile_channels},
         timeline::PropertyId,
@@ -205,12 +204,8 @@ mod tests {
     fn demo_preserves_lines_and_keeps_common_text_outside_changing_ranges() {
         let recipe = editor_recipe();
         assert_eq!(recipe.initial_line_ids, recipe.final_line_ids);
-        let transition = recipe.transition().unwrap();
-        let lines = transition.sample(TransitionProgress {
-            layout: 1.0,
-            content: 1.0,
-        });
-        assert_eq!(lines.len(), 4);
+        let editor = recipe.compile().unwrap();
+        assert_eq!(editor.sample_lines(|_, _| 1.0).len(), 4);
         for reveal in recipe
             .inline_reveal
             .iter()

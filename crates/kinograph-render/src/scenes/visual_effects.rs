@@ -1,12 +1,11 @@
-use std::{collections::HashMap, path::Path};
+use std::path::Path;
 
 use anyhow::Result;
 use serde::Deserialize;
 
 use kinograph::{
     composition::{Asset, Clip, Composition, Time, TimeRange},
-    dsl::{Scalar, Scene, Task},
-    timeline::PropertyId,
+    dsl::{CompiledScene, Task},
     transcript::Transcript,
 };
 
@@ -126,8 +125,7 @@ pub(crate) async fn render(output: &Path) -> Result<()> {
         sound_at(cues.notify_failed, failure_sound),
         sound_at(cues.pact_death, death_sound),
     ]);
-    let scene =
-        Scene::new(Vec::<(PropertyId, Scalar)>::new(), composition).compile(&HashMap::new())?;
+    let scene = CompiledScene::from_composition(composition)?;
     encode_scene(
         &mut renderer,
         output,

@@ -311,10 +311,7 @@ fn effect_is_a_description_choreography(
         ),
         (
             pointer.y.clone(),
-            Scalar::TargetBelow {
-                target: run_sync,
-                offset: 85.0,
-            },
+            Scalar::TargetLineY(run_sync).offset(85.0),
         ),
         (pointer.opacity.clone(), Scalar::Literal(0.0)),
         (pointer.scale.clone(), Scalar::Literal(pointer_scale)),

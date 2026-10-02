@@ -302,13 +302,7 @@ fn effect_shows_errors_choreography(
             pointer.x.clone(),
             Scalar::TargetCenterX(effect.clone()).offset(40.0),
         ),
-        (
-            pointer.y.clone(),
-            Scalar::TargetBelow {
-                target: effect,
-                offset: 85.0,
-            },
-        ),
+        (pointer.y.clone(), Scalar::TargetLineY(effect).offset(85.0)),
         (pointer.opacity.clone(), Scalar::Literal(0.0)),
         (pointer.scale.clone(), Scalar::Literal(pointer_scale * 0.7)),
         (pointer.blur.clone(), Scalar::Literal(4.0)),

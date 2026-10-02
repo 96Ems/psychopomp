@@ -280,10 +280,6 @@ Immutable source material identified independently from any use on the timeline.
 
 One positive-duration source range from an audio or video asset. Moving, copying, removing, or changing an audio clip's gain changes the edit without changing its source asset.
 
-## Image Actor
-
-A stable visual actor backed by an image asset. Position, scale, rotation, opacity, and blur are ordinary property tracks; unlike a clip, an image has no intrinsic timeline duration.
-
 ## Script Clip
 
 A clip on the primary spoken-media track. Its transcript may drive structural edits, captions, and semantic timing.

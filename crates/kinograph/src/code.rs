@@ -94,7 +94,6 @@ impl InlinePart {
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum LogicalOffset {
     Start,
-    Byte(usize),
     End,
 }
 
@@ -109,13 +108,6 @@ impl LogicalPosition {
         Self {
             part_id: PartId::new(part_id),
             offset: LogicalOffset::Start,
-        }
-    }
-
-    pub fn byte(part_id: impl Into<String>, byte: usize) -> Self {
-        Self {
-            part_id: PartId::new(part_id),
-            offset: LogicalOffset::Byte(byte),
         }
     }
 
@@ -136,22 +128,6 @@ pub struct LogicalRange {
 impl LogicalRange {
     pub fn new(start: LogicalPosition, end: LogicalPosition) -> Self {
         Self { start, end }
-    }
-
-    pub fn whole(part_id: impl Into<String>) -> Self {
-        let part_id = part_id.into();
-        Self::new(
-            LogicalPosition::start(part_id.clone()),
-            LogicalPosition::end(part_id),
-        )
-    }
-
-    pub fn within(part_id: impl Into<String>, bytes: Range<usize>) -> Self {
-        let part_id = part_id.into();
-        Self::new(
-            LogicalPosition::byte(part_id.clone(), bytes.start),
-            LogicalPosition::byte(part_id, bytes.end),
-        )
     }
 
     pub fn spanning(first: impl Into<String>, last: impl Into<String>) -> Self {
@@ -275,39 +251,8 @@ impl CodeLine {
         &self.parts
     }
 
-    pub fn part_span_range(&self, part_id: &PartId) -> Option<Range<usize>> {
-        self.parts
-            .iter()
-            .position(|part| part.id == *part_id)
-            .map(|index| self.part_spans[index].clone())
-    }
-
     pub fn semantic_range(&self, id: &RangeId) -> Option<&LogicalRange> {
         self.ranges.get(id)
-    }
-
-    pub fn semantic_byte_range(&self, id: &RangeId) -> Result<Range<usize>> {
-        let logical = self.ranges.get(id).with_context(|| {
-            format!(
-                "code line '{}' has no semantic range '{}'",
-                self.id.as_str(),
-                id.as_str()
-            )
-        })?;
-        let resolved = self.resolve_logical_range(logical)?;
-        let start = self.parts[..resolved.start_part]
-            .iter()
-            .map(InlinePart::text)
-            .map(|text| text.len())
-            .sum::<usize>()
-            + resolved.start_byte;
-        let end = self.parts[..resolved.end_part]
-            .iter()
-            .map(InlinePart::text)
-            .map(|text| text.len())
-            .sum::<usize>()
-            + resolved.end_byte;
-        Ok(start..end)
     }
 
     pub fn semantic_span_range(&self, id: &RangeId) -> Result<Range<usize>> {
@@ -357,8 +302,8 @@ impl CodeLine {
         if start_part > end_part {
             bail!("logical range reverses inline part order");
         }
-        let start_byte = resolve_offset(&self.parts[start_part], range.start.offset)?;
-        let end_byte = resolve_offset(&self.parts[end_part], range.end.offset)?;
+        let start_byte = resolve_offset(&self.parts[start_part], range.start.offset);
+        let end_byte = resolve_offset(&self.parts[end_part], range.end.offset);
         let selects_text = if start_part == end_part {
             start_byte < end_byte
         } else {
@@ -380,23 +325,11 @@ impl CodeLine {
     }
 }
 
-fn resolve_offset(part: &InlinePart, offset: LogicalOffset) -> Result<usize> {
-    let text = part.text();
-    let byte = match offset {
+fn resolve_offset(part: &InlinePart, offset: LogicalOffset) -> usize {
+    match offset {
         LogicalOffset::Start => 0,
-        LogicalOffset::Byte(byte) => byte,
-        LogicalOffset::End => text.len(),
-    };
-    if byte > text.len() {
-        bail!(
-            "logical byte offset {byte} exceeds inline part length {}",
-            text.len()
-        );
+        LogicalOffset::End => part.text().len(),
     }
-    if !text.is_char_boundary(byte) {
-        bail!("logical byte offset {byte} is not a UTF-8 character boundary");
-    }
-    Ok(byte)
 }
 
 pub struct CodeDocument {
@@ -572,7 +505,7 @@ impl CodeTransition {
 mod tests {
     use super::{
         CodeDocument, CodeLayout, CodeLine, CodeSnapshot, CodeTransition, InlinePart, LogicalRange,
-        PartId, SemanticRange, StyledSpan, SyntaxStyle, TransitionProgress,
+        SemanticRange, StyledSpan, SyntaxStyle, TransitionProgress,
     };
 
     fn line(id: &str) -> CodeLine {
@@ -643,14 +576,13 @@ mod tests {
                 ),
             ],
             [SemanticRange::new(
-                "suffix-call",
-                LogicalRange::within("suffix", 3..8),
+                "types",
+                LogicalRange::spanning("promise", "effect"),
             )],
         )
         .unwrap();
 
         assert_eq!(line.parts().len(), 4);
-        assert_eq!(line.part_span_range(&PartId::new("effect")).unwrap(), 2..3);
         assert_eq!(
             line.spans()
                 .iter()
@@ -659,14 +591,14 @@ mod tests {
             "const value: Promise<A>Effect<A> = run()"
         );
         assert_eq!(
-            line.semantic_byte_range(&super::RangeId::new("suffix-call"))
+            line.semantic_span_range(&super::RangeId::new("types"))
                 .unwrap(),
-            35..40
+            1..3
         );
     }
 
     #[test]
-    fn logical_ranges_validate_part_identity_and_utf8_boundaries() {
+    fn logical_ranges_validate_part_identity_and_selected_text() {
         let duplicate = CodeLine::with_parts(
             "line",
             vec![
@@ -681,25 +613,6 @@ mod tests {
             duplicate
                 .to_string()
                 .contains("repeats inline part 'value'")
-        );
-
-        let invalid_utf8 = CodeLine::with_parts(
-            "line",
-            vec![InlinePart::new(
-                "value",
-                vec![StyledSpan::new("é", SyntaxStyle::Plain)],
-            )],
-            [SemanticRange::new(
-                "broken",
-                LogicalRange::within("value", 1..2),
-            )],
-        )
-        .err()
-        .unwrap();
-        assert!(
-            invalid_utf8
-                .to_string()
-                .contains("UTF-8 character boundary")
         );
 
         let empty_across_parts = CodeLine::with_parts(

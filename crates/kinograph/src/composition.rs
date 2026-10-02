@@ -1,5 +1,5 @@
 use std::{
-    collections::HashMap,
+    collections::HashSet,
     path::{Path, PathBuf},
 };
 
@@ -44,14 +44,6 @@ impl Time {
                 .expect("timeline time overflowed"),
         )
     }
-
-    pub fn before(self, duration: Duration) -> Self {
-        assert!(
-            duration.0 <= self.0,
-            "time offset precedes composition start"
-        );
-        Self(self.0 - duration.0)
-    }
 }
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq, PartialOrd)]
@@ -79,10 +71,6 @@ impl Duration {
 
     pub fn from_nanos(value: u64) -> Self {
         Self(value)
-    }
-
-    pub fn as_nanos(self) -> u64 {
-        self.0
     }
 
     pub fn frame_count(self, frames_per_second: u32) -> u64 {
@@ -133,39 +121,19 @@ impl AssetId {
     }
 }
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum AssetKind {
-    Audio,
-    Video,
-    Image,
-}
-
+/// A source audio file; clips select time ranges from it.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Asset {
     id: AssetId,
     path: PathBuf,
-    kind: AssetKind,
 }
 
 impl Asset {
-    pub fn new(id: impl Into<String>, path: impl Into<PathBuf>, kind: AssetKind) -> Self {
+    pub fn audio(id: impl Into<String>, path: impl Into<PathBuf>) -> Self {
         Self {
             id: AssetId::new(id),
             path: path.into(),
-            kind,
         }
-    }
-
-    pub fn audio(id: impl Into<String>, path: impl Into<PathBuf>) -> Self {
-        Self::new(id, path, AssetKind::Audio)
-    }
-
-    pub fn video(id: impl Into<String>, path: impl Into<PathBuf>) -> Self {
-        Self::new(id, path, AssetKind::Video)
-    }
-
-    pub fn image(id: impl Into<String>, path: impl Into<PathBuf>) -> Self {
-        Self::new(id, path, AssetKind::Image)
     }
 
     pub fn id(&self) -> &AssetId {
@@ -174,10 +142,6 @@ impl Asset {
 
     pub fn path(&self) -> &Path {
         &self.path
-    }
-
-    pub fn kind(&self) -> AssetKind {
-        self.kind
     }
 
     pub fn clip(&self, source_range: TimeRange) -> Clip {
@@ -195,10 +159,6 @@ pub struct Clip {
 impl Clip {
     pub fn new(asset: Asset, source_range: TimeRange) -> Self {
         assert!(
-            asset.kind != AssetKind::Image,
-            "still images are visual actors, not time-based clips"
-        );
-        assert!(
             source_range.duration() > Duration::ZERO,
             "clip source range must have positive duration"
         );
@@ -211,11 +171,6 @@ impl Clip {
 
     pub fn gain_db(mut self, gain_db: f32) -> Self {
         assert!(gain_db.is_finite(), "clip gain must be finite");
-        assert_eq!(
-            self.asset.kind,
-            AssetKind::Audio,
-            "clip gain currently applies only to audio assets"
-        );
         self.gain_db = gain_db;
         self
     }
@@ -362,16 +317,8 @@ impl Cue {
         }
     }
 
-    pub fn point(id: impl Into<String>, at: Time) -> Self {
-        Self::new(id, TimeRange::new(at, at))
-    }
-
     pub fn id(&self) -> &CueId {
         &self.id
-    }
-
-    pub fn range(&self) -> TimeRange {
-        self.range
     }
 
     pub fn start(&self) -> Time {
@@ -380,10 +327,6 @@ impl Cue {
 
     pub fn end(&self) -> Time {
         self.range.end
-    }
-
-    pub fn before_start(&self, duration: Duration) -> Time {
-        self.start().before(duration)
     }
 
     pub fn start_offset(&self) -> Duration {
@@ -524,7 +467,6 @@ impl Composition {
         Ok(LoweredComposition {
             motion: Motion::parallel(motions),
             media: scheduled.media,
-            cues: scheduled.cues,
             annotations: scheduled.annotations,
             tasks: scheduled.tasks,
             task_poses: scheduled.task_poses,
@@ -563,8 +505,7 @@ impl Composition {
             } => composition.schedule(start.after(*duration), scheduled)?,
             Self::Hold(_) => {}
             Self::Named { id, composition } => {
-                let range = TimeRange::new(start, start.after(composition.duration()));
-                if scheduled.cues.insert(id.clone(), range).is_some() {
+                if !scheduled.cues.insert(id.clone()) {
                     bail!("composition defines cue '{}' more than once", id.as_str());
                 }
                 composition.schedule(start, scheduled)?;
@@ -602,7 +543,7 @@ impl From<TaskPoseChange> for Composition {
 struct Scheduled {
     motions: Vec<(Time, Motion)>,
     media: Vec<MediaPlacement>,
-    cues: HashMap<CueId, TimeRange>,
+    cues: HashSet<CueId>,
     annotations: Vec<(Time, Annotation)>,
     tasks: Vec<(Time, TaskChange)>,
     task_poses: Vec<(Time, TaskPoseChange)>,
@@ -611,7 +552,6 @@ struct Scheduled {
 pub(crate) struct LoweredComposition {
     pub motion: Motion,
     pub media: Vec<MediaPlacement>,
-    pub cues: HashMap<CueId, TimeRange>,
     pub annotations: Vec<(Time, Annotation)>,
     pub tasks: Vec<(Time, TaskChange)>,
     pub task_poses: Vec<(Time, TaskPoseChange)>,
@@ -663,19 +603,16 @@ mod tests {
     }
 
     #[test]
-    fn named_compositions_compile_to_inspectable_cue_ranges() {
+    fn named_compositions_reject_repeated_cue_names() {
         let clip = Asset::audio("take", "assets/take.wav").clip(range(0.0, 1.25));
         let composition = Composition::sequence([
-            Composition::hold(Duration::seconds(0.5)),
+            Composition::named("opening", Composition::script(clip.clone())),
             Composition::named("opening", Composition::script(clip)),
         ]);
 
-        let lowered = composition.lower().unwrap();
+        let error = composition.lower().err().unwrap();
 
-        assert_eq!(
-            lowered.cues[&super::CueId::new("opening")],
-            range(0.5, 1.75)
-        );
+        assert!(error.to_string().contains("cue 'opening' more than once"));
     }
 
     #[test]

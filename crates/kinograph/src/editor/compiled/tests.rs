@@ -150,7 +150,6 @@ fn keyed_sampling_matches_compatibility_overrides_without_fabricating_a_transiti
         assert_eq!(signature(&actual), signature(&expected));
     }
     recipe.snapshots[0].at_nanos = 3_000_000_000;
-    assert!(recipe.compile().is_ok());
-    assert!(recipe.transition().is_ok());
-    assert!(recipe.snapshot_channels("editor", 4_000_000_000).is_err());
+    let editor = recipe.compile().unwrap();
+    assert!(editor.snapshot_channels("editor", 4_000_000_000).is_err());
 }

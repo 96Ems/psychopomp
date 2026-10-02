@@ -17,8 +17,8 @@ use kinograph::{
     code::{CodeLine, PlacedLine, StyledSpan, SyntaxStyle},
     composition::{Asset, Clip, Composition, Duration, Time, TimeRange},
     dsl::{
-        AnnotationEffect, AnnotationFrame, CompiledScene, Scalar, Scene, TargetGeometry, TaskFrame,
-        TaskId, TaskState,
+        AnnotationEffect, AnnotationFrame, CompiledScene, TargetGeometry, TaskFrame, TaskId,
+        TaskState,
     },
     motion::MotionState,
     state::{StateTrack, TimedState},
@@ -64,8 +64,7 @@ pub(crate) async fn render(
         .iter()
         .find(|section| section.id == section_id)
         .with_context(|| format!("chapter '{chapter_id}' has no section '{section_id}'"))?;
-    let scene = Scene::new(Vec::<(PropertyId, Scalar)>::new(), section.composition())
-        .compile(&HashMap::new())?;
+    let scene = CompiledScene::from_composition(section.composition())?;
     let mut renderer = new_renderer(&format!("{chapter_id}/{section_id}.ts")).await?;
     encode_scene(
         &mut renderer,
@@ -195,11 +194,7 @@ impl PublishedChapter {
             }
         });
 
-        let scene = Scene::new(
-            Vec::<(PropertyId, Scalar)>::new(),
-            Composition::sequence(composition),
-        )
-        .compile(&HashMap::new())?;
+        let scene = CompiledScene::from_composition(Composition::sequence(composition))?;
         Ok(Self {
             title: manifest.title,
             scene,
@@ -1692,8 +1687,6 @@ impl PublishedComponent {
                 id: &node.id,
                 x: node.x,
                 y: 790.0,
-                x_velocity: 0.0,
-                y_velocity: 0.0,
                 name: &node.name,
                 result_width: node.result_width,
                 previous_state: &node.previous_state,

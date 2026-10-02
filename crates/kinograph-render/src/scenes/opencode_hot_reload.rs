@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fs, path::Path};
+use std::{fs, path::Path};
 
 use anyhow::{Context, Result};
 use kinograph::math::smoothstep;
@@ -6,9 +6,8 @@ use serde::Deserialize;
 
 use kinograph::{
     composition::{Asset, Clip, Composition, Time, TimeRange},
-    dsl::{Scalar, Scene},
+    dsl::CompiledScene,
     motion::{MotionState, Spring},
-    timeline::PropertyId,
 };
 
 use crate::{
@@ -85,8 +84,7 @@ pub(crate) async fn render(output: &Path) -> Result<()> {
         sound_at(capture.cues_seconds.command_submitted + 1.04, impact),
         sound_at(capture.cues_seconds.response_complete, confirm),
     ]);
-    let scene =
-        Scene::new(Vec::<(PropertyId, Scalar)>::new(), composition).compile(&HashMap::new())?;
+    let scene = CompiledScene::from_composition(composition)?;
     let mut recording = VideoFrameCache::open(
         asset_directory.join("fire-the-missiles.mp4"),
         Path::new(WORKSPACE_ROOT)

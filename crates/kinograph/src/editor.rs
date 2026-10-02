@@ -2,8 +2,8 @@ use anyhow::{Context, Result, bail};
 use serde::{Deserialize, Serialize};
 
 use crate::code::{
-    CodeDocument, CodeLine, CodeSnapshot, CodeTransition, InlinePart, LineId, LogicalRange,
-    RangeId, SemanticRange, StyledSpan,
+    CodeDocument, CodeLine, CodeSnapshot, InlinePart, LineId, LogicalRange, RangeId, SemanticRange,
+    StyledSpan,
 };
 
 mod compiled;
@@ -118,20 +118,6 @@ impl EditorRecipePlan {
         }
         CompiledEditor::new(self, document, compiled_reveals)
     }
-
-    pub fn transition(&self) -> Result<CodeTransition> {
-        self.compile()?.into_transition()
-    }
-
-    /// Lower keyed snapshots into ordinary continuous channels so native
-    /// navigation and video use the same per-line position/presence trajectories.
-    pub fn snapshot_channels(
-        &self,
-        actor_id: &str,
-        duration_nanos: u64,
-    ) -> Result<Vec<crate::plan::ContinuousChannelPlan>> {
-        self.compile()?.snapshot_channels(actor_id, duration_nanos)
-    }
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -237,7 +223,7 @@ pub struct PointerRecipePlan {
 
 #[cfg(test)]
 mod tests {
-    use crate::code::{StyledSpan, SyntaxStyle, TransitionProgress};
+    use crate::code::{StyledSpan, SyntaxStyle};
 
     use super::{
         EditorInlineRevealPlan, EditorLinePlan, EditorPartPlan, EditorRecipePlan,
@@ -288,16 +274,8 @@ mod tests {
             additional_inline_reveals: Vec::new(),
         };
 
-        let transition = recipe.transition().unwrap();
-        assert_eq!(
-            transition
-                .sample(TransitionProgress {
-                    layout: 1.0,
-                    content: 1.0,
-                })
-                .len(),
-            2
-        );
+        let editor = recipe.compile().unwrap();
+        assert_eq!(editor.sample_lines(|_, _| 1.0).len(), 2);
 
         let mut marked = recipe.clone();
         marked.lines[1].mark = Some(LineMarkPlan::Added);
@@ -383,19 +361,15 @@ mod tests {
             }),
             additional_inline_reveals: Vec::new(),
         };
-        let transition = recipe.transition().unwrap();
-        assert_eq!(
-            transition
-                .sample(TransitionProgress {
-                    layout: 0.,
-                    content: 0.
-                })
-                .len(),
-            3
-        );
-        let channels = recipe.snapshot_channels("editor", 4_000_000_000).unwrap();
-        assert_eq!(channels.len(), 6);
-        let insert_y = channels
+        let channels = |recipe: &EditorRecipePlan| {
+            recipe
+                .compile()
+                .and_then(|editor| editor.snapshot_channels("editor", 4_000_000_000))
+        };
+        assert_eq!(recipe.compile().unwrap().sample_lines(|_, d| d).len(), 3);
+        let canonical = channels(&recipe).unwrap();
+        assert_eq!(canonical.len(), 6);
+        let insert_y = canonical
             .iter()
             .find(|channel| channel.property == "line.insert.y")
             .unwrap();
@@ -404,12 +378,11 @@ mod tests {
             insert_y.initial,
             crate::plan::ScalarPlan::Literal(44.)
         ));
-        let b = channels
+        let b = canonical
             .iter()
             .find(|channel| channel.property == "line.b.y")
             .unwrap();
         assert_eq!(b.events.len(), 3);
-        let canonical = recipe.snapshot_channels("editor", 4_000_000_000).unwrap();
         recipe.snapshots.insert(
             1,
             super::EditorSnapshotPlan {
@@ -418,15 +391,14 @@ mod tests {
             },
         );
         assert_eq!(
-            serde_json::to_value(recipe.snapshot_channels("editor", 4_000_000_000).unwrap())
-                .unwrap(),
+            serde_json::to_value(channels(&recipe).unwrap()).unwrap(),
             serde_json::to_value(canonical).unwrap()
         );
         recipe.snapshots.remove(1);
         recipe.snapshots[1].at_nanos = 5_000_000_000;
-        assert!(recipe.snapshot_channels("editor", 4_000_000_000).is_err());
+        assert!(channels(&recipe).is_err());
         recipe.snapshots[1].at_nanos = 2_000_000_000;
         recipe.snapshots[1].line_ids.push("missing".into());
-        assert!(recipe.snapshot_channels("editor", 4_000_000_000).is_err());
+        assert!(channels(&recipe).is_err());
     }
 }

@@ -34,7 +34,7 @@ fn deck_is_deterministic_native_and_has_valid_concrete_recipes() {
                         actor.data.clone(),
                     )
                     .unwrap()
-                    .transition()
+                    .compile()
                     .unwrap();
                 }
                 "text" => {}

@@ -118,20 +118,17 @@ pub struct Playback {
 impl Playback {
     /// `authored` has already resolved renderer-owned semantic target geometry.
     pub fn new(plan: &ScenePlan, authored: &Timeline, reduced_motion: bool) -> Result<Self> {
-        Self::with_default_profiles(plan, authored, reduced_motion, &HashMap::new())
+        Self::with_start_delays(
+            plan,
+            authored,
+            reduced_motion,
+            &HashMap::new(),
+            &HashMap::new(),
+        )
     }
 
     /// Renderer-generated dimensionless tracks can supply unit-aware fallback
     /// profiles. Authored spring profiles still take precedence.
-    pub fn with_default_profiles(
-        plan: &ScenePlan,
-        authored: &Timeline,
-        reduced_motion: bool,
-        defaults: &HashMap<String, SpringProfile>,
-    ) -> Result<Self> {
-        Self::with_start_delays(plan, authored, reduced_motion, defaults, &HashMap::new())
-    }
-
     pub fn with_start_delays(
         plan: &ScenePlan,
         authored: &Timeline,

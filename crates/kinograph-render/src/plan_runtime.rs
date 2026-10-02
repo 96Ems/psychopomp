@@ -8,7 +8,7 @@ use std::{
 use anyhow::{Context, Result, bail};
 use kinograph::{
     composition::{Asset, Composition, Duration, Time, TimeRange},
-    dsl::{Scalar, Scene, TargetGeometry},
+    dsl::{CompiledScene, TargetGeometry},
     plan::{
         MediaKindPlan, MediaRolePlan, ReadPlanError, ScalarPlan, ScenePlan, TargetComponentPlan,
         TrackEventPlan,
@@ -630,11 +630,7 @@ impl CompiledPlan {
                 placement,
             ));
         }
-        let scene = Scene::new(
-            Vec::<(PropertyId, Scalar)>::new(),
-            Composition::parallel(composition),
-        )
-        .compile(&HashMap::new())?;
+        let scene = CompiledScene::from_composition(Composition::parallel(composition))?;
         Ok(Self {
             plan,
             timeline,

@@ -24,17 +24,6 @@ pub fn cubic_in_out(t: f32) -> f32 {
     }
 }
 
-/// The `t` at which [`cubic_in_out`] reaches `p`: when an eased mover crossed
-/// a point of its path.
-pub fn cubic_in_out_inverse(p: f32) -> f32 {
-    let p = p.clamp(0.0, 1.0);
-    if p < 0.5 {
-        (p / 4.0).cbrt()
-    } else {
-        1.0 - ((1.0 - p) / 4.0).cbrt()
-    }
-}
-
 /// Minimum-jerk travel: position, velocity, and acceleration meet a resting
 /// hold continuously at both ends, without cubic-in-out's mid-flight jerk.
 pub fn smootherstep(t: f32) -> f32 {
@@ -230,12 +219,6 @@ mod tests {
         // The wire-draw curve starts gently and finishes early.
         let draw = [0.45, 0.0, 0.2, 1.0];
         assert!(cubic_bezier(0.1, draw) < 0.05 && cubic_bezier(0.8, draw) > 0.95);
-        for p in [0.0, 0.1, 0.49, 0.5, 0.8, 1.0] {
-            assert!(
-                (cubic_in_out(cubic_in_out_inverse(p)) - p).abs() < 1e-5,
-                "{p}"
-            );
-        }
     }
 
     #[test]

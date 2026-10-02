@@ -235,10 +235,7 @@ fn promises_only_happy_path_choreography(
         ),
         (
             pointer.y.clone(),
-            Scalar::TargetBelow {
-                target: checkout,
-                offset: 85.0,
-            },
+            Scalar::TargetLineY(checkout).offset(85.0),
         ),
         (pointer.opacity.clone(), Scalar::Literal(0.0)),
         (pointer.scale.clone(), Scalar::Literal(pointer_scale)),

@@ -61,14 +61,10 @@ impl SpringProfile {
         position_threshold: f32,
         velocity_threshold: f32,
     ) -> Self {
-        assert!(
-            visual_duration_seconds > 0.0,
-            "visual duration must be positive"
-        );
-        assert!((0.0..1.0).contains(&bounce), "bounce must be in [0, 1)");
+        let visual = crate::plan::SpringPlan::visual(visual_duration_seconds, bounce);
         Self::new(
-            visual_duration_seconds * 1.2,
-            1.0 - bounce,
+            visual.response_seconds,
+            visual.damping_ratio,
             position_threshold,
             velocity_threshold,
         )
@@ -333,7 +329,6 @@ impl Segment {
 
 pub struct Timeline {
     tracks: HashMap<PropertyId, Vec<Segment>>,
-    duration: f64,
 }
 
 impl Timeline {
@@ -345,8 +340,7 @@ impl Timeline {
         animation.leaves_at(0.0, &mut leaves);
         // Conflicts are diagnosed in authored order, before initial values.
         Animation::validate_leaves(&leaves)?;
-        let mut timeline =
-            Self::with_initial_values(initial_values, f64::from(animation.duration()))?;
+        let mut timeline = Self::with_initial_values(initial_values)?;
         leaves.sort_by(|(left, _), (right, _)| left.total_cmp(right));
         for (start, leaf) in leaves {
             timeline.compile_leaf(leaf, f64::from(start))?;
@@ -368,7 +362,7 @@ impl Timeline {
         if !duration.is_finite() || duration < 0.0 {
             bail!("timeline duration must be finite and non-negative");
         }
-        let mut timeline = Self::with_initial_values(initial_values, duration)?;
+        let mut timeline = Self::with_initial_values(initial_values)?;
         let mut events = events.into_iter().enumerate().collect::<Vec<_>>();
         events.sort_by(|(left_index, left), (right_index, right)| {
             left.at
@@ -384,20 +378,6 @@ impl Timeline {
             }
             timeline.compile_leaf(&event.animation, event.at)?;
         }
-        Ok(timeline)
-    }
-
-    pub fn duration(&self) -> f32 {
-        self.duration as f32
-    }
-
-    pub(crate) fn compile_with_duration(
-        initial_values: impl IntoIterator<Item = (PropertyId, f32)>,
-        animation: &Animation,
-        duration: f32,
-    ) -> Result<Self> {
-        let mut timeline = Self::compile(initial_values, animation)?;
-        timeline.duration = f64::from(duration);
         Ok(timeline)
     }
 
@@ -507,7 +487,6 @@ impl Timeline {
 
     fn with_initial_values(
         initial_values: impl IntoIterator<Item = (PropertyId, f32)>,
-        duration: f64,
     ) -> Result<Self> {
         let mut tracks = HashMap::new();
         for (property, value) in initial_values {
@@ -532,7 +511,7 @@ impl Timeline {
                 bail!("property '{id}' has more than one initial value");
             }
         }
-        Ok(Self { tracks, duration })
+        Ok(Self { tracks })
     }
 
     fn push_segment(&mut self, property: &PropertyId, segment: Segment) {
@@ -784,8 +763,7 @@ mod tests {
             1.375,
         )
         .unwrap();
-        assert_eq!(relative.duration().to_bits(), 1.375_f32.to_bits());
-        assert_eq!(relative.duration().to_bits(), explicit.duration().to_bits());
+        assert_eq!(animation.duration().to_bits(), 1.375_f32.to_bits());
         let mut times = vec![4.0, 0.0, 0.45, 0.2, 1.375, 0.45];
         for at in [0.125, 0.1875, 0.25, 0.3125, marker_at, 1.125] {
             times.extend([at - 1e-9, at, at + 1e-9]);
@@ -879,7 +857,7 @@ mod tests {
         let timeline = Timeline::compile([(x.clone(), 0.0)], &animation).unwrap();
         let at_retarget = timeline.sample(&x, first_duration).unwrap();
 
-        assert!((timeline.duration() - first_duration * 2.0).abs() < 0.0001);
+        assert!((animation.duration() - first_duration * 2.0).abs() < 0.0001);
         assert!((at_retarget.position - before_retarget.position).abs() < 0.0001);
         assert!((at_retarget.velocity - before_retarget.velocity).abs() < 0.0001);
         assert!(at_retarget.velocity.abs() > 0.001);

@@ -74,12 +74,11 @@ The Module does not know about glyphs, GPUs, colors, FFmpeg, or absolute screen 
 
 The Effect Institute corpus and hand-authored lesson ports demonstrated flat stable inline identity. `CodeLine` therefore owns ordered `InlinePart` values and validated logical semantic ranges while retaining a derived flattened span view for the current renderer. The model intentionally stops before a recursive slot AST, automatic diffing, or glyph geometry.
 
-Maximum Stability uses authored identity, not an inferred text diff. `CodeTransition::compile` still matches line IDs between two row maps. The planned editor preserves that legacy path when `snapshots` is empty. A timed `EditorSnapshotPlan` schedule instead lowers through `EditorRecipePlan::snapshot_channels` into private per-line y and opacity channels. Lines absent from both endpoints remain available between them; equal-time snapshots coalesce before layout, and unchanged row/presence targets do not restart. Native playback includes those generated channels in ordinary destination compilation, so insertion, removal, reordering, and re-entry use the same velocity-preserving tracks as video.
+Maximum Stability uses authored identity, not an inferred text diff. `CodeTransition::compile` still matches line IDs between two row maps. The planned editor preserves that legacy path when `snapshots` is empty. A timed `EditorSnapshotPlan` schedule instead lowers through `CompiledEditor::snapshot_channels` into private per-line y and opacity channels. Lines absent from both endpoints remain available between them; equal-time snapshots coalesce before layout, and unchanged row/presence targets do not restart. Native playback includes those generated channels in ordinary destination compilation, so insertion, removal, reordering, and re-entry use the same velocity-preserving tracks as video.
 
 `kinograph::editor::compiled` owns the validated catalog, legacy/keyed placement,
 and reveal span/part ranges used by both inspection and renderer preparation.
-The public `CodeTransition` and `EditorRecipePlan` Interfaces remain compatibility
-entry points; actual keyed sampling does not fabricate a two-snapshot transition.
+Keyed sampling does not fabricate a two-snapshot transition.
 
 `kinograph/src/editor/stability.rs` provides GPU-free `inspect_steps`, exposed by `kinograph plan steps` and the persistent server's `steps` command. It reports before/after text, changed-part markers, retained-line movement, unsettled or partial holds, and heuristic common-text warnings for exchanged parts or replaced lines. It never assigns identity automatically. The ordinary Scene Plan JSON diff remains a structural plan diff, not an animation-stability analysis.
 
@@ -95,11 +94,9 @@ Each compiled spring has a deterministic settling time. Underdamped motion uses 
 
 `crates/kinograph/src/composition.rs` keeps immutable source assets separate from their uses in an edit. A `Clip` selects an exact source range; compiling a `Composition` places that range on the output timeline without modifying the asset.
 
-Composition supplies sequence, parallel, delay, hold, and named cue ranges across visual `Motion`, semantic annotations, stable Task state and pose changes, and timed media. It distinguishes transcript-bearing script clips from accompanying layer clips such as sound effects, music, and B-roll. Cue-local parallel composition keeps an annotation and its sound synchronized as one authored event without coupling renderer recipes to audio assets. This mirrors the real behavioral difference exposed by transcript-led editors without introducing a graphical editor or media decoder.
+Composition supplies sequence, parallel, delay, hold, and named cues across visual `Motion`, semantic annotations, stable Task state and pose changes, and timed media. It distinguishes transcript-bearing script clips from accompanying layer clips such as sound effects, music, and B-roll. Cue-local parallel composition keeps an annotation and its sound synchronized as one authored event without coupling renderer recipes to audio assets. This mirrors the real behavioral difference exposed by transcript-led editors without introducing a graphical editor or media decoder.
 
 Media time is stored as integer nanoseconds. Conversion to floating-point seconds happens only when visual motion is lowered into scalar trajectories, so repeated source-range edits retain exact boundaries.
-
-Still images remain stable scene actors rather than pretending to be time-based clips. A compiled scene retains each image asset and its transform property IDs; actual image composition remains renderer work for the first image-backed scene.
 
 `crates/kinograph-render/src/video.rs` is the narrow input-video boundary demonstrated by the OpenCode command-hot-reload scene. FFmpeg decodes a checked-in H.264 terminal recording into an ignored seekable RGBA cache under `target/`; fixed-size frame offsets then provide deterministic arbitrary-time sampling without codec bindings or retaining the decoded recording in memory. The cache is regenerated when the immutable source changes.
 

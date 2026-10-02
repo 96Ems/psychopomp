@@ -107,20 +107,6 @@ impl Transcript {
             ),
         ))
     }
-
-    pub fn phrase(&self, phrase: &str) -> Result<Cue> {
-        self.phrase_after(phrase, 0.0)
-    }
-
-    pub fn words(&self) -> &[WordTiming] {
-        &self.words
-    }
-
-    pub fn duration(&self) -> Time {
-        self.words
-            .last()
-            .map_or(Time::ZERO, |word| Time::seconds(word.end))
-    }
 }
 
 /// Lowercase alphanumerics, with number words as digits: speech recognition
@@ -202,14 +188,18 @@ mod tests {
             ("Not", 2.0),
             ("found", 2.3),
         ]);
-        let cue = transcript.phrase("answers 404").unwrap();
+        let cue = transcript.phrase_after("answers 404", 0.0).unwrap();
         assert_eq!(cue.id().as_str(), "answers-404");
         assert_eq!(
             (cue.start().as_seconds(), cue.end().as_seconds()),
             (0.6, 1.025)
         );
         assert_eq!(
-            transcript.phrase("not found").unwrap().start().as_seconds(),
+            transcript
+                .phrase_after("not found", 0.0)
+                .unwrap()
+                .start()
+                .as_seconds(),
             1.2
         );
         assert_eq!(
@@ -220,7 +210,7 @@ mod tests {
                 .as_seconds(),
             2.0
         );
-        assert!(transcript.phrase("found server").is_err());
+        assert!(transcript.phrase_after("found server", 0.0).is_err());
         let spoken = words(&[
             ("waits", 0.0),
             ("up", 0.2),
@@ -230,13 +220,13 @@ mod tests {
         ]);
         assert_eq!(
             spoken
-                .phrase("up to fifteen seconds")
+                .phrase_after("up to fifteen seconds", 0.0)
                 .unwrap()
                 .start()
                 .as_seconds(),
             0.2
         );
-        assert!(transcript.phrase("  ").is_err());
+        assert!(transcript.phrase_after("  ", 0.0).is_err());
     }
 
     #[test]
