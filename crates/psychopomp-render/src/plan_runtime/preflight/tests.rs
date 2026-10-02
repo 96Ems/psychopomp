@@ -216,7 +216,6 @@ fn every_root_pair_is_exclusive_without_opening_media_or_a_gpu() {
             .slides
             .remove(0)
             .plan,
-        psychopomp_opencode_architecture::build_scene().unwrap(),
         terminal,
     ];
     for left in &sources {

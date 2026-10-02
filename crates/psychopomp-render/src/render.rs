@@ -14,7 +14,6 @@ use psychopomp::code::{CodeLine, LineId, PlacedLine, StyledSpan, SyntaxStyle};
 mod caption;
 mod component_prototype;
 mod debug;
-mod diagram;
 mod fonts;
 mod grid;
 mod header;
@@ -33,7 +32,6 @@ mod venn;
 use text::{PlainTextSpec, TextSprite, blend_pixel, blend_pixel_at, make_sprite, paint_rect};
 
 pub(crate) use component_prototype::PrototypeGlyphs;
-pub(crate) use diagram::DiagramGlyphs;
 pub use grid::{
     GridFrame, GridItemFrame, GridLabelStyle, GridLinePalette, GridTextClip, GridTextDisclosure,
 };

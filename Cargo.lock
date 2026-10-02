@@ -1640,15 +1640,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "psychopomp-opencode-architecture"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "psychopomp",
- "serde_json",
-]
-
-[[package]]
 name = "psychopomp-opencode-jr-architecture"
 version = "0.1.0"
 dependencies = [
@@ -1712,7 +1703,6 @@ dependencies = [
  "psychopomp-hero",
  "psychopomp-interactive-showcase",
  "psychopomp-keyed-grid",
- "psychopomp-opencode-architecture",
  "psychopomp-opencode-session-tool",
  "pulldown-cmark",
  "resvg",

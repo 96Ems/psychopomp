@@ -3,7 +3,6 @@
 use super::{
     caption::PreparedCaption,
     component_prototype::{self, ComponentInput},
-    diagram,
     editor::{EditorSelection, PreparedEditor},
     generated,
     grid::PreparedGrid,
@@ -19,8 +18,7 @@ use anyhow::{Context, Result, bail};
 use psychopomp::{
     caption::CAPTION_RECIPE,
     component_prototype::{
-        COLLECTION, CONNECTOR, DIAGRAM, DiagramPlan, HEADER, HeaderPlan, RICH_TEXT, TYPESET, VENN,
-        WIDTH_TEXT,
+        COLLECTION, CONNECTOR, HEADER, HeaderPlan, RICH_TEXT, TYPESET, VENN, WIDTH_TEXT,
     },
     editor::{EDITOR_RECIPE, EditorTargetSelector, POINTER_RECIPE, PointerRecipePlan},
     grid::GRID_RECIPE,
@@ -61,10 +59,6 @@ pub(super) enum RootPlan {
     },
     Terminal(Box<TerminalInput>),
     Grid(Box<PreparedGrid>),
-    Diagram {
-        id: String,
-        recipe: DiagramPlan,
-    },
     Stage {
         id: String,
         recipe: Box<StagePlan>,
@@ -84,7 +78,7 @@ pub(super) struct PlainText {
     pub mask: Option<VerticalMask>,
 }
 
-pub(super) const NATIVE_UNSUPPORTED: &str = "interruptible native playback supports continuous-channel editor, pointer, text, effect-task, keyed-grid, value-token, and provisional component/diagram scenes; generic State Channels and recorded media still support video export";
+pub(super) const NATIVE_UNSUPPORTED: &str = "interruptible native playback supports continuous-channel editor, pointer, text, effect-task, keyed-grid, value-token, and provisional component scenes; generic State Channels and recorded media still support video export";
 
 /// A typed projection of observable CURRENT states. Raw JSON StateTracks retain
 /// full equal-time history for cache identity and previous-snapshot semantics.
@@ -312,7 +306,6 @@ impl RootPlan {
             Self::Editor { .. } => Some(EDITOR_RECIPE),
             Self::Terminal(_) => Some(TERMINAL_RECORDING_RECIPE),
             Self::Grid(_) => Some(GRID_RECIPE),
-            Self::Diagram { .. } => Some(DIAGRAM),
             Self::Stage { .. } => Some(STAGE_RECIPE),
         }
     }
@@ -323,7 +316,7 @@ fn put_root(root: &mut RootPlan, next: RootPlan) -> Result<()> {
             bail!("plan renderer currently supports at most one {existing} root actor");
         }
         bail!(
-            "editor, title-card, terminal-recording, keyed-grid, prototype-diagram, and stage actors are exclusive root recipes"
+            "editor, title-card, terminal-recording, keyed-grid, and stage actors are exclusive root recipes"
         );
     }
     *root = next;
@@ -376,17 +369,6 @@ impl Plan {
                     &mut root,
                     RootPlan::Grid(Box::new(PreparedGrid::new(actor, plan.duration_nanos)?)),
                 )?,
-                DIAGRAM => {
-                    let recipe: DiagramPlan = serde_json::from_value(actor.data.clone())?;
-                    diagram::validate_recipe(&actor.id, &recipe, &plan.continuous_channels)?;
-                    put_root(
-                        &mut root,
-                        RootPlan::Diagram {
-                            id: actor.id.clone(),
-                            recipe,
-                        },
-                    )?;
-                }
                 STAGE_RECIPE => put_root(
                     &mut root,
                     RootPlan::Stage {
@@ -531,7 +513,6 @@ impl Plan {
             | RootPlan::Title(_)
             | RootPlan::Editor { .. }
             | RootPlan::Grid(_)
-            | RootPlan::Diagram { .. }
             | RootPlan::Stage { .. } => true,
             RootPlan::Terminal(_) => false,
         };

@@ -374,13 +374,6 @@ mod tests {
                 .plan
                 .clone(),
         );
-        plans.extend(
-            psychopomp_opencode_architecture::build_deck()
-                .unwrap()
-                .slides
-                .into_iter()
-                .map(|s| s.plan),
-        );
         let mut renderer = pollster::block_on(new_renderer("theme-proof")).unwrap();
         renderer.set_interactive_preview(true);
         for plan in plans {

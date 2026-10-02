@@ -27,7 +27,6 @@ mod attachments;
 mod caption;
 mod component_prototype;
 pub(crate) mod delivery;
-mod diagram;
 mod editor;
 mod generated;
 mod grid;
@@ -425,7 +424,6 @@ enum PreparedRoot {
     },
     Terminal(Box<PreparedTerminal>),
     Grid(Box<grid::PreparedGrid>),
-    Diagram(Box<diagram::PreparedDiagram>),
     Stage(Box<stage::PreparedStage>),
 }
 
@@ -476,9 +474,6 @@ impl PreparedPlan {
         let mut delays = HashMap::new();
         for header in &self.headers {
             header.delays(&mut delays);
-        }
-        if let PreparedRoot::Diagram(diagram) = &self.root {
-            diagram.delays(&mut delays);
         }
         psychopomp::playback::Playback::with_start_delays(
             &self.plan,
@@ -567,14 +562,6 @@ impl PreparedPlan {
             preflight::RootPlan::Stage { id, recipe } => PreparedRoot::Stage(Box::new(
                 stage::PreparedStage::from_recipe(id, *recipe, renderer)?,
             )),
-            preflight::RootPlan::Diagram { id, recipe } => {
-                PreparedRoot::Diagram(Box::new(diagram::PreparedDiagram::from_recipe(
-                    id,
-                    recipe,
-                    &compiled.plan.continuous_channels,
-                    renderer,
-                )?))
-            }
         };
         Ok(Self {
             compiled,
@@ -744,19 +731,6 @@ impl CompiledPlan {
         self.properties.get(&channel.id)
     }
     #[cfg(test)]
-    fn property_value(
-        &self,
-        timeline: &Timeline,
-        actor: &str,
-        name: &str,
-        time: f64,
-        default: f32,
-    ) -> f32 {
-        self.property(actor, name)
-            .and_then(|id| timeline.sample_at(id, time))
-            .map_or(default, |s| s.position)
-    }
-    #[cfg(test)]
     fn playback(&self, reduced_motion: bool) -> Result<psychopomp::playback::Playback> {
         psychopomp::playback::Playback::new(&self.plan, &self.timeline, reduced_motion)
     }
@@ -867,7 +841,6 @@ impl PreparedPlan {
             self.property_value(timeline, actor, property, time, default)
         };
         let mut pixels = match &self.root {
-            PreparedRoot::Diagram(diagram) => diagram.render(renderer, value)?,
             PreparedRoot::Stage(stage) => stage.render(renderer, time, value)?,
             PreparedRoot::Editor { editor, pointer } => {
                 editor.render(renderer, time, pointer.as_deref(), |actor, property, at| {
