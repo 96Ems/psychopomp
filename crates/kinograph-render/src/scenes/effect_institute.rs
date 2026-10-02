@@ -1726,8 +1726,6 @@ impl PublishedComponent {
                 id: &node.id,
                 x: node.x,
                 y: 790.0,
-                x_velocity: 0.0,
-                y_velocity: 0.0,
                 name: &node.name,
                 result_width: node.result_width,
                 previous_state: &node.previous_state,

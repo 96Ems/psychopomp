@@ -8,7 +8,7 @@ use std::{
 
 use anyhow::{Context, Result, bail};
 
-use kinograph::composition::{AssetKind, MediaPlacement};
+use kinograph::composition::MediaPlacement;
 
 static NEXT_TEMPORARY_OUTPUT: AtomicU64 = AtomicU64::new(0);
 
@@ -61,13 +61,6 @@ impl FfmpegEncoder {
         let mut filters = Vec::with_capacity(media.len());
         for (index, placement) in media.iter().enumerate() {
             let asset = placement.clip().asset();
-            if asset.kind() != AssetKind::Audio {
-                bail!(
-                    "FFmpeg media assembly currently supports audio clips, not {:?} asset '{}'",
-                    asset.kind(),
-                    asset.id().as_str()
-                );
-            }
             arguments.push("-i".to_owned());
             arguments.push(asset.path().to_string_lossy().into_owned());
             filters.push(audio_clip_filter(index, index + 1, placement));

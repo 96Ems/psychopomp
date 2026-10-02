@@ -3,9 +3,7 @@ use std::collections::HashMap;
 use anyhow::{Context, Result};
 
 use crate::code::{CodeTransition, PlacedLine, TransitionProgress};
-use crate::composition::{
-    Asset, AssetKind, Composition, CueId, Duration, MediaPlacement, Time, TimeRange,
-};
+use crate::composition::{Composition, Duration, MediaPlacement, Time, TimeRange};
 use crate::state::{StateTrack, TimedState};
 use crate::timeline::{Animation, PropertyId, SpringProfile, Timeline};
 
@@ -68,15 +66,6 @@ impl Annotation {
 
     pub fn effect(mut self, effect: AnnotationEffect) -> Self {
         self.effect = effect;
-        self
-    }
-
-    pub fn over(mut self, duration: Duration) -> Self {
-        assert!(
-            duration > Duration::ZERO,
-            "annotation duration must be positive"
-        );
-        self.duration = duration;
         self
     }
 
@@ -243,8 +232,6 @@ pub struct TaskFrame<'a> {
     pub id: &'a TaskId,
     pub x: f32,
     pub y: f32,
-    pub x_velocity: f32,
-    pub y_velocity: f32,
     pub name: &'a str,
     pub result_width: Option<f32>,
     pub previous_state: &'a TaskState,
@@ -282,16 +269,11 @@ impl Scalar {
 
 #[derive(Clone, Debug)]
 pub enum Motion {
-    Set {
-        property: PropertyId,
-        value: Scalar,
-    },
     Spring {
         property: PropertyId,
         target: Scalar,
         profile: SpringProfile,
     },
-    Sequence(Vec<Motion>),
     Parallel(Vec<Motion>),
     Delay {
         seconds: f32,
@@ -301,23 +283,12 @@ pub enum Motion {
 }
 
 impl Motion {
-    pub fn set(property: PropertyId, value: impl Into<Scalar>) -> Self {
-        Self::Set {
-            property,
-            value: value.into(),
-        }
-    }
-
     pub fn spring(property: PropertyId, target: impl Into<Scalar>, profile: SpringProfile) -> Self {
         Self::Spring {
             property,
             target: target.into(),
             profile,
         }
-    }
-
-    pub fn sequence(motions: impl IntoIterator<Item = Motion>) -> Self {
-        Self::Sequence(motions.into_iter().collect())
     }
 
     pub fn parallel(motions: impl IntoIterator<Item = Motion>) -> Self {
@@ -337,9 +308,7 @@ impl Motion {
 
     pub fn duration(&self) -> f32 {
         match self {
-            Self::Set { .. } => 0.0,
             Self::Spring { profile, .. } => profile.advance_time(),
-            Self::Sequence(motions) => motions.iter().map(Self::duration).sum(),
             Self::Parallel(motions) => motions.iter().map(Self::duration).fold(0.0, f32::max),
             Self::Delay { seconds, motion } => seconds + motion.duration(),
             Self::Hold(seconds) => *seconds,
@@ -348,20 +317,11 @@ impl Motion {
 
     fn resolve(&self, targets: &HashMap<TextTarget, TargetGeometry>) -> Result<Animation> {
         Ok(match self {
-            Self::Set { property, value } => {
-                Animation::set(property.clone(), resolve_scalar(value, targets)?)
-            }
             Self::Spring {
                 property,
                 target,
                 profile,
             } => Animation::spring(property.clone(), resolve_scalar(target, targets)?, *profile),
-            Self::Sequence(motions) => Animation::sequence(
-                motions
-                    .iter()
-                    .map(|motion| motion.resolve(targets))
-                    .collect::<Result<Vec<_>>>()?,
-            ),
             Self::Parallel(motions) => Animation::parallel(
                 motions
                     .iter()
@@ -377,7 +337,6 @@ impl Motion {
 pub struct Scene {
     initial_values: Vec<(PropertyId, Scalar)>,
     composition: Composition,
-    images: Vec<Image>,
 }
 
 impl Scene {
@@ -388,13 +347,7 @@ impl Scene {
         Self {
             initial_values: initial_values.into_iter().collect(),
             composition: composition.into(),
-            images: Vec::new(),
         }
-    }
-
-    pub fn with_image(mut self, image: Image) -> Self {
-        self.images.push(image);
-        self
     }
 
     pub fn compile(&self, targets: &HashMap<TextTarget, TargetGeometry>) -> Result<CompiledScene> {
@@ -414,9 +367,7 @@ impl Scene {
         Ok(CompiledScene {
             timeline,
             media: lowered.media,
-            cues: lowered.cues,
             duration: lowered.duration,
-            images: self.images.clone(),
             tasks,
             task_pose_timeline,
             annotations: lowered
@@ -530,9 +481,7 @@ fn compile_task_actors(
 pub struct CompiledScene {
     timeline: Timeline,
     media: Vec<MediaPlacement>,
-    cues: HashMap<CueId, TimeRange>,
     duration: Duration,
-    images: Vec<Image>,
     tasks: Vec<CompiledTaskActor>,
     task_pose_timeline: Timeline,
     annotations: Vec<CompiledAnnotation>,
@@ -561,22 +510,8 @@ impl CompiledScene {
         &self.media
     }
 
-    pub fn cue(&self, id: &str) -> Option<TimeRange> {
-        self.cues
-            .iter()
-            .find_map(|(cue_id, range)| (cue_id.as_str() == id).then_some(*range))
-    }
-
-    pub fn cues(&self) -> impl Iterator<Item = (&CueId, TimeRange)> {
-        self.cues.iter().map(|(id, range)| (id, *range))
-    }
-
     pub fn duration(&self) -> Duration {
         self.duration
-    }
-
-    pub fn images(&self) -> &[Image] {
-        &self.images
     }
 
     pub fn task_frames_at(&self, seconds: f32) -> Vec<TaskFrame<'_>> {
@@ -601,8 +536,6 @@ impl CompiledScene {
                     id: &actor.task.id,
                     x: x.position,
                     y: y.position,
-                    x_velocity: x.velocity,
-                    y_velocity: y.velocity,
                     name: &actor.task.name,
                     result_width: actor.task.result_width,
                     previous_state: state.previous,
@@ -639,40 +572,6 @@ pub struct Pointer {
     pub blur: PropertyId,
 }
 
-#[derive(Clone, Debug)]
-pub struct Image {
-    asset: Asset,
-    pub x: PropertyId,
-    pub y: PropertyId,
-    pub scale: PropertyId,
-    pub rotation: PropertyId,
-    pub opacity: PropertyId,
-    pub blur: PropertyId,
-}
-
-impl Image {
-    pub fn new(id: &str, asset: Asset) -> Self {
-        assert_eq!(
-            asset.kind(),
-            AssetKind::Image,
-            "image actors require an image asset"
-        );
-        Self {
-            asset,
-            x: PropertyId::new(format!("{id}.x")),
-            y: PropertyId::new(format!("{id}.y")),
-            scale: PropertyId::new(format!("{id}.scale")),
-            rotation: PropertyId::new(format!("{id}.rotation")),
-            opacity: PropertyId::new(format!("{id}.opacity")),
-            blur: PropertyId::new(format!("{id}.blur")),
-        }
-    }
-
-    pub fn asset(&self) -> &Asset {
-        &self.asset
-    }
-}
-
 #[derive(Clone)]
 pub struct Code {
     pub panel_y: PropertyId,
@@ -681,15 +580,12 @@ pub struct Code {
     pub panel_tilt_y: PropertyId,
     pub panel_scale: PropertyId,
     pub panel_near_blur: PropertyId,
-    pub layout: PropertyId,
-    pub content: PropertyId,
     pub focus: PropertyId,
     pub focus_y: PropertyId,
     pub highlight_x: PropertyId,
     pub highlight_y: PropertyId,
     pub highlight_width: PropertyId,
     pub highlight_opacity: PropertyId,
-    pub inline_reveal: PropertyId,
 }
 
 #[derive(Clone)]
@@ -755,15 +651,12 @@ impl Code {
             panel_tilt_y: PropertyId::new(format!("{id}.panel_tilt_y")),
             panel_scale: PropertyId::new(format!("{id}.panel_scale")),
             panel_near_blur: PropertyId::new(format!("{id}.panel_near_blur")),
-            layout: PropertyId::new(format!("{id}.layout")),
-            content: PropertyId::new(format!("{id}.content")),
             focus: PropertyId::new(format!("{id}.focus")),
             focus_y: PropertyId::new(format!("{id}.focus_y")),
             highlight_x: PropertyId::new(format!("{id}.highlight.x")),
             highlight_y: PropertyId::new(format!("{id}.highlight.y")),
             highlight_width: PropertyId::new(format!("{id}.highlight.width")),
             highlight_opacity: PropertyId::new(format!("{id}.highlight.opacity")),
-            inline_reveal: PropertyId::new(format!("{id}.inline_reveal")),
         }
     }
 
@@ -806,10 +699,6 @@ impl Code {
             Motion::spring(self.focus.clone(), 1.0, profile),
             Motion::spring(self.focus_y.clone(), Scalar::TargetLineY(target), profile),
         ])
-    }
-
-    pub fn reveal_inline(&self, profile: SpringProfile) -> Motion {
-        Motion::spring(self.inline_reveal.clone(), 1.0, profile)
     }
 }
 
@@ -870,8 +759,8 @@ fn resolve_target(
 #[cfg(test)]
 mod tests {
     use super::{
-        Annotation, AnnotationEffect, Code, Image, Motion, Pointer, Scalar, Scene, TargetGeometry,
-        Task, TaskState, TextTarget,
+        Annotation, AnnotationEffect, Code, Motion, Pointer, Scalar, Scene, TargetGeometry, Task,
+        TaskState, TextTarget,
     };
     use crate::code::{
         CodeDocument, CodeLayout, CodeLine, CodeSnapshot, CodeTransition, StyledSpan, SyntaxStyle,
@@ -923,7 +812,10 @@ mod tests {
 
         let reversed = Scene::new(
             edit.initial_values(),
-            Motion::sequence([edit.enter(profile), edit.exit(profile)]),
+            Motion::parallel([
+                edit.enter(profile),
+                Motion::delay(edit.enter(profile).duration(), edit.exit(profile)),
+            ]),
         )
         .compile(&HashMap::new())
         .unwrap();
@@ -1019,11 +911,13 @@ mod tests {
         );
         let compiled = scene.compile(&HashMap::new()).unwrap();
 
-        let before = &compiled.task_frames_at(0.2999)[0];
-        let redirected = &compiled.task_frames_at(0.3)[0];
-        assert!((redirected.x - before.x).abs() < 0.1);
-        assert!(redirected.x_velocity > 0.0);
-        assert!((redirected.x_velocity - before.x_velocity).abs() < 1.0);
+        let x = &compiled.tasks[0].x_property;
+        let before = compiled.task_pose_timeline.sample(x, 0.2999).unwrap();
+        let redirected = compiled.task_pose_timeline.sample(x, 0.3).unwrap();
+        assert_eq!(compiled.task_frames_at(0.3)[0].x, redirected.position);
+        assert!((redirected.position - before.position).abs() < 0.1);
+        assert!(redirected.velocity > 0.0);
+        assert!((redirected.velocity - before.velocity).abs() < 1.0);
     }
 
     #[test]
@@ -1072,7 +966,6 @@ mod tests {
         assert_eq!(compiled.media()[0].role(), MediaRole::Script);
         assert_eq!(compiled.duration().as_seconds(), 2.0);
         assert_eq!(compiled.timeline().duration(), 2.0);
-        assert_eq!(compiled.cue("title").unwrap().start(), Time::ZERO);
         assert!(compiled.timeline().sample(&opacity, 1.0).unwrap().position > 0.99);
     }
 
@@ -1106,35 +999,5 @@ mod tests {
         assert_eq!(earlier.effect, AnnotationEffect::FocusPulse);
         assert_eq!(earlier.phase, 0.0);
         assert!((later.phase - 0.5).abs() < 0.0001);
-    }
-
-    #[test]
-    fn image_assets_compile_as_stable_animated_scene_actors() {
-        let logo = Image::new("logo", Asset::image("logo", "assets/logo.svg"));
-        let profile = SpringProfile::from_visual_duration(0.3, 0.0, 0.001, 0.001);
-        let scene = Scene::new(
-            [
-                (logo.opacity.clone(), Scalar::Literal(0.0)),
-                (logo.scale.clone(), Scalar::Literal(0.8)),
-            ],
-            Motion::parallel([
-                Motion::spring(logo.opacity.clone(), 1.0, profile),
-                Motion::spring(logo.scale.clone(), 1.0, profile),
-            ]),
-        )
-        .with_image(logo.clone());
-
-        let compiled = scene.compile(&HashMap::new()).unwrap();
-
-        assert_eq!(compiled.images().len(), 1);
-        assert_eq!(compiled.images()[0].asset().id().as_str(), "logo");
-        assert!(
-            compiled
-                .timeline()
-                .sample(&logo.opacity, 1.0)
-                .unwrap()
-                .position
-                > 0.99
-        );
     }
 }
