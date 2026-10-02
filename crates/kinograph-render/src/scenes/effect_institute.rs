@@ -30,7 +30,7 @@ use crate::render::{
     SquiggleFrame, TaskLinkFrame, TaskSceneFrame, TextRangeBounds, TokenHighlight,
 };
 
-use super::{HEIGHT, WIDTH, WORKSPACE_ROOT, encode_video_with_samples};
+use super::{HEIGHT, WIDTH, WORKSPACE_ROOT, encode_scene};
 
 const LINE_HEIGHT: f32 = 44.0;
 const OPENER_DURATION: f64 = 3.0;
@@ -50,13 +50,11 @@ pub(crate) async fn render(chapter_id: &str, output: &Path) -> Result<()> {
     })
     .await?;
 
-    encode_video_with_samples(
+    encode_scene(
         &mut renderer,
         output,
         &chapter.scene,
-        2,
-        2,
-        &[],
+        |_| 2,
         |renderer, time| chapter.render_sample(renderer, time),
     )
 }
@@ -83,13 +81,11 @@ pub(crate) async fn render_section(
         file_name: format!("{chapter_id}/{section_id}.ts"),
     })
     .await?;
-    encode_video_with_samples(
+    encode_scene(
         &mut renderer,
         output,
         &scene,
-        2,
-        2,
-        &[],
+        |_| 2,
         |renderer, time| section.render(renderer, time),
     )
 }

@@ -18,7 +18,7 @@ use crate::{
     video::VideoFrameCache,
 };
 
-use super::{HEIGHT, WIDTH, WORKSPACE_ROOT, encode_video_with_samples};
+use super::{HEIGHT, WIDTH, WORKSPACE_ROOT, boosted_samples, encode_scene};
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -106,13 +106,11 @@ pub(crate) async fn render(output: &Path) -> Result<()> {
     .await?;
     let source_size = recording.size();
 
-    encode_video_with_samples(
+    encode_scene(
         &mut renderer,
         output,
         &scene,
-        4,
-        8,
-        &[0.0..1.0, 2.2..4.55, 4.75..6.25],
+        boosted_samples(&[0.0..1.0, 2.2..4.55, 4.75..6.25]),
         |renderer, time| {
             let source_pixels = recording.frame_at(time)?;
             renderer.render_terminal_scene(&opencode_hot_reload_frame(

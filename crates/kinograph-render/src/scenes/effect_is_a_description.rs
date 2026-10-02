@@ -18,7 +18,7 @@ use crate::render::{
 };
 
 use super::{
-    CodeTarget, HEIGHT, WIDTH, WORKSPACE_ROOT, encode_video_with_samples, measure_target,
+    CodeTarget, HEIGHT, WIDTH, WORKSPACE_ROOT, boosted_samples, encode_scene, measure_target,
     measure_text_width, sample_pointer_frame, span,
 };
 
@@ -123,20 +123,18 @@ pub(crate) async fn render(output: &Path) -> Result<()> {
         reset_sound,
     )?;
 
-    encode_video_with_samples(
+    encode_scene(
         &mut renderer,
         output,
         &choreography.scene,
-        4,
-        8,
-        &[
+        boosted_samples(&[
             0.0..2.2,
             5.8..9.5,
             13.2..14.9,
             17.8..20.1,
             21.6..23.3,
             27.3..29.1,
-        ],
+        ]),
         |renderer, time| {
             render_effect_is_a_description_sample(renderer, &transitions, &choreography, time)
         },

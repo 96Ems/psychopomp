@@ -18,8 +18,8 @@ use crate::render::{
 };
 
 use super::{
-    CodeTarget, HEIGHT, WIDTH, WORKSPACE_ROOT, encode_video, measure_target, measure_text_width,
-    sample_pointer_frame, span,
+    CodeTarget, HEIGHT, WIDTH, WORKSPACE_ROOT, encode_scene, measure_target, measure_text_width,
+    plan_temporal_samples, sample_pointer_frame, span,
 };
 
 const LESSON_AUDIO_DURATION: f64 = 31.708;
@@ -95,10 +95,11 @@ pub(crate) async fn render(output: &Path) -> Result<()> {
     .gain_db(-10.0);
     let choreography = effect_shows_errors_choreography(&transcript, targets, narration, success)?;
 
-    encode_video(
+    encode_scene(
         &mut renderer,
         output,
         &choreography.scene,
+        plan_temporal_samples,
         |renderer, time| {
             render_effect_shows_errors_sample(renderer, &transitions, &choreography, time)
         },

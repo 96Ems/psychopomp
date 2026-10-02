@@ -12,7 +12,7 @@ use kinograph::{
 
 use crate::render::{HeadlessRenderer, QuoteFrame, RenderSpec, TaskLinkFrame, TaskSceneFrame};
 
-use super::{HEIGHT, WIDTH, WORKSPACE_ROOT, encode_video};
+use super::{HEIGHT, WIDTH, WORKSPACE_ROOT, encode_scene, plan_temporal_samples};
 
 pub(crate) async fn render(output: &Path) -> Result<()> {
     let asset_directory = Path::new(WORKSPACE_ROOT)
@@ -130,16 +130,22 @@ pub(crate) async fn render(output: &Path) -> Result<()> {
     ]);
     let scene =
         Scene::new(Vec::<(PropertyId, Scalar)>::new(), composition).compile(&HashMap::new())?;
-    encode_video(&mut renderer, output, &scene, |renderer, time| {
-        let quote = visual_effects_quote(time, &cues);
-        let nodes = scene.task_frames_at(time);
-        let links = visual_effects_task_links(time, &cues, &nodes);
-        renderer.render_task_scene(&TaskSceneFrame {
-            quote,
-            links: &links,
-            nodes: &nodes,
-        })
-    })
+    encode_scene(
+        &mut renderer,
+        output,
+        &scene,
+        plan_temporal_samples,
+        |renderer, time| {
+            let quote = visual_effects_quote(time, &cues);
+            let nodes = scene.task_frames_at(time);
+            let links = visual_effects_task_links(time, &cues, &nodes);
+            renderer.render_task_scene(&TaskSceneFrame {
+                quote,
+                links: &links,
+                nodes: &nodes,
+            })
+        },
+    )
 }
 
 #[derive(Deserialize)]

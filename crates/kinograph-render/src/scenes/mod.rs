@@ -1,4 +1,4 @@
-use std::{path::Path, time::Instant};
+use std::{ops::Range, path::Path, time::Instant};
 
 use anyhow::{Context, Result, bail};
 
@@ -27,37 +27,16 @@ const TEMPORAL_SAMPLES: u32 = 8;
 const ENTRANCE_TEMPORAL_SAMPLES: u32 = 16;
 const SHUTTER_ANGLE: f32 = 180.0;
 const WORKSPACE_ROOT: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../..");
-const _: () = assert!(TEMPORAL_SAMPLES > 0);
 
-pub(crate) fn encode_video(
+/// Encode a legacy scene: `samples_at` chooses each frame's shutter samples
+/// from its center time; samples are averaged on the CPU.
+pub(crate) fn encode_scene(
     renderer: &mut HeadlessRenderer,
     output: &Path,
     scene: &CompiledScene,
-    render_sample: impl FnMut(&mut HeadlessRenderer, f32) -> Result<Vec<u8>>,
-) -> Result<()> {
-    encode_video_with_samples(
-        renderer,
-        output,
-        scene,
-        TEMPORAL_SAMPLES,
-        ENTRANCE_TEMPORAL_SAMPLES,
-        &[0.0..1.0],
-        render_sample,
-    )
-}
-
-/// Legacy scenes: `temporal_samples` per frame, `entrance_temporal_samples`
-/// inside `high_sample_ranges` (scene seconds), averaged on the CPU.
-pub(crate) fn encode_video_with_samples(
-    renderer: &mut HeadlessRenderer,
-    output: &Path,
-    scene: &CompiledScene,
-    temporal_samples: u32,
-    entrance_temporal_samples: u32,
-    high_sample_ranges: &[std::ops::Range<f32>],
+    samples_at: impl FnMut(f64) -> u32,
     mut render_sample: impl FnMut(&mut HeadlessRenderer, f32) -> Result<Vec<u8>>,
 ) -> Result<()> {
-    assert!(temporal_samples > 0 && entrance_temporal_samples > 0);
     let window = TimeRange::new(Time::ZERO, Time::ZERO.after(scene.duration()));
     encode_exposures(
         renderer,
@@ -65,16 +44,7 @@ pub(crate) fn encode_video_with_samples(
         scene.duration(),
         scene.media(),
         window,
-        |center| {
-            if high_sample_ranges
-                .iter()
-                .any(|range| range.contains(&(center as f32)))
-            {
-                entrance_temporal_samples
-            } else {
-                temporal_samples
-            }
-        },
+        samples_at,
         |time| Ok(time.to_bits()),
         |renderer, exposure| {
             accumulate(renderer, exposure, |renderer, time| {
@@ -82,6 +52,17 @@ pub(crate) fn encode_video_with_samples(
             })
         },
     )
+}
+
+/// Eight samples per frame inside `ranges` (scene seconds), four elsewhere.
+pub(crate) fn boosted_samples(ranges: &[Range<f32>]) -> impl Fn(f64) -> u32 + '_ {
+    move |center| {
+        if ranges.iter().any(|range| range.contains(&(center as f32))) {
+            8
+        } else {
+            4
+        }
+    }
 }
 
 /// Samples per frame for Scene Plans: more in the first second, where

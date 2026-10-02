@@ -18,8 +18,8 @@ use kinograph::{
 use crate::render::{EditorFrame, HeadlessRenderer, InlineRevealFrame, RenderSpec, TokenHighlight};
 
 use super::{
-    CodeTarget, HEIGHT, WIDTH, WORKSPACE_ROOT, encode_video, measure_target, measure_text_width,
-    sample_pointer_frame, span,
+    CodeTarget, HEIGHT, WIDTH, WORKSPACE_ROOT, encode_scene, measure_target, measure_text_width,
+    plan_temporal_samples, sample_pointer_frame, span,
 };
 
 const PROMISES_AUDIO_DURATION: f64 = 31.107;
@@ -66,10 +66,11 @@ pub(crate) async fn render(output: &Path) -> Result<()> {
         .clip(TimeRange::new(Time::ZERO, Time::seconds(0.67)));
     let choreography = promises_only_happy_path_choreography(&transcript, targets, narration, sad)?;
 
-    encode_video(
+    encode_scene(
         &mut renderer,
         output,
         &choreography.scene,
+        plan_temporal_samples,
         |renderer, time| {
             render_promises_only_happy_path_sample(renderer, &transition, &choreography, time)
         },
