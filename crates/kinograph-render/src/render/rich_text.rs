@@ -430,15 +430,10 @@ impl HeadlessRenderer {
                     if let Some(marker) = &b.marker {
                         let mut marker = marker.clone();
                         self.theme.sprite(&mut marker);
-                        composite_text_sprite(
+                        composite_text(
                             &mut pixels,
                             [glyphs.width, b.height],
-                            &marker,
-                            [b.x - marker.width as f32, 0.],
-                            marker.width as f32,
-                            0.,
-                            1.,
-                            [0., b.height as f32],
+                            TextDraw::new(&marker, [b.x - marker.width as f32, 0.]),
                         );
                     }
                     TextSprite {
@@ -455,21 +450,22 @@ impl HeadlessRenderer {
         for (index, (block, sprite)) in glyphs.blocks.iter().zip(sprites.iter()).enumerate() {
             let alpha = opacity * sample(&format!("block.{index}.opacity"), 1.).clamp(0., 1.);
             let y = sample(&format!("block.{index}.y"), block.y);
-            composite_text_region(
+            composite_text(
                 pixels,
                 [self.spec.width, self.spec.height],
-                sprite,
-                [origin[0], origin[1] + y],
-                0.,
-                if reveal >= 1. {
-                    sprite.width as f32
-                } else {
-                    sprite.advance * reveal
+                TextDraw {
+                    clip_width: if reveal >= 1. {
+                        sprite.width as f32
+                    } else {
+                        sprite.advance * reveal
+                    },
+                    filter: TextFilter::Blur(
+                        sample("blur", (1. - alpha) * glyphs.fade_blur).max(0.),
+                    ),
+                    opacity: alpha,
+                    mask: glyphs.mask,
+                    ..TextDraw::new(sprite, [origin[0], origin[1] + y])
                 },
-                sample("blur", (1. - alpha) * glyphs.fade_blur).max(0.),
-                alpha,
-                [0., self.spec.height as f32],
-                glyphs.mask,
             );
         }
     }

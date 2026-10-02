@@ -123,15 +123,15 @@ impl HeadlessRenderer {
         };
         // Optical treatment of the existing fade, not another motion window.
         // Fully present words stay sharp even while their positions are moving.
-        composite_text_sprite(
+        composite_text(
             pixels,
             [self.spec.width, self.spec.height],
-            sprite,
-            origin,
-            visible,
-            blur,
-            opacity,
-            [0., self.spec.height as f32],
+            TextDraw {
+                clip_width: visible,
+                filter: TextFilter::Blur(blur),
+                opacity,
+                ..TextDraw::new(sprite, origin)
+            },
         );
     }
 
@@ -276,19 +276,18 @@ mod tests {
         let background = renderer.render_title_card("", None, 0.);
         let sharp = |origin, presence: f32, opacity| {
             let mut pixels = background.clone();
-            composite_text_sprite(
+            composite_text(
                 &mut pixels,
                 [1920, 1080],
-                &glyphs.sprite,
-                origin,
-                if presence >= 1. {
-                    glyphs.sprite.width as f32
-                } else {
-                    glyphs.width() * presence
+                TextDraw {
+                    clip_width: if presence >= 1. {
+                        glyphs.sprite.width as f32
+                    } else {
+                        glyphs.width() * presence
+                    },
+                    opacity,
+                    ..TextDraw::new(&glyphs.sprite, origin)
                 },
-                0.,
-                opacity,
-                [0., 1080.],
             );
             pixels
         };

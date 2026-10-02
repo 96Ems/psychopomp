@@ -9,7 +9,7 @@ use kinograph::{
 
 use super::theme::mix;
 use super::{
-    HeadlessRenderer, PlainTextSpec, composite_text_region,
+    HeadlessRenderer, PlainTextSpec, TextDraw, composite_text,
     ui::{
         Bounds,
         card::{Fill, SurfaceStyle, UiCanvas, UiColor},
@@ -562,17 +562,14 @@ impl HeadlessRenderer {
             Anchor::Center => x - advance * 0.5,
             Anchor::Right => x - advance,
         };
-        composite_text_region(
+        composite_text(
             pixels,
             canvas,
-            sprite,
-            [left, y - spec.size[1] as f32 * 0.5],
-            0.0,
-            advance.ceil() + 1.0,
-            0.0,
-            opacity,
-            [0.0, canvas[1] as f32],
-            None,
+            TextDraw {
+                clip_width: advance.ceil() + 1.0,
+                opacity,
+                ..TextDraw::new(sprite, [left, y - spec.size[1] as f32 * 0.5])
+            },
         );
         advance
     }

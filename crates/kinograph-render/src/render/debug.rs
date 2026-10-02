@@ -51,15 +51,10 @@ impl HeadlessRenderer {
                     26,
                 )
             });
-            composite_text_sprite(
+            composite_text(
                 pixels,
                 [self.spec.width, self.spec.height],
-                sprite,
-                [36., 26. + index as f32 * 26.],
-                sprite.width as f32,
-                0.,
-                1.,
-                [0., self.spec.height as f32],
+                TextDraw::new(sprite, [36., 26. + index as f32 * 26.]),
             );
         }
     }

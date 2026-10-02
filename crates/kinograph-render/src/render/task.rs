@@ -12,8 +12,8 @@ use kinograph::motion::{MotionState, Spring};
 
 use super::theme::mix;
 use super::{
-    HeadlessRenderer, TextSprite, blend_pixel_at, composite_sprite_rotated,
-    composite_sprite_rotated_with_coverage, rasterize_svg, text::PlainTextSpec,
+    HeadlessRenderer, TextDraw, TextSprite, blend_pixel_at, composite_sprite_rotated,
+    composite_sprite_rotated_with_coverage, composite_text, rasterize_svg, text::PlainTextSpec,
 };
 
 mod content;
@@ -863,18 +863,16 @@ impl HeadlessRenderer {
                 1.,
             );
             draw_bubble_tail(&mut pixels, width, height, center, 1.);
-            super::composite_text_sprite(
+            composite_text(
                 &mut pixels,
                 [width, height],
-                text,
-                [
-                    center[0] - text.advance * 0.5,
-                    center[1] - text.height as f32 * 0.5,
-                ],
-                text.width as f32,
-                0.,
-                1.,
-                [0., height as f32],
+                TextDraw::new(
+                    text,
+                    [
+                        center[0] - text.advance * 0.5,
+                        center[1] - text.height as f32 * 0.5,
+                    ],
+                ),
             );
             self.part_sprites.insert(
                 key.clone(),
@@ -988,18 +986,19 @@ impl HeadlessRenderer {
         let canvas_width = self.spec.width;
         let canvas_height = self.spec.height;
         let sprite = self.task_text_sprite(text, font_size, color);
-        super::composite_text_sprite(
+        composite_text(
             pixels,
             [canvas_width, canvas_height],
-            sprite,
-            [
-                center_x - sprite.advance * 0.5,
-                center_y - sprite.height as f32 * 0.5,
-            ],
-            sprite.width as f32,
-            0.,
-            opacity,
-            [0., canvas_height as f32],
+            TextDraw {
+                opacity,
+                ..TextDraw::new(
+                    sprite,
+                    [
+                        center_x - sprite.advance * 0.5,
+                        center_y - sprite.height as f32 * 0.5,
+                    ],
+                )
+            },
         );
     }
 

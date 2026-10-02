@@ -4,7 +4,7 @@
 use kinograph::caption::{CaptionAlign, CaptionPlan};
 
 use super::{
-    HeadlessRenderer, PlainTextSpec, composite_text_region,
+    HeadlessRenderer, PlainTextSpec, TextDraw, composite_text,
     ui::{
         Bounds,
         card::{Fill, SurfaceStyle, UiCanvas, UiColor},
@@ -115,21 +115,18 @@ impl HeadlessRenderer {
                 let clip = width * shown as f32 / chars as f32;
                 let color = self.theme.tone(span.tone);
                 let sprite = self.plain_text_sprite(&span.text, PlainTextSpec { color, ..spec });
-                composite_text_region(
+                composite_text(
                     pixels,
                     canvas,
-                    sprite,
-                    [x, y - spec.size[1] as f32 * 0.5],
-                    0.0,
-                    if shown == chars {
-                        clip.ceil() + 1.0
-                    } else {
-                        clip
+                    TextDraw {
+                        clip_width: if shown == chars {
+                            clip.ceil() + 1.0
+                        } else {
+                            clip
+                        },
+                        opacity,
+                        ..TextDraw::new(sprite, [x, y - spec.size[1] as f32 * 0.5])
                     },
-                    0.0,
-                    opacity,
-                    [0.0, canvas[1] as f32],
-                    None,
                 );
                 x += clip;
                 caret_at = Some([x, y]);

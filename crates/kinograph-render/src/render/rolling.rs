@@ -8,7 +8,7 @@ use kinograph::{
 };
 
 use super::{
-    HeadlessRenderer, PlainTextSpec, TextFilter, VerticalMask, composite_text_filtered,
+    HeadlessRenderer, PlainTextSpec, TextDraw, TextFilter, VerticalMask, composite_text,
     ui::{
         Bounds,
         card::{Fill, SurfaceStyle, UiCanvas, UiColor},
@@ -85,20 +85,18 @@ impl HeadlessRenderer {
             let digit = char::from(b'0' + face.rem_euclid(10) as u8).to_string();
             let sprite = self.plain_text_sprite(&digit, spec);
             let left = x + glyph.x + (glyph.width - sprite.advance) * 0.5;
-            composite_text_filtered(
+            composite_text(
                 pixels,
                 canvas,
-                sprite,
-                [left, y + offset - sprite.height as f32 * 0.5],
-                0.0,
-                sprite.width as f32,
-                TextFilter::Smear {
-                    sigma,
-                    amount: glyph.smear,
+                TextDraw {
+                    filter: TextFilter::Smear {
+                        sigma,
+                        amount: glyph.smear,
+                    },
+                    opacity: alpha,
+                    mask: Some(mask),
+                    ..TextDraw::new(sprite, [left, y + offset - sprite.height as f32 * 0.5])
                 },
-                alpha,
-                [0.0, canvas[1] as f32],
-                Some(mask),
             );
         }
     }
@@ -115,17 +113,13 @@ impl HeadlessRenderer {
         let canvas = [self.spec.width, self.spec.height];
         let spec = rolling_spec(plan, self.theme.tone(glyph.token.tone));
         let sprite = self.plain_text_sprite(&glyph.token.text, spec);
-        composite_text_filtered(
+        composite_text(
             pixels,
             canvas,
-            sprite,
-            [x + glyph.x, y - sprite.height as f32 * 0.5],
-            0.0,
-            sprite.width as f32,
-            TextFilter::Blur(0.0),
-            alpha,
-            [0.0, canvas[1] as f32],
-            None,
+            TextDraw {
+                opacity: alpha,
+                ..TextDraw::new(sprite, [x + glyph.x, y - sprite.height as f32 * 0.5])
+            },
         );
     }
 
