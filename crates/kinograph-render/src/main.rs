@@ -10,18 +10,21 @@ use std::{fs, path::PathBuf};
 
 use anyhow::{Context, Result, bail};
 
-enum RenderScene {
+enum RenderScene<'a> {
     Hero,
     EffectShowsErrors,
     PromisesOnlyHappyPath,
     EffectIsADescription,
-    IntroChapter,
-    BasicsChapter,
     VisualEffects,
     OpencodeCommandHotReload,
+    /// A published Effect Institute chapter, or one of its sections.
+    Chapter {
+        chapter: &'a str,
+        section: Option<&'a str>,
+    },
 }
 
-impl RenderScene {
+impl<'a> RenderScene<'a> {
     fn parse(value: &str) -> Option<Self> {
         match value {
             "hero" => Some(Self::Hero),
@@ -34,16 +37,21 @@ impl RenderScene {
         }
     }
 
-    fn default_output(&self) -> &'static str {
+    fn default_output(&self) -> String {
         match self {
-            Self::Hero => "output/kinograph-prototype.mp4",
-            Self::EffectShowsErrors => "output/effect-shows-errors.mp4",
-            Self::PromisesOnlyHappyPath => "output/promises-only-happy-path.mp4",
-            Self::EffectIsADescription => "output/effect-is-a-description.mp4",
-            Self::IntroChapter => "output/chapters/intro.mp4",
-            Self::BasicsChapter => "output/chapters/basics.mp4",
-            Self::VisualEffects => "output/visual-effects.mp4",
-            Self::OpencodeCommandHotReload => "output/opencode-command-hot-reload.mp4",
+            Self::Hero => "output/kinograph-prototype.mp4".into(),
+            Self::EffectShowsErrors => "output/effect-shows-errors.mp4".into(),
+            Self::PromisesOnlyHappyPath => "output/promises-only-happy-path.mp4".into(),
+            Self::EffectIsADescription => "output/effect-is-a-description.mp4".into(),
+            Self::VisualEffects => "output/visual-effects.mp4".into(),
+            Self::OpencodeCommandHotReload => "output/opencode-command-hot-reload.mp4".into(),
+            Self::Chapter {
+                section: Some(_), ..
+            } => "output/effect-institute-section.mp4".into(),
+            Self::Chapter {
+                chapter,
+                section: None,
+            } => format!("output/chapters/{chapter}.mp4"),
         }
     }
 }
@@ -55,52 +63,37 @@ fn main() -> Result<()> {
     {
         return plan_runtime::command(rest);
     }
-    if let [command, kind, chapter, section, rest @ ..] = arguments.as_slice()
-        && command == "render"
-        && kind == "section"
-        && rest.len() <= 1
-    {
-        let output = PathBuf::from(
-            rest.first()
-                .map(String::as_str)
-                .unwrap_or("output/effect-institute-section.mp4"),
-        );
-        if let Some(parent) = output.parent() {
-            fs::create_dir_all(parent)
-                .with_context(|| format!("create output directory {}", parent.display()))?;
-        }
-        return pollster::block_on(scenes::effect_institute::render(
-            chapter,
-            Some(section),
-            &output,
-        ));
-    }
     let (scene, explicit_output) = match arguments.as_slice() {
         [] => (RenderScene::Hero, None),
-        [output] if output != "render" => (RenderScene::Hero, Some(output.as_str())),
-        [command, scene] if command == "render" => (
+        [output] if output != "render" => (RenderScene::Hero, Some(output)),
+        [command, kind, chapter, rest @ ..]
+            if command == "render" && kind == "chapter" && rest.len() <= 1 =>
+        {
+            if !matches!(chapter.as_str(), "intro" | "basics") {
+                bail!("unknown chapter '{chapter}'");
+            }
+            (
+                RenderScene::Chapter {
+                    chapter,
+                    section: None,
+                },
+                rest.first(),
+            )
+        }
+        [command, kind, chapter, section, rest @ ..]
+            if command == "render" && kind == "section" && rest.len() <= 1 =>
+        {
+            (
+                RenderScene::Chapter {
+                    chapter,
+                    section: Some(section),
+                },
+                rest.first(),
+            )
+        }
+        [command, scene, rest @ ..] if command == "render" && rest.len() <= 1 => (
             RenderScene::parse(scene).with_context(|| format!("unknown scene '{scene}'"))?,
-            None,
-        ),
-        [command, kind, chapter] if command == "render" && kind == "chapter" => (
-            match chapter.as_str() {
-                "intro" => RenderScene::IntroChapter,
-                "basics" => RenderScene::BasicsChapter,
-                _ => bail!("unknown chapter '{chapter}'"),
-            },
-            None,
-        ),
-        [command, kind, chapter, output] if command == "render" && kind == "chapter" => (
-            match chapter.as_str() {
-                "intro" => RenderScene::IntroChapter,
-                "basics" => RenderScene::BasicsChapter,
-                _ => bail!("unknown chapter '{chapter}'"),
-            },
-            Some(output.as_str()),
-        ),
-        [command, scene, output] if command == "render" => (
-            RenderScene::parse(scene).with_context(|| format!("unknown scene '{scene}'"))?,
-            Some(output.as_str()),
+            rest.first(),
         ),
         _ => bail!(
             "usage: kinograph [output] | kinograph render \
@@ -109,7 +102,11 @@ fn main() -> Result<()> {
              kinograph render section <intro|basics> <section> [output]"
         ),
     };
-    let output = PathBuf::from(explicit_output.unwrap_or_else(|| scene.default_output()));
+    let output = PathBuf::from(
+        explicit_output
+            .cloned()
+            .unwrap_or_else(|| scene.default_output()),
+    );
 
     if let Some(parent) = output.parent() {
         fs::create_dir_all(parent)
@@ -127,11 +124,8 @@ fn main() -> Result<()> {
         RenderScene::EffectIsADescription => {
             pollster::block_on(scenes::effect_is_a_description::render(&output))
         }
-        RenderScene::IntroChapter => {
-            pollster::block_on(scenes::effect_institute::render("intro", None, &output))
-        }
-        RenderScene::BasicsChapter => {
-            pollster::block_on(scenes::effect_institute::render("basics", None, &output))
+        RenderScene::Chapter { chapter, section } => {
+            pollster::block_on(scenes::effect_institute::render(chapter, section, &output))
         }
         RenderScene::VisualEffects => pollster::block_on(scenes::visual_effects::render(&output)),
         RenderScene::OpencodeCommandHotReload => {
