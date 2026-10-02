@@ -1,0 +1,169 @@
+{
+ "wordTimings": [
+  {
+   "word": "In",
+   "start": 0,
+   "end": 0.2
+  },
+  {
+   "word": "the",
+   "start": 0.2,
+   "end": 0.28
+  },
+  {
+   "word": "code",
+   "start": 0.28,
+   "end": 0.56
+  },
+  {
+   "word": "it's",
+   "start": 0.56,
+   "end": 1.04
+  },
+  {
+   "word": "one",
+   "start": 1.04,
+   "end": 1.28
+  },
+  {
+   "word": "short",
+   "start": 1.28,
+   "end": 1.68
+  },
+  {
+   "word": "pipeline.",
+   "start": 1.68,
+   "end": 2.08
+  },
+  {
+   "word": "A",
+   "start": 2.38,
+   "end": 3.06
+  },
+  {
+   "word": "bad",
+   "start": 3.06,
+   "end": 3.28
+  },
+  {
+   "word": "signature",
+   "start": 3.28,
+   "end": 3.62
+  },
+  {
+   "word": "gets",
+   "start": 3.62,
+   "end": 4.08
+  },
+  {
+   "word": "a",
+   "start": 4.08,
+   "end": 4.34
+  },
+  {
+   "word": "401,",
+   "start": 4.34,
+   "end": 4.84
+  },
+  {
+   "word": "a",
+   "start": 5.26,
+   "end": 5.96
+  },
+  {
+   "word": "malformed",
+   "start": 5.96,
+   "end": 6.44
+  },
+  {
+   "word": "envelope",
+   "start": 6.44,
+   "end": 6.8
+  },
+  {
+   "word": "a",
+   "start": 6.8,
+   "end": 7.4
+  },
+  {
+   "word": "400,",
+   "start": 7.4,
+   "end": 7.78
+  },
+  {
+   "word": "anything",
+   "start": 8.14,
+   "end": 8.88
+  },
+  {
+   "word": "not",
+   "start": 8.88,
+   "end": 9.26
+  },
+  {
+   "word": "for",
+   "start": 9.26,
+   "end": 9.42
+  },
+  {
+   "word": "us",
+   "start": 9.42,
+   "end": 9.68
+  },
+  {
+   "word": "is",
+   "start": 9.68,
+   "end": 9.96
+  },
+  {
+   "word": "ignored,",
+   "start": 9.96,
+   "end": 10.46
+  },
+  {
+   "word": "and",
+   "start": 10.7,
+   "end": 11.48
+  },
+  {
+   "word": "the",
+   "start": 11.48,
+   "end": 11.62
+  },
+  {
+   "word": "enqueue",
+   "start": 11.62,
+   "end": 12.04
+  },
+  {
+   "word": "resolves",
+   "start": 12.04,
+   "end": 12.54
+  },
+  {
+   "word": "only",
+   "start": 12.54,
+   "end": 12.74
+  },
+  {
+   "word": "after",
+   "start": 12.74,
+   "end": 13.16
+  },
+  {
+   "word": "the",
+   "start": 13.16,
+   "end": 13.38
+  },
+  {
+   "word": "mailbox",
+   "start": 13.38,
+   "end": 13.62
+  },
+  {
+   "word": "write.",
+   "start": 13.62,
+   "end": 14
+  }
+ ]
+}

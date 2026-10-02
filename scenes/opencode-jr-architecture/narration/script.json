@@ -1,0 +1,41 @@
+{
+  "speed": 1.1,
+  "clips": [
+    {
+      "id": "intro",
+      "text": "[warm and conversational] This is OpenCode Junior, our Slack bot. Mention it in a thread, and that thread becomes its own coding agent, with durable state and a real sandboxed computer. Let's follow one message through it."
+    },
+    {
+      "id": "edge",
+      "text": "It starts at the edge. Slack posts the event to a Cloudflare Worker. The Worker verifies the signature, and decodes the envelope. It drops other workspaces, and ambient chatter at the top of a channel. It checks who sent it. Then it writes the event into the thread's mailbox. Only after that write commits does Slack get its two hundred. [confident] That two hundred is a durability receipt. If anything fails first, Slack retries, and the mailbox dedupes by message timestamp."
+    },
+    {
+      "id": "edge-code",
+      "text": "In the code, it's one short pipeline. A bad signature gets a four oh one. A malformed envelope, a four hundred. Anything not for us is ignored. And the enqueue resolves only after the mailbox write."
+    },
+    {
+      "id": "session",
+      "text": "Every conversation gets exactly one session object, named by its team, channel, and thread. An alarm wakes it to drain the mailbox, and admission decides what each message means. A mention always wakes the agent. A reply mid-turn steers the running turn. With several people in a thread, a classifier decides, and the rest becomes quiet context. Inside runs an embedded OpenCode runtime, with all its state in the object's own SQLite. Each prompt carries a message ID generated up front, so a retry never submits twice."
+    },
+    {
+      "id": "workspace",
+      "text": "The agent's hands live elsewhere. A workspace object owns one Modal sandbox: a real virtual machine running a small daemon. Shell commands and file edits cross into it; text-only replies don't wait for it. Every hour, a template registry prepares a checkout of the OpenCode repo with its dependencies installed, so cloning it is a mount, not a download. After twenty idle minutes, the sandbox is snapshotted and shut down, and restored the next time it's needed."
+    },
+    {
+      "id": "publish",
+      "text": "Now the answer travels back. A follower reads OpenCode's durable event log and folds it into a turn. Each assistant message becomes one Slack post, edited in place as it streams, with a working indicator above it, and a footer only for substantial or failed turns. Slack has no idempotency key for new posts. So before posting, Junior flushes a write-ahead intent, and stamps the post's identity into Slack metadata. After a crash, it finds that post and adopts it, instead of posting twice."
+    },
+    {
+      "id": "resets",
+      "text": "One rule shapes all of this. When a durable object resets, its unflushed writes roll back, but Slack posts it already sent still stand. So every coordinator pass is time-boxed, and returns before the platform's limit. Writes that must survive are flushed before the side effect. Alarms are backstops, not poll loops. And storage is never migrated: a schema version mismatch wipes the tables and starts fresh."
+    },
+    {
+      "id": "around",
+      "text": "A few shared objects sit around this core. Some tools, like a GitHub comment, need a human's approval. The call is recorded with its full arguments, a card is posted, and the turn ends. When someone clicks approve, pending to executing commits first, so a double click never runs it twice. Then the result wakes the model. Each team has a scheduler object: a schedule fires as an ordinary new session, and after downtime it fires once, late, never in a burst. Behind the web dashboard, settings and connectors objects hold configuration and connections."
+    },
+    {
+      "id": "outro",
+      "text": "[warm] That's the shape. Slack hits the edge. Each thread gets one durable object. The work happens in a sandbox, and the answer flows back into Slack. Next time, we'll look at where it's heading."
+    }
+  ]
+}

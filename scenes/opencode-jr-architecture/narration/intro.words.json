@@ -1,0 +1,164 @@
+{
+ "wordTimings": [
+  {
+   "word": "This",
+   "start": 0,
+   "end": 0.26
+  },
+  {
+   "word": "is",
+   "start": 0.26,
+   "end": 0.56
+  },
+  {
+   "word": "OpenCodeJr,",
+   "start": 0.56,
+   "end": 1.56
+  },
+  {
+   "word": "our",
+   "start": 1.76,
+   "end": 2.16
+  },
+  {
+   "word": "Slackbot.",
+   "start": 2.16,
+   "end": 2.78
+  },
+  {
+   "word": "Mention",
+   "start": 3.32,
+   "end": 3.92
+  },
+  {
+   "word": "it",
+   "start": 3.92,
+   "end": 4.12
+  },
+  {
+   "word": "in",
+   "start": 4.12,
+   "end": 4.26
+  },
+  {
+   "word": "a",
+   "start": 4.26,
+   "end": 4.34
+  },
+  {
+   "word": "thread,",
+   "start": 4.34,
+   "end": 4.62
+  },
+  {
+   "word": "and",
+   "start": 4.78,
+   "end": 5.3
+  },
+  {
+   "word": "that",
+   "start": 5.3,
+   "end": 5.44
+  },
+  {
+   "word": "thread",
+   "start": 5.44,
+   "end": 5.7
+  },
+  {
+   "word": "becomes",
+   "start": 5.7,
+   "end": 6.04
+  },
+  {
+   "word": "its",
+   "start": 6.04,
+   "end": 6.34
+  },
+  {
+   "word": "own",
+   "start": 6.34,
+   "end": 6.58
+  },
+  {
+   "word": "coding",
+   "start": 6.58,
+   "end": 6.94
+  },
+  {
+   "word": "agent,",
+   "start": 6.94,
+   "end": 7.32
+  },
+  {
+   "word": "with",
+   "start": 7.46,
+   "end": 7.84
+  },
+  {
+   "word": "durable",
+   "start": 7.84,
+   "end": 8.3
+  },
+  {
+   "word": "state,",
+   "start": 8.3,
+   "end": 8.7
+  },
+  {
+   "word": "and",
+   "start": 8.98,
+   "end": 9.48
+  },
+  {
+   "word": "a",
+   "start": 9.48,
+   "end": 9.54
+  },
+  {
+   "word": "real,",
+   "start": 9.54,
+   "end": 9.94
+  },
+  {
+   "word": "sandboxed",
+   "start": 10,
+   "end": 10.9
+  },
+  {
+   "word": "computer.",
+   "start": 10.9,
+   "end": 11.14
+  },
+  {
+   "word": "Let's",
+   "start": 12.040000000000001,
+   "end": 12.64
+  },
+  {
+   "word": "follow",
+   "start": 12.64,
+   "end": 12.92
+  },
+  {
+   "word": "one",
+   "start": 12.92,
+   "end": 13.22
+  },
+  {
+   "word": "message",
+   "start": 13.22,
+   "end": 13.6
+  },
+  {
+   "word": "through",
+   "start": 13.6,
+   "end": 13.94
+  },
+  {
+   "word": "it.",
+   "start": 13.94,
+   "end": 14.08
+  }
+ ]
+}

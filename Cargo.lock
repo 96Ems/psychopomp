@@ -969,6 +969,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "kinograph-opencode-jr-architecture"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "kinograph",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "kinograph-opencode-session-tool"
 version = "0.1.0"
 dependencies = [

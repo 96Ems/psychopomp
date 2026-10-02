@@ -1,0 +1,474 @@
+{
+ "wordTimings": [
+  {
+   "word": "A",
+   "start": 0,
+   "end": 0.28
+  },
+  {
+   "word": "few",
+   "start": 0.28,
+   "end": 0.46
+  },
+  {
+   "word": "shared",
+   "start": 0.46,
+   "end": 0.82
+  },
+  {
+   "word": "objects",
+   "start": 0.82,
+   "end": 1.2
+  },
+  {
+   "word": "sit",
+   "start": 1.2,
+   "end": 1.74
+  },
+  {
+   "word": "around",
+   "start": 1.74,
+   "end": 1.96
+  },
+  {
+   "word": "this",
+   "start": 1.96,
+   "end": 2.34
+  },
+  {
+   "word": "core.",
+   "start": 2.34,
+   "end": 2.64
+  },
+  {
+   "word": "Some",
+   "start": 3.04,
+   "end": 3.64
+  },
+  {
+   "word": "tools,",
+   "start": 3.64,
+   "end": 4.08
+  },
+  {
+   "word": "like",
+   "start": 4.26,
+   "end": 4.52
+  },
+  {
+   "word": "a",
+   "start": 4.52,
+   "end": 4.66
+  },
+  {
+   "word": "GitHub",
+   "start": 4.66,
+   "end": 5
+  },
+  {
+   "word": "comment,",
+   "start": 5,
+   "end": 5.48
+  },
+  {
+   "word": "need",
+   "start": 5.66,
+   "end": 6.22
+  },
+  {
+   "word": "a",
+   "start": 6.22,
+   "end": 6.34
+  },
+  {
+   "word": "human's",
+   "start": 6.34,
+   "end": 6.78
+  },
+  {
+   "word": "approval.",
+   "start": 6.78,
+   "end": 7
+  },
+  {
+   "word": "The",
+   "start": 7.8,
+   "end": 8.08
+  },
+  {
+   "word": "call",
+   "start": 8.08,
+   "end": 8.34
+  },
+  {
+   "word": "is",
+   "start": 8.34,
+   "end": 8.54
+  },
+  {
+   "word": "recorded",
+   "start": 8.54,
+   "end": 8.88
+  },
+  {
+   "word": "with",
+   "start": 8.88,
+   "end": 9.12
+  },
+  {
+   "word": "its",
+   "start": 9.12,
+   "end": 9.28
+  },
+  {
+   "word": "full",
+   "start": 9.28,
+   "end": 9.54
+  },
+  {
+   "word": "arguments,",
+   "start": 9.54,
+   "end": 10.02
+  },
+  {
+   "word": "a",
+   "start": 10.24,
+   "end": 10.72
+  },
+  {
+   "word": "card",
+   "start": 10.72,
+   "end": 11.08
+  },
+  {
+   "word": "is",
+   "start": 11.08,
+   "end": 11.16
+  },
+  {
+   "word": "posted,",
+   "start": 11.16,
+   "end": 11.52
+  },
+  {
+   "word": "and",
+   "start": 11.74,
+   "end": 12.3
+  },
+  {
+   "word": "the",
+   "start": 12.3,
+   "end": 12.36
+  },
+  {
+   "word": "turn",
+   "start": 12.36,
+   "end": 12.6
+  },
+  {
+   "word": "ends.",
+   "start": 12.6,
+   "end": 13.04
+  },
+  {
+   "word": "When",
+   "start": 13.28,
+   "end": 13.56
+  },
+  {
+   "word": "someone",
+   "start": 13.56,
+   "end": 13.92
+  },
+  {
+   "word": "clicks",
+   "start": 13.92,
+   "end": 14.28
+  },
+  {
+   "word": "approve,",
+   "start": 14.28,
+   "end": 14.66
+  },
+  {
+   "word": "pending",
+   "start": 14.98,
+   "end": 15.56
+  },
+  {
+   "word": "to",
+   "start": 15.56,
+   "end": 15.84
+  },
+  {
+   "word": "executing",
+   "start": 15.84,
+   "end": 16.34
+  },
+  {
+   "word": "commits",
+   "start": 16.34,
+   "end": 16.8
+  },
+  {
+   "word": "first,",
+   "start": 16.8,
+   "end": 17.24
+  },
+  {
+   "word": "so",
+   "start": 17.46,
+   "end": 18.06
+  },
+  {
+   "word": "a",
+   "start": 18.06,
+   "end": 18.3
+  },
+  {
+   "word": "double",
+   "start": 18.3,
+   "end": 18.6
+  },
+  {
+   "word": "-click",
+   "start": 18.6,
+   "end": 18.82
+  },
+  {
+   "word": "never",
+   "start": 18.82,
+   "end": 19.16
+  },
+  {
+   "word": "runs",
+   "start": 19.16,
+   "end": 19.46
+  },
+  {
+   "word": "it",
+   "start": 19.46,
+   "end": 19.64
+  },
+  {
+   "word": "twice,",
+   "start": 19.64,
+   "end": 19.98
+  },
+  {
+   "word": "then",
+   "start": 20.18,
+   "end": 20.78
+  },
+  {
+   "word": "the",
+   "start": 20.78,
+   "end": 20.96
+  },
+  {
+   "word": "result",
+   "start": 20.96,
+   "end": 21.22
+  },
+  {
+   "word": "wakes",
+   "start": 21.22,
+   "end": 21.54
+  },
+  {
+   "word": "the",
+   "start": 21.54,
+   "end": 21.84
+  },
+  {
+   "word": "model.",
+   "start": 21.84,
+   "end": 22.06
+  },
+  {
+   "word": "Each",
+   "start": 22.06,
+   "end": 23.04
+  },
+  {
+   "word": "team",
+   "start": 23.04,
+   "end": 23.46
+  },
+  {
+   "word": "has",
+   "start": 23.46,
+   "end": 23.72
+  },
+  {
+   "word": "a",
+   "start": 23.72,
+   "end": 23.9
+  },
+  {
+   "word": "scheduler",
+   "start": 23.9,
+   "end": 24.5
+  },
+  {
+   "word": "object.",
+   "start": 24.5,
+   "end": 24.76
+  },
+  {
+   "word": "A",
+   "start": 25.1,
+   "end": 25.58
+  },
+  {
+   "word": "schedule",
+   "start": 25.58,
+   "end": 26
+  },
+  {
+   "word": "fires",
+   "start": 26,
+   "end": 26.4
+  },
+  {
+   "word": "as",
+   "start": 26.4,
+   "end": 26.82
+  },
+  {
+   "word": "an",
+   "start": 26.82,
+   "end": 26.96
+  },
+  {
+   "word": "ordinary",
+   "start": 26.96,
+   "end": 27.3
+  },
+  {
+   "word": "new",
+   "start": 27.3,
+   "end": 27.62
+  },
+  {
+   "word": "session,",
+   "start": 27.62,
+   "end": 27.98
+  },
+  {
+   "word": "and",
+   "start": 28.16,
+   "end": 28.78
+  },
+  {
+   "word": "after",
+   "start": 28.78,
+   "end": 29.04
+  },
+  {
+   "word": "downtime",
+   "start": 29.04,
+   "end": 29.4
+  },
+  {
+   "word": "it",
+   "start": 29.4,
+   "end": 29.78
+  },
+  {
+   "word": "fires",
+   "start": 29.78,
+   "end": 30.12
+  },
+  {
+   "word": "once,",
+   "start": 30.12,
+   "end": 30.4
+  },
+  {
+   "word": "late,",
+   "start": 30.64,
+   "end": 31.28
+  },
+  {
+   "word": "never",
+   "start": 31.4,
+   "end": 31.98
+  },
+  {
+   "word": "in",
+   "start": 31.98,
+   "end": 32.24
+  },
+  {
+   "word": "a",
+   "start": 32.24,
+   "end": 32.32
+  },
+  {
+   "word": "burst.",
+   "start": 32.32,
+   "end": 32.6
+  },
+  {
+   "word": "Behind",
+   "start": 32.82,
+   "end": 33.2
+  },
+  {
+   "word": "the",
+   "start": 33.2,
+   "end": 33.42
+  },
+  {
+   "word": "web",
+   "start": 33.42,
+   "end": 33.6
+  },
+  {
+   "word": "dashboard,",
+   "start": 33.6,
+   "end": 34.04
+  },
+  {
+   "word": "settings",
+   "start": 34.34,
+   "end": 35
+  },
+  {
+   "word": "and",
+   "start": 35,
+   "end": 35.26
+  },
+  {
+   "word": "connectors",
+   "start": 35.26,
+   "end": 35.64
+  },
+  {
+   "word": "objects",
+   "start": 35.64,
+   "end": 36.04
+  },
+  {
+   "word": "hold",
+   "start": 36.04,
+   "end": 36.76
+  },
+  {
+   "word": "configuration",
+   "start": 36.76,
+   "end": 37.24
+  },
+  {
+   "word": "and",
+   "start": 37.24,
+   "end": 37.8
+  },
+  {
+   "word": "connections.",
+   "start": 37.8,
+   "end": 38.12
+  }
+ ]
+}

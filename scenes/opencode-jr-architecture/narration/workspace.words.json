@@ -1,0 +1,394 @@
+{
+ "wordTimings": [
+  {
+   "word": "The",
+   "start": 0,
+   "end": 0.22
+  },
+  {
+   "word": "agent's",
+   "start": 0.22,
+   "end": 0.7
+  },
+  {
+   "word": "hands",
+   "start": 0.7,
+   "end": 0.94
+  },
+  {
+   "word": "live",
+   "start": 0.94,
+   "end": 1.32
+  },
+  {
+   "word": "elsewhere.",
+   "start": 1.32,
+   "end": 1.84
+  },
+  {
+   "word": "A",
+   "start": 2.3,
+   "end": 2.98
+  },
+  {
+   "word": "workspace",
+   "start": 2.98,
+   "end": 3.32
+  },
+  {
+   "word": "object",
+   "start": 3.32,
+   "end": 3.78
+  },
+  {
+   "word": "owns",
+   "start": 3.78,
+   "end": 4.24
+  },
+  {
+   "word": "one",
+   "start": 4.24,
+   "end": 4.8
+  },
+  {
+   "word": "modal",
+   "start": 4.8,
+   "end": 5.24
+  },
+  {
+   "word": "sandbox,",
+   "start": 5.24,
+   "end": 5.74
+  },
+  {
+   "word": "a",
+   "start": 6.1,
+   "end": 6.7
+  },
+  {
+   "word": "real",
+   "start": 6.7,
+   "end": 7.04
+  },
+  {
+   "word": "virtual",
+   "start": 7.04,
+   "end": 7.42
+  },
+  {
+   "word": "machine",
+   "start": 7.42,
+   "end": 7.88
+  },
+  {
+   "word": "running",
+   "start": 7.88,
+   "end": 8.4
+  },
+  {
+   "word": "a",
+   "start": 8.4,
+   "end": 8.64
+  },
+  {
+   "word": "small",
+   "start": 8.64,
+   "end": 8.9
+  },
+  {
+   "word": "daemon.",
+   "start": 8.9,
+   "end": 9.32
+  },
+  {
+   "word": "Shell",
+   "start": 9.84,
+   "end": 10.2
+  },
+  {
+   "word": "commands",
+   "start": 10.2,
+   "end": 10.54
+  },
+  {
+   "word": "and",
+   "start": 10.54,
+   "end": 10.94
+  },
+  {
+   "word": "file",
+   "start": 10.94,
+   "end": 11.26
+  },
+  {
+   "word": "edits",
+   "start": 11.26,
+   "end": 11.58
+  },
+  {
+   "word": "cross",
+   "start": 11.58,
+   "end": 11.92
+  },
+  {
+   "word": "into",
+   "start": 11.92,
+   "end": 12.26
+  },
+  {
+   "word": "it.",
+   "start": 12.26,
+   "end": 12.54
+  },
+  {
+   "word": "Text",
+   "start": 12.8,
+   "end": 13.36
+  },
+  {
+   "word": "-only",
+   "start": 13.36,
+   "end": 13.68
+  },
+  {
+   "word": "replies",
+   "start": 13.68,
+   "end": 14.08
+  },
+  {
+   "word": "don't",
+   "start": 14.08,
+   "end": 14.64
+  },
+  {
+   "word": "wait",
+   "start": 14.64,
+   "end": 14.76
+  },
+  {
+   "word": "for",
+   "start": 14.76,
+   "end": 14.98
+  },
+  {
+   "word": "it.",
+   "start": 14.98,
+   "end": 15.2
+  },
+  {
+   "word": "Every",
+   "start": 15.36,
+   "end": 15.9
+  },
+  {
+   "word": "hour,",
+   "start": 15.9,
+   "end": 16.26
+  },
+  {
+   "word": "a",
+   "start": 16.44,
+   "end": 16.68
+  },
+  {
+   "word": "template",
+   "start": 16.68,
+   "end": 17.02
+  },
+  {
+   "word": "registry",
+   "start": 17.02,
+   "end": 17.34
+  },
+  {
+   "word": "prepares",
+   "start": 17.34,
+   "end": 17.84
+  },
+  {
+   "word": "a",
+   "start": 17.84,
+   "end": 18.16
+  },
+  {
+   "word": "checkout",
+   "start": 18.16,
+   "end": 18.5
+  },
+  {
+   "word": "of",
+   "start": 18.5,
+   "end": 18.78
+  },
+  {
+   "word": "the",
+   "start": 18.78,
+   "end": 18.88
+  },
+  {
+   "word": "OpenCode",
+   "start": 18.88,
+   "end": 19.44
+  },
+  {
+   "word": "repo,",
+   "start": 19.44,
+   "end": 19.74
+  },
+  {
+   "word": "with",
+   "start": 20,
+   "end": 20.52
+  },
+  {
+   "word": "its",
+   "start": 20.52,
+   "end": 20.68
+  },
+  {
+   "word": "dependencies",
+   "start": 20.68,
+   "end": 21.08
+  },
+  {
+   "word": "installed.",
+   "start": 21.08,
+   "end": 21.74
+  },
+  {
+   "word": "So",
+   "start": 22.04,
+   "end": 22.66
+  },
+  {
+   "word": "cloning",
+   "start": 22.66,
+   "end": 23.06
+  },
+  {
+   "word": "it",
+   "start": 23.06,
+   "end": 23.24
+  },
+  {
+   "word": "is",
+   "start": 23.24,
+   "end": 23.54
+  },
+  {
+   "word": "a",
+   "start": 23.54,
+   "end": 23.7
+  },
+  {
+   "word": "mount,",
+   "start": 23.7,
+   "end": 23.94
+  },
+  {
+   "word": "not",
+   "start": 24.1,
+   "end": 24.68
+  },
+  {
+   "word": "a",
+   "start": 24.68,
+   "end": 24.82
+  },
+  {
+   "word": "download.",
+   "start": 24.82,
+   "end": 25.18
+  },
+  {
+   "word": "After",
+   "start": 25.46,
+   "end": 25.78
+  },
+  {
+   "word": "20",
+   "start": 25.78,
+   "end": 26.16
+  },
+  {
+   "word": "idle",
+   "start": 26.16,
+   "end": 26.58
+  },
+  {
+   "word": "minutes,",
+   "start": 26.58,
+   "end": 26.8
+  },
+  {
+   "word": "the",
+   "start": 26.8,
+   "end": 27.44
+  },
+  {
+   "word": "sandbox",
+   "start": 27.44,
+   "end": 27.92
+  },
+  {
+   "word": "is",
+   "start": 27.92,
+   "end": 28.26
+  },
+  {
+   "word": "snapshotted",
+   "start": 28.26,
+   "end": 28.88
+  },
+  {
+   "word": "and",
+   "start": 28.88,
+   "end": 29.1
+  },
+  {
+   "word": "shut",
+   "start": 29.1,
+   "end": 29.34
+  },
+  {
+   "word": "down,",
+   "start": 29.34,
+   "end": 29.64
+  },
+  {
+   "word": "and",
+   "start": 29.8,
+   "end": 30.38
+  },
+  {
+   "word": "restored",
+   "start": 30.38,
+   "end": 30.82
+  },
+  {
+   "word": "the",
+   "start": 30.82,
+   "end": 31.04
+  },
+  {
+   "word": "next",
+   "start": 31.04,
+   "end": 31.24
+  },
+  {
+   "word": "time",
+   "start": 31.24,
+   "end": 31.52
+  },
+  {
+   "word": "it's",
+   "start": 31.52,
+   "end": 31.7
+  },
+  {
+   "word": "needed.",
+   "start": 31.7,
+   "end": 31.96
+  }
+ ]
+}

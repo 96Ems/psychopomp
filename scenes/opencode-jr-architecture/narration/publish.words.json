@@ -1,0 +1,429 @@
+{
+ "wordTimings": [
+  {
+   "word": "Now",
+   "start": 0,
+   "end": 0.3
+  },
+  {
+   "word": "the",
+   "start": 0.3,
+   "end": 0.46
+  },
+  {
+   "word": "answer",
+   "start": 0.46,
+   "end": 0.8
+  },
+  {
+   "word": "travels",
+   "start": 0.8,
+   "end": 1.24
+  },
+  {
+   "word": "back.",
+   "start": 1.24,
+   "end": 1.7
+  },
+  {
+   "word": "A",
+   "start": 2.22,
+   "end": 2.78
+  },
+  {
+   "word": "follower",
+   "start": 2.78,
+   "end": 3.14
+  },
+  {
+   "word": "reads",
+   "start": 3.14,
+   "end": 3.52
+  },
+  {
+   "word": "OpenCode's",
+   "start": 3.52,
+   "end": 4.64
+  },
+  {
+   "word": "durable",
+   "start": 4.64,
+   "end": 5.02
+  },
+  {
+   "word": "event",
+   "start": 5.02,
+   "end": 5.36
+  },
+  {
+   "word": "log",
+   "start": 5.36,
+   "end": 5.66
+  },
+  {
+   "word": "and",
+   "start": 5.66,
+   "end": 6.16
+  },
+  {
+   "word": "folds",
+   "start": 6.16,
+   "end": 6.54
+  },
+  {
+   "word": "it",
+   "start": 6.54,
+   "end": 6.72
+  },
+  {
+   "word": "into",
+   "start": 6.72,
+   "end": 6.98
+  },
+  {
+   "word": "a",
+   "start": 6.98,
+   "end": 7.1
+  },
+  {
+   "word": "turn.",
+   "start": 7.1,
+   "end": 7.36
+  },
+  {
+   "word": "Each",
+   "start": 7.48,
+   "end": 7.8
+  },
+  {
+   "word": "assistant",
+   "start": 7.8,
+   "end": 8.24
+  },
+  {
+   "word": "message",
+   "start": 8.24,
+   "end": 8.58
+  },
+  {
+   "word": "becomes",
+   "start": 8.58,
+   "end": 9.06
+  },
+  {
+   "word": "one",
+   "start": 9.06,
+   "end": 9.64
+  },
+  {
+   "word": "Slack",
+   "start": 9.64,
+   "end": 10.1
+  },
+  {
+   "word": "post,",
+   "start": 10.1,
+   "end": 10.46
+  },
+  {
+   "word": "edited",
+   "start": 10.7,
+   "end": 11.48
+  },
+  {
+   "word": "in",
+   "start": 11.48,
+   "end": 11.74
+  },
+  {
+   "word": "place",
+   "start": 11.74,
+   "end": 12.02
+  },
+  {
+   "word": "as",
+   "start": 12.02,
+   "end": 12.36
+  },
+  {
+   "word": "it",
+   "start": 12.36,
+   "end": 12.46
+  },
+  {
+   "word": "streams,",
+   "start": 12.46,
+   "end": 12.76
+  },
+  {
+   "word": "with",
+   "start": 13.02,
+   "end": 13.6
+  },
+  {
+   "word": "a",
+   "start": 13.6,
+   "end": 13.72
+  },
+  {
+   "word": "working",
+   "start": 13.72,
+   "end": 13.98
+  },
+  {
+   "word": "indicator",
+   "start": 13.98,
+   "end": 14.34
+  },
+  {
+   "word": "above",
+   "start": 14.34,
+   "end": 14.78
+  },
+  {
+   "word": "it,",
+   "start": 14.78,
+   "end": 15.06
+  },
+  {
+   "word": "and",
+   "start": 15.14,
+   "end": 15.76
+  },
+  {
+   "word": "a",
+   "start": 15.76,
+   "end": 15.88
+  },
+  {
+   "word": "footer",
+   "start": 15.88,
+   "end": 16.26
+  },
+  {
+   "word": "only",
+   "start": 16.26,
+   "end": 16.48
+  },
+  {
+   "word": "for",
+   "start": 16.48,
+   "end": 16.84
+  },
+  {
+   "word": "substantial",
+   "start": 16.84,
+   "end": 17.34
+  },
+  {
+   "word": "or",
+   "start": 17.34,
+   "end": 17.86
+  },
+  {
+   "word": "failed",
+   "start": 17.86,
+   "end": 18.26
+  },
+  {
+   "word": "turns.",
+   "start": 18.26,
+   "end": 18.74
+  },
+  {
+   "word": "Slack",
+   "start": 19.1,
+   "end": 19.76
+  },
+  {
+   "word": "has",
+   "start": 19.76,
+   "end": 19.98
+  },
+  {
+   "word": "no",
+   "start": 19.98,
+   "end": 20.3
+  },
+  {
+   "word": "idempotency",
+   "start": 20.3,
+   "end": 20.96
+  },
+  {
+   "word": "key",
+   "start": 20.96,
+   "end": 21.3
+  },
+  {
+   "word": "for",
+   "start": 21.3,
+   "end": 21.56
+  },
+  {
+   "word": "new",
+   "start": 21.56,
+   "end": 21.82
+  },
+  {
+   "word": "posts,",
+   "start": 21.82,
+   "end": 22.28
+  },
+  {
+   "word": "so",
+   "start": 22.46,
+   "end": 23.1
+  },
+  {
+   "word": "before",
+   "start": 23.1,
+   "end": 23.34
+  },
+  {
+   "word": "posting,",
+   "start": 23.34,
+   "end": 23.9
+  },
+  {
+   "word": "Junior",
+   "start": 24.06,
+   "end": 24.72
+  },
+  {
+   "word": "flushes",
+   "start": 24.72,
+   "end": 25.42
+  },
+  {
+   "word": "a",
+   "start": 25.42,
+   "end": 25.52
+  },
+  {
+   "word": "write",
+   "start": 25.52,
+   "end": 25.78
+  },
+  {
+   "word": "-ahead",
+   "start": 25.78,
+   "end": 26.02
+  },
+  {
+   "word": "intent",
+   "start": 26.02,
+   "end": 26.24
+  },
+  {
+   "word": "and",
+   "start": 26.24,
+   "end": 27.06
+  },
+  {
+   "word": "stamps",
+   "start": 27.06,
+   "end": 27.46
+  },
+  {
+   "word": "the",
+   "start": 27.46,
+   "end": 27.62
+  },
+  {
+   "word": "post's",
+   "start": 27.62,
+   "end": 28.04
+  },
+  {
+   "word": "identity",
+   "start": 28.04,
+   "end": 28.36
+  },
+  {
+   "word": "into",
+   "start": 28.36,
+   "end": 28.84
+  },
+  {
+   "word": "Slack",
+   "start": 28.84,
+   "end": 29.24
+  },
+  {
+   "word": "metadata.",
+   "start": 29.24,
+   "end": 29.7
+  },
+  {
+   "word": "After",
+   "start": 30.34,
+   "end": 30.86
+  },
+  {
+   "word": "a",
+   "start": 30.86,
+   "end": 31.06
+  },
+  {
+   "word": "crash,",
+   "start": 31.06,
+   "end": 31.34
+  },
+  {
+   "word": "it",
+   "start": 31.52,
+   "end": 31.86
+  },
+  {
+   "word": "finds",
+   "start": 31.86,
+   "end": 32.18
+  },
+  {
+   "word": "that",
+   "start": 32.18,
+   "end": 32.32
+  },
+  {
+   "word": "post",
+   "start": 32.32,
+   "end": 32.58
+  },
+  {
+   "word": "and",
+   "start": 32.58,
+   "end": 32.9
+  },
+  {
+   "word": "adopts",
+   "start": 32.9,
+   "end": 33.36
+  },
+  {
+   "word": "it,",
+   "start": 33.36,
+   "end": 33.44
+  },
+  {
+   "word": "instead",
+   "start": 33.52,
+   "end": 34.02
+  },
+  {
+   "word": "of",
+   "start": 34.02,
+   "end": 34.26
+  },
+  {
+   "word": "posting",
+   "start": 34.26,
+   "end": 34.46
+  },
+  {
+   "word": "twice.",
+   "start": 34.46,
+   "end": 34.86
+  }
+ ]
+}

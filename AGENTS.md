@@ -143,6 +143,7 @@ Do not run the full render as routine validation when unit tests and static chec
 - `scenes/data-modeling/`: seven-slide types/cardinality, finite correspondence, joystick, sum/product, and illegal-state adaptation
 - `scenes/component-prototypes/`: provisional reusable Typeset, Collection, and Connector showroom; payloads and adapters remain in the three `component_prototype.rs` modules until visual approval
 - `scenes/opencode-architecture/`: four-step Daemon / merge port using the provisional box-and-wire diagram surface
+- `scenes/opencode-jr-architecture/`: narrated Stage-film teaching reel of the OpenCode Jr Slack bot, with one condensed code zoom
 - `scenes/opencode-session-tool/`: rapid-fire OpenCode v2 hot-reload proof using split Vim/OpenCode terminal video, layered SFX, text, and discrete state
 - `scenes/deployment-queue/`: canonical state-driven simulated UI proof with keyed insertion, phase replacement, failure focus, and retry
 - `scenes/rolling-number/`: Rolling Number showroom: roll up and down, a mid-roll redirect, a carry into a new place, and a shrink

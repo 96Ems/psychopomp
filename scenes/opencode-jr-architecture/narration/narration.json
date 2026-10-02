@@ -1,0 +1,76 @@
+{
+  "clips": [
+    {
+      "id": "intro",
+      "file": "intro.mp3",
+      "words": "intro.words.json",
+      "durationNanos": 14286520833,
+      "textHash": "5016213dcd59ee26",
+      "engine": "fish"
+    },
+    {
+      "id": "edge",
+      "file": "edge.mp3",
+      "words": "edge.words.json",
+      "durationNanos": 32839125000,
+      "textHash": "70e8b0a600763468",
+      "engine": "fish"
+    },
+    {
+      "id": "edge-code",
+      "file": "edge-code.mp3",
+      "words": "edge-code.words.json",
+      "durationNanos": 14413187500,
+      "textHash": "118682f7060191d6",
+      "engine": "fish"
+    },
+    {
+      "id": "session",
+      "file": "session.mp3",
+      "words": "session.words.json",
+      "durationNanos": 36335979166,
+      "textHash": "71fe93b4b64a05ff",
+      "engine": "fish"
+    },
+    {
+      "id": "workspace",
+      "file": "workspace.mp3",
+      "words": "workspace.words.json",
+      "durationNanos": 32265812500,
+      "textHash": "2f772eb4d6b4cb20",
+      "engine": "fish"
+    },
+    {
+      "id": "publish",
+      "file": "publish.mp3",
+      "words": "publish.words.json",
+      "durationNanos": 35272354166,
+      "textHash": "246f91a56b412e89",
+      "engine": "fish"
+    },
+    {
+      "id": "resets",
+      "file": "resets.mp3",
+      "words": "resets.words.json",
+      "durationNanos": 29078979166,
+      "textHash": "919f98abb570dd52",
+      "engine": "fish"
+    },
+    {
+      "id": "around",
+      "file": "around.mp3",
+      "words": "around.words.json",
+      "durationNanos": 38665062500,
+      "textHash": "cd48f6195d81fec9",
+      "engine": "fish"
+    },
+    {
+      "id": "outro",
+      "file": "outro.mp3",
+      "words": "outro.words.json",
+      "durationNanos": 13019979166,
+      "textHash": "7ae597db152e895d",
+      "engine": "fish"
+    }
+  ]
+}

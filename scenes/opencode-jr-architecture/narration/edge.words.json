@@ -1,0 +1,394 @@
+{
+ "wordTimings": [
+  {
+   "word": "It",
+   "start": 0,
+   "end": 0.24
+  },
+  {
+   "word": "starts",
+   "start": 0.24,
+   "end": 0.46
+  },
+  {
+   "word": "at",
+   "start": 0.46,
+   "end": 0.72
+  },
+  {
+   "word": "the",
+   "start": 0.72,
+   "end": 0.8
+  },
+  {
+   "word": "edge.",
+   "start": 0.8,
+   "end": 1.12
+  },
+  {
+   "word": "Slack",
+   "start": 1.44,
+   "end": 2.08
+  },
+  {
+   "word": "posts",
+   "start": 2.08,
+   "end": 2.42
+  },
+  {
+   "word": "the",
+   "start": 2.42,
+   "end": 2.84
+  },
+  {
+   "word": "event",
+   "start": 2.84,
+   "end": 3.1
+  },
+  {
+   "word": "to",
+   "start": 3.1,
+   "end": 3.42
+  },
+  {
+   "word": "a",
+   "start": 3.42,
+   "end": 3.64
+  },
+  {
+   "word": "Cloudflare",
+   "start": 3.64,
+   "end": 4.36
+  },
+  {
+   "word": "worker.",
+   "start": 4.36,
+   "end": 4.66
+  },
+  {
+   "word": "The",
+   "start": 5.06,
+   "end": 5.7
+  },
+  {
+   "word": "worker",
+   "start": 5.7,
+   "end": 5.94
+  },
+  {
+   "word": "verifies",
+   "start": 5.94,
+   "end": 6.58
+  },
+  {
+   "word": "the",
+   "start": 6.58,
+   "end": 6.78
+  },
+  {
+   "word": "signature",
+   "start": 6.78,
+   "end": 7.1
+  },
+  {
+   "word": "and",
+   "start": 7.1,
+   "end": 7.86
+  },
+  {
+   "word": "decodes",
+   "start": 7.86,
+   "end": 8.56
+  },
+  {
+   "word": "the",
+   "start": 8.56,
+   "end": 8.7
+  },
+  {
+   "word": "envelope.",
+   "start": 8.7,
+   "end": 9.02
+  },
+  {
+   "word": "It",
+   "start": 9.42,
+   "end": 10.06
+  },
+  {
+   "word": "drops",
+   "start": 10.06,
+   "end": 10.3
+  },
+  {
+   "word": "other",
+   "start": 10.3,
+   "end": 10.62
+  },
+  {
+   "word": "workspaces",
+   "start": 10.62,
+   "end": 11.34
+  },
+  {
+   "word": "and",
+   "start": 11.34,
+   "end": 11.92
+  },
+  {
+   "word": "ambient",
+   "start": 11.92,
+   "end": 12.4
+  },
+  {
+   "word": "chatter",
+   "start": 12.4,
+   "end": 12.84
+  },
+  {
+   "word": "at",
+   "start": 12.84,
+   "end": 13.24
+  },
+  {
+   "word": "the",
+   "start": 13.24,
+   "end": 13.28
+  },
+  {
+   "word": "top",
+   "start": 13.28,
+   "end": 13.5
+  },
+  {
+   "word": "of",
+   "start": 13.5,
+   "end": 13.64
+  },
+  {
+   "word": "a",
+   "start": 13.64,
+   "end": 13.72
+  },
+  {
+   "word": "channel.",
+   "start": 13.72,
+   "end": 14.02
+  },
+  {
+   "word": "It",
+   "start": 14.4,
+   "end": 14.84
+  },
+  {
+   "word": "checks",
+   "start": 14.84,
+   "end": 15.12
+  },
+  {
+   "word": "who",
+   "start": 15.12,
+   "end": 15.28
+  },
+  {
+   "word": "sent",
+   "start": 15.28,
+   "end": 15.5
+  },
+  {
+   "word": "it,",
+   "start": 15.5,
+   "end": 15.76
+  },
+  {
+   "word": "then",
+   "start": 15.84,
+   "end": 16.54
+  },
+  {
+   "word": "it",
+   "start": 16.54,
+   "end": 16.72
+  },
+  {
+   "word": "writes",
+   "start": 16.72,
+   "end": 16.98
+  },
+  {
+   "word": "the",
+   "start": 16.98,
+   "end": 17.16
+  },
+  {
+   "word": "event",
+   "start": 17.16,
+   "end": 17.44
+  },
+  {
+   "word": "into",
+   "start": 17.44,
+   "end": 17.8
+  },
+  {
+   "word": "the",
+   "start": 17.8,
+   "end": 17.92
+  },
+  {
+   "word": "thread's",
+   "start": 17.92,
+   "end": 18.3
+  },
+  {
+   "word": "mailbox.",
+   "start": 18.3,
+   "end": 18.58
+  },
+  {
+   "word": "Only",
+   "start": 19.02,
+   "end": 19.64
+  },
+  {
+   "word": "after",
+   "start": 19.64,
+   "end": 19.86
+  },
+  {
+   "word": "that",
+   "start": 19.86,
+   "end": 20.14
+  },
+  {
+   "word": "write",
+   "start": 20.14,
+   "end": 20.38
+  },
+  {
+   "word": "commits",
+   "start": 20.38,
+   "end": 20.72
+  },
+  {
+   "word": "does",
+   "start": 20.72,
+   "end": 21.28
+  },
+  {
+   "word": "Slack",
+   "start": 21.28,
+   "end": 21.68
+  },
+  {
+   "word": "get",
+   "start": 21.68,
+   "end": 22
+  },
+  {
+   "word": "its",
+   "start": 22,
+   "end": 22.34
+  },
+  {
+   "word": "200.",
+   "start": 22.34,
+   "end": 22.78
+  },
+  {
+   "word": "That",
+   "start": 23.4,
+   "end": 24.04
+  },
+  {
+   "word": "200",
+   "start": 24.04,
+   "end": 24.44
+  },
+  {
+   "word": "is",
+   "start": 24.44,
+   "end": 24.98
+  },
+  {
+   "word": "a",
+   "start": 24.98,
+   "end": 25.14
+  },
+  {
+   "word": "durability",
+   "start": 25.14,
+   "end": 25.48
+  },
+  {
+   "word": "receipt.",
+   "start": 25.48,
+   "end": 26
+  },
+  {
+   "word": "If",
+   "start": 26,
+   "end": 26.92
+  },
+  {
+   "word": "anything",
+   "start": 26.92,
+   "end": 27.22
+  },
+  {
+   "word": "fails",
+   "start": 27.22,
+   "end": 27.72
+  },
+  {
+   "word": "first,",
+   "start": 27.72,
+   "end": 28.1
+  },
+  {
+   "word": "Slack",
+   "start": 28.38,
+   "end": 28.98
+  },
+  {
+   "word": "retries",
+   "start": 28.98,
+   "end": 29.64
+  },
+  {
+   "word": "and",
+   "start": 29.64,
+   "end": 30.18
+  },
+  {
+   "word": "the",
+   "start": 30.18,
+   "end": 30.32
+  },
+  {
+   "word": "mailbox",
+   "start": 30.32,
+   "end": 30.58
+  },
+  {
+   "word": "dedupes",
+   "start": 30.58,
+   "end": 31.48
+  },
+  {
+   "word": "by",
+   "start": 31.48,
+   "end": 31.6
+  },
+  {
+   "word": "message",
+   "start": 31.6,
+   "end": 31.9
+  },
+  {
+   "word": "timestamp.",
+   "start": 31.9,
+   "end": 32.64
+  }
+ ]
+}
