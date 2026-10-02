@@ -33,10 +33,6 @@ impl TargetGeometry {
     pub fn center_x(self) -> f32 {
         self.x + self.width * 0.5
     }
-
-    pub fn below(self, offset: f32) -> f32 {
-        self.line_y + offset
-    }
 }
 
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
@@ -248,7 +244,6 @@ pub enum Scalar {
     TargetWidth(TextTarget),
     TargetCenterX(TextTarget),
     TargetLineY(TextTarget),
-    TargetBelow { target: TextTarget, offset: f32 },
     Offset { value: Box<Scalar>, amount: f32 },
 }
 
@@ -722,10 +717,7 @@ impl Pointer {
             ),
             Motion::spring(
                 self.y.clone(),
-                Scalar::TargetBelow {
-                    target,
-                    offset: offset_y,
-                },
+                Scalar::TargetLineY(target).offset(offset_y),
                 profile,
             ),
         ])
@@ -739,7 +731,6 @@ fn resolve_scalar(scalar: &Scalar, targets: &HashMap<TextTarget, TargetGeometry>
         Scalar::TargetWidth(target) => resolve_target(target, targets)?.width,
         Scalar::TargetCenterX(target) => resolve_target(target, targets)?.center_x(),
         Scalar::TargetLineY(target) => resolve_target(target, targets)?.line_y,
-        Scalar::TargetBelow { target, offset } => resolve_target(target, targets)?.below(*offset),
         Scalar::Offset { value, amount } => resolve_scalar(value, targets)? + amount,
     })
 }
