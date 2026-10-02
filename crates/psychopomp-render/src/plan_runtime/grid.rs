@@ -1,7 +1,7 @@
 use anyhow::{Context, Result};
 use psychopomp::{
-    grid::{GRID_RECIPE, GridArrangement, GridFillPlan, GridRecipePlan, GridSnapshotPlan},
-    plan::{ActorPlan, ContinuousChannelPlan, ScenePlan},
+    grid::{GridArrangement, GridFillPlan, GridRecipePlan, GridSnapshotPlan},
+    plan::{ActorPlan, ContinuousChannelPlan},
     timeline::{PropertyId, Timeline},
 };
 
@@ -551,27 +551,13 @@ fn group_bounds(dims: [usize; 3], left: bool, index: usize) -> ([f32; 3], [f32; 
     )
 }
 
-/// Shared GPU-free preflight and preparation; generated channels are reserved.
-#[allow(dead_code)] // Concrete entrypoint staged into the isolated browser host.
-pub(super) fn compile(plan: &mut ScenePlan) -> Result<Option<PreparedGrid>> {
-    let grid = plan
-        .actors
-        .iter()
-        .find(|actor| actor.recipe == GRID_RECIPE)
-        .map(|actor| PreparedGrid::new(actor, plan.duration_nanos))
-        .transpose()?;
-    if let Some(grid) = &grid {
-        super::generated::extend(plan, grid.channels(), super::generated::Owner::Grid)?;
-    }
-    Ok(grid)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::plan_runtime::{PreparedPlan, validate_renderer_plan};
+    use crate::plan_runtime::{PreparedPlan, generated, validate_renderer_plan};
     use psychopomp::plan::TrackEventPlan;
     use psychopomp::playback::PlaybackCommand;
+    use psychopomp::{grid::GRID_RECIPE, plan::ScenePlan};
     use std::{path::Path, time::Duration};
 
     #[test]
@@ -971,7 +957,13 @@ mod tests {
     }
     fn prepared(index: usize) -> CompiledGrid {
         let mut plan = plan(index);
-        let grid = compile(&mut plan).unwrap().unwrap();
+        let actor = plan
+            .actors
+            .iter()
+            .find(|a| a.recipe == GRID_RECIPE)
+            .unwrap();
+        let grid = PreparedGrid::new(actor, plan.duration_nanos).unwrap();
+        generated::extend(&mut plan, grid.channels(), generated::Owner::Grid).unwrap();
         let compiled = crate::plan_runtime::CompiledPlan::compile(plan, Path::new(".")).unwrap();
         CompiledGrid { compiled, grid }
     }
