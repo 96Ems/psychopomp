@@ -1,7 +1,7 @@
 //! Sequence diagrams: participants with lifelines and time-ordered rows of
 //! messages, notes and terminations. Rows are recipe-local identities revealed by
 //! ordinary Continuous Channels; the recipe does not simulate the protocol it shows.
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 
 use anyhow::{Result, bail, ensure};
 use serde::{Deserialize, Serialize};
@@ -17,7 +17,7 @@ pub const SEQUENCE_RECIPE: &str = "sequence";
 pub const HEADER_HEIGHT: f32 = 58.0;
 pub const HEADER_HEIGHT_WITH_DETAIL: f32 = 76.0;
 /// Space between the header row and the first slot.
-pub const LIFELINE_LEAD: f32 = 22.0;
+const LIFELINE_LEAD: f32 = 22.0;
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
@@ -101,7 +101,118 @@ fn error_tone() -> Tone {
     Tone::Error
 }
 
+impl SequenceParticipantPlan {
+    pub fn new(id: impl Into<String>, label: impl Into<String>, detail: impl Into<String>) -> Self {
+        Self {
+            id: id.into(),
+            label: label.into(),
+            detail: detail.into(),
+        }
+    }
+}
+
 impl SequenceRowPlan {
+    /// An arrow from `from` to `to`, in the next slot.
+    pub fn message(
+        id: impl Into<String>,
+        from: impl Into<String>,
+        to: impl Into<String>,
+        label: impl Into<String>,
+        tone: Tone,
+    ) -> Self {
+        Self::Message {
+            id: id.into(),
+            slot: None,
+            from: from.into(),
+            to: to.into(),
+            label: label.into(),
+            tone,
+            reply: false,
+            aside: String::new(),
+        }
+    }
+
+    /// A dashed response arrow.
+    pub fn reply(
+        id: impl Into<String>,
+        from: impl Into<String>,
+        to: impl Into<String>,
+        label: impl Into<String>,
+        tone: Tone,
+    ) -> Self {
+        match Self::message(id, from, to, label, tone) {
+            Self::Message {
+                id,
+                slot,
+                from,
+                to,
+                label,
+                tone,
+                aside,
+                ..
+            } => Self::Message {
+                id,
+                slot,
+                from,
+                to,
+                label,
+                tone,
+                reply: true,
+                aside,
+            },
+            row => row,
+        }
+    }
+
+    /// A box spanning the lifelines of `over`.
+    pub fn note(id: impl Into<String>, over: &[&str], text: impl Into<String>, tone: Tone) -> Self {
+        Self::Note {
+            id: id.into(),
+            slot: None,
+            over: over.iter().map(|p| (*p).to_owned()).collect(),
+            text: text.into(),
+            tone,
+            aside: String::new(),
+        }
+    }
+
+    /// `participant` stops here.
+    pub fn end(
+        id: impl Into<String>,
+        participant: impl Into<String>,
+        label: impl Into<String>,
+        tone: Tone,
+    ) -> Self {
+        Self::End {
+            id: id.into(),
+            slot: None,
+            participant: participant.into(),
+            label: label.into(),
+            tone,
+            aside: String::new(),
+        }
+    }
+
+    /// Place the row in `slot` instead of its index.
+    pub fn in_slot(mut self, value: u32) -> Self {
+        match &mut self {
+            Self::Message { slot, .. } | Self::Note { slot, .. } | Self::End { slot, .. } => {
+                *slot = Some(value)
+            }
+        }
+        self
+    }
+
+    /// Label the row in the left margin, as for a time.
+    pub fn with_aside(mut self, text: impl Into<String>) -> Self {
+        match &mut self {
+            Self::Message { aside, .. } | Self::Note { aside, .. } | Self::End { aside, .. } => {
+                *aside = text.into()
+            }
+        }
+        self
+    }
+
     pub fn id(&self) -> &str {
         match self {
             Self::Message { id, .. } | Self::Note { id, .. } | Self::End { id, .. } => id,
@@ -139,12 +250,16 @@ impl SequencePlan {
             .collect()
     }
 
-    pub fn slot_count(&self) -> u32 {
-        let used = self
-            .row_slots()
+    /// One past the highest slot a row occupies.
+    fn used_slots(&self) -> u32 {
+        self.row_slots()
             .into_iter()
             .max()
-            .map_or(0, |slot| slot + 1);
+            .map_or(0, |slot| slot + 1)
+    }
+
+    pub fn slot_count(&self) -> u32 {
+        let used = self.used_slots();
         self.slots.unwrap_or(used).max(used)
     }
 
@@ -262,11 +377,7 @@ impl SequencePlan {
                 }
             }
         }
-        let used = self
-            .row_slots()
-            .into_iter()
-            .max()
-            .map_or(0, |slot| slot + 1);
+        let used = self.used_slots();
         if let Some(slots) = self.slots {
             ensure!(
                 slots >= used,
@@ -304,11 +415,10 @@ fn single_line(what: &str, text: &str, max_chars: usize) -> Result<()> {
 /// default as its initial value, and writes eased reveals by row identity.
 pub struct SequenceActor {
     actor: ActorHandle,
-    channels: HashMap<String, ContinuousHandle>,
 }
 
 /// Default reveal motion: a critically damped spring that settles in 0.6 s.
-pub const REVEAL_SECONDS: f32 = 0.6;
+const REVEAL_SECONDS: f32 = 0.6;
 
 impl SequenceActor {
     pub fn declare(
@@ -318,14 +428,7 @@ impl SequenceActor {
     ) -> Result<Self> {
         plan.validate()?;
         let actor = scene.actor(id, SEQUENCE_RECIPE, plan)?;
-        Ok(Self {
-            actor,
-            channels: HashMap::new(),
-        })
-    }
-
-    pub fn actor(&self) -> &ActorHandle {
-        &self.actor
+        Ok(Self { actor })
     }
 
     /// The channel for `property`, declared on first use with `initial`.
@@ -335,10 +438,33 @@ impl SequenceActor {
         property: &str,
         initial: f32,
     ) -> ContinuousHandle {
-        self.channels
-            .entry(property.to_owned())
-            .or_insert_with(|| scene.continuous(&self.actor, property, initial))
-            .clone()
+        scene.channel(&self.actor, property, initial)
+    }
+
+    /// `row.<row>.<property>` (`reveal`, `opacity`, or `strike`).
+    pub fn row_channel(
+        &mut self,
+        scene: &mut PlanBuilder,
+        row: &str,
+        property: &str,
+        initial: f32,
+    ) -> ContinuousHandle {
+        self.channel(scene, &format!("row.{row}.{property}"), initial)
+    }
+
+    /// `participant.<participant>.<property>` (`opacity` or `emphasis`).
+    pub fn participant_channel(
+        &mut self,
+        scene: &mut PlanBuilder,
+        participant: &str,
+        property: &str,
+        initial: f32,
+    ) -> ContinuousHandle {
+        self.channel(
+            scene,
+            &format!("participant.{participant}.{property}"),
+            initial,
+        )
     }
 
     /// Ease a whole-diagram property (`opacity`, `x`, `y`, `lifelines`).
@@ -357,22 +483,23 @@ impl SequenceActor {
 
     /// Draw a row in: arrows travel, notes and marks appear.
     pub fn reveal(&mut self, scene: &mut PlanBuilder, row: &str, at_nanos: u64) {
-        let channel = self.channel(scene, &format!("row.{row}.reveal"), 0.0);
+        let channel = self.row_channel(scene, row, "reveal", 0.0);
         scene.spring(&channel, at_nanos, 1.0, REVEAL_SECONDS, 0.0);
     }
 
     /// Fade a revealed row to `opacity` without undrawing it.
     pub fn fade(&mut self, scene: &mut PlanBuilder, row: &str, at_nanos: u64, opacity: f32) {
-        let channel = self.channel(scene, &format!("row.{row}.opacity"), 1.0);
+        let channel = self.row_channel(scene, row, "opacity", 1.0);
         scene.spring(&channel, at_nanos, opacity, 0.45, 0.0);
     }
 
     /// Strike a row through, as for a result that is dropped or ignored.
     pub fn strike(&mut self, scene: &mut PlanBuilder, row: &str, at_nanos: u64) {
-        let channel = self.channel(scene, &format!("row.{row}.strike"), 0.0);
+        let channel = self.row_channel(scene, row, "strike", 0.0);
         scene.spring(&channel, at_nanos, 1.0, 0.5, 0.0);
     }
 
+    /// Spring a participant property to `target` over 0.5 s.
     pub fn participant(
         &mut self,
         scene: &mut PlanBuilder,
@@ -382,11 +509,7 @@ impl SequenceActor {
         at_nanos: u64,
         target: f32,
     ) {
-        let channel = self.channel(
-            scene,
-            &format!("participant.{participant}.{property}"),
-            initial,
-        );
+        let channel = self.participant_channel(scene, participant, property, initial);
         scene.spring(&channel, at_nanos, target, 0.5, 0.0);
     }
 }
