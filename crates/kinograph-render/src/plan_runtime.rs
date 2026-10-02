@@ -1,5 +1,5 @@
 use std::{
-    collections::{HashMap, HashSet},
+    collections::HashMap,
     fs,
     io::{BufRead, Write},
     path::{Path, PathBuf},
@@ -501,11 +501,7 @@ impl PreparedPlan {
         }
         let attachments = attachments::compile(&mut plan, &targets, &scales)?;
         plan.validate()?;
-        let visual_media = match &root {
-            preflight::RootPlan::Terminal(input) => input.media_ids().collect(),
-            _ => HashSet::new(),
-        };
-        let compiled = CompiledPlan::new(plan, base, &targets, &visual_media)?;
+        let compiled = CompiledPlan::new(plan, base, &targets)?;
         let rich_text = rich_text
             .into_iter()
             .map(|(id, source)| rich_text::PreparedRichText::from_source(id, source, renderer))
@@ -563,14 +559,13 @@ impl PreparedPlan {
 impl CompiledPlan {
     #[cfg(test)]
     fn compile(plan: ScenePlan, base: &Path) -> Result<Self> {
-        Self::new(plan, base, &HashMap::new(), &HashSet::new())
+        Self::new(plan, base, &HashMap::new())
     }
 
     fn new(
         plan: ScenePlan,
         base: &Path,
         targets: &HashMap<String, TargetGeometry>,
-        visual_media: &HashSet<&str>,
     ) -> Result<Self> {
         let mut properties = HashMap::new();
         let channels = plan.continuous_channels.iter().map(|channel| {
@@ -599,18 +594,10 @@ impl CompiledPlan {
             .collect::<Result<HashMap<_, _>>>()?;
 
         let mut composition = vec![Composition::hold(Duration::from_nanos(plan.duration_nanos))];
+        // Preflight rejected media no recipe consumes; video belongs to its recipe.
         for media in &plan.media {
             if !matches!(media.kind, MediaKindPlan::Audio) {
-                if matches!(media.kind, MediaKindPlan::Video)
-                    && visual_media.contains(media.id.as_str())
-                {
-                    continue;
-                }
-                bail!(
-                    "plan renderer has no actor consuming {:?} media '{}'",
-                    media.kind,
-                    media.id
-                );
+                continue;
             }
             let path = resolve_media_path(base, media);
             let asset = Asset::audio(media.id.clone(), path);
@@ -1253,7 +1240,7 @@ fn seconds_f64(nanos: u64) -> f64 {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::{HashMap, HashSet};
+    use std::collections::HashMap;
 
     use kinograph::{
         dsl::TargetGeometry,
@@ -1367,8 +1354,7 @@ mod tests {
             },
         )]);
 
-        let prepared =
-            CompiledPlan::new(plan, std::path::Path::new("."), &targets, &HashSet::new()).unwrap();
+        let prepared = CompiledPlan::new(plan, std::path::Path::new("."), &targets).unwrap();
         assert_eq!(
             prepared
                 .timeline
@@ -1395,9 +1381,7 @@ mod tests {
         });
         plan.validate().unwrap();
 
-        let error = CompiledPlan::compile(plan, std::path::Path::new("."))
-            .err()
-            .unwrap();
+        let error = validate_renderer_plan(&plan).unwrap_err();
         assert!(
             error
                 .to_string()
