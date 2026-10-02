@@ -35,16 +35,13 @@ impl HeadlessRenderer {
             text.hash(&mut hasher);
             p.text.hash(&mut hasher);
             let fingerprint = hasher.finish();
+            // One reusable slot per HUD row, not a new cache entry per time.
             let key = format!("native-debug:{index}");
-            if self
-                .part_sprites
-                .get(&key)
-                .is_none_or(|(old, _)| *old != fingerprint)
-            {
+            let sprite = refresh_sprite(&mut self.part_sprites, &*key, fingerprint, || {
                 let attrs = Attrs::new()
                     .family(Family::Name("CommitMono"))
                     .color(Color::rgb(p.text[0], p.text[1], p.text[2]));
-                let sprite = make_sprite(
+                make_sprite(
                     &mut self.font_system,
                     &mut self.swash_cache,
                     vec![(text.as_str(), attrs.clone())],
@@ -52,11 +49,8 @@ impl HeadlessRenderer {
                     Metrics::new(18., 26.),
                     self.spec.width.saturating_sub(72),
                     26,
-                );
-                // One reusable slot per HUD row, not a new cache entry per time.
-                self.part_sprites.insert(key.clone(), (fingerprint, sprite));
-            }
-            let sprite = &self.part_sprites[&key].1;
+                )
+            });
             composite_text_sprite(
                 pixels,
                 [self.spec.width, self.spec.height],

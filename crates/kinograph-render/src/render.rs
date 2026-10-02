@@ -540,22 +540,22 @@ impl HeadlessRenderer {
         for (start, end, _) in &segments {
             let spans = &line.spans()[*start..*end];
             let key = format!("centered-code:{}:{start}:{end}", line.id.as_str());
-            let fingerprint = spans_fingerprint(spans);
-            if self
-                .part_sprites
-                .get(&key)
-                .is_none_or(|(cached, _)| *cached != fingerprint)
-            {
-                let mut sprite = make_spans_sprite_at_size(
-                    &mut self.font_system,
-                    &mut self.swash_cache,
-                    spans,
-                    64.0,
-                    96.0,
-                );
-                self.theme.sprite(&mut sprite);
-                self.part_sprites.insert(key, (fingerprint, sprite));
-            }
+            refresh_sprite(
+                &mut self.part_sprites,
+                &*key,
+                spans_fingerprint(spans),
+                || {
+                    let mut sprite = make_spans_sprite_at_size(
+                        &mut self.font_system,
+                        &mut self.swash_cache,
+                        spans,
+                        64.0,
+                        96.0,
+                    );
+                    self.theme.sprite(&mut sprite);
+                    sprite
+                },
+            );
         }
         let width = segments
             .iter()
@@ -1047,33 +1047,19 @@ impl HeadlessRenderer {
         pixels: &mut [u8],
         frame: &EditorFrame<'_>,
     ) -> Result<()> {
-        for placed in frame.lines {
-            let fingerprint = line_fingerprint(placed.line);
-            let is_stale = self
-                .line_sprites
-                .get(&placed.line.id)
-                .is_none_or(|(cached, _)| *cached != fingerprint);
-            if is_stale {
-                let mut sprite =
-                    make_line_sprite(&mut self.font_system, &mut self.swash_cache, placed.line);
-                self.theme.sprite(&mut sprite);
-                self.line_sprites
-                    .insert(placed.line.id.clone(), (fingerprint, sprite));
-            }
-        }
-        for bright in frame.bright_text {
-            let fingerprint = line_fingerprint(&bright.line);
-            let is_stale = self
-                .line_sprites
-                .get(&bright.line.id)
-                .is_none_or(|(cached, _)| *cached != fingerprint);
-            if is_stale {
-                let mut sprite =
-                    make_line_sprite(&mut self.font_system, &mut self.swash_cache, &bright.line);
-                self.theme.sprite(&mut sprite);
-                self.line_sprites
-                    .insert(bright.line.id.clone(), (fingerprint, sprite));
-            }
+        let lines = frame.lines.iter().map(|placed| placed.line);
+        for line in lines.chain(frame.bright_text.iter().map(|bright| &bright.line)) {
+            refresh_sprite(
+                &mut self.line_sprites,
+                &line.id,
+                line_fingerprint(line),
+                || {
+                    let mut sprite =
+                        make_line_sprite(&mut self.font_system, &mut self.swash_cache, line);
+                    self.theme.sprite(&mut sprite);
+                    sprite
+                },
+            );
         }
 
         let panel_top = self.spec.height as f32 * 0.17 + frame.panel_offset_y;
@@ -1211,17 +1197,17 @@ impl HeadlessRenderer {
         for (start, end, _) in &segments {
             let spans = &placed.line.spans()[*start..*end];
             let key = format!("{}:{start}:{end}", placed.line.id.as_str());
-            let fingerprint = spans_fingerprint(spans);
-            let stale = self
-                .part_sprites
-                .get(&key)
-                .is_none_or(|(cached, _)| *cached != fingerprint);
-            if stale {
-                let mut sprite =
-                    make_spans_sprite(&mut self.font_system, &mut self.swash_cache, spans);
-                self.theme.sprite(&mut sprite);
-                self.part_sprites.insert(key, (fingerprint, sprite));
-            }
+            refresh_sprite(
+                &mut self.part_sprites,
+                &*key,
+                spans_fingerprint(spans),
+                || {
+                    let mut sprite =
+                        make_spans_sprite(&mut self.font_system, &mut self.swash_cache, spans);
+                    self.theme.sprite(&mut sprite);
+                    sprite
+                },
+            );
         }
 
         let mut cursor_x = x;
@@ -1443,6 +1429,26 @@ fn make_title_sprite(
         320,
         40,
     )
+}
+
+/// The cached sprite for `key`, rebuilt by `make` only when `fingerprint` changed.
+fn refresh_sprite<'a, K, Q>(
+    cache: &'a mut HashMap<K, (u64, TextSprite)>,
+    key: &Q,
+    fingerprint: u64,
+    make: impl FnOnce() -> TextSprite,
+) -> &'a TextSprite
+where
+    K: std::borrow::Borrow<Q> + Eq + Hash,
+    Q: ToOwned<Owned = K> + Eq + Hash + ?Sized,
+{
+    if cache
+        .get(key)
+        .is_none_or(|(cached, _)| *cached != fingerprint)
+    {
+        cache.insert(key.to_owned(), (fingerprint, make()));
+    }
+    &cache[key].1
 }
 
 fn line_fingerprint(line: &CodeLine) -> u64 {
