@@ -83,8 +83,7 @@ impl PreparedReel {
             let offset = Duration::from_nanos(span.start_nanos);
             media.extend(
                 prepared
-                    .scene
-                    .media()
+                    .media
                     .iter()
                     .map(|placement| placement.shifted(offset)),
             );

@@ -4,7 +4,6 @@ use anyhow::{Context, Result, bail};
 use psychopomp::{
     callout::CalloutSide,
     code::RangeId,
-    dsl::TargetGeometry,
     editor::{CompiledEditor, EditorRecipePlan, EditorTargetSelector},
     math::{
         Vec2,
@@ -15,7 +14,7 @@ use psychopomp::{
     plan::{ActorPlan, ScalarPlan, ScenePlan, TrackEventPlan},
 };
 
-use super::generated;
+use super::{TargetGeometry, generated};
 use crate::render::{
     EditorFrame, EditorPanel, HeadlessRenderer, InlineRangeMetrics, InlineRevealFrame,
     LineMarkFrame, PointerFrame, TokenHighlight,
@@ -344,11 +343,8 @@ impl PreparedEditor {
             focus_line_y,
             focus_height: self.editor.focus_height(),
             token_highlight,
-            bright_text: &[],
             pointer,
             inline_reveals: &inline_reveals,
-            squiggles: &[],
-            annotations: &[],
             lines: &lines,
         })
     }

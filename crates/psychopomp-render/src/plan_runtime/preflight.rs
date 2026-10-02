@@ -4,8 +4,6 @@ use super::{
     callout::PreparedCallout,
     caption::PreparedCaption,
     component_prototype::{self, ComponentInput},
-    deployment_queue::PreparedDeploymentQueue,
-    diagram,
     editor::{EditorSelection, PreparedEditor},
     generated,
     grid::PreparedGrid,
@@ -25,10 +23,8 @@ use psychopomp::{
     callout::CALLOUT_RECIPE,
     caption::CAPTION_RECIPE,
     component_prototype::{
-        COLLECTION, CONNECTOR, DIAGRAM, DiagramPlan, HEADER, HeaderPlan, RICH_TEXT, TYPESET, VENN,
-        WIDTH_TEXT,
+        COLLECTION, CONNECTOR, HEADER, HeaderPlan, RICH_TEXT, TYPESET, VENN, WIDTH_TEXT,
     },
-    deployment::DEPLOYMENT_QUEUE_RECIPE,
     editor::{EDITOR_RECIPE, EditorTargetSelector, POINTER_RECIPE, PointerRecipePlan},
     grid::GRID_RECIPE,
     lanes::LANES_RECIPE,
@@ -74,12 +70,7 @@ pub(super) enum RootPlan {
         pointer: Option<String>,
         selectors: Vec<(String, EditorSelection)>,
     },
-    Deployment(Box<PreparedDeploymentQueue>),
     Grid(Box<PreparedGrid>),
-    Diagram {
-        id: String,
-        recipe: DiagramPlan,
-    },
     Stage {
         id: String,
         recipe: Box<StagePlan>,
@@ -99,7 +90,7 @@ pub(super) struct PlainText {
     pub mask: Option<VerticalMask>,
 }
 
-pub(super) const NATIVE_UNSUPPORTED: &str = "interruptible native playback supports continuous-channel editor, pointer, text, effect-task, keyed-grid, value-token, and provisional component/diagram scenes; generic State Channels and recorded media still support video export";
+pub(super) const NATIVE_UNSUPPORTED: &str = "interruptible native playback supports continuous-channel editor, pointer, text, effect-task, keyed-grid, value-token, and provisional component scenes; generic State Channels and recorded media still support video export";
 
 /// A typed projection of observable CURRENT states. Raw JSON StateTracks retain
 /// full equal-time history for cache identity and previous-snapshot semantics.
@@ -325,9 +316,7 @@ impl RootPlan {
             Self::Blank => None,
             Self::Title(_) => Some("title-card"),
             Self::Editor { .. } => Some(EDITOR_RECIPE),
-            Self::Deployment(_) => Some(DEPLOYMENT_QUEUE_RECIPE),
             Self::Grid(_) => Some(GRID_RECIPE),
-            Self::Diagram { .. } => Some(DIAGRAM),
             Self::Stage { .. } => Some(STAGE_RECIPE),
         }
     }
@@ -337,9 +326,7 @@ fn put_root(root: &mut RootPlan, next: RootPlan) -> Result<()> {
         if Some(existing) == next.recipe() {
             bail!("plan renderer currently supports at most one {existing} root actor");
         }
-        bail!(
-            "editor, title-card, deployment-queue, keyed-grid, prototype-diagram, and stage actors are exclusive root recipes"
-        );
+        bail!("editor, title-card, keyed-grid, and stage actors are exclusive root recipes");
     }
     *root = next;
     Ok(())
@@ -383,29 +370,10 @@ impl Plan {
                         })?;
                     pointers.push((actor.id.clone(), recipe.editor_id));
                 }
-                DEPLOYMENT_QUEUE_RECIPE => put_root(
-                    &mut root,
-                    RootPlan::Deployment(Box::new(PreparedDeploymentQueue::new(
-                        actor,
-                        &plan.state_channels,
-                        plan.duration_nanos,
-                    )?)),
-                )?,
                 GRID_RECIPE => put_root(
                     &mut root,
                     RootPlan::Grid(Box::new(PreparedGrid::new(actor, plan.duration_nanos)?)),
                 )?,
-                DIAGRAM => {
-                    let recipe: DiagramPlan = serde_json::from_value(actor.data.clone())?;
-                    diagram::validate_recipe(&actor.id, &recipe, &plan.continuous_channels)?;
-                    put_root(
-                        &mut root,
-                        RootPlan::Diagram {
-                            id: actor.id.clone(),
-                            recipe,
-                        },
-                    )?;
-                }
                 STAGE_RECIPE => put_root(
                     &mut root,
                     RootPlan::Stage {
@@ -564,16 +532,7 @@ impl Plan {
     }
     /// Whether interruptible native playback can drive this plan.
     pub(super) fn native(&self) -> bool {
-        let root = match &self.root {
-            RootPlan::Blank
-            | RootPlan::Title(_)
-            | RootPlan::Editor { .. }
-            | RootPlan::Grid(_)
-            | RootPlan::Diagram { .. }
-            | RootPlan::Stage { .. } => true,
-            RootPlan::Deployment(_) => false,
-        };
-        root && self.plan.state_channels.is_empty()
+        self.plan.state_channels.is_empty()
             && self.plan.media.is_empty()
             // Their changes follow the authored clock, not Playback destinations.
             && self.rolling.is_empty()

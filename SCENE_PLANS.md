@@ -59,13 +59,6 @@ cargo run -p psychopomp-opencode-session-tool -- \
   scenes/opencode-session-tool/opencode-session-tool.plan.json
 ```
 
-Emit the state-driven deployment queue UI proof:
-
-```bash
-cargo run -p psychopomp-deployment-queue -- \
-  scenes/deployment-queue/deployment-queue.plan.json
-```
-
 Emit the minimal Solid Store to Quark before-and-after:
 
 ```bash
@@ -114,30 +107,6 @@ A Render Window trims and rebases intersecting media to output time zero, but vi
 Delivery remains frame-based: a window whose duration is not exactly frame-aligned emits one final frame sampled only within the remaining window interval. At 60 fps, the encoded duration therefore rounds up to the next frame boundary.
 
 ## Play As A Presentation
-
-The OpenCode **Daemon / merge** adaptation is a four-step native scene:
-
-```sh
-cargo run -p psychopomp-opencode-architecture
-cargo run --release -- plan present target/opencode-architecture/deck.json --theme original
-```
-
-It moves from one client/server pair through three processes to one shared purple
-daemon, with only boxes and attached wires: no dotted background or enclosing UI.
-**1 / 2** selects Flat / Isometric; both share layout and the motion engine, while
-Isometric adds critically damped width/depth entrances. Client labels are **TUI 1**,
-**TUI 2**, and **DESKTOP** in both views. Arrows change destinations, **S** slows the local clock,
-and **Shift+R** plus **.** inspects the current transition from its entry pose.
-The source project remains read-only. See `scenes/opencode-architecture/README.md`
-for reference timings, intentional adaptations and export commands.
-The same bare views run in the isolated WASM/WebGPU probe's `diagram.html`; its
-README documents the static build/serve commands and browser limitations.
-
-The supported player below is native. For the separate, throwaway browser grid
-probe only, run `bash experiments/browser-grid-prototype/run.sh` and open
-`http://127.0.0.1:5201/`. It shares the chess-grid Scene Plans, Playback and shaders
-but not the complete renderer. See that experiment's README for prerequisites,
-baked-label restrictions and browser/measurement limits.
 
 The themed slideshow-component showroom runs natively:
 
@@ -783,6 +752,7 @@ Renderer Recipe payloads remain adapter-owned. The lightweight core validates st
 Scene Plan v2 scalar values may reference a component of a stable Semantic Target. The target's selector remains recipe-owned; for the hero, the editor recipe resolves logical code range IDs through `cosmic-text` before compiling highlight and pointer channels into the shared Timeline.
 
 The current plan runtime demonstrates `title-card`, `text`, `editor`, attached `pointer`, `effect-task`, `keyed-grid`, `video`, and `deployment-queue` renderer recipes. Planned audio lowers into exact script or layer placements for FFmpeg. Planned video is accepted only when a `video` actor consumes its media ID; unconsumed video and all image media still return request errors. The Video Card maps the global scene clock through the media placement into source time, so cue and range renders do not restart footage. Editor, video, and deployment recipes independently produce RGBA content but delegate framing to the same private immediate-mode card compositor; this reuse does not add recursive presentation nodes to Scene Plan. The deployment recipe compiles ordered semantic snapshots into private stable keyed row tracks, keeping layout destinations distinct from velocity-preserving motion.
+The current plan runtime demonstrates `title-card`, `text`, `editor`, attached `pointer`, `effect-task`, `keyed-grid`, and `terminal-recording` renderer recipes. Planned audio lowers into exact script or layer placements for FFmpeg. Planned video is accepted only when a prepared visual recipe consumes its media ID; unconsumed video and all image media still return request errors. The terminal recipe maps the global scene clock through the media placement into source time, so cue and range renders do not restart footage. Editor and terminal recipes independently produce RGBA content but delegate framing to the same private immediate-mode card compositor; this reuse does not add recursive presentation nodes to Scene Plan.
 
 ## Package Direction
 
@@ -794,13 +764,11 @@ psychopomp-render ----------+
 ```
 
 - `crates/psychopomp`: lightweight plans, authoring values, motion, composition, stable code, and validation
-- `crates/psychopomp-render`: concrete renderer, encoder, development server, CLI, and built-in scenes
+- `crates/psychopomp-render`: concrete renderer, encoder, development server, and CLI
 - `scenes/*`: lightweight Rust Scene Programs
 
 The default hero command embeds `scenes/hero/hero.plan.json` for compatibility. A workspace test regenerates the plan from `scenes/hero/src/lib.rs` and requires byte equality, so the checked artifact cannot drift from its Rust source.
 
 `scenes/opencode-session-tool/opencode-session-tool.plan.json` is likewise checked against its Rust Scene Program. It demonstrates one planned split Vim/OpenCode Video Card, layered SFX, continuous card motion, nine live-capability text overlays, and named cue selection through the same renderer process.
-
-`scenes/deployment-queue/deployment-queue.plan.json` is checked the same way. It demonstrates a typed state-driven UI Surface whose rows retain recipe-local identity across insertion, phase replacement, failure focus, and retry while the Scene Plan remains ordinary actors, continuous channels, state channels, and cues.
 
 The plan and authoring Modules intentionally share one lightweight crate. They should become separate crates only after another language, protocol consumer, or independent version lifecycle demonstrates that seam.

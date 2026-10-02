@@ -3,9 +3,18 @@
 use anyhow::{Result, bail};
 use serde::{Deserialize, Serialize};
 
-use crate::dsl::TaskState;
-
 pub const TASK_RECIPE: &str = "effect-task";
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "kind", content = "value", rename_all = "kebab-case")]
+pub enum TaskState {
+    Hidden,
+    Idle,
+    Running,
+    Succeeded(Option<String>),
+    Failed(String),
+    Death(String),
+}
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]

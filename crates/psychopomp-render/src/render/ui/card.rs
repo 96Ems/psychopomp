@@ -139,7 +139,6 @@ impl Clip {
 
 #[derive(Clone, Copy, Debug)]
 pub(crate) enum ContentFit {
-    Fill,
     Contain,
     /// The `source` window (fractional source pixels) stretched over the
     /// `content` rectangle (card-local, from the top-left); the rest of the
@@ -476,10 +475,6 @@ impl<'a> UiCanvas<'a> {
         }
         let source_size = [source.size[0] as f32, source.size[1] as f32];
         let scale = match fit {
-            ContentFit::Fill => [
-                bounds.size[0] / source_size[0],
-                bounds.size[1] / source_size[1],
-            ],
             ContentFit::Contain => {
                 let value = (bounds.size[0] / source_size[0]).min(bounds.size[1] / source_size[1]);
                 [value, value]
@@ -1104,7 +1099,6 @@ fn source_coordinates(
     }
     let source_size = [source_size[0] as f32, source_size[1] as f32];
     let scale = match fit {
-        ContentFit::Fill => [card_size[0] / source_size[0], card_size[1] / source_size[1]],
         ContentFit::Contain => {
             let value = (card_size[0] / source_size[0]).min(card_size[1] / source_size[1]);
             [value, value]
@@ -1374,7 +1368,7 @@ mod tests {
                 ui.clipped(
                     Clip::rounded(Bounds::from_center([4.0, 4.0], [4.0, 4.0]), 0.0),
                     |ui| {
-                        ui.rgba(ui.bounds(), source, ContentFit::Fill, 1.0);
+                        ui.rgba(ui.bounds(), source, ContentFit::Contain, 1.0);
                         Ok(())
                     },
                 )
@@ -1456,7 +1450,7 @@ mod tests {
                 },
                 |card| {
                     card.content(|ui| {
-                        ui.rgba(ui.bounds(), source, ContentFit::Fill, 1.0);
+                        ui.rgba(ui.bounds(), source, ContentFit::Contain, 1.0);
                         Ok(())
                     })
                 },
@@ -1503,7 +1497,7 @@ mod tests {
                     opacity: 1.0,
                 },
                 source,
-                ContentFit::Fill,
+                ContentFit::Contain,
             )
             .unwrap();
 
@@ -1540,7 +1534,7 @@ mod tests {
                     ui.card_source(
                         frame,
                         RgbaSource::packed(&[0; 4], [1, 1]).unwrap(),
-                        ContentFit::Fill,
+                        ContentFit::Contain,
                     )
                     .unwrap();
                 } else {

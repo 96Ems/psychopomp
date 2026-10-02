@@ -7,7 +7,7 @@ The project was previously named Kinograph; a psychopomp is a guide that leads
 souls between worlds, as these scenes lead a viewer from one state to the next.
 
 Psychopomp is an early prototype, not a general-purpose scene graph. Its examples
-explore stable code edits, teaching diagrams, typography, and simulated interfaces.
+explore stable code edits, teaching diagrams, typography, and narrated explainers.
 Motion is sampled at arbitrary times; reversing a transition preserves its
 current position and velocity instead of restarting an animation.
 
@@ -16,12 +16,12 @@ current position and velocity instead of restarting an animation.
 From the repository root:
 
 ```sh
-cargo run -p psychopomp-opencode-architecture
-cargo run --release -- plan present target/opencode-architecture/deck.json --theme original
+cargo run -p psychopomp-interactive-showcase
+cargo run --release -- plan present target/interactive-showcase/deck.json --theme original
 ```
 
-This opens the four-step Daemon diagram. **1 / 2** selects Flat / Isometric;
-**← / →** changes steps; **R** replays; **P** pauses; **S** slows motion.
+This opens a four-slide deck of code reveals and Effect Tasks. **' / Shift+'**
+changes slides; **← / →** changes steps; **R** replays; **P** pauses; **S** slows motion.
 
 You need a recent Rust toolchain, a working `wgpu` adapter, and a desktop display.
 The prototype has been exercised on macOS/Metal. CommitMono is bundled
@@ -36,7 +36,7 @@ For the typography, table, and component showroom, see
 With FFmpeg and `libx264` on `PATH`:
 
 ```sh
-cargo run --release -- plan render target/opencode-architecture/daemon-isometric.json output/daemon.mp4 --range 3..4.2 --theme original
+cargo run --release -- plan render target/interactive-showcase/task-lifecycle.json output/task-lifecycle.mp4 --range 3..6 --theme original
 ```
 
 The range samples the original scene clock, so cutting into a transition does
@@ -73,11 +73,7 @@ crates/psychopomp-render           measured typography, recipes, sampled pixels
 
 Share a rule when two real callers need the same behavior. Keep recipe-specific
 layout, identity, and motion choices visible. A Grid product, an editor line,
-and a deployment row are not interchangeable just because each has a key.
-
-The [browser experiment](experiments/browser-grid-prototype/README.md) reuses
-selected Grid/Diagram code through WASM/WebGPU. It remains an isolated prototype
-with baked labels—not a supported browser renderer or editable-text API.
+and a sequence row are not interchangeable just because each has a key.
 
 ## Verify a change
 
@@ -89,7 +85,7 @@ cargo clippy --workspace --all-targets --all-features -- -D warnings
 
 For rendering or choreography changes, also inspect targeted frames and
 transitions, including interrupted navigation. Passing tests is not aesthetic
-approval. The browser experiment has separate build and proof commands.
+approval.
 
 ## Read further by question
 
@@ -98,10 +94,9 @@ approval. The browser experiment has separate build and proof commands.
 | What do the domain terms mean? | [CONTEXT.md](CONTEXT.md) |
 | Which Module owns this behavior? | [ARCHITECTURE.md](ARCHITECTURE.md) |
 | How do I author, inspect, present, or export? | [SCENE_PLANS.md](SCENE_PLANS.md) |
-| What is in scope, and what comes next? | [PLAN.md](PLAN.md) |
 | Which references inform the motion? | [PRIOR_ART.md](PRIOR_ART.md) |
 | Where do composable particle and shader effects live? | [EFFECTS.md](EFFECTS.md) |
-| What did earlier experiments establish? | [NOTES.md](NOTES.md) and [perf/](perf/) |
+| What did earlier experiments establish? | [docs/history/](docs/history/) and [perf/](perf/) |
 
 [AGENTS.md](AGENTS.md) records the engineering, stability, and verification rules.
 Current contracts live in the domain and architecture documents; experiment

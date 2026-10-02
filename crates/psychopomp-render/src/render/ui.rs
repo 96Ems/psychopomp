@@ -58,49 +58,6 @@ impl Bounds {
             size: self.size,
         }
     }
-
-    pub fn split_top(self, height: f32) -> (Self, Self) {
-        let height = height.clamp(0.0, self.size[1]);
-        (
-            Self {
-                origin: self.origin,
-                size: [self.size[0], height],
-            },
-            Self {
-                origin: [self.origin[0], self.origin[1] + height],
-                size: [self.size[0], self.size[1] - height],
-            },
-        )
-    }
-
-    pub fn split_left(self, width: f32) -> (Self, Self) {
-        let width = width.clamp(0.0, self.size[0]);
-        (
-            Self {
-                origin: self.origin,
-                size: [width, self.size[1]],
-            },
-            Self {
-                origin: [self.origin[0] + width, self.origin[1]],
-                size: [self.size[0] - width, self.size[1]],
-            },
-        )
-    }
-
-    pub(crate) fn split_bottom(self, height: f32) -> (Self, Self) {
-        let height = height.clamp(0.0, self.size[1]);
-        let top_height = self.size[1] - height;
-        (
-            Self {
-                origin: self.origin,
-                size: [self.size[0], top_height],
-            },
-            Self {
-                origin: [self.origin[0], self.origin[1] + top_height],
-                size: [self.size[0], height],
-            },
-        )
-    }
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
@@ -119,73 +76,5 @@ impl Edges {
             bottom: value,
             left: value,
         }
-    }
-
-    pub fn symmetric(horizontal: f32, vertical: f32) -> Self {
-        Self {
-            top: vertical,
-            right: horizontal,
-            bottom: vertical,
-            left: horizontal,
-        }
-    }
-}
-
-pub(crate) struct VerticalFlow {
-    bounds: Bounds,
-    line_height: f32,
-    index: usize,
-}
-
-impl VerticalFlow {
-    pub fn new(bounds: Bounds, line_height: f32) -> Self {
-        Self {
-            bounds,
-            line_height,
-            index: 0,
-        }
-    }
-
-    pub fn next(&mut self) -> Bounds {
-        let row = Bounds {
-            origin: [
-                self.bounds.origin[0],
-                self.bounds.origin[1] + self.index as f32 * self.line_height,
-            ],
-            size: [self.bounds.size[0], self.line_height],
-        };
-        self.index += 1;
-        row
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::{Bounds, Edges, VerticalFlow};
-
-    #[test]
-    fn bounds_compose_without_authored_child_coordinates() {
-        let card = Bounds::from_center([100.0, 80.0], [160.0, 100.0]);
-        let (header, body) = card.split_top(20.0);
-        let (gutter, content) = body.inset(Edges::symmetric(8.0, 4.0)).split_left(24.0);
-        let mut rows = VerticalFlow::new(content, 16.0);
-
-        assert_eq!(header.origin, [20.0, 30.0]);
-        assert_eq!(gutter.size, [24.0, 72.0]);
-        assert_eq!(rows.next().origin, [52.0, 54.0]);
-        assert_eq!(rows.next().origin, [52.0, 70.0]);
-    }
-
-    #[test]
-    fn bounds_split_from_bottom() {
-        let bounds = Bounds {
-            origin: [10.0, 20.0],
-            size: [100.0, 80.0],
-        };
-
-        let (top, bottom) = bounds.split_bottom(30.0);
-        assert_eq!(top.size, [100.0, 50.0]);
-        assert_eq!(bottom.origin, [10.0, 70.0]);
-        assert_eq!(bottom.size, [100.0, 30.0]);
     }
 }

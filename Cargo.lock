@@ -1630,14 +1630,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "psychopomp-deployment-queue"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "psychopomp",
-]
-
-[[package]]
 name = "psychopomp-effect-succeed-slides"
 version = "0.1.0"
 dependencies = [
@@ -1666,15 +1658,6 @@ dependencies = [
 
 [[package]]
 name = "psychopomp-keyed-grid"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "psychopomp",
- "serde_json",
-]
-
-[[package]]
-name = "psychopomp-opencode-architecture"
 version = "0.1.0"
 dependencies = [
  "anyhow",
@@ -1750,12 +1733,10 @@ dependencies = [
  "psychopomp",
  "psychopomp-component-prototypes",
  "psychopomp-data-modeling",
- "psychopomp-deployment-queue",
  "psychopomp-effect-succeed-slides",
  "psychopomp-hero",
  "psychopomp-interactive-showcase",
  "psychopomp-keyed-grid",
- "psychopomp-opencode-architecture",
  "psychopomp-opencode-session-tool",
  "pulldown-cmark",
  "resvg",

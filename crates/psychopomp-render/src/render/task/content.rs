@@ -1,6 +1,6 @@
 //! Independently sampled content channels. Timing lives in Task preparation,
 //! not a second easing/window applied to an already animated state weight.
-use psychopomp::dsl::TaskState;
+use psychopomp::task::TaskState;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct ContentPose {

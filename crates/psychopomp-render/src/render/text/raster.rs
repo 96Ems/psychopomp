@@ -1,5 +1,4 @@
-//! Exact CPU glyph rasterization shared with the isolated native bake. Font
-//! provisioning, text identity, theme mapping and layout belong to callers.
+//! Exact CPU glyph rasterization. Font provisioning, text identity, theme mapping and layout belong to callers.
 use cosmic_text::{Attrs, Buffer, Color, FontSystem, Metrics, Shaping, SwashCache, Wrap};
 
 #[derive(Clone)]

@@ -87,8 +87,6 @@ fn native_eligibility_rejects_valid_export_only_inputs_and_missing_steps() {
     let mut p = plan("title-card", json!({"title":"Title"}));
     p.presentation_steps.clear();
     assert!(Plan::new(p).unwrap().require_native().is_err());
-    let p = psychopomp_deployment_queue::build_plan().unwrap();
-    assert!(Plan::new(p).unwrap().require_native().is_err());
     let p = psychopomp_opencode_session_tool::build_plan().unwrap();
     assert!(Plan::new(p).unwrap().require_native().is_err());
 }
@@ -214,8 +212,6 @@ fn every_root_pair_is_exclusive_without_opening_media_or_a_gpu() {
             .slides
             .remove(0)
             .plan,
-        psychopomp_opencode_architecture::build_scene().unwrap(),
-        psychopomp_deployment_queue::build_plan().unwrap(),
     ];
     for left in &sources {
         for right in &sources {

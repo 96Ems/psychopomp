@@ -845,10 +845,12 @@ mod tests {
     use super::*;
 
     #[test]
-    fn native_recipe_gate_accepts_the_diagram_scene() {
+    fn native_recipe_gate_accepts_a_grid_scene() {
         let mut slides = vec![SlidePlan {
-            title: "Daemon / merge".into(),
-            plan: psychopomp_opencode_architecture::build_scene().unwrap(),
+            title: "Grid".into(),
+            plan: psychopomp_keyed_grid::build_deck().unwrap().slides[0]
+                .plan
+                .clone(),
         }];
         preflight_slides(slides.clone()).unwrap();
         slides[0].plan.actors[0].recipe = "unsupported-recipe".into();

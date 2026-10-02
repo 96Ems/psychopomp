@@ -10,16 +10,12 @@ use cosmic_text::{Attrs, Buffer, Color, FontSystem, Metrics, Shaping, SwashCache
 use wgpu::util::DeviceExt;
 
 use psychopomp::code::{CodeLine, LineId, PlacedLine, StyledSpan, SyntaxStyle};
-use psychopomp::dsl::AnnotationFrame;
 
 mod callout;
 mod caption;
 mod chart;
 mod component_prototype;
 mod debug;
-mod deployment_queue;
-mod diagram;
-mod effects;
 mod fonts;
 mod grid;
 mod header;
@@ -31,7 +27,6 @@ mod rolling;
 mod sequence;
 mod stage;
 mod task;
-mod terminal;
 mod text;
 mod theme;
 mod tree;
@@ -44,20 +39,13 @@ use text::{PlainTextSpec, TextSprite, blend_pixel, blend_pixel_at, make_sprite, 
 
 pub(crate) use callout::CalloutPose;
 pub(crate) use component_prototype::PrototypeGlyphs;
-pub(crate) use deployment_queue::deployment_row_center_y;
-pub use deployment_queue::{DeploymentItemFrame, DeploymentQueueFrame};
-pub(crate) use diagram::DiagramGlyphs;
 pub use grid::{
     GridFrame, GridItemFrame, GridLabelStyle, GridLinePalette, GridTextClip, GridTextDisclosure,
 };
 pub(crate) use header::{HeaderGlyphs, header_words};
 pub(crate) use rich_text::{RichTextGlyphs, RichTextSource, parse as parse_rich_text};
 pub(crate) use stage::{StageGpu, stage_anchor};
-pub use task::{
-    BubblePose, ContentPose, QuoteFrame, TaskContentFrame, TaskLinkFrame, TaskSceneFrame,
-    TaskVisualFrame,
-};
-pub use terminal::{CommandFileFrame, TerminalSceneFrame};
+pub use task::{BubblePose, ContentPose, TaskContentFrame, TaskVisualFrame};
 pub use theme::Theme;
 pub(crate) use tree::TreeNames;
 pub(crate) use venn::validate as validate_venn;
@@ -90,11 +78,8 @@ pub struct EditorFrame<'a> {
     pub focus_line_y: f32,
     pub focus_height: f32,
     pub token_highlight: TokenHighlight,
-    pub bright_text: &'a [BrightTextFrame],
     pub pointer: PointerFrame,
     pub inline_reveals: &'a [InlineRevealFrame<'a>],
-    pub squiggles: &'a [SquiggleFrame],
-    pub annotations: &'a [AnnotationFrame],
     pub lines: &'a [PlacedLine<'a>],
 }
 
@@ -189,15 +174,6 @@ pub struct LineMarkFrame<'a> {
     pub row_height: f32,
 }
 
-pub struct BrightTextFrame {
-    pub line: CodeLine,
-    pub source_x: f32,
-    pub width: f32,
-    pub y: f32,
-    pub opacity: f32,
-    pub blur: f32,
-}
-
 #[derive(Clone, Copy)]
 pub struct TokenHighlight {
     pub x: f32,
@@ -222,14 +198,6 @@ pub struct InlineRevealFrame<'a> {
     pub start_span: usize,
     pub end_span: usize,
     pub progress: f32,
-}
-
-#[derive(Clone, Copy)]
-pub struct SquiggleFrame {
-    pub x: f32,
-    pub y: f32,
-    pub width: f32,
-    pub opacity: f32,
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -321,16 +289,10 @@ pub struct HeadlessRenderer {
     swash_cache: SwashCache,
     title_sprite: TextSprite,
     pointer_sprite: TextSprite,
-    code_column_width: f32,
     line_sprites: HashMap<LineId, (u64, TextSprite)>,
     part_sprites: HashMap<String, (u64, TextSprite)>,
     plain_text_sprites: text::PlainTextCache,
-    task_layer_pixels: Vec<u8>,
-    task_blur_source: Vec<[f32; 4]>,
-    task_blur_scratch: Vec<[f32; 4]>,
     editor_background_pixels: Vec<u8>,
-    terminal_background_pixels: Vec<u8>,
-    deployment_background_pixels: Vec<u8>,
     ui_card_pixels: Vec<u8>,
     ui_overlay_pixels: Vec<u8>,
     interactive_preview: bool,
@@ -448,17 +410,6 @@ impl HeadlessRenderer {
         let mut swash_cache = SwashCache::new();
         let title_sprite = make_title_sprite(&mut font_system, &mut swash_cache, &spec.file_name);
         let pointer_sprite = make_pointer_sprite()?;
-        let code_column_width = make_sprite(
-            &mut font_system,
-            &mut swash_cache,
-            vec![("M", Attrs::new().family(fonts::MONO))],
-            Attrs::new().family(fonts::MONO),
-            Metrics::new(28.0, LINE_HEIGHT),
-            64,
-            LINE_HEIGHT as u32,
-        )
-        .advance;
-
         Ok(Self {
             spec,
             device,
@@ -474,16 +425,10 @@ impl HeadlessRenderer {
             swash_cache,
             title_sprite,
             pointer_sprite,
-            code_column_width,
             line_sprites: HashMap::new(),
             part_sprites: HashMap::new(),
             plain_text_sprites: text::PlainTextCache::default(),
-            task_layer_pixels: Vec::new(),
-            task_blur_source: Vec::new(),
-            task_blur_scratch: Vec::new(),
             editor_background_pixels: Vec::new(),
-            terminal_background_pixels: Vec::new(),
-            deployment_background_pixels: Vec::new(),
             ui_card_pixels: Vec::new(),
             ui_overlay_pixels: Vec::new(),
             interactive_preview: false,
@@ -552,10 +497,6 @@ impl HeadlessRenderer {
         self.theme.sprite(&mut self.title_sprite);
     }
 
-    pub fn code_column_width(&self) -> f32 {
-        self.code_column_width
-    }
-
     pub fn render_title_card(
         &mut self,
         title: &str,
@@ -600,66 +541,6 @@ impl HeadlessRenderer {
         opacity: f32,
     ) {
         self.composite_centered_text_masked(pixels, text, center, font_size, color, opacity, None);
-    }
-
-    pub fn render_centered_code_line(
-        &mut self,
-        line: &CodeLine,
-        reveals: &[InlineRevealFrame<'_>],
-    ) -> Result<Vec<u8>> {
-        let mut pixels = vec![0_u8; self.spec.width as usize * self.spec.height as usize * 4];
-        for pixel in pixels.chunks_exact_mut(4) {
-            let [r, g, b] = self.theme.background([1, 2, 4]);
-            pixel.copy_from_slice(&[r, g, b, 255]);
-        }
-        let segments = inline_reveal_segments(line.spans().len(), reveals)?;
-        for (start, end, _) in &segments {
-            let spans = &line.spans()[*start..*end];
-            let key = format!("centered-code:{}:{start}:{end}", line.id.as_str());
-            refresh_sprite(
-                &mut self.part_sprites,
-                &*key,
-                spans_fingerprint(spans),
-                || {
-                    let mut sprite = make_spans_sprite_at_size(
-                        &mut self.font_system,
-                        &mut self.swash_cache,
-                        spans,
-                        64.0,
-                        96.0,
-                    );
-                    self.theme.sprite(&mut sprite);
-                    sprite
-                },
-            );
-        }
-        let width = segments
-            .iter()
-            .map(|(start, end, progress)| {
-                let key = format!("centered-code:{}:{start}:{end}", line.id.as_str());
-                self.part_sprites[&key].1.advance * progress.unwrap_or(1.0).clamp(0.0, 1.0)
-            })
-            .sum::<f32>();
-        let mut x = self.spec.width as f32 * 0.5 - width * 0.5;
-        let y = self.spec.height as f32 * 0.5 - 48.0;
-        for (start, end, progress) in segments {
-            let key = format!("centered-code:{}:{start}:{end}", line.id.as_str());
-            let sprite = &self.part_sprites[&key].1;
-            let progress = progress.unwrap_or(1.0).clamp(0.0, 1.0);
-            let visible_width = sprite.advance * progress;
-            composite_text(
-                &mut pixels,
-                [self.spec.width, self.spec.height],
-                TextDraw {
-                    clip_width: visible_width,
-                    filter: TextFilter::Blur((1.0 - progress) * 4.0),
-                    opacity: progress,
-                    ..TextDraw::new(sprite, [x, y])
-                },
-            );
-            x += visible_width;
-        }
-        Ok(pixels)
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -889,11 +770,8 @@ impl HeadlessRenderer {
             focus_line_y: frame.focus_line_y,
             focus_height: frame.focus_height,
             token_highlight: frame.token_highlight,
-            bright_text: frame.bright_text,
             pointer: frame.pointer,
             inline_reveals: frame.inline_reveals,
-            squiggles: frame.squiggles,
-            annotations: frame.annotations,
             lines: frame.lines,
         };
         let mut flat_pixels = self.render_shapes(&flat_frame)?;
@@ -1110,8 +988,7 @@ impl HeadlessRenderer {
         pixels: &mut [u8],
         frame: &EditorFrame<'_>,
     ) -> Result<()> {
-        let lines = frame.lines.iter().map(|placed| placed.line);
-        for line in lines.chain(frame.bright_text.iter().map(|bright| &bright.line)) {
+        for line in frame.lines.iter().map(|placed| placed.line) {
             refresh_sprite(
                 &mut self.line_sprites,
                 &line.id,
@@ -1178,55 +1055,6 @@ impl HeadlessRenderer {
                     clip_y: Some([code_top, code_bottom]),
                     ..TextDraw::new(sprite, [line_x, line_y])
                 },
-            );
-        }
-        for bright in frame.bright_text {
-            let y = code_top + bright.y;
-            if y + LINE_HEIGHT <= code_top || y >= code_bottom {
-                continue;
-            }
-            let sprite = self
-                .line_sprites
-                .get(&bright.line.id)
-                .map(|(_, sprite)| sprite)
-                .expect("bright text sprite was populated above");
-            let source_x = bright.source_x.max(0.0);
-            let width = bright
-                .width
-                .min(sprite.width as f32 - source_x)
-                .min(code_right - (self.spec.width as f32 * 0.145 + source_x));
-            composite_text(
-                pixels,
-                [self.spec.width, self.spec.height],
-                TextDraw {
-                    source_left: source_x,
-                    clip_width: width,
-                    filter: TextFilter::Blur(bright.blur),
-                    opacity: bright.opacity,
-                    clip_y: Some([code_top, code_bottom]),
-                    ..TextDraw::new(sprite, [self.spec.width as f32 * 0.145 + source_x, y])
-                },
-            );
-        }
-        for squiggle in frame.squiggles {
-            composite_squiggle(
-                pixels,
-                self.spec.width,
-                self.spec.height,
-                self.spec.width as f32 * 0.145 + squiggle.x,
-                code_top + squiggle.y + LINE_HEIGHT - 7.0,
-                squiggle.width,
-                squiggle.opacity,
-            );
-        }
-        for annotation in frame.annotations {
-            effects::composite(
-                pixels,
-                self.spec.width,
-                self.spec.height,
-                [self.spec.width as f32 * 0.145, code_top],
-                LINE_HEIGHT,
-                *annotation,
             );
         }
         composite_sprite_rotated(
@@ -1298,6 +1126,7 @@ impl HeadlessRenderer {
         Ok(())
     }
 
+    #[cfg(test)]
     pub fn measure_text_range(&mut self, line: &CodeLine, text: &str) -> Result<TextRangeBounds> {
         let full_text: String = line.spans().iter().map(|span| span.text.as_str()).collect();
         let start = full_text
@@ -1343,6 +1172,7 @@ impl HeadlessRenderer {
             .collect()
     }
 
+    #[cfg(test)]
     pub fn measure_text_byte_range(
         &mut self,
         line: &CodeLine,
@@ -1576,9 +1406,6 @@ fn can_preview_editor(frame: &EditorFrame<'_>, [width, height]: [u32; 2]) -> boo
         || frame.panel_scale != 1.0
         || frame.panel_near_blur != 0.0
         || frame.pointer.opacity > 0.001
-        || !frame.bright_text.is_empty()
-        || !frame.squiggles.is_empty()
-        || !frame.annotations.is_empty()
         || frame.lines.iter().any(|line| line.x < 0.0)
     {
         return false;
@@ -2026,35 +1853,6 @@ fn composite_sprite_rotated_with_coverage(
                 &mut canvas[target_index..target_index + 4],
                 source,
                 opacity * coverage,
-            );
-        }
-    }
-}
-
-fn composite_squiggle(
-    canvas: &mut [u8],
-    canvas_width: u32,
-    canvas_height: u32,
-    x: f32,
-    y: f32,
-    width: f32,
-    opacity: f32,
-) {
-    let opacity = opacity.clamp(0.0, 1.0);
-    if opacity <= 0.001 {
-        return;
-    }
-    for offset_x in 0..width.max(0.0).round() as i32 {
-        let wave_y = ((offset_x as f32 * 0.48).sin() * 2.0).round() as i32;
-        for thickness in 0..2 {
-            blend_pixel_at(
-                canvas,
-                canvas_width,
-                canvas_height,
-                x.round() as i32 + offset_x,
-                y.round() as i32 + wave_y + thickness,
-                [248, 113, 113, 255],
-                opacity,
             );
         }
     }
@@ -2771,10 +2569,7 @@ mod tests {
                 scale: 1.,
                 blur: 0.,
             },
-            bright_text: &[],
             inline_reveals: &[],
-            squiggles: &[],
-            annotations: &[],
             lines: &[],
         };
         let hidden = can_preview_editor(&frame, [1920, 1080]);

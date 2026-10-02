@@ -20,8 +20,8 @@ pub(super) fn render_video(
     encode_exposures(
         renderer,
         output,
-        prepared.scene.duration(),
-        prepared.scene.media(),
+        prepared.duration(),
+        &prepared.media,
         window,
         |center| prepared.temporal_samples(center),
         |time| prepared.visual_sample_key(time),

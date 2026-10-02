@@ -423,7 +423,6 @@ pub fn shatter_offset(point: OrbPoint, radius: f32, shatter: f32) -> Vec3 {
 /// flight time, so every phase is exact at any sample time. Light gathers at the
 /// start port, the packet flies on an acceleration-continuous quintic ease,
 /// then it is absorbed as a small ring while its trail cools.
-/// The constants follow the opencode-architecture diagrams.
 pub mod packet {
     use crate::math::easing::{smootherstep, smootherstep_inverse};
 

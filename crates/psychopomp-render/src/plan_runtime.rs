@@ -7,8 +7,7 @@ use std::{
 
 use anyhow::{Context, Result, bail};
 use psychopomp::{
-    composition::{Asset, Composition, Duration, Time, TimeRange},
-    dsl::{CompiledScene, TargetGeometry},
+    composition::{Asset, Duration, MediaPlacement, MediaRole, Time, TimeRange},
     plan::{
         DeckPlan, MediaKindPlan, MediaRolePlan, ReadPlanError, ReelPlan, ScalarPlan, ScenePlan,
         TargetComponentPlan,
@@ -29,13 +28,10 @@ mod callout;
 mod caption;
 mod component_prototype;
 pub(crate) mod delivery;
-mod deployment_queue;
-mod diagram;
 mod editor;
 mod generated;
 mod grid;
 mod header;
-mod keyed_layout;
 mod lanes;
 mod plot;
 mod preflight;
@@ -56,13 +52,26 @@ mod value;
 mod venn;
 mod video;
 
-use deployment_queue::{DeploymentQueueVisualKey, PreparedDeploymentQueue};
 use editor::PreparedEditor;
 
 /// Shutter samples per Stage frame: enough that a fast ember draws a
 /// continuous streak rather than a row of copies.
 const STAGE_TEMPORAL_SAMPLES: u32 = 24;
 const BUILTIN_HERO_PLAN: &str = include_str!("../../../scenes/hero/hero.plan.json");
+
+/// Measured placement of a semantic code target within the editor body.
+#[derive(Clone, Copy, Debug)]
+pub(crate) struct TargetGeometry {
+    pub x: f32,
+    pub width: f32,
+    pub line_y: f32,
+}
+
+impl TargetGeometry {
+    pub fn center_x(self) -> f32 {
+        self.x + self.width * 0.5
+    }
+}
 
 pub(crate) async fn render_builtin_hero(output: &Path) -> Result<()> {
     let plan = ScenePlan::from_json(BUILTIN_HERO_PLAN)?;
@@ -406,7 +415,7 @@ struct CompiledPlan {
     timeline: Timeline,
     properties: HashMap<String, PropertyId>,
     state_tracks: HashMap<String, StateTrack<serde_json::Value>>,
-    scene: psychopomp::dsl::CompiledScene,
+    media: Vec<MediaPlacement>,
 }
 
 enum PreparedRoot {
@@ -416,9 +425,7 @@ enum PreparedRoot {
         editor: Box<PreparedEditor>,
         pointer: Option<String>,
     },
-    Deployment(Box<PreparedDeploymentQueue>),
     Grid(Box<grid::PreparedGrid>),
-    Diagram(Box<diagram::PreparedDiagram>),
     Stage(Box<stage::PreparedStage>),
 }
 
@@ -458,7 +465,6 @@ struct VisualSampleKey {
     motion: Vec<[u32; 4]>,
     states: Vec<Value>,
     video_frames: Vec<u64>,
-    deployment_queue: Option<DeploymentQueueVisualKey>,
     ambient_time: Option<u64>,
     /// Stage-pinned callout anchors, which move with the camera.
     anchors: Vec<[u32; 2]>,
@@ -477,9 +483,6 @@ impl PreparedPlan {
         let mut delays = HashMap::new();
         for header in &self.headers {
             header.delays(&mut delays);
-        }
-        if let PreparedRoot::Diagram(diagram) = &self.root {
-            diagram.delays(&mut delays);
         }
         psychopomp::playback::Playback::with_start_delays(
             &self.plan,
@@ -570,19 +573,10 @@ impl PreparedPlan {
             preflight::RootPlan::Editor {
                 editor, pointer, ..
             } => PreparedRoot::Editor { editor, pointer },
-            preflight::RootPlan::Deployment(queue) => PreparedRoot::Deployment(queue),
             preflight::RootPlan::Grid(grid) => PreparedRoot::Grid(grid),
             preflight::RootPlan::Stage { id, recipe } => PreparedRoot::Stage(Box::new(
                 stage::PreparedStage::from_recipe(id, *recipe, renderer)?,
             )),
-            preflight::RootPlan::Diagram { id, recipe } => {
-                PreparedRoot::Diagram(Box::new(diagram::PreparedDiagram::from_recipe(
-                    id,
-                    recipe,
-                    &compiled.plan.continuous_channels,
-                    renderer,
-                )?))
-            }
         };
         Ok(Self {
             compiled,
@@ -646,37 +640,36 @@ impl CompiledPlan {
             })
             .collect::<Result<HashMap<_, _>>>()?;
 
-        let mut composition = vec![Composition::hold(Duration::from_nanos(plan.duration_nanos))];
         // Preflight rejected media no recipe consumes; video belongs to its recipe.
-        for media in &plan.media {
-            if !matches!(media.kind, MediaKindPlan::Audio) {
-                continue;
-            }
-            let path = resolve_media_path(base, media);
-            let asset = Asset::audio(media.id.clone(), path);
-            let clip = asset
-                .clip(TimeRange::new(
-                    Time::from_nanos(media.source_start_nanos),
-                    Time::from_nanos(media.source_end_nanos),
-                ))
-                .gain_db(media.gain_db);
-            let placement = match media.role {
-                MediaRolePlan::Script => Composition::script(clip),
-                MediaRolePlan::Layer => Composition::layer(clip),
-            };
-            composition.push(Composition::delay(
-                Duration::from_nanos(media.timeline_start_nanos),
-                placement,
-            ));
-        }
-        let scene = CompiledScene::from_composition(Composition::parallel(composition))?;
+        let media = plan
+            .media
+            .iter()
+            .filter(|media| matches!(media.kind, MediaKindPlan::Audio))
+            .map(|media| {
+                let clip = Asset::audio(media.id.clone(), resolve_media_path(base, media))
+                    .clip(TimeRange::new(
+                        Time::from_nanos(media.source_start_nanos),
+                        Time::from_nanos(media.source_end_nanos),
+                    ))
+                    .gain_db(media.gain_db);
+                let role = match media.role {
+                    MediaRolePlan::Script => MediaRole::Script,
+                    MediaRolePlan::Layer => MediaRole::Layer,
+                };
+                MediaPlacement::new(clip, role, Time::from_nanos(media.timeline_start_nanos))
+            })
+            .collect();
         Ok(Self {
             plan,
             timeline,
             properties,
             state_tracks,
-            scene,
+            media,
         })
+    }
+
+    fn duration(&self) -> Duration {
+        Duration::from_nanos(self.plan.duration_nanos)
     }
 }
 
@@ -691,7 +684,6 @@ impl PreparedPlan {
     fn file_name(&self) -> &str {
         match &self.root {
             PreparedRoot::Editor { editor, .. } => editor.file_name(),
-            PreparedRoot::Deployment(queue) => queue.file_name(),
             _ => &self.plan.id,
         }
     }
@@ -745,7 +737,6 @@ impl CompiledPlan {
             motion,
             states,
             video_frames: Vec::new(),
-            deployment_queue: None,
             ambient_time: None,
             anchors: Vec::new(),
         })
@@ -760,19 +751,6 @@ impl CompiledPlan {
         self.properties.get(&channel.id)
     }
     #[cfg(test)]
-    fn property_value(
-        &self,
-        timeline: &Timeline,
-        actor: &str,
-        name: &str,
-        time: f64,
-        default: f32,
-    ) -> f32 {
-        self.property(actor, name)
-            .and_then(|id| timeline.sample_at(id, time))
-            .map_or(default, |s| s.position)
-    }
-    #[cfg(test)]
     fn playback(&self, reduced_motion: bool) -> Result<psychopomp::playback::Playback> {
         psychopomp::playback::Playback::new(&self.plan, &self.timeline, reduced_motion)
     }
@@ -785,10 +763,6 @@ impl PreparedPlan {
     fn visual_sample_key_using(&self, time: f64, timeline: &Timeline) -> Result<VisualSampleKey> {
         let mut key = self.compiled.visual_sample_key_using(time, timeline)?;
         key.video_frames = self.video_frames(time);
-        key.deployment_queue = match &self.root {
-            PreparedRoot::Deployment(queue) => Some(queue.visual_key(time)),
-            _ => None,
-        };
         // A stage always moves (spin, flow, grain), so every temporal sample renders.
         let stage = matches!(&self.root, PreparedRoot::Stage(_));
         key.ambient_time = (stage
@@ -925,16 +899,10 @@ impl PreparedPlan {
             self.property_value(timeline, actor, property, time, default)
         };
         let mut pixels = match &self.root {
-            PreparedRoot::Diagram(diagram) => diagram.render(renderer, value)?,
             PreparedRoot::Stage(stage) => stage.render(renderer, time, value)?,
             PreparedRoot::Editor { editor, pointer } => {
                 editor.render(renderer, time, pointer.as_deref(), |actor, property, at| {
                     self.motion_value(timeline, actor, property, at)
-                })?
-            }
-            PreparedRoot::Deployment(deployment) => {
-                deployment.render(renderer, time, |property, default| {
-                    value(deployment.actor_id(), property, default)
                 })?
             }
             PreparedRoot::Grid(grid) => grid.render(
@@ -1315,16 +1283,15 @@ fn seconds_f64(nanos: u64) -> f64 {
 mod tests {
     use std::collections::HashMap;
 
-    use psychopomp::{
-        dsl::TargetGeometry,
-        plan::{
-            ActorPlan, ContinuousChannelPlan, MediaKindPlan, MediaPlan, MediaRolePlan, ScalarPlan,
-            ScenePlan, SemanticTargetPlan, TargetComponentPlan, TargetScalarPlan, TrackEventPlan,
-        },
+    use psychopomp::plan::{
+        ActorPlan, ContinuousChannelPlan, MediaKindPlan, MediaPlan, MediaRolePlan, ScalarPlan,
+        ScenePlan, SemanticTargetPlan, TargetComponentPlan, TargetScalarPlan, TrackEventPlan,
     };
     use serde_json::json;
 
-    use super::{BUILTIN_HERO_PLAN, CompiledPlan, parse_range, validate_renderer_plan};
+    use super::{
+        BUILTIN_HERO_PLAN, CompiledPlan, TargetGeometry, parse_range, validate_renderer_plan,
+    };
 
     #[test]
     fn plan_channels_compile_through_the_shared_timeline() {
@@ -1509,16 +1476,9 @@ mod tests {
     fn concrete_validation_rejects_unpreparable_and_unknown_recipes() {
         let mut plan = ScenePlan::new("demo", 1_000_000_000);
         plan.actors.push(ActorPlan {
-            id: "deployments".to_owned(),
-            recipe: "deployment-queue".to_owned(),
-            data: json!({
-                "product": "NORTHSTAR",
-                "title": "Release Control",
-                "subtitle": "Live deployment telemetry",
-                "environment": "PRODUCTION",
-                "release": "release-2026.07.16",
-                "items": []
-            }),
+            id: "grid".to_owned(),
+            recipe: "keyed-grid".to_owned(),
+            data: json!({}),
         });
         assert!(validate_renderer_plan(&plan).is_err());
 
@@ -1543,7 +1503,7 @@ mod tests {
         plan.validate().unwrap();
 
         let prepared = CompiledPlan::compile(plan, std::path::Path::new(".")).unwrap();
-        let source = prepared.scene.media()[0].clip().source_range();
+        let source = prepared.media[0].clip().source_range();
         assert_eq!(source.start().as_nanos(), u64::MAX - 1);
         assert_eq!(source.end().as_nanos(), u64::MAX);
     }
