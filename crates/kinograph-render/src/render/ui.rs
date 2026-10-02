@@ -1,5 +1,14 @@
 pub(crate) mod card;
 
+/// Signed distance from `local` to a `size` rectangle centred on the origin,
+/// its corners rounded by `radius` clamped to the shorter half-side.
+pub(crate) fn rounded_rect_distance(local: [f32; 2], size: [f32; 2], radius: f32) -> f32 {
+    let radius = radius.min(size[0].min(size[1]) * 0.5);
+    let dx = local[0].abs() - (size[0] * 0.5 - radius);
+    let dy = local[1].abs() - (size[1] * 0.5 - radius);
+    dx.max(0.0).hypot(dy.max(0.0)) + dx.max(dy).min(0.0) - radius
+}
+
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub(crate) struct Bounds {
     pub origin: [f32; 2],

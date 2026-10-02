@@ -1,7 +1,12 @@
 //! The font database. CommitMono is compiled in, so every machine shapes the
 //! same text with the same weights; installed fonts only supply glyphs it lacks
 //! (chess pieces, CJK, emoji). See `assets/fonts/OFL.txt`.
-use cosmic_text::{FontSystem, fontdb};
+use cosmic_text::{Family, FontSystem, fontdb};
+
+/// The bundled monospace family used for code and labels.
+pub(crate) const MONO: Family<'static> = Family::Name("CommitMono");
+/// The installed sans family used for prose and headers.
+pub(crate) const SANS: Family<'static> = Family::Name("Helvetica Neue");
 
 const COMMIT_MONO: [&[u8]; 4] = [
     include_bytes!("../../../../assets/fonts/CommitMono-400-Regular.otf"),
@@ -38,7 +43,7 @@ pub(crate) fn font_system() -> FontSystem {
 
 #[cfg(test)]
 mod tests {
-    use cosmic_text::fontdb::{Family, Query, Source, Stretch, Style, Weight};
+    use cosmic_text::fontdb::{Query, Source, Stretch, Style, Weight};
 
     #[test]
     fn every_commit_mono_style_resolves_to_a_bundled_face() {
@@ -61,7 +66,7 @@ mod tests {
         ] {
             let id = db
                 .query(&Query {
-                    families: &[Family::Name("CommitMono")],
+                    families: &[super::MONO],
                     weight,
                     stretch: Stretch::Normal,
                     style,

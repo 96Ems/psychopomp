@@ -51,11 +51,7 @@ struct Canvas<'a> {
 
 impl Canvas<'_> {
     fn blend(&mut self, x: i32, y: i32, color: [u8; 4], opacity: f32) {
-        if !(0..self.width as i32).contains(&x) || !(0..self.height as i32).contains(&y) {
-            return;
-        }
-        let index = (y as usize * self.width as usize + x as usize) * 4;
-        super::blend_pixel(&mut self.pixels[index..index + 4], color, opacity);
+        super::blend_pixel_at(self.pixels, self.width, self.height, x, y, color, opacity);
     }
 
     fn soft_disc(&mut self, center: [f32; 2], radius: f32, color: [u8; 3], opacity: f32) {

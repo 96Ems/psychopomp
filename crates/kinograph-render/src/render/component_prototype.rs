@@ -5,7 +5,7 @@ use kinograph::component_prototype::{Font, TextPart};
 
 pub(crate) struct PrototypeGlyphs {
     sprite: TextSprite,
-    themed: std::cell::RefCell<Option<(Theme, TextSprite)>>,
+    themed: theme::ThemedCache<TextSprite>,
 }
 
 impl PrototypeGlyphs {
@@ -55,8 +55,8 @@ impl HeadlessRenderer {
         size: f32,
     ) -> PrototypeGlyphs {
         let family = match font {
-            Font::Sans => Family::Name("Helvetica Neue"),
-            Font::Mono => Family::Name("CommitMono"),
+            Font::Sans => fonts::SANS,
+            Font::Mono => fonts::MONO,
         };
         let attrs = Attrs::new().family(family).weight(Weight::NORMAL);
         let height = (size * 1.4).ceil() as u32;
@@ -105,16 +105,16 @@ impl HeadlessRenderer {
         opacity: f32,
         blur: f32,
     ) {
-        let mut cached = glyphs.themed.borrow_mut();
-        if self.theme != Theme::Original && cached.as_ref().is_none_or(|(t, _)| *t != self.theme) {
-            let mut sprite = glyphs.sprite.clone();
-            self.theme.sprite(&mut sprite);
-            *cached = Some((self.theme, sprite));
-        }
+        let themed;
         let sprite = if self.theme == Theme::Original {
             &glyphs.sprite
         } else {
-            &cached.as_ref().unwrap().1
+            themed = glyphs.themed.get(self.theme, || {
+                let mut sprite = glyphs.sprite.clone();
+                self.theme.sprite(&mut sprite);
+                sprite
+            });
+            &*themed
         };
         let visible = if presence >= 1. {
             glyphs.sprite.width as f32
@@ -123,15 +123,15 @@ impl HeadlessRenderer {
         };
         // Optical treatment of the existing fade, not another motion window.
         // Fully present words stay sharp even while their positions are moving.
-        composite_text_sprite(
+        composite_text(
             pixels,
             [self.spec.width, self.spec.height],
-            sprite,
-            origin,
-            visible,
-            blur,
-            opacity,
-            [0., self.spec.height as f32],
+            TextDraw {
+                clip_width: visible,
+                filter: TextFilter::Blur(blur),
+                opacity,
+                ..TextDraw::new(sprite, origin)
+            },
         );
     }
 
@@ -276,19 +276,18 @@ mod tests {
         let background = renderer.render_title_card("", None, 0.);
         let sharp = |origin, presence: f32, opacity| {
             let mut pixels = background.clone();
-            composite_text_sprite(
+            composite_text(
                 &mut pixels,
                 [1920, 1080],
-                &glyphs.sprite,
-                origin,
-                if presence >= 1. {
-                    glyphs.sprite.width as f32
-                } else {
-                    glyphs.width() * presence
+                TextDraw {
+                    clip_width: if presence >= 1. {
+                        glyphs.sprite.width as f32
+                    } else {
+                        glyphs.width() * presence
+                    },
+                    opacity,
+                    ..TextDraw::new(&glyphs.sprite, origin)
                 },
-                0.,
-                opacity,
-                [0., 1080.],
             );
             pixels
         };

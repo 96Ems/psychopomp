@@ -571,31 +571,13 @@ impl GridRenderer {
                 }
             }
         }
-        let atlas = device.create_texture(&wgpu::TextureDescriptor {
-            label: Some("grid face label atlas"),
-            size: wgpu::Extent3d {
-                width: atlas_width,
-                height: atlas_height,
-                depth_or_array_layers: 1,
-            },
-            mip_level_count: 1,
-            sample_count: 1,
-            dimension: wgpu::TextureDimension::D2,
-            format: wgpu::TextureFormat::R8Unorm,
-            usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
-            view_formats: &[],
-        });
-        queue.write_texture(
-            atlas.as_image_copy(),
+        let view = upload_r8(
+            device,
+            queue,
+            "grid face label atlas",
+            [atlas_width, atlas_height],
             &pixels,
-            wgpu::TexelCopyBufferLayout {
-                offset: 0,
-                bytes_per_row: Some(atlas_width),
-                rows_per_image: Some(atlas_height),
-            },
-            atlas.size(),
         );
-        let view = atlas.create_view(&Default::default());
         let sampler = device.create_sampler(&wgpu::SamplerDescriptor {
             mag_filter: wgpu::FilterMode::Linear,
             min_filter: wgpu::FilterMode::Linear,
@@ -675,7 +657,7 @@ fn table_label_sprite(
             continue;
         }
         let attrs = Attrs::new()
-            .family(Family::Name("Helvetica Neue"))
+            .family(fonts::SANS)
             .color(Color::rgb(255, 255, 255));
         let height = (size * 1.4).ceil() as u32;
         lines.push(make_sprite(
@@ -742,7 +724,7 @@ fn label_sprite(
         }
         let mut rasterize = |size| {
             let attrs = Attrs::new()
-                .family(Family::Name("CommitMono"))
+                .family(fonts::MONO)
                 .color(Color::rgb(255, 255, 255));
             make_sprite(
                 fonts,
@@ -882,6 +864,7 @@ fn visible_bounds(frame: &GridFrame<'_>) -> Option<[f32; 6]> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::render::theme::srgb_to_linear;
 
     #[test]
     #[ignore = "requires a headless GPU; fading headings must blend over cells and strokes, never paint dark glyphs"]
@@ -942,14 +925,6 @@ mod tests {
                 })
                 .unwrap()
         };
-        let linear = |byte: u8| {
-            let v = f32::from(byte) / 255.;
-            if v <= 0.04045 {
-                v / 12.92
-            } else {
-                ((v + 0.055) / 1.055).powf(2.4)
-            }
-        };
         for group in [false, true] {
             let blank = render(&mut renderer, 0., group);
             let full = render(&mut renderer, 1., group);
@@ -970,7 +945,9 @@ mod tests {
                     .zip(&blank)
                     .zip(&full)
                     .map(|((&pixel, &base), &full)| {
-                        (linear(pixel) - (linear(base) * (1. - opacity) + linear(full) * opacity))
+                        (srgb_to_linear(pixel)
+                            - (srgb_to_linear(base) * (1. - opacity)
+                                + srgb_to_linear(full) * opacity))
                             .abs()
                     })
                     .fold(0., f32::max);
@@ -996,14 +973,6 @@ mod tests {
             file_name: "crease-width-proof".into(),
         }))
         .unwrap();
-        let linear = |byte: u8| {
-            let v = f32::from(byte) / 255.;
-            if v <= 0.04045 {
-                v / 12.92
-            } else {
-                ((v + 0.055) / 1.055).powf(2.4)
-            }
-        };
         let mut widths = Vec::new();
         for (point, direction, yaw, pitch) in [
             ([0., 75., 75.], [1., 0., 0.], 0., 0.),
@@ -1061,8 +1030,8 @@ mod tests {
                     let across = offset[0] * normal[0] + offset[1] * normal[1];
                     if along.abs() < half_length && across.abs() < 2. {
                         let depth = edge[2] + along / length * axis[2];
-                        coverage += (linear(pixels[(y * 1920 + x) * 4])
-                            - linear(blank[(y * 1920 + x) * 4]))
+                        coverage += (srgb_to_linear(pixels[(y * 1920 + x) * 4])
+                            - srgb_to_linear(blank[(y * 1920 + x) * 4]))
                             / (0.7 + depth / 1600.).clamp(0.32, 0.95);
                     }
                 }
@@ -1088,14 +1057,6 @@ mod tests {
             file_name: "line-width-proof".into(),
         }))
         .unwrap();
-        let linear = |byte: u8| {
-            let v = f32::from(byte) / 255.;
-            if v <= 0.04045 {
-                v / 12.92
-            } else {
-                ((v + 0.055) / 1.055).powf(2.4)
-            }
-        };
         let mut widths = Vec::new();
         for (yaw, pitch, scale) in [
             (0., 0., 1.),
@@ -1149,7 +1110,7 @@ mod tests {
                     let across = offset[0] * normal[0] + offset[1] * normal[1];
                     if along.abs() < half_length && across.abs() < 6. {
                         let depth = (edge[2] + along / (length * scale) * axis[2]) * scale;
-                        coverage += linear(pixels[(y * 1920 + x) * 4])
+                        coverage += srgb_to_linear(pixels[(y * 1920 + x) * 4])
                             / (0.7 + depth / 1600.).clamp(0.32, 0.95);
                     }
                 }
@@ -1286,20 +1247,12 @@ mod tests {
                 ((pixel / 4 % 1920) as f32 + 0.5 - 960.) / scale,
                 (540. - (pixel / 4 / 1920) as f32 - 0.5) / scale,
             ];
-            let linear = |byte: u8| {
-                let v = f32::from(byte) / 255.;
-                if v <= 0.04045 {
-                    v / 12.92
-                } else {
-                    ((v + 0.055) / 1.055).powf(2.4)
-                }
-            };
             for coverage in [0.25, 0.5, 0.75] {
                 let end =
                     (normal[0] * local[0] + normal[1] * local[1] + coverage * 8. / scale) / length;
                 let pixels = render(&mut renderer, 1., end, axis, yaw, pitch, scale);
-                let measured = (linear(pixels[pixel]) - linear(blank[pixel]))
-                    / (linear(full[pixel]) - linear(blank[pixel]));
+                let measured = (srgb_to_linear(pixels[pixel]) - srgb_to_linear(blank[pixel]))
+                    / (srgb_to_linear(full[pixel]) - srgb_to_linear(blank[pixel]));
                 assert!(
                     (measured - coverage).abs() < 0.02,
                     "linear coverage: expected {coverage}, got {measured}"

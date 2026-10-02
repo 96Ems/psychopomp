@@ -1,6 +1,6 @@
 use anyhow::{Result, bail};
 
-use super::{super::blend_pixel, Bounds};
+use super::{super::blend_pixel, super::theme::mix, Bounds, rounded_rect_distance};
 
 const CAMERA_DISTANCE: f32 = 1_800.0;
 const BYTES_PER_PIXEL: usize = 4;
@@ -435,7 +435,7 @@ impl Fill {
                     ((offset[0] * direction[0] + offset[1] * direction[1]) / length_squared)
                         .clamp(0.0, 1.0)
                 };
-                mix_color(start, end, progress)
+                UiColor(mix(start.0, end.0, progress))
             }
             Self::Radial {
                 center,
@@ -445,18 +445,14 @@ impl Fill {
             } => {
                 let center = [bounds.origin[0] + center[0], bounds.origin[1] + center[1]];
                 let distance = (point[0] - center[0]).hypot(point[1] - center[1]);
-                mix_color(inner, outer, (distance / radius.max(0.001)).clamp(0.0, 1.0))
+                UiColor(mix(
+                    inner.0,
+                    outer.0,
+                    (distance / radius.max(0.001)).clamp(0.0, 1.0),
+                ))
             }
         }
     }
-}
-
-fn mix_color(start: UiColor, end: UiColor, progress: f32) -> UiColor {
-    UiColor(std::array::from_fn(|channel| {
-        (f32::from(start.0[channel])
-            + (f32::from(end.0[channel]) - f32::from(start.0[channel])) * progress)
-            .round() as u8
-    }))
 }
 
 pub(crate) struct CardUi<'a> {
@@ -948,13 +944,6 @@ fn sample_layer_blurred(pixels: &[u8], size: [u32; 2], x: f32, y: f32, blur: f32
 fn rounded_coverage(point: [f32; 2], bounds: Bounds, radius: f32) -> f32 {
     let local = [point[0] - bounds.center()[0], point[1] - bounds.center()[1]];
     (0.75 - rounded_rect_distance(local, bounds.size, radius)).clamp(0.0, 1.0)
-}
-
-fn rounded_rect_distance(local: [f32; 2], size: [f32; 2], radius: f32) -> f32 {
-    let radius = radius.min(size[0].min(size[1]) * 0.5);
-    let dx = local[0].abs() - (size[0] * 0.5 - radius);
-    let dy = local[1].abs() - (size[1] * 0.5 - radius);
-    dx.max(0.0).hypot(dy.max(0.0)) + dx.max(dy).min(0.0) - radius
 }
 
 fn card_corners([half_width, half_height]: [f32; 2]) -> [[f32; 2]; 4] {

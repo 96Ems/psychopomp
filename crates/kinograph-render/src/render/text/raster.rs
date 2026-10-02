@@ -63,19 +63,27 @@ pub(crate) fn paint_rect(
     color: [u8; 4],
 ) {
     for row in 0..rect_height as i32 {
-        let target_y = y + row;
-        if !(0..height as i32).contains(&target_y) {
-            continue;
-        }
         for column in 0..rect_width as i32 {
-            let target_x = x + column;
-            if !(0..width as i32).contains(&target_x) {
-                continue;
-            }
-            let index = (target_y as usize * width as usize + target_x as usize) * 4;
-            blend_pixel(&mut pixels[index..index + 4], color, 1.0);
+            blend_pixel_at(pixels, width, height, x + column, y + row, color, 1.0);
         }
     }
+}
+
+/// Blends one pixel of a `width × height` RGBA canvas, ignoring points outside it.
+pub(crate) fn blend_pixel_at(
+    pixels: &mut [u8],
+    width: u32,
+    height: u32,
+    x: i32,
+    y: i32,
+    color: [u8; 4],
+    opacity: f32,
+) {
+    if !(0..width as i32).contains(&x) || !(0..height as i32).contains(&y) {
+        return;
+    }
+    let index = (y as usize * width as usize + x as usize) * 4;
+    blend_pixel(&mut pixels[index..index + 4], color, opacity);
 }
 
 pub(crate) fn blend_pixel(destination: &mut [u8], source: [u8; 4], opacity: f32) {

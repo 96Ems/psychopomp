@@ -2,7 +2,7 @@
 //! Reflection mirrors that same sampled ink, never a separately timed copy.
 use super::*;
 use kinograph::component_prototype::{HeaderPlan, HeaderSplit};
-use std::{cell::RefCell, ops::Range};
+use std::ops::Range;
 
 pub(crate) fn header_words(text: &str, split: HeaderSplit) -> Vec<Range<usize>> {
     if split == HeaderSplit::Line {
@@ -29,7 +29,7 @@ pub(crate) struct HeaderGlyphs {
     sprite: TextSprite,
     ranges: Vec<[f32; 2]>,
     ink_bottom: f32,
-    colored: RefCell<Option<(Theme, TextSprite, TextSprite)>>,
+    colored: theme::ThemedCache<(TextSprite, TextSprite)>,
 }
 
 impl HeadlessRenderer {
@@ -37,7 +37,7 @@ impl HeadlessRenderer {
         let height = (plan.font_size * 1.4).ceil() as u32;
         let width = plan.width.ceil() as u32;
         let attrs = Attrs::new()
-            .family(Family::Name("Helvetica Neue"))
+            .family(fonts::SANS)
             .weight(Weight::BOLD)
             .color(Color::rgb(235, 233, 227));
         let mut buffer = Buffer::new(
@@ -148,8 +148,7 @@ impl HeadlessRenderer {
         glyphs: &HeaderGlyphs,
         sample: impl Fn(&str, f32) -> f32,
     ) {
-        let mut colored = glyphs.colored.borrow_mut();
-        if colored.as_ref().is_none_or(|(t, _, _)| *t != self.theme) {
+        let colored = glyphs.colored.get(self.theme, || {
             let mut normal = glyphs.sprite.clone();
             self.theme.sprite(&mut normal);
             let mut reflected = normal.clone();
@@ -160,9 +159,9 @@ impl HeadlessRenderer {
                         ..(normal.height as usize - y) * row],
                 );
             }
-            *colored = Some((self.theme, normal, reflected));
-        }
-        let (_, normal, reflected) = colored.as_ref().unwrap();
+            (normal, reflected)
+        });
+        let (normal, reflected) = &*colored;
         let origin = [sample("x", plan.origin[0]), sample("y", plan.origin[1])];
         let edge = origin[1] + glyphs.ink_bottom + 6.;
         let opacity = sample("opacity", 1.).clamp(0., 1.);
@@ -177,17 +176,17 @@ impl HeadlessRenderer {
                 bottom: edge,
                 fade: 8.,
             };
-            composite_text_region(
+            composite_text(
                 pixels,
                 [self.spec.width, self.spec.height],
-                normal,
-                [origin[0] + start, y],
-                start,
-                end - start,
-                blur,
-                alpha,
-                [0., self.spec.height as f32],
-                Some(window),
+                TextDraw {
+                    source_left: start,
+                    clip_width: end - start,
+                    filter: TextFilter::Blur(blur),
+                    opacity: alpha,
+                    mask: Some(window),
+                    ..TextDraw::new(normal, [origin[0] + start, y])
+                },
             );
             if let Some(reflection) = plan.reflection {
                 let top = edge + reflection.gap;
@@ -198,20 +197,24 @@ impl HeadlessRenderer {
                     bottom: top + reflection.depth,
                     fade: reflection.depth,
                 };
-                composite_text_region(
+                composite_text(
                     pixels,
                     [self.spec.width, self.spec.height],
-                    reflected,
-                    [
-                        origin[0] + start,
-                        2. * edge - y - normal.height as f32 + reflection.gap,
-                    ],
-                    start,
-                    end - start,
-                    blur + 1.,
-                    alpha * reflection.opacity,
-                    [top, top + reflection.depth],
-                    Some(mask),
+                    TextDraw {
+                        source_left: start,
+                        clip_width: end - start,
+                        filter: TextFilter::Blur(blur + 1.),
+                        opacity: alpha * reflection.opacity,
+                        clip_y: Some([top, top + reflection.depth]),
+                        mask: Some(mask),
+                        ..TextDraw::new(
+                            reflected,
+                            [
+                                origin[0] + start,
+                                2. * edge - y - normal.height as f32 + reflection.gap,
+                            ],
+                        )
+                    },
                 );
             }
         }

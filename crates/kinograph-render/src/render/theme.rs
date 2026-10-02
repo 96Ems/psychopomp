@@ -2,6 +2,7 @@
 //! clocks, recorded pixels, or semantic state changes live in a theme.
 use super::TextSprite;
 use serde::{Deserialize, Serialize};
+use std::cell::{Ref, RefCell};
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
@@ -215,15 +216,49 @@ impl Theme {
     }
 }
 
-pub(super) fn linear(rgb: [u8; 3]) -> [f32; 3] {
-    rgb.map(|c| {
-        let c = f32::from(c) / 255.;
-        if c <= 0.04045 {
-            c / 12.92
-        } else {
-            ((c + 0.055) / 1.055).powf(2.4)
+/// Prepared glyphs recolored for the last theme they were drawn with.
+pub(super) struct ThemedCache<T>(RefCell<Option<(Theme, T)>>);
+
+impl<T> Default for ThemedCache<T> {
+    fn default() -> Self {
+        Self(RefCell::new(None))
+    }
+}
+
+impl<T> ThemedCache<T> {
+    /// The value for `theme`, rebuilt by `make` only when the theme changed.
+    pub(super) fn get(&self, theme: Theme, make: impl FnOnce() -> T) -> Ref<'_, T> {
+        if self
+            .0
+            .borrow()
+            .as_ref()
+            .is_none_or(|(cached, _)| *cached != theme)
+        {
+            *self.0.borrow_mut() = Some((theme, make()));
         }
+        Ref::map(self.0.borrow(), |cached| &cached.as_ref().unwrap().1)
+    }
+}
+
+/// Byte colour from `from` at 0 to `to` at 1, `t` clamped to that range.
+pub(super) fn mix<const N: usize>(from: [u8; N], to: [u8; N], t: f32) -> [u8; N] {
+    let t = t.clamp(0.0, 1.0);
+    std::array::from_fn(|i| {
+        kinograph::math::lerp(f32::from(from[i]), f32::from(to[i]), t).round() as u8
     })
+}
+
+pub(super) fn linear(rgb: [u8; 3]) -> [f32; 3] {
+    rgb.map(srgb_to_linear)
+}
+
+pub(super) fn srgb_to_linear(byte: u8) -> f32 {
+    let c = f32::from(byte) / 255.;
+    if c <= 0.04045 {
+        c / 12.92
+    } else {
+        ((c + 0.055) / 1.055).powf(2.4)
+    }
 }
 
 #[cfg(test)]

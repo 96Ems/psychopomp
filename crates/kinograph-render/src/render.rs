@@ -6,9 +6,7 @@ use std::{
 
 use anyhow::{Context, Result, bail};
 use bytemuck::{Pod, Zeroable};
-use cosmic_text::{
-    Attrs, Buffer, Color, Family, FontSystem, Metrics, Shaping, SwashCache, Weight, Wrap,
-};
+use cosmic_text::{Attrs, Buffer, Color, FontSystem, Metrics, Shaping, SwashCache, Weight, Wrap};
 use wgpu::util::DeviceExt;
 
 use kinograph::code::{CodeLine, LineId, PlacedLine, StyledSpan, SyntaxStyle};
@@ -35,7 +33,7 @@ mod theme;
 mod ui;
 mod value;
 mod venn;
-use text::{PlainTextSpec, TextSprite, blend_pixel, make_sprite, paint_rect};
+use text::{PlainTextSpec, TextSprite, blend_pixel, blend_pixel_at, make_sprite, paint_rect};
 
 pub(crate) use component_prototype::PrototypeGlyphs;
 pub(crate) use deployment_queue::deployment_row_center_y;
@@ -358,8 +356,8 @@ impl HeadlessRenderer {
         let code_column_width = make_sprite(
             &mut font_system,
             &mut swash_cache,
-            vec![("M", Attrs::new().family(Family::Name("CommitMono")))],
-            Attrs::new().family(Family::Name("CommitMono")),
+            vec![("M", Attrs::new().family(fonts::MONO))],
+            Attrs::new().family(fonts::MONO),
             Metrics::new(28.0, LINE_HEIGHT),
             64,
             LINE_HEIGHT as u32,
@@ -477,24 +475,22 @@ impl HeadlessRenderer {
         }
         let center_x = self.spec.width as f32 * 0.5;
         let center_y = self.spec.height as f32 * 0.5;
-        self.composite_title_card_text(
+        self.composite_centered_text(
             &mut pixels,
             title,
             [center_x, center_y - 20.0],
             64.0,
             [238, 240, 244],
             opacity,
-            None,
         );
         if let Some(subtitle) = subtitle {
-            self.composite_title_card_text(
+            self.composite_centered_text(
                 &mut pixels,
                 subtitle,
                 [center_x, center_y + 64.0],
                 26.0,
                 [135, 145, 160],
                 opacity * 0.9,
-                None,
             );
         }
         pixels
@@ -509,21 +505,7 @@ impl HeadlessRenderer {
         color: [u8; 3],
         opacity: f32,
     ) {
-        self.composite_title_card_text(pixels, text, center, font_size, color, opacity, None);
-    }
-
-    #[allow(clippy::too_many_arguments)]
-    pub fn composite_centered_text_masked(
-        &mut self,
-        pixels: &mut [u8],
-        text: &str,
-        center: [f32; 2],
-        font_size: f32,
-        color: [u8; 3],
-        opacity: f32,
-        mask: Option<VerticalMask>,
-    ) {
-        self.composite_title_card_text(pixels, text, center, font_size, color, opacity, mask);
+        self.composite_centered_text_masked(pixels, text, center, font_size, color, opacity, None);
     }
 
     pub fn render_centered_code_line(
@@ -540,22 +522,22 @@ impl HeadlessRenderer {
         for (start, end, _) in &segments {
             let spans = &line.spans()[*start..*end];
             let key = format!("centered-code:{}:{start}:{end}", line.id.as_str());
-            let fingerprint = spans_fingerprint(spans);
-            if self
-                .part_sprites
-                .get(&key)
-                .is_none_or(|(cached, _)| *cached != fingerprint)
-            {
-                let mut sprite = make_spans_sprite_at_size(
-                    &mut self.font_system,
-                    &mut self.swash_cache,
-                    spans,
-                    64.0,
-                    96.0,
-                );
-                self.theme.sprite(&mut sprite);
-                self.part_sprites.insert(key, (fingerprint, sprite));
-            }
+            refresh_sprite(
+                &mut self.part_sprites,
+                &*key,
+                spans_fingerprint(spans),
+                || {
+                    let mut sprite = make_spans_sprite_at_size(
+                        &mut self.font_system,
+                        &mut self.swash_cache,
+                        spans,
+                        64.0,
+                        96.0,
+                    );
+                    self.theme.sprite(&mut sprite);
+                    sprite
+                },
+            );
         }
         let width = segments
             .iter()
@@ -571,15 +553,15 @@ impl HeadlessRenderer {
             let sprite = &self.part_sprites[&key].1;
             let progress = progress.unwrap_or(1.0).clamp(0.0, 1.0);
             let visible_width = sprite.advance * progress;
-            composite_text_sprite(
+            composite_text(
                 &mut pixels,
                 [self.spec.width, self.spec.height],
-                sprite,
-                [x, y],
-                visible_width,
-                (1.0 - progress) * 4.0,
-                progress,
-                [0.0, self.spec.height as f32],
+                TextDraw {
+                    clip_width: visible_width,
+                    filter: TextFilter::Blur((1.0 - progress) * 4.0),
+                    opacity: progress,
+                    ..TextDraw::new(sprite, [x, y])
+                },
             );
             x += visible_width;
         }
@@ -587,7 +569,7 @@ impl HeadlessRenderer {
     }
 
     #[allow(clippy::too_many_arguments)]
-    fn composite_title_card_text(
+    pub fn composite_centered_text_masked(
         &mut self,
         pixels: &mut [u8],
         text: &str,
@@ -610,20 +592,20 @@ impl HeadlessRenderer {
                 crop_to_advance: false,
             },
         );
-        composite_text_region(
+        composite_text(
             pixels,
             canvas_size,
-            sprite,
-            [
-                center[0] - sprite.advance * 0.5,
-                center[1] - sprite.height as f32 * 0.5,
-            ],
-            0.,
-            sprite.width as f32,
-            0.0,
-            opacity,
-            [0.0, canvas_size[1] as f32],
-            mask,
+            TextDraw {
+                opacity,
+                mask,
+                ..TextDraw::new(
+                    sprite,
+                    [
+                        center[0] - sprite.advance * 0.5,
+                        center[1] - sprite.height as f32 * 0.5,
+                    ],
+                )
+            },
         );
     }
 
@@ -1047,33 +1029,19 @@ impl HeadlessRenderer {
         pixels: &mut [u8],
         frame: &EditorFrame<'_>,
     ) -> Result<()> {
-        for placed in frame.lines {
-            let fingerprint = line_fingerprint(placed.line);
-            let is_stale = self
-                .line_sprites
-                .get(&placed.line.id)
-                .is_none_or(|(cached, _)| *cached != fingerprint);
-            if is_stale {
-                let mut sprite =
-                    make_line_sprite(&mut self.font_system, &mut self.swash_cache, placed.line);
-                self.theme.sprite(&mut sprite);
-                self.line_sprites
-                    .insert(placed.line.id.clone(), (fingerprint, sprite));
-            }
-        }
-        for bright in frame.bright_text {
-            let fingerprint = line_fingerprint(&bright.line);
-            let is_stale = self
-                .line_sprites
-                .get(&bright.line.id)
-                .is_none_or(|(cached, _)| *cached != fingerprint);
-            if is_stale {
-                let mut sprite =
-                    make_line_sprite(&mut self.font_system, &mut self.swash_cache, &bright.line);
-                self.theme.sprite(&mut sprite);
-                self.line_sprites
-                    .insert(bright.line.id.clone(), (fingerprint, sprite));
-            }
+        let lines = frame.lines.iter().map(|placed| placed.line);
+        for line in lines.chain(frame.bright_text.iter().map(|bright| &bright.line)) {
+            refresh_sprite(
+                &mut self.line_sprites,
+                &line.id,
+                line_fingerprint(line),
+                || {
+                    let mut sprite =
+                        make_line_sprite(&mut self.font_system, &mut self.swash_cache, line);
+                    self.theme.sprite(&mut sprite);
+                    sprite
+                },
+            );
         }
 
         let panel_top = self.spec.height as f32 * 0.17 + frame.panel_offset_y;
@@ -1119,15 +1087,16 @@ impl HeadlessRenderer {
                 .expect("line sprite was populated above");
             let line_blur = placed.blur;
             let clip_width = sprite.advance.min((code_right - line_x).max(0.0));
-            composite_text_sprite(
+            composite_text(
                 pixels,
                 [self.spec.width, self.spec.height],
-                sprite,
-                [line_x, line_y],
-                clip_width,
-                line_blur,
-                placed.opacity,
-                [code_top, code_bottom],
+                TextDraw {
+                    clip_width,
+                    filter: TextFilter::Blur(line_blur),
+                    opacity: placed.opacity,
+                    clip_y: Some([code_top, code_bottom]),
+                    ..TextDraw::new(sprite, [line_x, line_y])
+                },
             );
         }
         for bright in frame.bright_text {
@@ -1145,17 +1114,17 @@ impl HeadlessRenderer {
                 .width
                 .min(sprite.width as f32 - source_x)
                 .min(code_right - (self.spec.width as f32 * 0.145 + source_x));
-            composite_text_region(
+            composite_text(
                 pixels,
                 [self.spec.width, self.spec.height],
-                sprite,
-                [self.spec.width as f32 * 0.145 + source_x, y],
-                source_x,
-                width,
-                bright.blur,
-                bright.opacity,
-                [code_top, code_bottom],
-                None,
+                TextDraw {
+                    source_left: source_x,
+                    clip_width: width,
+                    filter: TextFilter::Blur(bright.blur),
+                    opacity: bright.opacity,
+                    clip_y: Some([code_top, code_bottom]),
+                    ..TextDraw::new(sprite, [self.spec.width as f32 * 0.145 + source_x, y])
+                },
             );
         }
         for squiggle in frame.squiggles {
@@ -1211,17 +1180,17 @@ impl HeadlessRenderer {
         for (start, end, _) in &segments {
             let spans = &placed.line.spans()[*start..*end];
             let key = format!("{}:{start}:{end}", placed.line.id.as_str());
-            let fingerprint = spans_fingerprint(spans);
-            let stale = self
-                .part_sprites
-                .get(&key)
-                .is_none_or(|(cached, _)| *cached != fingerprint);
-            if stale {
-                let mut sprite =
-                    make_spans_sprite(&mut self.font_system, &mut self.swash_cache, spans);
-                self.theme.sprite(&mut sprite);
-                self.part_sprites.insert(key, (fingerprint, sprite));
-            }
+            refresh_sprite(
+                &mut self.part_sprites,
+                &*key,
+                spans_fingerprint(spans),
+                || {
+                    let mut sprite =
+                        make_spans_sprite(&mut self.font_system, &mut self.swash_cache, spans);
+                    self.theme.sprite(&mut sprite);
+                    sprite
+                },
+            );
         }
 
         let mut cursor_x = x;
@@ -1232,15 +1201,16 @@ impl HeadlessRenderer {
             let available = (right - cursor_x).max(0.0);
             let progress = progress.unwrap_or(1.0).clamp(0.0, 1.0);
             let width = sprite.advance * progress;
-            composite_text_sprite(
+            composite_text(
                 pixels,
                 [self.spec.width, self.spec.height],
-                sprite,
-                [cursor_x, y],
-                width.min(available),
-                ((1.0 - progress) * 4.0).max(line_blur),
-                placed.opacity * progress,
-                clip_y,
+                TextDraw {
+                    clip_width: width.min(available),
+                    filter: TextFilter::Blur(((1.0 - progress) * 4.0).max(line_blur)),
+                    opacity: placed.opacity * progress,
+                    clip_y: Some(clip_y),
+                    ..TextDraw::new(sprite, [cursor_x, y])
+                },
             );
             cursor_x += width;
         }
@@ -1321,7 +1291,7 @@ fn measure_code_spans(
             bail!("text byte range is outside the code line");
         }
     }
-    let base = Attrs::new().family(Family::Name("CommitMono"));
+    let base = Attrs::new().family(fonts::MONO);
     let spans: Vec<_> = spans
         .iter()
         .map(|span| (span.text.as_str(), attributes(base.clone(), span.style)))
@@ -1395,6 +1365,41 @@ fn make_pointer_sprite() -> Result<TextSprite> {
     rasterize_svg(SVG, SIZE, SIZE).context("rasterize Phosphor hand pointer")
 }
 
+/// Uploads single-channel glyph coverage as a sampled texture.
+fn upload_r8(
+    device: &wgpu::Device,
+    queue: &wgpu::Queue,
+    label: &str,
+    [width, height]: [u32; 2],
+    pixels: &[u8],
+) -> wgpu::TextureView {
+    let texture = device.create_texture(&wgpu::TextureDescriptor {
+        label: Some(label),
+        size: wgpu::Extent3d {
+            width,
+            height,
+            depth_or_array_layers: 1,
+        },
+        mip_level_count: 1,
+        sample_count: 1,
+        dimension: wgpu::TextureDimension::D2,
+        format: wgpu::TextureFormat::R8Unorm,
+        usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
+        view_formats: &[],
+    });
+    queue.write_texture(
+        texture.as_image_copy(),
+        pixels,
+        wgpu::TexelCopyBufferLayout {
+            offset: 0,
+            bytes_per_row: Some(width),
+            rows_per_image: Some(height),
+        },
+        texture.size(),
+    );
+    texture.create_view(&Default::default())
+}
+
 fn rasterize_svg(svg: &str, width: u32, height: u32) -> Result<TextSprite> {
     let tree = resvg::usvg::Tree::from_str(svg, &resvg::usvg::Options::default())
         .context("parse SVG sprite")?;
@@ -1431,7 +1436,7 @@ fn make_title_sprite(
     file_name: &str,
 ) -> TextSprite {
     let attrs = Attrs::new()
-        .family(Family::Name("CommitMono"))
+        .family(fonts::MONO)
         .weight(Weight::NORMAL)
         .color(Color::rgb(161, 161, 170));
     make_sprite(
@@ -1443,6 +1448,26 @@ fn make_title_sprite(
         320,
         40,
     )
+}
+
+/// The cached sprite for `key`, rebuilt by `make` only when `fingerprint` changed.
+fn refresh_sprite<'a, K, Q>(
+    cache: &'a mut HashMap<K, (u64, TextSprite)>,
+    key: &Q,
+    fingerprint: u64,
+    make: impl FnOnce() -> TextSprite,
+) -> &'a TextSprite
+where
+    K: std::borrow::Borrow<Q> + Eq + Hash,
+    Q: ToOwned<Owned = K> + Eq + Hash + ?Sized,
+{
+    if cache
+        .get(key)
+        .is_none_or(|(cached, _)| *cached != fingerprint)
+    {
+        cache.insert(key.to_owned(), (fingerprint, make()));
+    }
+    &cache[key].1
 }
 
 fn line_fingerprint(line: &CodeLine) -> u64 {
@@ -1527,7 +1552,7 @@ fn make_spans_sprite_at_size(
     font_size: f32,
     line_height: f32,
 ) -> TextSprite {
-    let base = Attrs::new().family(Family::Name("CommitMono"));
+    let base = Attrs::new().family(fonts::MONO);
     let spans: Vec<_> = if line_spans.is_empty() {
         vec![(" ", attributes(base.clone(), SyntaxStyle::Plain))]
     } else {
@@ -1588,47 +1613,36 @@ fn composite_sprite(
     }
 }
 
-#[allow(clippy::too_many_arguments)]
-fn composite_text_sprite(
-    canvas: &mut [u8],
-    size: [u32; 2],
-    sprite: &TextSprite,
-    origin: [f32; 2],
-    clip_width: f32,
-    blur: f32,
-    opacity: f32,
-    clip_y: [f32; 2],
-) {
-    composite_text_region(
-        canvas, size, sprite, origin, 0., clip_width, blur, opacity, clip_y, None,
-    );
-}
-
-#[allow(clippy::too_many_arguments)]
-fn composite_text_region(
-    canvas: &mut [u8],
-    size: [u32; 2],
-    sprite: &TextSprite,
+/// One text sprite drawn onto a canvas. `TextDraw::new` draws the whole sprite
+/// sharply and opaquely; override fields to reveal, fade, blur, or clip it.
+#[derive(Clone, Copy)]
+struct TextDraw<'a> {
+    sprite: &'a TextSprite,
+    /// Where sprite column `source_left` and the sprite's top land.
     origin: [f32; 2],
     source_left: f32,
+    /// Width of the drawn sprite window, from `source_left`.
     clip_width: f32,
-    blur: f32,
+    filter: TextFilter,
     opacity: f32,
-    clip_y: [f32; 2],
+    /// Canvas rows that may receive ink; the whole canvas when `None`.
+    clip_y: Option<[f32; 2]>,
     mask: Option<VerticalMask>,
-) {
-    composite_text_filtered(
-        canvas,
-        size,
-        sprite,
-        origin,
-        source_left,
-        clip_width,
-        TextFilter::Blur(blur),
-        opacity,
-        clip_y,
-        mask,
-    );
+}
+
+impl<'a> TextDraw<'a> {
+    fn new(sprite: &'a TextSprite, origin: [f32; 2]) -> Self {
+        Self {
+            sprite,
+            origin,
+            source_left: 0.0,
+            clip_width: sprite.width as f32,
+            filter: TextFilter::Blur(0.0),
+            opacity: 1.0,
+            clip_y: None,
+            mask: None,
+        }
+    }
 }
 
 /// How a text sprite is resampled: a soft radial blur, or a vertical smear
@@ -1670,19 +1684,18 @@ impl TextFilter {
     }
 }
 
-#[allow(clippy::too_many_arguments)]
-fn composite_text_filtered(
-    canvas: &mut [u8],
-    [canvas_width, canvas_height]: [u32; 2],
-    sprite: &TextSprite,
-    [x, y]: [f32; 2],
-    source_left: f32,
-    clip_width: f32,
-    filter: TextFilter,
-    opacity: f32,
-    clip_y: [f32; 2],
-    mask: Option<VerticalMask>,
-) {
+fn composite_text(canvas: &mut [u8], [canvas_width, canvas_height]: [u32; 2], draw: TextDraw) {
+    let TextDraw {
+        sprite,
+        origin: [x, y],
+        source_left,
+        clip_width,
+        filter,
+        opacity,
+        clip_y,
+        mask,
+    } = draw;
+    let clip_y = clip_y.unwrap_or([0.0, canvas_height as f32]);
     if opacity <= 0.0 || clip_width <= 0.0 {
         return;
     }
@@ -1953,17 +1966,15 @@ fn composite_squiggle(
     for offset_x in 0..width.max(0.0).round() as i32 {
         let wave_y = ((offset_x as f32 * 0.48).sin() * 2.0).round() as i32;
         for thickness in 0..2 {
-            let target_x = x.round() as i32 + offset_x;
-            let target_y = y.round() as i32 + wave_y + thickness;
-            if target_x < 0
-                || target_y < 0
-                || target_x >= canvas_width as i32
-                || target_y >= canvas_height as i32
-            {
-                continue;
-            }
-            let index = (target_y as usize * canvas_width as usize + target_x as usize) * 4;
-            blend_pixel(&mut canvas[index..index + 4], [248, 113, 113, 255], opacity);
+            blend_pixel_at(
+                canvas,
+                canvas_width,
+                canvas_height,
+                x.round() as i32 + offset_x,
+                y.round() as i32 + wave_y + thickness,
+                [248, 113, 113, 255],
+                opacity,
+            );
         }
     }
 }
@@ -2000,7 +2011,7 @@ mod tests {
             {
                 bail!("text byte range is outside the code line");
             }
-            let base = Attrs::new().family(Family::Name("CommitMono"));
+            let base = Attrs::new().family(fonts::MONO);
             let spans = spans
                 .iter()
                 .map(|span| (span.text.as_str(), attributes(base.clone(), span.style)))
@@ -2348,17 +2359,14 @@ mod tests {
             fade: 2.,
         };
         let mut pixels = vec![0; 16 * 16 * 4];
-        super::composite_text_region(
+        super::composite_text(
             &mut pixels,
             [16, 16],
-            &sprite,
-            [4., 3.],
-            0.,
-            4.,
-            0.,
-            1.,
-            [0., 16.],
-            Some(mask),
+            TextDraw {
+                clip_width: 4.,
+                mask: Some(mask),
+                ..TextDraw::new(&sprite, [4., 3.])
+            },
         );
         let alpha = |y: usize| pixels[(y * 16 + 5) * 4 + 3];
         assert_eq!([alpha(3), alpha(4), alpha(5), alpha(6)], [0, 64, 191, 255]);
@@ -2368,17 +2376,14 @@ mod tests {
 
         let background = [17, 33, 49, 255].repeat(16 * 16);
         let mut pixels = background.clone();
-        super::composite_text_region(
+        super::composite_text(
             &mut pixels,
             [16, 16],
-            &sprite,
-            [4., 3.],
-            0.,
-            4.,
-            0.,
-            1.,
-            [0., 16.],
-            Some(mask),
+            TextDraw {
+                clip_width: 4.,
+                mask: Some(mask),
+                ..TextDraw::new(&sprite, [4., 3.])
+            },
         );
         for y in 0..16 {
             for x in 0..16 {
@@ -2400,15 +2405,14 @@ mod tests {
         };
         let draw = |origin, width, blur| {
             let mut pixels = vec![0; 40 * 24 * 4];
-            super::composite_text_sprite(
+            super::composite_text(
                 &mut pixels,
                 [40, 24],
-                &sprite,
-                origin,
-                width,
-                blur,
-                1.,
-                [0., 24.],
+                TextDraw {
+                    clip_width: width,
+                    filter: TextFilter::Blur(blur),
+                    ..TextDraw::new(&sprite, origin)
+                },
             );
             pixels
         };
@@ -2502,15 +2506,13 @@ mod tests {
         };
         for origin in [[2., 2.], [2.5, 2.], [2.5, 2.5], [2.25, 2.75]] {
             let mut pixels = vec![0; 8 * 8 * 4];
-            super::composite_text_sprite(
+            super::composite_text(
                 &mut pixels,
                 [8, 8],
-                &sprite,
-                origin,
-                1.,
-                0.,
-                1.,
-                [0., 8.],
+                TextDraw {
+                    clip_width: 1.,
+                    ..TextDraw::new(&sprite, origin)
+                },
             );
             let alpha = pixels
                 .chunks_exact(4)
@@ -2538,27 +2540,26 @@ mod tests {
             for blur in [0., 0.49, 0.51] {
                 let mut base = vec![0; 40 * 24 * 4];
                 let mut bright = base.clone();
-                super::composite_text_sprite(
+                super::composite_text(
                     &mut base,
                     [40, 24],
-                    &sprite,
-                    [10.25, y],
-                    12.,
-                    blur,
-                    1.,
-                    [5.5, 14.5],
+                    TextDraw {
+                        clip_width: 12.,
+                        filter: TextFilter::Blur(blur),
+                        clip_y: Some([5.5, 14.5]),
+                        ..TextDraw::new(&sprite, [10.25, y])
+                    },
                 );
-                super::composite_text_region(
+                super::composite_text(
                     &mut bright,
                     [40, 24],
-                    &sprite,
-                    [12.75, y],
-                    2.5,
-                    6.,
-                    blur,
-                    1.,
-                    [5.5, 14.5],
-                    None,
+                    TextDraw {
+                        source_left: 2.5,
+                        clip_width: 6.,
+                        filter: TextFilter::Blur(blur),
+                        clip_y: Some([5.5, 14.5]),
+                        ..TextDraw::new(&sprite, [12.75, y])
+                    },
                 );
                 assert_eq!(base, bright, "origin y={y}, blur={blur}");
             }
@@ -2576,15 +2577,14 @@ mod tests {
         sprite.pixels[(5 * 12 + 5) * 4..(5 * 12 + 5) * 4 + 4].copy_from_slice(&[255; 4]);
         let draw = |sprite: &super::TextSprite, x, width, blur| {
             let mut pixels = vec![0; 40 * 24 * 4];
-            super::composite_text_sprite(
+            super::composite_text(
                 &mut pixels,
                 [40, 24],
-                sprite,
-                [x, 4.25],
-                width,
-                blur,
-                1.,
-                [0., 24.],
+                TextDraw {
+                    clip_width: width,
+                    filter: TextFilter::Blur(blur),
+                    ..TextDraw::new(sprite, [x, 4.25])
+                },
             );
             pixels
         };
@@ -2614,7 +2614,7 @@ mod tests {
     }
 
     use super::{
-        InlineRevealFrame, TextSprite, composite_sprite_rotated,
+        InlineRevealFrame, TextDraw, TextFilter, TextSprite, composite_sprite_rotated,
         composite_sprite_rotated_with_coverage, inline_reveal_segments,
     };
 

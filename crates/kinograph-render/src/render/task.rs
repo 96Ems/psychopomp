@@ -5,14 +5,15 @@ use std::{
 };
 
 use anyhow::Result;
-use kinograph::math::smoothstep;
+use kinograph::math::{lerp, smoothstep};
 
 use kinograph::dsl::{TaskFrame, TaskState};
 use kinograph::motion::{MotionState, Spring};
 
+use super::theme::mix;
 use super::{
-    HeadlessRenderer, TextSprite, blend_pixel, composite_sprite_rotated,
-    composite_sprite_rotated_with_coverage, rasterize_svg, text::PlainTextSpec,
+    HeadlessRenderer, TextDraw, TextSprite, blend_pixel_at, composite_sprite_rotated,
+    composite_sprite_rotated_with_coverage, composite_text, rasterize_svg, text::PlainTextSpec,
 };
 
 mod content;
@@ -452,11 +453,7 @@ impl HeadlessRenderer {
         };
         let previous_color = task_state_color(node.previous_state);
         let color_mix = 1.0 - (-12.0 * node.state_age).exp();
-        let color = [
-            mix_channel(previous_color[0], target_color[0], color_mix),
-            mix_channel(previous_color[1], target_color[1], color_mix),
-            mix_channel(previous_color[2], target_color[2], color_mix),
-        ];
+        let color = mix(previous_color, target_color, color_mix);
         let (flash_duration, flash_mix, flash_color) = match node.state {
             TaskState::Succeeded(_) => (0.45, 0.38, [55, 163, 95]),
             TaskState::Failed(_) => (0.32, 0.45, [244, 92, 92]),
@@ -467,11 +464,7 @@ impl HeadlessRenderer {
         let remaining = (1.0 - node.state_age / flash_duration).clamp(0.0, 1.0);
         let attack = smoothstep((node.state_age / 0.025).clamp(0.0, 1.0));
         let flash = (remaining * std::f32::consts::FRAC_PI_2).sin() * flash_mix * attack;
-        let color = [
-            mix_channel(color[0], flash_color[0], flash),
-            mix_channel(color[1], flash_color[1], flash),
-            mix_channel(color[2], flash_color[2], flash),
-        ];
+        let color = mix(color, flash_color, flash);
         let center = [node.x + offset[0], node.y + offset[1]];
         width *= scale;
         height *= scale;
@@ -870,18 +863,16 @@ impl HeadlessRenderer {
                 1.,
             );
             draw_bubble_tail(&mut pixels, width, height, center, 1.);
-            super::composite_text_sprite(
+            composite_text(
                 &mut pixels,
                 [width, height],
-                text,
-                [
-                    center[0] - text.advance * 0.5,
-                    center[1] - text.height as f32 * 0.5,
-                ],
-                text.width as f32,
-                0.,
-                1.,
-                [0., height as f32],
+                TextDraw::new(
+                    text,
+                    [
+                        center[0] - text.advance * 0.5,
+                        center[1] - text.height as f32 * 0.5,
+                    ],
+                ),
             );
             self.part_sprites.insert(
                 key.clone(),
@@ -995,18 +986,19 @@ impl HeadlessRenderer {
         let canvas_width = self.spec.width;
         let canvas_height = self.spec.height;
         let sprite = self.task_text_sprite(text, font_size, color);
-        super::composite_text_sprite(
+        composite_text(
             pixels,
             [canvas_width, canvas_height],
-            sprite,
-            [
-                center_x - sprite.advance * 0.5,
-                center_y - sprite.height as f32 * 0.5,
-            ],
-            sprite.width as f32,
-            0.,
-            opacity,
-            [0., canvas_height as f32],
+            TextDraw {
+                opacity,
+                ..TextDraw::new(
+                    sprite,
+                    [
+                        center_x - sprite.advance * 0.5,
+                        center_y - sprite.height as f32 * 0.5,
+                    ],
+                )
+            },
         );
     }
 
@@ -1067,7 +1059,7 @@ fn draw_bubble_tail(pixels: &mut [u8], width: u32, height: u32, center: [f32; 2]
             let distance = ((dx + dy - 6.) * std::f32::consts::FRAC_1_SQRT_2)
                 .max(-dy)
                 .max(dy - 6.);
-            paint(
+            blend_pixel_at(
                 pixels,
                 width,
                 height,
@@ -1090,7 +1082,7 @@ fn draw_task_link(pixels: &mut [u8], width: u32, height: u32, link: TaskLinkFram
         let x = link.from[0] + dx * phase;
         let y = link.from[1] + dy * phase;
         for offset in -1..=1 {
-            paint(
+            blend_pixel_at(
                 pixels,
                 width,
                 height,
@@ -1111,7 +1103,7 @@ fn draw_task_link(pixels: &mut [u8], width: u32, height: u32, link: TaskLinkFram
             let distance = (x as f32).hypot(y as f32);
             let alpha = (-distance.powi(2) / (2.0 * 6.0_f32.powi(2))).exp() * 0.55;
             if alpha > 0.003 {
-                paint(
+                blend_pixel_at(
                     pixels,
                     width,
                     height,
@@ -1205,16 +1197,7 @@ fn blur_task_layer(
 
 fn srgb_to_linear_lut() -> &'static [f32; 256] {
     static LUT: OnceLock<[f32; 256]> = OnceLock::new();
-    LUT.get_or_init(|| {
-        std::array::from_fn(|value| {
-            let encoded = value as f32 / 255.0;
-            if encoded <= 0.04045 {
-                encoded / 12.92
-            } else {
-                ((encoded + 0.055) / 1.055).powf(2.4)
-            }
-        })
-    })
+    LUT.get_or_init(|| std::array::from_fn(|value| super::theme::srgb_to_linear(value as u8)))
 }
 
 fn linear_to_srgb_lut() -> &'static [u8; 65536] {
@@ -1360,10 +1343,6 @@ fn task_state_color(state: &TaskState) -> [u8; 3] {
     }
 }
 
-fn mix_channel(from: u8, to: u8, progress: f32) -> u8 {
-    (from as f32 + (to as f32 - from as f32) * progress.clamp(0.0, 1.0)).round() as u8
-}
-
 fn failure_jitter(id: &str, age: f32, duration: f32) -> [f32; 3] {
     if !(0.0..duration).contains(&age) {
         return [0.0; 3];
@@ -1410,7 +1389,7 @@ fn ambient_running_jitter(id: &str, time: f64) -> [f32; 3] {
         let progress = smoothstep(phase.fract() as f32);
         let a = jitter_target(id, index, axis);
         let b = jitter_target(id, index.wrapping_add(1), axis);
-        a + (b - a) * progress
+        lerp(a, b, progress)
     };
     std::array::from_fn(|axis| {
         (noise(0.085, axis as u32) * 0.75 + noise(0.137, axis as u32 + 4) * 0.25)
@@ -1471,7 +1450,7 @@ fn draw_soft_rect_glow(
             let distance = rounded_rect_distance(local_x, local_y, size).max(0.0);
             let alpha = (-distance * distance / (2.0 * radius * radius)).exp() * opacity;
             if alpha > 0.002 {
-                paint(pixels, width, height, x, y, color, alpha);
+                blend_pixel_at(pixels, width, height, x, y, color, alpha);
             }
         }
     }
@@ -1506,7 +1485,7 @@ fn draw_energy_sweep(
             let band = 1.0 - smoothstep(((distance - 1.0) / 39.0).clamp(0.0, 1.0));
             let alpha = band * 0.5 * coverage * opacity;
             if alpha > 0.002 {
-                paint(pixels, width, height, x, y, [150, 215, 255, 255], alpha);
+                blend_pixel_at(pixels, width, height, x, y, [150, 215, 255, 255], alpha);
             }
         }
     }
@@ -1557,7 +1536,7 @@ fn draw_state_pulse(
                 * intensity
                 * coverage;
             if alpha > 0.003 {
-                paint(pixels, width, height, x, y, color, alpha);
+                blend_pixel_at(pixels, width, height, x, y, color, alpha);
             }
         }
     }
@@ -1580,7 +1559,7 @@ fn fill_rect(
         for x in min_x..=max_x {
             let coverage =
                 rounded_rect_coverage(x as f32 + 0.5 - center[0], y as f32 + 0.5 - center[1], size);
-            paint(pixels, width, height, x, y, color, opacity * coverage);
+            blend_pixel_at(pixels, width, height, x, y, color, opacity * coverage);
         }
     }
 }
@@ -1602,7 +1581,7 @@ fn fill_rotated_rect(
             let [local_x, local_y] = rotated_local(center, rotation, x, y);
             let coverage = rounded_rect_coverage(local_x, local_y, size);
             if coverage > 0.0 {
-                paint(pixels, width, height, x, y, color, opacity * coverage);
+                blend_pixel_at(pixels, width, height, x, y, color, opacity * coverage);
             }
         }
     }
@@ -1631,7 +1610,7 @@ fn stroke_rotated_rect(
             );
             let coverage = (outer - inner).clamp(0.0, 1.0);
             if coverage > 0.0 {
-                paint(pixels, width, height, x, y, color, opacity * coverage);
+                blend_pixel_at(pixels, width, height, x, y, color, opacity * coverage);
             }
         }
     }
@@ -1698,7 +1677,7 @@ fn draw_face(pixels: &mut [u8], width: u32, height: u32, center: [f32; 2], radiu
     let wobble = (time * 2.0).sin() * 3.0;
     for x in -24..=24 {
         let y = center[1] + 18.0 + (x as f32 / 24.0).powi(2) * -10.0 + wobble;
-        paint(
+        blend_pixel_at(
             pixels,
             width,
             height,
@@ -1723,7 +1702,7 @@ fn draw_disc(
     for y in -radius_i..=radius_i {
         for x in -radius_i..=radius_i {
             if (x * x + y * y) as f32 <= radius * radius {
-                paint(
+                blend_pixel_at(
                     pixels,
                     width,
                     height,
@@ -1751,7 +1730,7 @@ fn draw_ring(
         let angle = step as f32 / steps as f32 * std::f32::consts::TAU;
         let x = center[0] + angle.cos() * radius;
         let y = center[1] + angle.sin() * radius;
-        paint(
+        blend_pixel_at(
             pixels,
             width,
             height,
@@ -1761,14 +1740,6 @@ fn draw_ring(
             opacity,
         );
     }
-}
-
-fn paint(pixels: &mut [u8], width: u32, height: u32, x: i32, y: i32, color: [u8; 4], opacity: f32) {
-    if !(0..width as i32).contains(&x) || !(0..height as i32).contains(&y) {
-        return;
-    }
-    let index = (y as usize * width as usize + x as usize) * 4;
-    blend_pixel(&mut pixels[index..index + 4], color, opacity);
 }
 
 #[cfg(test)]

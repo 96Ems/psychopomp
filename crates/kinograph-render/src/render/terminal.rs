@@ -1,12 +1,13 @@
 use anyhow::{Result, bail};
-use kinograph::math::smoothstep;
+use kinograph::math::{lerp, smoothstep};
 
 use super::{
-    HeadlessRenderer, TextSprite, blend_pixel, composite_sprite,
+    HeadlessRenderer, TextSprite, blend_pixel, blend_pixel_at, composite_sprite,
     text::PlainTextSpec,
     ui::{
         Bounds, Edges, VerticalFlow,
         card::{CardFrame, CardProjection, CardStyle, ContentFit, RgbaSource},
+        rounded_rect_distance,
     },
 };
 
@@ -652,10 +653,7 @@ fn draw_line(
     let steps = length.ceil() as usize;
     for step in 0..=steps {
         let phase = step as f32 / steps as f32;
-        let point = [
-            from[0] + (to[0] - from[0]) * phase,
-            from[1] + (to[1] - from[1]) * phase,
-        ];
+        let point = [lerp(from[0], to[0], phase), lerp(from[1], to[1], phase)];
         draw_glow(pixels, width, height, point, thickness, color, opacity);
     }
 }
@@ -674,7 +672,7 @@ fn draw_glow(
         for x in -extent..=extent {
             let distance = (x as f32).hypot(y as f32);
             let alpha = (-distance * distance / (2.0 * radius * radius)).exp() * opacity;
-            paint(
+            blend_pixel_at(
                 pixels,
                 width,
                 height,
@@ -702,7 +700,7 @@ fn draw_ring(
             let distance = (x as f32).hypot(y as f32);
             let alpha = (1.5 - (distance - radius).abs()).clamp(0.0, 1.0) * opacity;
             if alpha > 0.0 {
-                paint(
+                blend_pixel_at(
                     pixels,
                     width,
                     height,
@@ -736,9 +734,9 @@ fn fill_rounded_rect(
             let local_x = x as f32 + 0.5 - center[0];
             let local_y = y as f32 + 0.5 - center[1];
             let coverage =
-                (0.5 - rounded_rect_distance(local_x, local_y, size, radius)).clamp(0.0, 1.0);
+                (0.5 - rounded_rect_distance([local_x, local_y], size, radius)).clamp(0.0, 1.0);
             if coverage > 0.0 {
-                paint(pixels, width, height, x, y, color, opacity * coverage);
+                blend_pixel_at(pixels, width, height, x, y, color, opacity * coverage);
             }
         }
     }
@@ -763,28 +761,13 @@ fn stroke_rounded_rect(
         for x in min_x..=max_x {
             let local_x = x as f32 + 0.5 - center[0];
             let local_y = y as f32 + 0.5 - center[1];
-            let distance = rounded_rect_distance(local_x, local_y, size, radius);
+            let distance = rounded_rect_distance([local_x, local_y], size, radius);
             let coverage = (1.25 - distance.abs()).clamp(0.0, 1.0);
             if coverage > 0.0 {
-                paint(pixels, width, height, x, y, color, opacity * coverage);
+                blend_pixel_at(pixels, width, height, x, y, color, opacity * coverage);
             }
         }
     }
-}
-
-fn rounded_rect_distance(local_x: f32, local_y: f32, size: [f32; 2], radius: f32) -> f32 {
-    let radius = radius.min(size[0].min(size[1]) * 0.5);
-    let dx = local_x.abs() - (size[0] * 0.5 - radius);
-    let dy = local_y.abs() - (size[1] * 0.5 - radius);
-    dx.max(0.0).hypot(dy.max(0.0)) + dx.max(dy).min(0.0) - radius
-}
-
-fn paint(pixels: &mut [u8], width: u32, height: u32, x: i32, y: i32, color: [u8; 4], opacity: f32) {
-    if !(0..width as i32).contains(&x) || !(0..height as i32).contains(&y) {
-        return;
-    }
-    let index = (y as usize * width as usize + x as usize) * 4;
-    blend_pixel(&mut pixels[index..index + 4], color, opacity);
 }
 
 fn reveal_text(text: &str, progress: f32, start: f32, end: f32) -> &str {

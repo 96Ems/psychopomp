@@ -1,14 +1,15 @@
 //! Sequence Diagram pixels: participant headers, dashed lifelines, travelling
 //! messages, notes and termination marks. All geometry comes from the recipe and
 //! sampled channels; nothing is carried between frames.
-use kinograph::math::easing::cubic_out;
+use kinograph::math::{easing::cubic_out, lerp};
 use kinograph::{
     sequence::{SequencePlan, SequenceRowPlan},
     tone::Tone,
 };
 
+use super::theme::mix;
 use super::{
-    HeadlessRenderer, PlainTextSpec, composite_text_region,
+    HeadlessRenderer, PlainTextSpec, TextDraw, composite_text,
     ui::{
         Bounds,
         card::{Fill, SurfaceStyle, UiCanvas, UiColor},
@@ -317,7 +318,7 @@ impl HeadlessRenderer {
         let direction = (to - from).signum();
         let start = from + direction * 7.0;
         let end = to - direction * 5.0;
-        let tip = start + (end - start) * travel;
+        let tip = lerp(start, end, travel);
         self.stroke_path(pixels, &[[start, y], [tip, y]], reply, color, alpha);
         if head > 0.0 {
             self.composite_prototype_path(
@@ -561,17 +562,14 @@ impl HeadlessRenderer {
             Anchor::Center => x - advance * 0.5,
             Anchor::Right => x - advance,
         };
-        composite_text_region(
+        composite_text(
             pixels,
             canvas,
-            sprite,
-            [left, y - spec.size[1] as f32 * 0.5],
-            0.0,
-            advance.ceil() + 1.0,
-            0.0,
-            opacity,
-            [0.0, canvas[1] as f32],
-            None,
+            TextDraw {
+                clip_width: advance.ceil() + 1.0,
+                opacity,
+                ..TextDraw::new(sprite, [left, y - spec.size[1] as f32 * 0.5])
+            },
         );
         advance
     }
@@ -593,13 +591,6 @@ fn solid(color: [u8; 3], alpha: u8) -> Fill {
 
 fn rgba([r, g, b]: [u8; 3], alpha: u8) -> UiColor {
     UiColor::srgb8(r, g, b, alpha)
-}
-
-fn mix(a: [u8; 3], b: [u8; 3], t: f32) -> [u8; 3] {
-    let t = t.clamp(0.0, 1.0);
-    std::array::from_fn(|i| {
-        (f32::from(a[i]) + (f32::from(b[i]) - f32::from(a[i])) * t).round() as u8
-    })
 }
 
 fn path_length(points: &[[f32; 2]]) -> f32 {
