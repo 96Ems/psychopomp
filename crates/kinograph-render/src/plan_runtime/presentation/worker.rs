@@ -13,6 +13,7 @@ use winit::event_loop::EventLoopProxy;
 
 use super::super::{PreparedPlan, VisualSampleKey};
 use super::debug::DebugState;
+use super::effective_grid_palette;
 use super::scheduler::RequestStamp;
 use crate::render::{GridLinePalette, HeadlessRenderer, Theme};
 
@@ -97,13 +98,7 @@ impl FrameCache {
         }
         renderer.set_file_name(prepared.file_name());
         renderer.set_theme(stamp.theme);
-        renderer.set_grid_line_palette(
-            if stamp.theme != Theme::Original && stamp.palette == GridLinePalette::Orange {
-                None
-            } else {
-                Some(stamp.palette)
-            },
-        );
+        renderer.set_grid_line_palette(effective_grid_palette(stamp.theme, stamp.palette));
         let start = Instant::now();
         let pixels = Arc::new(prepared.render_sample_using(renderer, time, &request.timeline)?);
         self.total += start.elapsed();
