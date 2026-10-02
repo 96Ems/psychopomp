@@ -2716,18 +2716,11 @@ mod tests {
             );
             eprintln!("published proof: {section} step {step} at {time:.6}s");
             if let Some(directory) = &output {
-                let file =
-                    std::fs::File::create(directory.join(format!("{section}-{step:02}.png")))
-                        .unwrap();
-                let mut encoder =
-                    png::Encoder::new(std::io::BufWriter::new(file), super::WIDTH, super::HEIGHT);
-                encoder.set_color(png::ColorType::Rgba);
-                encoder.set_depth(png::BitDepth::Eight);
-                encoder
-                    .write_header()
-                    .unwrap()
-                    .write_image_data(&pixels)
-                    .unwrap();
+                crate::plan_runtime::delivery::write_png(
+                    &directory.join(format!("{section}-{step:02}.png")),
+                    &pixels,
+                )
+                .unwrap();
             }
         }
     }

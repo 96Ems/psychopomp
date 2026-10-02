@@ -27,7 +27,7 @@ use crate::{
 mod attachments;
 mod caption;
 mod component_prototype;
-mod delivery;
+pub(crate) mod delivery;
 mod deployment_queue;
 mod diagram;
 mod editor;
