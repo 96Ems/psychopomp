@@ -17,8 +17,11 @@ pub struct SpringPlan {
 
 impl SpringPlan {
     pub fn visual(duration: f32, bounce: f32) -> Self {
-        assert!(duration.is_finite() && duration > 0.);
-        assert!((0.0..1.0).contains(&bounce));
+        assert!(
+            duration.is_finite() && duration > 0.,
+            "visual duration must be positive"
+        );
+        assert!((0.0..1.0).contains(&bounce), "bounce must be in [0, 1)");
         Self {
             response_seconds: duration * 1.2,
             damping_ratio: 1. - bounce,

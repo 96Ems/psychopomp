@@ -61,14 +61,10 @@ impl SpringProfile {
         position_threshold: f32,
         velocity_threshold: f32,
     ) -> Self {
-        assert!(
-            visual_duration_seconds > 0.0,
-            "visual duration must be positive"
-        );
-        assert!((0.0..1.0).contains(&bounce), "bounce must be in [0, 1)");
+        let visual = crate::plan::SpringPlan::visual(visual_duration_seconds, bounce);
         Self::new(
-            visual_duration_seconds * 1.2,
-            1.0 - bounce,
+            visual.response_seconds,
+            visual.damping_ratio,
             position_threshold,
             velocity_threshold,
         )
