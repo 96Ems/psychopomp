@@ -848,13 +848,12 @@ impl PreparedPlan {
         time: f64,
         timeline: &Timeline,
     ) -> Result<Vec<u8>> {
+        let value = |actor: &str, property: &str, default: f32| {
+            self.property_value(timeline, actor, property, time, default)
+        };
         let mut pixels = match &self.root {
-            PreparedRoot::Diagram(diagram) => diagram.render(renderer, |a, p, d| {
-                self.property_value(timeline, a, p, time, d)
-            })?,
-            PreparedRoot::Stage(stage) => stage.render(renderer, time, |a, p, d| {
-                self.property_value(timeline, a, p, time, d)
-            })?,
+            PreparedRoot::Diagram(diagram) => diagram.render(renderer, value)?,
+            PreparedRoot::Stage(stage) => stage.render(renderer, time, value)?,
             PreparedRoot::Editor { editor, pointer } => {
                 editor.render(renderer, time, pointer.as_deref(), |actor, property, at| {
                     self.motion_value(timeline, actor, property, at)
@@ -862,25 +861,24 @@ impl PreparedPlan {
             }
             PreparedRoot::Terminal(terminal) => {
                 terminal.render(renderer, time, |property, default| {
-                    self.property_value(timeline, terminal.actor_id(), property, time, default)
+                    value(terminal.actor_id(), property, default)
                 })?
             }
             PreparedRoot::Deployment(deployment) => {
                 deployment.render(renderer, time, |property, default| {
-                    self.property_value(timeline, deployment.actor_id(), property, time, default)
+                    value(deployment.actor_id(), property, default)
                 })?
             }
             PreparedRoot::Grid(grid) => grid.render(
                 renderer,
                 timeline,
                 time,
-                self.property_value(timeline, grid.actor_id(), "scale", time, 1.),
+                value(grid.actor_id(), "scale", 1.),
             )?,
             PreparedRoot::Title(title) => renderer.render_title_card(
                 &title.title,
                 title.subtitle.sample_at(time).current.as_deref(),
-                self.property_value(timeline, &title.id, "opacity", time, 1.0)
-                    .clamp(0.0, 1.0),
+                value(&title.id, "opacity", 1.0).clamp(0.0, 1.0),
             ),
             PreparedRoot::Blank => renderer.render_title_card("", None, 0.0),
         };
@@ -896,59 +894,44 @@ impl PreparedPlan {
         time: f64,
         timeline: &Timeline,
     ) -> Result<()> {
+        let value = |actor: &str, property: &str, default: f32| {
+            self.property_value(timeline, actor, property, time, default)
+        };
         // Value tiles are diagram surfaces; ordinary text is their foreground
         // annotation layer, regardless of declaration order.
         for diagram in &self.venn {
-            diagram.render(pixels, renderer, |a, p, d| {
-                self.property_value(timeline, a, p, time, d)
-            });
+            diagram.render(pixels, renderer, value);
         }
         for token in &self.value_tokens {
-            token.render(pixels, renderer, |actor, property, default| {
-                self.property_value(timeline, actor, property, time, default)
-            });
+            token.render(pixels, renderer, value);
         }
         for sequence in &self.sequences {
-            sequence.render(pixels, renderer, |actor, property, default| {
-                self.property_value(timeline, actor, property, time, default)
-            });
+            sequence.render(pixels, renderer, value);
         }
-        self.components
-            .render(pixels, renderer, |actor, property, default| {
-                self.property_value(timeline, actor, property, time, default)
-            })?;
+        self.components.render(pixels, renderer, value)?;
         for header in &self.headers {
-            header.render(pixels, renderer, |a, p, d| {
-                self.property_value(timeline, a, p, time, d)
-            });
+            header.render(pixels, renderer, value);
         }
         for text in &self.rich_text {
-            text.render(pixels, renderer, |a, p, d| {
-                self.property_value(timeline, a, p, time, d)
-            });
+            text.render(pixels, renderer, value);
         }
         for caption in &self.captions {
-            caption.render(pixels, renderer, |actor, property, default| {
-                self.property_value(timeline, actor, property, time, default)
-            });
+            caption.render(pixels, renderer, value);
         }
         for number in &self.rolling {
-            number.render(pixels, renderer, time, |actor, property, default| {
-                self.property_value(timeline, actor, property, time, default)
-            });
+            number.render(pixels, renderer, time, value);
         }
         for text in &self.texts {
             renderer.composite_centered_text_masked(
                 pixels,
                 text.content.sample_at(time).current,
                 [
-                    self.property_value(timeline, &text.id, "x", time, text.center[0]),
-                    self.property_value(timeline, &text.id, "y", time, text.center[1]),
+                    value(&text.id, "x", text.center[0]),
+                    value(&text.id, "y", text.center[1]),
                 ],
                 text.font_size,
                 text.color,
-                self.property_value(timeline, &text.id, "opacity", time, 1.)
-                    .clamp(0., 1.),
+                value(&text.id, "opacity", 1.).clamp(0., 1.),
                 text.mask,
             );
         }
