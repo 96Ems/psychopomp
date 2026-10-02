@@ -571,31 +571,13 @@ impl GridRenderer {
                 }
             }
         }
-        let atlas = device.create_texture(&wgpu::TextureDescriptor {
-            label: Some("grid face label atlas"),
-            size: wgpu::Extent3d {
-                width: atlas_width,
-                height: atlas_height,
-                depth_or_array_layers: 1,
-            },
-            mip_level_count: 1,
-            sample_count: 1,
-            dimension: wgpu::TextureDimension::D2,
-            format: wgpu::TextureFormat::R8Unorm,
-            usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
-            view_formats: &[],
-        });
-        queue.write_texture(
-            atlas.as_image_copy(),
+        let view = upload_r8(
+            device,
+            queue,
+            "grid face label atlas",
+            [atlas_width, atlas_height],
             &pixels,
-            wgpu::TexelCopyBufferLayout {
-                offset: 0,
-                bytes_per_row: Some(atlas_width),
-                rows_per_image: Some(atlas_height),
-            },
-            atlas.size(),
         );
-        let view = atlas.create_view(&Default::default());
         let sampler = device.create_sampler(&wgpu::SamplerDescriptor {
             mag_filter: wgpu::FilterMode::Linear,
             min_filter: wgpu::FilterMode::Linear,

@@ -178,29 +178,12 @@ impl HeadlessRenderer {
             }
             rects.push([2., y as f32, s.advance, s.height as f32]);
         }
-        let atlas = self.device.create_texture(&wgpu::TextureDescriptor {
-            label: Some("diagram R8 glyph coverage"),
-            size: wgpu::Extent3d {
-                width,
-                height,
-                depth_or_array_layers: 1,
-            },
-            mip_level_count: 1,
-            sample_count: 1,
-            dimension: wgpu::TextureDimension::D2,
-            format: wgpu::TextureFormat::R8Unorm,
-            usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
-            view_formats: &[],
-        });
-        self.queue.write_texture(
-            atlas.as_image_copy(),
+        let atlas = upload_r8(
+            &self.device,
+            &self.queue,
+            "diagram R8 glyph coverage",
+            [width, height],
             &pixels,
-            wgpu::TexelCopyBufferLayout {
-                offset: 0,
-                bytes_per_row: Some(width),
-                rows_per_image: Some(height),
-            },
-            atlas.size(),
         );
         let sampler = self.device.create_sampler(&wgpu::SamplerDescriptor {
             label: Some("fractional diagram text"),
@@ -257,9 +240,7 @@ impl HeadlessRenderer {
                 },
                 wgpu::BindGroupEntry {
                     binding: 1,
-                    resource: wgpu::BindingResource::TextureView(
-                        &atlas.create_view(&Default::default()),
-                    ),
+                    resource: wgpu::BindingResource::TextureView(&atlas),
                 },
                 wgpu::BindGroupEntry {
                     binding: 2,

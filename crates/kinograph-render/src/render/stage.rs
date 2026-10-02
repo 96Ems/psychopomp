@@ -594,29 +594,12 @@ impl HeadlessRenderer {
                 }
             }
         }
-        let atlas = self.device.create_texture(&wgpu::TextureDescriptor {
-            label: Some("stage text atlas"),
-            size: wgpu::Extent3d {
-                width: atlas_width,
-                height: atlas_height,
-                depth_or_array_layers: 1,
-            },
-            mip_level_count: 1,
-            sample_count: 1,
-            dimension: wgpu::TextureDimension::D2,
-            format: wgpu::TextureFormat::R8Unorm,
-            usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
-            view_formats: &[],
-        });
-        self.queue.write_texture(
-            atlas.as_image_copy(),
+        let atlas = upload_r8(
+            &self.device,
+            &self.queue,
+            "stage text atlas",
+            [atlas_width, atlas_height],
             &pixels,
-            wgpu::TexelCopyBufferLayout {
-                offset: 0,
-                bytes_per_row: Some(atlas_width),
-                rows_per_image: Some(atlas_height),
-            },
-            atlas.size(),
         );
         let rects = strings
             .into_iter()
@@ -630,11 +613,7 @@ impl HeadlessRenderer {
                 )
             })
             .collect();
-        Ok((
-            atlas.create_view(&Default::default()),
-            [atlas_width as f32, atlas_height as f32],
-            rects,
-        ))
+        Ok((atlas, [atlas_width as f32, atlas_height as f32], rects))
     }
 
     pub(crate) fn render_stage(
