@@ -1,6 +1,7 @@
 //! Pure, typed recipe preflight. Each payload is decoded once and retained for
 //! resource preparation; sampling never interprets immutable actor JSON again.
 use super::{
+    callout::PreparedCallout,
     caption::PreparedCaption,
     component_prototype::{self, ComponentInput},
     deployment_queue::PreparedDeploymentQueue,
@@ -21,6 +22,7 @@ use super::{
 use crate::render::{RichTextSource, VerticalMask};
 use anyhow::{Context, Result, bail};
 use psychopomp::{
+    callout::CALLOUT_RECIPE,
     caption::CAPTION_RECIPE,
     component_prototype::{
         COLLECTION, CONNECTOR, DIAGRAM, DiagramPlan, HEADER, HeaderPlan, RICH_TEXT, TYPESET, VENN,
@@ -62,6 +64,7 @@ pub(super) struct Plan {
     pub plots: Vec<PreparedPlot>,
     pub lanes: Vec<PreparedLanes>,
     pub videos: Vec<VideoInput>,
+    pub callouts: Vec<PreparedCallout>,
 }
 pub(super) enum RootPlan {
     Blank,
@@ -361,6 +364,7 @@ impl Plan {
         let mut plots = Vec::new();
         let mut lanes = Vec::new();
         let mut videos = Vec::new();
+        let mut callouts = Vec::new();
         for actor in &plan.actors {
             match actor.recipe.as_str() {
                 "title-card" => put_root(&mut root, RootPlan::Title(Title::new(actor, &plan)?))?,
@@ -451,6 +455,9 @@ impl Plan {
                     &plan.media,
                     &plan.continuous_channels,
                 )?),
+                CALLOUT_RECIPE => {
+                    callouts.push(PreparedCallout::new(actor, &plan.continuous_channels)?)
+                }
                 recipe => bail!("unsupported actor recipe '{recipe}'"),
             }
         }
@@ -495,6 +502,9 @@ impl Plan {
             .iter()
             .map(VideoInput::media_id)
             .collect::<HashSet<_>>();
+        for callout in &callouts {
+            callout.validate_anchors(&root, &plan.semantic_targets)?;
+        }
         for media in &plan.media {
             if matches!(media.kind, MediaKindPlan::Audio)
                 || (matches!(media.kind, MediaKindPlan::Video)
@@ -526,6 +536,7 @@ impl Plan {
             plots,
             lanes,
             videos,
+            callouts,
         };
         match &result.root {
             RootPlan::Editor { editor, .. } => editor.compile_channels(&mut result.plan)?,

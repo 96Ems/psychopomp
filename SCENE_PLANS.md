@@ -625,6 +625,39 @@ Components used by explainers:
   card.focus(&mut scene, seconds(3.0), [920.0, 225.0, 900.0, 356.0], 0.9);
   ```
   The showroom is `cargo run -p psychopomp-video` (writes `target/video.json`).
+- `callout`: `anchors` (one to eight; the first is where it starts), `lines` (one
+  to three lines of `{ text, tone }` spans), `size` (24), `side` (where the label
+  sits: `top`, `bottom`, `left`, `right`, `top-left`, `top-right` (default),
+  `bottom-left`, `bottom-right`), `reach` (first-leg length, 64 px), `elbow`
+  (diagonals turn into a 28 px horizontal shelf), `tone` (leader and mark,
+  `accent`), and `chip`. Each anchor has an `id` and a `kind`: `point` (`at`),
+  `stage` (`element`, a positioned element of the Stage root), or `editor`
+  (`target`, a Semantic Target of the editor root), with an optional `edge`
+  (`center` by default, or a side or corner of the outline) and an optional
+  per-anchor `side`. Channels: `opacity`, `draw` (leader draw-on; the mark
+  appears with it), `label` (fade and 8 px rise), `emphasis`, and
+  `anchor.<id>` weights (1 for the first anchor, 0 otherwise). The renderer
+  resolves every weighted anchor at every sample from the prepared root and
+  blends them, so the leader stays on its card through camera moves, jolts, and
+  shutter samples, and on its code range as lines move or the panel zooms.
+  `CalloutActor` writes `show` (draw on, then the label), `hide` (label out,
+  then retract), `move_to(anchor)` (every weight springs on one critically
+  damped profile, so interrupted moves keep their velocity), and `emphasize`
+  (instant flare, convex decay).
+  ```rust
+  let mut note = CalloutActor::declare(&mut scene, "retries",
+      &CalloutPlan::new(CalloutAnchorPlan::Stage { id: "client".into(),
+          element: "client".into(), edge: CalloutSide::Top, side: None },
+          vec![CaptionSpanPlan::new("retries 3×", Tone::Plain)])
+          .anchor(CalloutAnchorPlan::Stage { id: "api".into(), element: "api".into(),
+              edge: CalloutSide::Top, side: Some(CalloutSide::TopLeft) })
+          .elbow())?;
+  note.show(&mut scene, at);
+  note.move_to(&mut scene, "api", later)?;
+  ```
+  The showroom is `cargo run -p psychopomp-callouts` (writes the reel
+  `target/callouts.json` and its segments under `target/callouts/`); render it
+  with `cargo run --release -- plan render target/callouts.json output/callouts.mp4 --theme neutral`.
 - Editor Line Marks: `"mark": "added" | "removed"` on a line, with presence
   channel `mark.<line-id>`; `panel-x`, `panel-y`, and `panel-opacity` move and fade the card (the Stepped Diff
   enters on `panel-y`).

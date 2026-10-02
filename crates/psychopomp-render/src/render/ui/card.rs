@@ -76,6 +76,14 @@ impl Default for CardProjection {
     }
 }
 
+impl CardProjection {
+    /// Where a card-local point (relative to the card center) lands, relative
+    /// to the card's destination center: the compositor's forward mapping.
+    pub(crate) fn project(self, point: [f32; 2]) -> [f32; 2] {
+        CardTransform::new(self, [0.0; 2]).project(point)
+    }
+}
+
 #[derive(Clone, Copy, Debug)]
 pub(crate) struct CardStyle {
     pub material: Fill,

@@ -12,6 +12,7 @@ use wgpu::util::DeviceExt;
 use psychopomp::code::{CodeLine, LineId, PlacedLine, StyledSpan, SyntaxStyle};
 use psychopomp::dsl::AnnotationFrame;
 
+mod callout;
 mod caption;
 mod chart;
 mod component_prototype;
@@ -41,6 +42,7 @@ mod video;
 mod wipe;
 use text::{PlainTextSpec, TextSprite, blend_pixel, blend_pixel_at, make_sprite, paint_rect};
 
+pub(crate) use callout::CalloutPose;
 pub(crate) use component_prototype::PrototypeGlyphs;
 pub(crate) use deployment_queue::deployment_row_center_y;
 pub use deployment_queue::{DeploymentItemFrame, DeploymentQueueFrame};
@@ -50,7 +52,7 @@ pub use grid::{
 };
 pub(crate) use header::{HeaderGlyphs, header_words};
 pub(crate) use rich_text::{RichTextGlyphs, RichTextSource, parse as parse_rich_text};
-pub(crate) use stage::StageGpu;
+pub(crate) use stage::{StageGpu, stage_anchor};
 pub use task::{
     BubblePose, ContentPose, QuoteFrame, TaskContentFrame, TaskLinkFrame, TaskSceneFrame,
     TaskVisualFrame,
@@ -94,6 +96,87 @@ pub struct EditorFrame<'a> {
     pub squiggles: &'a [SquiggleFrame],
     pub annotations: &'a [AnnotationFrame],
     pub lines: &'a [PlacedLine<'a>],
+}
+
+impl EditorFrame<'_> {
+    fn panel_offset(&self) -> [f32; 2] {
+        [self.panel_offset_x, self.panel_offset_y]
+    }
+
+    fn panel_projection(&self) -> ui::card::CardProjection {
+        ui::card::CardProjection {
+            scale: self.panel_scale,
+            rotation_z: self.panel_rotation,
+            tilt_x: self.panel_tilt_x,
+            tilt_y: self.panel_tilt_y,
+            surface_blur: 0.0,
+            near_edge_blur: self.panel_near_blur,
+        }
+    }
+}
+
+/// The editor panel's pose: what `panel-*` channels do to the projected card.
+#[derive(Clone, Copy, Debug)]
+pub(crate) struct EditorPanel {
+    pub offset: [f32; 2],
+    pub scale: f32,
+    pub rotation: f32,
+    pub tilt: [f32; 2],
+}
+
+/// Where the flat editor surface is cut out and where its card lands.
+struct EditorCard {
+    size: [u32; 2],
+    source_origin: [u32; 2],
+}
+
+impl EditorCard {
+    fn new([width, height]: [u32; 2]) -> Self {
+        let size = [
+            (width as f32 * 0.78).round() as u32,
+            (height as f32 * 0.70).round() as u32,
+        ];
+        Self {
+            size,
+            source_origin: [(width - size[0]) / 2, (height as f32 * 0.17).round() as u32],
+        }
+    }
+
+    fn center([width, height]: [u32; 2], offset: [f32; 2]) -> [f32; 2] {
+        [
+            width as f32 * 0.5 + offset[0],
+            height as f32 * 0.52 + offset[1],
+        ]
+    }
+}
+
+/// The canvas position of a point in editor code coordinates (x from the code
+/// column, y from the first row's top, as Semantic Targets measure them),
+/// carried through the same card projection the full editor path composites.
+pub(crate) fn editor_canvas_point(
+    canvas: [u32; 2],
+    panel: EditorPanel,
+    point: [f32; 2],
+) -> [f32; 2] {
+    let card = EditorCard::new(canvas);
+    let flat = [
+        canvas[0] as f32 * 0.145 + point[0],
+        canvas[1] as f32 * 0.17 + 104.0 + point[1],
+    ];
+    let local = [
+        flat[0] - card.source_origin[0] as f32 - card.size[0] as f32 * 0.5,
+        flat[1] - card.source_origin[1] as f32 - card.size[1] as f32 * 0.5,
+    ];
+    let projected = ui::card::CardProjection {
+        scale: panel.scale,
+        rotation_z: panel.rotation,
+        tilt_x: panel.tilt[0],
+        tilt_y: panel.tilt[1],
+        ..Default::default()
+    }
+    .project(local);
+    let center = EditorCard::center(canvas, panel.offset);
+    [center[0] + projected[0], center[1] + projected[1]]
 }
 
 /// A diff-marked line: a tinted row and gutter sign under the code.
@@ -258,6 +341,11 @@ pub struct HeadlessRenderer {
 }
 
 impl HeadlessRenderer {
+    /// The delivered frame size in pixels.
+    pub(crate) fn size(&self) -> [u32; 2] {
+        [self.spec.width, self.spec.height]
+    }
+
     pub async fn new(spec: RenderSpec) -> Result<Self> {
         if spec.width == 0 || spec.height == 0 {
             bail!("render dimensions must be non-zero");
@@ -812,14 +900,10 @@ impl HeadlessRenderer {
         self.composite_editor_title(&mut flat_pixels, flat_frame.panel_offset_y);
         self.composite_text_untransformed(&mut flat_pixels, &flat_frame)?;
 
-        let card_size = [
-            (self.spec.width as f32 * 0.78).round() as u32,
-            (self.spec.height as f32 * 0.70).round() as u32,
-        ];
-        let source_origin = [
-            ((self.spec.width - card_size[0]) / 2),
-            (self.spec.height as f32 * 0.17).round() as u32,
-        ];
+        let EditorCard {
+            size: card_size,
+            source_origin,
+        } = EditorCard::new([self.spec.width, self.spec.height]);
         let source = ui::card::RgbaSource::strided_region(
             &flat_pixels,
             [self.spec.width, self.spec.height],
@@ -861,10 +945,8 @@ impl HeadlessRenderer {
         }
         let mut pixels = self.editor_background_pixels.clone();
         let destination_size = [card_size[0] as f32, card_size[1] as f32];
-        let destination_center = [
-            self.spec.width as f32 * 0.5 + frame.panel_offset_x,
-            self.spec.height as f32 * 0.52 + frame.panel_offset_y,
-        ];
+        let destination_center =
+            EditorCard::center([self.spec.width, self.spec.height], frame.panel_offset());
         let mut card_style = ui::card::CardStyle::standard();
         if self.theme != Theme::Original {
             let [r, g, b] = self.theme.palette().surface;
@@ -877,14 +959,7 @@ impl HeadlessRenderer {
                 ui::card::CardFrame {
                     bounds: ui::Bounds::from_center(destination_center, destination_size),
                     style: card_style,
-                    projection: ui::card::CardProjection {
-                        scale: frame.panel_scale,
-                        rotation_z: frame.panel_rotation,
-                        tilt_x: frame.panel_tilt_x,
-                        tilt_y: frame.panel_tilt_y,
-                        surface_blur: 0.0,
-                        near_edge_blur: frame.panel_near_blur,
-                    },
+                    projection: frame.panel_projection(),
                     opacity: frame.panel_opacity.clamp(0.0, 1.0),
                 },
                 |card| {
@@ -1998,6 +2073,39 @@ fn attributes(base: Attrs<'static>, style: SyntaxStyle) -> Attrs<'static> {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn editor_canvas_points_follow_the_panel_projection() {
+        use super::{EditorPanel, editor_canvas_point};
+        let canvas = [1920, 1080];
+        let rest = EditorPanel {
+            offset: [0.0; 2],
+            scale: 1.0,
+            rotation: 0.0,
+            tilt: [0.0; 2],
+        };
+        // At rest the card shows the flat editor: code x starts at 14.5% of
+        // the width and rows 104 px below the panel top. The compositor's
+        // whole-pixel source cut lifts the content 0.4 px; the point follows.
+        let point = editor_canvas_point(canvas, rest, [100.0, 22.0]);
+        assert!((point[0] - (278.4 + 100.0)).abs() < 1e-3);
+        assert!((point[1] - (183.6 + 104.0 + 22.0 - 0.4)).abs() < 1e-3);
+        // Scale grows about the card center; offsets translate it.
+        let center = [960.0, 1080.0 * 0.52];
+        let zoomed = editor_canvas_point(
+            canvas,
+            EditorPanel {
+                offset: [-90.0, 10.0],
+                scale: 2.0,
+                ..rest
+            },
+            [100.0, 22.0],
+        );
+        for axis in 0..2 {
+            let expected = center[axis] + [-90.0, 10.0][axis] + (point[axis] - center[axis]) * 2.0;
+            assert!((zoomed[axis] - expected).abs() < 1e-2, "{zoomed:?}");
+        }
+    }
+
     mod code_measurement {
         use super::super::*;
         use std::ops::Range;

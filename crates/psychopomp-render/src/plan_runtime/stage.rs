@@ -40,6 +40,10 @@ impl PreparedStage {
         &self.id
     }
 
+    pub(super) fn plan(&self) -> &StagePlan {
+        &self.plan
+    }
+
     /// One frame exposed through weighted shutter samples, accumulated on the GPU.
     pub(super) fn render_exposure(
         &self,

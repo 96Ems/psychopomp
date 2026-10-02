@@ -16,12 +16,14 @@ members = [
   "scenes/pr-walkthrough",
   "scenes/rolling-number",
   "scenes/tree",
+  "scenes/callouts",
   "scenes/config-migration",
   "scenes/opencode-jr-architecture",
   "scenes/pr-50231",
   "scenes/charts",
   "scenes/video",
   "scenes/compare",
+  "scenes/opencode-quality",
 ]
 default-members = ["crates/psychopomp-render"]
 resolver = "3"

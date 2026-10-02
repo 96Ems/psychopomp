@@ -2,17 +2,23 @@ use std::{collections::HashMap, ops::Range};
 
 use anyhow::{Context, Result, bail};
 use psychopomp::{
+    callout::CalloutSide,
     code::RangeId,
     dsl::TargetGeometry,
     editor::{CompiledEditor, EditorRecipePlan, EditorTargetSelector},
+    math::{
+        Vec2,
+        shapes::{Box2, Shape},
+        vec2,
+    },
     motion::MotionState,
     plan::{ActorPlan, ScalarPlan, ScenePlan, TrackEventPlan},
 };
 
 use super::generated;
 use crate::render::{
-    EditorFrame, HeadlessRenderer, InlineRangeMetrics, InlineRevealFrame, LineMarkFrame,
-    PointerFrame, TokenHighlight,
+    EditorFrame, EditorPanel, HeadlessRenderer, InlineRangeMetrics, InlineRevealFrame,
+    LineMarkFrame, PointerFrame, TokenHighlight,
 };
 
 pub(super) struct PreparedEditor {
@@ -164,6 +170,39 @@ impl PreparedEditor {
                 false,
             )
         })
+    }
+
+    /// Where `edge` of a measured code range is on the canvas at this sample:
+    /// the range's sampled glyph box, carried through the panel's projection.
+    pub(super) fn anchor(
+        &self,
+        target: &str,
+        edge: CalloutSide,
+        canvas: [u32; 2],
+        sample: impl Fn(&str, &str) -> Option<MotionState>,
+    ) -> Option<Vec2> {
+        let motion = self.target_motion(target, &sample)?;
+        let value = |property: &str, default: f32| {
+            sample(&self.actor_id, property).map_or(default, |state| state.position)
+        };
+        let center = motion.line_y.position + self.editor.line_height() * 0.5;
+        let half = self.editor.line_height() * 0.5;
+        let range = Box2 {
+            min: vec2(motion.x.position, center - half),
+            max: vec2(motion.x.position + motion.width.position, center + half),
+        };
+        let point = edge.on(Shape::Box(range));
+        let panel = EditorPanel {
+            offset: [value("panel-x", 0.0), value("panel-y", 0.0)],
+            scale: value("panel-scale", 1.0),
+            rotation: value("panel-rotation", 0.0),
+            tilt: [value("panel-tilt-x", 0.0), value("panel-tilt-y", 0.0)],
+        };
+        Some(Vec2::from(crate::render::editor_canvas_point(
+            canvas,
+            panel,
+            point.to_array(),
+        )))
     }
 
     pub(super) fn target_scale(&self, id: &str) -> Option<f32> {

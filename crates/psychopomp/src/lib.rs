@@ -1,5 +1,6 @@
 pub mod author;
 pub mod axis;
+pub mod callout;
 pub mod caption;
 pub mod code;
 pub mod component_prototype;
