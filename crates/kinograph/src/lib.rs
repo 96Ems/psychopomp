@@ -11,6 +11,7 @@ pub mod grid;
 pub mod highlight;
 pub mod math;
 pub mod motion;
+pub mod narration;
 pub mod plan;
 pub mod playback;
 pub mod rolling;
