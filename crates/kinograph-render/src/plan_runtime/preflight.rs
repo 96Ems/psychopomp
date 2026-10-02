@@ -52,7 +52,6 @@ pub(super) struct Plan {
     pub sequences: Vec<PreparedSequence>,
     pub captions: Vec<PreparedCaption>,
     pub rolling: Vec<RollingNumberInput>,
-    pub native: bool,
 }
 pub(super) enum RootPlan {
     Blank,
@@ -499,18 +498,6 @@ impl Plan {
             );
         }
         component_prototype::validate_inputs(&plan, &components)?;
-        let native = match &root {
-            RootPlan::Blank
-            | RootPlan::Title(_)
-            | RootPlan::Editor { .. }
-            | RootPlan::Grid(_)
-            | RootPlan::Diagram { .. }
-            | RootPlan::Stage { .. } => true,
-            RootPlan::Terminal(_) | RootPlan::Deployment(_) => false,
-        } && plan.state_channels.is_empty()
-            && plan.media.is_empty()
-            // Their changes follow the authored clock, not Playback destinations.
-            && rolling.is_empty();
         let mut result = Self {
             plan,
             root,
@@ -524,7 +511,6 @@ impl Plan {
             sequences,
             captions,
             rolling,
-            native,
         };
         match &result.root {
             RootPlan::Editor { editor, .. } => editor.compile_channels(&mut result.plan)?,
@@ -550,8 +536,25 @@ impl Plan {
         result.plan.validate()?;
         Ok(result)
     }
+    /// Whether interruptible native playback can drive this plan.
+    pub(super) fn native(&self) -> bool {
+        let root = match &self.root {
+            RootPlan::Blank
+            | RootPlan::Title(_)
+            | RootPlan::Editor { .. }
+            | RootPlan::Grid(_)
+            | RootPlan::Diagram { .. }
+            | RootPlan::Stage { .. } => true,
+            RootPlan::Terminal(_) | RootPlan::Deployment(_) => false,
+        };
+        root && self.plan.state_channels.is_empty()
+            && self.plan.media.is_empty()
+            // Their changes follow the authored clock, not Playback destinations.
+            && self.rolling.is_empty()
+    }
+
     pub(super) fn require_native(&self) -> Result<()> {
-        if !self.native {
+        if !self.native() {
             bail!(NATIVE_UNSUPPORTED);
         }
         if self.plan.presentation_steps.is_empty() {

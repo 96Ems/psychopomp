@@ -457,6 +457,7 @@ impl PreparedPlan {
         base: &Path,
         renderer: &mut HeadlessRenderer,
     ) -> Result<Self> {
+        let native = input.native();
         let preflight::Plan {
             mut plan,
             mut root,
@@ -470,7 +471,6 @@ impl PreparedPlan {
             sequences,
             captions,
             rolling,
-            native,
         } = input;
         let components = component_prototype::PreparedComponents::prepare_inputs(
             &mut plan, components, renderer,
