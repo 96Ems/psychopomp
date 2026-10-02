@@ -110,11 +110,15 @@ impl PreparedReel {
             .layers_at(time)
             .into_iter()
             .map(|layer| {
-                // A zoom moves pixels even when both segments hold still.
+                // A zoom or wipe moves pixels even when both segments hold still.
                 Ok((
                     layer.segment,
                     layer.weight.to_bits(),
-                    layer.zoom.map(|phase| phase.progress.to_bits()),
+                    layer
+                        .zoom
+                        .map(|phase| phase.progress)
+                        .or(layer.wipe.map(|phase| phase.position))
+                        .map(f32::to_bits),
                     self.segments[layer.segment].visual_sample_key(layer.local_seconds)?,
                 ))
             })
@@ -134,6 +138,7 @@ impl PreparedReel {
             };
             if layer.weight < 1.0
                 || layer.zoom.is_some()
+                || layer.wipe.is_some()
                 || *segment.get_or_insert(layer.segment) != layer.segment
             {
                 return None;
@@ -151,7 +156,7 @@ impl PreparedReel {
     }
 
     /// One exposed frame. A segment shown alone renders its own exposure (a
-    /// Stage accumulates on the GPU); mixes and zooms average on the CPU.
+    /// Stage accumulates on the GPU); mixes, zooms, and wipes average on the CPU.
     pub(super) fn render_exposure(
         &self,
         renderer: &mut HeadlessRenderer,
@@ -186,6 +191,14 @@ impl PreparedReel {
             let prepared = &self.segments[layer.segment];
             renderer.set_file_name(prepared.file_name());
             let pixels = prepared.render_sample(renderer, layer.local_seconds)?;
+            if let (Some(wipe), Some(below)) = (layer.wipe, blended.as_mut()) {
+                let labels = self.reel.segments[layer.segment]
+                    .transition_wipe
+                    .as_ref()
+                    .and_then(|wipe| wipe.labels.as_ref());
+                renderer.composite_wipe(below, &pixels, wipe, labels);
+                continue;
+            }
             let (pixels, coverage) = match layer.zoom {
                 Some(phase) => {
                     let zoom = ReelZoom::at(

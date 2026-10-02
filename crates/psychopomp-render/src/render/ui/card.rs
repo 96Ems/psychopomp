@@ -133,6 +133,13 @@ impl Clip {
 pub(crate) enum ContentFit {
     Fill,
     Contain,
+    /// The `source` window (fractional source pixels) stretched over the
+    /// `content` rectangle (card-local, from the top-left); the rest of the
+    /// card shows its material.
+    Region {
+        source: Bounds,
+        content: Bounds,
+    },
 }
 
 #[derive(Clone, Copy)]
@@ -432,6 +439,33 @@ impl<'a> UiCanvas<'a> {
     }
 
     pub fn rgba(&mut self, bounds: Bounds, source: RgbaSource<'_>, fit: ContentFit, opacity: f32) {
+        if let ContentFit::Region { .. } = fit {
+            let min_x = bounds.origin[0].floor().max(0.0) as i32;
+            let max_x = bounds.right().ceil().min(self.size[0] as f32) as i32;
+            let min_y = bounds.origin[1].floor().max(0.0) as i32;
+            let max_y = bounds.bottom().ceil().min(self.size[1] as f32) as i32;
+            for y in min_y..max_y {
+                for x in min_x..max_x {
+                    let point = [x as f32 + 0.5, y as f32 + 0.5];
+                    let local = [point[0] - bounds.center()[0], point[1] - bounds.center()[1]];
+                    let Some([sx, sy]) = source_coordinates(local, bounds.size, source.size, fit)
+                    else {
+                        continue;
+                    };
+                    let coverage = self.clip_coverage(point) * opacity.clamp(0.0, 1.0);
+                    if coverage <= 0.0 {
+                        continue;
+                    }
+                    let index = (y as usize * self.size[0] as usize + x as usize) * BYTES_PER_PIXEL;
+                    blend_pixel(
+                        &mut self.pixels[index..index + 4],
+                        source.sample(sx, sy),
+                        coverage,
+                    );
+                }
+            }
+            return;
+        }
         let source_size = [source.size[0] as f32, source.size[1] as f32];
         let scale = match fit {
             ContentFit::Fill => [
@@ -442,6 +476,7 @@ impl<'a> UiCanvas<'a> {
                 let value = (bounds.size[0] / source_size[0]).min(bounds.size[1] / source_size[1]);
                 [value, value]
             }
+            ContentFit::Region { .. } => unreachable!("regions return above"),
         };
         let display_size = [source_size[0] * scale[0], source_size[1] * scale[1]];
         let display = Bounds::from_center(bounds.center(), display_size);
@@ -574,6 +609,20 @@ impl<'a> FrameUi<'a> {
     ) -> Result<()> {
         validate_card(frame)?;
         composite_card_source(self.canvas.pixels, self.canvas.size, source, fit, frame);
+        Ok(())
+    }
+
+    /// Composite a card-local `source` layer over `region` of an already
+    /// drawn card, through the same projection and rounded clip, without
+    /// another shell or shadow.
+    pub fn card_layer(
+        &mut self,
+        frame: CardFrame,
+        source: RgbaSource<'_>,
+        region: Bounds,
+    ) -> Result<()> {
+        validate_card(frame)?;
+        composite_card_region(self.canvas.pixels, self.canvas.size, source, region, frame);
         Ok(())
     }
 
@@ -908,6 +957,93 @@ fn composite_card_source(
     }
 }
 
+fn composite_card_region(
+    destination: &mut [u8],
+    destination_size: [u32; 2],
+    source: RgbaSource<'_>,
+    region: Bounds,
+    frame: CardFrame,
+) {
+    let center = frame.bounds.center();
+    let half_size = [frame.bounds.size[0] * 0.5, frame.bounds.size[1] * 0.5];
+    let transform = CardTransform::new(frame.projection, half_size);
+    let local_region = region.translate([-half_size[0], -half_size[1]]);
+    let corners = [
+        [local_region.origin[0], local_region.origin[1]],
+        [local_region.right(), local_region.origin[1]],
+        [local_region.right(), local_region.bottom()],
+        [local_region.origin[0], local_region.bottom()],
+    ]
+    .map(|corner| transform.project(corner));
+    let min_x = corners
+        .iter()
+        .map(|p| center[0] + p[0])
+        .fold(f32::INFINITY, f32::min)
+        - 2.0;
+    let max_x = corners
+        .iter()
+        .map(|p| center[0] + p[0])
+        .fold(f32::NEG_INFINITY, f32::max)
+        + 2.0;
+    let min_y = corners
+        .iter()
+        .map(|p| center[1] + p[1])
+        .fold(f32::INFINITY, f32::min)
+        - 2.0;
+    let max_y = corners
+        .iter()
+        .map(|p| center[1] + p[1])
+        .fold(f32::NEG_INFINITY, f32::max)
+        + 2.0;
+    for target_y in
+        min_y.floor().max(0.0) as i32..=max_y.ceil().min(destination_size[1] as f32 - 1.0) as i32
+    {
+        for target_x in min_x.floor().max(0.0) as i32
+            ..=max_x.ceil().min(destination_size[0] as f32 - 1.0) as i32
+        {
+            let point = [
+                target_x as f32 + 0.5 - center[0],
+                target_y as f32 + 0.5 - center[1],
+            ];
+            let local = transform.unproject(point);
+            let inside = [
+                local[0] - local_region.origin[0],
+                local[1] - local_region.origin[1],
+            ];
+            if inside[0] < 0.0
+                || inside[1] < 0.0
+                || inside[0] > region.size[0]
+                || inside[1] > region.size[1]
+            {
+                continue;
+            }
+            let distance =
+                rounded_rect_distance(local, frame.bounds.size, frame.style.corner_radius);
+            let coverage = (-distance).clamp(0.0, 1.0) * frame.opacity;
+            if coverage <= 0.0 {
+                continue;
+            }
+            let depth = transform.depth[0] * local[0] + transform.depth[1] * local[1];
+            let proximity = if transform.max_near_depth > 0.001 {
+                (depth / transform.max_near_depth).clamp(0.0, 1.0)
+            } else {
+                0.0
+            };
+            let blur = frame.projection.surface_blur.max(0.0)
+                + frame.projection.near_edge_blur.max(0.0) * proximity;
+            let color = sample_source_blurred(
+                source,
+                inside[0] / region.size[0] * source.size[0] as f32 - 0.5,
+                inside[1] / region.size[1] * source.size[1] as f32 - 0.5,
+                blur,
+            );
+            let target = (target_y as usize * destination_size[0] as usize + target_x as usize)
+                * BYTES_PER_PIXEL;
+            blend_pixel(&mut destination[target..target + 4], color, coverage);
+        }
+    }
+}
+
 fn composite_card_shadow(
     destination: &mut [u8],
     target: usize,
@@ -941,6 +1077,23 @@ fn source_coordinates(
     source_size: [u32; 2],
     fit: ContentFit,
 ) -> Option<[f32; 2]> {
+    if let ContentFit::Region { source, content } = fit {
+        let inside = [
+            local[0] + card_size[0] * 0.5 - content.origin[0],
+            local[1] + card_size[1] * 0.5 - content.origin[1],
+        ];
+        if inside[0] < 0.0
+            || inside[1] < 0.0
+            || inside[0] > content.size[0]
+            || inside[1] > content.size[1]
+        {
+            return None;
+        }
+        return Some([
+            source.origin[0] + inside[0] / content.size[0] * source.size[0] - 0.5,
+            source.origin[1] + inside[1] / content.size[1] * source.size[1] - 0.5,
+        ]);
+    }
     let source_size = [source_size[0] as f32, source_size[1] as f32];
     let scale = match fit {
         ContentFit::Fill => [card_size[0] / source_size[0], card_size[1] / source_size[1]],
@@ -948,6 +1101,7 @@ fn source_coordinates(
             let value = (card_size[0] / source_size[0]).min(card_size[1] / source_size[1]);
             [value, value]
         }
+        ContentFit::Region { .. } => unreachable!("regions return above"),
     };
     let display_size = [source_size[0] * scale[0], source_size[1] * scale[1]];
     if local[0].abs() > display_size[0] * 0.5 || local[1].abs() > display_size[1] * 0.5 {

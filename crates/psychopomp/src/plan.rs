@@ -13,7 +13,9 @@ use crate::math::{
 };
 
 mod channels;
+mod wipe;
 pub use channels::{SpringPlan, compile_channels, destination_channel, effective_snapshots};
+pub use wipe::{ReelWipePlan, WipeDirection, WipeHoldPlan, WipePhase};
 
 pub const SCENE_PLAN_VERSION: u32 = 2;
 
@@ -92,7 +94,24 @@ pub struct ReelSegmentPlan {
     /// becomes this segment, such as a card that opens into its code.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub transition_focus: Option<[f32; 4]>,
+    /// For `wipe`: the divider's direction, mid-frame holds, and side labels.
+    /// Omitted, the divider sweeps once from left to right.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub transition_wipe: Option<ReelWipePlan>,
     pub plan: ScenePlan,
+}
+
+impl ReelSegmentPlan {
+    /// A segment that enters through `wipe` over `transition_nanos`.
+    pub fn wiped(plan: ScenePlan, transition_nanos: u64, wipe: ReelWipePlan) -> Self {
+        Self {
+            transition_nanos,
+            transition_style: ReelTransitionStyle::Wipe,
+            transition_focus: None,
+            transition_wipe: Some(wipe),
+            plan,
+        }
+    }
 }
 
 /// How a segment replaces its predecessor during `transition_nanos`.
@@ -108,6 +127,9 @@ pub enum ReelTransitionStyle {
     /// The camera flies into `transition_focus`: the outgoing frame zooms past
     /// while the incoming segment grows out of that rectangle.
     Zoom,
+    /// A divider sweeps across with the incoming segment behind it, optionally
+    /// resting mid-frame so both are visible side by side.
+    Wipe,
 }
 
 /// Screen transform of one layer during a zoom: `output = source * scale + offset`.
@@ -164,6 +186,8 @@ pub struct ReelLayer {
     pub weight: f32,
     /// Set during a zoom; the renderer resolves it with `ReelZoom::at`.
     pub zoom: Option<ZoomPhase>,
+    /// Set on the incoming layer of a wipe: it shows only behind the divider.
+    pub wipe: Option<WipePhase>,
 }
 
 /// One layer's part in a zoom transition.
@@ -194,6 +218,7 @@ impl ReelPlan {
                     transition_nanos: if index == 0 { 0 } else { transition_nanos },
                     transition_style: ReelTransitionStyle::Dip,
                     transition_focus: None,
+                    transition_wipe: None,
                     plan,
                 })
                 .collect(),
@@ -235,6 +260,18 @@ impl ReelPlan {
                         segment.plan.id
                     );
                 }
+            }
+            match (&segment.transition_wipe, segment.transition_style) {
+                (Some(wipe), ReelTransitionStyle::Wipe) => {
+                    wipe.validate(segment.transition_nanos).map_err(|error| {
+                        anyhow::anyhow!("reel segment '{}': {error}", segment.plan.id)
+                    })?
+                }
+                (Some(_), _) => anyhow::bail!(
+                    "reel segment '{}' has transitionWipe without the wipe style",
+                    segment.plan.id
+                ),
+                (None, _) => {}
             }
             let previous = &self.segments[index - 1];
             // The previous segment must be alone on screen before this one starts,
@@ -306,6 +343,7 @@ impl ReelPlan {
             local_seconds: local(segment),
             weight: smoothstep(weight as f32),
             zoom: None,
+            wipe: None,
         };
         if progress >= 1.0 || current == 0 {
             return vec![layer(current, 1.0)];
@@ -337,6 +375,28 @@ impl ReelPlan {
                     ReelLayer {
                         zoom: phase(true),
                         ..layer(current, (progress - 0.08) / 0.4)
+                    },
+                ]
+            }
+            ReelTransitionStyle::Wipe => {
+                let default = ReelWipePlan::default();
+                let wipe = self.segments[current]
+                    .transition_wipe
+                    .as_ref()
+                    .unwrap_or(&default);
+                let elapsed = at - span.start_nanos as f64 / 1e9;
+                let position = wipe.position(elapsed, span.transition_nanos as f64 / 1e9);
+                if position <= 0.0 {
+                    return vec![layer(current - 1, 1.0)];
+                }
+                vec![
+                    layer(current - 1, 1.0),
+                    ReelLayer {
+                        wipe: Some(WipePhase {
+                            position,
+                            direction: wipe.direction,
+                        }),
+                        ..layer(current, 1.0)
                     },
                 ]
             }
@@ -1570,6 +1630,7 @@ mod reel_tests {
                     transition_nanos: transition,
                     transition_style: ReelTransitionStyle::default(),
                     transition_focus: None,
+                    transition_wipe: None,
                     plan: ScenePlan::new(id, duration),
                 })
                 .collect(),
@@ -1622,6 +1683,7 @@ mod reel_tests {
                 local_seconds,
                 weight: 1.0,
                 zoom: None,
+                wipe: None,
             }]
         };
         assert_eq!(reel.layers_at(1.0), only(0, 1.0));
@@ -1691,6 +1753,39 @@ mod reel_tests {
         assert_eq!(layers.len(), 2);
         assert!(layers[0].zoom.is_some_and(|phase| !phase.incoming));
         assert!(layers[1].zoom.is_some_and(|phase| phase.incoming));
+    }
+
+    #[test]
+    fn a_wipe_shows_the_incoming_segment_behind_a_held_divider() {
+        use super::{ReelWipePlan, WipeDirection};
+        let mut wiped = reel(&[("before", 6 * SECOND, 0), ("after", 6 * SECOND, 3 * SECOND)]);
+        wiped.segments[1].transition_style = super::ReelTransitionStyle::Wipe;
+        wiped.segments[1].transition_wipe =
+            Some(ReelWipePlan::new(WipeDirection::Left).hold(0.5, 2 * SECOND));
+        wiped.validate().unwrap();
+        // The transition starts at 3 s: half-frame sweeps of 0.5 s around the hold.
+        assert_eq!(wiped.layers_at(3.0).len(), 1, "nothing is wiped yet");
+        let held = wiped.layers_at(4.5);
+        assert_eq!(held.len(), 2);
+        assert_eq!((held[0].segment, held[0].weight), (0, 1.0));
+        let phase = held[1].wipe.unwrap();
+        assert_eq!(
+            (phase.position, phase.direction),
+            (0.5, WipeDirection::Left)
+        );
+        assert!(
+            (held[1].local_seconds - 1.5).abs() < 1e-9,
+            "both clocks run"
+        );
+        assert_eq!(wiped.layers_at(6.0).len(), 1);
+        wiped.segments[1].transition_wipe = Some(ReelWipePlan::default().hold(0.5, 3 * SECOND));
+        assert!(wiped.validate().is_err(), "holds leave no time to sweep");
+        wiped.segments[1].transition_style = super::ReelTransitionStyle::Dip;
+        wiped.segments[1].transition_wipe = Some(ReelWipePlan::default());
+        assert!(
+            wiped.validate().is_err(),
+            "wipe settings need the wipe style"
+        );
     }
 
     #[test]

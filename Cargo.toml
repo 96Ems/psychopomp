@@ -20,6 +20,8 @@ members = [
   "scenes/opencode-jr-architecture",
   "scenes/pr-50231",
   "scenes/charts",
+  "scenes/video",
+  "scenes/compare",
 ]
 default-members = ["crates/psychopomp-render"]
 resolver = "3"

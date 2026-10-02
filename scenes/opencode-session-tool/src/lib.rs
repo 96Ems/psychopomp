@@ -4,7 +4,7 @@ use anyhow::Result;
 use psychopomp::{
     author::PlanBuilder,
     plan::{MediaKindPlan, MediaPlan, MediaRolePlan, ScenePlan},
-    terminal::{TERMINAL_RECORDING_RECIPE, TerminalRecordingPlan, TerminalRecordingRecipePlan},
+    video::{self, VideoActor, VideoPlan},
 };
 use serde_json::json;
 
@@ -119,33 +119,31 @@ const BEATS: [Beat; 9] = [
 
 pub fn build_plan() -> Result<ScenePlan> {
     let mut scene = PlanBuilder::new("opencode-v2-session-tool", DURATION);
-    let terminal = scene.actor(
-        "terminal",
-        TERMINAL_RECORDING_RECIPE,
-        TerminalRecordingRecipePlan {
-            file_name: "OpenCode v2 / Vim".to_owned(),
-            recordings: vec![TerminalRecordingPlan {
-                media_id: "live-hot-reload".to_owned(),
-                width: 1920,
-                height: 760,
-                fps: 60,
-            }],
-        },
+    let mut recording = VideoActor::declare(
+        &mut scene,
+        "recording",
+        VideoPlan::new("live-hot-reload", [1920, 760], 60)
+            .at([960.0, 540.0], 1400.0)
+            .titled("vim  /  opencode v2"),
+        video::media(
+            "live-hot-reload",
+            "../../assets/opencode-v2-session-tool/max-hot-reload-split.mp4",
+            (0, RECORDING_DURATION),
+            RECORDING_START,
+        ),
     )?;
-    scene.state(&terminal, "recording", "live-hot-reload")?;
-
-    let panel_y = scene.continuous(&terminal, "panel-y", 500.0);
-    let panel_scale = scene.continuous(&terminal, "panel-scale", 1.35);
-    let panel_rotation = scene.continuous(&terminal, "panel-rotation", -0.06);
-    let panel_tilt_x = scene.continuous(&terminal, "panel-tilt-x", -0.24);
-    let panel_tilt_y = scene.continuous(&terminal, "panel-tilt-y", 0.34);
-    let panel_near_blur = scene.continuous(&terminal, "panel-near-blur", 11.0);
-    scene.spring(&panel_y, 0, 540.0, 0.7, 0.0);
-    scene.spring(&panel_scale, 0, 1.15, 0.7, 0.0);
-    scene.spring(&panel_rotation, 0, 0.0, 0.7, 0.0);
-    scene.spring(&panel_tilt_x, 0, 0.0, 0.7, 0.0);
-    scene.spring(&panel_tilt_y, 0, 0.0, 0.7, 0.0);
-    scene.spring(&panel_near_blur, 0, 0.0, 0.7, 0.0);
+    // The card swings flat out of a tipped, defocused pose.
+    for (property, from, to) in [
+        ("y", -40.0, 0.0),
+        ("scale", 1.35, 1.15),
+        ("rotation", -0.06, 0.0),
+        ("tilt-x", -0.24, 0.0),
+        ("tilt-y", 0.34, 0.0),
+        ("blur", 11.0, 0.0),
+    ] {
+        let channel = recording.channel(&mut scene, property, from);
+        scene.spring(&channel, 0, to, 0.7, 0.0);
+    }
 
     for (index, beat) in BEATS.iter().enumerate() {
         let heading_actor = scene.actor(
@@ -186,12 +184,6 @@ pub fn build_plan() -> Result<ScenePlan> {
         scene.cue(beat.id, beat.start, beat.end);
     }
 
-    scene.media(video(
-        "live-hot-reload",
-        "../../assets/opencode-v2-session-tool/max-hot-reload-split.mp4",
-        RECORDING_DURATION,
-        RECORDING_START,
-    ));
     for (index, beat) in BEATS.into_iter().enumerate() {
         scene.media(audio(
             &format!("{}-{index}", beat.sound.id),
@@ -204,20 +196,6 @@ pub fn build_plan() -> Result<ScenePlan> {
     }
 
     Ok(scene.finish()?)
-}
-
-fn video(id: &str, path: &str, duration: u64, timeline_start: u64) -> MediaPlan {
-    MediaPlan {
-        id: id.to_owned(),
-        path: PathBuf::from(path),
-        kind: MediaKindPlan::Video,
-        role: MediaRolePlan::Layer,
-        source_start_nanos: 0,
-        source_end_nanos: duration,
-        timeline_start_nanos: timeline_start,
-        timeline_end_nanos: timeline_start + duration,
-        gain_db: 0.0,
-    }
 }
 
 fn audio(
@@ -250,11 +228,11 @@ mod tests {
     const CANONICAL_PLAN: &str = include_str!("../opencode-session-tool.plan.json");
 
     #[test]
-    fn scene_plan_owns_video_audio_state_and_cues() {
+    fn scene_plan_owns_video_audio_and_cues() {
         let plan = build_plan().unwrap();
         assert_eq!(plan.duration_nanos, 20_500_000_000);
         assert_eq!(plan.media.len(), 10);
-        assert_eq!(plan.state_channels.len(), 1);
+        assert!(plan.state_channels.is_empty());
         assert_eq!(plan.cues.len(), 9);
     }
 
@@ -282,18 +260,11 @@ mod tests {
     #[test]
     fn panel_entrance_is_critically_damped() {
         let plan = build_plan().unwrap();
-        for property in [
-            "panel-y",
-            "panel-scale",
-            "panel-rotation",
-            "panel-tilt-x",
-            "panel-tilt-y",
-            "panel-near-blur",
-        ] {
+        for property in ["y", "scale", "rotation", "tilt-x", "tilt-y", "blur"] {
             let channel = plan
                 .continuous_channels
                 .iter()
-                .find(|channel| channel.actor_id == "terminal" && channel.property == property)
+                .find(|channel| channel.actor_id == "recording" && channel.property == property)
                 .unwrap();
             let TrackEventPlan::Spring {
                 at_nanos,

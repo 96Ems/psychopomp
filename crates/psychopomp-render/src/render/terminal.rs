@@ -17,7 +17,6 @@ const COMMAND_SOURCE: &str =
 pub struct TerminalSceneFrame<'a> {
     pub source_pixels: &'a [u8],
     pub source_size: [u32; 2],
-    pub background: TerminalBackground,
     pub panel_center: [f32; 2],
     pub panel_scale: f32,
     pub panel_rotation: f32,
@@ -27,12 +26,6 @@ pub struct TerminalSceneFrame<'a> {
     pub command_file: Option<CommandFileFrame>,
     pub missile_age: Option<f32>,
     pub tagline_opacity: f32,
-}
-
-#[derive(Clone, Copy)]
-pub enum TerminalBackground {
-    Aurora,
-    Neutral,
 }
 
 #[derive(Clone, Copy)]
@@ -56,32 +49,16 @@ impl HeadlessRenderer {
             bail!("terminal panel scale must be positive");
         }
 
-        let mut pixels = match frame.background {
-            TerminalBackground::Aurora => {
-                if self.terminal_background_pixels.is_empty() {
-                    self.terminal_background_pixels =
-                        vec![0_u8; self.spec.width as usize * self.spec.height as usize * 4];
-                    draw_background(
-                        &mut self.terminal_background_pixels,
-                        self.spec.width,
-                        self.spec.height,
-                    );
-                }
-                self.terminal_background_pixels.clone()
-            }
-            TerminalBackground::Neutral => {
-                if self.terminal_neutral_background_pixels.is_empty() {
-                    self.terminal_neutral_background_pixels =
-                        vec![0_u8; self.spec.width as usize * self.spec.height as usize * 4];
-                    draw_neutral_background(
-                        &mut self.terminal_neutral_background_pixels,
-                        self.spec.width,
-                        self.spec.height,
-                    );
-                }
-                self.terminal_neutral_background_pixels.clone()
-            }
-        };
+        if self.terminal_background_pixels.is_empty() {
+            self.terminal_background_pixels =
+                vec![0_u8; self.spec.width as usize * self.spec.height as usize * 4];
+            draw_background(
+                &mut self.terminal_background_pixels,
+                self.spec.width,
+                self.spec.height,
+            );
+        }
+        let mut pixels = self.terminal_background_pixels.clone();
         if let Some(age) = frame.missile_age {
             draw_missiles(&mut pixels, self.spec.width, self.spec.height, age);
         }
@@ -426,19 +403,6 @@ fn draw_background(pixels: &mut [u8], width: u32, height: u32) {
         for x in 0..width as usize {
             let index = (y * width as usize + x) * 4;
             pixels[index..index + 4].copy_from_slice(&color);
-        }
-    }
-}
-
-fn draw_neutral_background(pixels: &mut [u8], width: u32, height: u32) {
-    for y in 0..height as usize {
-        for x in 0..width as usize {
-            let nx = x as f32 / width as f32 - 0.5;
-            let ny = y as f32 / height as f32 - 0.46;
-            let glow = (1.0 - (nx * nx * 1.4 + ny * ny).sqrt() / 0.78).clamp(0.0, 1.0);
-            let value = (4.0 + glow * 8.0) as u8;
-            let index = (y * width as usize + x) * 4;
-            pixels[index..index + 4].copy_from_slice(&[value, value, value, 255]);
         }
     }
 }

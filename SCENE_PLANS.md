@@ -479,11 +479,32 @@ and original scene assets. The explicit `sig term`/`sigterm` cue alternatives
 handle ASR word segmentation without changing recorded timings. Rebuild and
 review the new clock before rendering; replacing just the audio desynchronizes it.
 
-A reel is `{ "version": 1, "id", "segments": [{ "transitionNanos", "transitionStyle": "crossfade" | "dip" | "zoom", "transitionFocus"?, "plan" }] }`.
+A reel is `{ "version": 1, "id", "segments": [{ "transitionNanos", "transitionStyle": "crossfade" | "dip" | "zoom" | "wipe", "transitionFocus"?, "transitionWipe"?, "plan" }] }`.
 A `zoom` needs `transitionFocus: [x, y, width, height]` in the outgoing frame; compute
 it with `stage::Camera::project` so it matches the card the camera flies into.
 Relative media paths resolve against the reel file. Prefer `dip` between frames
 that are both dense with text; a crossfade between two editors turns both unreadable.
+
+A `wipe` sweeps a divider across with the incoming segment behind it. Its optional
+`transitionWipe` is `{ "direction"?: "right" | "left" | "down" | "up", "holds"?:
+[{ "position", "holdNanos" }], "labels"?: [outgoing, incoming] }`: the divider
+travels in `direction` (`left` leaves the outgoing frame on the left, the usual
+before/after order), eases minimum-jerk into each hold `position` (0..1 of its
+travel), rests there for `holdNanos`, and sweeps on. Holds must leave time to sweep
+within `transitionNanos`. During a hold both segments keep running on their own
+clocks, so author the outgoing segment's tail and the incoming segment's head as
+still frames. A held wipe suits frames that compare spatially (the same diagram
+with different status, two looks of one layout); halves of the same code lines
+read poorly side by side, so prefer a Stepped Diff for code.
+
+```rust
+ReelSegmentPlan::wiped(after, seconds(4.4), ReelWipePlan::new(WipeDirection::Left)
+    .hold(0.5, seconds(2.6))
+    .labeled("BEFORE", "AFTER"))
+```
+
+The showroom is `cargo run -p psychopomp-compare` (writes `target/compare.json`):
+a held before/after between two Stage frames, then a plain downward wipe.
 
 Components used by explainers:
 
@@ -584,6 +605,26 @@ Components used by explainers:
   The showroom is `cargo run -p psychopomp-charts` (writes `target/charts.json`);
   render it with
   `cargo run --release -- plan render target/charts.json output/charts.mp4 --theme neutral`.
+- `video` (Video Card): `mediaId` (a planned `video` media placement), `size`
+  (decoded `[width, height]`), `fps`, `center`, `width` (card width at scale 1;
+  height follows the footage aspect), and optional `title` (a 44 px title bar).
+  Channels: `x`, `y` (offsets from `center`), `scale`, `opacity`, `rotation`,
+  `tilt-x`, `tilt-y`, `blur` (near-edge defocus of a tilted card), and the focus
+  window `focus-x`, `focus-y` (its center, as fractions of the frame; 0.5) and
+  `focus-size` (fraction of the frame visible; 1). The footage's source time follows
+  its placement on the plan clock, holding the first frame before it and the last
+  after it. `VideoActor::declare(scene, id, plan, video::media(id, path, (from, to),
+  at))` adds the card and its placement; `fly_in`, `focus(region_in_source_px)`,
+  `unfocus`, and `hide` write the motion. Video Cards draw beneath other overlays,
+  over any root, and plans using them are export-only.
+  ```rust
+  let mut card = VideoActor::declare(&mut scene, "recording",
+      VideoPlan::new("session", [1920, 760], 60).at([960.0, 520.0], 1520.0).titled("vim  /  opencode v2"),
+      video::media("session", "../assets/opencode-v2-session-tool/max-hot-reload-split.mp4", (0, 9 * SECOND), 0))?;
+  card.fly_in(&mut scene, seconds(0.25));
+  card.focus(&mut scene, seconds(3.0), [920.0, 225.0, 900.0, 356.0], 0.9);
+  ```
+  The showroom is `cargo run -p psychopomp-video` (writes `target/video.json`).
 - Editor Line Marks: `"mark": "added" | "removed"` on a line, with presence
   channel `mark.<line-id>`; `panel-x`, `panel-y`, and `panel-opacity` move and fade the card (the Stepped Diff
   enters on `panel-y`).
@@ -708,7 +749,7 @@ Renderer Recipe payloads remain adapter-owned. The lightweight core validates st
 
 Scene Plan v2 scalar values may reference a component of a stable Semantic Target. The target's selector remains recipe-owned; for the hero, the editor recipe resolves logical code range IDs through `cosmic-text` before compiling highlight and pointer channels into the shared Timeline.
 
-The current plan runtime demonstrates `title-card`, `text`, `editor`, attached `pointer`, `effect-task`, `keyed-grid`, `terminal-recording`, and `deployment-queue` renderer recipes. Planned audio lowers into exact script or layer placements for FFmpeg. Planned video is accepted only when a prepared visual recipe consumes its media ID; unconsumed video and all image media still return request errors. The terminal recipe maps the global scene clock through the media placement into source time, so cue and range renders do not restart footage. Editor, terminal, and deployment recipes independently produce RGBA content but delegate framing to the same private immediate-mode card compositor; this reuse does not add recursive presentation nodes to Scene Plan. The deployment recipe compiles ordered semantic snapshots into private stable keyed row tracks, keeping layout destinations distinct from velocity-preserving motion.
+The current plan runtime demonstrates `title-card`, `text`, `editor`, attached `pointer`, `effect-task`, `keyed-grid`, `video`, and `deployment-queue` renderer recipes. Planned audio lowers into exact script or layer placements for FFmpeg. Planned video is accepted only when a `video` actor consumes its media ID; unconsumed video and all image media still return request errors. The Video Card maps the global scene clock through the media placement into source time, so cue and range renders do not restart footage. Editor, video, and deployment recipes independently produce RGBA content but delegate framing to the same private immediate-mode card compositor; this reuse does not add recursive presentation nodes to Scene Plan. The deployment recipe compiles ordered semantic snapshots into private stable keyed row tracks, keeping layout destinations distinct from velocity-preserving motion.
 
 ## Package Direction
 
@@ -725,7 +766,7 @@ psychopomp-render ----------+
 
 The default hero command embeds `scenes/hero/hero.plan.json` for compatibility. A workspace test regenerates the plan from `scenes/hero/src/lib.rs` and requires byte equality, so the checked artifact cannot drift from its Rust source.
 
-`scenes/opencode-session-tool/opencode-session-tool.plan.json` is likewise checked against its Rust Scene Program. It demonstrates one planned split Vim/OpenCode Terminal Recording, layered SFX, discrete state, continuous panel motion, nine live-capability text overlays, and named cue selection through the same renderer process.
+`scenes/opencode-session-tool/opencode-session-tool.plan.json` is likewise checked against its Rust Scene Program. It demonstrates one planned split Vim/OpenCode Video Card, layered SFX, continuous card motion, nine live-capability text overlays, and named cue selection through the same renderer process.
 
 `scenes/deployment-queue/deployment-queue.plan.json` is checked the same way. It demonstrates a typed state-driven UI Surface whose rows retain recipe-local identity across insertion, phase replacement, failure focus, and retry while the Scene Plan remains ordinary actors, continuous channels, state channels, and cues.
 

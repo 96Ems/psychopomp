@@ -37,6 +37,8 @@ mod tree;
 mod ui;
 mod value;
 mod venn;
+mod video;
+mod wipe;
 use text::{PlainTextSpec, TextSprite, blend_pixel, blend_pixel_at, make_sprite, paint_rect};
 
 pub(crate) use component_prototype::PrototypeGlyphs;
@@ -53,10 +55,11 @@ pub use task::{
     BubblePose, ContentPose, QuoteFrame, TaskContentFrame, TaskLinkFrame, TaskSceneFrame,
     TaskVisualFrame,
 };
-pub use terminal::{CommandFileFrame, TerminalBackground, TerminalSceneFrame};
+pub use terminal::{CommandFileFrame, TerminalSceneFrame};
 pub use theme::Theme;
 pub(crate) use tree::TreeNames;
 pub(crate) use venn::validate as validate_venn;
+pub(crate) use video::VideoPose;
 
 const FORMAT: wgpu::TextureFormat = wgpu::TextureFormat::Rgba8UnormSrgb;
 const BYTES_PER_PIXEL: u32 = 4;
@@ -244,7 +247,6 @@ pub struct HeadlessRenderer {
     task_blur_scratch: Vec<[f32; 4]>,
     editor_background_pixels: Vec<u8>,
     terminal_background_pixels: Vec<u8>,
-    terminal_neutral_background_pixels: Vec<u8>,
     deployment_background_pixels: Vec<u8>,
     ui_card_pixels: Vec<u8>,
     ui_overlay_pixels: Vec<u8>,
@@ -393,7 +395,6 @@ impl HeadlessRenderer {
             task_blur_scratch: Vec::new(),
             editor_background_pixels: Vec::new(),
             terminal_background_pixels: Vec::new(),
-            terminal_neutral_background_pixels: Vec::new(),
             deployment_background_pixels: Vec::new(),
             ui_card_pixels: Vec::new(),
             ui_overlay_pixels: Vec::new(),

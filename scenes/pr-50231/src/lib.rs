@@ -42,6 +42,7 @@ pub fn build_reel(narration_dir: &Path) -> Result<ReelPlan> {
         transition_nanos,
         transition_style,
         transition_focus: None,
+        transition_wipe: None,
         plan,
     };
     let reel = ReelPlan {

@@ -1582,6 +1582,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "psychopomp-compare"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "psychopomp",
+ "serde_json",
+]
+
+[[package]]
 name = "psychopomp-component-prototypes"
 version = "0.1.0"
 dependencies = [
@@ -1755,6 +1764,14 @@ dependencies = [
  "anyhow",
  "psychopomp",
  "serde_json",
+]
+
+[[package]]
+name = "psychopomp-video"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "psychopomp",
 ]
 
 [[package]]

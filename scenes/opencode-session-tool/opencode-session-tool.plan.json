@@ -4,18 +4,21 @@
   "durationNanos": 20500000000,
   "actors": [
     {
-      "id": "terminal",
-      "recipe": "terminal-recording",
+      "id": "recording",
+      "recipe": "video",
       "data": {
-        "fileName": "OpenCode v2 / Vim",
-        "recordings": [
-          {
-            "fps": 60,
-            "height": 760,
-            "mediaId": "live-hot-reload",
-            "width": 1920
-          }
-        ]
+        "center": [
+          960.0,
+          540.0
+        ],
+        "fps": 60,
+        "mediaId": "live-hot-reload",
+        "size": [
+          1920,
+          760
+        ],
+        "title": "vim  /  opencode v2",
+        "width": 1400.0
       }
     },
     {
@@ -328,15 +331,15 @@
   "semanticTargets": [],
   "continuousChannels": [
     {
-      "id": "terminal.panel-y",
-      "actorId": "terminal",
-      "property": "panel-y",
-      "initial": 500.0,
+      "id": "recording.y",
+      "actorId": "recording",
+      "property": "y",
+      "initial": -40.0,
       "events": [
         {
           "operation": "spring",
           "atNanos": 0,
-          "target": 540.0,
+          "target": 0.0,
           "responseSeconds": 0.84000003,
           "dampingRatio": 1.0,
           "positionThreshold": 0.001,
@@ -345,9 +348,9 @@
       ]
     },
     {
-      "id": "terminal.panel-scale",
-      "actorId": "terminal",
-      "property": "panel-scale",
+      "id": "recording.scale",
+      "actorId": "recording",
+      "property": "scale",
       "initial": 1.35,
       "events": [
         {
@@ -362,9 +365,9 @@
       ]
     },
     {
-      "id": "terminal.panel-rotation",
-      "actorId": "terminal",
-      "property": "panel-rotation",
+      "id": "recording.rotation",
+      "actorId": "recording",
+      "property": "rotation",
       "initial": -0.06,
       "events": [
         {
@@ -379,9 +382,9 @@
       ]
     },
     {
-      "id": "terminal.panel-tilt-x",
-      "actorId": "terminal",
-      "property": "panel-tilt-x",
+      "id": "recording.tilt-x",
+      "actorId": "recording",
+      "property": "tilt-x",
       "initial": -0.24,
       "events": [
         {
@@ -396,9 +399,9 @@
       ]
     },
     {
-      "id": "terminal.panel-tilt-y",
-      "actorId": "terminal",
-      "property": "panel-tilt-y",
+      "id": "recording.tilt-y",
+      "actorId": "recording",
+      "property": "tilt-y",
       "initial": 0.34,
       "events": [
         {
@@ -413,9 +416,9 @@
       ]
     },
     {
-      "id": "terminal.panel-near-blur",
-      "actorId": "terminal",
-      "property": "panel-near-blur",
+      "id": "recording.blur",
+      "actorId": "recording",
+      "property": "blur",
       "initial": 11.0,
       "events": [
         {
@@ -862,15 +865,7 @@
       ]
     }
   ],
-  "stateChannels": [
-    {
-      "id": "terminal.recording",
-      "actorId": "terminal",
-      "state": "recording",
-      "initial": "live-hot-reload",
-      "events": []
-    }
-  ],
+  "stateChannels": [],
   "cues": [
     {
       "id": "command",

@@ -13,10 +13,10 @@ use super::{
     plot::PreparedPlot,
     rolling::RollingNumberInput,
     sequence::PreparedSequence,
-    terminal::TerminalInput,
     tree::PreparedTree,
     value::PreparedValueToken,
     venn::PreparedVenn,
+    video::VideoInput,
 };
 use crate::render::{RichTextSource, VerticalMask};
 use anyhow::{Context, Result, bail};
@@ -37,9 +37,9 @@ use psychopomp::{
     stage::{STAGE_RECIPE, StagePlan},
     state::{StateTrack, TimedState},
     task::{TASK_RECIPE, TaskRecipePlan},
-    terminal::TERMINAL_RECORDING_RECIPE,
     tree::TREE_RECIPE,
     value::VALUE_TOKEN_RECIPE,
+    video::VIDEO_RECIPE,
 };
 use serde::de::DeserializeOwned;
 use serde_json::Value;
@@ -61,6 +61,7 @@ pub(super) struct Plan {
     pub trees: Vec<PreparedTree>,
     pub plots: Vec<PreparedPlot>,
     pub lanes: Vec<PreparedLanes>,
+    pub videos: Vec<VideoInput>,
 }
 pub(super) enum RootPlan {
     Blank,
@@ -70,7 +71,6 @@ pub(super) enum RootPlan {
         pointer: Option<String>,
         selectors: Vec<(String, EditorSelection)>,
     },
-    Terminal(Box<TerminalInput>),
     Deployment(Box<PreparedDeploymentQueue>),
     Grid(Box<PreparedGrid>),
     Diagram {
@@ -322,7 +322,6 @@ impl RootPlan {
             Self::Blank => None,
             Self::Title(_) => Some("title-card"),
             Self::Editor { .. } => Some(EDITOR_RECIPE),
-            Self::Terminal(_) => Some(TERMINAL_RECORDING_RECIPE),
             Self::Deployment(_) => Some(DEPLOYMENT_QUEUE_RECIPE),
             Self::Grid(_) => Some(GRID_RECIPE),
             Self::Diagram { .. } => Some(DIAGRAM),
@@ -336,7 +335,7 @@ fn put_root(root: &mut RootPlan, next: RootPlan) -> Result<()> {
             bail!("plan renderer currently supports at most one {existing} root actor");
         }
         bail!(
-            "editor, title-card, terminal-recording, deployment-queue, keyed-grid, prototype-diagram, and stage actors are exclusive root recipes"
+            "editor, title-card, deployment-queue, keyed-grid, prototype-diagram, and stage actors are exclusive root recipes"
         );
     }
     *root = next;
@@ -361,6 +360,7 @@ impl Plan {
         let mut trees = Vec::new();
         let mut plots = Vec::new();
         let mut lanes = Vec::new();
+        let mut videos = Vec::new();
         for actor in &plan.actors {
             match actor.recipe.as_str() {
                 "title-card" => put_root(&mut root, RootPlan::Title(Title::new(actor, &plan)?))?,
@@ -379,15 +379,6 @@ impl Plan {
                         })?;
                     pointers.push((actor.id.clone(), recipe.editor_id));
                 }
-                TERMINAL_RECORDING_RECIPE => put_root(
-                    &mut root,
-                    RootPlan::Terminal(Box::new(TerminalInput::new(
-                        actor,
-                        &plan.media,
-                        &plan.state_channels,
-                        plan.duration_nanos,
-                    )?)),
-                )?,
                 DEPLOYMENT_QUEUE_RECIPE => put_root(
                     &mut root,
                     RootPlan::Deployment(Box::new(PreparedDeploymentQueue::new(
@@ -455,6 +446,11 @@ impl Plan {
                 TREE_RECIPE => trees.push(PreparedTree::new(actor, &plan.continuous_channels)?),
                 PLOT_RECIPE => plots.push(PreparedPlot::new(actor, &plan.continuous_channels)?),
                 LANES_RECIPE => lanes.push(PreparedLanes::new(actor, &plan.continuous_channels)?),
+                VIDEO_RECIPE => videos.push(VideoInput::new(
+                    actor,
+                    &plan.media,
+                    &plan.continuous_channels,
+                )?),
                 recipe => bail!("unsupported actor recipe '{recipe}'"),
             }
         }
@@ -495,10 +491,10 @@ impl Plan {
             let selection = editor.select(&target.id, &selector)?;
             selectors.push((target.id.clone(), selection));
         }
-        let consumed = match &root {
-            RootPlan::Terminal(input) => input.media_ids().collect::<HashSet<_>>(),
-            _ => HashSet::new(),
-        };
+        let consumed = videos
+            .iter()
+            .map(VideoInput::media_id)
+            .collect::<HashSet<_>>();
         for media in &plan.media {
             if matches!(media.kind, MediaKindPlan::Audio)
                 || (matches!(media.kind, MediaKindPlan::Video)
@@ -529,6 +525,7 @@ impl Plan {
             trees,
             plots,
             lanes,
+            videos,
         };
         match &result.root {
             RootPlan::Editor { editor, .. } => editor.compile_channels(&mut result.plan)?,
@@ -563,7 +560,7 @@ impl Plan {
             | RootPlan::Grid(_)
             | RootPlan::Diagram { .. }
             | RootPlan::Stage { .. } => true,
-            RootPlan::Terminal(_) | RootPlan::Deployment(_) => false,
+            RootPlan::Deployment(_) => false,
         };
         root && self.plan.state_channels.is_empty()
             && self.plan.media.is_empty()

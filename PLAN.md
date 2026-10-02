@@ -428,7 +428,7 @@ It fails if most effort goes into general layout, language syntax, codecs, edito
 
 The lightweight `agent-demo` proves the generic process workflow, and the canonical hero proves a real editor-heavy Rust Scene Program can cross Scene Plan v2 through stable inline parts, logical Semantic Targets, renderer-assisted measurement, continuous pointer/highlight channels, and a concrete editor recipe. Its generated plan and Rust source are checked for byte equality, and the complete 300-frame encoded artifact matched the deleted direct implementation exactly.
 
-The `opencode-session-tool` lesson now proves the narration-rich media seam. One inspectable plan owns an authentic live session creating and hot-reloading a plugin tool, ElevenLabs voiceover, layered SFX, continuous card motion, discrete recording and explanatory-text state, and named cues. The renderer accepts video only when the concrete terminal recipe consumes its media ID, while script and layer audio continue through exact composition and FFmpeg placement.
+The `opencode-session-tool` lesson now proves the narration-rich media seam. One inspectable plan owns an authentic live session creating and hot-reloading a plugin tool, ElevenLabs voiceover, layered SFX, continuous card motion, discrete recording and explanatory-text state, and named cues. The renderer accepts video only when a Video Card consumes its media ID, while script and layer audio continue through exact composition and FFmpeg placement.
 
 The `pr-walkthrough` reel proves the code-explainer direction end to end: narration
 voiced and transcribed by one script, phrase-keyed choreography, Sequence Diagrams
