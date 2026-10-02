@@ -55,7 +55,7 @@ so requesting 120 fps on a 60 Hz screen cannot produce 120 visible frames/sec.
 
 The default live preview caches stationary editor chrome and paints code directly
 over it, without the export compositor's final optical resampling of glyphs.
-Camera, visible pointer, and annotation combinations fall back to the full
+Camera and visible pointer combinations fall back to the full
 renderer. `--full-quality` disables this preview shortcut; it still samples one
 instant rather than an export shutter. It can be much slower.
 

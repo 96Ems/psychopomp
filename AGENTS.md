@@ -9,13 +9,13 @@ domain and current architecture as contracts; consult relevant experiment
 history for evidence rather than treating earlier trials as current policy.
 
 - `CONTEXT.md` defines the domain language. Use its terms in code and documentation.
-- `ARCHITECTURE.md` describes the current module boundaries and intentional non-abstractions.
-- `PLAN.md` defines the product direction, milestones, scope cuts, and success criteria.
+- `ARCHITECTURE.md` is the module map and describes the current boundaries and intentional non-abstractions.
 - `SCENE_PLANS.md` documents the lightweight Scene Program and persistent renderer workflow.
-- `NOTES.md` records what the prototype has and has not proved.
 - `PRIOR_ART.md` records the animation systems that should inform timeline and authoring API work.
+- `docs/history/` keeps the original plan (`PLAN.md`) and experiment findings (`NOTES.md`) as evidence, not current policy.
+- `scenes/effect-succeed-slides` shows how an Effect Institute lesson is ported as a Scene Plan; `/Users/kit/code/experiments/typescript/effect-institute` remains the source of truth for its choreography.
 
-Keep these documents accurate when a change alters a domain term, architectural boundary, validated finding, or milestone direction. Do not duplicate their detail here.
+Keep these documents accurate when a change alters a domain term, architectural boundary, or validated finding. Do not duplicate their detail here.
 
 ## Commands
 
@@ -24,9 +24,6 @@ cargo test --workspace
 cargo fmt --check
 cargo clippy --workspace --all-targets --all-features -- -D warnings
 cargo run --release
-cargo run --release -- render effect-shows-errors
-cargo run --release -- render chapter intro
-cargo run --release -- render chapter basics
 cargo run -p psychopomp-effect-succeed-slides -- target/effect-succeed-slides.json
 cargo run --release -- plan present target/effect-succeed-slides.json
 cargo run -- plan steps target/effect-succeed-slides.json
@@ -59,108 +56,19 @@ Do not run the full render as routine validation when unit tests and static chec
 
 ## Architecture
 
-- `crates/psychopomp/src/code.rs`: stable line identity, code documents and snapshots, validation, and sampled line placement
-- `crates/psychopomp/src/composition.rs`: exact media time, immutable assets and clips, script/layer scheduling, cues, and cross-media composition
-- `crates/psychopomp/src/dsl.rs`: public Rust scene values, semantic targets, actor helpers, and lowering into scalar tracks
-- `crates/psychopomp/src/editor.rs`: typed editor recipe data lowering stable inline parts and logical ranges into Code Transitions
-- `crates/psychopomp/src/editor/compiled.rs`: shared validated catalog, reveal ranges, and legacy/keyed placement used by inspection and rendering
-- `crates/psychopomp/src/editor/stability.rs`: GPU-free step deltas and heuristic common-text stability warnings
-- `crates/psychopomp/src/editor/diff.rs`: Stepped Diff recipe builder (keep/add/remove lines, room-opening snapshots, Line Mark warnings)
-- `crates/psychopomp/src/task.rs`: typed planned Task state schedules
-- `crates/psychopomp/src/grid.rs`: finite keyed product catalogs and semantic Grid Snapshots
-- `crates/psychopomp/src/value.rs`: immutable Value Token recipe data for finite teaching diagrams
-- `crates/psychopomp/src/author.rs`: typed Scene Plan builder and stable actor/channel handles for lightweight Scene Programs
-- `crates/psychopomp/src/plan.rs`: versioned renderer-independent Scene Plan values and structured validation
-- `crates/psychopomp/src/plan/channels.rs`: exact scalar-event lowering and opt-in snapshot-destination reduction; raw event ordering remains distinct
-- `crates/psychopomp/src/state.rs`: deterministic arbitrary-time discrete State Tracks
-- `crates/psychopomp/src/playback.rs`: interruptible step destinations, continuous track retargeting, and a pausable local presentation clock
-- `crates/psychopomp/src/terminal.rs`: lightweight terminal-recording recipe values for planned video media
-- `crates/psychopomp/src/deployment.rs`: typed deployment-queue recipe values, semantic snapshots, and authoring handle
-- `crates/psychopomp/src/timeline.rs`: relative Animation and explicit-time continuous Property Track compilation
-- `crates/psychopomp/src/timeline/retarget.rs`: shared cancellation-safe numeric schedule for Playback and authored resting entrances
-- `crates/psychopomp/src/motion.rs`: deterministic arbitrary-time analytic spring sampling with position and velocity
-- `crates/psychopomp/src/transcript.rs`: word timing ingestion, word and phrase cue lookup
-- `crates/psychopomp/src/narration.rs`: `scripts/narrate.ts` manifests loaded as narration clips, placed as Script Clips, with panicking phrase lookups
-- `crates/psychopomp/src/sequence.rs`: Sequence Diagram recipe values and row constructors, slot geometry, validation, and the `SequenceActor` authoring handle
-- `crates/psychopomp/src/caption.rs`: Caption recipe values and the `CaptionActor` authoring handle (typing, show, hide)
-- `crates/psychopomp/src/rolling.rs`: Rolling Number recipe values, value tokenization, the closed-form roll compiler, and the `RollingNumberActor` handle (`roll`, show, hide)
-- `crates/psychopomp/src/math.rs` and `math/`: shared motion and geometry math (glam vectors, lerp/remap/smoothstep, easing, closed-form dynamics such as the settling spring, arc-length curves, shape ports and connectors, deterministic hash)
-- `crates/psychopomp/src/stage.rs`: Stage elements, strict channels, perspective camera, orb geometry, the packet clock (`stage::packet`), and the `StageActor` authoring handle (`to`, `ease`, `bounce`, `settle_in`, `clock`/`clock_for`, `connect`, `send`, `hit`, `kick`, `jolt`, `twang`, `land`)
-- `crates/psychopomp/src/tone.rs`: semantic Tone roles shared by explainer recipes
-- `crates/psychopomp/src/highlight.rs`: line-local TypeScript highlighting into editor spans
-- `crates/psychopomp-render/src/plan_runtime/reel.rs`: Reel preparation, layer mixing, media retiming, and reel frame/video delivery
-- `crates/psychopomp-render/src/plan_runtime/sequence.rs` and `caption.rs`: strict-channel preflight for the explainer overlays
-- `crates/psychopomp-render/src/render/sequence.rs` and `render/caption.rs`: Sequence Diagram and Caption pixels
-- `crates/psychopomp-render/src/plan_runtime/rolling.rs` and `render/rolling.rs`: Rolling Number preflight/compilation and its masked, smeared wheels
-- `crates/psychopomp-render/src/plan_runtime/stage.rs`: Stage root preflight and preparation
-- `crates/psychopomp-render/src/render/stage.rs`, `stage.wgsl`, `stage_post.wgsl`: Stage primitives, HDR bloom, and composite; `PSYCHOPOMP_SHADER_DIR` loads the WGSL live
-- `crates/psychopomp/src/effects/`: GPU-free special-effect clocks and particle poses; shared dynamics stay in `psychopomp::math::dynamics`
-- `crates/psychopomp-render/src/render/effects/*.wgsl`: binding-free noise, combustion, and pressure Modules, composed by the Stage shaders; see `EFFECTS.md`
-- `crates/psychopomp-render/src/render.rs`: concrete headless `wgpu` renderer, sprite compositor, and code annotations
-- `crates/psychopomp-render/src/render/effects/`: independent pixel recipes for interchangeable short annotation effects
-- `crates/psychopomp-render/src/render/task.rs`: concrete Effect Task recipe and compositing
-- `crates/psychopomp-render/src/render/grid.rs`: opaque connected 3D grid, sampled-bounds centering, and cached symbols/labels
-- `crates/psychopomp-render/src/render/grid/edges.rs`: centered screen-space grid strokes, nearest-depth selection, and shared-edge coverage union
-- `crates/psychopomp-render/src/render/value.rs`: Value Token tiles using shared card coverage and cached fractional text
-- `crates/psychopomp-render/src/render/theme.rs`: named native/export paint palettes; no layout or motion
-- `crates/psychopomp-render/src/render/rich_text.rs`: bounded Markdown shaping, decoration, and theme-aware glyph cache
-- `crates/psychopomp-render/src/render/text.rs` and `text/raster.rs`: typed plain-text cache and exact native glyph rasterization shared with the experimental bake
-- `crates/psychopomp-render/src/render/venn.rs`: sampled rounded-set geometry and exact intersection hatching
-- `crates/psychopomp-render/src/render/header.rs`: fixed-edge line/word rises and mirrored, fading reflection ink
-- `crates/psychopomp-render/src/render/terminal.rs`: concrete terminal recording and command-file presentation
-- `crates/psychopomp-render/src/render/deployment_queue.rs`: concrete state-driven deployment dashboard UI Surface
-- `crates/psychopomp-render/src/render/ui.rs`: private bounds, inset, split, and terminal line-flow primitives for pixel UI
-- `crates/psychopomp-render/src/render/ui/card.rs`: shared immediate-mode RGBA composition and projected card presentation used by editor, recorded-video, and simulated-UI producers
-- `crates/psychopomp-render/src/encode.rs`: concrete FFmpeg subprocess, raw RGBA protocol, and compiled audio placement
-- `crates/psychopomp-render/src/exposure.rs`: delivery dimensions, shutter samples and weights, linear-light accumulation, and encoding a timeline one exposed frame at a time
-- `crates/psychopomp-render/src/scenes/`: one concrete choreography Module per renderable legacy scene plus their shared target measurement, editor frame, and pointer sampling
-- `crates/psychopomp-render/src/scenes/effect_institute.rs`: private adapter from pinned published lesson artifacts into stable code, Task overlays, and stitched chapter schedules
-- `crates/psychopomp-render/src/main.rs`: command parsing, output selection, and scene dispatch
-- `crates/psychopomp/src/lib.rs`: lightweight public library boundary used by Rust Scene Programs
-- `crates/psychopomp-render/src/plan_runtime.rs`: Scene Plan inspection, validation, rendering, and persistent JSON server
-- `crates/psychopomp-render/src/plan_runtime/preflight.rs`: owned typed recipe inputs, root selection, references, and native eligibility before resources
-- `crates/psychopomp-render/src/plan_runtime/generated.rs`: generated-channel reservation/insertion, including the explicit Task position override
-- `crates/psychopomp-render/src/plan_runtime/delivery.rs`: PNG and MP4 delivery from a prepared scene
-- `crates/psychopomp-render/src/plan_runtime/presentation.rs`: native winit window, step navigation, and smooth/pixelated display filtering
-- `crates/psychopomp-render/src/plan_runtime/presentation/worker.rs`: persistent render worker with bounded in-flight sampling and immutable timeline revisions
-- `crates/psychopomp-render/src/plan_runtime/presentation/scheduler.rs`: GPU-free request eligibility, invalidation, completion freshness, and deadlines
-- `crates/psychopomp-render/src/plan_runtime/presentation/debug.rs`: sample-coherent optional native motion diagnostics
-- `crates/psychopomp-render/src/plan_runtime/presentation/gpu.rs`: native wgpu surface and GPU-backed smooth/pixelated frame presentation
-- `crates/psychopomp-render/src/plan_runtime/editor.rs`: concrete editor and attached pointer Scene Plan recipe
-- `crates/psychopomp-render/src/plan_runtime/attachments.rs`: private companion-track compilation for layout-aware semantic coordinates
-- `crates/psychopomp-render/src/plan_runtime/task.rs`: Task state schedules lowered into interruptible scalar visual destinations
-- `crates/psychopomp-render/src/plan_runtime/grid.rs`: GPU-free keyed grid layout and continuous destination compilation
-- `crates/psychopomp-render/src/plan_runtime/grid/table.rs`: fixed-anchor table placement, display headings, and padding/alignment over the same grid catalog
-- `crates/psychopomp-render/src/plan_runtime/value.rs`: Value Token validation and ordinary scalar-channel sampling
-- `crates/psychopomp-render/src/plan_runtime/header.rs`: header word tracks and opt-in resting-entrance delays with cancellation
-- `crates/psychopomp-render/src/plan_runtime/diagram.rs`: finite box/wire preflight and recipe-owned native start delays
-- `crates/psychopomp-render/src/render/diagram.rs` and `diagram.wgsl`: shared native/browser GPU boxes, sampled ports, wire traces and bare flat/isometric views
-- `crates/psychopomp-render/src/plan_runtime/terminal.rs`: concrete planned terminal-recording recipe and video source-time mapping
-- `crates/psychopomp-render/src/plan_runtime/deployment_queue.rs`: deployment snapshot validation, private track compilation, and rendering adapter
-- `crates/psychopomp-render/src/plan_runtime/keyed_layout.rs`: private stable keyed position and presence track compiler
-- `scenes/`: lightweight Rust Scene Programs that emit Scene Plans
-- `scenes/agent-demo/`: smallest Scene Program: one title card, a state channel, and cues
-- `scenes/quark-before-after/`: compact narrated Solid Store versus Quark keyed-identity tutorial
-- `scenes/hero/`: canonical editor-heavy Scene Program and generated plan used by the default render command
-- `scenes/effect-succeed-slides/`: Effect Institute code-reveal adaptation proving manual presentation and video export from one source
-- `scenes/interactive-showcase/`: four-slide native deck covering inline reveals, Task lifecycle/retry, parallel Tasks, and keyed code edits
-- `scenes/keyed-grid/`: native row/table/3D-layer growth and product-reassociation proof
-- `scenes/data-modeling/`: seven-slide types/cardinality, finite correspondence, joystick, sum/product, and illegal-state adaptation
-- `scenes/component-prototypes/`: provisional reusable Typeset, Collection, and Connector showroom; payloads and adapters remain in the three `component_prototype.rs` modules until visual approval
-- `scenes/opencode-architecture/`: four-step Daemon / merge port using the provisional box-and-wire diagram surface
-- `scenes/opencode-jr-architecture/`: narrated Stage-film teaching reel of the OpenCode Jr Slack bot, with one condensed code zoom
-- `scenes/opencode-session-tool/`: rapid-fire OpenCode v2 hot-reload proof using split Vim/OpenCode terminal video, layered SFX, text, and discrete state
-- `scenes/deployment-queue/`: canonical state-driven simulated UI proof with keyed insertion, phase replacement, failure focus, and retry
-- `scenes/pr-walkthrough/`: narrated PR explainer reels; `src/film.rs` is the shared PR-film template (header, chips, behavior and code segments) that `scenes/config-migration/` also uses
-- `scenes/rolling-number/`: Rolling Number showroom: roll up and down, a mid-roll redirect, a carry into a new place, and a shrink
-- `crates/psychopomp-render/src/scene.wgsl`: editor geometry and focus shader
+`ARCHITECTURE.md` is the single module map; update it when a Module's responsibility changes.
+
+- `crates/psychopomp`: lightweight authoring values, Scene Plans, validation, timelines, playback, and recipe data; no GPU.
+- `crates/psychopomp-render` (binary `psychopomp`): `plan_runtime/` preflights and prepares plans, `render/` paints recipes, `exposure.rs` and `encode.rs` deliver video.
+- `scenes/`: one Rust Scene Program per scene or showroom, each emitting a Scene Plan or Reel.
+- A new recipe follows the existing pattern: values and an authoring handle in `crates/psychopomp`, strict preflight in `plan_runtime/<x>.rs`, pixels in `render/<x>.rs`, and a showroom under `scenes/<x>/`.
 
 Preserve these boundaries unless a concrete scene or second implementation demonstrates a better seam. The lightweight `psychopomp` and heavyweight `psychopomp-render` crates are a demonstrated process and compilation seam. Do not introduce a generic scene graph, renderer or encoder traits, plugins, or additional crate splits merely for future flexibility.
 
 ## Engineering Rules
 
 - Prefer the smallest change that improves the benchmark scene or answers a stated prototype question.
-- Keep concrete choreography visible in its scene Module. Move an operation into the DSL only after repeated scene usage demonstrates a deeper interface.
+- Keep concrete choreography visible in its Scene Program. Move an operation into `psychopomp` only after repeated scene usage demonstrates a deeper interface.
 - Keep code identity and layout independent of glyphs, GPUs, colors, FFmpeg, and absolute screen coordinates.
 - Keep layout responsible for target placement and motion responsible for trajectories.
 - Preserve deterministic arbitrary-time sampling. Do not replace trajectories with stateful frame-by-frame integration.
@@ -197,15 +105,6 @@ This is the default for every code presentation and video, not only Effect Insti
 - Give scale, opacity, blur, and secondary geometry independent tracks when the reference uses different springs. A second easing or progress window on an already animated value changes its timing; it is not a neutral implementation detail.
 - Richer staging must remain interruptible and deterministic. Avoid delayed callbacks and direction-dependent pose resets; test each visible channel and its velocity through reversal.
 - Inspect normal-speed and slowed/stepped artifacts, not only endpoint images. The motion-graphics sources and their application are recorded in `PRIOR_ART.md`.
-
-## Effect Institute Ports
-
-- Treat `/Users/kit/code/experiments/typescript/effect-institute` as the source of truth for published lesson choreography.
-- Before porting or changing an animated-code lesson, read its `CLAUDE.md`, `.claude/skills/content-animation/SKILL.md`, and the **Stability Principle** in that skill's `references/animation-dsl.md`. Also read `docs/animation-patterns.md` and `src/lib/animated-code/animation/stability.ts`; the latter is a heuristic warning checker, not a guarantee of maximum stability.
-- Run `bun narrate steps -c <chapter> <section>` in the Effect Institute repo and use the `Delta` output to identify exactly which slot content may change.
-- Require the smallest possible changed-slot markers in the `Delta` output. If the CLI is unavailable, report that limitation and inspect the source variants directly; do not silently claim stability validation or repair unrelated dependencies.
-- Structural Code Transitions may add, remove, or reposition complete lines, but use Inline Reveals for slot-sized changes inside a stable line.
-- Match the published motion constants: complete lines move only on `y` and transition opacity/blur with a 0.45-second zero-bounce spring; variable inline parts transition width/opacity/blur with a 0.4-second zero-bounce spring. Effect Institute lines do not enter or exit by sliding horizontally.
 
 ## Testing
 

@@ -20,21 +20,9 @@ The authoring and rendering contract that preserves common code identity across 
 
 The compiled relationship between two code snapshots. Sampling a code transition places every stable, entering, and exiting line at an arbitrary progress value.
 
-## Code Edit
-
-A renderer-independent actor for one coordinated structural change to code. A Code Edit owns layout and content progress tracks, supplies their zero-state initial values, enters or exits through one Motion, and samples a Code Transition from a compiled Scene. Scenes that deliberately stagger layout and content may still animate those tracks independently.
-
 ## Motion State
 
 The position and velocity of one animated scalar at a specific time. Carrying both values allows a later trajectory to preserve momentum.
-
-## Animation
-
-A pure value describing a property change or the composition of other animations. Sequence, parallel, delay, and hold determine relative timing without rendering or mutating scene state.
-
-## Scene
-
-A pure Rust value containing initial property expressions and a composition. Compiling a scene resolves semantic targets and produces deterministic property tracks plus scheduled media placements and cue ranges.
 
 ## Scene Program
 
@@ -55,18 +43,6 @@ One named scalar property of a stable actor. Ordered set, spring, and ease event
 ## State Channel
 
 One named discrete property of a stable actor. Its compiled State Track retains the previous and current value, completed previous duration, transition time, and current age without depending on frame history.
-
-## UI Snapshot
-
-One complete meaningful state of a simulated interface recipe. A UI Snapshot contains ordered recipe-local item identities and semantic values, not rectangles or animation. Reordering an item changes its layout target without replacing its identity.
-
-## Keyed Layout Transition
-
-A renderer-owned compilation from timestamped UI Snapshots into arbitrary-time position and presence tracks for stable recipe-local item IDs. Each retarget begins from the earlier trajectory's sampled position and velocity. Layout supplies target positions; the Keyed Layout Transition supplies motion between them.
-
-## UI Surface
-
-One stable actor rendered as a simulated application window, dashboard, or panel by a concrete Renderer Recipe. Internal controls and rows remain recipe-local unless another actor demonstrates a need to address them through a Semantic Target.
 
 ## Keyed Grid
 
@@ -246,32 +222,6 @@ added in a step, or removed in a step. Added lines carry an added Line Mark;
 removed lines turn red just before their step. A pure insertion or removal first
 holds blank rows so moving code never crosses entering or leaving code.
 
-## Diagram Port
-
-A side of a stable diagram node with a tangential pixel offset, resolved against
-the node's currently sampled position, dimensions and scale. In Isometric the
-port lies halfway down the sampled side face, including depth and lift. An optional
-width reveal changes the sampled footprint and ports, not the label's font size.
-Top/Bottom
-name footprint edges (−Y/+Y), not the horizontal top/bottom faces of the solid. The provisional
-box-and-wire Diagram Surface uses these ports for attached straight connections;
-endpoints are derived geometry, not separately animated guesses. Node/link IDs
-are authored, and the Scene Program supplies layout destinations. This is neither
-automatic graph layout nor an extension of editor Semantic Targets.
-
-The bare Diagram View may be Flat or Isometric. Both retain the same authored box
-identity and layout; an Isometric Scene Program may add depth/lift entrance tracks
-through the same motion engine. Projecting geometry and ports does not create
-another clock. Isometric uses upright labels and back-to-front whole-box painting
-by sampled solid-center depth along the fixed view ray. Authored order only breaks
-equal-depth ties; it cannot force the middle pair over a nearer box. Wire visibility
-compares sampled top/side faces. This bounded painter is not a general mesh scene
-or an exact solution for arbitrary interpenetrating/translucent solids.
-
-## Composition
-
-A pure, time-bearing value that arranges visual motion and media with sequence, parallel, delay, and hold. Composition owns cross-media timing; Motion remains responsible for visual property trajectories.
-
 ## Asset
 
 Immutable source material identified independently from any use on the timeline. Audio, video, and image assets retain their original files while edits refer to them non-destructively.
@@ -286,11 +236,11 @@ A clip on the primary spoken-media track. Its transcript may drive structural ed
 
 ## Layer Clip
 
-Accompanying timed media such as music, sound effects, or B-roll. Layer clips share composition timing but do not implicitly become part of the editable transcript.
+Accompanying timed media such as music, sound effects, or B-roll. Layer clips share the media clock but do not implicitly become part of the editable transcript.
 
 ## Cue
 
-A named timeline range. Cues may be authored around a composition or imported from transcript word and phrase timing; their start and end can synchronize motion and media. Scheduling a composition `at` a Cue places it at the Cue's start relative to the containing composition's origin, which is the shared media clock for root scene choreography.
+A named timeline range. Cues may be authored or imported from transcript word and phrase timing; their start and end can synchronize motion and media.
 
 ## Transcript
 
@@ -298,7 +248,7 @@ An ordered set of words with source start and end times. Looking up a word occur
 
 ## Media Placement
 
-A compiled relationship between a clip's immutable source range and its scheduled timeline range. Media placement time uses integer nanoseconds so edit boundaries remain exact across repeated composition.
+A compiled relationship between a clip's immutable source range and its scheduled timeline range. Media placement time uses integer nanoseconds so edit boundaries remain exact across repeated edits.
 
 ## Property Track
 
@@ -316,27 +266,19 @@ Attachment follows sampled visible layout, including collapsed Inline Reveals an
 
 A transition that expands or collapses authored spans inside a Stable Line. Variable spans animate width, opacity, and blur while common prefix, infix, and suffix spans retain identity and move to their new positions without replacement. Opposing reveals can exchange slot alternatives horizontally while preserving maximum stability.
 
-## Annotation
-
-A transient or persistent visual attached to a semantic target without changing the target's identity. Short annotations are scheduled in a composition, resolve their semantic target during scene compilation, and sample a deterministic normalized phase at arbitrary media time. The lesson port demonstrates a persistent red error squiggle plus interchangeable prismatic-bloom and focus-pulse celebration effects.
-
 ## Pointer
 
 A stable visual actor that directs attention to a semantic target. Its position and opacity are ordinary property tracks, so retargeting and temporal sampling use the same motion system as every other actor.
 
 ## Task
 
-A stable visual actor representing one Effect computation. Composition schedules its idle, running, succeeded, failed, death, hidden, and retry state changes; the stable task ID preserves identity across those changes.
+A stable visual actor representing one Effect computation. The `effect-task` recipe schedules its idle, running, succeeded, failed, death, hidden, and retry state changes; the stable task ID preserves identity across those changes.
 
 ## Task State
 
 One meaningful snapshot of a Task. A task state selects semantic content and visual targets, while the renderer derives the transition from the preceding state at arbitrary media time. A succeeded task may carry a result or represent payload-free completion.
 
 Planned interactive Tasks lower state changes into continuous geometry and content-presence tracks. A running Task can keep the local playback clock active after those tracks settle, while pause and reduced motion still stop its ambient animation. It illustrates a computation rather than executing an actual Effect.
-
-## Task Pose
-
-The renderer-independent position of one Task. Pose changes are composition leaves distinct from semantic Task State changes, so row recentering cannot replay state feedback. Compiled x/y property tracks preserve position and velocity when layout movement is interrupted or redirected.
 
 ## Terminal Recording
 
@@ -349,11 +291,3 @@ One evaluation of the complete scene within an output frame's shutter interval. 
 ## Editor Frame
 
 The renderer-neutral description of one sampled editor scene: panel position, focus state, and placed code lines.
-
-## Published Lesson
-
-An immutable Effect Institute section artifact containing canonical narration, word timing, stable code template identities, step frames, and optional component snapshots. A Published Lesson is imported into ordinary Psychopomp tracks and renderer recipes; it is not a second authoring language.
-
-## Chapter Reel
-
-One encoded video that arranges Published Lessons in manifest order with chapter and group title intervals. Every section retains its own local media clock and actor namespace while narration clips are placed exactly on the chapter clock.

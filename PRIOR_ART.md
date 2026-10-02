@@ -54,10 +54,9 @@ Alphabet/Alterbet decoding and live joystick input remain unported.
 ## OpenCode Architecture Diagrams
 
 `/Users/kit/code/open-source/opencode-architecture/src/experiments/options/Merge.tsx`
-is the source for Psychopomp's `scenes/opencode-architecture` Daemon / merge port.
+was the source for Psychopomp's former Daemon / merge diagram port (since removed).
 The supplied screenshot shows its third of four steps, not `MergeGoo.tsx`.
-Read-only inspection used HEAD `b7e0fa8` plus the existing working-tree stylesheet;
-the scene README records the exact source file digest and supporting components.
+Read-only inspection used HEAD `b7e0fa8` plus the existing working-tree stylesheet.
 
 The source demonstrates centered finite client/server growth, 450 ms spatial and
 320 ms convergence springs, independent 300 ms scale / 140 ms focus, 120 ms server
@@ -215,7 +214,7 @@ What Psychopomp should avoid:
 - a public retained element tree or serialized flexbox vocabulary
 - copying GPUI's runtime state machinery into an offline renderer whose complete state is already a function of media time
 
-The `deployment-queue` proof takes this narrower path. One UI Snapshot produces recipe-owned target layout, stable keyed tracks preserve motion across snapshot changes, and a private immediate-mode painter reconstructs the complete UI Surface at every Temporal Sample.
+The former `deployment-queue` proof took this narrower path: recipe-owned target layout, stable keyed tracks across snapshot changes, and a private immediate-mode painter that reconstructed the complete surface at every Temporal Sample.
 
 ## Animations.dev
 
@@ -233,7 +232,7 @@ The `deployment-queue` proof takes this narrower path. One UI Snapshot produces 
 - choose easing before duration, then inspect the result in slow motion and at normal speed
 - prefer solid materials or eased multi-stop gradients; plain two-stop color gradients expose banding and often add hierarchy-free decoration
 
-The deployment queue applies the relevant subset with solid materials, stable service order, a no-bounce entrance, critically damped position and presence springs, previous-to-current phase presentation, staggered rich-state replacement, and event-boundary artifact checks. Separate keyed-layout tests prove velocity-preserving redirection and exit/re-entry behavior; the canonical scene does not claim to demonstrate those motions or size-dependent timing. Psychopomp still compiles these choices into deterministic arbitrary-time tracks rather than adopting a browser animation runtime.
+Psychopomp compiles these choices into deterministic arbitrary-time tracks rather than adopting a browser animation runtime.
 
 ### Pointer Motion Principles
 
@@ -374,7 +373,7 @@ Relevant ideas:
 - stable line and part identity prevents unrelated code from being replaced
 - focus and annotations target semantic content
 
-Psychopomp retains these concepts in its first lesson port. The published `effect-shows-errors` narration and word timing sidecar now drive ordinary actor properties and trajectories; inline slots lower to independent reveal properties on stable code lines.
+Psychopomp retains these concepts: inline slots lower to independent reveal properties on stable code lines, as in `scenes/effect-succeed-slides`.
 
 ## Working Synthesis
 
