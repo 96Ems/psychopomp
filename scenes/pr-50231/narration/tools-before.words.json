@@ -1,0 +1,174 @@
+{
+ "wordTimings": [
+  {
+   "word": "Second,",
+   "start": 0,
+   "end": 0.52
+  },
+  {
+   "word": "tool",
+   "start": 0.66,
+   "end": 1.16
+  },
+  {
+   "word": "schemas.",
+   "start": 1.16,
+   "end": 1.86
+  },
+  {
+   "word": "Effect",
+   "start": 1.9,
+   "end": 2.5
+  },
+  {
+   "word": "now",
+   "start": 2.5,
+   "end": 2.9
+  },
+  {
+   "word": "writes",
+   "start": 2.9,
+   "end": 3.2
+  },
+  {
+   "word": "its",
+   "start": 3.2,
+   "end": 3.38
+  },
+  {
+   "word": "schemas",
+   "start": 3.38,
+   "end": 3.9
+  },
+  {
+   "word": "a",
+   "start": 3.9,
+   "end": 4
+  },
+  {
+   "word": "little",
+   "start": 4,
+   "end": 4.1
+  },
+  {
+   "word": "differently.",
+   "start": 4.1,
+   "end": 4.56
+  },
+  {
+   "word": "Reference",
+   "start": 4.9,
+   "end": 5.52
+  },
+  {
+   "word": "names",
+   "start": 5.52,
+   "end": 5.74
+  },
+  {
+   "word": "arrive",
+   "start": 5.74,
+   "end": 6.16
+  },
+  {
+   "word": "encoded.",
+   "start": 6.16,
+   "end": 6.9
+  },
+  {
+   "word": "Plain",
+   "start": 7.1,
+   "end": 7.64
+  },
+  {
+   "word": "numbers",
+   "start": 7.64,
+   "end": 7.82
+  },
+  {
+   "word": "grow",
+   "start": 7.82,
+   "end": 8.18
+  },
+  {
+   "word": "extra",
+   "start": 8.18,
+   "end": 8.54
+  },
+  {
+   "word": "strings,",
+   "start": 8.54,
+   "end": 9
+  },
+  {
+   "word": "like",
+   "start": 9.26,
+   "end": 9.54
+  },
+  {
+   "word": "infinity.",
+   "start": 9.54,
+   "end": 10.02
+  },
+  {
+   "word": "And",
+   "start": 10.36,
+   "end": 10.72
+  },
+  {
+   "word": "a",
+   "start": 10.72,
+   "end": 10.8
+  },
+  {
+   "word": "tool",
+   "start": 10.8,
+   "end": 11.06
+  },
+  {
+   "word": "with",
+   "start": 11.06,
+   "end": 11.24
+  },
+  {
+   "word": "no",
+   "start": 11.24,
+   "end": 11.44
+  },
+  {
+   "word": "arguments",
+   "start": 11.44,
+   "end": 11.96
+  },
+  {
+   "word": "stops",
+   "start": 11.96,
+   "end": 12.3
+  },
+  {
+   "word": "being",
+   "start": 12.3,
+   "end": 12.62
+  },
+  {
+   "word": "an",
+   "start": 12.62,
+   "end": 12.82
+  },
+  {
+   "word": "object",
+   "start": 12.82,
+   "end": 13.12
+  },
+  {
+   "word": "at",
+   "start": 13.12,
+   "end": 13.34
+  },
+  {
+   "word": "all.",
+   "start": 13.34,
+   "end": 13.56
+  }
+ ]
+}

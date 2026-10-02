@@ -1,0 +1,129 @@
+{
+ "wordTimings": [
+  {
+   "word": "This",
+   "start": 0,
+   "end": 0.16
+  },
+  {
+   "word": "pull",
+   "start": 0.16,
+   "end": 0.4
+  },
+  {
+   "word": "request",
+   "start": 0.4,
+   "end": 0.62
+  },
+  {
+   "word": "upgrades",
+   "start": 0.62,
+   "end": 1.12
+  },
+  {
+   "word": "effect",
+   "start": 1.12,
+   "end": 1.5
+  },
+  {
+   "word": "five",
+   "start": 1.5,
+   "end": 2.08
+  },
+  {
+   "word": "release",
+   "start": 2.08,
+   "end": 2.5
+  },
+  {
+   "word": "candidates",
+   "start": 2.5,
+   "end": 2.92
+  },
+  {
+   "word": "in",
+   "start": 2.92,
+   "end": 3.22
+  },
+  {
+   "word": "one",
+   "start": 3.22,
+   "end": 3.52
+  },
+  {
+   "word": "jump.",
+   "start": 3.52,
+   "end": 3.96
+  },
+  {
+   "word": "The",
+   "start": 4.1,
+   "end": 4.44
+  },
+  {
+   "word": "compiler",
+   "start": 4.44,
+   "end": 4.7
+  },
+  {
+   "word": "caught",
+   "start": 4.7,
+   "end": 5.08
+  },
+  {
+   "word": "every",
+   "start": 5.08,
+   "end": 5.62
+  },
+  {
+   "word": "renamed",
+   "start": 5.62,
+   "end": 6.08
+  },
+  {
+   "word": "function.",
+   "start": 6.08,
+   "end": 6.48
+  },
+  {
+   "word": "The",
+   "start": 6.76,
+   "end": 7.18
+  },
+  {
+   "word": "hard",
+   "start": 7.18,
+   "end": 7.46
+  },
+  {
+   "word": "part",
+   "start": 7.46,
+   "end": 7.72
+  },
+  {
+   "word": "was",
+   "start": 7.72,
+   "end": 8.24
+  },
+  {
+   "word": "everything",
+   "start": 8.24,
+   "end": 8.72
+  },
+  {
+   "word": "it",
+   "start": 8.72,
+   "end": 9.02
+  },
+  {
+   "word": "couldn't",
+   "start": 9.02,
+   "end": 9.4
+  },
+  {
+   "word": "catch.",
+   "start": 9.4,
+   "end": 9.62
+  }
+ ]
+}

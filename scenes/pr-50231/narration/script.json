@@ -1,0 +1,36 @@
+{
+  "engine": "elevenlabs",
+  "model": "eleven_v4",
+  "voice": "8olojUk4IXpvKgaOCHXj",
+  "settings": { "stability": 0.5, "similarity": 0.7 },
+  "clips": [
+    {
+      "id": "intro",
+      "text": "[warm, conversational voice] This pull request upgrades Effect, five release candidates in one jump. The compiler caught every renamed function. [quiet, deliberate emphasis] The hard part was everything it couldn't catch."
+    },
+    {
+      "id": "settings",
+      "text": "[measured voice] First, saved settings. The new parser drops any field the schema doesn't name, so an unknown setting would vanish on the next save. [confident] Now every legacy shape has an open rest: the known fields, plus a catch-all record. Unknown fields come back exactly as you left them."
+    },
+    {
+      "id": "tools-before",
+      "text": "[curious] Second, tool schemas. Effect now writes its schemas a little differently. Reference names arrive encoded. Plain numbers grow extra strings, like infinity. And a tool with no arguments stops being an object at all."
+    },
+    {
+      "id": "tools-after",
+      "text": "[confident, precise] So we decode the names, show Effect's own number encoding as just a number, but keep strings an author wrote on purpose. Empty tools become a real empty object, checked against what each provider actually receives."
+    },
+    {
+      "id": "permissions-before",
+      "text": "[restrained urgency] Third, the one that really mattered. Permission rules are last match wins, so their order is the policy. But Effect no longer keeps your key order. Take an agent that allows everything, asks before shell, and denies edits... [quiet, deliberate emphasis] It would have silently allowed both."
+    },
+    {
+      "id": "permissions-after",
+      "text": "[relieved, understated] The fix rebuilds the rules in the order you wrote them. Shell asks again. Edits are denied. And the new tests fail without it."
+    },
+    {
+      "id": "outro",
+      "text": "[warm, conversational voice] All eight checks pass, on Linux and Windows. That's pull request five oh two three one. [quiet, satisfied] A newer Effect, and nothing you depend on changes."
+    }
+  ]
+}
