@@ -415,6 +415,22 @@ outside Continuous Channels, a settling number marks its samples distinct
 (`ambient_time`), including over a Stage, so shutter samples are not merged. Its
 schedule follows the authored clock, so plans using it are export-only.
 
+`plot` and `lanes` are chart overlays (drawn just after sequences) that share an
+axis vocabulary. The lightweight `axis.rs` owns `AxisPlan` (range, ticks, label,
+unit) with tick choice (`every`, `nice`) and tabular tick labels; `plot.rs` and
+`lanes.rs` own payloads, validation, strict channel matching (`accepts`, which
+matches `series.<id>.…` and `lane.<id>.…` by prefix and suffix so ids may contain
+dots), interpolation (`PlotSeriesPlan::y_at`, `slope_at`), and the `PlotActor`
+and `LanesActor` handles. A plot's curves are points the Scene Program sampled,
+optionally with exact slopes; the renderer never evaluates a function.
+`LanesPlan::from_scene_plan` compiles selected channels with the ordinary
+`compile_channels` to sample their sparklines, so a Lanes view shows the tracks
+the renderer would play. Pixels come from `render/plot.rs` and `render/lanes.rs`
+over `render/chart.rs`, which holds the shared ink: snapped CommitMono labels,
+`chart_axis` (ticks disclosed as the line reaches them, fading beside a playhead
+readout), dashes along arc length, dots, diamonds, and readout tabs. Both draw
+only from channels, so they are native-presentable.
+
 ### Stage
 
 `stage` is an exclusive root recipe. The lightweight crate (`stage.rs`) owns the

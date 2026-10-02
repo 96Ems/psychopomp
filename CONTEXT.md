@@ -226,6 +226,26 @@ and suffix spans slide with the layout. The values and their times belong to the
 recipe; a later change redirects wheels from their current position and velocity.
 It is a display of authored values, not a numeric tween.
 
+## Plot
+
+A function chart for explaining motion and metrics: curves over an x and a y
+axis, each the Scene Program's own sampled points (for a motion, position with
+its exact velocity as the slope). The renderer draws a curve on along its
+length, rides a dot along it at the shared playhead, and shows the tangent
+there as a velocity arrow; it never evaluates a function. Marks label a
+moment, such as a retarget. A Plot depicts computed values; it does not compute
+them.
+
+## Lanes
+
+A track view of channels over time: a seconds ruler, one lane per channel with
+keyframe diamonds at its event times and a sparkline of its values, cue
+brackets above the ruler, and a scrubbing playhead. Keys the playhead has
+crossed light and cool by playhead distance, so scrubbing either way samples
+deterministically. Built from a Scene Plan, its sparklines are the compiled
+Property Tracks the renderer would play. Plot and Lanes share one Axis
+vocabulary (range, ticks, label, unit).
+
 ## Tone
 
 A semantic color role shared by explainer recipes: plain, request, success,

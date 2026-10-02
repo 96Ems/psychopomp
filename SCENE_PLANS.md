@@ -18,6 +18,7 @@ machinery:
 | A pull request: broken behavior, the fix, the diff | `scenes/config-migration` (smallest) or `scenes/pr-walkthrough` | `psychopomp_pr_walkthrough::film`, `narration`, `editor::diff`, `sequence` rows |
 | A system, as a 3D film of cards, orbs, and packets | `scenes/opencode-jr-architecture`, `scenes/pr-walkthrough/src/flagship.rs` | `stage::StageActor` (`settle_in`, `send`, `hit`, `jolt`), `caption` |
 | Code changing step by step, presented live | `scenes/effect-succeed-slides`, `scenes/interactive-showcase` | `editor` recipes, `PresentationStepPlan` |
+| Springs, easing, retargeting, or a metric as curves; a plan's channels over time | `scenes/charts` | `plot::PlotActor` (`draw`, `ride`, `velocity`), `lanes::LanesPlan::from_scene_plan` |
 | A single titled idea | `scenes/agent-demo` | `PlanBuilder` channels and cues |
 
 1. Write the narration script and voice it with `bun scripts/narrate.ts` (`--draft`
@@ -514,6 +515,47 @@ Components used by explainers:
   The showroom is `cargo run -p psychopomp-rolling-number` (writes
   `target/rolling-number.json`); render it with
   `cargo run --release -- plan render target/rolling-number.json output/rolling-number.mp4 --theme opencode`.
+- Axes (shared by `plot` and `lanes`): `{ range: [start, end], ticks?, label?, unit? }`.
+  `AxisPlan::new(range).every(step)` or `.nice(count)` chooses ticks; labels share
+  the fewest exact decimals and append `unit`.
+- `plot`: `origin` (top-left of the data frame), `size`, `x` and `y` axes,
+  `series` of `{ id, label?, tone?, dashed?, points: [[x, y]], slopes? }` (x never
+  decreasing; a repeated x draws a step; `slopes` are exact dy/dx per point, else
+  central differences), and `marks` of `{ id, x, label? }`. Channels: `opacity`,
+  `x`, `y`, `axes` (draw-on), `playhead` (an x value; no playhead without the
+  channel), `playhead.opacity`, `series.<id>.draw|opacity|ride|velocity`, and
+  `mark.<id>.opacity`. A riding series puts a dot at the playhead; `velocity`
+  adds its tangent arrow (where the dot will be 8% of the x range later) and a
+  signed `v` readout above the frame. The Scene Program computes every curve:
+  `PlotSeriesPlan::sampled(id, label, tone, range, samples, |x| ..)` or
+  `::motion(.., |t| MotionState)` for exact velocities. Sample motions from the
+  compiled Property Track to show what the engine actually does.
+  ```rust
+  let mut plot = PlotActor::declare(&mut scene, "plot", &PlotPlan::new(
+      [250.0, 250.0], [1420.0, 560.0],
+      AxisPlan::new([0.0, 1.6]).every(0.2).label("time (s)"),
+      AxisPlan::new([0.0, 1.3]).every(0.5).label("position"))
+      .series(PlotSeriesPlan::motion("bouncy", "bouncy", Tone::Accent, [0.0, 1.6], 321, &track)))?;
+  plot.show(&mut scene, at, 1.0);               // fade in, draw the axes
+  let drawn = plot.draw(&mut scene, "bouncy", at, 1.4);
+  let arrived = plot.ride(&mut scene, "bouncy", [0.0, 1.6], drawn, 3.0);
+  plot.velocity(&mut scene, "bouncy", drawn, 1.0);
+  plot.stop_ride(&mut scene, "bouncy", arrived);
+  ```
+- `lanes`: `origin` (top-left, above the cue row), `width`, `time` axis (seconds),
+  optional `labelWidth` (300) and `laneHeight` (48), `lanes` of `{ id, label,
+  tone?, keys?: [seconds], curve?: [[seconds, value]] }` (sparklines scale to
+  their own range), and `cues` of `{ id, start, end, label? }`. Channels:
+  `opacity`, `x`, `y`, `reveal` (ruler, lanes top to bottom, then cues),
+  `playhead` (seconds), `playhead.opacity`, and `lane.<id>.opacity|emphasis`.
+  The cue under the playhead brightens and crossed keys light, then cool.
+  `LanesPlan::from_scene_plan(&plan, origin, width, |channel| Some(label))` builds
+  lanes from a plan's continuous channels: keys at their event times, sparklines
+  from the compiled tracks, and the plan's cues. `LanesActor::show`, `scrub`, and
+  `emphasize` write the channels.
+  The showroom is `cargo run -p psychopomp-charts` (writes `target/charts.json`);
+  render it with
+  `cargo run --release -- plan render target/charts.json output/charts.mp4 --theme neutral`.
 - Editor Line Marks: `"mark": "added" | "removed"` on a line, with presence
   channel `mark.<line-id>`; `panel-x`, `panel-y`, and `panel-opacity` move and fade the card (the Stepped Diff
   enters on `panel-y`).

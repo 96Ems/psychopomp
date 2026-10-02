@@ -42,6 +42,8 @@ cargo run --release -- plan present target/slideshow-components/deck.json
 cargo run -p psychopomp-pr-walkthrough
 cargo run -p psychopomp-rolling-number
 cargo run --release -- plan render target/rolling-number.json output/rolling-number.mp4 --theme opencode
+cargo run -p psychopomp-charts
+cargo run --release -- plan render target/charts.json output/charts.mp4 --theme neutral
 cargo run --release -- plan render scenes/pr-walkthrough/pr-walkthrough.reel.json output/pr-walkthrough.mp4 --theme opencode
 bun scripts/narrate.ts <scene>/narration/script.json [--draft]
 bun scripts/sheet.ts <plan-or-reel.json> <from:to:step | t1,t2,...> [--theme NAME] [--crop x,y,w,h] [--shutter]
@@ -83,6 +85,9 @@ Do not run the full render as routine validation when unit tests and static chec
 - `crates/psychopomp/src/narration.rs`: `scripts/narrate.ts` manifests loaded as narration clips, placed as Script Clips, with panicking phrase lookups
 - `crates/psychopomp/src/sequence.rs`: Sequence Diagram recipe values and row constructors, slot geometry, validation, and the `SequenceActor` authoring handle
 - `crates/psychopomp/src/caption.rs`: Caption recipe values and the `CaptionActor` authoring handle (typing, show, hide)
+- `crates/psychopomp/src/axis.rs`: `AxisPlan` (range, ticks, label, unit), `nice_ticks`, and tabular tick labels shared by Plot and Lanes
+- `crates/psychopomp/src/plot.rs`: Plot recipe values (frame, axes, sampled series with optional exact slopes, marks), interpolation, strict channel matching, and the `PlotActor` handle (`show`, `draw`, `fade`, `ride`, `velocity`, `mark`)
+- `crates/psychopomp/src/lanes.rs`: Lanes recipe values (time axis, lanes with keys and sparklines, cues), `LanesPlan::from_scene_plan`, and the `LanesActor` handle (`show`, `scrub`, `emphasize`)
 - `crates/psychopomp/src/rolling.rs`: Rolling Number recipe values, value tokenization, the closed-form roll compiler, and the `RollingNumberActor` handle (`roll`, show, hide)
 - `crates/psychopomp/src/math.rs` and `math/`: shared motion and geometry math (glam vectors, lerp/remap/smoothstep, easing, closed-form dynamics such as the settling spring, arc-length curves, shape ports and connectors, deterministic hash)
 - `crates/psychopomp/src/stage.rs`: Stage elements, strict channels, perspective camera, orb geometry, the packet clock (`stage::packet`), and the `StageActor` authoring handle (`to`, `ease`, `bounce`, `settle_in`, `clock`/`clock_for`, `connect`, `send`, `hit`, `kick`, `jolt`, `twang`, `land`)
@@ -91,6 +96,7 @@ Do not run the full render as routine validation when unit tests and static chec
 - `crates/psychopomp-render/src/plan_runtime/reel.rs`: Reel preparation, layer mixing, media retiming, and reel frame/video delivery
 - `crates/psychopomp-render/src/plan_runtime/sequence.rs` and `caption.rs`: strict-channel preflight for the explainer overlays
 - `crates/psychopomp-render/src/render/sequence.rs` and `render/caption.rs`: Sequence Diagram and Caption pixels
+- `crates/psychopomp-render/src/plan_runtime/plot.rs`, `lanes.rs` and `render/plot.rs`, `render/lanes.rs`: Plot and Lanes strict-channel preflight and pixels over the shared chart ink in `render/chart.rs` (snapped labels, axis rulers, dashes, dots, diamonds, readout tabs)
 - `crates/psychopomp-render/src/plan_runtime/rolling.rs` and `render/rolling.rs`: Rolling Number preflight/compilation and its masked, smeared wheels
 - `crates/psychopomp-render/src/plan_runtime/stage.rs`: Stage root preflight and preparation
 - `crates/psychopomp-render/src/render/stage.rs`, `stage.wgsl`, `stage_post.wgsl`: Stage primitives, HDR bloom, and composite; `PSYCHOPOMP_SHADER_DIR` loads the WGSL live
@@ -152,6 +158,7 @@ Do not run the full render as routine validation when unit tests and static chec
 - `scenes/opencode-session-tool/`: rapid-fire OpenCode v2 hot-reload proof using split Vim/OpenCode terminal video, layered SFX, text, and discrete state
 - `scenes/deployment-queue/`: canonical state-driven simulated UI proof with keyed insertion, phase replacement, failure focus, and retry
 - `scenes/pr-walkthrough/`: narrated PR explainer reels; `src/film.rs` is the shared PR-film template (header, chips, behavior and code segments) that `scenes/config-migration/` also uses
+- `scenes/charts/`: Plot and Lanes showroom: critically damped vs bouncy springs, a riding playhead with its velocity arrow, a retarget beside a restart from rest (all from compiled Property Tracks), then Lanes of the plot's own channels
 - `scenes/rolling-number/`: Rolling Number showroom: roll up and down, a mid-roll redirect, a carry into a new place, and a shrink
 - `crates/psychopomp-render/src/scene.wgsl`: editor geometry and focus shader
 
