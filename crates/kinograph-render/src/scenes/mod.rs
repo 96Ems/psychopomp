@@ -1,16 +1,16 @@
-use std::{path::Path, time::Instant};
+use std::{ops::Range, path::Path, time::Instant};
 
 use anyhow::{Context, Result, bail};
 
 use kinograph::{
     code::{CodeLine, PlacedLine, StyledSpan, SyntaxStyle},
     composition::{Duration, MediaPlacement, Time, TimeRange},
-    dsl::{CompiledScene, Pointer, TargetGeometry},
+    dsl::{AnnotationFrame, Code, CompiledScene, Pointer, TargetGeometry, TextTarget},
 };
 
 use crate::{
     encode::{FfmpegEncoder, VideoSpec},
-    render::{HeadlessRenderer, PointerFrame, TextRangeBounds},
+    render::{EditorFrame, HeadlessRenderer, InlineRevealFrame, PointerFrame, TokenHighlight},
 };
 
 pub(crate) mod effect_institute;
@@ -27,37 +27,16 @@ const TEMPORAL_SAMPLES: u32 = 8;
 const ENTRANCE_TEMPORAL_SAMPLES: u32 = 16;
 const SHUTTER_ANGLE: f32 = 180.0;
 const WORKSPACE_ROOT: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../..");
-const _: () = assert!(TEMPORAL_SAMPLES > 0);
 
-pub(crate) fn encode_video(
+/// Encode a legacy scene: `samples_at` chooses each frame's shutter samples
+/// from its center time; samples are averaged on the CPU.
+pub(crate) fn encode_scene(
     renderer: &mut HeadlessRenderer,
     output: &Path,
     scene: &CompiledScene,
-    render_sample: impl FnMut(&mut HeadlessRenderer, f32) -> Result<Vec<u8>>,
-) -> Result<()> {
-    encode_video_with_samples(
-        renderer,
-        output,
-        scene,
-        TEMPORAL_SAMPLES,
-        ENTRANCE_TEMPORAL_SAMPLES,
-        &[0.0..1.0],
-        render_sample,
-    )
-}
-
-/// Legacy scenes: `temporal_samples` per frame, `entrance_temporal_samples`
-/// inside `high_sample_ranges` (scene seconds), averaged on the CPU.
-pub(crate) fn encode_video_with_samples(
-    renderer: &mut HeadlessRenderer,
-    output: &Path,
-    scene: &CompiledScene,
-    temporal_samples: u32,
-    entrance_temporal_samples: u32,
-    high_sample_ranges: &[std::ops::Range<f32>],
+    samples_at: impl FnMut(f64) -> u32,
     mut render_sample: impl FnMut(&mut HeadlessRenderer, f32) -> Result<Vec<u8>>,
 ) -> Result<()> {
-    assert!(temporal_samples > 0 && entrance_temporal_samples > 0);
     let window = TimeRange::new(Time::ZERO, Time::ZERO.after(scene.duration()));
     encode_exposures(
         renderer,
@@ -65,16 +44,7 @@ pub(crate) fn encode_video_with_samples(
         scene.duration(),
         scene.media(),
         window,
-        |center| {
-            if high_sample_ranges
-                .iter()
-                .any(|range| range.contains(&(center as f32)))
-            {
-                entrance_temporal_samples
-            } else {
-                temporal_samples
-            }
-        },
+        samples_at,
         |time| Ok(time.to_bits()),
         |renderer, exposure| {
             accumulate(renderer, exposure, |renderer, time| {
@@ -82,6 +52,17 @@ pub(crate) fn encode_video_with_samples(
             })
         },
     )
+}
+
+/// Eight samples per frame inside `ranges` (scene seconds), four elsewhere.
+pub(crate) fn boosted_samples(ranges: &[Range<f32>]) -> impl Fn(f64) -> u32 + '_ {
+    move |center| {
+        if ranges.iter().any(|range| range.contains(&(center as f32))) {
+            8
+        } else {
+            4
+        }
+    }
 }
 
 /// Samples per frame for Scene Plans: more in the first second, where
@@ -283,36 +264,72 @@ fn linear_tables() -> &'static LinearTables {
     })
 }
 
-#[derive(Clone, Copy)]
-struct CodeTarget {
-    bounds: TextRangeBounds,
-    line_y: f32,
-}
-
-impl From<CodeTarget> for TargetGeometry {
-    fn from(target: CodeTarget) -> Self {
-        Self {
-            x: target.bounds.x,
-            width: target.bounds.width,
-            line_y: target.line_y,
-        }
-    }
-}
-
+/// Measure `text` on a placed line, keyed by that same target.
 fn measure_target(
     renderer: &mut HeadlessRenderer,
     lines: &[PlacedLine<'_>],
     line_id: &str,
     text: &str,
-) -> Result<CodeTarget> {
+) -> Result<(TextTarget, TargetGeometry)> {
     let placed = lines
         .iter()
         .find(|placed| placed.line.id.as_str() == line_id)
         .with_context(|| format!("code target line '{line_id}' is not in the settled scene"))?;
-    Ok(CodeTarget {
-        bounds: renderer.measure_text_range(placed.line, text)?,
-        line_y: placed.y,
-    })
+    let bounds = renderer.measure_text_range(placed.line, text)?;
+    Ok((
+        TextTarget::new(line_id, text),
+        TargetGeometry {
+            x: bounds.x,
+            width: bounds.width,
+            line_y: placed.y,
+        },
+    ))
+}
+
+/// The perspective-card editor frame whose panel, focus, and highlight are all
+/// sampled from `code`.
+fn editor_frame<'a>(
+    scene: &CompiledScene,
+    code: &Code,
+    pointer: &Pointer,
+    time: f32,
+    lines: &'a [PlacedLine<'a>],
+    inline_reveals: &'a [InlineRevealFrame<'a>],
+    annotations: &'a [AnnotationFrame],
+) -> EditorFrame<'a> {
+    let sample = |property| {
+        scene
+            .timeline()
+            .sample(property, time)
+            .expect("code property has an initial value")
+            .position
+    };
+    EditorFrame {
+        panel_offset_x: 0.0,
+        panel_offset_y: sample(&code.panel_y),
+        panel_opacity: 1.0,
+        line_marks: &[],
+        panel_rotation: sample(&code.panel_rotation),
+        panel_tilt_x: sample(&code.panel_tilt_x),
+        panel_tilt_y: sample(&code.panel_tilt_y),
+        panel_scale: sample(&code.panel_scale),
+        panel_near_blur: sample(&code.panel_near_blur),
+        focus_intensity: sample(&code.focus).clamp(0.0, 1.0),
+        focus_line_y: sample(&code.focus_y),
+        focus_height: 44.0,
+        token_highlight: TokenHighlight {
+            x: sample(&code.highlight_x),
+            y: sample(&code.highlight_y),
+            width: sample(&code.highlight_width),
+            opacity: sample(&code.highlight_opacity).clamp(0.0, 1.0),
+        },
+        bright_text: &[],
+        pointer: sample_pointer_frame(scene, pointer, time),
+        inline_reveals,
+        squiggles: &[],
+        annotations,
+        lines,
+    }
 }
 
 fn measure_text_width(renderer: &mut HeadlessRenderer, text: &str) -> Result<f32> {

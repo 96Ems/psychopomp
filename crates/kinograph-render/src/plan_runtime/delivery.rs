@@ -58,7 +58,7 @@ pub(super) fn render_frame(
     write_png(output, &pixels)
 }
 
-pub(super) fn write_png(path: &Path, pixels: &[u8]) -> Result<()> {
+pub(crate) fn write_png(path: &Path, pixels: &[u8]) -> Result<()> {
     let expected = WIDTH as usize * HEIGHT as usize * 4;
     if pixels.len() != expected {
         bail!(

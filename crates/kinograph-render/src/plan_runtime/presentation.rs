@@ -337,12 +337,8 @@ impl Player {
             if slide.grid {
                 format!(
                     " · Lines: {} [C]",
-                    if self.theme != Theme::Original && self.grid_palette == GridLinePalette::Orange
-                    {
-                        "Theme"
-                    } else {
-                        self.grid_palette.name()
-                    }
+                    effective_grid_palette(self.theme, self.grid_palette)
+                        .map_or("Theme", GridLinePalette::name)
                 )
             } else {
                 String::new()
@@ -768,6 +764,12 @@ impl ApplicationHandler<RenderEvent> for Player {
 
 /// Native pacing is independent of the authored video FPS. Unknown/zero refresh
 /// falls back to 60 Hz; millihertz preserves fractional rates such as 59.94 Hz.
+/// The grid line palette that overrides the recipe's colors, if any: other
+/// themes keep their own accent until the audition leaves Orange.
+fn effective_grid_palette(theme: Theme, palette: GridLinePalette) -> Option<GridLinePalette> {
+    (theme == Theme::Original || palette != GridLinePalette::Orange).then_some(palette)
+}
+
 fn frame_interval(fps: Option<u32>, refresh_millihertz: Option<u32>) -> Duration {
     let rate = fps
         .filter(|fps| *fps > 0)

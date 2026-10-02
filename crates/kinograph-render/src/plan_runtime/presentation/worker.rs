@@ -13,6 +13,7 @@ use winit::event_loop::EventLoopProxy;
 
 use super::super::{PreparedPlan, VisualSampleKey};
 use super::debug::DebugState;
+use super::effective_grid_palette;
 use super::scheduler::RequestStamp;
 use crate::render::{GridLinePalette, HeadlessRenderer, Theme};
 
@@ -97,13 +98,7 @@ impl FrameCache {
         }
         renderer.set_file_name(prepared.file_name());
         renderer.set_theme(stamp.theme);
-        renderer.set_grid_line_palette(
-            if stamp.theme != Theme::Original && stamp.palette == GridLinePalette::Orange {
-                None
-            } else {
-                Some(stamp.palette)
-            },
-        );
+        renderer.set_grid_line_palette(effective_grid_palette(stamp.theme, stamp.palette));
         let start = Instant::now();
         let pixels = Arc::new(prepared.render_sample_using(renderer, time, &request.timeline)?);
         self.total += start.elapsed();
@@ -316,16 +311,11 @@ mod tests {
                 request.debug = Some(DebugState::capture(&playback, sample));
                 request.stamp.debug = true;
                 let pixels = cache.render(&mut renderer, &prepared, &request).unwrap();
-                let file =
-                    std::fs::File::create(path.join(format!("quarter-{millis:04}.png"))).unwrap();
-                let mut encoder = png::Encoder::new(std::io::BufWriter::new(file), 1920, 1080);
-                encoder.set_color(png::ColorType::Rgba);
-                encoder.set_depth(png::BitDepth::Eight);
-                encoder
-                    .write_header()
-                    .unwrap()
-                    .write_image_data(&pixels)
-                    .unwrap();
+                crate::plan_runtime::delivery::write_png(
+                    &path.join(format!("quarter-{millis:04}.png")),
+                    &pixels,
+                )
+                .unwrap();
             }
             if std::env::var_os("KINOGRAPH_DEBUG_VIDEO").is_some() {
                 for (speed, frames, name) in [
@@ -521,16 +511,11 @@ mod tests {
             if let Some(path) = std::env::var_os("KINOGRAPH_GRID_STYLE_ARTIFACTS") {
                 let path = std::path::PathBuf::from(path);
                 std::fs::create_dir_all(&path).unwrap();
-                let file =
-                    std::fs::File::create(path.join(format!("{index}-{palette:?}.png"))).unwrap();
-                let mut encoder = png::Encoder::new(std::io::BufWriter::new(file), 1920, 1080);
-                encoder.set_color(png::ColorType::Rgba);
-                encoder.set_depth(png::BitDepth::Eight);
-                encoder
-                    .write_header()
-                    .unwrap()
-                    .write_image_data(&pixels)
-                    .unwrap();
+                crate::plan_runtime::delivery::write_png(
+                    &path.join(format!("{index}-{palette:?}.png")),
+                    &pixels,
+                )
+                .unwrap();
             }
         }
         request.stamp.palette = GridLinePalette::Orange;

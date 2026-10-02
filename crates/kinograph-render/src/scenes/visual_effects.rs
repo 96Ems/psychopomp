@@ -10,9 +10,12 @@ use kinograph::{
     transcript::Transcript,
 };
 
-use crate::render::{HeadlessRenderer, QuoteFrame, RenderSpec, TaskLinkFrame, TaskSceneFrame};
+use crate::{
+    plan_runtime::new_renderer,
+    render::{QuoteFrame, TaskLinkFrame, TaskSceneFrame},
+};
 
-use super::{HEIGHT, WIDTH, WORKSPACE_ROOT, encode_video};
+use super::{HEIGHT, WIDTH, WORKSPACE_ROOT, encode_scene, plan_temporal_samples};
 
 pub(crate) async fn render(output: &Path) -> Result<()> {
     let asset_directory = Path::new(WORKSPACE_ROOT)
@@ -36,12 +39,7 @@ pub(crate) async fn render(output: &Path) -> Result<()> {
     let cues = VisualEffectsCues::from_transcript(&transcript)?;
     let center = WIDTH as f32 * 0.5;
     let y = HEIGHT as f32 * 0.5;
-    let mut renderer = HeadlessRenderer::new(RenderSpec {
-        width: WIDTH,
-        height: HEIGHT,
-        file_name: "effect-simulacra".to_owned(),
-    })
-    .await?;
+    let mut renderer = new_renderer("effect-simulacra").await?;
     let typescript_width = renderer.measure_task_result_width("TypeScript");
     let homicide_width = renderer.measure_task_result_width("HOMICIDE");
     let detective_width = renderer.measure_task_result_width("JR. DETECTIVE");
@@ -130,16 +128,22 @@ pub(crate) async fn render(output: &Path) -> Result<()> {
     ]);
     let scene =
         Scene::new(Vec::<(PropertyId, Scalar)>::new(), composition).compile(&HashMap::new())?;
-    encode_video(&mut renderer, output, &scene, |renderer, time| {
-        let quote = visual_effects_quote(time, &cues);
-        let nodes = scene.task_frames_at(time);
-        let links = visual_effects_task_links(time, &cues, &nodes);
-        renderer.render_task_scene(&TaskSceneFrame {
-            quote,
-            links: &links,
-            nodes: &nodes,
-        })
-    })
+    encode_scene(
+        &mut renderer,
+        output,
+        &scene,
+        plan_temporal_samples,
+        |renderer, time| {
+            let quote = visual_effects_quote(time, &cues);
+            let nodes = scene.task_frames_at(time);
+            let links = visual_effects_task_links(time, &cues, &nodes);
+            renderer.render_task_scene(&TaskSceneFrame {
+                quote,
+                links: &links,
+                nodes: &nodes,
+            })
+        },
+    )
 }
 
 #[derive(Deserialize)]

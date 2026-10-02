@@ -9,17 +9,21 @@ use kinograph::{
     },
     composition::{Asset, Composition, Time, TimeRange},
     dsl::{
-        Annotation, AnnotationEffect, Code, CodeEdit, CompiledScene, Motion, Pointer, Scalar, Scene,
+        Annotation, AnnotationEffect, Code, CodeEdit, CompiledScene, Motion, Pointer, Scalar,
+        Scene, TargetGeometry, TextTarget,
     },
     timeline::{PropertyId, SpringProfile},
     transcript::Transcript,
 };
 
-use crate::render::{EditorFrame, HeadlessRenderer, InlineRevealFrame, RenderSpec, TokenHighlight};
+use crate::{
+    plan_runtime::new_renderer,
+    render::{HeadlessRenderer, InlineRevealFrame},
+};
 
 use super::{
-    CodeTarget, HEIGHT, WIDTH, WORKSPACE_ROOT, encode_video, measure_target, measure_text_width,
-    sample_pointer_frame, span,
+    WORKSPACE_ROOT, editor_frame, encode_scene, measure_target, measure_text_width,
+    plan_temporal_samples, span,
 };
 
 const PROMISES_AUDIO_DURATION: f64 = 31.107;
@@ -30,30 +34,26 @@ pub(crate) async fn render(output: &Path) -> Result<()> {
         .join("promises-only-happy-path");
     let transcript = Transcript::load(&asset_directory.join("timings.json"))?;
     let transition = promises_only_happy_path_transition()?;
-    let mut renderer = HeadlessRenderer::new(RenderSpec {
-        width: WIDTH,
-        height: HEIGHT,
-        file_name: "checkout.ts".to_owned(),
-    })
-    .await?;
+    let mut renderer = new_renderer("checkout.ts").await?;
     let settled_lines = transition.sample(TransitionProgress {
         layout: 1.0,
         content: 1.0,
     });
     let question_width = measure_text_width(&mut renderer, " // ???")?;
-    let mut error = measure_target(&mut renderer, &settled_lines, "call", "SomeError")?;
-    error.bounds.x -= question_width;
-    let targets = PromiseTargets {
-        checkout: measure_target(&mut renderer, &settled_lines, "sig", "checkout")?,
-        promise: measure_target(&mut renderer, &settled_lines, "sig", "Promise<Order>")?,
-        get_cart: measure_target(&mut renderer, &settled_lines, "cart", "getCart")?,
-        charge: measure_target(&mut renderer, &settled_lines, "payment", "charge")?,
-        ship: measure_target(&mut renderer, &settled_lines, "shipment", "ship(payment)")?,
-        call: measure_target(&mut renderer, &settled_lines, "call", "cart-123")?,
-        order: measure_target(&mut renderer, &settled_lines, "sig", "Order")?,
-        question: measure_target(&mut renderer, &settled_lines, "call", "???")?,
-        error,
-    };
+    let (error_target, mut error) =
+        measure_target(&mut renderer, &settled_lines, "call", "SomeError")?;
+    error.x -= question_width;
+    let targets = HashMap::from([
+        measure_target(&mut renderer, &settled_lines, "sig", "checkout")?,
+        measure_target(&mut renderer, &settled_lines, "sig", "Promise<Order>")?,
+        measure_target(&mut renderer, &settled_lines, "cart", "getCart")?,
+        measure_target(&mut renderer, &settled_lines, "payment", "charge")?,
+        measure_target(&mut renderer, &settled_lines, "shipment", "ship(payment)")?,
+        measure_target(&mut renderer, &settled_lines, "call", "cart-123")?,
+        measure_target(&mut renderer, &settled_lines, "sig", "Order")?,
+        measure_target(&mut renderer, &settled_lines, "call", "???")?,
+        (error_target, error),
+    ]);
     let narration = Asset::audio(
         "promises-only-happy-path",
         asset_directory.join("narration.webm"),
@@ -64,46 +64,24 @@ pub(crate) async fn render(output: &Path) -> Result<()> {
     ));
     let sad = Asset::audio("sad", asset_directory.join("sad.wav"))
         .clip(TimeRange::new(Time::ZERO, Time::seconds(0.67)));
-    let choreography = promises_only_happy_path_choreography(&transcript, targets, narration, sad)?;
+    let choreography =
+        promises_only_happy_path_choreography(&transcript, &targets, narration, sad)?;
 
-    encode_video(
+    encode_scene(
         &mut renderer,
         output,
         &choreography.scene,
+        plan_temporal_samples,
         |renderer, time| {
             render_promises_only_happy_path_sample(renderer, &transition, &choreography, time)
         },
     )
 }
 
-#[derive(Clone, Copy)]
-struct PromiseTargets {
-    checkout: CodeTarget,
-    promise: CodeTarget,
-    get_cart: CodeTarget,
-    charge: CodeTarget,
-    ship: CodeTarget,
-    call: CodeTarget,
-    order: CodeTarget,
-    question: CodeTarget,
-    error: CodeTarget,
-}
-
 struct PromisesOnlyHappyPathChoreography {
     scene: CompiledScene,
-    panel_y: PropertyId,
-    panel_rotation: PropertyId,
-    panel_tilt_x: PropertyId,
-    panel_tilt_y: PropertyId,
-    panel_scale: PropertyId,
-    panel_near_blur: PropertyId,
+    code: Code,
     call_edit: CodeEdit,
-    focus: PropertyId,
-    focus_y: PropertyId,
-    token_x: PropertyId,
-    token_y: PropertyId,
-    token_width: PropertyId,
-    token_opacity: PropertyId,
     pointer: Pointer,
     question: PropertyId,
     error: PropertyId,
@@ -111,7 +89,7 @@ struct PromisesOnlyHappyPathChoreography {
 
 fn promises_only_happy_path_choreography(
     transcript: &Transcript,
-    measured: PromiseTargets,
+    targets: &HashMap<TextTarget, TargetGeometry>,
     narration: kinograph::composition::Clip,
     sad: kinograph::composition::Clip,
 ) -> Result<PromisesOnlyHappyPathChoreography> {
@@ -135,17 +113,6 @@ fn promises_only_happy_path_choreography(
     let order = code.text("sig", "Order");
     let question_target = code.text("call", "???");
     let error_target = code.text("call", "SomeError");
-    let targets = HashMap::from([
-        (checkout.clone(), measured.checkout.into()),
-        (promise.clone(), measured.promise.into()),
-        (get_cart.clone(), measured.get_cart.into()),
-        (charge.clone(), measured.charge.into()),
-        (ship.clone(), measured.ship.into()),
-        (call.clone(), measured.call.into()),
-        (order.clone(), measured.order.into()),
-        (question_target.clone(), measured.question.into()),
-        (error_target.clone(), measured.error.into()),
-    ]);
     let forthcoming = transcript.word("forthcoming")?;
     let at = |cue: kinograph::composition::Cue, motion| cue.at(motion);
     let focus_cursor_at = |target: kinograph::dsl::TextTarget, cue: kinograph::composition::Cue| {
@@ -281,23 +248,12 @@ fn promises_only_happy_path_choreography(
     ]
     .into_iter()
     .chain(call_edit.initial_values());
-    let scene = Scene::new(initial_values, composition).compile(&targets)?;
+    let scene = Scene::new(initial_values, composition).compile(targets)?;
 
     Ok(PromisesOnlyHappyPathChoreography {
         scene,
-        panel_y: code.panel_y,
-        panel_rotation: code.panel_rotation,
-        panel_tilt_x: code.panel_tilt_x,
-        panel_tilt_y: code.panel_tilt_y,
-        panel_scale: code.panel_scale,
-        panel_near_blur: code.panel_near_blur,
+        code,
         call_edit,
-        focus: code.focus,
-        focus_y: code.focus_y,
-        token_x: code.highlight_x,
-        token_y: code.highlight_y,
-        token_width: code.highlight_width,
-        token_opacity: code.highlight_opacity,
         pointer,
         question,
         error,
@@ -335,35 +291,16 @@ fn render_promises_only_happy_path_sample(
             progress: sample(&choreography.error),
         },
     ];
-    let squiggles = [];
     let annotations = choreography.scene.annotations_at(time).collect::<Vec<_>>();
-    let frame = EditorFrame {
-        panel_offset_x: 0.0,
-        panel_offset_y: sample(&choreography.panel_y),
-        panel_opacity: 1.0,
-        line_marks: &[],
-        panel_rotation: sample(&choreography.panel_rotation),
-        panel_tilt_x: sample(&choreography.panel_tilt_x),
-        panel_tilt_y: sample(&choreography.panel_tilt_y),
-        panel_scale: sample(&choreography.panel_scale),
-        panel_near_blur: sample(&choreography.panel_near_blur),
-        focus_intensity: sample(&choreography.focus).clamp(0.0, 1.0),
-        focus_line_y: sample(&choreography.focus_y),
-        focus_height: 44.0,
-        token_highlight: TokenHighlight {
-            x: sample(&choreography.token_x),
-            y: sample(&choreography.token_y),
-            width: sample(&choreography.token_width),
-            opacity: sample(&choreography.token_opacity).clamp(0.0, 1.0),
-        },
-        bright_text: &[],
-        pointer: sample_pointer_frame(&choreography.scene, &choreography.pointer, time),
-        inline_reveals: &reveals,
-        squiggles: &squiggles,
-        annotations: &annotations,
-        lines: &lines,
-    };
-    renderer.render_editor(&frame)
+    renderer.render_editor(&editor_frame(
+        &choreography.scene,
+        &choreography.code,
+        &choreography.pointer,
+        time,
+        &lines,
+        &reveals,
+        &annotations,
+    ))
 }
 
 fn promises_only_happy_path_transition() -> Result<CodeTransition> {

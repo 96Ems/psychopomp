@@ -26,11 +26,12 @@ use kinograph::{
 };
 
 use crate::render::{
-    BrightTextFrame, EditorFrame, HeadlessRenderer, InlineRevealFrame, PointerFrame, RenderSpec,
-    SquiggleFrame, TaskLinkFrame, TaskSceneFrame, TextRangeBounds, TokenHighlight,
+    BrightTextFrame, EditorFrame, HeadlessRenderer, InlineRevealFrame, PointerFrame, SquiggleFrame,
+    TaskLinkFrame, TaskSceneFrame, TokenHighlight,
 };
 
-use super::{HEIGHT, WIDTH, WORKSPACE_ROOT, encode_video_with_samples};
+use super::{HEIGHT, WIDTH, WORKSPACE_ROOT, encode_scene};
+use crate::plan_runtime::new_renderer;
 
 const LINE_HEIGHT: f32 = 44.0;
 const OPENER_DURATION: f64 = 3.0;
@@ -38,38 +39,26 @@ const GROUP_DURATION: f64 = 2.5;
 const GAP_DURATION: f64 = 0.5;
 const OUTRO_DURATION: f64 = 0.5;
 
-pub(crate) async fn render(chapter_id: &str, output: &Path) -> Result<()> {
-    let assets = Path::new(WORKSPACE_ROOT)
-        .join("assets/effect-institute")
-        .join(chapter_id);
-    let chapter = PublishedChapter::load(chapter_id, &assets)?;
-    let mut renderer = HeadlessRenderer::new(RenderSpec {
-        width: WIDTH,
-        height: HEIGHT,
-        file_name: chapter.title.clone(),
-    })
-    .await?;
-
-    encode_video_with_samples(
-        &mut renderer,
-        output,
-        &chapter.scene,
-        2,
-        2,
-        &[],
-        |renderer, time| chapter.render_sample(renderer, time),
-    )
-}
-
-pub(crate) async fn render_section(
+/// Render a whole published chapter, or only one of its sections.
+pub(crate) async fn render(
     chapter_id: &str,
-    section_id: &str,
+    section_id: Option<&str>,
     output: &Path,
 ) -> Result<()> {
     let assets = Path::new(WORKSPACE_ROOT)
         .join("assets/effect-institute")
         .join(chapter_id);
     let chapter = PublishedChapter::load(chapter_id, &assets)?;
+    let Some(section_id) = section_id else {
+        let mut renderer = new_renderer(&chapter.title).await?;
+        return encode_scene(
+            &mut renderer,
+            output,
+            &chapter.scene,
+            |_| 2,
+            |renderer, time| chapter.render_sample(renderer, time),
+        );
+    };
     let section = chapter
         .sections
         .iter()
@@ -77,19 +66,12 @@ pub(crate) async fn render_section(
         .with_context(|| format!("chapter '{chapter_id}' has no section '{section_id}'"))?;
     let scene = Scene::new(Vec::<(PropertyId, Scalar)>::new(), section.composition())
         .compile(&HashMap::new())?;
-    let mut renderer = HeadlessRenderer::new(RenderSpec {
-        width: WIDTH,
-        height: HEIGHT,
-        file_name: format!("{chapter_id}/{section_id}.ts"),
-    })
-    .await?;
-    encode_video_with_samples(
+    let mut renderer = new_renderer(&format!("{chapter_id}/{section_id}.ts")).await?;
+    encode_scene(
         &mut renderer,
         output,
         &scene,
-        2,
-        2,
-        &[],
+        |_| 2,
         |renderer, time| section.render(renderer, time),
     )
 }
@@ -1249,9 +1231,9 @@ impl PublishedCode {
                 self.measure_overlay(renderer, frame, &order, overlay.clone(), time)?
             {
                 squiggles.push(SquiggleFrame {
-                    x: target.bounds.x,
+                    x: target.x,
                     y: target.line_y,
-                    width: target.bounds.width,
+                    width: target.width,
                     opacity: 1.0,
                 });
             }
@@ -1273,26 +1255,18 @@ impl PublishedCode {
                     };
                     match range.status.as_str() {
                         "error" | "interrupted" => squiggles.push(SquiggleFrame {
-                            x: target.bounds.x,
+                            x: target.x,
                             y: target.line_y,
-                            width: target.bounds.width,
+                            width: target.width,
                             opacity: 1.0,
                         }),
                         "running" => annotations.push(AnnotationFrame {
-                            target: TargetGeometry {
-                                x: target.bounds.x,
-                                width: target.bounds.width,
-                                line_y: target.line_y,
-                            },
+                            target,
                             effect: AnnotationEffect::FocusPulse,
                             phase: (time * 0.7).fract(),
                         }),
                         "success" => annotations.push(AnnotationFrame {
-                            target: TargetGeometry {
-                                x: target.bounds.x,
-                                width: target.bounds.width,
-                                line_y: target.line_y,
-                            },
+                            target,
                             effect: AnnotationEffect::PrismaticBloom,
                             phase: ((time
                                 - status_started_at(
@@ -1317,11 +1291,7 @@ impl PublishedCode {
                     self.measure_overlay(renderer, frame, &order, burst.as_overlay(), time)?
                 {
                     annotations.push(AnnotationFrame {
-                        target: TargetGeometry {
-                            x: target.bounds.x,
-                            width: target.bounds.width,
-                            line_y: target.line_y,
-                        },
+                        target,
                         effect: burst.effect(),
                         phase: burst_phase,
                     });
@@ -1354,7 +1324,7 @@ impl PublishedCode {
         order: &[(String, usize)],
         overlay: PublishedOverlay,
         time: f32,
-    ) -> Result<Option<MeasuredOverlay>> {
+    ) -> Result<Option<TargetGeometry>> {
         let Some(key) = order.get(overlay.line_index) else {
             return Ok(None);
         };
@@ -1372,16 +1342,12 @@ impl PublishedCode {
         let bounds = renderer.measure_text_byte_range(&measure_line, start, end)?;
         let sampled_y = self.timeline.sample(&prepared.y, time).unwrap().position
             - self.overlays.scroll_y.sample(time).position.max(0.0);
-        Ok(Some(MeasuredOverlay {
-            bounds,
+        Ok(Some(TargetGeometry {
+            x: bounds.x,
+            width: bounds.width,
             line_y: sampled_y,
         }))
     }
-}
-
-struct MeasuredOverlay {
-    bounds: TextRangeBounds,
-    line_y: f32,
 }
 
 fn append_variant(
@@ -2603,12 +2569,8 @@ mod tests {
     #[test]
     #[ignore = "requires headless GPU and fonts; bounded published overlay/scroll artifact proof"]
     fn published_overlay_pixels_are_deterministic_and_select_the_expected_lines() {
-        let mut renderer = pollster::block_on(super::HeadlessRenderer::new(super::RenderSpec {
-            width: super::WIDTH,
-            height: super::HEIGHT,
-            file_name: "published-overlay-proof".into(),
-        }))
-        .unwrap();
+        let mut renderer =
+            pollster::block_on(super::new_renderer("published-overlay-proof")).unwrap();
         let output =
             std::env::var_os("KINOGRAPH_PUBLISHED_ARTIFACTS").map(std::path::PathBuf::from);
         if let Some(directory) = &output {
@@ -2722,8 +2684,8 @@ mod tests {
                     expected_text,
                 )
                 .unwrap();
-            assert_eq!(selected.bounds.x, expected_bounds.x);
-            assert_eq!(selected.bounds.width, expected_bounds.width);
+            assert_eq!(selected.x, expected_bounds.x);
+            assert_eq!(selected.width, expected_bounds.width);
             assert_eq!(
                 selected.line_y,
                 code.timeline.sample(&line.y, time).unwrap().position
@@ -2754,18 +2716,11 @@ mod tests {
             );
             eprintln!("published proof: {section} step {step} at {time:.6}s");
             if let Some(directory) = &output {
-                let file =
-                    std::fs::File::create(directory.join(format!("{section}-{step:02}.png")))
-                        .unwrap();
-                let mut encoder =
-                    png::Encoder::new(std::io::BufWriter::new(file), super::WIDTH, super::HEIGHT);
-                encoder.set_color(png::ColorType::Rgba);
-                encoder.set_depth(png::BitDepth::Eight);
-                encoder
-                    .write_header()
-                    .unwrap()
-                    .write_image_data(&pixels)
-                    .unwrap();
+                crate::plan_runtime::delivery::write_png(
+                    &directory.join(format!("{section}-{step:02}.png")),
+                    &pixels,
+                )
+                .unwrap();
             }
         }
     }

@@ -27,7 +27,7 @@ use crate::{
 mod attachments;
 mod caption;
 mod component_prototype;
-mod delivery;
+pub(crate) mod delivery;
 mod deployment_queue;
 mod diagram;
 mod editor;
@@ -356,7 +356,7 @@ async fn render_loaded_plan(
     delivery::render_video(&prepared, &mut renderer, output, window)
 }
 
-async fn new_renderer(file_name: &str) -> Result<HeadlessRenderer> {
+pub(crate) async fn new_renderer(file_name: &str) -> Result<HeadlessRenderer> {
     HeadlessRenderer::new(RenderSpec {
         width: WIDTH,
         height: HEIGHT,

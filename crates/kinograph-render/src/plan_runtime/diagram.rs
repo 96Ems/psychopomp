@@ -260,14 +260,7 @@ mod tests {
         }
         let save = |name: &str, pixels: &[u8]| {
             if let Some(path) = &output {
-                let file = std::fs::File::create(path.join(format!("{name}.png"))).unwrap();
-                let mut encoder = png::Encoder::new(std::io::BufWriter::new(file), 1920, 1080);
-                encoder.set_color(png::ColorType::Rgba);
-                encoder.set_depth(png::BitDepth::Eight);
-                encoder
-                    .write_header()
-                    .unwrap()
-                    .write_image_data(pixels)
+                crate::plan_runtime::delivery::write_png(&path.join(format!("{name}.png")), pixels)
                     .unwrap();
             }
         };

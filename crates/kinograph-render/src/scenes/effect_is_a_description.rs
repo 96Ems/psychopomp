@@ -8,18 +8,22 @@ use kinograph::{
         TransitionProgress,
     },
     composition::{Asset, Clip, Composition, Time, TimeRange},
-    dsl::{Code, CodeEdit, CompiledScene, Motion, Pointer, Scalar, Scene, Task},
+    dsl::{
+        Code, CodeEdit, CompiledScene, Motion, Pointer, Scalar, Scene, TargetGeometry, Task,
+        TextTarget,
+    },
     timeline::{PropertyId, SpringProfile},
     transcript::Transcript,
 };
 
-use crate::render::{
-    EditorFrame, HeadlessRenderer, InlineRevealFrame, RenderSpec, TaskSceneFrame, TokenHighlight,
+use crate::{
+    plan_runtime::new_renderer,
+    render::{HeadlessRenderer, InlineRevealFrame, TaskSceneFrame},
 };
 
 use super::{
-    CodeTarget, HEIGHT, WIDTH, WORKSPACE_ROOT, encode_video_with_samples, measure_target,
-    measure_text_width, sample_pointer_frame, span,
+    WIDTH, WORKSPACE_ROOT, boosted_samples, editor_frame, encode_scene, measure_target,
+    measure_text_width, span,
 };
 
 const DESCRIPTION_AUDIO_DURATION: f64 = 30.366;
@@ -30,12 +34,7 @@ pub(crate) async fn render(output: &Path) -> Result<()> {
         .join("effect-is-a-description");
     let transcript = Transcript::load(&asset_directory.join("timings.json"))?;
     let transitions = effect_is_a_description_transitions()?;
-    let mut renderer = HeadlessRenderer::new(RenderSpec {
-        width: WIDTH,
-        height: HEIGHT,
-        file_name: "effect.ts".to_owned(),
-    })
-    .await?;
+    let mut renderer = new_renderer("effect.ts").await?;
     let initial = transitions.effect_run.sample(TransitionProgress {
         layout: 0.0,
         content: 0.0,
@@ -61,28 +60,31 @@ pub(crate) async fn render(output: &Path) -> Result<()> {
     let hidden_effect_subject_width = measure_text_width(&mut renderer, "Effects")?;
     let mut function_impl =
         measure_target(&mut renderer, &function, "definition", "() => Date.now()")?;
-    function_impl.bounds.x -= hidden_definition_width;
-    let mut function_call = measure_target(&mut renderer, &function, "run", "getTime")?;
-    function_call.bounds.x -= hidden_run_prefix_width;
-    function_call.bounds.width += function_call_suffix_width;
+    function_impl.1.x -= hidden_definition_width;
+    let (_, mut function_call) = measure_target(&mut renderer, &function, "run", "getTime")?;
+    function_call.x -= hidden_run_prefix_width;
+    function_call.width += function_call_suffix_width;
     let mut function_lazy = measure_target(&mut renderer, &function_comment, "comment", "LAZY")?;
-    function_lazy.bounds.x -= hidden_effect_subject_width;
-    let mut run_effect =
+    function_lazy.1.x -= hidden_effect_subject_width;
+    let (_, mut run_effect) =
         measure_target(&mut renderer, &effect_run, "run", "Effect.runSync(getTime")?;
-    run_effect.bounds.width += measure_text_width(&mut renderer, ")")?;
-    let targets = DescriptionTargets {
-        effect_type: measure_target(
+    run_effect.width += measure_text_width(&mut renderer, ")")?;
+    let targets = HashMap::from([
+        measure_target(
             &mut renderer,
             &initial,
             "definition",
             "Effect.Effect<number>",
         )?,
-        run_sync: measure_target(&mut renderer, &effect_run, "run", "Effect.runSync")?,
-        run_effect,
+        measure_target(&mut renderer, &effect_run, "run", "Effect.runSync")?,
+        (
+            TextTarget::new("run", "Effect.runSync(getTime)"),
+            run_effect,
+        ),
         function_impl,
-        function_call,
+        (TextTarget::new("run", "getTime()"), function_call),
         function_lazy,
-    };
+    ]);
     let narration = Asset::audio(
         "effect-is-a-description",
         asset_directory.join("narration.webm"),
@@ -115,7 +117,7 @@ pub(crate) async fn render(output: &Path) -> Result<()> {
     let timestamp_width = renderer.measure_task_result_width("1736078400000");
     let choreography = effect_is_a_description_choreography(
         &transcript,
-        targets,
+        &targets,
         timestamp_width,
         narration,
         running_sound,
@@ -123,44 +125,27 @@ pub(crate) async fn render(output: &Path) -> Result<()> {
         reset_sound,
     )?;
 
-    encode_video_with_samples(
+    encode_scene(
         &mut renderer,
         output,
         &choreography.scene,
-        4,
-        8,
-        &[
+        boosted_samples(&[
             0.0..2.2,
             5.8..9.5,
             13.2..14.9,
             17.8..20.1,
             21.6..23.3,
             27.3..29.1,
-        ],
+        ]),
         |renderer, time| {
             render_effect_is_a_description_sample(renderer, &transitions, &choreography, time)
         },
     )
 }
 
-#[derive(Clone, Copy)]
-struct DescriptionTargets {
-    effect_type: CodeTarget,
-    run_sync: CodeTarget,
-    run_effect: CodeTarget,
-    function_impl: CodeTarget,
-    function_call: CodeTarget,
-    function_lazy: CodeTarget,
-}
-
 struct EffectIsADescriptionChoreography {
     scene: CompiledScene,
-    panel_y: PropertyId,
-    panel_rotation: PropertyId,
-    panel_tilt_x: PropertyId,
-    panel_tilt_y: PropertyId,
-    panel_scale: PropertyId,
-    panel_near_blur: PropertyId,
+    code: Code,
     effect_run: CodeEdit,
     function: CodeEdit,
     function_comment: CodeEdit,
@@ -171,18 +156,12 @@ struct EffectIsADescriptionChoreography {
     run_middle: PropertyId,
     function_subject: PropertyId,
     effect_subject: PropertyId,
-    focus: PropertyId,
-    focus_y: PropertyId,
-    token_x: PropertyId,
-    token_y: PropertyId,
-    token_width: PropertyId,
-    token_opacity: PropertyId,
     pointer: Pointer,
 }
 
 fn effect_is_a_description_choreography(
     transcript: &Transcript,
-    measured: DescriptionTargets,
+    targets: &HashMap<TextTarget, TargetGeometry>,
     timestamp_width: f32,
     narration: Clip,
     running_sound: Clip,
@@ -214,14 +193,6 @@ fn effect_is_a_description_choreography(
     let function_impl = code.text("definition", "() => Date.now()");
     let function_call = code.text("run", "getTime()");
     let function_lazy = code.text("comment", "LAZY");
-    let targets = HashMap::from([
-        (effect_type.clone(), measured.effect_type.into()),
-        (run_sync.clone(), measured.run_sync.into()),
-        (run_effect.clone(), measured.run_effect.into()),
-        (function_impl.clone(), measured.function_impl.into()),
-        (function_call.clone(), measured.function_call.into()),
-        (function_lazy.clone(), measured.function_lazy.into()),
-    ]);
     let get_time = Task::new("get-time", "getTime")
         .at(WIDTH as f32 * 0.5, 742.0)
         .with_result_width(timestamp_width);
@@ -353,16 +324,11 @@ fn effect_is_a_description_choreography(
     .chain(effect_run_edit.initial_values())
     .chain(function_edit.initial_values())
     .chain(function_comment_edit.initial_values());
-    let scene = Scene::new(initial_values, composition).compile(&targets)?;
+    let scene = Scene::new(initial_values, composition).compile(targets)?;
 
     Ok(EffectIsADescriptionChoreography {
         scene,
-        panel_y: code.panel_y,
-        panel_rotation: code.panel_rotation,
-        panel_tilt_x: code.panel_tilt_x,
-        panel_tilt_y: code.panel_tilt_y,
-        panel_scale: code.panel_scale,
-        panel_near_blur: code.panel_near_blur,
+        code,
         effect_run: effect_run_edit,
         function: function_edit,
         function_comment: function_comment_edit,
@@ -373,12 +339,6 @@ fn effect_is_a_description_choreography(
         run_middle,
         function_subject,
         effect_subject,
-        focus: code.focus,
-        focus_y: code.focus_y,
-        token_x: code.highlight_x,
-        token_y: code.highlight_y,
-        token_width: code.highlight_width,
-        token_opacity: code.highlight_opacity,
         pointer,
     })
 }
@@ -454,35 +414,15 @@ fn render_effect_is_a_description_sample(
             progress: sample(&choreography.effect_subject),
         },
     ];
-    let squiggles = [];
-    let annotations = [];
-    let frame = EditorFrame {
-        panel_offset_x: 0.0,
-        panel_offset_y: sample(&choreography.panel_y),
-        panel_opacity: 1.0,
-        line_marks: &[],
-        panel_rotation: sample(&choreography.panel_rotation),
-        panel_tilt_x: sample(&choreography.panel_tilt_x),
-        panel_tilt_y: sample(&choreography.panel_tilt_y),
-        panel_scale: sample(&choreography.panel_scale),
-        panel_near_blur: sample(&choreography.panel_near_blur),
-        focus_intensity: sample(&choreography.focus).clamp(0.0, 1.0),
-        focus_line_y: sample(&choreography.focus_y),
-        focus_height: 44.0,
-        token_highlight: TokenHighlight {
-            x: sample(&choreography.token_x),
-            y: sample(&choreography.token_y),
-            width: sample(&choreography.token_width),
-            opacity: sample(&choreography.token_opacity).clamp(0.0, 1.0),
-        },
-        bright_text: &[],
-        pointer: sample_pointer_frame(&choreography.scene, &choreography.pointer, time),
-        inline_reveals: &reveals,
-        squiggles: &squiggles,
-        annotations: &annotations,
-        lines: &lines,
-    };
-    let mut pixels = renderer.render_editor(&frame)?;
+    let mut pixels = renderer.render_editor(&editor_frame(
+        &choreography.scene,
+        &choreography.code,
+        &choreography.pointer,
+        time,
+        &lines,
+        &reveals,
+        &[],
+    ))?;
     let nodes = choreography.scene.task_frames_at(time);
     let links = [];
     renderer.composite_task_scene(
