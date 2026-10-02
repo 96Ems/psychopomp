@@ -177,6 +177,31 @@ pub struct ZoomPhase {
 impl ReelPlan {
     pub const VERSION: u32 = 1;
 
+    /// A validated reel that plays `plans` in order, each dipping through the
+    /// empty background from the previous one over `transition_nanos`.
+    pub fn dipped(
+        id: impl Into<String>,
+        plans: Vec<ScenePlan>,
+        transition_nanos: u64,
+    ) -> anyhow::Result<Self> {
+        let reel = Self {
+            version: Self::VERSION,
+            id: id.into(),
+            segments: plans
+                .into_iter()
+                .enumerate()
+                .map(|(index, plan)| ReelSegmentPlan {
+                    transition_nanos: if index == 0 { 0 } else { transition_nanos },
+                    transition_style: ReelTransitionStyle::Dip,
+                    transition_focus: None,
+                    plan,
+                })
+                .collect(),
+        };
+        reel.validate()?;
+        Ok(reel)
+    }
+
     pub fn validate(&self) -> anyhow::Result<()> {
         if self.version != Self::VERSION {
             anyhow::bail!("reel requires version {}", Self::VERSION);
