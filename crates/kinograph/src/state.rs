@@ -29,7 +29,6 @@ pub struct StateTrack<T> {
     initial: T,
     initial_at: f64,
     events: Vec<StateSegment<T>>,
-    duration: f64,
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -97,7 +96,6 @@ impl<T: Clone + PartialEq> StateTrack<T> {
             initial,
             initial_at,
             events: segments,
-            duration,
         })
     }
 
@@ -124,24 +122,6 @@ impl<T: Clone + PartialEq> StateTrack<T> {
                 transition_at: self.initial_at as f32,
             }
         }
-    }
-
-    pub fn duration(&self) -> f32 {
-        self.duration as f32
-    }
-
-    pub fn last_time_matching(
-        &self,
-        time: f32,
-        mut predicate: impl FnMut(&T) -> bool,
-    ) -> Option<f32> {
-        let time = f64::from(time.max(0.0));
-        self.events
-            .iter()
-            .rev()
-            .find(|event| event.at <= time && predicate(&event.value))
-            .map(|event| event.at as f32)
-            .or_else(|| predicate(&self.initial).then_some(self.initial_at as f32))
     }
 
     pub fn last_interval_start(
@@ -304,7 +284,6 @@ mod tests {
             assert_sample(track.sample_at(time), expected);
             assert_sample(track.sample(time as f32), expected);
         }
-        assert_eq!(track.duration(), 8.0);
     }
 
     #[test]
@@ -388,7 +367,6 @@ mod tests {
             (
                 8.0,
                 Some(6.0),
-                Some(7.0),
                 &[
                     "hidden", "idle", "running", "hidden", "idle", "hidden", "idle", "running",
                 ][..],
@@ -396,20 +374,18 @@ mod tests {
             (
                 5.5,
                 Some(4.0),
-                Some(4.0),
                 &["hidden", "idle", "running", "hidden", "idle", "hidden"],
             ),
-            (0.0, None, None, &["hidden"]),
-            (3.5, Some(2.0), Some(3.0), &["hidden", "idle", "running"]),
+            (0.0, None, &["hidden"]),
+            (3.5, Some(2.0), &["hidden", "idle", "running"]),
             (
                 4.0,
                 Some(4.0),
-                Some(4.0),
                 &["hidden", "idle", "running", "hidden", "idle"],
             ),
-            (2.0, Some(2.0), Some(2.0), &["hidden", "idle"]),
+            (2.0, Some(2.0), &["hidden", "idle"]),
         ];
-        for (time, interval_start, last_match, expected_calls) in cases {
+        for (time, interval_start, expected_calls) in cases {
             let mut calls = Vec::new();
             assert_eq!(
                 track.last_interval_start(time, |state| {
@@ -419,10 +395,6 @@ mod tests {
                 interval_start
             );
             assert_eq!(calls, expected_calls);
-            assert_eq!(
-                track.last_time_matching(time, |state| *state != "hidden"),
-                last_match
-            );
         }
     }
 

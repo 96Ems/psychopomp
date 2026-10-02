@@ -359,11 +359,7 @@ impl Scene {
         let lowered = self.composition.lower()?;
         let (tasks, task_pose_timeline) =
             compile_task_actors(lowered.tasks, lowered.task_poses, lowered.duration)?;
-        let timeline = Timeline::compile_with_duration(
-            initial_values,
-            &lowered.motion.resolve(targets)?,
-            lowered.duration.as_seconds() as f32,
-        )?;
+        let timeline = Timeline::compile(initial_values, &lowered.motion.resolve(targets)?)?;
         Ok(CompiledScene {
             timeline,
             media: lowered.media,
@@ -473,8 +469,7 @@ fn compile_task_actors(
             .chain(std::iter::once(Ok(Animation::hold(duration_seconds))))
             .collect::<Result<Vec<_>>>()?,
     );
-    let pose_timeline =
-        Timeline::compile_with_duration(pose_initial_values, &pose_animation, duration_seconds)?;
+    let pose_timeline = Timeline::compile(pose_initial_values, &pose_animation)?;
     Ok((actors, pose_timeline))
 }
 
@@ -965,7 +960,6 @@ mod tests {
         assert_eq!(compiled.media().len(), 1);
         assert_eq!(compiled.media()[0].role(), MediaRole::Script);
         assert_eq!(compiled.duration().as_seconds(), 2.0);
-        assert_eq!(compiled.timeline().duration(), 2.0);
         assert!(compiled.timeline().sample(&opacity, 1.0).unwrap().position > 0.99);
     }
 
