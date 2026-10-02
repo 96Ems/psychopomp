@@ -8,6 +8,35 @@ Rust Scene Program -> Scene Plan -> persistent kinograph-render process
 
 The separation keeps scene compilation lightweight and lets one renderer process retain its GPU device, font caches, and rendering implementation across repeated agent requests.
 
+## Build An Explainer
+
+Start from the closest existing Scene Program and change its content, not its
+machinery:
+
+| You are explaining | Start from | Library pieces |
+| --- | --- | --- |
+| A pull request: broken behavior, the fix, the diff | `scenes/config-migration` (smallest) or `scenes/pr-walkthrough` | `kinograph_pr_walkthrough::film`, `narration`, `editor::diff`, `sequence` rows |
+| A system, as a 3D film of cards, orbs, and packets | `scenes/opencode-jr-architecture`, `scenes/pr-walkthrough/src/flagship.rs` | `stage::StageActor` (`settle_in`, `send`, `hit`, `jolt`), `caption` |
+| Code changing step by step, presented live | `scenes/effect-succeed-slides`, `scenes/interactive-showcase` | `editor` recipes, `PresentationStepPlan` |
+| A single titled idea | `scenes/agent-demo` | `PlanBuilder` channels and cues |
+
+1. Write the narration script and voice it with `bun scripts/narrate.ts` (`--draft`
+   for a local voice). Place clips with `Narration::load(dir)?.clip(id)?.place(..)`
+   and time everything from `spoken.at("phrase")`, so re-voicing re-times the film.
+2. Declare actors with `PlanBuilder`; write motion through typed handles. Time
+   literals use `author::SECOND` and `author::seconds(f64)`.
+3. Emit with `ScenePlan::write_or_print`, `DeckPlan::write_with_slides`, or
+   `ReelPlan::dipped(..)`, then `plan validate` and `plan inspect`.
+4. Review exact frames before encoding: `bun scripts/sheet.ts <plan> 0:10:0.5
+   [--crop x,y,w,h] [--shutter]`, `plan frame <plan> <t> out.png --shutter`, and for
+   code steps `plan steps`.
+5. Render one cue with audio (`plan render <plan> out.mp4 --cue <id>`), then the
+   whole film. When refactoring, `plan snapshot <plan> <times> <dir>` before and
+   `--compare` after proves the pixels did not change.
+
+The sections below cover presentation, narrated reels, every recipe's payload and
+channels, and the persistent renderer.
+
 ## Run The Example
 
 Emit a plan from the lightweight example Scene Program:
@@ -486,7 +515,8 @@ Components used by explainers:
   `target/rolling-number.json`); render it with
   `cargo run --release -- plan render target/rolling-number.json output/rolling-number.mp4 --theme opencode`.
 - Editor Line Marks: `"mark": "added" | "removed"` on a line, with presence
-  channel `mark.<line-id>`; `panel-x` and `panel-opacity` move and fade the card.
+  channel `mark.<line-id>`; `panel-x`, `panel-y`, and `panel-opacity` move and fade the card (the Stepped Diff
+  enters on `panel-y`).
 - `--theme opencode` renders with the OpenCode TUI's tokens; `--theme neutral`
   with the OpenCode blog's clear-neutral diagram palette (the #50825 film's look).
 - `stage` (root): `elements` of `kind` `card` (`at`, `size`, `title`, `status`,

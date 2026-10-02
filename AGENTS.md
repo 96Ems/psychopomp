@@ -85,7 +85,7 @@ Do not run the full render as routine validation when unit tests and static chec
 - `crates/kinograph/src/caption.rs`: Caption recipe values and the `CaptionActor` authoring handle (typing, show, hide)
 - `crates/kinograph/src/rolling.rs`: Rolling Number recipe values, value tokenization, the closed-form roll compiler, and the `RollingNumberActor` handle (`roll`, show, hide)
 - `crates/kinograph/src/math.rs` and `math/`: shared motion and geometry math (glam vectors, lerp/remap/smoothstep, easing, closed-form dynamics such as the settling spring, arc-length curves, shape ports and connectors, deterministic hash)
-- `crates/kinograph/src/stage.rs`: Stage elements, strict channels, perspective camera, orb geometry, the packet clock (`stage::packet`), and the `StageActor` authoring handle (`settle_in`, `ease`, `clock`/`clock_for`, `connect`, `send`, `hit`, `twang`, `land`)
+- `crates/kinograph/src/stage.rs`: Stage elements, strict channels, perspective camera, orb geometry, the packet clock (`stage::packet`), and the `StageActor` authoring handle (`to`, `ease`, `bounce`, `settle_in`, `clock`/`clock_for`, `connect`, `send`, `hit`, `kick`, `jolt`, `twang`, `land`)
 - `crates/kinograph/src/tone.rs`: semantic Tone roles shared by explainer recipes
 - `crates/kinograph/src/highlight.rs`: line-local TypeScript highlighting into editor spans
 - `crates/kinograph-render/src/plan_runtime/reel.rs`: Reel preparation, layer mixing, media retiming, and reel frame/video delivery
@@ -139,6 +139,8 @@ Do not run the full render as routine validation when unit tests and static chec
 - `crates/kinograph-render/src/plan_runtime/deployment_queue.rs`: deployment snapshot validation, private track compilation, and rendering adapter
 - `crates/kinograph-render/src/plan_runtime/keyed_layout.rs`: private stable keyed position and presence track compiler
 - `scenes/`: lightweight Rust Scene Programs that emit Scene Plans
+- `scenes/agent-demo/`: smallest Scene Program: one title card, a state channel, and cues
+- `scenes/quark-before-after/`: compact narrated Solid Store versus Quark keyed-identity tutorial
 - `scenes/hero/`: canonical editor-heavy Scene Program and generated plan used by the default render command
 - `scenes/effect-succeed-slides/`: Effect Institute code-reveal adaptation proving manual presentation and video export from one source
 - `scenes/interactive-showcase/`: four-slide native deck covering inline reveals, Task lifecycle/retry, parallel Tasks, and keyed code edits

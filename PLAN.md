@@ -375,7 +375,7 @@ kinograph/
     kinograph/           # lightweight authoring, plans, tracks, and validation
     kinograph-render/    # wgpu, typography, FFmpeg, recipes, server, and CLI
   scenes/
-    agent-demo/          # lightweight Rust Scene Program
+    agent-demo/          # one lightweight Rust Scene Program per crate
 ```
 
 The two packages reflect one measured compilation and process boundary. Modules should become additional crates only after another real reuse, versioning, or deployment boundary appears.
