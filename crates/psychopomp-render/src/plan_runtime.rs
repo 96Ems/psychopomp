@@ -49,6 +49,7 @@ mod stage;
 mod still;
 mod task;
 mod terminal;
+mod tree;
 mod value;
 mod venn;
 
@@ -434,6 +435,7 @@ struct PreparedPlan {
     sequences: Vec<sequence::PreparedSequence>,
     captions: Vec<caption::PreparedCaption>,
     rolling: Vec<rolling::PreparedRollingNumber>,
+    trees: Vec<tree::PreparedTree>,
     headers: Vec<header::PreparedHeader>,
 }
 
@@ -503,6 +505,7 @@ impl PreparedPlan {
             sequences,
             captions,
             rolling,
+            trees,
         } = input;
         let components = component_prototype::PreparedComponents::prepare_inputs(
             &mut plan, components, renderer,
@@ -583,6 +586,7 @@ impl PreparedPlan {
             sequences,
             captions,
             rolling,
+            trees,
             headers,
         })
     }
@@ -929,6 +933,9 @@ impl PreparedPlan {
         }
         for text in &self.rich_text {
             text.render(pixels, renderer, value);
+        }
+        for tree in &self.trees {
+            tree.render(pixels, renderer, value);
         }
         for caption in &self.captions {
             caption.render(pixels, renderer, value);

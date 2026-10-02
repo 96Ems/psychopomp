@@ -12,6 +12,7 @@ use super::{
     rolling::RollingNumberInput,
     sequence::PreparedSequence,
     terminal::TerminalInput,
+    tree::PreparedTree,
     value::PreparedValueToken,
     venn::PreparedVenn,
 };
@@ -33,6 +34,7 @@ use psychopomp::{
     state::{StateTrack, TimedState},
     task::{TASK_RECIPE, TaskRecipePlan},
     terminal::TERMINAL_RECORDING_RECIPE,
+    tree::TREE_RECIPE,
     value::VALUE_TOKEN_RECIPE,
 };
 use serde::de::DeserializeOwned;
@@ -52,6 +54,7 @@ pub(super) struct Plan {
     pub sequences: Vec<PreparedSequence>,
     pub captions: Vec<PreparedCaption>,
     pub rolling: Vec<RollingNumberInput>,
+    pub trees: Vec<PreparedTree>,
 }
 pub(super) enum RootPlan {
     Blank,
@@ -349,6 +352,7 @@ impl Plan {
         let mut sequences = Vec::new();
         let mut captions = Vec::new();
         let mut rolling = Vec::new();
+        let mut trees = Vec::new();
         for actor in &plan.actors {
             match actor.recipe.as_str() {
                 "title-card" => put_root(&mut root, RootPlan::Title(Title::new(actor, &plan)?))?,
@@ -440,6 +444,7 @@ impl Plan {
                     &plan.continuous_channels,
                     plan.duration_nanos,
                 )?),
+                TREE_RECIPE => trees.push(PreparedTree::new(actor, &plan.continuous_channels)?),
                 recipe => bail!("unsupported actor recipe '{recipe}'"),
             }
         }
@@ -511,6 +516,7 @@ impl Plan {
             sequences,
             captions,
             rolling,
+            trees,
         };
         match &result.root {
             RootPlan::Editor { editor, .. } => editor.compile_channels(&mut result.plan)?,

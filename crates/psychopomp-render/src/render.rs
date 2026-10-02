@@ -30,6 +30,7 @@ mod task;
 mod terminal;
 mod text;
 mod theme;
+mod tree;
 mod ui;
 mod value;
 mod venn;
@@ -51,6 +52,7 @@ pub use task::{
 };
 pub use terminal::{CommandFileFrame, TerminalBackground, TerminalSceneFrame};
 pub use theme::Theme;
+pub(crate) use tree::TreeNames;
 pub(crate) use venn::validate as validate_venn;
 
 const FORMAT: wgpu::TextureFormat = wgpu::TextureFormat::Rgba8UnormSrgb;

@@ -220,10 +220,26 @@ pub fn fibonacci_sphere(count: u32) -> Vec<Vec3> {
         .collect()
 }
 
+/// Distance from `point` to the segment from `a` to `b`: the field of a
+/// stroked line, such as a chevron, whose coverage is `width / 2 - distance`.
+pub fn segment_distance(point: Vec2, a: Vec2, b: Vec2) -> f32 {
+    let along = b - a;
+    let t = ((point - a).dot(along) / along.length_squared().max(1e-6)).clamp(0.0, 1.0);
+    point.distance(a + along * t)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::math::vec2;
+
+    #[test]
+    fn segment_distance_measures_to_the_nearest_point_or_end() {
+        let (a, b) = (vec2(0.0, 0.0), vec2(10.0, 0.0));
+        assert_eq!(segment_distance(vec2(5.0, 3.0), a, b), 3.0);
+        assert_eq!(segment_distance(vec2(13.0, 4.0), a, b), 5.0);
+        assert_eq!(segment_distance(vec2(-3.0, 0.0), a, a), 3.0);
+    }
 
     fn card() -> Shape {
         Shape::Box(Box2::from_center_size(

@@ -23,4 +23,5 @@ pub mod terminal;
 pub mod timeline;
 pub mod tone;
 pub mod transcript;
+pub mod tree;
 pub mod value;
