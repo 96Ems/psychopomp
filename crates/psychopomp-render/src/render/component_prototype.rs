@@ -143,71 +143,13 @@ impl HeadlessRenderer {
         color: [u8; 3],
         opacity: f32,
     ) {
-        if points.len() < 2 || opacity <= 0. {
-            return;
-        }
-        let color = self.theme.ink(color);
-        // Union analytic segment coverage before blending. Joints must not get
-        // darker/brighter simply because the curve is subdivided there.
-        let pad = width * 0.5 + 1.;
-        let min = std::array::from_fn::<_, 2, _>(|axis| {
-            (points.iter().map(|p| p[axis]).fold(f32::INFINITY, f32::min) - pad)
-                .floor()
-                .max(0.) as u32
-        });
-        let max = std::array::from_fn::<_, 2, _>(|axis| {
-            (points
-                .iter()
-                .map(|p| p[axis])
-                .fold(f32::NEG_INFINITY, f32::max)
-                + pad)
-                .ceil()
-                .max(0.)
-                .min([self.spec.width, self.spec.height][axis] as f32) as u32
-        });
-        if min[0] >= max[0] || min[1] >= max[1] {
-            return;
-        }
-        let stride = (max[0] - min[0]) as usize;
-        let mut mask = vec![0_f32; stride * (max[1] - min[1]) as usize];
-        for segment in points.windows(2) {
-            let [a, b] = [segment[0], segment[1]];
-            let d = [b[0] - a[0], b[1] - a[1]];
-            let length = d[0] * d[0] + d[1] * d[1];
-            let lo = std::array::from_fn::<_, 2, _>(|i| {
-                (a[i].min(b[i]) - pad).floor().max(min[i] as f32) as u32
-            });
-            let hi = std::array::from_fn::<_, 2, _>(|i| {
-                (a[i].max(b[i]) + pad).ceil().max(0.).min(max[i] as f32) as u32
-            });
-            for y in lo[1]..hi[1] {
-                for x in lo[0]..hi[0] {
-                    let p = [x as f32 + 0.5 - a[0], y as f32 + 0.5 - a[1]];
-                    let t = if length > 0. {
-                        ((p[0] * d[0] + p[1] * d[1]) / length).clamp(0., 1.)
-                    } else {
-                        0.
-                    };
-                    let distance = (p[0] - d[0] * t).hypot(p[1] - d[1] * t);
-                    let coverage = (width * 0.5 + 0.5 - distance).clamp(0., 1.);
-                    let i = (y - min[1]) as usize * stride + (x - min[0]) as usize;
-                    mask[i] = mask[i].max(coverage);
-                }
-            }
-        }
-        for y in min[1]..max[1] {
-            for x in min[0]..max[0] {
-                let coverage = mask[(y - min[1]) as usize * stride + (x - min[0]) as usize];
-                if coverage > 0. {
-                    let i = (y as usize * self.spec.width as usize + x as usize) * 4;
-                    blend_pixel(
-                        &mut pixels[i..i + 4],
-                        [color[0], color[1], color[2], 255],
-                        coverage * opacity,
-                    );
-                }
-            }
-        }
+        let [r, g, b] = self.theme.ink(color);
+        ui::card::UiCanvas::new(pixels, [self.spec.width, self.spec.height]).polyline(
+            points,
+            width,
+            ui::card::UiColor::srgb8(r, g, b, 255),
+            opacity,
+        );
     }
 }
 

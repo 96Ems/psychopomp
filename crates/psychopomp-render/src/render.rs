@@ -13,6 +13,7 @@ use psychopomp::code::{CodeLine, LineId, PlacedLine, StyledSpan, SyntaxStyle};
 use psychopomp::dsl::AnnotationFrame;
 
 mod caption;
+mod chart;
 mod component_prototype;
 mod debug;
 mod deployment_queue;
@@ -21,7 +22,9 @@ mod effects;
 mod fonts;
 mod grid;
 mod header;
+mod lanes;
 mod line_marks;
+mod plot;
 mod rich_text;
 mod rolling;
 mod sequence;

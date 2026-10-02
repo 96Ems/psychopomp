@@ -9,6 +9,8 @@ use super::{
     generated,
     grid::PreparedGrid,
     header,
+    lanes::PreparedLanes,
+    plot::PreparedPlot,
     rolling::RollingNumberInput,
     sequence::PreparedSequence,
     terminal::TerminalInput,
@@ -27,7 +29,9 @@ use psychopomp::{
     deployment::DEPLOYMENT_QUEUE_RECIPE,
     editor::{EDITOR_RECIPE, EditorTargetSelector, POINTER_RECIPE, PointerRecipePlan},
     grid::GRID_RECIPE,
+    lanes::LANES_RECIPE,
     plan::{ActorPlan, ContinuousChannelPlan, MediaKindPlan, ScenePlan, StateChannelPlan},
+    plot::PLOT_RECIPE,
     rolling::ROLLING_NUMBER_RECIPE,
     sequence::SEQUENCE_RECIPE,
     stage::{STAGE_RECIPE, StagePlan},
@@ -55,6 +59,8 @@ pub(super) struct Plan {
     pub captions: Vec<PreparedCaption>,
     pub rolling: Vec<RollingNumberInput>,
     pub trees: Vec<PreparedTree>,
+    pub plots: Vec<PreparedPlot>,
+    pub lanes: Vec<PreparedLanes>,
 }
 pub(super) enum RootPlan {
     Blank,
@@ -353,6 +359,8 @@ impl Plan {
         let mut captions = Vec::new();
         let mut rolling = Vec::new();
         let mut trees = Vec::new();
+        let mut plots = Vec::new();
+        let mut lanes = Vec::new();
         for actor in &plan.actors {
             match actor.recipe.as_str() {
                 "title-card" => put_root(&mut root, RootPlan::Title(Title::new(actor, &plan)?))?,
@@ -445,6 +453,8 @@ impl Plan {
                     plan.duration_nanos,
                 )?),
                 TREE_RECIPE => trees.push(PreparedTree::new(actor, &plan.continuous_channels)?),
+                PLOT_RECIPE => plots.push(PreparedPlot::new(actor, &plan.continuous_channels)?),
+                LANES_RECIPE => lanes.push(PreparedLanes::new(actor, &plan.continuous_channels)?),
                 recipe => bail!("unsupported actor recipe '{recipe}'"),
             }
         }
@@ -517,6 +527,8 @@ impl Plan {
             captions,
             rolling,
             trees,
+            plots,
+            lanes,
         };
         match &result.root {
             RootPlan::Editor { editor, .. } => editor.compile_channels(&mut result.plan)?,

@@ -19,6 +19,7 @@ members = [
   "scenes/config-migration",
   "scenes/opencode-jr-architecture",
   "scenes/pr-50231",
+  "scenes/charts",
 ]
 default-members = ["crates/psychopomp-render"]
 resolver = "3"
