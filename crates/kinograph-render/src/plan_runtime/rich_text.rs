@@ -71,21 +71,7 @@ mod tests {
                 boundary.sample_later_and_repeat(&p, &mut renderer, 0.12);
                 now += Duration::from_millis(130);
             }
-            let mut reduced = p.playback(true).unwrap();
-            for step in &p.plan.presentation_steps {
-                let s = reduced.sample(Duration::ZERO);
-                assert!(
-                    p.render_sample(&mut renderer, step.hold_nanos as f64 / 1e9)
-                        .unwrap()
-                        == p.render_sample_using(
-                            &mut renderer,
-                            s.at_nanos as f64 / 1e9,
-                            &reduced.timeline()
-                        )
-                        .unwrap()
-                );
-                reduced.command(PlaybackCommand::Next, Duration::ZERO);
-            }
+            crate::plan_runtime::proof::assert_reduced_motion_holds(&p, &mut renderer);
         }
     }
 }

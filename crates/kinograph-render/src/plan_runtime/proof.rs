@@ -35,6 +35,30 @@ pub(super) fn interrupt(
         changed,
     })
 }
+/// Reduced motion reaches each identical authored hold, not a second
+/// rendering interpretation of the destination.
+pub(super) fn assert_reduced_motion_holds(plan: &PreparedPlan, renderer: &mut HeadlessRenderer) {
+    let mut reduced = plan.playback(true).unwrap();
+    for step in &plan.plan.presentation_steps {
+        let sample = reduced.sample(Duration::ZERO);
+        assert!(
+            plan.render_sample(renderer, step.hold_nanos as f64 / 1e9)
+                .unwrap()
+                == plan
+                    .render_sample_using(
+                        renderer,
+                        sample.at_nanos as f64 / 1e9,
+                        &reduced.timeline()
+                    )
+                    .unwrap(),
+            "{} reduced-motion step {}",
+            plan.plan.id,
+            step.id
+        );
+        reduced.command(PlaybackCommand::Next, Duration::ZERO);
+    }
+}
+
 impl Interruption {
     pub(super) fn assert_states_within(&self, plan: &PreparedPlan, tolerance: f32) {
         for channel in &plan.plan.continuous_channels {
