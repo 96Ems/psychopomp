@@ -17,7 +17,7 @@ mkdir -p output/eleven-v4/narration
 cp scenes/pr-walkthrough/narration-v4/script.json output/eleven-v4/narration/script.json
 # Inject ELEVENLABS_API_KEY with 2password for each synthesis command.
 bun scripts/narrate.ts output/eleven-v4/narration/script.json
-cargo run -p kinograph-pr-walkthrough -- pr-50825 --narration output/eleven-v4/narration --output output/eleven-v4/reel.json
+cargo run -p psychopomp-pr-walkthrough -- pr-50825 --narration output/eleven-v4/narration --output output/eleven-v4/reel.json
 bun scenes/pr-walkthrough/narration-v4/sound-design.ts
 cargo run --release -- plan render output/eleven-v4/reel-sound.json output/pr-50825-eleven-v4.mp4 --theme neutral
 ```

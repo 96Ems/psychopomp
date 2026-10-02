@@ -1,6 +1,6 @@
 use super::stage::*;
 use anyhow::Result;
-use kinograph::{
+use psychopomp::{
     code::{StyledSpan, SyntaxStyle},
     editor::{
         EditorInlineRevealPlan, EditorLinePlan, EditorPartPlan, EditorRecipePlan,

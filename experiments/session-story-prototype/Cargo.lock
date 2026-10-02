@@ -169,7 +169,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8f42a60cbdf9a97f5d2305f08a87dc4e09308d1276d28c869c684d7777685682"
 
 [[package]]
-name = "kinograph"
+name = "psychopomp"
 version = "0.1.0"
 dependencies = [
  "anyhow",
@@ -178,12 +178,12 @@ dependencies = [
 ]
 
 [[package]]
-name = "kinograph-session-story-prototype"
+name = "psychopomp-session-story-prototype"
 version = "0.0.0"
 dependencies = [
  "anyhow",
  "cosmic-text",
- "kinograph",
+ "psychopomp",
  "png",
  "serde_json",
 ]

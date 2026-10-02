@@ -1,9 +1,9 @@
 # Scene Programs Compile Into Inspectable Plans
 
-Kinograph keeps Rust as its authoring language. A Scene Program can import libraries, load data, run calculations, use loops, and define helpers. Running that program emits a versioned Scene Plan containing only stable actors, continuous channels, state channels, cues, and media placements.
+Psychopomp keeps Rust as its authoring language. A Scene Program can import libraries, load data, run calculations, use loops, and define helpers. Running that program emits a versioned Scene Plan containing only stable actors, continuous channels, state channels, cues, and media placements.
 
 ```text
-Rust Scene Program -> Scene Plan -> persistent kinograph-render process
+Rust Scene Program -> Scene Plan -> persistent psychopomp-render process
 ```
 
 The separation keeps scene compilation lightweight and lets one renderer process retain its GPU device, font caches, and rendering implementation across repeated agent requests.
@@ -15,7 +15,7 @@ machinery:
 
 | You are explaining | Start from | Library pieces |
 | --- | --- | --- |
-| A pull request: broken behavior, the fix, the diff | `scenes/config-migration` (smallest) or `scenes/pr-walkthrough` | `kinograph_pr_walkthrough::film`, `narration`, `editor::diff`, `sequence` rows |
+| A pull request: broken behavior, the fix, the diff | `scenes/config-migration` (smallest) or `scenes/pr-walkthrough` | `psychopomp_pr_walkthrough::film`, `narration`, `editor::diff`, `sequence` rows |
 | A system, as a 3D film of cards, orbs, and packets | `scenes/opencode-jr-architecture`, `scenes/pr-walkthrough/src/flagship.rs` | `stage::StageActor` (`settle_in`, `send`, `hit`, `jolt`), `caption` |
 | Code changing step by step, presented live | `scenes/effect-succeed-slides`, `scenes/interactive-showcase` | `editor` recipes, `PresentationStepPlan` |
 | A single titled idea | `scenes/agent-demo` | `PlanBuilder` channels and cues |
@@ -48,27 +48,27 @@ cargo run -p agent-demo -- target/agent-demo.json
 Emit the canonical editor-heavy hero plan:
 
 ```bash
-cargo run -p kinograph-hero -- target/hero.json
+cargo run -p psychopomp-hero -- target/hero.json
 ```
 
 Emit the narration-rich OpenCode session-tool lesson:
 
 ```bash
-cargo run -p kinograph-opencode-session-tool -- \
+cargo run -p psychopomp-opencode-session-tool -- \
   scenes/opencode-session-tool/opencode-session-tool.plan.json
 ```
 
 Emit the state-driven deployment queue UI proof:
 
 ```bash
-cargo run -p kinograph-deployment-queue -- \
+cargo run -p psychopomp-deployment-queue -- \
   scenes/deployment-queue/deployment-queue.plan.json
 ```
 
 Emit the minimal Solid Store to Quark before-and-after:
 
 ```bash
-cargo run -p kinograph-quark-before-after -- \
+cargo run -p psychopomp-quark-before-after -- \
   scenes/quark-before-after/quark-before-after.plan.json
 ```
 
@@ -117,7 +117,7 @@ Delivery remains frame-based: a window whose duration is not exactly frame-align
 The OpenCode **Daemon / merge** adaptation is a four-step native scene:
 
 ```sh
-cargo run -p kinograph-opencode-architecture
+cargo run -p psychopomp-opencode-architecture
 cargo run --release -- plan present target/opencode-architecture/deck.json --theme original
 ```
 
@@ -141,7 +141,7 @@ baked-label restrictions and browser/measurement limits.
 The themed slideshow-component showroom runs natively:
 
 ```sh
-cargo run -p kinograph-component-prototypes -- --slideshow
+cargo run -p psychopomp-component-prototypes -- --slideshow
 cargo run --release -- plan present target/slideshow-components/deck.json
 ```
 
@@ -153,8 +153,8 @@ variant with 25 ms offsets. Left/Right reverses these entrances without orphaned
 delayed words. An unchanged hold does not replay the header.
 **T / Shift+T** cycles Original, Evergreen, Tokyo Night, and Pure Black in either
 direction. The choice is saved immediately in
-`$XDG_CONFIG_HOME/kinograph/preferences.json`, or
-`~/.config/kinograph/preferences.json` when XDG is unset. Malformed preferences
+`$XDG_CONFIG_HOME/psychopomp/preferences.json`, or
+`~/.config/psychopomp/preferences.json` when XDG is unset. Malformed preferences
 produce a warning, not a crash or silent overwrite. The window title names the
 active theme. Held/paused frames repaint without retargeting or advancing motion.
 **C** remains a temporary grid-line audition; changing theme restores its accent.
@@ -203,7 +203,7 @@ Speed/debug are not persisted and do not affect exports. `--benchmark` and
 Compare plain and row-banded tables with unfilled and original 3D volumes:
 
 ```bash
-cargo run -p kinograph-keyed-grid -- --styles
+cargo run -p psychopomp-keyed-grid -- --styles
 cargo run --release -- plan present target/grid-styles/deck.json
 ```
 
@@ -225,7 +225,7 @@ types/cardinality sequence, Boolean ↔ Toggle, joystick representation fit, OR,
 AND, and an illegal-state code edit:
 
 ```bash
-cargo run -p kinograph-data-modeling
+cargo run -p psychopomp-data-modeling
 cargo run --release -- plan present target/data-modeling/deck.json
 cargo run -- plan steps target/data-modeling/illegal-states.json
 ```
@@ -248,7 +248,7 @@ scene.presentation_step("reveal", "Reveal the type", 1_000_000_000, 2_500_000_00
 Build the Effect Institute `effect-succeed` adaptation:
 
 ```bash
-cargo run -p kinograph-effect-succeed-slides -- target/effect-succeed-slides.json
+cargo run -p psychopomp-effect-succeed-slides -- target/effect-succeed-slides.json
 cargo run --release -- plan present target/effect-succeed-slides.json
 ```
 
@@ -290,7 +290,7 @@ reloading, native higher-DPI glyph rasterization, and presentation audio remain 
 ### Present A Deck
 
 ```bash
-cargo run -p kinograph-interactive-showcase
+cargo run -p psychopomp-interactive-showcase
 cargo run --release -- plan present target/interactive-showcase/deck.json
 ```
 
@@ -324,7 +324,7 @@ single-scene throughput benchmark.
 ### Present A Growing 3D Grid
 
 ```sh
-cargo run -p kinograph-keyed-grid
+cargo run -p psychopomp-keyed-grid
 cargo run --release -- plan present target/keyed-grid/deck.json
 ```
 
@@ -426,17 +426,17 @@ Diagram plays the broken behavior and replays the fix in the same slots, then an
 editor animates the actual change as a diff with Line Marks. The workflow is
 reusable for any code explainer:
 
-- `kinograph::narration::Narration::load(dir)` reads `narration.json`;
+- `psychopomp::narration::Narration::load(dir)` reads `narration.json`;
   `clip(id)?.place(&mut scene, start)` adds the Script Clip and returns a
   `Spoken` whose `at(phrase)`, `at_any`, and `at_after` give plan-clock times.
-- `kinograph::editor::diff::Diff` of `keep`/`add(step, ..)`/`remove(step, ..)`
+- `psychopomp::editor::diff::Diff` of `keep`/`add(step, ..)`/`remove(step, ..)`
   lines declares the stepped editor; `declare(scene, step_times, warning, entrance)`.
 - `SequenceRowPlan::message|reply|note|end(..)` with `.in_slot(n)` and
   `.with_aside(text)` build rows; `SequenceParticipantPlan::new(id, label, detail)`
   builds participants; `SequenceActor::row_channel`/`participant_channel` address
   their channels.
 - `ReelPlan::dipped(id, plans, transition_nanos)` joins segments with dips.
-- `kinograph_pr_walkthrough::film` is the PR-film template itself (`header`,
+- `psychopomp_pr_walkthrough::film` is the PR-film template itself (`header`,
   `chip`, `footer`, `behavior`, `code`); `scenes/config-migration` reuses it.
 
 ```sh
@@ -444,7 +444,7 @@ reusable for any code explainer:
 2password run --env 'FISH_AUDIO_API_KEY=op://…' -- \
   bun scripts/narrate.ts scenes/pr-walkthrough/narration/script.json
 # 2. Emit the reel; phrase lookups fail loudly if narration changed.
-cargo run -p kinograph-pr-walkthrough
+cargo run -p psychopomp-pr-walkthrough
 cargo run --release -- plan validate scenes/pr-walkthrough/pr-walkthrough.reel.json
 cargo run --release -- plan inspect scenes/pr-walkthrough/pr-walkthrough.reel.json
 # 3. Review exact frames, then one segment with audio, then everything.
@@ -469,7 +469,7 @@ Copy it under `output/` before generating to keep alternate audio there:
 mkdir -p output/eleven-v4/narration
 cp scenes/pr-walkthrough/narration-v4/script.json output/eleven-v4/narration/script.json
 2password run --env 'ELEVENLABS_API_KEY=op://…' -- bun scripts/narrate.ts output/eleven-v4/narration/script.json
-cargo run -p kinograph-pr-walkthrough -- pr-50825 --narration output/eleven-v4/narration --output output/eleven-v4/reel.json
+cargo run -p psychopomp-pr-walkthrough -- pr-50825 --narration output/eleven-v4/narration --output output/eleven-v4/reel.json
 ```
 
 The selected reel is built lazily, so a flagship-only script needs only its three
@@ -511,7 +511,7 @@ Components used by explainers:
   version.show(&mut scene, at);
   version.roll(&mut scene, phrase_start, "rc.117")?;
   ```
-  The showroom is `cargo run -p kinograph-rolling-number` (writes
+  The showroom is `cargo run -p psychopomp-rolling-number` (writes
   `target/rolling-number.json`); render it with
   `cargo run --release -- plan render target/rolling-number.json output/rolling-number.mp4 --theme opencode`.
 - Editor Line Marks: `"mark": "added" | "removed"` on a line, with presence
@@ -566,22 +566,22 @@ Components used by explainers:
   `curve` one of `linear`, `smoothstep`, `smootherstep`, `cubic-out`, `cubic-in-out`,
   `{ "decelerate": s }`, or `{ "cubic-bezier": [x1, y1, x2, y2] }`). Use `ease` for
   timed curves; never approximate one with stepped `set` events, which stutter.
-- Reusable math is `kinograph::math` (`lerp`, `remap_clamp`, `smoothstep`, `easing`, `dynamics::settle`,
+- Reusable math is `psychopomp::math` (`lerp`, `remap_clamp`, `smoothstep`, `easing`, `dynamics::settle`,
   `curve::Polyline`, `shapes::connect`, glam vectors). Use it in Scene Programs too.
 
 `scenes/pr-walkthrough` also emits `pr-50825.reel.json`, a Stage film of #50825
 that zooms from the client card into its code:
 
 ```sh
-cargo run -p kinograph-pr-walkthrough pr-50825
-KINOGRAPH_SHADER_DIR=crates/kinograph-render/src/render \
+cargo run -p psychopomp-pr-walkthrough pr-50825
+PSYCHOPOMP_SHADER_DIR=crates/psychopomp-render/src/render \
   bun scripts/sheet.ts scenes/pr-walkthrough/pr-50825.reel.json 2,13,19,46 --theme neutral
 cargo run --release -- plan render scenes/pr-walkthrough/pr-50825.reel.json output/pr-50825.mp4 --theme neutral
 ```
 
 ## Keep The Renderer Running
 
-`kinograph plan serve` reads one JSON request per line from standard input and writes one JSON response per line to standard output. Progress and GPU diagnostics use standard error, leaving standard output machine-readable.
+`psychopomp plan serve` reads one JSON request per line from standard input and writes one JSON response per line to standard output. Progress and GPU diagnostics use standard error, leaving standard output machine-readable.
 
 ```bash
 cargo run --release -- plan serve
@@ -643,14 +643,14 @@ The current plan runtime demonstrates `title-card`, `text`, `editor`, attached `
 ## Package Direction
 
 ```text
-scenes/* ------------> kinograph
+scenes/* ------------> psychopomp
                            ^
                            |
-kinograph-render ----------+
+psychopomp-render ----------+
 ```
 
-- `crates/kinograph`: lightweight plans, authoring values, motion, composition, stable code, and validation
-- `crates/kinograph-render`: concrete renderer, encoder, development server, CLI, and built-in scenes
+- `crates/psychopomp`: lightweight plans, authoring values, motion, composition, stable code, and validation
+- `crates/psychopomp-render`: concrete renderer, encoder, development server, CLI, and built-in scenes
 - `scenes/*`: lightweight Rust Scene Programs
 
 The default hero command embeds `scenes/hero/hero.plan.json` for compatibility. A workspace test regenerates the plan from `scenes/hero/src/lib.rs` and requires byte equality, so the checked artifact cannot drift from its Rust source.

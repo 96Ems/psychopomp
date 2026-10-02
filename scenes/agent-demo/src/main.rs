@@ -1,4 +1,4 @@
-use kinograph::{
+use psychopomp::{
     author::{PlanBuilder, SECOND},
     plan::ScenePlan,
 };
@@ -19,7 +19,7 @@ fn build_plan() -> ScenePlan {
             "title",
             "title-card",
             json!({
-            "title": "Kinograph Scene Plan",
+            "title": "Psychopomp Scene Plan",
             "subtitle": phrases[0],
             }),
         )

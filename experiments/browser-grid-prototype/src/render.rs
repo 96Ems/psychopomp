@@ -9,7 +9,7 @@ mod glyphs;
 use glyphs::{FontSystem, TextSprite, make_sprite};
 
 include!(concat!(env!("OUT_DIR"), "/render.rs"));
-#[path = "../../../crates/kinograph-render/src/render/theme.rs"]
+#[path = "../../../crates/psychopomp-render/src/render/theme.rs"]
 #[allow(dead_code)] // Only grid palette roles are exercised by the spike.
 mod theme;
 pub(crate) use diagram::DiagramGlyphs;

@@ -1,5 +1,5 @@
 use anyhow::{Context, Result, bail};
-use kinograph::{
+use psychopomp::{
     grid::GRID_RECIPE,
     plan::{ScalarPlan, ScenePlan},
     playback::Playback,
@@ -27,7 +27,7 @@ impl Scene {
             .actors
             .iter()
             .filter(|a| {
-                a.recipe == GRID_RECIPE || a.recipe == kinograph::component_prototype::DIAGRAM
+                a.recipe == GRID_RECIPE || a.recipe == psychopomp::component_prototype::DIAGRAM
             })
             .count();
         if count != 1 {
@@ -37,7 +37,7 @@ impl Scene {
             .actors
             .iter()
             .find(|a| {
-                a.recipe == GRID_RECIPE || a.recipe == kinograph::component_prototype::DIAGRAM
+                a.recipe == GRID_RECIPE || a.recipe == psychopomp::component_prototype::DIAGRAM
             })
             .context("expected one grid or diagram actor")?
             .id
@@ -53,7 +53,7 @@ impl Scene {
                 _ => bail!("browser spike accepts literal channels only"),
             }
         };
-        let timeline = kinograph::plan::compile_channels(
+        let timeline = psychopomp::plan::compile_channels(
             plan.continuous_channels.iter().map(|channel| (channel, PropertyId::new(&channel.id))),
             plan.duration_nanos,
             literal,

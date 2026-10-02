@@ -1,5 +1,5 @@
 [package]
-name = "kinograph-browser-grid-prototype"
+name = "psychopomp-browser-grid-prototype"
 version = "0.0.0"
 edition = "2024"
 publish = false
@@ -20,7 +20,7 @@ path = "src/bake.rs"
 anyhow = "1"
 bytemuck = { version = "1.25", features = ["derive"] }
 cosmic-text = { version = "0.19", default-features = false, features = ["std", "swash"] }
-kinograph = { path = "../../crates/kinograph" }
+psychopomp = { path = "../../crates/psychopomp" }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 png = "0.18"
@@ -28,8 +28,8 @@ wgpu = { version = "30.0", default-features = false, features = ["std", "wgsl", 
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 cosmic-text = "0.19"
-kinograph-keyed-grid = { path = "../../scenes/keyed-grid" }
-kinograph-opencode-architecture = { path = "../../scenes/opencode-architecture" }
+psychopomp-keyed-grid = { path = "../../scenes/keyed-grid" }
+psychopomp-opencode-architecture = { path = "../../scenes/opencode-architecture" }
 pollster = "0.4"
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]

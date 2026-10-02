@@ -1,7 +1,7 @@
 //! Native build step only. No native fonts or rendering server needed at runtime.
 use anyhow::{Context, Result};
-use kinograph::playback::PlaybackCommand;
-use kinograph_browser_grid_prototype::{
+use psychopomp::playback::PlaybackCommand;
+use psychopomp_browser_grid_prototype::{
     plan_runtime::Scene,
     render::{HEIGHT, HeadlessRenderer, Theme, WIDTH},
 };
@@ -13,8 +13,8 @@ fn main() -> Result<()> {
     std::fs::create_dir_all(&output)?;
     let mut renderer = pollster::block_on(HeadlessRenderer::new())?;
     let mut scenes = HashMap::new();
-    for slide in kinograph_keyed_grid::build_deck()?.slides.into_iter()
-        .chain(kinograph_opencode_architecture::build_deck()?.slides) {
+    for slide in psychopomp_keyed_grid::build_deck()?.slides.into_iter()
+        .chain(psychopomp_opencode_architecture::build_deck()?.slides) {
         let id = slide.plan.id.clone();
         std::fs::write(output.join(format!("{id}.json")),serde_json::to_vec(&slide.plan)?)?;
         scenes.insert(id,Scene::new(slide.plan,&mut renderer)?);

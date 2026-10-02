@@ -1,5 +1,5 @@
 // THROWAWAY host, not a framework API. State and drawing stay in Rust/WASM.
-import init, { GridCanvas } from "/pkg/kinograph_browser_grid_prototype.js";
+import init, { GridCanvas } from "/pkg/psychopomp_browser_grid_prototype.js";
 
 const started = performance.now();
 const wasm = init();
@@ -14,7 +14,7 @@ async function plan(name) {
 }
 const glyphs = fetch("/labels.glyphs").then(r => r.arrayBuffer()).then(b => new Uint8Array(b));
 
-class KinographCanvas extends HTMLElement {
+class PsychopompCanvas extends HTMLElement {
   async connectedCallback() {
     this.buttons = [...this.querySelectorAll("button")];
     this.buttons.forEach(b => b.disabled = true);
@@ -133,4 +133,4 @@ class KinographCanvas extends HTMLElement {
     cancelAnimationFrame(this.frame); this.observer?.disconnect(); this.abort?.abort(); this.engine?.free();
   }
 }
-customElements.define("kinograph-canvas", KinographCanvas);
+customElements.define("psychopomp-canvas", PsychopompCanvas);

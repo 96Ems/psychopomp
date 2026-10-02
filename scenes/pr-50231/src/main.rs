@@ -5,7 +5,7 @@ fn main() -> anyhow::Result<()> {
     let output = env::args()
         .nth(1)
         .map_or_else(|| root.join("pr-50231.reel.json"), PathBuf::from);
-    let reel = kinograph_pr_50231::build_reel(&root.join("narration"))?;
+    let reel = psychopomp_pr_50231::build_reel(&root.join("narration"))?;
     fs::write(&output, serde_json::to_string_pretty(&reel)? + "\n")?;
     eprintln!(
         "wrote {} ({:.1}s, {} segments)",

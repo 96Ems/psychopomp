@@ -8,7 +8,7 @@ Four independent slides, one persistent Rust renderer:
 4. **Code edits:** add/remove lines while stable code and its highlight move together.
 
 ```bash
-cargo run -p kinograph-interactive-showcase
+cargo run -p psychopomp-interactive-showcase
 cargo run --release -- plan present target/interactive-showcase/deck.json
 ```
 
@@ -18,7 +18,7 @@ motion, X toggles smooth/pixelated display, F toggles fullscreen, and Escape clo
 Each slide remembers its step. Running Tasks continue their energy animation while
 you hold a step, but pause and slide departure freeze their local time.
 
-The Effect blocks reuse Kinograph's Rust port of Effect Institute's
+The Effect blocks reuse Psychopomp's Rust port of Effect Institute's
 `PixiEffectRow` visuals, including compressed running geometry, jitter/energy
 sweeps, result text, error bubbles, and stable labels. This is a native adaptation,
 not embedded WebGPU/JavaScript or actual execution of the illustrated Effects.
@@ -41,9 +41,9 @@ The showcase is silent; it does not yet port every Pixi overlay, connector, or S
 The program also emits individual Scene Plans next to `deck.json`:
 
 ```bash
-target/release/kinograph plan steps target/interactive-showcase/stable-code-edits.json
-target/release/kinograph plan frame target/interactive-showcase/parallel-effects.json 11 output/parallel.png
-target/release/kinograph plan render target/interactive-showcase/task-lifecycle.json output/lifecycle.mp4
+target/release/psychopomp plan steps target/interactive-showcase/stable-code-edits.json
+target/release/psychopomp plan frame target/interactive-showcase/parallel-effects.json 11 output/parallel.png
+target/release/psychopomp plan render target/interactive-showcase/task-lifecycle.json output/lifecycle.mp4
 ```
 
 Edit `src/lib.rs` to change examples. A Task recipe supplies a name, center,
@@ -55,8 +55,8 @@ generated width, height, scale, opacity, activity, `state.*`, `content.*`, and
 Verification:
 
 ```bash
-cargo test -p kinograph-interactive-showcase
-KINOGRAPH_STABILITY_ARTIFACTS=1 cargo test -p kinograph-render --release -- --ignored --nocapture
+cargo test -p psychopomp-interactive-showcase
+PSYCHOPOMP_STABILITY_ARTIFACTS=1 cargo test -p psychopomp-render --release -- --ignored --nocapture
 ```
 
 The GPU checks cover code and Task reversals, deterministic out-of-order pixels,

@@ -33,9 +33,9 @@ Native/export still read back RGBA; the browser directly targets its acquired
 sRGB canvas view, with no full-frame CPU readback/blit in ordinary animation.
 
 ```sh
-cargo run -p kinograph-opencode-architecture
+cargo run -p psychopomp-opencode-architecture
 cargo run --release -- plan present target/opencode-architecture/deck.json --theme original
-KINOGRAPH_WEB_ASSETS="$PWD/target/browser-diagram-site" bash experiments/browser-grid-prototype/run.sh --build-only
+PSYCHOPOMP_WEB_ASSETS="$PWD/target/browser-diagram-site" bash experiments/browser-grid-prototype/run.sh --build-only
 bun experiments/browser-grid-prototype/diagram-proof.ts
 python3 experiments/browser-grid-prototype/compare-diagram.py
 ```

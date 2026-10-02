@@ -30,7 +30,7 @@ export default defineScript({
 +import { Schema } from "effect"
 +
 +export default Plugin.define({
-+  id: "kinograph.hot-reload-tool",
++  id: "psychopomp.hot-reload-tool",
 +  setup: async (ctx) => {
 +    await ctx.tool.transform((tools) => {
 +      tools.add({

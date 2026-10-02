@@ -1,7 +1,7 @@
 use std::{env, path::PathBuf};
 
 fn main() -> anyhow::Result<()> {
-    let deck = kinograph_interactive_showcase::build_deck()?;
+    let deck = psychopomp_interactive_showcase::build_deck()?;
     let output = env::args()
         .nth(1)
         .map(PathBuf::from)

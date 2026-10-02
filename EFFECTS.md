@@ -7,12 +7,12 @@ they happen; effect Modules own their physical pose and optical response.
 
 | Module | Interface | Responsibility |
 |---|---|---|
-| `kinograph::effects::combustion` | `Burst::sample(age).ember(direction, seed)` | Compression, ignition, rim-light envelope, gravity/drag embers, cooling |
-| `kinograph::effects::surface` | `impact(age, angle)`, `wavefront(age)` | Local contact dimple and a damped emissive wave over a sphere |
-| `kinograph::effects::shake` | `rumble(time, trauma)` | Squared-trauma camera rumble from two octaves of smooth noise: offset and roll |
-| `kinograph::effects::combustion` | `shock_arrival(distance)` | When the burst's pressure front reaches a distance, mirroring `pressure.wgsl` |
-| `kinograph::effects::spinner` | `sample(age, release, mark, shape)`, `handoff(after)` | The blog's radial spinner: closed-form critically damped motor, speed-driven wake, and a mark route drawn from a top-right handoff |
-| `kinograph::math::dynamics` | `ballistic(velocity, acceleration, drag, seconds)` | Closed-form reusable particle displacement |
+| `psychopomp::effects::combustion` | `Burst::sample(age).ember(direction, seed)` | Compression, ignition, rim-light envelope, gravity/drag embers, cooling |
+| `psychopomp::effects::surface` | `impact(age, angle)`, `wavefront(age)` | Local contact dimple and a damped emissive wave over a sphere |
+| `psychopomp::effects::shake` | `rumble(time, trauma)` | Squared-trauma camera rumble from two octaves of smooth noise: offset and roll |
+| `psychopomp::effects::combustion` | `shock_arrival(distance)` | When the burst's pressure front reaches a distance, mirroring `pressure.wgsl` |
+| `psychopomp::effects::spinner` | `sample(age, release, mark, shape)`, `handoff(after)` | The blog's radial spinner: closed-form critically damped motor, speed-driven wake, and a mark route drawn from a top-right handoff |
+| `psychopomp::math::dynamics` | `ballistic(velocity, acceleration, drag, seconds)` | Closed-form reusable particle displacement |
 | `render/effects/noise.wgsl` | `fx_hash2(p)`, `fx_noise3(p)`, `fx_fbm3(p)` | Deterministic 3D noise; caller-owned coordinate transforms |
 | `render/effects/combustion.wgsl` | `combustion_volume(pixel, radius, age)` | Domain-warped fire/smoke, emission and absorption; requires noise |
 | `render/effects/pressure.wgsl` | `pressure_wave(delta, scale, age)` | Inward pinch and outward refraction; returns displacement and ring intensity |
@@ -56,7 +56,7 @@ ambient rotation stay with the caller. Shader color is premultiplied linear HDR.
 
 ## Tuning and research
 
-Set `KINOGRAPH_SHADER_DIR=crates/kinograph-render/src/render` to reload shader
+Set `PSYCHOPOMP_SHADER_DIR=crates/psychopomp-render/src/render` to reload shader
 sources, including the `effects/` files. Keep short canonical studies under
 ignored `output/`; keep the experiment method and decisions in `perf/`.
 

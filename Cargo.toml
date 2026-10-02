@@ -1,7 +1,7 @@
 [workspace]
 members = [
-  "crates/kinograph",
-  "crates/kinograph-render",
+  "crates/psychopomp",
+  "crates/psychopomp-render",
   "scenes/agent-demo",
   "scenes/deployment-queue",
   "scenes/hero",
@@ -19,5 +19,5 @@ members = [
   "scenes/opencode-jr-architecture",
   "scenes/pr-50231",
 ]
-default-members = ["crates/kinograph-render"]
+default-members = ["crates/psychopomp-render"]
 resolver = "3"

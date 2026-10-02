@@ -1,4 +1,4 @@
-# Kinograph Domain Language
+# Psychopomp Domain Language
 
 ## Code Document
 
@@ -340,11 +340,11 @@ The renderer-independent position of one Task. Pose changes are composition leav
 
 ## Terminal Recording
 
-An immutable recording of a real terminal interaction used as source pixels inside authored choreography. Kinograph samples the recording by media time, while a terminal frame supplies presentation such as rounded clipping, whole-card camera motion, explanatory split views, and effects. The recording remains evidence of the actual product behavior rather than a reconstructed terminal simulation.
+An immutable recording of a real terminal interaction used as source pixels inside authored choreography. Psychopomp samples the recording by media time, while a terminal frame supplies presentation such as rounded clipping, whole-card camera motion, explanatory split views, and effects. The recording remains evidence of the actual product behavior rather than a reconstructed terminal simulation.
 
 ## Temporal Sample
 
-One evaluation of the complete scene within an output frame's shutter interval. Kinograph combines a frame's weighted temporal samples (its exposure) to produce motion blur from real scene movement; a Stage adds their light on the GPU before developing the frame.
+One evaluation of the complete scene within an output frame's shutter interval. Psychopomp combines a frame's weighted temporal samples (its exposure) to produce motion blur from real scene movement; a Stage adds their light on the GPU before developing the frame.
 
 ## Editor Frame
 
@@ -352,7 +352,7 @@ The renderer-neutral description of one sampled editor scene: panel position, fo
 
 ## Published Lesson
 
-An immutable Effect Institute section artifact containing canonical narration, word timing, stable code template identities, step frames, and optional component snapshots. A Published Lesson is imported into ordinary Kinograph tracks and renderer recipes; it is not a second authoring language.
+An immutable Effect Institute section artifact containing canonical narration, word timing, stable code template identities, step frames, and optional component snapshots. A Published Lesson is imported into ordinary Psychopomp tracks and renderer recipes; it is not a second authoring language.
 
 ## Chapter Reel
 

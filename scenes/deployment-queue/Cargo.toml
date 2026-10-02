@@ -1,8 +1,8 @@
 [package]
-name = "kinograph-deployment-queue"
+name = "psychopomp-deployment-queue"
 version = "0.1.0"
 edition = "2024"
 
 [dependencies]
 anyhow = "1.0"
-kinograph = { path = "../../crates/kinograph" }
+psychopomp = { path = "../../crates/psychopomp" }

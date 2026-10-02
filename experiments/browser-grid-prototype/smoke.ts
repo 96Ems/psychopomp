@@ -41,7 +41,7 @@ try {
   await page.getByRole("button", { name: "Next →", exact: true }).click();
   await page.waitForFunction(() => (window as any).probe.state.step === 1 && (window as any).probe.state.phase === "Held");
   await page.locator("canvas").screenshot({ path: resolve(output, "regroup.png") });
-  await page.evaluate(() => document.querySelector("kinograph-canvas")!.remove());
+  await page.evaluate(() => document.querySelector("psychopomp-canvas")!.remove());
   if (errors.length) throw new Error(errors.join("\n"));
   const video = page.video();
   await context.close();

@@ -7,11 +7,11 @@ fn main() -> anyhow::Result<()> {
     let reels = [
         (
             "pr-51889.reel.json",
-            kinograph_config_migration::build_duplicate(&narration)?,
+            psychopomp_config_migration::build_duplicate(&narration)?,
         ),
         (
             "pr-51901.reel.json",
-            kinograph_config_migration::build_rename(&narration)?,
+            psychopomp_config_migration::build_rename(&narration)?,
         ),
     ];
     for (file, reel) in reels {

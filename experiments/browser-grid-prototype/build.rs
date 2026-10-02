@@ -3,7 +3,7 @@
 use std::{env, fs, path::PathBuf};
 fn main() {
     let root = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap())
-        .join("../../crates/kinograph-render/src");
+        .join("../../crates/psychopomp-render/src");
     let out = PathBuf::from(env::var("OUT_DIR").unwrap());
     for (kind, files) in [
         (

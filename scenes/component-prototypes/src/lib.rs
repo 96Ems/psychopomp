@@ -2,7 +2,7 @@
 //! their appearance before promoting their provisional payloads into an API.
 use anyhow::Result;
 mod slideshow;
-use kinograph::{
+use psychopomp::{
     author::{ActorHandle, PlanBuilder, SECOND},
     component_prototype::*,
     plan::{DeckPlan, ScenePlan, SlidePlan},
@@ -93,7 +93,7 @@ fn track(p: &mut PlanBuilder, actor: &ActorHandle, property: &str, values: &[f32
         actor,
         property,
         values,
-        kinograph::plan::SpringPlan::visual(0.4, 0.),
+        psychopomp::plan::SpringPlan::visual(0.4, 0.),
     );
 }
 fn footer(p: &mut PlanBuilder, index: usize, title: &str) -> Result<()> {

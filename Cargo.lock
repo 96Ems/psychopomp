@@ -28,7 +28,7 @@ checksum = "320119579fcad9c21884f5c4861d16174d0e06250625266f50fe6898340abefa"
 name = "agent-demo"
 version = "0.1.0"
 dependencies = [
- "kinograph",
+ "psychopomp",
  "serde_json",
 ]
 
@@ -877,182 +877,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e2db585e1d738fc771bf08a151420d3ed193d9d895a36df7f6f8a9456b911ddc"
 
 [[package]]
-name = "kinograph"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "glam",
- "serde",
- "serde_json",
-]
-
-[[package]]
-name = "kinograph-component-prototypes"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "kinograph",
- "kinograph-keyed-grid",
- "serde_json",
-]
-
-[[package]]
-name = "kinograph-config-migration"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "kinograph",
- "kinograph-pr-walkthrough",
- "serde",
- "serde_json",
-]
-
-[[package]]
-name = "kinograph-data-modeling"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "kinograph",
- "serde_json",
-]
-
-[[package]]
-name = "kinograph-deployment-queue"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "kinograph",
-]
-
-[[package]]
-name = "kinograph-effect-succeed-slides"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "kinograph",
- "serde_json",
-]
-
-[[package]]
-name = "kinograph-hero"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "kinograph",
-]
-
-[[package]]
-name = "kinograph-interactive-showcase"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "kinograph",
- "kinograph-effect-succeed-slides",
- "serde_json",
-]
-
-[[package]]
-name = "kinograph-keyed-grid"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "kinograph",
- "serde_json",
-]
-
-[[package]]
-name = "kinograph-opencode-architecture"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "kinograph",
- "serde_json",
-]
-
-[[package]]
-name = "kinograph-opencode-jr-architecture"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "kinograph",
- "serde",
- "serde_json",
-]
-
-[[package]]
-name = "kinograph-opencode-session-tool"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "kinograph",
- "serde_json",
-]
-
-[[package]]
-name = "kinograph-pr-50231"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "kinograph",
- "serde",
- "serde_json",
-]
-
-[[package]]
-name = "kinograph-pr-walkthrough"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "kinograph",
- "serde",
- "serde_json",
-]
-
-[[package]]
-name = "kinograph-quark-before-after"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "kinograph",
- "serde_json",
-]
-
-[[package]]
-name = "kinograph-render"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "bytemuck",
- "cosmic-text",
- "kinograph",
- "kinograph-component-prototypes",
- "kinograph-data-modeling",
- "kinograph-deployment-queue",
- "kinograph-effect-succeed-slides",
- "kinograph-hero",
- "kinograph-interactive-showcase",
- "kinograph-keyed-grid",
- "kinograph-opencode-architecture",
- "kinograph-opencode-session-tool",
- "png",
- "pollster",
- "pulldown-cmark",
- "resvg",
- "serde",
- "serde_json",
- "wgpu",
- "winit",
-]
-
-[[package]]
-name = "kinograph-rolling-number"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "kinograph",
-]
-
-[[package]]
 name = "kurbo"
 version = "0.13.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1738,6 +1562,182 @@ name = "profiling"
 version = "1.0.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3d595e54a326bc53c1c197b32d295e14b169e3cfeaa8dc82b529f947fba6bcf5"
+
+[[package]]
+name = "psychopomp"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "glam",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "psychopomp-component-prototypes"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "psychopomp",
+ "psychopomp-keyed-grid",
+ "serde_json",
+]
+
+[[package]]
+name = "psychopomp-config-migration"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "psychopomp",
+ "psychopomp-pr-walkthrough",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "psychopomp-data-modeling"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "psychopomp",
+ "serde_json",
+]
+
+[[package]]
+name = "psychopomp-deployment-queue"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "psychopomp",
+]
+
+[[package]]
+name = "psychopomp-effect-succeed-slides"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "psychopomp",
+ "serde_json",
+]
+
+[[package]]
+name = "psychopomp-hero"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "psychopomp",
+]
+
+[[package]]
+name = "psychopomp-interactive-showcase"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "psychopomp",
+ "psychopomp-effect-succeed-slides",
+ "serde_json",
+]
+
+[[package]]
+name = "psychopomp-keyed-grid"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "psychopomp",
+ "serde_json",
+]
+
+[[package]]
+name = "psychopomp-opencode-architecture"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "psychopomp",
+ "serde_json",
+]
+
+[[package]]
+name = "psychopomp-opencode-jr-architecture"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "psychopomp",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "psychopomp-opencode-session-tool"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "psychopomp",
+ "serde_json",
+]
+
+[[package]]
+name = "psychopomp-pr-50231"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "psychopomp",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "psychopomp-pr-walkthrough"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "psychopomp",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "psychopomp-quark-before-after"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "psychopomp",
+ "serde_json",
+]
+
+[[package]]
+name = "psychopomp-render"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "bytemuck",
+ "cosmic-text",
+ "png",
+ "pollster",
+ "psychopomp",
+ "psychopomp-component-prototypes",
+ "psychopomp-data-modeling",
+ "psychopomp-deployment-queue",
+ "psychopomp-effect-succeed-slides",
+ "psychopomp-hero",
+ "psychopomp-interactive-showcase",
+ "psychopomp-keyed-grid",
+ "psychopomp-opencode-architecture",
+ "psychopomp-opencode-session-tool",
+ "pulldown-cmark",
+ "resvg",
+ "serde",
+ "serde_json",
+ "wgpu",
+ "winit",
+]
+
+[[package]]
+name = "psychopomp-rolling-number"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "psychopomp",
+]
 
 [[package]]
 name = "pulldown-cmark"

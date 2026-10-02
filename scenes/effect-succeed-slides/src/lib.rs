@@ -1,7 +1,7 @@
 //! Presentation-sized adaptation of Effect Institute's basics/effect-succeed.
 //! The two stable declaration lines are a display reflow, not a changing slot.
 use anyhow::Result;
-use kinograph::{
+use psychopomp::{
     author::{PlanBuilder, SECOND},
     code::{StyledSpan, SyntaxStyle},
     editor::{
@@ -193,7 +193,7 @@ fn reveal(line: &str, range: &str, channel: &str, reversed: bool) -> EditorInlin
 #[cfg(test)]
 mod tests {
     use super::*;
-    use kinograph::{
+    use psychopomp::{
         editor::inspect_steps,
         plan::{ScalarPlan, compile_channels},
         timeline::PropertyId,

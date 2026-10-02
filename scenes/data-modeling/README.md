@@ -17,7 +17,7 @@ The existing `scenes/keyed-grid` chess demonstration is unchanged.
 ## Run
 
 ```bash
-cargo run -p kinograph-data-modeling
+cargo run -p psychopomp-data-modeling
 cargo run --release -- plan present target/data-modeling/deck.json
 cargo run -- plan steps target/data-modeling/illegal-states.json
 cargo run --release -- plan render target/data-modeling/boolean-toggle.json \

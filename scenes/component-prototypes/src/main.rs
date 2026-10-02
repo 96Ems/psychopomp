@@ -5,9 +5,9 @@ fn main() -> anyhow::Result<()> {
     let first = args.next();
     let slideshow = first.as_deref() == Some("--slideshow");
     let deck = if slideshow {
-        kinograph_component_prototypes::build_slideshow_deck()?
+        psychopomp_component_prototypes::build_slideshow_deck()?
     } else {
-        kinograph_component_prototypes::build_deck()?
+        psychopomp_component_prototypes::build_deck()?
     };
     let output = if slideshow { args.next() } else { first }
         .map(PathBuf::from)

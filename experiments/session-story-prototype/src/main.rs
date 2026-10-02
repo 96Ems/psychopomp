@@ -2,17 +2,17 @@
 //! emulator, browser recording, live client, or new supported Scene Plan recipe.
 use anyhow::{Context, Result};
 use cosmic_text::{Attrs, Color, Family, FontSystem, Metrics, SwashCache, Weight};
-use kinograph::{
+use psychopomp::{
     author::PlanBuilder,
     plan::{ScenePlan, SpringPlan, compile_channels},
     timeline::{PropertyId, Timeline},
 };
 use std::{collections::HashMap, fs, path::Path};
 
-#[path = "../../../crates/kinograph-render/src/encode.rs"]
+#[path = "../../../crates/psychopomp-render/src/encode.rs"]
 mod encode;
 mod paint;
-#[path = "../../../crates/kinograph-render/src/render/text/raster.rs"]
+#[path = "../../../crates/psychopomp-render/src/render/text/raster.rs"]
 mod raster;
 use paint::ui::{
     Bounds,
@@ -115,7 +115,7 @@ struct Text {
 impl Text {
     fn new() -> Result<Self> {
         let mut fonts = FontSystem::new();
-        let path = std::env::var("KINOGRAPH_FONT").unwrap_or_else(|_| {
+        let path = std::env::var("PSYCHOPOMP_FONT").unwrap_or_else(|_| {
             format!(
                 "{}/Library/Fonts/CommitMono-400-Regular.otf",
                 std::env::var("HOME").unwrap()
@@ -905,7 +905,7 @@ fn main() -> Result<()> {
                 .map(|c| (c, PropertyId::new(&c.id))),
             plan.duration_nanos,
             |s| match s {
-                kinograph::plan::ScalarPlan::Literal(v) => Ok(*v),
+                psychopomp::plan::ScalarPlan::Literal(v) => Ok(*v),
                 _ => anyhow::bail!("literal prototype"),
             },
         )?;

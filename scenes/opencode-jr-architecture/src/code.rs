@@ -1,7 +1,7 @@
 //! The Worker's pipeline in `src/ingress.ts`, condensed for display: each
 //! stage of the handler arrives as the narration names it.
 use anyhow::{Context, Result};
-use kinograph::{
+use psychopomp::{
     author::PlanBuilder,
     editor::{EDITOR_RECIPE, EditorLinePlan, EditorPartPlan, EditorRecipePlan, EditorSnapshotPlan},
     highlight,

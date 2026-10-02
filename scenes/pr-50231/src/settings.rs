@@ -4,7 +4,7 @@
 //! the legacy read shape has an open rest, the lower gate opens, and both
 //! fields make the round trip home.
 use anyhow::{Context, Result};
-use kinograph::{
+use psychopomp::{
     author::PlanBuilder,
     caption::CaptionAlign,
     math::easing::Ease,

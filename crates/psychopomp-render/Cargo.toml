@@ -1,0 +1,33 @@
+[package]
+name = "psychopomp-render"
+version = "0.1.0"
+edition = "2024"
+
+[[bin]]
+name = "psychopomp"
+path = "src/main.rs"
+
+[dependencies]
+anyhow = "1.0"
+bytemuck = { version = "1.25", features = ["derive"] }
+cosmic-text = "0.19"
+psychopomp = { path = "../psychopomp" }
+pollster = "0.4"
+pulldown-cmark = { version = "0.13", default-features = false }
+png = "0.18"
+resvg = "0.47"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+wgpu = "30.0"
+winit = "0.30"
+
+[dev-dependencies]
+psychopomp-deployment-queue = { path = "../../scenes/deployment-queue" }
+psychopomp-opencode-session-tool = { path = "../../scenes/opencode-session-tool" }
+psychopomp-hero = { path = "../../scenes/hero" }
+psychopomp-effect-succeed-slides = { path = "../../scenes/effect-succeed-slides" }
+psychopomp-interactive-showcase = { path = "../../scenes/interactive-showcase" }
+psychopomp-keyed-grid = { path = "../../scenes/keyed-grid" }
+psychopomp-data-modeling = { path = "../../scenes/data-modeling" }
+psychopomp-component-prototypes = { path = "../../scenes/component-prototypes" }
+psychopomp-opencode-architecture = { path = "../../scenes/opencode-architecture" }

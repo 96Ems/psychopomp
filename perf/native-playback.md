@@ -7,8 +7,8 @@ frame-submission intervals below 18 ms. These are CPU submission times, not
 hardware display scanout timestamps; visual inspection still matters.
 
 ```bash
-cargo build --release -p kinograph-render
-target/release/kinograph plan present target/effect-succeed-slides.json --benchmark \
+cargo build --release -p psychopomp-render
+target/release/psychopomp plan present target/effect-succeed-slides.json --benchmark \
   > output/native-perf/run.json 2> output/native-perf/run.log
 ```
 
@@ -96,7 +96,7 @@ unverified because no connected display supports it.
 ### Diagnostic: measure completed work, not just submission
 
 ```bash
-target/release/kinograph plan present target/effect-succeed-slides.json \
+target/release/psychopomp plan present target/effect-succeed-slides.json \
   --fps 120 --benchmark-gpu > output/native-perf/completed.json
 ```
 

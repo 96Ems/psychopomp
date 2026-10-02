@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use anyhow::Result;
-use kinograph::{
+use psychopomp::{
     author::PlanBuilder,
     plan::{MediaKindPlan, MediaPlan, MediaRolePlan, ScenePlan},
     terminal::{TERMINAL_RECORDING_RECIPE, TerminalRecordingPlan, TerminalRecordingRecipePlan},
@@ -243,7 +243,7 @@ fn audio(
 
 #[cfg(test)]
 mod tests {
-    use kinograph::plan::TrackEventPlan;
+    use psychopomp::plan::TrackEventPlan;
 
     use super::build_plan;
 

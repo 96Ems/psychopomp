@@ -32,7 +32,7 @@ extra easing window is introduced.
 ## Slideshow components and themes
 
 ```sh
-cargo run -p kinograph-component-prototypes -- --slideshow
+cargo run -p psychopomp-component-prototypes -- --slideshow
 cargo run --release -- plan present target/slideshow-components/deck.json
 ```
 
@@ -124,7 +124,7 @@ them, select the entrance step, use Shift+R, and frame-step with the HUD visible
 
 ## Provisional, not a public API commitment
 
-- Payloads live in `kinograph::component_prototype`; recipe names start with
+- Payloads live in `psychopomp::component_prototype`; recipe names start with
   `prototype-`. Keep, revise, or remove them after visual review.
 - Typeset owns one line of authored parts. Partition at intentional word/slot
   boundaries; this does not claim cross-part shaping of ligatures or scripts.

@@ -2,7 +2,7 @@
 //! counter redirected mid-roll, and a test count that carries into a new
 //! place and later shrinks. Every change is one `roll` call at a time.
 use anyhow::Result;
-use kinograph::{
+use psychopomp::{
     author::{PlanBuilder, SECOND},
     caption::{CaptionAlign, CaptionSpanPlan},
     plan::ScenePlan,

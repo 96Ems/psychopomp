@@ -2,7 +2,7 @@ use crate::{
     plan_runtime::Scene,
     render::{HeadlessRenderer, Theme},
 };
-use kinograph::playback::{PlaybackCommand, PlaybackSpeed};
+use psychopomp::playback::{PlaybackCommand, PlaybackSpeed};
 use std::time::Duration;
 use wasm_bindgen::prelude::*;
 

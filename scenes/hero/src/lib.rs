@@ -1,5 +1,5 @@
 use anyhow::Result;
-use kinograph::{
+use psychopomp::{
     author::{PlanBuilder, SECOND, seconds},
     code::{StyledSpan, SyntaxStyle},
     editor::{
@@ -109,10 +109,10 @@ pub fn build_plan() -> Result<ScenePlan> {
 
 fn move_pointer(
     scene: &mut PlanBuilder,
-    x: &kinograph::author::ContinuousHandle,
-    y: &kinograph::author::ContinuousHandle,
+    x: &psychopomp::author::ContinuousHandle,
+    y: &psychopomp::author::ContinuousHandle,
     at: f64,
-    target: &kinograph::author::SemanticTargetHandle,
+    target: &psychopomp::author::SemanticTargetHandle,
 ) {
     scene.spring_to(x, seconds(at), target.center_x(), 0.42, 0.18);
     scene.spring_to(

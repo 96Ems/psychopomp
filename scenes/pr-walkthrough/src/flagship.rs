@@ -5,7 +5,7 @@
 use std::path::PathBuf;
 
 use anyhow::{Context, Result};
-use kinograph::{
+use psychopomp::{
     author::{PlanBuilder, seconds},
     caption::{CaptionAlign, CaptionSpanPlan},
     effects::{
@@ -65,7 +65,7 @@ pub fn build_flagship(narration_dir: &std::path::Path) -> Result<ReelPlan> {
 /// Keep the compatible declaration and version-check expression alive while
 /// splitting the computation. Their lines trade places; only edited slots fade.
 fn stable_code(mut plan: ScenePlan) -> Result<ScenePlan> {
-    use kinograph::{
+    use psychopomp::{
         editor::{
             EditorInlineRevealPlan, EditorPartPlan, EditorRecipePlan, EditorSemanticRangePlan,
             LineMarkPlan,
@@ -773,8 +773,8 @@ fn stage_film(narration: &Narration) -> Result<ScenePlan> {
 mod tests {
     #[test]
     fn client_cards_fit_the_camera_compositions() {
-        use kinograph::math::{Vec3, vec2};
-        use kinograph::stage::{Camera, StageElement};
+        use psychopomp::math::{Vec3, vec2};
+        use psychopomp::stage::{Camera, StageElement};
 
         for position in [
             [0.0, 0.0, -160.0],
@@ -804,7 +804,7 @@ mod tests {
 
     #[test]
     fn the_version_split_preserves_common_parts_and_has_no_stability_warnings() {
-        use kinograph::{author::PlanBuilder, editor::inspect_steps, plan::PresentationStepPlan};
+        use psychopomp::{author::PlanBuilder, editor::inspect_steps, plan::PresentationStepPlan};
         let mut builder = PlanBuilder::new("stable-split", super::seconds(8.0));
         crate::diffs(1)
             .0

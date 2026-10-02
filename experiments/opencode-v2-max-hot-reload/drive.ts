@@ -1,6 +1,6 @@
 import { defineScript, wait } from "opencode-drive"
 
-const VIM_SESSION = "kinograph-max-hot-reload-vim"
+const VIM_SESSION = "psychopomp-max-hot-reload-vim"
 const VIM_RECORDING_OUTPUT = new URL("../../output/opencode-v2-max-hot-reload-vim.termctrl", import.meta.url).pathname
 
 const config = `{

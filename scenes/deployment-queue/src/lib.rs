@@ -1,5 +1,5 @@
 use anyhow::Result;
-use kinograph::{
+use psychopomp::{
     author::{PlanBuilder, SECOND},
     deployment::{
         DeploymentItemPlan, DeploymentQueueHandle, DeploymentQueueRecipePlan,

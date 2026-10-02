@@ -57,7 +57,7 @@ try {
       total.resources.push({ label: descriptor.label, format: descriptor.format, size: [width, height, depth], samples: descriptor.sampleCount || 1, bytes });
       return texture;
     };
-    const { default: init, GridCanvas } = await import("/pkg/kinograph_browser_grid_prototype.js");
+    const { default: init, GridCanvas } = await import("/pkg/psychopomp_browser_grid_prototype.js");
     const wasm = await init();
     const [plan, glyphs] = await Promise.all([
       fetch("/growing-grid.json").then(r => r.text()),
@@ -71,7 +71,7 @@ try {
     const engine = await GridCanvas.create(canvas, plan, glyphs);
     const engines = [{ variant: "candidate", engine, canvas }];
     if (compare) {
-      const old = await import("/control/pkg/kinograph_browser_grid_prototype.js");
+      const old = await import("/control/pkg/psychopomp_browser_grid_prototype.js");
       await old.default();
       const otherCanvas = document.createElement("canvas");
       otherCanvas.width = 1920; otherCanvas.height = 1080;

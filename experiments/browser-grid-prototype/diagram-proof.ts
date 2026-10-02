@@ -105,7 +105,7 @@ try {
   await Bun.write(join(output,"grid-17.png"),Buffer.from(grid.split(",")[1],"base64"));
   await page.goto(new URL("diagram.html?scene=daemon-isometric",server.url).toString());
   await page.waitForFunction(()=>(window as any).probe?.state?.scene==="daemon-isometric");
-  await page.evaluate(()=>document.querySelector("kinograph-canvas")!.remove());
+  await page.evaluate(()=>document.querySelector("psychopomp-canvas")!.remove());
   if(errors.length)throw new Error(errors.join("\n"));
   const video=page.video();await context.close();await video?.saveAs(join(output,"navigation.webm"));
   const median=(values:number[])=>values.sort((a,b)=>a-b)[Math.floor(values.length/2)];

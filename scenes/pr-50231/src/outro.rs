@@ -1,7 +1,7 @@
 //! Eight CI checks spin and resolve into marks while the count rolls to 8/8;
 //! then the title card and the promise that nothing you depend on changes.
 use anyhow::{Context, Result};
-use kinograph::{
+use psychopomp::{
     author::PlanBuilder,
     caption::CaptionAlign,
     effects::spinner,

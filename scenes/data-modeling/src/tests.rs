@@ -1,5 +1,5 @@
 use super::*;
-use kinograph::{
+use psychopomp::{
     editor::inspect_steps,
     plan::{ScalarPlan, TrackEventPlan},
     value::{VALUE_TOKEN_RECIPE, ValueTokenPlan},
@@ -30,7 +30,7 @@ fn deck_is_deterministic_native_and_has_valid_concrete_recipes() {
                     .validate(slide.plan.duration_nanos)
                     .unwrap(),
                 "editor" => {
-                    serde_json::from_value::<kinograph::editor::EditorRecipePlan>(
+                    serde_json::from_value::<psychopomp::editor::EditorRecipePlan>(
                         actor.data.clone(),
                     )
                     .unwrap()

@@ -5,9 +5,9 @@ fn main() -> anyhow::Result<()> {
     let first = args.next();
     let styles = first.as_deref() == Some("--styles");
     let deck = if styles {
-        kinograph_keyed_grid::build_style_deck()?
+        psychopomp_keyed_grid::build_style_deck()?
     } else {
-        kinograph_keyed_grid::build_deck()?
+        psychopomp_keyed_grid::build_deck()?
     };
     let output = if styles { args.next() } else { first }
         .map(PathBuf::from)

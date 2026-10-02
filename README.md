@@ -1,9 +1,12 @@
-# Kinograph
+# Psychopomp
 
 Code-first motion graphics in Rust. One authored scene can become a native,
 interruptible presentation or a shutter-sampled video.
 
-Kinograph is an early prototype, not a general-purpose scene graph. Its examples
+The project was previously named Kinograph; a psychopomp is a guide that leads
+souls between worlds, as these scenes lead a viewer from one state to the next.
+
+Psychopomp is an early prototype, not a general-purpose scene graph. Its examples
 explore stable code edits, teaching diagrams, typography, and simulated interfaces.
 Motion is sampled at arbitrary times; reversing a transition preserves its
 current position and velocity instead of restarting an animation.
@@ -13,7 +16,7 @@ current position and velocity instead of restarting an animation.
 From the repository root:
 
 ```sh
-cargo run -p kinograph-opencode-architecture
+cargo run -p psychopomp-opencode-architecture
 cargo run --release -- plan present target/opencode-architecture/deck.json --theme original
 ```
 
@@ -48,7 +51,7 @@ and fixed behavior, and editors animate each change as a diff. See
 [Make A Narrated Explainer Reel](SCENE_PLANS.md#make-a-narrated-explainer-reel).
 
 ```sh
-cargo run -p kinograph-pr-walkthrough
+cargo run -p psychopomp-pr-walkthrough
 cargo run --release -- plan render scenes/pr-walkthrough/pr-walkthrough.reel.json output/pr-walkthrough.mp4 --theme opencode
 ```
 
@@ -61,9 +64,9 @@ The renderer prepares that plan once, then samples it for either delivery.
 ```text
 scenes/*                         authored meaning, destinations, choreography
     ↓ Scene Plan
-crates/kinograph                  identity, validation, tracks, retargeting, time
+crates/psychopomp                  identity, validation, tracks, retargeting, time
     ↓ typed preflight and resource preparation
-crates/kinograph-render           measured typography, recipes, sampled pixels
+crates/psychopomp-render           measured typography, recipes, sampled pixels
     ├─ native presentation       Playback, window and worker scheduling
     └─ video export              temporal sampling, readback and FFmpeg
 ```

@@ -1,4 +1,4 @@
-// THROWAWAY: three Kinograph compositions in an isolated copy of the actual
+// THROWAWAY: three Psychopomp compositions in an isolated copy of the actual
 // article, switched via ?prototype=sessions&variant=A|B|C. No live mutations.
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react"
 import "./preview.css"
@@ -12,9 +12,9 @@ const beats = [
   [0, "Ask"], [3, "Configure"], [6, "Connect"], [9, "Browse"],
   [13, "Inspect"], [17, "Code Mode"], [21, "Continue"],
 ] as const
-const assets = "/kinograph-session-prototype"
+const assets = "/psychopomp-session-prototype"
 
-export function KinographPrototype({ original }: { original: ReactNode }) {
+export function PsychopompPrototype({ original }: { original: ReactNode }) {
   if (!import.meta.env.DEV || new URLSearchParams(location.search).get("prototype") !== "sessions") return original
   return <Comparison original={original} />
 }
@@ -36,7 +36,7 @@ function Comparison({ original }: { original: ReactNode }) {
     const url = new URL(location.href)
     url.searchParams.set("variant", variants[index].id)
     history.replaceState(null, "", url)
-    console.info("Kinograph comparison", { variant: variants[index].id, ...resume.current, delivery: "native-rendered video", fixture: true })
+    console.info("Psychopomp comparison", { variant: variants[index].id, ...resume.current, delivery: "native-rendered video", fixture: true })
   }, [elapsed])
   useEffect(() => {
     const key = (event: KeyboardEvent) => {
@@ -53,14 +53,14 @@ function Comparison({ original }: { original: ReactNode }) {
     video.current.pause()
     video.current.currentTime = time
   }
-  return <section id="kinograph-options" className="kg-comparison" data-kinograph-prototype>
-    <div className="kg-prototype-label"><span>Kinograph · visual prototype</span><button onClick={() => {
+  return <section id="psychopomp-options" className="kg-comparison" data-psychopomp-prototype>
+    <div className="kg-prototype-label"><span>Psychopomp · visual prototype</span><button onClick={() => {
       if (video.current) {
         resume.current = { time: video.current.currentTime, playing: false, speed: video.current.playbackRate }
         video.current.pause()
       }
       setShowOriginal(v => !v)
-    }}>{showOriginal ? "Back to Kinograph" : "Compare current version"}</button></div>
+    }}>{showOriginal ? "Back to Psychopomp" : "Compare current version"}</button></div>
     {showOriginal ? original : <>
       <video key={selected.id} ref={video} className="kg-prototype-video" src={`${assets}/${selected.id}.mp4`} poster={`${assets}/${selected.id}.png`} controls playsInline preload="metadata"
         aria-label={`${selected.name}: illustrated OpenCode and browser session`}

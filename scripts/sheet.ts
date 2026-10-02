@@ -1,6 +1,6 @@
 // Labeled contact sheet of exact frames from a Scene Plan or reel: the fastest way
 // to review choreography before a full render. Frames render in one process
-// (`kinograph plan snapshot`); `--shutter` exposes each like an exported video
+// (`psychopomp plan snapshot`); `--shutter` exposes each like an exported video
 // frame, motion blur included. `--crop x,y,w,h` tiles one region at full size.
 //
 // Usage:
@@ -25,7 +25,7 @@ const crop = args.includes("--crop") ? flag("--crop", "").split(",").map(Number)
 if (crop && (crop.length !== 4 || crop.some(Number.isNaN))) throw new Error("--crop takes x,y,w,h")
 
 const root = path.join(import.meta.dir, "..")
-const binary = path.join(root, "target/release/kinograph")
+const binary = path.join(root, "target/release/psychopomp")
 if (Bun.spawnSync(["cargo", "build", "--release", "-q"], { cwd: root, stderr: "inherit" }).exitCode !== 0) throw new Error("build failed")
 const frames = path.join(root, "output/sheet-frames")
 await rm(frames, { recursive: true, force: true })

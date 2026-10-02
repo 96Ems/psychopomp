@@ -1,6 +1,6 @@
 # OpenCode architecture · Daemon / merge
 
-A bare Kinograph adaptation of `opencode-architecture`'s four-step `Merge.tsx`:
+A bare Psychopomp adaptation of `opencode-architecture`'s four-step `Merge.tsx`:
 **only labeled boxes and attached wires**. The original dotted stage, enclosing
 frame, heading, caption and indicators were explicitly rejected and are not drawn.
 Flat and isometric views share identities, layout and the GPU recipe. Isometric
@@ -8,7 +8,7 @@ adds its own width/depth entrance through the same motion engine. Kit likes its 
 Flat remains the default rather than being replaced automatically.
 
 ```sh
-cargo run -p kinograph-opencode-architecture
+cargo run -p psychopomp-opencode-architecture
 cargo run --release -- plan present target/opencode-architecture/deck.json --theme original
 ```
 
@@ -84,7 +84,7 @@ Also inspected `Card.tsx`, `CyclingCaption.tsx`, `Comet.tsx`, `shared.ts`,
 Nothing in that project was edited or restarted.
 
 The reference's 880×240 SVG content is doubled into a centered 1760-pixel-wide
-layout on Kinograph's 1920×1080 canvas. Labels, order, palette and box/wire timing
+layout on Psychopomp's 1920×1080 canvas. Labels, order, palette and box/wire timing
 are retained. The reference-card chrome and rolling caption are intentionally gone.
 
 - 450 ms spatial / 320 ms merge springs, zero bounce.
@@ -129,8 +129,8 @@ not. No CPU backdrop or node-pixel rasterization remains in this recipe.
 Run benchmarks separately from builds and other rendering workloads:
 
 ```sh
-target/release/kinograph plan present target/opencode-architecture/daemon-merge.json --theme original --benchmark
-KINOGRAPH_DIAGRAM_PERF="$PWD/output/daemon-speed/check" cargo test -p kinograph-render --release diagram_sampling_benchmark -- --ignored --nocapture --test-threads=1
+target/release/psychopomp plan present target/opencode-architecture/daemon-merge.json --theme original --benchmark
+PSYCHOPOMP_DIAGRAM_PERF="$PWD/output/daemon-speed/check" cargo test -p psychopomp-render --release diagram_sampling_benchmark -- --ignored --nocapture --test-threads=1
 ```
 
 The first measures native submission pacing. The second measures a fixed-clock
@@ -140,8 +140,8 @@ or isolated GPU timing measurement. Resolution, filters and choreography are fix
 ## Browser
 
 ```sh
-KINOGRAPH_WEB_ASSETS="$PWD/target/browser-diagram-site" bash experiments/browser-grid-prototype/run.sh --build-only
-PORT=5203 KINOGRAPH_WEB_ASSETS="$PWD/target/browser-diagram-site" bun experiments/browser-grid-prototype/serve.ts
+PSYCHOPOMP_WEB_ASSETS="$PWD/target/browser-diagram-site" bash experiments/browser-grid-prototype/run.sh --build-only
+PORT=5203 PSYCHOPOMP_WEB_ASSETS="$PWD/target/browser-diagram-site" bun experiments/browser-grid-prototype/serve.ts
 ```
 
 Open <http://127.0.0.1:5203/diagram.html>. The experiment stages the actual

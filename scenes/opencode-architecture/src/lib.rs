@@ -1,7 +1,7 @@
 //! Four-step port of opencode-architecture's Merge.tsx, not its goo alternative.
 //! The diagram recipe knows boxes/wires; this Scene Program knows daemon history.
 use anyhow::Result;
-use kinograph::{
+use psychopomp::{
     author::{ActorHandle, PlanBuilder, SECOND},
     component_prototype::{
         DIAGRAM, DiagramAnchor, DiagramDelay, DiagramLink, DiagramNode, DiagramPlan, DiagramView,
@@ -311,7 +311,7 @@ mod tests {
     use super::*;
     #[test]
     fn isometric_entrance_is_a_fast_critical_rise_from_a_fixed_base() {
-        use kinograph::{
+        use psychopomp::{
             motion::{MotionState, Spring},
             plan::{ScalarPlan, TrackEventPlan},
         };

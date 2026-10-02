@@ -5,7 +5,7 @@
 use std::{collections::HashMap, fs, path::Path};
 
 use anyhow::{Context, Result};
-use kinograph::{
+use psychopomp::{
     author::PlanBuilder,
     plan::{MediaKindPlan, MediaPlan, MediaRolePlan},
     transcript::Transcript,

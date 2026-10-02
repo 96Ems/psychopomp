@@ -1,7 +1,7 @@
 //! The whole shape in one line: the edge, one object per thread, the sandbox,
 //! and back to Slack.
 use anyhow::{Context, Result};
-use kinograph::{caption::CaptionAlign, plan::ScenePlan, stage::StagePlan, tone::Tone};
+use psychopomp::{caption::CaptionAlign, plan::ScenePlan, stage::StagePlan, tone::Tone};
 
 use crate::{
     BLOOM, Film, Narration, arrive, beam, begin, card, footer, header, label, orb, orb_in, packet,

@@ -2,7 +2,7 @@
 //! decides wake, steer, or quiet context, and the embedded OpenCode runtime
 //! keeps its state in the object's own SQLite.
 use anyhow::{Context, Result};
-use kinograph::{
+use psychopomp::{
     caption::CaptionAlign, math::easing::Ease, plan::ScenePlan, stage::StagePlan, tone::Tone,
 };
 

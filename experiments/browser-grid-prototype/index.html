@@ -2,14 +2,14 @@
 <html lang="en">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Kinograph · browser grid probe</title>
+<title>Psychopomp · browser grid probe</title>
 <link rel="icon" href="data:,">
 <style>
   :root { color-scheme: dark; font-family: system-ui, sans-serif; background: #10131b; color: #e8e9ee; }
   body { max-width: 1280px; margin: 36px auto; padding: 0 24px 48px; }
   h1 { font-size: 26px; margin-bottom: 8px; } p { color: #a6aebb; line-height: 1.5; }
   small, output { color: #a6aebb; } a { color: #ef9d64; }
-  kinograph-canvas { display: block; }
+  psychopomp-canvas { display: block; }
   canvas, .fallback { display: block; width: 100%; height: auto; aspect-ratio: 16 / 9; background: #181c27; }
   canvas:focus-visible { outline: 2px solid #ef9d64; }
   nav { display: flex; gap: 8px; flex-wrap: wrap; margin: 14px 0; align-items: center; }
@@ -20,7 +20,7 @@
 </style>
 <h1>The same grid. A different host.</h1>
 <p>Local, throwaway WebAssembly + WebGPU proof. Shared Rust motion, shared grid shaders. No rendering server.</p>
-<kinograph-canvas aria-label="Interactive finite product: chess piece × side × board">
+<psychopomp-canvas aria-label="Interactive finite product: chess piece × side × board">
   <nav aria-label="Scene and appearance">
     <label>Scene <select name="scene"><option value="growing-grid">Growing a product</option><option value="grid-isomorphism">Regrouping the same values</option></select></label>
     <label>Theme <select name="theme"><option value="original">Original</option><option value="evergreen">Evergreen</option><option value="tokyo-night">Tokyo Night</option><option value="black">Pure Black</option></select></label>
@@ -37,7 +37,7 @@
     <button data-action="reduce" aria-pressed="false">Reduced motion</button>
   </nav>
   <output>Preparing…</output>
-</kinograph-canvas>
+</psychopomp-canvas>
 <p><small>Focus the canvas: ← / → steps · Home / End skip · R replay · Shift+R replay paused · P pause · S slower · , / . frame-step.<br>
 Prepared labels, 1920×1080, 4× spatial AA, one temporal sample. The slide's surrounding text is not ported. Canvas text is not selectable; this is not a production accessibility solution.</small></p>
 <script type="module" src="/probe.js"></script>

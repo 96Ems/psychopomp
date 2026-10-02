@@ -16,7 +16,8 @@ mod tools;
 use std::path::{Path, PathBuf};
 
 use anyhow::Result;
-use kinograph::{
+use narration::Narration;
+use psychopomp::{
     author::PlanBuilder,
     caption::{CaptionActor, CaptionAlign, CaptionPlan, CaptionSpanPlan},
     effects::spinner::Mark,
@@ -26,7 +27,6 @@ use kinograph::{
     stage::{StageElement, StagePost, StatusText},
     tone::Tone,
 };
-use narration::Narration;
 
 const LEFT: f32 = 140.0;
 const RIGHT: f32 = 1780.0;

@@ -26,8 +26,8 @@ samples across all themes and a return to Original for exact before/after checks
 
 ```sh
 cargo build --release
-target/release/kinograph plan present target/opencode-architecture/daemon-merge.json --theme original --benchmark > output/daemon-speed/native.json
-KINOGRAPH_DIAGRAM_PERF="$PWD/output/daemon-speed/candidate" cargo test -p kinograph-render --release diagram_sampling_benchmark -- --ignored --nocapture --test-threads=1
+target/release/psychopomp plan present target/opencode-architecture/daemon-merge.json --theme original --benchmark > output/daemon-speed/native.json
+PSYCHOPOMP_DIAGRAM_PERF="$PWD/output/daemon-speed/candidate" cargo test -p psychopomp-render --release diagram_sampling_benchmark -- --ignored --nocapture --test-threads=1
 ```
 
 Do not measure concurrently with builds or other rendering benchmarks. Artifacts

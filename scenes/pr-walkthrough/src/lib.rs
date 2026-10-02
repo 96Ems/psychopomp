@@ -15,7 +15,7 @@ use anyhow::{Context, Result};
 use film::{
     Flow, HEADER_Y, LEFT, Pr, TRANSITION, after, after_following, before, behavior, code, span,
 };
-use kinograph::{
+use psychopomp::{
     author::{PlanBuilder, seconds},
     caption::{CaptionActor, CaptionAlign, CaptionPlan},
     editor::diff::{Diff, add, keep, remove},

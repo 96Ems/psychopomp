@@ -26,7 +26,7 @@ pub fn build_slideshow_deck() -> Result<DeckPlan> {
                 title: "Venn · intersection follows geometry".into(),
                 plan: venn()?,
             },
-            kinograph_keyed_grid::build_plain_table_slide()?,
+            psychopomp_keyed_grid::build_plain_table_slide()?,
             SlidePlan {
                 title: "Composition · existing pieces, same theme".into(),
                 plan: super::composition()?,
@@ -67,7 +67,7 @@ fn prose_fade(p: &mut PlanBuilder, actor: &ActorHandle, property: &str, values: 
         actor,
         property,
         values,
-        kinograph::plan::SpringPlan::visual(0.16, 0.),
+        psychopomp::plan::SpringPlan::visual(0.16, 0.),
     );
 }
 
@@ -209,7 +209,7 @@ fn headers() -> Result<ScenePlan> {
     Ok(p.finish()?)
 }
 fn width_text() -> Result<ScenePlan> {
-    use kinograph::code::{StyledSpan, SyntaxStyle};
+    use psychopomp::code::{StyledSpan, SyntaxStyle};
     let styled = |id: &str, runs: Vec<(&str, SyntaxStyle)>| TextPart {
         id: id.into(),
         text: runs.iter().map(|(text, _)| *text).collect(),
@@ -421,7 +421,7 @@ fn venn() -> Result<ScenePlan> {
             &actor,
             name,
             &values,
-            kinograph::plan::SpringPlan::visual(0.3, 0.3),
+            psychopomp::plan::SpringPlan::visual(0.3, 0.3),
         );
     }
     markdown(
@@ -481,7 +481,8 @@ mod tests {
         assert_eq!(a.slides.len(), 8);
         assert_eq!(
             serde_json::to_value(&a.slides[5]).unwrap(),
-            serde_json::to_value(kinograph_keyed_grid::build_plain_table_slide().unwrap()).unwrap()
+            serde_json::to_value(psychopomp_keyed_grid::build_plain_table_slide().unwrap())
+                .unwrap()
         );
         for slide in a.slides {
             assert!(slide.plan.state_channels.is_empty());
@@ -491,7 +492,7 @@ mod tests {
 
     #[test]
     fn prose_uses_short_unblurred_fades_while_headers_keep_their_treatment() {
-        use kinograph::plan::TrackEventPlan;
+        use psychopomp::plan::TrackEventPlan;
         for plan in [rich_text().unwrap(), lists().unwrap()] {
             for actor in &plan.actors {
                 let p: RichTextPlan = serde_json::from_value(actor.data.clone()).unwrap();

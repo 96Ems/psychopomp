@@ -18,7 +18,7 @@ mod workspace;
 use std::path::{Path, PathBuf};
 
 use anyhow::Result;
-use kinograph::{
+use psychopomp::{
     author::{PlanBuilder, seconds},
     caption::{CaptionActor, CaptionAlign, CaptionPlan, CaptionSpanPlan},
     effects::spinner::Mark,
@@ -277,7 +277,7 @@ fn orb_in(s: &mut StageActor, sc: &mut PlanBuilder, id: &str, at: u64) {
         at,
         0.0,
         1.25,
-        kinograph::math::easing::Ease::CubicOut,
+        psychopomp::math::easing::Ease::CubicOut,
     );
     s.to(sc, &format!("{id}.opacity"), at, 1.0, 0.6);
 }

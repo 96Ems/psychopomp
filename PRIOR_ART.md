@@ -1,6 +1,6 @@
 # Animation Prior Art
 
-Kinograph should not invent its authoring and timeline model without pressure-testing it against established animation systems. This document records the parts worth borrowing and the constraints that make direct adoption insufficient.
+Psychopomp should not invent its authoring and timeline model without pressure-testing it against established animation systems. This document records the parts worth borrowing and the constraints that make direct adoption insufficient.
 
 ## Current Design Question
 
@@ -19,12 +19,12 @@ The local Scala source in
 `/Users/kit/code/lessons/scala-course/frontend/src/main/scala/slides/content/modeling/`
 contains `Slide_3_WhyModeling.scala` and `Slide_4_Modeling.scala`: the light-switch,
 Pac-Man joystick, counting, chess, and sum/product-type examples. Its `DynamicGrid`
-shows Cartesian products as growing keyed rows and columns. The first Kinograph
+shows Cartesian products as growing keyed rows and columns. The first Psychopomp
 adaptation (`scenes/keyed-grid`) keeps finite tuple identity separate from layout
 and extends those arrangements into a real connected 3D line lattice and product
 reassociation. The source uses adjoining 130-pixel cells, orange borders, dark
 gray interiors, outside axis labels, and opposing ±45° CSS grid rotations for
-its depth reveal. The initial Kinograph solid-block treatment was rejected;
+its depth reveal. The initial Psychopomp solid-block treatment was rejected;
 the corrected recipe has adjoining opaque faces with restrained borders, no cell
 scaling, and an orthographic view of the same 3D geometry. A wireframe intermediate
 was rejected because rear lines cluttered the diagram. The current chess-symbol
@@ -54,7 +54,7 @@ Alphabet/Alterbet decoding and live joystick input remain unported.
 ## OpenCode Architecture Diagrams
 
 `/Users/kit/code/open-source/opencode-architecture/src/experiments/options/Merge.tsx`
-is the source for Kinograph's `scenes/opencode-architecture` Daemon / merge port.
+is the source for Psychopomp's `scenes/opencode-architecture` Daemon / merge port.
 The supplied screenshot shows its third of four steps, not `MergeGoo.tsx`.
 Read-only inspection used HEAD `b7e0fa8` plus the existing working-tree stylesheet;
 the scene README records the exact source file digest and supporting components.
@@ -62,7 +62,7 @@ the scene README records the exact source file digest and supporting components.
 The source demonstrates centered finite client/server growth, 450 ms spatial and
 320 ms convergence springs, independent 300 ms scale / 140 ms focus, 120 ms server
 and 60 ms path offsets, a shared daemon halo, and a 400 ms caption-column spring.
-Kinograph retains the visual/choreographic intent with stable node/port identity
+Psychopomp retains the visual/choreographic intent with stable node/port identity
 and cancellation-aware waits. A spring-based trace replaces the CSS cubic-ease
 path/comet and a fade-through replaces mount-based wait-mode label swapping. The
 initial framed port used a stationary caption aperture; Kit then rejected the
@@ -86,7 +86,7 @@ the Stage Burst's layered noise: distort the coordinates before evaluating
 density so the silhouette and internal folds read organically.
 [GPU Gems 3, chapter 30](https://developer.nvidia.com/gpugems/gpugems3/part-v-physics-simulation/chapter-30-real-time-simulation-and-rendering-3d-fluids)
 informs the rendering: raymarch density, accumulate emission with front-to-back
-absorption, and let cooler smoke obscure the hot interior. Kinograph uses an
+absorption, and let cooler smoke obscure the hot interior. Psychopomp uses an
 analytic age-driven density rather than the chapter's simulated velocity and
 temperature fields, so arbitrary-time sampling and reverse reconstruction remain
 deterministic. `render/effects/combustion.wgsl` owns the bounded volume; closed-form
@@ -104,14 +104,14 @@ Relevant ideas:
 - Mobjects preserve visual identity while transforms act on them.
 - Trackers and updaters let one animated value drive dependent geometry.
 
-What Kinograph should borrow:
+What Psychopomp should borrow:
 
 - animations as composable values rather than scattered property calculations
 - first-class sequence, parallel, and stagger composition
 - actor-targeted semantic operations such as enter, move, focus, and transform
 - normalized sampling beneath a readable imperative authoring surface
 
-What Kinograph should avoid:
+What Psychopomp should avoid:
 
 - frame-order-dependent mutation as the source of truth
 - unrestricted per-frame callbacks that cannot be serialized or sampled out of order
@@ -129,14 +129,14 @@ Relevant ideas:
 - a property can be assigned immediately or animated over a duration through one coherent interface
 - dependencies can derive layout or geometry from animated signals
 
-What Kinograph should borrow:
+What Psychopomp should borrow:
 
 - generator-style choreography as a candidate authoring frontend
 - one composition algebra shared by waits, tweens, springs, sequences, and parallel groups
 - typed animatable properties and derived values
 - reusable procedures that return animation values
 
-What Kinograph should test carefully:
+What Psychopomp should test carefully:
 
 - whether generator execution can compile once into a durable timeline instead of becoming runtime mutable state
 - whether overloaded signal getter/setter/tween syntax remains understandable for a serializable scene compiler
@@ -154,14 +154,14 @@ Relevant ideas:
 - `interpolate` maps a sampled driver across keyframes
 - `spring` is a pure function of frame and configuration
 
-What Kinograph should borrow:
+What Psychopomp should borrow:
 
 - rendering as a pure function of composition time
 - local time domains for nested clips and reusable components
 - explicit trim, delay, and duration semantics
 - interpolation as a separate operation from the source driver
 
-What Kinograph should improve:
+What Psychopomp should improve:
 
 - authors should not routinely calculate frame numbers
 - time should use seconds or typed durations and remain independent of output frame rate
@@ -181,14 +181,14 @@ Relevant ideas:
 - React Motion emphasizes spring destinations and natural interruption over fixed-duration curves
 - Motion's `visualDuration` maps to angular frequency `2π / (visualDuration × 1.2)`; `bounce: 0` is critically damped
 
-What Kinograph should borrow:
+What Psychopomp should borrow:
 
 - target-driven property animation
 - physical interruption semantics
 - ergonomic defaults and named motion profiles
 - separation between stable actor identity and changing target state
 
-What Kinograph should avoid:
+What Psychopomp should avoid:
 
 - dependence on browser layout or DOM lifecycle
 - implicit real-time state that makes offline random-access sampling ambiguous
@@ -198,7 +198,7 @@ What Kinograph should avoid:
 
 [GPUI](https://github.com/zed-industries/zed/tree/main/crates/gpui) is prior art for composing high-performance Rust interfaces from plain values. Its `RenderOnce`, `IntoElement`, and `Element` layers rebuild declarative element structure while retaining application state outside the tree; layout, prepaint, and paint remain distinct phases.
 
-What Kinograph should borrow:
+What Psychopomp should borrow:
 
 - plain data components whose rendering can be rebuilt from one sampled state
 - stable identity only where state, caching, or layout animation requires it
@@ -207,7 +207,7 @@ What Kinograph should borrow:
 - cached shaped text and expensive immutable surfaces
 - call-order painting and lexical clipping for concrete renderer recipes
 
-What Kinograph should avoid:
+What Psychopomp should avoid:
 
 - reactive entities, notifications, subscriptions, and invalidation as animation truth
 - wall-clock animation elements that request future frames
@@ -219,7 +219,7 @@ The `deployment-queue` proof takes this narrower path. One UI Snapshot produces 
 
 ## Animations.dev
 
-[Animations.dev](https://animations.dev/learn) by Emil Kowalski is practical prior art for judging product motion rather than merely implementing it. Its animation-theory, Family drawer, Dynamic Island, and good-versus-great lessons reinforce several rules that apply directly to Kinograph scenes:
+[Animations.dev](https://animations.dev/learn) by Emil Kowalski is practical prior art for judging product motion rather than merely implementing it. Its animation-theory, Family drawer, Dynamic Island, and good-versus-great lessons reinforce several rules that apply directly to Psychopomp scenes:
 
 - record the result and inspect state changes frame by frame instead of tuning only from code
 - give every animation one legible purpose; repeated decoration reduces the value of motion
@@ -233,13 +233,13 @@ The `deployment-queue` proof takes this narrower path. One UI Snapshot produces 
 - choose easing before duration, then inspect the result in slow motion and at normal speed
 - prefer solid materials or eased multi-stop gradients; plain two-stop color gradients expose banding and often add hierarchy-free decoration
 
-The deployment queue applies the relevant subset with solid materials, stable service order, a no-bounce entrance, critically damped position and presence springs, previous-to-current phase presentation, staggered rich-state replacement, and event-boundary artifact checks. Separate keyed-layout tests prove velocity-preserving redirection and exit/re-entry behavior; the canonical scene does not claim to demonstrate those motions or size-dependent timing. Kinograph still compiles these choices into deterministic arbitrary-time tracks rather than adopting a browser animation runtime.
+The deployment queue applies the relevant subset with solid materials, stable service order, a no-bounce entrance, critically damped position and presence springs, previous-to-current phase presentation, staggered rich-state replacement, and event-boundary artifact checks. Separate keyed-layout tests prove velocity-preserving redirection and exit/re-entry behavior; the canonical scene does not claim to demonstrate those motions or size-dependent timing. Psychopomp still compiles these choices into deterministic arbitrary-time tracks rather than adopting a browser animation runtime.
 
 ### Pointer Motion Principles
 
 [Emil Kowalski's animation guidance](https://emilkowal.ski/ui/great-animations) emphasizes natural spring motion, speed, purpose, interruptibility, and reviewing work in slow motion or frame by frame. His published design-engineering skill specifically recommends spring interpolation for decorative pointer-following motion because direct target assignment feels artificial.
 
-Kinograph applies that guidance with restraint:
+Psychopomp applies that guidance with restraint:
 
 - the pointer is explanatory rather than a frequently repeated control
 - translation remains fast, interruptible, and velocity-preserving
@@ -262,13 +262,13 @@ Relevant ideas:
 - code-defined objects can be driven by editor-authored timeline data
 - a graph editor and dope sheet operate on the same property model used at runtime
 
-What Kinograph should borrow now:
+What Psychopomp should borrow now:
 
 - a serializable property-track and keyframe model
 - stable addresses for actors and their properties
 - the principle that programmatic and visual authoring can target the same compiled representation
 
-What Kinograph should defer:
+What Psychopomp should defer:
 
 - a graphical timeline, property inspector, graph editor, or extension system
 - editor-specific project structures before the code-authored hero scene reveals the required data model
@@ -287,7 +287,7 @@ Relevant ideas:
 - audio's main transient should coincide with visual contact, while longer sonic decay may provide follow-through after geometry has settled
 - state must remain legible through shape, text, icon, and contrast without depending on motion, color, or sound alone
 
-Kinograph applies these constraints to Effect Task states. Running uses compression and a directional energy sweep rather than perpetual shake. Success prioritizes result expansion and content resolution. Failure stages a short horizontal impact before its error bubble, then becomes still. Death darkens and settles with less scale instead of reusing failure shake. Layout-only changes do not restart semantic flashes or pulses.
+Psychopomp applies these constraints to Effect Task states. Running uses compression and a directional energy sweep rather than perpetual shake. Success prioritizes result expansion and content resolution. Failure stages a short horizontal impact before its error bubble, then becomes still. Death darkens and settles with less scale instead of reusing failure shake. Layout-only changes do not restart semantic flashes or pulses.
 
 ## Motion-Graphics Choreography
 
@@ -323,7 +323,7 @@ The requested GPU blocks use `PixiEffectRow`, not the older DOM `StaticEffectNod
 
 These are Motion `visualDuration` parameters, not deadlines at which every spring is exactly settled. Running effects are enabled immediately in the source; the native recipe uses a short continuity ramp, not a staged content threshold. Source error bubbles also begin immediately and use their different curves to create overlap.
 
-The regression fixture `crates/kinograph-render/tests/fixtures/effect-task-timing.json` is generated with Motion DOM 12.42.2, as pinned by the inspected Effect Institute lockfile. Its adjacent Bun script loads cached UMD bundles without installing or modifying Effect Institute dependencies. Tests compare actual compiled Rust channel samples, not only duplicated configuration constants. The fixture uses tight rest tolerances to compare analytic curves; Kinograph keeps its deterministic permanent-settling policy.
+The regression fixture `crates/psychopomp-render/tests/fixtures/effect-task-timing.json` is generated with Motion DOM 12.42.2, as pinned by the inspected Effect Institute lockfile. Its adjacent Bun script loads cached UMD bundles without installing or modifying Effect Institute dependencies. Tests compare actual compiled Rust channel samples, not only duplicated configuration constants. The fixture uses tight rest tolerances to compare analytic curves; Psychopomp keeps its deterministic permanent-settling policy.
 
 ## Visual Types Rolling Content
 
@@ -332,7 +332,7 @@ The regression fixture `crates/kinograph-render/tests/fixtures/effect-task-timin
 The same checkout's `AnimatedType.tsx` reveals authored stable segments by width
 and 4 CSS px blur (no uniform opacity fade); `animationConfigs.ts` uses 0.4-second,
 zero-bounce entry and a 0.2-second exit. `AnimatedWidthText.tsx` instead exchanges a
-whole measured value with width/opacity/blur using the 0.3-second default. Kinograph's
+whole measured value with width/opacity/blur using the 0.3-second default. Psychopomp's
 `prototype-width-text` adopts the stable-segment variant, not whole-string replacement.
 Its authored enter/leave profiles are 0.4/0.2 seconds; native navigation still uses
 destination profiles with continuous position/velocity, rather than browser mount
@@ -341,7 +341,7 @@ resets. Its 4-output-pixel sampling-offset blur is not claimed to be CSS-blur pa
 `SubsetComparison.tsx` animates circles/rounded rectangles with the 0.3-second,
 0.3-bounce profile, uses 20% fills and 60% 2-pixel outlines, and hatches the overlap
 with 8-pixel-spaced diagonal 1.5-pixel lines at 40% opacity. Intersection geometry
-is derived from current MotionValues, including nested/disjoint states. Kinograph
+is derived from current MotionValues, including nested/disjoint states. Psychopomp
 keeps that sampled-geometry rule and profile, including a circle-to-square morph.
 It uses explicit authored geometry rather than porting the source's label/radius
 heuristics, TypeScript evaluator, result flash, framed lesson panel, or type badges.
@@ -357,7 +357,7 @@ idea to a centered code line, sizing its fade regions from the measured line hei
 
 The important feature is spatial occlusion: text disappears into the edges of
 the window, rather than fading uniformly while visibly floating above or below
-its resting row. Kinograph's showcase captions use a fixed text alpha aperture
+its resting row. Psychopomp's showcase captions use a fixed text alpha aperture
 with the same 12-pixel fades. Applying it before blending, instead of painting
 the source project's solid-background overlays, also preserves arbitrary
 backgrounds. Existing presence channels keep skipped captions hidden, and
@@ -374,7 +374,7 @@ Relevant ideas:
 - stable line and part identity prevents unrelated code from being replaced
 - focus and annotations target semantic content
 
-Kinograph retains these concepts in its first lesson port. The published `effect-shows-errors` narration and word timing sidecar now drive ordinary actor properties and trajectories; inline slots lower to independent reveal properties on stable code lines.
+Psychopomp retains these concepts in its first lesson port. The published `effect-shows-errors` narration and word timing sidecar now drive ordinary actor properties and trajectories; inline slots lower to independent reveal properties on stable code lines.
 
 ## Working Synthesis
 

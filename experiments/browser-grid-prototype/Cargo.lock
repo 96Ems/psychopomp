@@ -349,7 +349,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "kinograph"
+name = "psychopomp"
 version = "0.1.0"
 dependencies = [
  "anyhow",
@@ -358,7 +358,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "kinograph-browser-grid-prototype"
+name = "psychopomp-browser-grid-prototype"
 version = "0.0.0"
 dependencies = [
  "anyhow",
@@ -366,9 +366,9 @@ dependencies = [
  "console_error_panic_hook",
  "cosmic-text",
  "futures-channel",
- "kinograph",
- "kinograph-keyed-grid",
- "kinograph-opencode-architecture",
+ "psychopomp",
+ "psychopomp-keyed-grid",
+ "psychopomp-opencode-architecture",
  "png",
  "pollster",
  "serde",
@@ -380,20 +380,20 @@ dependencies = [
 ]
 
 [[package]]
-name = "kinograph-keyed-grid"
+name = "psychopomp-keyed-grid"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "kinograph",
+ "psychopomp",
  "serde_json",
 ]
 
 [[package]]
-name = "kinograph-opencode-architecture"
+name = "psychopomp-opencode-architecture"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "kinograph",
+ "psychopomp",
  "serde_json",
 ]
 

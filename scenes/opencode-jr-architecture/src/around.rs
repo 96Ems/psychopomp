@@ -1,7 +1,7 @@
 //! Around the core: durable approval cards, the per-team scheduler, and the
 //! settings and connectors objects behind the web dashboard.
 use anyhow::{Context, Result};
-use kinograph::{
+use psychopomp::{
     caption::CaptionAlign, math::easing::Ease, plan::ScenePlan, stage::StagePlan, tone::Tone,
 };
 

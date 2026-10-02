@@ -2,7 +2,7 @@
 <html lang="en">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Kinograph · Daemon</title>
+<title>Psychopomp · Daemon</title>
 <link rel="icon" href="data:,">
 <style>
   :root { color-scheme: dark; font-family: system-ui, sans-serif; background: #050505; color: #d8d7d5; }
@@ -10,7 +10,7 @@
   :root:has([name="theme"] option[value="evergreen"]:checked) { background: rgb(13 23 20); }
   :root:has([name="theme"] option[value="tokyo-night"]:checked) { background: rgb(26 27 38); }
   body { margin: 0; min-height: 100dvh; display: grid; place-items: center; }
-  kinograph-canvas { display: block; width: min(100%, 1600px); }
+  psychopomp-canvas { display: block; width: min(100%, 1600px); }
   canvas, .fallback { display: block; width: 100%; height: auto; aspect-ratio: 16/9; }
   canvas:focus-visible { outline: 1px solid #b392f0; outline-offset: -1px; }
   nav { display: flex; justify-content: center; align-items: center; gap: 12px; flex-wrap: wrap; padding: 12px 20px 28px; }
@@ -20,7 +20,7 @@
   [role=alert] { color: #f1b59a; padding: 20px; text-align: center; }
   [hidden] { display: none !important; }
 </style>
-<kinograph-canvas aria-label="Clients and their servers converge into one shared daemon">
+<psychopomp-canvas aria-label="Clients and their servers converge into one shared daemon">
   <canvas width="1920" height="1080" tabindex="0" aria-label="Daemon diagram. Left and right arrows change steps; Home and End jump; R replays." hidden></canvas>
   <img class="fallback" src="/native-daemon-merge-8.png" alt="Three clients, each with its own server. Interactive WebGPU is unavailable.">
   <p role="alert" hidden></p>
@@ -35,6 +35,6 @@
     <select name="theme" aria-label="Theme"><option value="original">Original</option><option value="black">Pure Black</option><option value="evergreen">Evergreen</option><option value="tokyo-night">Tokyo Night</option></select>
   </nav>
   <output hidden></output>
-</kinograph-canvas>
+</psychopomp-canvas>
 <script type="module" src="/probe.js"></script>
 </html>

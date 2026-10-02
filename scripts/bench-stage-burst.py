@@ -31,7 +31,7 @@ def frame(age, name):
     source = out / f"{name}.json"
     source.write_text(json.dumps(plan))
     image = out / f"{name}.png"
-    subprocess.run([str(root / "target/release/kinograph"), "plan", "frame",
+    subprocess.run([str(root / "target/release/psychopomp"), "plan", "frame",
                     str(source), "2", str(image), "--theme", "opencode"],
                    cwd=root, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
     return np.asarray(Image.open(image).convert("RGB"), dtype=np.float32)

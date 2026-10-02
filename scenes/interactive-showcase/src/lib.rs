@@ -1,6 +1,6 @@
 //! Native presentation examples sharing one Scene Plan model with video export.
 use anyhow::Result;
-use kinograph::{
+use psychopomp::{
     author::{PlanBuilder, SECOND},
     code::{StyledSpan, SyntaxStyle},
     dsl::TaskState,
@@ -94,7 +94,7 @@ pub fn build_deck() -> Result<DeckPlan> {
         slides: vec![
             SlidePlan {
                 title: "Effect.succeed · stable inline reveals".into(),
-                plan: kinograph_effect_succeed_slides::build_plan()?,
+                plan: psychopomp_effect_succeed_slides::build_plan()?,
             },
             SlidePlan {
                 title: "Effect blocks · lifecycle and retry".into(),
@@ -379,7 +379,7 @@ mod tests {
                 .any(|actor| actor.recipe == "editor")
             {
                 let report =
-                    serde_json::to_value(kinograph::editor::inspect_steps(&slide.plan).unwrap())
+                    serde_json::to_value(psychopomp::editor::inspect_steps(&slide.plan).unwrap())
                         .unwrap();
                 assert_eq!(report["warnings"], json!([]));
             }

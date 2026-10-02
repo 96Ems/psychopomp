@@ -40,9 +40,9 @@ fn main() -> anyhow::Result<()> {
             continue;
         }
         let mut reel = if file == "pr-50825.reel.json" {
-            kinograph_pr_walkthrough::build_flagship(&narration)?
+            psychopomp_pr_walkthrough::build_flagship(&narration)?
         } else {
-            kinograph_pr_walkthrough::build_reel(&narration)?
+            psychopomp_pr_walkthrough::build_reel(&narration)?
         };
         // Alternate exports can live outside the scene directory. Resolve media
         // from the selected narration and original scene, not the output folder.

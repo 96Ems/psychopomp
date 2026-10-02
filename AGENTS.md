@@ -1,6 +1,6 @@
-# Kinograph Agent Guide
+# Psychopomp Agent Guide
 
-Kinograph is an early Rust prototype for deterministic, code-first motion graphics. Its headless 1920x1080 benchmark scenes are rendered with `wgpu`, shaped with `cosmic-text`, temporally sampled for motion blur, and streamed to FFmpeg.
+Psychopomp is an early Rust prototype for deterministic, code-first motion graphics. Its headless 1920x1080 benchmark scenes are rendered with `wgpu`, shaped with `cosmic-text`, temporally sampled for motion blur, and streamed to FFmpeg.
 
 ## Read First
 
@@ -27,20 +27,20 @@ cargo run --release
 cargo run --release -- render effect-shows-errors
 cargo run --release -- render chapter intro
 cargo run --release -- render chapter basics
-cargo run -p kinograph-effect-succeed-slides -- target/effect-succeed-slides.json
+cargo run -p psychopomp-effect-succeed-slides -- target/effect-succeed-slides.json
 cargo run --release -- plan present target/effect-succeed-slides.json
 cargo run -- plan steps target/effect-succeed-slides.json
-cargo run -p kinograph-interactive-showcase
+cargo run -p psychopomp-interactive-showcase
 cargo run --release -- plan present target/interactive-showcase/deck.json
-cargo run -p kinograph-data-modeling
+cargo run -p psychopomp-data-modeling
 cargo run --release -- plan present target/data-modeling/deck.json
 bash scenes/component-prototypes/run.sh
-cargo run -p kinograph-keyed-grid -- --styles
+cargo run -p psychopomp-keyed-grid -- --styles
 cargo run --release -- plan present target/grid-styles/deck.json
-cargo run -p kinograph-component-prototypes -- --slideshow
+cargo run -p psychopomp-component-prototypes -- --slideshow
 cargo run --release -- plan present target/slideshow-components/deck.json
-cargo run -p kinograph-pr-walkthrough
-cargo run -p kinograph-rolling-number
+cargo run -p psychopomp-pr-walkthrough
+cargo run -p psychopomp-rolling-number
 cargo run --release -- plan render target/rolling-number.json output/rolling-number.mp4 --theme opencode
 cargo run --release -- plan render scenes/pr-walkthrough/pr-walkthrough.reel.json output/pr-walkthrough.mp4 --theme opencode
 bun scripts/narrate.ts <scene>/narration/script.json [--draft]
@@ -49,7 +49,7 @@ cargo run --release -- plan frame <plan-or-reel.json> <seconds> out.png --shutte
 cargo run --release -- plan snapshot <plan-or-reel.json> <times> <dir> [--compare] [--shutter]
 ```
 
-`cargo run --release` renders `output/kinograph-prototype.mp4` by default. Pass an output path as the first argument to override it. A full render requires:
+`cargo run --release` renders `output/psychopomp-prototype.mp4` by default. Pass an output path as the first argument to override it. A full render requires:
 
 - a working headless `wgpu` adapter
 - `ffmpeg` with `libx264` on `PATH`
@@ -59,85 +59,85 @@ Do not run the full render as routine validation when unit tests and static chec
 
 ## Architecture
 
-- `crates/kinograph/src/code.rs`: stable line identity, code documents and snapshots, validation, and sampled line placement
-- `crates/kinograph/src/composition.rs`: exact media time, immutable assets and clips, script/layer scheduling, cues, and cross-media composition
-- `crates/kinograph/src/dsl.rs`: public Rust scene values, semantic targets, actor helpers, and lowering into scalar tracks
-- `crates/kinograph/src/editor.rs`: typed editor recipe data lowering stable inline parts and logical ranges into Code Transitions
-- `crates/kinograph/src/editor/compiled.rs`: shared validated catalog, reveal ranges, and legacy/keyed placement used by inspection and rendering
-- `crates/kinograph/src/editor/stability.rs`: GPU-free step deltas and heuristic common-text stability warnings
-- `crates/kinograph/src/editor/diff.rs`: Stepped Diff recipe builder (keep/add/remove lines, room-opening snapshots, Line Mark warnings)
-- `crates/kinograph/src/task.rs`: typed planned Task state schedules
-- `crates/kinograph/src/grid.rs`: finite keyed product catalogs and semantic Grid Snapshots
-- `crates/kinograph/src/value.rs`: immutable Value Token recipe data for finite teaching diagrams
-- `crates/kinograph/src/author.rs`: typed Scene Plan builder and stable actor/channel handles for lightweight Scene Programs
-- `crates/kinograph/src/plan.rs`: versioned renderer-independent Scene Plan values and structured validation
-- `crates/kinograph/src/plan/channels.rs`: exact scalar-event lowering and opt-in snapshot-destination reduction; raw event ordering remains distinct
-- `crates/kinograph/src/state.rs`: deterministic arbitrary-time discrete State Tracks
-- `crates/kinograph/src/playback.rs`: interruptible step destinations, continuous track retargeting, and a pausable local presentation clock
-- `crates/kinograph/src/terminal.rs`: lightweight terminal-recording recipe values for planned video media
-- `crates/kinograph/src/deployment.rs`: typed deployment-queue recipe values, semantic snapshots, and authoring handle
-- `crates/kinograph/src/timeline.rs`: relative Animation and explicit-time continuous Property Track compilation
-- `crates/kinograph/src/timeline/retarget.rs`: shared cancellation-safe numeric schedule for Playback and authored resting entrances
-- `crates/kinograph/src/motion.rs`: deterministic arbitrary-time analytic spring sampling with position and velocity
-- `crates/kinograph/src/transcript.rs`: word timing ingestion, word and phrase cue lookup
-- `crates/kinograph/src/narration.rs`: `scripts/narrate.ts` manifests loaded as narration clips, placed as Script Clips, with panicking phrase lookups
-- `crates/kinograph/src/sequence.rs`: Sequence Diagram recipe values and row constructors, slot geometry, validation, and the `SequenceActor` authoring handle
-- `crates/kinograph/src/caption.rs`: Caption recipe values and the `CaptionActor` authoring handle (typing, show, hide)
-- `crates/kinograph/src/rolling.rs`: Rolling Number recipe values, value tokenization, the closed-form roll compiler, and the `RollingNumberActor` handle (`roll`, show, hide)
-- `crates/kinograph/src/math.rs` and `math/`: shared motion and geometry math (glam vectors, lerp/remap/smoothstep, easing, closed-form dynamics such as the settling spring, arc-length curves, shape ports and connectors, deterministic hash)
-- `crates/kinograph/src/stage.rs`: Stage elements, strict channels, perspective camera, orb geometry, the packet clock (`stage::packet`), and the `StageActor` authoring handle (`to`, `ease`, `bounce`, `settle_in`, `clock`/`clock_for`, `connect`, `send`, `hit`, `kick`, `jolt`, `twang`, `land`)
-- `crates/kinograph/src/tone.rs`: semantic Tone roles shared by explainer recipes
-- `crates/kinograph/src/highlight.rs`: line-local TypeScript highlighting into editor spans
-- `crates/kinograph-render/src/plan_runtime/reel.rs`: Reel preparation, layer mixing, media retiming, and reel frame/video delivery
-- `crates/kinograph-render/src/plan_runtime/sequence.rs` and `caption.rs`: strict-channel preflight for the explainer overlays
-- `crates/kinograph-render/src/render/sequence.rs` and `render/caption.rs`: Sequence Diagram and Caption pixels
-- `crates/kinograph-render/src/plan_runtime/rolling.rs` and `render/rolling.rs`: Rolling Number preflight/compilation and its masked, smeared wheels
-- `crates/kinograph-render/src/plan_runtime/stage.rs`: Stage root preflight and preparation
-- `crates/kinograph-render/src/render/stage.rs`, `stage.wgsl`, `stage_post.wgsl`: Stage primitives, HDR bloom, and composite; `KINOGRAPH_SHADER_DIR` loads the WGSL live
-- `crates/kinograph/src/effects/`: GPU-free special-effect clocks and particle poses; shared dynamics stay in `kinograph::math::dynamics`
-- `crates/kinograph-render/src/render/effects/*.wgsl`: binding-free noise, combustion, and pressure Modules, composed by the Stage shaders; see `EFFECTS.md`
-- `crates/kinograph-render/src/render.rs`: concrete headless `wgpu` renderer, sprite compositor, and code annotations
-- `crates/kinograph-render/src/render/effects/`: independent pixel recipes for interchangeable short annotation effects
-- `crates/kinograph-render/src/render/task.rs`: concrete Effect Task recipe and compositing
-- `crates/kinograph-render/src/render/grid.rs`: opaque connected 3D grid, sampled-bounds centering, and cached symbols/labels
-- `crates/kinograph-render/src/render/grid/edges.rs`: centered screen-space grid strokes, nearest-depth selection, and shared-edge coverage union
-- `crates/kinograph-render/src/render/value.rs`: Value Token tiles using shared card coverage and cached fractional text
-- `crates/kinograph-render/src/render/theme.rs`: named native/export paint palettes; no layout or motion
-- `crates/kinograph-render/src/render/rich_text.rs`: bounded Markdown shaping, decoration, and theme-aware glyph cache
-- `crates/kinograph-render/src/render/text.rs` and `text/raster.rs`: typed plain-text cache and exact native glyph rasterization shared with the experimental bake
-- `crates/kinograph-render/src/render/venn.rs`: sampled rounded-set geometry and exact intersection hatching
-- `crates/kinograph-render/src/render/header.rs`: fixed-edge line/word rises and mirrored, fading reflection ink
-- `crates/kinograph-render/src/render/terminal.rs`: concrete terminal recording and command-file presentation
-- `crates/kinograph-render/src/render/deployment_queue.rs`: concrete state-driven deployment dashboard UI Surface
-- `crates/kinograph-render/src/render/ui.rs`: private bounds, inset, split, and terminal line-flow primitives for pixel UI
-- `crates/kinograph-render/src/render/ui/card.rs`: shared immediate-mode RGBA composition and projected card presentation used by editor, recorded-video, and simulated-UI producers
-- `crates/kinograph-render/src/encode.rs`: concrete FFmpeg subprocess, raw RGBA protocol, and compiled audio placement
-- `crates/kinograph-render/src/exposure.rs`: delivery dimensions, shutter samples and weights, linear-light accumulation, and encoding a timeline one exposed frame at a time
-- `crates/kinograph-render/src/scenes/`: one concrete choreography Module per renderable legacy scene plus their shared target measurement, editor frame, and pointer sampling
-- `crates/kinograph-render/src/scenes/effect_institute.rs`: private adapter from pinned published lesson artifacts into stable code, Task overlays, and stitched chapter schedules
-- `crates/kinograph-render/src/main.rs`: command parsing, output selection, and scene dispatch
-- `crates/kinograph/src/lib.rs`: lightweight public library boundary used by Rust Scene Programs
-- `crates/kinograph-render/src/plan_runtime.rs`: Scene Plan inspection, validation, rendering, and persistent JSON server
-- `crates/kinograph-render/src/plan_runtime/preflight.rs`: owned typed recipe inputs, root selection, references, and native eligibility before resources
-- `crates/kinograph-render/src/plan_runtime/generated.rs`: generated-channel reservation/insertion, including the explicit Task position override
-- `crates/kinograph-render/src/plan_runtime/delivery.rs`: PNG and MP4 delivery from a prepared scene
-- `crates/kinograph-render/src/plan_runtime/presentation.rs`: native winit window, step navigation, and smooth/pixelated display filtering
-- `crates/kinograph-render/src/plan_runtime/presentation/worker.rs`: persistent render worker with bounded in-flight sampling and immutable timeline revisions
-- `crates/kinograph-render/src/plan_runtime/presentation/scheduler.rs`: GPU-free request eligibility, invalidation, completion freshness, and deadlines
-- `crates/kinograph-render/src/plan_runtime/presentation/debug.rs`: sample-coherent optional native motion diagnostics
-- `crates/kinograph-render/src/plan_runtime/presentation/gpu.rs`: native wgpu surface and GPU-backed smooth/pixelated frame presentation
-- `crates/kinograph-render/src/plan_runtime/editor.rs`: concrete editor and attached pointer Scene Plan recipe
-- `crates/kinograph-render/src/plan_runtime/attachments.rs`: private companion-track compilation for layout-aware semantic coordinates
-- `crates/kinograph-render/src/plan_runtime/task.rs`: Task state schedules lowered into interruptible scalar visual destinations
-- `crates/kinograph-render/src/plan_runtime/grid.rs`: GPU-free keyed grid layout and continuous destination compilation
-- `crates/kinograph-render/src/plan_runtime/grid/table.rs`: fixed-anchor table placement, display headings, and padding/alignment over the same grid catalog
-- `crates/kinograph-render/src/plan_runtime/value.rs`: Value Token validation and ordinary scalar-channel sampling
-- `crates/kinograph-render/src/plan_runtime/header.rs`: header word tracks and opt-in resting-entrance delays with cancellation
-- `crates/kinograph-render/src/plan_runtime/diagram.rs`: finite box/wire preflight and recipe-owned native start delays
-- `crates/kinograph-render/src/render/diagram.rs` and `diagram.wgsl`: shared native/browser GPU boxes, sampled ports, wire traces and bare flat/isometric views
-- `crates/kinograph-render/src/plan_runtime/terminal.rs`: concrete planned terminal-recording recipe and video source-time mapping
-- `crates/kinograph-render/src/plan_runtime/deployment_queue.rs`: deployment snapshot validation, private track compilation, and rendering adapter
-- `crates/kinograph-render/src/plan_runtime/keyed_layout.rs`: private stable keyed position and presence track compiler
+- `crates/psychopomp/src/code.rs`: stable line identity, code documents and snapshots, validation, and sampled line placement
+- `crates/psychopomp/src/composition.rs`: exact media time, immutable assets and clips, script/layer scheduling, cues, and cross-media composition
+- `crates/psychopomp/src/dsl.rs`: public Rust scene values, semantic targets, actor helpers, and lowering into scalar tracks
+- `crates/psychopomp/src/editor.rs`: typed editor recipe data lowering stable inline parts and logical ranges into Code Transitions
+- `crates/psychopomp/src/editor/compiled.rs`: shared validated catalog, reveal ranges, and legacy/keyed placement used by inspection and rendering
+- `crates/psychopomp/src/editor/stability.rs`: GPU-free step deltas and heuristic common-text stability warnings
+- `crates/psychopomp/src/editor/diff.rs`: Stepped Diff recipe builder (keep/add/remove lines, room-opening snapshots, Line Mark warnings)
+- `crates/psychopomp/src/task.rs`: typed planned Task state schedules
+- `crates/psychopomp/src/grid.rs`: finite keyed product catalogs and semantic Grid Snapshots
+- `crates/psychopomp/src/value.rs`: immutable Value Token recipe data for finite teaching diagrams
+- `crates/psychopomp/src/author.rs`: typed Scene Plan builder and stable actor/channel handles for lightweight Scene Programs
+- `crates/psychopomp/src/plan.rs`: versioned renderer-independent Scene Plan values and structured validation
+- `crates/psychopomp/src/plan/channels.rs`: exact scalar-event lowering and opt-in snapshot-destination reduction; raw event ordering remains distinct
+- `crates/psychopomp/src/state.rs`: deterministic arbitrary-time discrete State Tracks
+- `crates/psychopomp/src/playback.rs`: interruptible step destinations, continuous track retargeting, and a pausable local presentation clock
+- `crates/psychopomp/src/terminal.rs`: lightweight terminal-recording recipe values for planned video media
+- `crates/psychopomp/src/deployment.rs`: typed deployment-queue recipe values, semantic snapshots, and authoring handle
+- `crates/psychopomp/src/timeline.rs`: relative Animation and explicit-time continuous Property Track compilation
+- `crates/psychopomp/src/timeline/retarget.rs`: shared cancellation-safe numeric schedule for Playback and authored resting entrances
+- `crates/psychopomp/src/motion.rs`: deterministic arbitrary-time analytic spring sampling with position and velocity
+- `crates/psychopomp/src/transcript.rs`: word timing ingestion, word and phrase cue lookup
+- `crates/psychopomp/src/narration.rs`: `scripts/narrate.ts` manifests loaded as narration clips, placed as Script Clips, with panicking phrase lookups
+- `crates/psychopomp/src/sequence.rs`: Sequence Diagram recipe values and row constructors, slot geometry, validation, and the `SequenceActor` authoring handle
+- `crates/psychopomp/src/caption.rs`: Caption recipe values and the `CaptionActor` authoring handle (typing, show, hide)
+- `crates/psychopomp/src/rolling.rs`: Rolling Number recipe values, value tokenization, the closed-form roll compiler, and the `RollingNumberActor` handle (`roll`, show, hide)
+- `crates/psychopomp/src/math.rs` and `math/`: shared motion and geometry math (glam vectors, lerp/remap/smoothstep, easing, closed-form dynamics such as the settling spring, arc-length curves, shape ports and connectors, deterministic hash)
+- `crates/psychopomp/src/stage.rs`: Stage elements, strict channels, perspective camera, orb geometry, the packet clock (`stage::packet`), and the `StageActor` authoring handle (`to`, `ease`, `bounce`, `settle_in`, `clock`/`clock_for`, `connect`, `send`, `hit`, `kick`, `jolt`, `twang`, `land`)
+- `crates/psychopomp/src/tone.rs`: semantic Tone roles shared by explainer recipes
+- `crates/psychopomp/src/highlight.rs`: line-local TypeScript highlighting into editor spans
+- `crates/psychopomp-render/src/plan_runtime/reel.rs`: Reel preparation, layer mixing, media retiming, and reel frame/video delivery
+- `crates/psychopomp-render/src/plan_runtime/sequence.rs` and `caption.rs`: strict-channel preflight for the explainer overlays
+- `crates/psychopomp-render/src/render/sequence.rs` and `render/caption.rs`: Sequence Diagram and Caption pixels
+- `crates/psychopomp-render/src/plan_runtime/rolling.rs` and `render/rolling.rs`: Rolling Number preflight/compilation and its masked, smeared wheels
+- `crates/psychopomp-render/src/plan_runtime/stage.rs`: Stage root preflight and preparation
+- `crates/psychopomp-render/src/render/stage.rs`, `stage.wgsl`, `stage_post.wgsl`: Stage primitives, HDR bloom, and composite; `PSYCHOPOMP_SHADER_DIR` loads the WGSL live
+- `crates/psychopomp/src/effects/`: GPU-free special-effect clocks and particle poses; shared dynamics stay in `psychopomp::math::dynamics`
+- `crates/psychopomp-render/src/render/effects/*.wgsl`: binding-free noise, combustion, and pressure Modules, composed by the Stage shaders; see `EFFECTS.md`
+- `crates/psychopomp-render/src/render.rs`: concrete headless `wgpu` renderer, sprite compositor, and code annotations
+- `crates/psychopomp-render/src/render/effects/`: independent pixel recipes for interchangeable short annotation effects
+- `crates/psychopomp-render/src/render/task.rs`: concrete Effect Task recipe and compositing
+- `crates/psychopomp-render/src/render/grid.rs`: opaque connected 3D grid, sampled-bounds centering, and cached symbols/labels
+- `crates/psychopomp-render/src/render/grid/edges.rs`: centered screen-space grid strokes, nearest-depth selection, and shared-edge coverage union
+- `crates/psychopomp-render/src/render/value.rs`: Value Token tiles using shared card coverage and cached fractional text
+- `crates/psychopomp-render/src/render/theme.rs`: named native/export paint palettes; no layout or motion
+- `crates/psychopomp-render/src/render/rich_text.rs`: bounded Markdown shaping, decoration, and theme-aware glyph cache
+- `crates/psychopomp-render/src/render/text.rs` and `text/raster.rs`: typed plain-text cache and exact native glyph rasterization shared with the experimental bake
+- `crates/psychopomp-render/src/render/venn.rs`: sampled rounded-set geometry and exact intersection hatching
+- `crates/psychopomp-render/src/render/header.rs`: fixed-edge line/word rises and mirrored, fading reflection ink
+- `crates/psychopomp-render/src/render/terminal.rs`: concrete terminal recording and command-file presentation
+- `crates/psychopomp-render/src/render/deployment_queue.rs`: concrete state-driven deployment dashboard UI Surface
+- `crates/psychopomp-render/src/render/ui.rs`: private bounds, inset, split, and terminal line-flow primitives for pixel UI
+- `crates/psychopomp-render/src/render/ui/card.rs`: shared immediate-mode RGBA composition and projected card presentation used by editor, recorded-video, and simulated-UI producers
+- `crates/psychopomp-render/src/encode.rs`: concrete FFmpeg subprocess, raw RGBA protocol, and compiled audio placement
+- `crates/psychopomp-render/src/exposure.rs`: delivery dimensions, shutter samples and weights, linear-light accumulation, and encoding a timeline one exposed frame at a time
+- `crates/psychopomp-render/src/scenes/`: one concrete choreography Module per renderable legacy scene plus their shared target measurement, editor frame, and pointer sampling
+- `crates/psychopomp-render/src/scenes/effect_institute.rs`: private adapter from pinned published lesson artifacts into stable code, Task overlays, and stitched chapter schedules
+- `crates/psychopomp-render/src/main.rs`: command parsing, output selection, and scene dispatch
+- `crates/psychopomp/src/lib.rs`: lightweight public library boundary used by Rust Scene Programs
+- `crates/psychopomp-render/src/plan_runtime.rs`: Scene Plan inspection, validation, rendering, and persistent JSON server
+- `crates/psychopomp-render/src/plan_runtime/preflight.rs`: owned typed recipe inputs, root selection, references, and native eligibility before resources
+- `crates/psychopomp-render/src/plan_runtime/generated.rs`: generated-channel reservation/insertion, including the explicit Task position override
+- `crates/psychopomp-render/src/plan_runtime/delivery.rs`: PNG and MP4 delivery from a prepared scene
+- `crates/psychopomp-render/src/plan_runtime/presentation.rs`: native winit window, step navigation, and smooth/pixelated display filtering
+- `crates/psychopomp-render/src/plan_runtime/presentation/worker.rs`: persistent render worker with bounded in-flight sampling and immutable timeline revisions
+- `crates/psychopomp-render/src/plan_runtime/presentation/scheduler.rs`: GPU-free request eligibility, invalidation, completion freshness, and deadlines
+- `crates/psychopomp-render/src/plan_runtime/presentation/debug.rs`: sample-coherent optional native motion diagnostics
+- `crates/psychopomp-render/src/plan_runtime/presentation/gpu.rs`: native wgpu surface and GPU-backed smooth/pixelated frame presentation
+- `crates/psychopomp-render/src/plan_runtime/editor.rs`: concrete editor and attached pointer Scene Plan recipe
+- `crates/psychopomp-render/src/plan_runtime/attachments.rs`: private companion-track compilation for layout-aware semantic coordinates
+- `crates/psychopomp-render/src/plan_runtime/task.rs`: Task state schedules lowered into interruptible scalar visual destinations
+- `crates/psychopomp-render/src/plan_runtime/grid.rs`: GPU-free keyed grid layout and continuous destination compilation
+- `crates/psychopomp-render/src/plan_runtime/grid/table.rs`: fixed-anchor table placement, display headings, and padding/alignment over the same grid catalog
+- `crates/psychopomp-render/src/plan_runtime/value.rs`: Value Token validation and ordinary scalar-channel sampling
+- `crates/psychopomp-render/src/plan_runtime/header.rs`: header word tracks and opt-in resting-entrance delays with cancellation
+- `crates/psychopomp-render/src/plan_runtime/diagram.rs`: finite box/wire preflight and recipe-owned native start delays
+- `crates/psychopomp-render/src/render/diagram.rs` and `diagram.wgsl`: shared native/browser GPU boxes, sampled ports, wire traces and bare flat/isometric views
+- `crates/psychopomp-render/src/plan_runtime/terminal.rs`: concrete planned terminal-recording recipe and video source-time mapping
+- `crates/psychopomp-render/src/plan_runtime/deployment_queue.rs`: deployment snapshot validation, private track compilation, and rendering adapter
+- `crates/psychopomp-render/src/plan_runtime/keyed_layout.rs`: private stable keyed position and presence track compiler
 - `scenes/`: lightweight Rust Scene Programs that emit Scene Plans
 - `scenes/agent-demo/`: smallest Scene Program: one title card, a state channel, and cues
 - `scenes/quark-before-after/`: compact narrated Solid Store versus Quark keyed-identity tutorial
@@ -153,9 +153,9 @@ Do not run the full render as routine validation when unit tests and static chec
 - `scenes/deployment-queue/`: canonical state-driven simulated UI proof with keyed insertion, phase replacement, failure focus, and retry
 - `scenes/pr-walkthrough/`: narrated PR explainer reels; `src/film.rs` is the shared PR-film template (header, chips, behavior and code segments) that `scenes/config-migration/` also uses
 - `scenes/rolling-number/`: Rolling Number showroom: roll up and down, a mid-roll redirect, a carry into a new place, and a shrink
-- `crates/kinograph-render/src/scene.wgsl`: editor geometry and focus shader
+- `crates/psychopomp-render/src/scene.wgsl`: editor geometry and focus shader
 
-Preserve these boundaries unless a concrete scene or second implementation demonstrates a better seam. The lightweight `kinograph` and heavyweight `kinograph-render` crates are a demonstrated process and compilation seam. Do not introduce a generic scene graph, renderer or encoder traits, plugins, or additional crate splits merely for future flexibility.
+Preserve these boundaries unless a concrete scene or second implementation demonstrates a better seam. The lightweight `psychopomp` and heavyweight `psychopomp-render` crates are a demonstrated process and compilation seam. Do not introduce a generic scene graph, renderer or encoder traits, plugins, or additional crate splits merely for future flexibility.
 
 ## Engineering Rules
 
@@ -166,7 +166,7 @@ Preserve these boundaries unless a concrete scene or second implementation demon
 - Preserve deterministic arbitrary-time sampling. Do not replace trajectories with stateful frame-by-frame integration.
 - Carry both position and velocity when introducing interrupted or redirected motion.
 - Add abstractions only after a real second use or implementation exposes the seam.
-- Put reusable interpolation, easing, and geometry in `kinograph::math` and compose it; do not add private lerps, easings, or connector math to renderers or Scene Programs. Keep renderers as small per-element helpers, as in `render/stage.rs`.
+- Put reusable interpolation, easing, and geometry in `psychopomp::math` and compose it; do not add private lerps, easings, or connector math to renderers or Scene Programs. Keep renderers as small per-element helpers, as in `render/stage.rs`.
 - Avoid unsafe code and codec bindings unless measured evidence shows the subprocess boundary is insufficient.
 - Treat output media and build artifacts as generated files; keep them under ignored `output/` and `target/` directories.
 
@@ -175,14 +175,14 @@ Preserve these boundaries unless a concrete scene or second implementation demon
 This is the default for every code presentation and video, not only Effect Institute ports. The viewer should be able to keep following the same code through a change. Preserve identity first; add motion only where the change requires it.
 
 - Inspect all step variants before partitioning a line. Keep common prefixes, infixes, suffixes, delimiters, URLs, and indentation outside changing inline parts. For `Effect<number>` → `Effect<number, Error>`, reveal only `, Error`; retain `Effect<number` and `>`.
-- Keep stable `LineId` and `PartId` values. Identical text in two semantic roles is not automatically the same part; do not match repeated punctuation or repeated `never` tokens arbitrarily. Kinograph currently uses authored identity, not automatic text diffing.
+- Keep stable `LineId` and `PartId` values. Identical text in two semantic roles is not automatically the same part; do not match repeated punctuation or repeated `never` tokens arbitrarily. Psychopomp currently uses authored identity, not automatic text diffing.
 - Separate the content delta from necessary layout movement. A retained suffix may move to make room, but must not disappear and reappear. Do not replace, fade, or blur a complete line for a slot-sized change, or recenter unaffected code without an explicit choreography reason.
 - Retarget interrupted motion from current position and velocity. Unchanged destinations keep their trajectories. Previous is an animated destination change, not a seek; only explicit Replay resets to an entry pose.
 - Once a trajectory reports settled at a time, later samples must stay settled unless it is retargeted. Starting another channel must not wake an unchanged one. Establish settling deterministically, not with a frame-history-dependent latch.
 - Review continuity all the way to pixels. Fractional positions, reveal widths, and blur must not become visible stair-steps through premature rounding. Smooth final-window scaling cannot recover motion precision already lost in the compositor; deliberately pixelated display filtering is a separate choice.
 - Check attached pointers and highlights against the currently sampled visible layout, including collapsed parts and moving lines. Measuring the fully expanded backing text alone does not establish correct attachment.
 - Verify forward, backward, skipped-step, and rapid `A → B → A → C` navigation, including interruptions before settling. Check retained identity, minimal changed ranges, position/velocity continuity, and pixels just before/at/after boundaries. Endpoint images, scalar-only tests, and a high FPS counter are not sufficient proof.
-- Run `kinograph plan steps <plan.json>` for code presentations. Inspect `beforeDelta`, `delta`, changed part IDs, line positions, and unsettled-hold warnings. Common-text warnings require semantic judgment, not automatic identity merging. Use timed `EditorSnapshotPlan` values for multi-step line-order changes.
+- Run `psychopomp plan steps <plan.json>` for code presentations. Inspect `beforeDelta`, `delta`, changed part IDs, line positions, and unsettled-hold warnings. Common-text warnings require semantic judgment, not automatic identity merging. Use timed `EditorSnapshotPlan` values for multi-step line-order changes.
 
 ## Expressive Content Motion
 

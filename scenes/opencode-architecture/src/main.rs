@@ -6,9 +6,9 @@ fn main() -> Result<()> {
             .nth(1)
             .unwrap_or_else(|| "target/opencode-architecture/daemon-merge.json".into()),
     );
-    kinograph_opencode_architecture::build_scene()?.write_or_print(Some(&path))?;
+    psychopomp_opencode_architecture::build_scene()?.write_or_print(Some(&path))?;
     if let Some(parent) = path.parent() {
-        kinograph_opencode_architecture::build_deck()?
+        psychopomp_opencode_architecture::build_deck()?
             .write_with_slides(&parent.join("deck.json"))?;
     }
     println!("{}", path.display());

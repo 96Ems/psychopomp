@@ -5,7 +5,7 @@ mod illegal_states;
 mod stage;
 
 use anyhow::Result;
-use kinograph::{
+use psychopomp::{
     grid::{
         GRID_RECIPE, GridArrangement, GridAxisPlan, GridCellLabelPlan, GridEventPlan,
         GridRecipePlan, GridSnapshotPlan,

@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "kinograph-browser-grid-prototype",
+      "name": "psychopomp-browser-grid-prototype",
       "devDependencies": {
         "playwright-core": "1.62.1",
       },

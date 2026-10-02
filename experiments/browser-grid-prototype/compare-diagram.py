@@ -12,7 +12,7 @@ assets = Path(os.environ.get("DIAGRAM_ASSETS", root / "target/browser-diagram-si
 output = Path(os.environ.get("DIAGRAM_OUTPUT", root / "output/diagram-gpu/browser"))
 results = []
 cases, run = load_run(output, "diagram", ("",))
-assert run["wasmSha256"] == sha(assets / "pkg/kinograph_browser_grid_prototype_bg.wasm"), "proof belongs to a different build"
+assert run["wasmSha256"] == sha(assets / "pkg/psychopomp_browser_grid_prototype_bg.wasm"), "proof belongs to a different build"
 for case in cases:
     path = output / f'{case["id"]}.png'
     assert Path(case["native"]).name == case["native"]

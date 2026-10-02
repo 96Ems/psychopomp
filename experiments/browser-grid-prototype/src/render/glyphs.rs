@@ -32,7 +32,7 @@ impl FontSystem {
     #[cfg(not(target_arch = "wasm32"))]
     pub fn native() -> Result<Self> {
         let mut inner = cosmic_text::FontSystem::new();
-        let font = std::env::var("KINOGRAPH_FONT").unwrap_or_else(|_| {
+        let font = std::env::var("PSYCHOPOMP_FONT").unwrap_or_else(|_| {
             format!(
                 "{}/Library/Fonts/CommitMono-400-Regular.otf",
                 std::env::var("HOME").unwrap()

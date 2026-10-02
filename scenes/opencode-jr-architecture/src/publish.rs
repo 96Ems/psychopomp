@@ -3,7 +3,7 @@
 //! indicator, and a write-ahead intent plus Slack metadata keep a crash from
 //! posting twice.
 use anyhow::{Context, Result};
-use kinograph::{caption::CaptionAlign, plan::ScenePlan, stage::StagePlan, tone::Tone};
+use psychopomp::{caption::CaptionAlign, plan::ScenePlan, stage::StagePlan, tone::Tone};
 
 use crate::{
     Film, GLITCH, IMPACT, MARK, Narration, SUCCESS, arrive, beam, begin, card, chip, footer,

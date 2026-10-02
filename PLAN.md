@@ -1,12 +1,12 @@
-# Kinograph Prototype Plan
+# Psychopomp Prototype Plan
 
-Kinograph is a code-first motion graphics system for animated technical videos and interactive presentations. Both deliveries share authored scenes and deterministic visual sampling. It combines Manim's semantic scene construction, Remotion's deterministic programmatic timeline, and the state-driven code animation DSL in `effect-institute`.
+Psychopomp is a code-first motion graphics system for animated technical videos and interactive presentations. Both deliveries share authored scenes and deterministic visual sampling. It combines Manim's semantic scene construction, Remotion's deterministic programmatic timeline, and the state-driven code animation DSL in `effect-institute`.
 
 `PRIOR_ART.md` records the specific animation systems and API ideas that should be pressure-tested before committing to an authoring model. In addition to Manim, Remotion, and `effect-institute`, the current research set includes Motion Canvas, Motion/React Motion, and Theatre.js.
 
 The prototype should prove one claim: a small declarative program can produce code animation with noticeably better weight, continuity, camera movement, and motion blur than a typical Remotion composition.
 
-Kinograph is not initially a Remotion replacement. It is an opinionated compiler and renderer for a narrow class of kinetic technical videos.
+Psychopomp is not initially a Remotion replacement. It is an opinionated compiler and renderer for a narrow class of kinetic technical videos.
 
 ## The First Artifact Is One Excellent Scene
 
@@ -93,7 +93,7 @@ Rust Scene Program
        |
 Scene Plan: actors + continuous channels + state channels + exact media and cues
        |
-persistent kinograph-render process
+persistent psychopomp-render process
        |
 scene sampled at global time t
        |
@@ -136,7 +136,7 @@ A continuous transition retargets one property with a motion profile. The render
 
 ## Motion Is a Core Domain, Not an Easing Function
 
-Kinograph should not model movement as `lerp(start, end, easing(progress))`. That representation loses velocity whenever a movement is interrupted or redirected.
+Psychopomp should not model movement as `lerp(start, end, easing(progress))`. That representation loses velocity whenever a movement is interrupted or redirected.
 
 Each animated scalar should compile to a continuous trajectory carrying at least:
 
@@ -181,7 +181,7 @@ The typography spike found that `glyphon` is well suited to ordinary UI renderin
 
 ## Motion Blur Samples Real Motion
 
-For output frame `n`, Kinograph should evaluate and render the scene at several times across a virtual shutter interval:
+For output frame `n`, Psychopomp should evaluate and render the scene at several times across a virtual shutter interval:
 
 ```text
 output frame n
@@ -212,7 +212,7 @@ Layout computes each pose's target rectangles. The motion compiler moves actors 
 
 ## Code Animation Extends the effect-institute Model
 
-The existing implementation in `/Users/kit/code/experiments/typescript/effect-institute` has the right semantic foundation. Kinograph should initially port its concepts rather than invent an unrelated code model.
+The existing implementation in `/Users/kit/code/experiments/typescript/effect-institute` has the right semantic foundation. Psychopomp should initially port its concepts rather than invent an unrelated code model.
 
 Keep:
 
@@ -251,7 +251,7 @@ Build a Rust CLI that renders a hardcoded frame containing a background, rounded
 
 Exit criteria:
 
-- `kinograph render hero.json --output hero.mp4` produces a playable 1080p60 video.
+- `psychopomp render hero.json --output hero.mp4` produces a playable 1080p60 video.
 - Text positions and colors are deterministic across repeated renders on the same machine.
 
 ### Milestone 2: Continuous Motion
@@ -367,13 +367,13 @@ behavior is reviewed; do not turn a Markdown parser into a second slideshow runt
 ## The Repository Starts Small
 
 ```text
-kinograph/
+psychopomp/
   PLAN.md
   SCENE_PLANS.md
   Cargo.toml
   crates/
-    kinograph/           # lightweight authoring, plans, tracks, and validation
-    kinograph-render/    # wgpu, typography, FFmpeg, recipes, server, and CLI
+    psychopomp/           # lightweight authoring, plans, tracks, and validation
+    psychopomp-render/    # wgpu, typography, FFmpeg, recipes, server, and CLI
   scenes/
     agent-demo/          # one lightweight Rust Scene Program per crate
 ```
@@ -397,7 +397,7 @@ The completed visual prototype deliberately excluded:
 - real-time full-resolution playback
 - feature parity with Remotion or Manim
 
-The next phase reopens audio, transcription, images, video layers, and interactive preview behind the proven Rust DSL. FFmpeg remains responsible for codec work and final media assembly; Kinograph owns source-range edits, timing, scene evaluation, and pixels.
+The next phase reopens audio, transcription, images, video layers, and interactive preview behind the proven Rust DSL. FFmpeg remains responsible for codec work and final media assembly; Psychopomp owns source-range edits, timing, scene evaluation, and pixels.
 
 ## Risks Have Cheap Tests
 

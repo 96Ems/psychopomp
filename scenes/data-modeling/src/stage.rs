@@ -1,6 +1,6 @@
 //! Scene-local layout and step helpers. No additional playback state machine.
 use anyhow::Result;
-use kinograph::{
+use psychopomp::{
     author::{ActorHandle, PlanBuilder, SECOND},
     plan::ScenePlan,
     value::{VALUE_TOKEN_RECIPE, ValueTokenPlan},
@@ -117,7 +117,10 @@ impl Stage {
             actor,
             property,
             values,
-            kinograph::plan::SpringPlan::visual(if property == "opacity" { 0.25 } else { 0.4 }, 0.),
+            psychopomp::plan::SpringPlan::visual(
+                if property == "opacity" { 0.25 } else { 0.4 },
+                0.,
+            ),
         );
     }
 

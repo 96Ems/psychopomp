@@ -1,10 +1,10 @@
 [package]
-name = "kinograph-component-prototypes"
+name = "psychopomp-component-prototypes"
 version = "0.1.0"
 edition = "2024"
 
 [dependencies]
 anyhow = "1.0"
-kinograph = { path = "../../crates/kinograph" }
-kinograph-keyed-grid = { path = "../keyed-grid" }
+psychopomp = { path = "../../crates/psychopomp" }
+psychopomp-keyed-grid = { path = "../keyed-grid" }
 serde_json = "1.0"

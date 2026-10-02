@@ -3,7 +3,7 @@
 //! packets carry a named repair and land clean, and the empty object is checked
 //! against every provider's request body.
 use anyhow::{Context, Result};
-use kinograph::{
+use psychopomp::{
     author::PlanBuilder,
     caption::CaptionAlign,
     plan::ScenePlan,

@@ -24,13 +24,13 @@ interaction proof. This is an adaptation, not a timing-identical published lesso
 From the workspace root:
 
 ```bash
-cargo run -p kinograph-effect-succeed-slides -- target/effect-succeed-slides.json
+cargo run -p psychopomp-effect-succeed-slides -- target/effect-succeed-slides.json
 cargo run --release -- plan present target/effect-succeed-slides.json
 cargo run -- plan steps target/effect-succeed-slides.json
 ```
 
 The first command compiles the lightweight Scene Program. The second opens a
-native Rust window using winit and a wgpu surface. Kinograph prepares the scene once
+native Rust window using winit and a wgpu surface. Psychopomp prepares the scene once
 and renders requested poses directly on a worker. No browser, pre-rendered clips,
 server, network connection, or FFmpeg is needed for this code-only demo.
 
@@ -75,9 +75,9 @@ exports retain their audio; the native player is currently silent.
 ## Verification
 
 ```bash
-cargo test -p kinograph-effect-succeed-slides
-cargo test -p kinograph playback
-cargo test -p kinograph-render --release -- --ignored --nocapture
+cargo test -p psychopomp-effect-succeed-slides
+cargo test -p psychopomp playback
+cargo test -p psychopomp-render --release -- --ignored --nocapture
 ```
 
 The Rust checks cover stable identities, token spans, settled channel values,
@@ -92,7 +92,7 @@ line edits, see `scenes/interactive-showcase/README.md`.
 For a repeatable ten-second native frame-pacing benchmark:
 
 ```bash
-target/release/kinograph plan present target/effect-succeed-slides.json --benchmark
+target/release/psychopomp plan present target/effect-succeed-slides.json --benchmark
 ```
 
 The benchmark window stays on top and exits automatically. Do not resize it.

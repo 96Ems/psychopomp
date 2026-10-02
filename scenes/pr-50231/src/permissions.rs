@@ -5,7 +5,7 @@
 //! rebuilds the stack in the order written; the same probes land on `shell ask`
 //! and `edit deny`. The camera then flies into `inInputOrder`'s code.
 use anyhow::{Context, Result};
-use kinograph::{
+use psychopomp::{
     author::PlanBuilder,
     caption::CaptionAlign,
     editor::{
@@ -623,7 +623,7 @@ fn swap_call_site(mut plan: ScenePlan, at: u64) -> Result<ScenePlan> {
 
 #[cfg(test)]
 mod tests {
-    use kinograph::{
+    use psychopomp::{
         math::{Vec3, vec2},
         stage::{Camera, StageElement},
     };
@@ -651,7 +651,7 @@ mod tests {
 
     #[test]
     fn the_call_site_swap_has_no_stability_warnings() {
-        use kinograph::{editor::inspect_steps, plan::PresentationStepPlan};
+        use psychopomp::{editor::inspect_steps, plan::PresentationStepPlan};
         let root = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         let narration = crate::narration::Narration::load(&root.join("narration")).unwrap();
         let (_, mut code, _) = super::build(&narration).unwrap();

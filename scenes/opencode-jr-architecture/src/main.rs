@@ -23,7 +23,7 @@ fn main() -> anyhow::Result<()> {
             _ => anyhow::bail!("unknown argument: {arg}"),
         }
     }
-    let mut reel = kinograph_opencode_jr_architecture::build_reel(&narration)?;
+    let mut reel = psychopomp_opencode_jr_architecture::build_reel(&narration)?;
     // Alternate exports can live outside the scene directory. Resolve media
     // from the selected narration and the original scene, not the output folder.
     if output.parent() != Some(root.as_path()) || narration != root.join("narration") {

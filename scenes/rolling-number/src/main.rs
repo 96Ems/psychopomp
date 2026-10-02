@@ -5,7 +5,7 @@ fn main() -> anyhow::Result<()> {
         || PathBuf::from("target/rolling-number.json"),
         PathBuf::from,
     );
-    kinograph_rolling_number::build_plan()?.write_or_print(Some(&output))?;
+    psychopomp_rolling_number::build_plan()?.write_or_print(Some(&output))?;
     eprintln!("Wrote {}", output.display());
     Ok(())
 }

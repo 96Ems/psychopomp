@@ -21,8 +21,8 @@ export async function captureRun(assets: string, output: string, group: "grid" |
   const native: Record<string, string> = {};
   if (group === "diagram") for (const c of cases) native[c.native] = digest(await Bun.file(join(assets, c.native)).bytes());
   const receipt = { version: 1, runId: randomUUID(), status: "running", group, variants,
-    inventorySha256: digest(source), wasmSha256: digest(await Bun.file(join(assets, "pkg/kinograph_browser_grid_prototype_bg.wasm")).bytes()),
-    controlWasmSha256: control ? digest(await Bun.file(join(control, "pkg/kinograph_browser_grid_prototype_bg.wasm")).bytes()) : undefined,
+    inventorySha256: digest(source), wasmSha256: digest(await Bun.file(join(assets, "pkg/psychopomp_browser_grid_prototype_bg.wasm")).bytes()),
+    controlWasmSha256: control ? digest(await Bun.file(join(control, "pkg/psychopomp_browser_grid_prototype_bg.wasm")).bytes()) : undefined,
     native, files };
   await Bun.write(join(output, "proof-cases.json"), source);
   const saveReceipt = () => Bun.write(join(output, "capture-run.json"), JSON.stringify(receipt, null, 2));

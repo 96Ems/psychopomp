@@ -1,7 +1,7 @@
 //! The edge: Slack's event passes the Worker's checks, lands in the thread's
 //! mailbox, and only then does Slack get its 200. A redelivery dedupes.
 use anyhow::{Context, Result};
-use kinograph::{
+use psychopomp::{
     caption::CaptionAlign,
     math::{Vec2, Vec3, vec2},
     plan::ScenePlan,

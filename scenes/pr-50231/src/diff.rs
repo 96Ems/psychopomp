@@ -2,7 +2,7 @@
 //! added from the start, since the zoom opens straight onto them; slot-sized
 //! edits are inline reveals applied afterward (see `permissions::swap_call_site`).
 use anyhow::Result;
-use kinograph::{
+use psychopomp::{
     author::PlanBuilder,
     code::StyledSpan,
     editor::{EDITOR_RECIPE, EditorLinePlan, EditorPartPlan, EditorRecipePlan, LineMarkPlan},
@@ -76,7 +76,7 @@ impl Diff {
 
 fn editor_line(id: String, line: &Line) -> EditorLinePlan {
     let spans = if line.text.trim().is_empty() {
-        vec![StyledSpan::new(" ", kinograph::code::SyntaxStyle::Plain)]
+        vec![StyledSpan::new(" ", psychopomp::code::SyntaxStyle::Plain)]
     } else {
         highlight::typescript(line.text)
     };

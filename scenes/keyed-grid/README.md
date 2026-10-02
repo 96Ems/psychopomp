@@ -3,7 +3,7 @@
 The selected growth-edge disclosure (former experiment C) is now the default.
 
 ```sh
-cargo run -p kinograph-keyed-grid
+cargo run -p psychopomp-keyed-grid
 cargo run --release -- plan present target/keyed-grid/deck.json
 ```
 
@@ -31,7 +31,7 @@ fills are unchanged by the color control.
 ## Plain tables and configurable paint
 
 ```sh
-cargo run -p kinograph-keyed-grid -- --styles
+cargo run -p psychopomp-keyed-grid -- --styles
 cargo run --release -- plan present target/grid-styles/deck.json
 ```
 
@@ -135,9 +135,9 @@ label visibility, and extents lower into ordinary continuous tracks. Group
 headers are text rather than backing cards. No wall-clock callbacks or
 integration state are involved.
 
-The lightweight `kinograph::grid` module owns the finite product catalog and
+The lightweight `psychopomp::grid` module owns the finite product catalog and
 semantic snapshots, plus optional explicit table-presentation metrics. Concrete
-placement, GPU resources, and camera projection remain in `kinograph-render`.
+placement, GPU resources, and camera projection remain in `psychopomp-render`.
 This is one root recipe with up to 256 cells, not a mesh importer, scene graph,
 or general editable/sortable table widget. Blender and
 joystick assets remain deferred. Native delivery still reads RGBA back from the
@@ -165,5 +165,5 @@ coplanar surface priority, navigation-boundary pixels,
 skipped steps, reversal, pause, sampling order, and reduced-motion destinations:
 
 ```sh
-cargo test -p kinograph-render --release grid -- --ignored --test-threads=1
+cargo test -p psychopomp-render --release grid -- --ignored --test-threads=1
 ```

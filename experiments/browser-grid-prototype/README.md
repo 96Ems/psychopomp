@@ -17,7 +17,7 @@ Open <http://127.0.0.1:5201>. `PORT=5202` selects another local port. The comman
 builds a native glyph bake and a release WASM module, then starts a static Bun
 server. First run installs the WASM Rust target and a repo-local wasm-bindgen CLI.
 Requires Rust, Bun, a native wgpu adapter for baking, and installed CommitMono
-(`KINOGRAPH_FONT` overrides the default `~/Library/Fonts/CommitMono-400-Regular.otf`).
+(`PSYCHOPOMP_FONT` overrides the default `~/Library/Fonts/CommitMono-400-Regular.otf`).
 The browser needs WebGPU on localhost or HTTPS. No browser flags are required.
 The Rust `web_sys_unstable_apis` compile cfg is for the pinned Rust bindings,
 not a request to disable browser security.
@@ -26,7 +26,7 @@ not a request to disable browser security.
 
 ```text
 scenes/keyed-grid                    → original two Scene Plans
-kinograph                           → same Timeline, springs, Playback, speed
+psychopomp                           → same Timeline, springs, Playback, speed
 plan_runtime/grid.rs + children      → same destinations and label disclosure
 render/grid.rs + shaders + edges     → same 3D geometry, occlusion, 4× AA, strokes
 scenes/opencode-architecture         → same two bare diagram Scene Plans
@@ -109,7 +109,7 @@ do not publish the experimental bindings as an API.
 ## Repeat the performance work
 
 ```sh
-KINOGRAPH_WEB_ASSETS="$PWD/target/browser-perf-site" bash experiments/browser-grid-prototype/run.sh --build-only
+PSYCHOPOMP_WEB_ASSETS="$PWD/target/browser-perf-site" bash experiments/browser-grid-prototype/run.sh --build-only
 cd experiments/browser-grid-prototype
 bun install
 bun run bench current
@@ -138,7 +138,7 @@ this shim. For strict Clippy, select native `--lib --bin bake` and WASM `--lib`;
 `--all-targets` pulls unsupported native test-only imports into the staged library.
 
 ```sh
-KINOGRAPH_WEB_ASSETS="$PWD/target/browser-diagram-site" bash experiments/browser-grid-prototype/run.sh --build-only
+PSYCHOPOMP_WEB_ASSETS="$PWD/target/browser-diagram-site" bash experiments/browser-grid-prototype/run.sh --build-only
 bun experiments/browser-grid-prototype/diagram-proof.ts
 python3 experiments/browser-grid-prototype/compare-diagram.py
 ```

@@ -1,7 +1,7 @@
 # OpenCode + browser story — visual prototype
 
 **Verdict:** keep the original illustrated session in the architecture article.
-Kit preferred it to all three Kinograph options. This rejected visual trial is
+Kit preferred it to all three Psychopomp options. This rejected visual trial is
 retained as experiment history, not a production integration or supported recipe.
 
 ```sh
@@ -12,7 +12,7 @@ This renders three 26-second clips and serves an **isolated copy of the existing
 article** at <http://127.0.0.1:5210/?prototype=sessions&variant=A>.
 `--preview-only` reuses the clips; `--stills` renders six moments per option.
 `ARTICLE_REPO` chooses the article checkout, `PORT` chooses the preview port, and
-`KINOGRAPH_FONT` chooses the native CommitMono font file. FFmpeg/libx264 is required.
+`PSYCHOPOMP_FONT` chooses the native CommitMono font file. FFmpeg/libx264 is required.
 
 - **A — Paired workspaces:** cumulative session and browser remain side by side.
 - **B — Focus handoff:** the session starts larger; the browser grows when used.
@@ -26,12 +26,12 @@ The switcher is development-only. The live article source/server is not modified
 ## What is real, and what is illustrated
 
 These are **native Rust pixels**, not CSS animation over a screenshot. The
-prototype source-shares Kinograph's exact native glyph rasterizer, UI/card
+prototype source-shares Psychopomp's exact native glyph rasterizer, UI/card
 coverage/compositor, and FFmpeg subprocess encoder. Panel geometry and transcript
 scroll use `PlanBuilder`, shared channel lowering, and the analytic Timeline.
 The tiny private scene painter remains here; no supported recipe or public API
 has been added. The emitted plans use an experiment-only recipe and cannot be
-sent to the normal `kinograph plan render/present` commands.
+sent to the normal `psychopomp plan render/present` commands.
 
 Delivery is 1920×1080, 60 fps, one temporal sample. It is not the supported video
 export's shutter-sampled quality profile and not a performance comparison.

@@ -1,10 +1,10 @@
-//! The PR-explainer template, shared with `kinograph-config-migration`: a header
+//! The PR-explainer template, shared with `psychopomp-config-migration`: a header
 //! naming the pull request, status chips, a behavior segment that plays the
 //! broken story as a Sequence Diagram and replays the fix in the same slots, and
 //! a code segment that animates the change as a Stepped Diff. Every moment is a
 //! phrase in the narration, so re-voicing the script re-times the film.
 use anyhow::{Context, Result};
-use kinograph::{
+use psychopomp::{
     author::{PlanBuilder, seconds},
     caption::{CaptionActor, CaptionAlign, CaptionPlan, CaptionSpanPlan},
     editor::diff::Diff,

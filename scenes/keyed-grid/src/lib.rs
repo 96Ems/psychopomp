@@ -1,6 +1,6 @@
 //! The first procedural 3D diagram: finite products and reassociation.
 use anyhow::Result;
-use kinograph::{
+use psychopomp::{
     author::{PlanBuilder, SECOND},
     grid::{
         GRID_RECIPE, GridArrangement, GridAxisPlan, GridCellLabelPlan, GridEventPlan,

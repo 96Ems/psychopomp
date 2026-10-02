@@ -1,11 +1,11 @@
 [package]
-name = "kinograph-effect-succeed-slides"
+name = "psychopomp-effect-succeed-slides"
 version = "0.1.0"
 edition = "2024"
 
 [dependencies]
 anyhow = "1.0"
-kinograph = { path = "../../crates/kinograph" }
+psychopomp = { path = "../../crates/psychopomp" }
 
 [dev-dependencies]
 serde_json = "1.0"

@@ -1,6 +1,6 @@
 //! Slack, three threads, and for each thread its own agent and sandbox.
 use anyhow::{Context, Result};
-use kinograph::{
+use psychopomp::{
     author::PlanBuilder, caption::CaptionAlign, plan::ScenePlan, stage::StagePlan, tone::Tone,
 };
 
@@ -83,7 +83,7 @@ pub fn film(narration: &crate::Narration) -> Result<ScenePlan> {
         v,
     } = begin(narration, "intro", 0.9, 2.2, &stage())?;
     let (s, sc) = (&mut actor, &mut scene);
-    let title = kinograph::caption::CaptionPlan::line(
+    let title = psychopomp::caption::CaptionPlan::line(
         [crate::LEFT, crate::HEADER_Y],
         30.0,
         vec![
@@ -91,7 +91,7 @@ pub fn film(narration: &crate::Narration) -> Result<ScenePlan> {
             crate::span("  how it works", Tone::Plain),
         ],
     );
-    kinograph::caption::CaptionActor::declare(sc, "header", &title)?.type_in(
+    psychopomp::caption::CaptionActor::declare(sc, "header", &title)?.type_in(
         sc,
         seconds(0.3),
         50.0,
@@ -155,7 +155,7 @@ pub fn film(narration: &crate::Narration) -> Result<ScenePlan> {
 }
 
 /// The other rows step back so the followed message reads alone.
-fn hide_others(s: &mut kinograph::stage::StageActor, sc: &mut PlanBuilder, at: u64) {
+fn hide_others(s: &mut psychopomp::stage::StageActor, sc: &mut PlanBuilder, at: u64) {
     for index in [0, 2] {
         for card in [format!("thread-{index}"), format!("sandbox-{index}")] {
             s.to(sc, &format!("{card}.dim"), at, 0.55, 0.8);

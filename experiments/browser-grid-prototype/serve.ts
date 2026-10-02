@@ -1,6 +1,6 @@
 // Static local files only. No rendering API, uploads, directory traversal or repo access.
 import { join } from "node:path";
-const generated = process.env.KINOGRAPH_WEB_ASSETS || join(import.meta.dir, "../../target/browser-grid-site");
+const generated = process.env.PSYCHOPOMP_WEB_ASSETS || join(import.meta.dir, "../../target/browser-grid-site");
 const types: Record<string, string> = { js: "text/javascript", html: "text/html", wasm: "application/wasm", json: "application/json", png: "image/png", glyphs: "application/octet-stream" };
 const server = Bun.serve({
   hostname: "127.0.0.1",

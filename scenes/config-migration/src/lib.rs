@@ -3,19 +3,19 @@
 //! #51889 removes the duplicate V1 config migration; #51901 renames legacy
 //! provider IDs in the top-level model. Each reel plays the broken behavior as a
 //! sequence diagram, replays the fix in the same slots, then animates the diff.
-//! Both use the `kinograph_pr_walkthrough::film` template, so every visual moment
+//! Both use the `psychopomp_pr_walkthrough::film` template, so every visual moment
 //! is keyed to a phrase in the narration.
 use std::path::Path;
 
 use anyhow::Result;
-use kinograph::{
+use psychopomp::{
     editor::diff::{Diff, add, keep, remove},
     narration::Narration,
     plan::ReelPlan,
     sequence::{SequenceParticipantPlan as Participant, SequencePlan, SequenceRowPlan as Row},
     tone::Tone,
 };
-use kinograph_pr_walkthrough::film::{Flow, Pr, TRANSITION, after, before, behavior, code, span};
+use psychopomp_pr_walkthrough::film::{Flow, Pr, TRANSITION, after, before, behavior, code, span};
 
 // ---------------------------------------------------------------------------
 // Reels

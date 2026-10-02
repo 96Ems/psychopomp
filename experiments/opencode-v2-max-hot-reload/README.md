@@ -1,6 +1,6 @@
 # OpenCode V2 Maximum Hot Reload Capture
 
-This fixture drives one OpenCode v2 service, client, and session while a real Vim process edits the same project. It verifies the live surfaces used by the Kinograph scene:
+This fixture drives one OpenCode v2 service, client, and session while a real Vim process edits the same project. It verifies the live surfaces used by the Psychopomp scene:
 
 - inline commands
 - agents
@@ -20,17 +20,18 @@ The capture was verified against OpenCode v2 commit `4a7f760d25b280fb367ac9b3a8a
 Typecheck the fixture before running it:
 
 ```bash
+REPO=$(git rev-parse --show-toplevel)  # run from this repository
 cd /Users/kit/code/open-source/opencode-drive
 bun run src/cli/index.ts check \
-  /Users/kit/code/open-source/kinograph/experiments/opencode-v2-max-hot-reload/drive.ts
+  "$REPO/experiments/opencode-v2-max-hot-reload/drive.ts"
 ```
 
 Run it against a checkout of the pinned OpenCode commit:
 
 ```bash
 TMPDIR=/private/tmp bun run src/cli/index.ts start \
-  --name kinograph-max-hot-reload \
-  --script /Users/kit/code/open-source/kinograph/experiments/opencode-v2-max-hot-reload/drive.ts \
+  --name psychopomp-max-hot-reload \
+  --script "$REPO/experiments/opencode-v2-max-hot-reload/drive.ts" \
   --dev /private/tmp/opencode-hot-reload-audit
 ```
 

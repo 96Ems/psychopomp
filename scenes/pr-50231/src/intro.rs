@@ -2,7 +2,7 @@
 //! renamed call and checks it off; then the three things it could not see
 //! arrive beyond its reach.
 use anyhow::{Context, Result};
-use kinograph::{
+use psychopomp::{
     author::PlanBuilder,
     caption::CaptionAlign,
     effects::spinner,

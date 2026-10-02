@@ -124,7 +124,7 @@ for (const clip of script.clips) {
     const wordTimings = transcript.segments
       .flatMap((segment: { words: { word: string; start: number; end: number }[] }) => segment.words)
       .map((word: { word: string; start: number; end: number }) => {
-        // Whisper can overlap adjacent words by a few milliseconds; kinograph requires order.
+        // Whisper can overlap adjacent words by a few milliseconds; psychopomp requires order.
         const start = Math.max(word.start, previousEnd)
         const end = Math.max(word.end, start)
         previousEnd = end

@@ -14,7 +14,7 @@ could not catch.
 | `outro` | Eight CI checks resolve to marks while the count rolls to 8/8; the title card. |
 
 ```sh
-cargo run -p kinograph-pr-50231
+cargo run -p psychopomp-pr-50231
 cargo run --release -- plan validate scenes/pr-50231/pr-50231.reel.json
 cargo run --release -- plan render scenes/pr-50231/pr-50231.reel.json output/pr-50231/pr-50231.mp4 --theme opencode
 ```

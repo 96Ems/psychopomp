@@ -1,7 +1,7 @@
 //! Same grid recipe, two layouts and configurable paint. Ordinary records are
 //! authored here as a fixed row/column catalog; this is not a sorting/editing API.
 use anyhow::Result;
-use kinograph::{
+use psychopomp::{
     author::{PlanBuilder, SECOND},
     component_prototype::{Font, TYPESET, TextPart, TypesetPlan},
     grid::{

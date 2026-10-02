@@ -8,7 +8,7 @@ resolution, AA, temporal quality, motion continuity, or native/browser sharing.
 Prepare without touching the live demo:
 
 ```sh
-KINOGRAPH_WEB_ASSETS="$PWD/target/browser-perf-site" bash experiments/browser-grid-prototype/run.sh --build-only
+PSYCHOPOMP_WEB_ASSETS="$PWD/target/browser-perf-site" bash experiments/browser-grid-prototype/run.sh --build-only
 ```
 
 From `experiments/browser-grid-prototype`, run `bun install`, then

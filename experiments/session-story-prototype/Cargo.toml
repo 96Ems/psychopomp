@@ -1,5 +1,5 @@
 [package]
-name = "kinograph-session-story-prototype"
+name = "psychopomp-session-story-prototype"
 version = "0.0.0"
 edition = "2024"
 publish = false
@@ -10,7 +10,7 @@ publish = false
 [dependencies]
 anyhow = "1"
 cosmic-text = "0.19"
-kinograph = { path = "../../crates/kinograph" }
+psychopomp = { path = "../../crates/psychopomp" }
 png = "0.18"
 serde_json = "1"
 

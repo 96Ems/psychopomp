@@ -2,7 +2,7 @@
 //! template registry keeps a prepared checkout; idle sandboxes are
 //! snapshotted, shut down, and restored on demand.
 use anyhow::{Context, Result};
-use kinograph::{
+use psychopomp::{
     caption::CaptionAlign, math::easing::Ease, plan::ScenePlan, stage::StagePlan, tone::Tone,
 };
 

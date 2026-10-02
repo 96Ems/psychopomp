@@ -2,7 +2,7 @@
 //! Slack posts stand, so passes are time-boxed, writes are flushed before
 //! side effects, alarms are backstops, and storage is versioned.
 use anyhow::{Context, Result};
-use kinograph::{
+use psychopomp::{
     caption::CaptionAlign,
     effects::combustion,
     math::{Vec3, easing::Ease},
