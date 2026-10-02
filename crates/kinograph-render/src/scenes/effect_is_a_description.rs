@@ -16,13 +16,11 @@ use kinograph::{
     transcript::Transcript,
 };
 
-use crate::render::{
-    EditorFrame, HeadlessRenderer, InlineRevealFrame, RenderSpec, TaskSceneFrame, TokenHighlight,
-};
+use crate::render::{HeadlessRenderer, InlineRevealFrame, RenderSpec, TaskSceneFrame};
 
 use super::{
-    HEIGHT, WIDTH, WORKSPACE_ROOT, boosted_samples, encode_scene, measure_target,
-    measure_text_width, sample_pointer_frame, span,
+    HEIGHT, WIDTH, WORKSPACE_ROOT, boosted_samples, editor_frame, encode_scene, measure_target,
+    measure_text_width, span,
 };
 
 const DESCRIPTION_AUDIO_DURATION: f64 = 30.366;
@@ -149,12 +147,7 @@ pub(crate) async fn render(output: &Path) -> Result<()> {
 
 struct EffectIsADescriptionChoreography {
     scene: CompiledScene,
-    panel_y: PropertyId,
-    panel_rotation: PropertyId,
-    panel_tilt_x: PropertyId,
-    panel_tilt_y: PropertyId,
-    panel_scale: PropertyId,
-    panel_near_blur: PropertyId,
+    code: Code,
     effect_run: CodeEdit,
     function: CodeEdit,
     function_comment: CodeEdit,
@@ -165,12 +158,6 @@ struct EffectIsADescriptionChoreography {
     run_middle: PropertyId,
     function_subject: PropertyId,
     effect_subject: PropertyId,
-    focus: PropertyId,
-    focus_y: PropertyId,
-    token_x: PropertyId,
-    token_y: PropertyId,
-    token_width: PropertyId,
-    token_opacity: PropertyId,
     pointer: Pointer,
 }
 
@@ -343,12 +330,7 @@ fn effect_is_a_description_choreography(
 
     Ok(EffectIsADescriptionChoreography {
         scene,
-        panel_y: code.panel_y,
-        panel_rotation: code.panel_rotation,
-        panel_tilt_x: code.panel_tilt_x,
-        panel_tilt_y: code.panel_tilt_y,
-        panel_scale: code.panel_scale,
-        panel_near_blur: code.panel_near_blur,
+        code,
         effect_run: effect_run_edit,
         function: function_edit,
         function_comment: function_comment_edit,
@@ -359,12 +341,6 @@ fn effect_is_a_description_choreography(
         run_middle,
         function_subject,
         effect_subject,
-        focus: code.focus,
-        focus_y: code.focus_y,
-        token_x: code.highlight_x,
-        token_y: code.highlight_y,
-        token_width: code.highlight_width,
-        token_opacity: code.highlight_opacity,
         pointer,
     })
 }
@@ -440,35 +416,15 @@ fn render_effect_is_a_description_sample(
             progress: sample(&choreography.effect_subject),
         },
     ];
-    let squiggles = [];
-    let annotations = [];
-    let frame = EditorFrame {
-        panel_offset_x: 0.0,
-        panel_offset_y: sample(&choreography.panel_y),
-        panel_opacity: 1.0,
-        line_marks: &[],
-        panel_rotation: sample(&choreography.panel_rotation),
-        panel_tilt_x: sample(&choreography.panel_tilt_x),
-        panel_tilt_y: sample(&choreography.panel_tilt_y),
-        panel_scale: sample(&choreography.panel_scale),
-        panel_near_blur: sample(&choreography.panel_near_blur),
-        focus_intensity: sample(&choreography.focus).clamp(0.0, 1.0),
-        focus_line_y: sample(&choreography.focus_y),
-        focus_height: 44.0,
-        token_highlight: TokenHighlight {
-            x: sample(&choreography.token_x),
-            y: sample(&choreography.token_y),
-            width: sample(&choreography.token_width),
-            opacity: sample(&choreography.token_opacity).clamp(0.0, 1.0),
-        },
-        bright_text: &[],
-        pointer: sample_pointer_frame(&choreography.scene, &choreography.pointer, time),
-        inline_reveals: &reveals,
-        squiggles: &squiggles,
-        annotations: &annotations,
-        lines: &lines,
-    };
-    let mut pixels = renderer.render_editor(&frame)?;
+    let mut pixels = renderer.render_editor(&editor_frame(
+        &choreography.scene,
+        &choreography.code,
+        &choreography.pointer,
+        time,
+        &lines,
+        &reveals,
+        &[],
+    ))?;
     let nodes = choreography.scene.task_frames_at(time);
     let links = [];
     renderer.composite_task_scene(

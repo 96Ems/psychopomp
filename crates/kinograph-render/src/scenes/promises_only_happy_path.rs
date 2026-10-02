@@ -16,11 +16,11 @@ use kinograph::{
     transcript::Transcript,
 };
 
-use crate::render::{EditorFrame, HeadlessRenderer, InlineRevealFrame, RenderSpec, TokenHighlight};
+use crate::render::{HeadlessRenderer, InlineRevealFrame, RenderSpec};
 
 use super::{
-    HEIGHT, WIDTH, WORKSPACE_ROOT, encode_scene, measure_target, measure_text_width,
-    plan_temporal_samples, sample_pointer_frame, span,
+    HEIGHT, WIDTH, WORKSPACE_ROOT, editor_frame, encode_scene, measure_target, measure_text_width,
+    plan_temporal_samples, span,
 };
 
 const PROMISES_AUDIO_DURATION: f64 = 31.107;
@@ -82,19 +82,8 @@ pub(crate) async fn render(output: &Path) -> Result<()> {
 
 struct PromisesOnlyHappyPathChoreography {
     scene: CompiledScene,
-    panel_y: PropertyId,
-    panel_rotation: PropertyId,
-    panel_tilt_x: PropertyId,
-    panel_tilt_y: PropertyId,
-    panel_scale: PropertyId,
-    panel_near_blur: PropertyId,
+    code: Code,
     call_edit: CodeEdit,
-    focus: PropertyId,
-    focus_y: PropertyId,
-    token_x: PropertyId,
-    token_y: PropertyId,
-    token_width: PropertyId,
-    token_opacity: PropertyId,
     pointer: Pointer,
     question: PropertyId,
     error: PropertyId,
@@ -265,19 +254,8 @@ fn promises_only_happy_path_choreography(
 
     Ok(PromisesOnlyHappyPathChoreography {
         scene,
-        panel_y: code.panel_y,
-        panel_rotation: code.panel_rotation,
-        panel_tilt_x: code.panel_tilt_x,
-        panel_tilt_y: code.panel_tilt_y,
-        panel_scale: code.panel_scale,
-        panel_near_blur: code.panel_near_blur,
+        code,
         call_edit,
-        focus: code.focus,
-        focus_y: code.focus_y,
-        token_x: code.highlight_x,
-        token_y: code.highlight_y,
-        token_width: code.highlight_width,
-        token_opacity: code.highlight_opacity,
         pointer,
         question,
         error,
@@ -315,35 +293,16 @@ fn render_promises_only_happy_path_sample(
             progress: sample(&choreography.error),
         },
     ];
-    let squiggles = [];
     let annotations = choreography.scene.annotations_at(time).collect::<Vec<_>>();
-    let frame = EditorFrame {
-        panel_offset_x: 0.0,
-        panel_offset_y: sample(&choreography.panel_y),
-        panel_opacity: 1.0,
-        line_marks: &[],
-        panel_rotation: sample(&choreography.panel_rotation),
-        panel_tilt_x: sample(&choreography.panel_tilt_x),
-        panel_tilt_y: sample(&choreography.panel_tilt_y),
-        panel_scale: sample(&choreography.panel_scale),
-        panel_near_blur: sample(&choreography.panel_near_blur),
-        focus_intensity: sample(&choreography.focus).clamp(0.0, 1.0),
-        focus_line_y: sample(&choreography.focus_y),
-        focus_height: 44.0,
-        token_highlight: TokenHighlight {
-            x: sample(&choreography.token_x),
-            y: sample(&choreography.token_y),
-            width: sample(&choreography.token_width),
-            opacity: sample(&choreography.token_opacity).clamp(0.0, 1.0),
-        },
-        bright_text: &[],
-        pointer: sample_pointer_frame(&choreography.scene, &choreography.pointer, time),
-        inline_reveals: &reveals,
-        squiggles: &squiggles,
-        annotations: &annotations,
-        lines: &lines,
-    };
-    renderer.render_editor(&frame)
+    renderer.render_editor(&editor_frame(
+        &choreography.scene,
+        &choreography.code,
+        &choreography.pointer,
+        time,
+        &lines,
+        &reveals,
+        &annotations,
+    ))
 }
 
 fn promises_only_happy_path_transition() -> Result<CodeTransition> {

@@ -5,12 +5,12 @@ use anyhow::{Context, Result, bail};
 use kinograph::{
     code::{CodeLine, PlacedLine, StyledSpan, SyntaxStyle},
     composition::{Duration, MediaPlacement, Time, TimeRange},
-    dsl::{CompiledScene, Pointer, TargetGeometry, TextTarget},
+    dsl::{AnnotationFrame, Code, CompiledScene, Pointer, TargetGeometry, TextTarget},
 };
 
 use crate::{
     encode::{FfmpegEncoder, VideoSpec},
-    render::{HeadlessRenderer, PointerFrame},
+    render::{EditorFrame, HeadlessRenderer, InlineRevealFrame, PointerFrame, TokenHighlight},
 };
 
 pub(crate) mod effect_institute;
@@ -284,6 +284,52 @@ fn measure_target(
             line_y: placed.y,
         },
     ))
+}
+
+/// The perspective-card editor frame whose panel, focus, and highlight are all
+/// sampled from `code`.
+fn editor_frame<'a>(
+    scene: &CompiledScene,
+    code: &Code,
+    pointer: &Pointer,
+    time: f32,
+    lines: &'a [PlacedLine<'a>],
+    inline_reveals: &'a [InlineRevealFrame<'a>],
+    annotations: &'a [AnnotationFrame],
+) -> EditorFrame<'a> {
+    let sample = |property| {
+        scene
+            .timeline()
+            .sample(property, time)
+            .expect("code property has an initial value")
+            .position
+    };
+    EditorFrame {
+        panel_offset_x: 0.0,
+        panel_offset_y: sample(&code.panel_y),
+        panel_opacity: 1.0,
+        line_marks: &[],
+        panel_rotation: sample(&code.panel_rotation),
+        panel_tilt_x: sample(&code.panel_tilt_x),
+        panel_tilt_y: sample(&code.panel_tilt_y),
+        panel_scale: sample(&code.panel_scale),
+        panel_near_blur: sample(&code.panel_near_blur),
+        focus_intensity: sample(&code.focus).clamp(0.0, 1.0),
+        focus_line_y: sample(&code.focus_y),
+        focus_height: 44.0,
+        token_highlight: TokenHighlight {
+            x: sample(&code.highlight_x),
+            y: sample(&code.highlight_y),
+            width: sample(&code.highlight_width),
+            opacity: sample(&code.highlight_opacity).clamp(0.0, 1.0),
+        },
+        bright_text: &[],
+        pointer: sample_pointer_frame(scene, pointer, time),
+        inline_reveals,
+        squiggles: &[],
+        annotations,
+        lines,
+    }
 }
 
 fn measure_text_width(renderer: &mut HeadlessRenderer, text: &str) -> Result<f32> {
