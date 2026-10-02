@@ -1,7 +1,7 @@
 //! A reel plays independently prepared Scene Plans on one clock. Each segment keeps
 //! its own actors and local time; crossfades blend the outgoing and incoming frames,
 //! and every segment's media is retimed onto the reel clock for one audio mix.
-use std::{fs, path::Path};
+use std::path::Path;
 
 use anyhow::{Context, Result};
 use kinograph::{
@@ -10,28 +10,11 @@ use kinograph::{
 };
 use serde_json::{Value, json};
 
-use super::{PreparedPlan, VisualSampleKey, delivery, inspect_plan, validate_renderer_plan};
+use super::{PreparedPlan, VisualSampleKey, inspect_plan, validate_renderer_plan};
 use crate::{
-    render::{HeadlessRenderer, Theme},
+    render::HeadlessRenderer,
     scenes::{HEIGHT, WIDTH},
 };
-
-/// Reels are recognized by their `segments` key, as decks are by `slides`.
-pub(super) fn is_reel(path: &Path) -> Result<bool> {
-    let json =
-        fs::read_to_string(path).with_context(|| format!("read plan file {}", path.display()))?;
-    let value: Value =
-        serde_json::from_str(&json).with_context(|| format!("parse JSON {}", path.display()))?;
-    Ok(value.get("segments").is_some())
-}
-
-pub(super) fn read(path: &Path) -> Result<ReelPlan> {
-    let json = fs::read_to_string(path).with_context(|| format!("read reel {}", path.display()))?;
-    let reel: ReelPlan =
-        serde_json::from_str(&json).with_context(|| format!("parse reel {}", path.display()))?;
-    reel.validate()?;
-    Ok(reel)
-}
 
 pub(super) fn validate(reel: &ReelPlan) -> Result<()> {
     for segment in &reel.segments {
@@ -63,7 +46,6 @@ pub(super) fn inspect(reel: &ReelPlan) -> Value {
     })
 }
 
-/// `--cue` on a reel selects one whole segment by its scene ID.
 pub(super) fn segment_window(reel: &ReelPlan, id: &str) -> Result<TimeRange> {
     let (_, span) = reel
         .segments
@@ -309,21 +291,6 @@ fn crossfade(below: &mut [u8], above: &[u8], weight: f32) {
         let mixed = f32::from(*dst) + (f32::from(*src) - f32::from(*dst)) * weight;
         *dst = mixed.round() as u8;
     }
-}
-
-pub(super) async fn render(
-    reel: ReelPlan,
-    base: &Path,
-    output: &Path,
-    window: Option<TimeRange>,
-    theme: Theme,
-) -> Result<()> {
-    let mut renderer = super::new_renderer(&reel.id).await?;
-    renderer.set_theme(theme);
-    let prepared = PreparedReel::prepare(reel, base, &mut renderer)?;
-    let window =
-        window.unwrap_or_else(|| TimeRange::new(Time::ZERO, Time::ZERO.after(prepared.duration())));
-    delivery::render_reel(&prepared, &mut renderer, output, window)
 }
 
 #[cfg(test)]

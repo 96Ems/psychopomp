@@ -10,7 +10,8 @@ use kinograph::{
     composition::{Asset, Composition, Duration, Time, TimeRange},
     dsl::{Scalar, Scene, TargetGeometry},
     plan::{
-        MediaKindPlan, MediaRolePlan, ReadPlanError, ScalarPlan, ScenePlan, TargetComponentPlan,
+        DeckPlan, MediaKindPlan, MediaRolePlan, ReadPlanError, ReelPlan, ScalarPlan, ScenePlan,
+        TargetComponentPlan,
     },
     state::{StateTrack, TimedState},
     timeline::{PropertyId, Timeline},
@@ -62,74 +63,86 @@ const BUILTIN_HERO_PLAN: &str = include_str!("../../../scenes/hero/hero.plan.jso
 
 pub(crate) async fn render_builtin_hero(output: &Path) -> Result<()> {
     let plan = ScenePlan::from_json(BUILTIN_HERO_PLAN)?;
-    let window = TimeRange::new(Time::ZERO, Time::from_nanos(plan.duration_nanos));
-    render_loaded_plan(plan, Path::new("."), output, window, Theme::Original).await
+    let window = plan_window(&plan, WindowSelection::Full)?;
+    let (loaded, mut renderer) =
+        still::Loaded::prepare(PlanFile::Plan(plan), Path::new("."), Theme::Original).await?;
+    loaded.render_video(&mut renderer, output, window)
+}
+
+const FRAME_USAGE: &str =
+    "kinograph plan frame <plan-or-reel.json> <seconds> [output.png] [--shutter] [--theme NAME]";
+const SNAPSHOT_USAGE: &str = "kinograph plan snapshot <plan-or-reel.json> <a,b,c | from:to:step> <dir> [--compare] [--shutter] [--theme NAME]";
+const RENDER_USAGE: &str = "kinograph plan render <plan-or-reel.json> [output] [--cue ID | --range START..END] [--theme NAME]";
+const PRESENT_USAGE: &str = "kinograph plan present <plan.json> [--theme NAME] [--speed 1|0.5|0.25|0.1] [--debug] [--reduced-motion] [--full-quality] [--fps FPS] [--benchmark | --benchmark-gpu]";
+
+fn usage() -> String {
+    [
+        "kinograph plan serve",
+        "kinograph plan schema",
+        "kinograph plan validate <plan.json>",
+        "kinograph plan inspect <plan.json>",
+        "kinograph plan steps <plan.json>",
+        "kinograph plan diff <before.json> <after.json>",
+        FRAME_USAGE,
+        SNAPSHOT_USAGE,
+        RENDER_USAGE,
+        PRESENT_USAGE,
+    ]
+    .join(" | ")
 }
 
 pub(crate) fn command(arguments: &[String]) -> Result<()> {
-    if arguments.first().is_some_and(|command| command == "render") {
-        let (arguments, theme) = delivery_theme(&arguments[1..])?;
-        return render_command(&arguments, theme);
-    }
-    if arguments.first().is_some_and(|command| command == "frame") {
-        let (arguments, theme) = delivery_theme(&arguments[1..])?;
-        return frame_command(&arguments, theme);
-    }
-    if arguments
-        .first()
-        .is_some_and(|command| command == "snapshot")
-    {
-        let (arguments, theme) = delivery_theme(&arguments[1..])?;
-        let (arguments, flags) = flags(&arguments, &["--compare", "--shutter"]);
-        let [path, times, dir] = arguments.as_slice() else {
-            bail!("usage: {SNAPSHOT_USAGE}");
-        };
-        return still::snapshot(
-            Path::new(path),
-            &still::parse_times(times)?,
-            Path::new(dir),
-            flags[0],
-            flags[1],
-            theme,
-        );
-    }
-    if arguments
-        .first()
-        .is_some_and(|command| command == "present")
-    {
-        let [path, flags @ ..] = &arguments[1..] else {
-            bail!(
-                "usage: kinograph plan present <plan.json> [--theme NAME] [--speed 1|0.5|0.25|0.1] [--debug] [--reduced-motion] [--full-quality] [--fps FPS] [--benchmark | --benchmark-gpu]"
-            );
-        };
-        let options = presentation::Options::parse(flags)?;
-        let json = fs::read_to_string(path)?;
-        let value: Value = serde_json::from_str(&json)?;
-        let slides = if value.get("slides").is_some() {
-            let deck: kinograph::plan::DeckPlan = serde_json::from_value(value)?;
-            deck.validate()?;
-            deck.slides
-        } else {
-            let plan = read_plan(Path::new(path))?;
-            vec![kinograph::plan::SlidePlan {
-                title: plan.id.clone(),
-                plan,
-            }]
-        };
-        let base = Path::new(path).parent().unwrap_or_else(|| Path::new("."));
-        return presentation::run(slides, base.to_owned(), options);
-    }
-    match arguments {
-        [command] if command == "serve" => pollster::block_on(serve()),
-        [command] if command == "schema" => {
+    let Some((command, arguments)) = arguments.split_first() else {
+        bail!("usage: {}", usage());
+    };
+    match (command.as_str(), arguments) {
+        ("render", arguments) => {
+            let (arguments, theme) = delivery_theme(arguments)?;
+            render_command(&arguments, theme)
+        }
+        ("frame", arguments) => {
+            let (arguments, theme) = delivery_theme(arguments)?;
+            frame_command(&arguments, theme)
+        }
+        ("snapshot", arguments) => {
+            let (arguments, theme) = delivery_theme(arguments)?;
+            let (arguments, flags) = flags(&arguments, &["--compare", "--shutter"]);
+            let [path, times, dir] = arguments.as_slice() else {
+                bail!("usage: {SNAPSHOT_USAGE}");
+            };
+            still::snapshot(
+                Path::new(path),
+                &still::parse_times(times)?,
+                Path::new(dir),
+                flags[0],
+                flags[1],
+                theme,
+            )
+        }
+        ("present", [path, flags @ ..]) => {
+            let options = presentation::Options::parse(flags)?;
+            let slides = match PlanFile::read(Path::new(path))? {
+                PlanFile::Deck(deck) => deck.slides,
+                PlanFile::Plan(plan) => vec![kinograph::plan::SlidePlan {
+                    title: plan.id.clone(),
+                    plan,
+                }],
+                PlanFile::Reel(_) => bail!("plan present takes a scene plan or deck, not a reel"),
+            };
+            let base = Path::new(path).parent().unwrap_or_else(|| Path::new("."));
+            presentation::run(slides, base.to_owned(), options)
+        }
+        ("present", _) => bail!("usage: {PRESENT_USAGE}"),
+        ("serve", []) => pollster::block_on(serve()),
+        ("schema", []) => {
             println!("{}", serde_json::to_string_pretty(&ScenePlan::schema())?);
             Ok(())
         }
-        [command, path] if command == "validate" => {
-            if reel::is_reel(Path::new(path))? {
-                reel::validate(&reel::read(Path::new(path))?)?;
-            } else {
-                validate_renderer_plan(&read_plan(Path::new(path))?)?;
+        ("validate", [path]) => {
+            match PlanFile::read(Path::new(path))? {
+                PlanFile::Plan(plan) => validate_renderer_plan(&plan)?,
+                PlanFile::Reel(reel) => reel::validate(&reel)?,
+                PlanFile::Deck(_) => bail!(DECK_UNSUPPORTED),
             }
             println!(
                 "{}",
@@ -140,16 +153,16 @@ pub(crate) fn command(arguments: &[String]) -> Result<()> {
             );
             Ok(())
         }
-        [command, path] if command == "inspect" => {
-            let report = if reel::is_reel(Path::new(path))? {
-                reel::inspect(&reel::read(Path::new(path))?)
-            } else {
-                inspect_plan(&read_plan(Path::new(path))?)
+        ("inspect", [path]) => {
+            let report = match PlanFile::read(Path::new(path))? {
+                PlanFile::Plan(plan) => inspect_plan(&plan),
+                PlanFile::Reel(reel) => reel::inspect(&reel),
+                PlanFile::Deck(_) => bail!(DECK_UNSUPPORTED),
             };
             println!("{}", serde_json::to_string_pretty(&report)?);
             Ok(())
         }
-        [command, path] if command == "steps" => {
+        ("steps", [path]) => {
             let plan = read_plan(Path::new(path))?;
             println!(
                 "{}",
@@ -157,7 +170,7 @@ pub(crate) fn command(arguments: &[String]) -> Result<()> {
             );
             Ok(())
         }
-        [command, before, after] if command == "diff" => {
+        ("diff", [before, after]) => {
             let before = read_plan(Path::new(before))?;
             let after = read_plan(Path::new(after))?;
             println!(
@@ -166,14 +179,7 @@ pub(crate) fn command(arguments: &[String]) -> Result<()> {
             );
             Ok(())
         }
-        _ => bail!(
-            "usage: kinograph plan serve | kinograph plan schema | kinograph plan validate <plan.json> | \
-             kinograph plan inspect <plan.json> | kinograph plan steps <plan.json> | kinograph plan diff <before.json> <after.json> | \
-             kinograph plan frame <plan-or-reel.json> <seconds> [output.png] [--shutter] [--theme NAME] | \
-             kinograph plan snapshot <plan-or-reel.json> <a,b,c | from:to:step> <dir> [--compare] [--shutter] [--theme NAME] | \
-              kinograph plan render <plan-or-reel.json> [output] [--cue ID | --range START..END] [--theme NAME] | \
-               kinograph plan present <plan.json> [--theme NAME] [--speed 1|0.5|0.25|0.1] [--debug] [--reduced-motion] [--full-quality] [--fps FPS] [--benchmark | --benchmark-gpu]"
-        ),
+        _ => bail!("usage: {}", usage()),
     }
 }
 
@@ -193,10 +199,6 @@ fn delivery_theme(arguments: &[String]) -> Result<(Vec<String>, Theme)> {
     }
     Ok((args, theme.unwrap_or_default()))
 }
-
-const FRAME_USAGE: &str =
-    "kinograph plan frame <plan-or-reel.json> <seconds> [output.png] [--shutter] [--theme NAME]";
-const SNAPSHOT_USAGE: &str = "kinograph plan snapshot <plan-or-reel.json> <a,b,c | from:to:step> <dir> [--compare] [--shutter] [--theme NAME]";
 
 /// Remove boolean `names` from `arguments`, reporting which were present.
 fn flags<const N: usize>(arguments: &[String], names: &[&str; N]) -> (Vec<String>, [bool; N]) {
@@ -225,10 +227,7 @@ fn frame_command(arguments: &[String], theme: Theme) -> Result<()> {
     let output = rest
         .first()
         .map_or_else(|| PathBuf::from("output/scene-plan.png"), PathBuf::from);
-    if let Some(parent) = output.parent() {
-        fs::create_dir_all(parent)
-            .with_context(|| format!("create output directory {}", parent.display()))?;
-    }
+    create_output_directory(&output)?;
     let (loaded, mut renderer) = pollster::block_on(still::Loaded::load(Path::new(plan), theme))?;
     delivery::write_png(&output, &loaded.still(&mut renderer, seconds, shutter)?)
 }
@@ -270,7 +269,21 @@ fn render_command(arguments: &[String], theme: Theme) -> Result<()> {
     if cursor != arguments.len() {
         bail!("unexpected plan render arguments");
     }
-    render_plan(Path::new(path), &output, selection, theme)
+    create_output_directory(&output)?;
+    let path = Path::new(path);
+    let file = PlanFile::read(path)?;
+    let window = file.window(selection)?;
+    let base = path.parent().unwrap_or_else(|| Path::new("."));
+    let (loaded, mut renderer) = pollster::block_on(still::Loaded::prepare(file, base, theme))?;
+    loaded.render_video(&mut renderer, &output, window)
+}
+
+fn create_output_directory(output: &Path) -> Result<()> {
+    if let Some(parent) = output.parent() {
+        fs::create_dir_all(parent)
+            .with_context(|| format!("create output directory {}", parent.display()))?;
+    }
+    Ok(())
 }
 
 enum WindowSelection {
@@ -293,36 +306,8 @@ fn parse_range(value: &str) -> Result<TimeRange> {
     Ok(TimeRange::new(start, end))
 }
 
-fn read_plan(path: &Path) -> Result<ScenePlan> {
-    let json =
-        fs::read_to_string(path).with_context(|| format!("read scene plan {}", path.display()))?;
-    match ScenePlan::from_json(&json) {
-        Ok(plan) => Ok(plan),
-        Err(ReadPlanError::Validation(error)) => {
-            eprintln!("{}", serde_json::to_string_pretty(error.diagnostics())?);
-            Err(error.into())
-        }
-        Err(error) => Err(error.into()),
-    }
-}
-
-fn render_plan(path: &Path, output: &Path, selection: WindowSelection, theme: Theme) -> Result<()> {
-    if let Some(parent) = output.parent() {
-        fs::create_dir_all(parent)
-            .with_context(|| format!("create output directory {}", parent.display()))?;
-    }
-    if reel::is_reel(path)? {
-        let reel = reel::read(path)?;
-        let window = match selection {
-            WindowSelection::Full => None,
-            WindowSelection::Cue(id) => Some(reel::segment_window(&reel, &id)?),
-            WindowSelection::Range(range) => Some(range),
-        };
-        let base = path.parent().unwrap_or_else(|| Path::new(".")).to_owned();
-        return pollster::block_on(reel::render(reel, &base, output, window, theme));
-    }
-    let plan = read_plan(path)?;
-    let window = match selection {
+fn plan_window(plan: &ScenePlan, selection: WindowSelection) -> Result<TimeRange> {
+    Ok(match selection {
         WindowSelection::Full => TimeRange::new(Time::ZERO, Time::from_nanos(plan.duration_nanos)),
         WindowSelection::Cue(id) => {
             let cue = plan
@@ -336,23 +321,70 @@ fn render_plan(path: &Path, output: &Path, selection: WindowSelection, theme: Th
             )
         }
         WindowSelection::Range(range) => range,
-    };
-    let base = path.parent().unwrap_or_else(|| Path::new(".")).to_owned();
-    pollster::block_on(render_loaded_plan(plan, &base, output, window, theme))
+    })
 }
 
-async fn render_loaded_plan(
-    plan: ScenePlan,
-    base: &Path,
-    output: &Path,
-    window: TimeRange,
-    theme: Theme,
-) -> Result<()> {
-    let input = preflight::Plan::new(plan)?;
-    let mut renderer = new_renderer(&input.plan.id).await?;
-    renderer.set_theme(theme);
-    let prepared = PreparedPlan::prepare_preflight(input, base, &mut renderer)?;
-    delivery::render_video(&prepared, &mut renderer, output, window)
+const DECK_UNSUPPORTED: &str =
+    "decks are presented with `kinograph plan present`; this command takes a scene plan or reel";
+
+/// A plan file, recognized by its top-level key: reels have `segments`, decks
+/// have `slides`.
+enum PlanFile {
+    Plan(ScenePlan),
+    Reel(ReelPlan),
+    Deck(DeckPlan),
+}
+
+impl PlanFile {
+    fn read(path: &Path) -> Result<Self> {
+        let json = fs::read_to_string(path)
+            .with_context(|| format!("read plan file {}", path.display()))?;
+        let value: Value = serde_json::from_str(&json)
+            .with_context(|| format!("parse JSON {}", path.display()))?;
+        if value.get("segments").is_some() {
+            let reel: ReelPlan = serde_json::from_str(&json)
+                .with_context(|| format!("parse reel {}", path.display()))?;
+            reel.validate()?;
+            Ok(Self::Reel(reel))
+        } else if value.get("slides").is_some() {
+            let deck: DeckPlan = serde_json::from_value(value)?;
+            deck.validate()?;
+            Ok(Self::Deck(deck))
+        } else {
+            plan_from_json(&json).map(Self::Plan)
+        }
+    }
+
+    /// `--cue` on a reel selects one whole segment by its scene ID.
+    fn window(&self, selection: WindowSelection) -> Result<TimeRange> {
+        match (self, selection) {
+            (Self::Plan(plan), selection) => plan_window(plan, selection),
+            (Self::Reel(reel), WindowSelection::Full) => Ok(TimeRange::new(
+                Time::ZERO,
+                Time::from_nanos(reel.duration_nanos()),
+            )),
+            (Self::Reel(reel), WindowSelection::Cue(id)) => reel::segment_window(reel, &id),
+            (Self::Reel(_), WindowSelection::Range(range)) => Ok(range),
+            (Self::Deck(_), _) => bail!(DECK_UNSUPPORTED),
+        }
+    }
+}
+
+fn read_plan(path: &Path) -> Result<ScenePlan> {
+    let json =
+        fs::read_to_string(path).with_context(|| format!("read scene plan {}", path.display()))?;
+    plan_from_json(&json)
+}
+
+fn plan_from_json(json: &str) -> Result<ScenePlan> {
+    match ScenePlan::from_json(json) {
+        Ok(plan) => Ok(plan),
+        Err(ReadPlanError::Validation(error)) => {
+            eprintln!("{}", serde_json::to_string_pretty(error.diagnostics())?);
+            Err(error.into())
+        }
+        Err(error) => Err(error.into()),
+    }
 }
 
 async fn new_renderer(file_name: &str) -> Result<HeadlessRenderer> {
@@ -1039,12 +1071,7 @@ struct ServerResponse {
 }
 
 async fn serve() -> Result<()> {
-    let mut renderer = HeadlessRenderer::new(RenderSpec {
-        width: WIDTH,
-        height: HEIGHT,
-        file_name: "scene-plan".to_owned(),
-    })
-    .await?;
+    let mut renderer = new_renderer("scene-plan").await?;
     let stdin = std::io::stdin();
     let mut stdout = std::io::stdout().lock();
     for line in stdin.lock().lines() {
@@ -1140,7 +1167,15 @@ fn handle_server_request(request: ServerRequest, renderer: &mut HeadlessRenderer
                 fs::create_dir_all(parent)?;
             }
             let scene_plan = read_plan(&plan)?;
-            let window = server_window(&scene_plan, cue.as_deref(), start_nanos, end_nanos)?;
+            let selection = match (cue, start_nanos, end_nanos) {
+                (Some(id), None, None) => WindowSelection::Cue(id),
+                (None, Some(start), Some(end)) if start < end => WindowSelection::Range(
+                    TimeRange::new(Time::from_nanos(start), Time::from_nanos(end)),
+                ),
+                (None, None, None) => WindowSelection::Full,
+                _ => bail!("provide either cue or both startNanos and endNanos"),
+            };
+            let window = plan_window(&scene_plan, selection)?;
             let base = plan.parent().unwrap_or_else(|| Path::new("."));
             let prepared = PreparedPlan::prepare(scene_plan, base, renderer)?;
             delivery::render_video(&prepared, renderer, &output, window)?;
@@ -1202,36 +1237,6 @@ fn resolve_scalar(scalar: &ScalarPlan, targets: &HashMap<String, TargetGeometry>
 
 fn validate_renderer_plan(plan: &ScenePlan) -> Result<()> {
     preflight::Plan::new(plan.clone()).map(|_| ())
-}
-
-fn server_window(
-    plan: &ScenePlan,
-    cue: Option<&str>,
-    start_nanos: Option<u64>,
-    end_nanos: Option<u64>,
-) -> Result<TimeRange> {
-    match (cue, start_nanos, end_nanos) {
-        (Some(id), None, None) => {
-            let cue = plan
-                .cues
-                .iter()
-                .find(|cue| cue.id == id)
-                .with_context(|| format!("scene plan has no cue '{id}'"))?;
-            Ok(TimeRange::new(
-                Time::from_nanos(cue.start_nanos),
-                Time::from_nanos(cue.end_nanos),
-            ))
-        }
-        (None, Some(start), Some(end)) if start < end => Ok(TimeRange::new(
-            Time::from_nanos(start),
-            Time::from_nanos(end),
-        )),
-        (None, None, None) => Ok(TimeRange::new(
-            Time::ZERO,
-            Time::from_nanos(plan.duration_nanos),
-        )),
-        _ => bail!("provide either cue or both startNanos and endNanos"),
-    }
 }
 
 fn seconds_f64(nanos: u64) -> f64 {
