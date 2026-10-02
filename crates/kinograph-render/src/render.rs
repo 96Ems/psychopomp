@@ -477,24 +477,22 @@ impl HeadlessRenderer {
         }
         let center_x = self.spec.width as f32 * 0.5;
         let center_y = self.spec.height as f32 * 0.5;
-        self.composite_title_card_text(
+        self.composite_centered_text(
             &mut pixels,
             title,
             [center_x, center_y - 20.0],
             64.0,
             [238, 240, 244],
             opacity,
-            None,
         );
         if let Some(subtitle) = subtitle {
-            self.composite_title_card_text(
+            self.composite_centered_text(
                 &mut pixels,
                 subtitle,
                 [center_x, center_y + 64.0],
                 26.0,
                 [135, 145, 160],
                 opacity * 0.9,
-                None,
             );
         }
         pixels
@@ -509,21 +507,7 @@ impl HeadlessRenderer {
         color: [u8; 3],
         opacity: f32,
     ) {
-        self.composite_title_card_text(pixels, text, center, font_size, color, opacity, None);
-    }
-
-    #[allow(clippy::too_many_arguments)]
-    pub fn composite_centered_text_masked(
-        &mut self,
-        pixels: &mut [u8],
-        text: &str,
-        center: [f32; 2],
-        font_size: f32,
-        color: [u8; 3],
-        opacity: f32,
-        mask: Option<VerticalMask>,
-    ) {
-        self.composite_title_card_text(pixels, text, center, font_size, color, opacity, mask);
+        self.composite_centered_text_masked(pixels, text, center, font_size, color, opacity, None);
     }
 
     pub fn render_centered_code_line(
@@ -587,7 +571,7 @@ impl HeadlessRenderer {
     }
 
     #[allow(clippy::too_many_arguments)]
-    fn composite_title_card_text(
+    pub fn composite_centered_text_masked(
         &mut self,
         pixels: &mut [u8],
         text: &str,
