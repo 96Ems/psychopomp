@@ -239,6 +239,13 @@ draws an accent bar and a vector +/- sign in the gutter, and joins consecutive
 marked rows into one band. Its presence is the `mark.<line-id>` Continuous Channel,
 so a removed line can turn red just before a Code Snapshot removes it.
 
+## Stepped Diff
+
+One code change told as ordered steps over Stable Lines: each line is kept,
+added in a step, or removed in a step. Added lines carry an added Line Mark;
+removed lines turn red just before their step. A pure insertion or removal first
+holds blank rows so moving code never crosses entering or leaving code.
+
 ## Diagram Port
 
 A side of a stable diagram node with a tangential pixel offset, resolved against

@@ -7,6 +7,7 @@ use crate::code::{
 };
 
 mod compiled;
+pub mod diff;
 mod stability;
 pub use compiled::{CompiledEditor, CompiledInlineReveal};
 pub use stability::inspect_steps;
