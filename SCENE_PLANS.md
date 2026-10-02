@@ -514,6 +514,34 @@ Components used by explainers:
   The showroom is `cargo run -p psychopomp-rolling-number` (writes
   `target/rolling-number.json`); render it with
   `cargo run --release -- plan render target/rolling-number.json output/rolling-number.mp4 --theme opencode`.
+- `tree`: `origin` (top-left of the first row), `width` (highlight extent and
+  truncation), `size` (24), `maxRows` (a scrolling window), `indent` (2 columns),
+  the JSON `value`, `expanded` (JSONPaths open at time zero), and `changes` of
+  `{ path, value }` (later scalar values, in order per path). Rows are keyed by
+  JSONPath (`$`, `$.actors[0].id`, `$["odd\u0020key"]`). Channels: `opacity`,
+  `x`, `y`, `scroll` (rows), and per path `node.<path>.open` (0 folded to 1 open,
+  non-empty objects and arrays only), `node.<path>.highlight`, and
+  `node.<path>.value` (variant index: 0 is `value`'s, `n` is that path's `n`th
+  change). An opening node's closing bracket slides out from under its row and
+  rows below move by exactly the room it opens; its children fade in at full
+  pitch inside that room, and nothing above it moves. A value change rolls up
+  through its row's window. `TreeActor` writes `open`/`close` (0.45 s
+  zero-bounce), `highlight(path, at, seconds)`, `set(path, value, at)`,
+  `scroll_to(row, at)`, and `reveal(path, at)`, which scrolls the least distance
+  that shows a path's block once the authored folds settle. Object keys display
+  in `serde_json::Value` order (sorted). Trees are channel-only, so they run in
+  `plan present` too.
+  ```rust
+  let mut tree = TreeActor::declare(&mut scene, "plan",
+      TreePlan::new([560.0, 150.0], 900.0, emitted).max_rows(22).expanded(["$"]))?;
+  tree.open(&mut scene, "$.continuousChannels", at)?;
+  tree.reveal(&mut scene, "$.continuousChannels", at)?;
+  tree.highlight(&mut scene, "$.continuousChannels[0].property", later, 2.0)?;
+  tree.set(&mut scene, "$.continuousChannels[0].initial", json!(1.0), later)?;
+  ```
+  The showroom is `cargo run -p psychopomp-tree` (writes `target/tree.json`, the
+  plan `agent-demo` emits); render it with
+  `cargo run --release -- plan render target/tree.json output/tree.mp4 --theme neutral`.
 - Editor Line Marks: `"mark": "added" | "removed"` on a line, with presence
   channel `mark.<line-id>`; `panel-x`, `panel-y`, and `panel-opacity` move and fade the card (the Stepped Diff
   enters on `panel-y`).

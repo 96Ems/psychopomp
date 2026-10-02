@@ -415,6 +415,19 @@ outside Continuous Channels, a settling number marks its samples distinct
 (`ambient_time`), including over a Stage, so shutter samples are not merged. Its
 schedule follows the authored clock, so plans using it are export-only.
 
+A `tree` overlay (drawn just before captions) shows a JSON value as a foldable
+outline. The lightweight `tree.rs` flattens it in pre-order with JSONPath
+identities and computes the layout as a pure function of the per-path `open`
+channels: a node's block is `1 + open × (children + 1)` rows, children sit at
+full pitch inside the room it opens, and the closing bracket rides that room's
+bottom edge. Rows above never move and rows below shift by exactly the room, so
+no step re-lays out the tree. `render/tree.rs` paints rows on a monospace column
+grid with cached CommitMono sprites, a `VerticalMask` per room (and the scroll
+window), `UiCanvas` bars and guides, and chevrons stroked with
+`math::shapes::segment_distance`. Value changes are a variant-index channel that
+rolls the text through its row's window. Everything is a Continuous Channel, so
+trees retarget like any other channel and run in native playback.
+
 ### Stage
 
 `stage` is an exclusive root recipe. The lightweight crate (`stage.rs`) owns the

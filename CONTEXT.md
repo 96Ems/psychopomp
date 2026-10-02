@@ -226,6 +226,15 @@ and suffix spans slide with the layout. The values and their times belong to the
 recipe; a later change redirects wheels from their current position and velocity.
 It is a display of authored values, not a numeric tween.
 
+## Tree
+
+A JSON value shown as a foldable, syntax-tinted outline: a plan a program emits,
+a config file, an API payload, or a state shape. Every row's identity is its
+JSONPath. Opening a node opens room for its children, so rows below slide down
+while rows above stay still; folding reverses it and leaves a summary such as
+`{…} 4 keys`. A scalar's later values roll in place in its row. Highlighting a
+path lights its row. A tree scrolls through a fixed window when it has more rows.
+
 ## Tone
 
 A semantic color role shared by explainer recipes: plain, request, success,

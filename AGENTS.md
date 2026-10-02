@@ -42,6 +42,8 @@ cargo run --release -- plan present target/slideshow-components/deck.json
 cargo run -p psychopomp-pr-walkthrough
 cargo run -p psychopomp-rolling-number
 cargo run --release -- plan render target/rolling-number.json output/rolling-number.mp4 --theme opencode
+cargo run -p psychopomp-tree
+cargo run --release -- plan render target/tree.json output/tree.mp4 --theme neutral
 cargo run --release -- plan render scenes/pr-walkthrough/pr-walkthrough.reel.json output/pr-walkthrough.mp4 --theme opencode
 bun scripts/narrate.ts <scene>/narration/script.json [--draft]
 bun scripts/sheet.ts <plan-or-reel.json> <from:to:step | t1,t2,...> [--theme NAME] [--crop x,y,w,h] [--shutter]
@@ -84,6 +86,8 @@ Do not run the full render as routine validation when unit tests and static chec
 - `crates/psychopomp/src/sequence.rs`: Sequence Diagram recipe values and row constructors, slot geometry, validation, and the `SequenceActor` authoring handle
 - `crates/psychopomp/src/caption.rs`: Caption recipe values and the `CaptionActor` authoring handle (typing, show, hide)
 - `crates/psychopomp/src/rolling.rs`: Rolling Number recipe values, value tokenization, the closed-form roll compiler, and the `RollingNumberActor` handle (`roll`, show, hide)
+- `crates/psychopomp/src/tree.rs`: Tree recipe values, JSONPath identity, the fold-driven pure layout, and the `TreeActor` handle (`open`, `close`, `highlight`, `set`, `scroll_to`, `reveal`, show, hide)
+- `crates/psychopomp-render/src/plan_runtime/tree.rs` and `render/tree.rs`: Tree per-path channel preflight and its rows, chevrons, guides, highlight bars, and rolling values
 - `crates/psychopomp/src/math.rs` and `math/`: shared motion and geometry math (glam vectors, lerp/remap/smoothstep, easing, closed-form dynamics such as the settling spring, arc-length curves, shape ports and connectors, deterministic hash)
 - `crates/psychopomp/src/stage.rs`: Stage elements, strict channels, perspective camera, orb geometry, the packet clock (`stage::packet`), and the `StageActor` authoring handle (`to`, `ease`, `bounce`, `settle_in`, `clock`/`clock_for`, `connect`, `send`, `hit`, `kick`, `jolt`, `twang`, `land`)
 - `crates/psychopomp/src/tone.rs`: semantic Tone roles shared by explainer recipes
@@ -153,6 +157,7 @@ Do not run the full render as routine validation when unit tests and static chec
 - `scenes/deployment-queue/`: canonical state-driven simulated UI proof with keyed insertion, phase replacement, failure focus, and retry
 - `scenes/pr-walkthrough/`: narrated PR explainer reels; `src/film.rs` is the shared PR-film template (header, chips, behavior and code segments) that `scenes/config-migration/` also uses
 - `scenes/rolling-number/`: Rolling Number showroom: roll up and down, a mid-roll redirect, a carry into a new place, and a shrink
+- `scenes/tree/`: Tree showroom: the plan `agent-demo` emits, opened node by node, scrolled, highlighted, a value rolled, then folded
 - `crates/psychopomp-render/src/scene.wgsl`: editor geometry and focus shader
 
 Preserve these boundaries unless a concrete scene or second implementation demonstrates a better seam. The lightweight `psychopomp` and heavyweight `psychopomp-render` crates are a demonstrated process and compilation seam. Do not introduce a generic scene graph, renderer or encoder traits, plugins, or additional crate splits merely for future flexibility.
