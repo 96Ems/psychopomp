@@ -1,6 +1,6 @@
 use anyhow::{Result, bail};
 
-use super::{super::blend_pixel, Bounds, rounded_rect_distance};
+use super::{super::blend_pixel, super::theme::mix, Bounds, rounded_rect_distance};
 
 const CAMERA_DISTANCE: f32 = 1_800.0;
 const BYTES_PER_PIXEL: usize = 4;
@@ -435,7 +435,7 @@ impl Fill {
                     ((offset[0] * direction[0] + offset[1] * direction[1]) / length_squared)
                         .clamp(0.0, 1.0)
                 };
-                mix_color(start, end, progress)
+                UiColor(mix(start.0, end.0, progress))
             }
             Self::Radial {
                 center,
@@ -445,18 +445,14 @@ impl Fill {
             } => {
                 let center = [bounds.origin[0] + center[0], bounds.origin[1] + center[1]];
                 let distance = (point[0] - center[0]).hypot(point[1] - center[1]);
-                mix_color(inner, outer, (distance / radius.max(0.001)).clamp(0.0, 1.0))
+                UiColor(mix(
+                    inner.0,
+                    outer.0,
+                    (distance / radius.max(0.001)).clamp(0.0, 1.0),
+                ))
             }
         }
     }
-}
-
-fn mix_color(start: UiColor, end: UiColor, progress: f32) -> UiColor {
-    UiColor(std::array::from_fn(|channel| {
-        (f32::from(start.0[channel])
-            + (f32::from(end.0[channel]) - f32::from(start.0[channel])) * progress)
-            .round() as u8
-    }))
 }
 
 pub(crate) struct CardUi<'a> {

@@ -215,6 +215,14 @@ impl Theme {
     }
 }
 
+/// Byte colour from `from` at 0 to `to` at 1, `t` clamped to that range.
+pub(super) fn mix<const N: usize>(from: [u8; N], to: [u8; N], t: f32) -> [u8; N] {
+    let t = t.clamp(0.0, 1.0);
+    std::array::from_fn(|i| {
+        kinograph::math::lerp(f32::from(from[i]), f32::from(to[i]), t).round() as u8
+    })
+}
+
 pub(super) fn linear(rgb: [u8; 3]) -> [f32; 3] {
     rgb.map(srgb_to_linear)
 }

@@ -7,6 +7,7 @@ use kinograph::{
     tone::Tone,
 };
 
+use super::theme::mix;
 use super::{
     HeadlessRenderer, PlainTextSpec, composite_text_region,
     ui::{
@@ -593,13 +594,6 @@ fn solid(color: [u8; 3], alpha: u8) -> Fill {
 
 fn rgba([r, g, b]: [u8; 3], alpha: u8) -> UiColor {
     UiColor::srgb8(r, g, b, alpha)
-}
-
-fn mix(a: [u8; 3], b: [u8; 3], t: f32) -> [u8; 3] {
-    let t = t.clamp(0.0, 1.0);
-    std::array::from_fn(|i| {
-        (f32::from(a[i]) + (f32::from(b[i]) - f32::from(a[i])) * t).round() as u8
-    })
 }
 
 fn path_length(points: &[[f32; 2]]) -> f32 {

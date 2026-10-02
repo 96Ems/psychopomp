@@ -4,6 +4,7 @@ use kinograph::deployment::{
 };
 use kinograph::math::{lerp, smoothstep};
 
+use super::theme::mix;
 use super::{
     HeadlessRenderer, TextSprite, composite_sprite,
     text::PlainTextSpec,
@@ -130,10 +131,10 @@ impl HealthPresentation {
     }
 
     fn color(self) -> [u8; 4] {
-        mix_color(
+        mix(
             health_color(self.previous.state),
             health_color(self.current.state),
-            self.transition,
+            unit(self.transition),
         )
     }
 
@@ -1137,19 +1138,19 @@ fn phase_changed(item: &DeploymentItemFrame<'_>) -> bool {
 fn phase_transition_color(item: &DeploymentItemFrame<'_>) -> [u8; 4] {
     let current = phase_color(item.phase);
     item.previous_phase
-        .map(|previous| mix_color(phase_color(previous), current, phase_transition_mix(item)))
+        .map(|previous| {
+            mix(
+                phase_color(previous),
+                current,
+                unit(phase_transition_mix(item)),
+            )
+        })
         .unwrap_or(current)
 }
 
 fn phase_transition_text_color(item: &DeploymentItemFrame<'_>) -> [u8; 3] {
     let color = phase_transition_color(item);
     [color[0], color[1], color[2]]
-}
-
-fn mix_color(from: [u8; 4], to: [u8; 4], progress: f32) -> [u8; 4] {
-    std::array::from_fn(|index| {
-        lerp(from[index] as f32, to[index] as f32, unit(progress)).round() as u8
-    })
 }
 
 fn phase_text_color(phase: &DeploymentPhasePlan) -> [u8; 3] {

@@ -10,6 +10,7 @@ use kinograph::math::smoothstep;
 use kinograph::dsl::{TaskFrame, TaskState};
 use kinograph::motion::{MotionState, Spring};
 
+use super::theme::mix;
 use super::{
     HeadlessRenderer, TextSprite, blend_pixel_at, composite_sprite_rotated,
     composite_sprite_rotated_with_coverage, rasterize_svg, text::PlainTextSpec,
@@ -452,11 +453,7 @@ impl HeadlessRenderer {
         };
         let previous_color = task_state_color(node.previous_state);
         let color_mix = 1.0 - (-12.0 * node.state_age).exp();
-        let color = [
-            mix_channel(previous_color[0], target_color[0], color_mix),
-            mix_channel(previous_color[1], target_color[1], color_mix),
-            mix_channel(previous_color[2], target_color[2], color_mix),
-        ];
+        let color = mix(previous_color, target_color, color_mix);
         let (flash_duration, flash_mix, flash_color) = match node.state {
             TaskState::Succeeded(_) => (0.45, 0.38, [55, 163, 95]),
             TaskState::Failed(_) => (0.32, 0.45, [244, 92, 92]),
@@ -467,11 +464,7 @@ impl HeadlessRenderer {
         let remaining = (1.0 - node.state_age / flash_duration).clamp(0.0, 1.0);
         let attack = smoothstep((node.state_age / 0.025).clamp(0.0, 1.0));
         let flash = (remaining * std::f32::consts::FRAC_PI_2).sin() * flash_mix * attack;
-        let color = [
-            mix_channel(color[0], flash_color[0], flash),
-            mix_channel(color[1], flash_color[1], flash),
-            mix_channel(color[2], flash_color[2], flash),
-        ];
+        let color = mix(color, flash_color, flash);
         let center = [node.x + offset[0], node.y + offset[1]];
         width *= scale;
         height *= scale;
@@ -1349,10 +1342,6 @@ fn task_state_color(state: &TaskState) -> [u8; 3] {
         TaskState::Failed(_) => [239, 68, 68],
         TaskState::Death(_) => [8, 8, 9],
     }
-}
-
-fn mix_channel(from: u8, to: u8, progress: f32) -> u8 {
-    (from as f32 + (to as f32 - from as f32) * progress.clamp(0.0, 1.0)).round() as u8
 }
 
 fn failure_jitter(id: &str, age: f32, duration: f32) -> [f32; 3] {
