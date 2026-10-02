@@ -3,14 +3,14 @@
 //! through a perspective camera, and every change is an ordinary Continuous
 //! Channel. Geometry that depends on time (orb spin, beam flow) is a pure function
 //! of the sample time, so any frame renders identically in any order.
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 
 use anyhow::{Result, bail, ensure};
 use serde::{Deserialize, Serialize};
 
 use crate::{
     author::{ActorHandle, ContinuousHandle, PlanBuilder},
-    caption::{CaptionAlign, CaptionSpanPlan},
+    caption::{self, CaptionAlign, CaptionSpanPlan},
     effects::spinner::Mark,
     math::{
         Vec2, Vec3,
@@ -487,7 +487,6 @@ pub const DRAW_CURVE: Ease = Ease::CubicBezier([0.45, 0.0, 0.2, 1.0]);
 /// Authoring handle: declares each stage channel once, on first use.
 pub struct StageActor {
     actor: ActorHandle,
-    channels: HashMap<String, ContinuousHandle>,
     /// The declared recipe, for helpers that follow a beam to its ends.
     plan: StagePlan,
 }
@@ -502,13 +501,8 @@ impl StageActor {
         let actor = scene.actor(id, STAGE_RECIPE, plan)?;
         Ok(Self {
             actor,
-            channels: HashMap::new(),
             plan: plan.clone(),
         })
-    }
-
-    pub fn actor(&self) -> &ActorHandle {
-        &self.actor
     }
 
     /// The channel for `property`, declared on first use with `initial`.
@@ -518,10 +512,7 @@ impl StageActor {
         property: &str,
         initial: f32,
     ) -> ContinuousHandle {
-        self.channels
-            .entry(property.to_owned())
-            .or_insert_with(|| scene.continuous(&self.actor, property, initial))
-            .clone()
+        scene.channel(&self.actor, property, initial)
     }
 
     /// Spring `property` to `target` at `at_nanos`. Channels not declared
@@ -678,15 +669,7 @@ impl StageActor {
         let opacity = self.channel(scene, &format!("{label}.opacity"), 0.0);
         let typed = self.channel(scene, &format!("{label}.typed"), 0.0);
         scene.set(&opacity, at_nanos, 1.0);
-        let per_char = (1e9 / f64::from(chars_per_second.max(1.0))) as u64;
-        for index in 1..=chars {
-            scene.set(
-                &typed,
-                at_nanos + per_char * index as u64,
-                index as f32 / chars as f32,
-            );
-        }
-        at_nanos + per_char * chars as u64
+        caption::type_steps(scene, &typed, at_nanos, chars, chars_per_second)
     }
 
     /// Send a packet so that it launches at `at_nanos` and flies for `seconds`.

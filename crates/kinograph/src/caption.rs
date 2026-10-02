@@ -1,8 +1,6 @@
 //! Captions: short lines of styled CommitMono text in the terminal voice of an
 //! explainer, with an optional typing reveal and block caret. Spans carry
 //! semantic tones, so one keyword can take the accent while the rest stays plain.
-use std::collections::HashMap;
-
 use anyhow::{Result, ensure};
 use serde::{Deserialize, Serialize};
 
@@ -133,7 +131,6 @@ impl CaptionPlan {
 pub struct CaptionActor {
     actor: ActorHandle,
     chars: usize,
-    channels: HashMap<String, ContinuousHandle>,
 }
 
 impl CaptionActor {
@@ -147,12 +144,7 @@ impl CaptionActor {
         Ok(Self {
             actor,
             chars: plan.char_count(),
-            channels: HashMap::new(),
         })
-    }
-
-    pub fn actor(&self) -> &ActorHandle {
-        &self.actor
     }
 
     pub fn channel(
@@ -161,24 +153,17 @@ impl CaptionActor {
         property: &str,
         initial: f32,
     ) -> ContinuousHandle {
-        self.channels
-            .entry(property.to_owned())
-            .or_insert_with(|| scene.continuous(&self.actor, property, initial))
-            .clone()
+        scene.channel(&self.actor, property, initial)
     }
 
     /// Fade and rise in. A caption with a `show` starts hidden.
     pub fn show(&mut self, scene: &mut PlanBuilder, at_nanos: u64) {
-        let opacity = self.channel(scene, "opacity", 0.0);
-        let y = self.channel(scene, "y", 10.0);
-        scene.spring(&opacity, at_nanos, 1.0, 0.35, 0.0);
-        scene.spring(&y, at_nanos, 0.0, 0.45, 0.0);
+        show(scene, &self.actor, at_nanos);
     }
 
     /// Fade out in place.
     pub fn hide(&mut self, scene: &mut PlanBuilder, at_nanos: u64) {
-        let opacity = self.channel(scene, "opacity", 0.0);
-        scene.spring(&opacity, at_nanos, 0.0, 0.3, 0.0);
+        hide(scene, &self.actor, at_nanos);
     }
 
     /// Type the caption in at `chars_per_second`, showing the block caret while
@@ -196,19 +181,46 @@ impl CaptionActor {
         let caret = self.channel(scene, "caret", 0.0);
         scene.set(&opacity, at_nanos, 1.0);
         scene.set(&caret, at_nanos, 1.0);
-        let per_char = (1e9 / f64::from(chars_per_second.max(1.0))) as u64;
-        for index in 1..=self.chars {
-            scene.set(
-                &typed,
-                at_nanos + per_char * index as u64,
-                index as f32 / self.chars as f32,
-            );
-        }
-        let done = at_nanos + per_char * self.chars as u64;
+        let done = type_steps(scene, &typed, at_nanos, self.chars, chars_per_second);
         let caret_off = done + (f64::from(caret_hold_seconds.max(0.0)) * 1e9) as u64;
         scene.spring(&caret, caret_off, 0.0, 0.2, 0.0);
         done
     }
+}
+
+/// Fade and rise in, as captions and Rolling Numbers do; the first `show`
+/// declares the actor hidden and 10 px low.
+pub(crate) fn show(scene: &mut PlanBuilder, actor: &ActorHandle, at_nanos: u64) {
+    let opacity = scene.channel(actor, "opacity", 0.0);
+    let y = scene.channel(actor, "y", 10.0);
+    scene.spring(&opacity, at_nanos, 1.0, 0.35, 0.0);
+    scene.spring(&y, at_nanos, 0.0, 0.45, 0.0);
+}
+
+/// Fade out in place.
+pub(crate) fn hide(scene: &mut PlanBuilder, actor: &ActorHandle, at_nanos: u64) {
+    let opacity = scene.channel(actor, "opacity", 0.0);
+    scene.spring(&opacity, at_nanos, 0.0, 0.3, 0.0);
+}
+
+/// Reveal `chars` characters on a 0..1 `typed` channel at `chars_per_second`,
+/// one exact step per character. Returns when the last one appears.
+pub(crate) fn type_steps(
+    scene: &mut PlanBuilder,
+    typed: &ContinuousHandle,
+    at_nanos: u64,
+    chars: usize,
+    chars_per_second: f32,
+) -> u64 {
+    let per_char = (1e9 / f64::from(chars_per_second.max(1.0))) as u64;
+    for index in 1..=chars {
+        scene.set(
+            typed,
+            at_nanos + per_char * index as u64,
+            index as f32 / chars as f32,
+        );
+    }
+    at_nanos + per_char * chars as u64
 }
 
 #[cfg(test)]

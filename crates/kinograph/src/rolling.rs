@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     author::{ActorHandle, ContinuousHandle, PlanBuilder},
-    caption::{CaptionAlign, CaptionSpanPlan},
+    caption::{self, CaptionAlign, CaptionSpanPlan},
     math::{dynamics::settle, remap_clamp},
     motion::MotionState,
     tone::Tone,
@@ -989,7 +989,6 @@ fn collapse_positions(
 pub struct RollingNumberActor {
     actor: ActorHandle,
     plan: RollingNumberPlan,
-    channels: HashMap<String, ContinuousHandle>,
 }
 
 impl RollingNumberActor {
@@ -1000,19 +999,7 @@ impl RollingNumberActor {
     ) -> Result<Self> {
         plan.validate()?;
         let actor = scene.actor(id, ROLLING_NUMBER_RECIPE, &plan)?;
-        Ok(Self {
-            actor,
-            plan,
-            channels: HashMap::new(),
-        })
-    }
-
-    pub fn actor(&self) -> &ActorHandle {
-        &self.actor
-    }
-
-    pub fn plan(&self) -> &RollingNumberPlan {
-        &self.plan
+        Ok(Self { actor, plan })
     }
 
     /// Roll to `value` at `at_nanos`, after every earlier change.
@@ -1035,24 +1022,17 @@ impl RollingNumberActor {
         property: &str,
         initial: f32,
     ) -> ContinuousHandle {
-        self.channels
-            .entry(property.to_owned())
-            .or_insert_with(|| scene.continuous(&self.actor, property, initial))
-            .clone()
+        scene.channel(&self.actor, property, initial)
     }
 
-    /// Fade and rise in. A number with a `show` starts hidden.
+    /// Fade and rise in, like a caption. A number with a `show` starts hidden.
     pub fn show(&mut self, scene: &mut PlanBuilder, at_nanos: u64) {
-        let opacity = self.channel(scene, "opacity", 0.0);
-        let y = self.channel(scene, "y", 10.0);
-        scene.spring(&opacity, at_nanos, 1.0, 0.35, 0.0);
-        scene.spring(&y, at_nanos, 0.0, 0.45, 0.0);
+        caption::show(scene, &self.actor, at_nanos);
     }
 
     /// Fade out in place.
     pub fn hide(&mut self, scene: &mut PlanBuilder, at_nanos: u64) {
-        let opacity = self.channel(scene, "opacity", 0.0);
-        scene.spring(&opacity, at_nanos, 0.0, 0.3, 0.0);
+        caption::hide(scene, &self.actor, at_nanos);
     }
 }
 

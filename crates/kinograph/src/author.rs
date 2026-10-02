@@ -11,6 +11,12 @@ pub struct PlanBuilder {
     plan: ScenePlan,
 }
 
+/// Whole milliseconds in nanoseconds: an f32 duration such as 0.8 is not exact
+/// in nanoseconds, so eases and helpers that chain them round alike.
+pub(crate) fn whole_millis(seconds: f32) -> u64 {
+    (f64::from(seconds) * 1000.0).round() as u64 * 1_000_000
+}
+
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct ActorHandle {
     id: String,
@@ -44,10 +50,6 @@ pub struct SemanticTargetHandle {
 }
 
 impl SemanticTargetHandle {
-    pub fn id(&self) -> &str {
-        &self.id
-    }
-
     pub fn x(&self) -> ScalarPlan {
         self.component(TargetComponentPlan::X)
     }
@@ -74,12 +76,6 @@ impl SemanticTargetHandle {
 
     fn component(&self, component: TargetComponentPlan) -> ScalarPlan {
         self.offset(component, 0.0)
-    }
-}
-
-impl StateHandle {
-    pub fn id(&self) -> &str {
-        &self.id
     }
 }
 
@@ -120,6 +116,26 @@ impl PlanBuilder {
             .expect("actor handle belongs to this plan builder")
             .data = data;
         Ok(())
+    }
+
+    /// The `actor.property` channel: the existing one, or a new one starting at
+    /// `initial`. An already declared channel keeps its initial value.
+    pub fn channel(
+        &mut self,
+        actor: &ActorHandle,
+        property: &str,
+        initial: impl Into<ScalarPlan>,
+    ) -> ContinuousHandle {
+        let id = format!("{}.{}", actor.id, property);
+        if self
+            .plan
+            .continuous_channels
+            .iter()
+            .any(|channel| channel.id == id)
+        {
+            return ContinuousHandle { id };
+        }
+        self.continuous(actor, property, initial)
     }
 
     pub fn continuous(
@@ -228,7 +244,7 @@ impl PlanBuilder {
         seconds: f32,
         curve: Ease,
     ) {
-        let duration_nanos = (f64::from(seconds) * 1000.0).round() as u64 * 1_000_000;
+        let duration_nanos = whole_millis(seconds);
         self.continuous_channel_mut(channel)
             .events
             .push(TrackEventPlan::Ease {
@@ -365,6 +381,29 @@ mod tests {
     }
 
     #[test]
+    fn channel_declares_once_in_first_use_order() {
+        let mut scene = PlanBuilder::new("channels", 1_000_000_000);
+        let actor = scene.actor("a", "title-card", json!({})).unwrap();
+        let y = scene.channel(&actor, "y", 10.0);
+        scene.channel(&actor, "opacity", 0.0);
+        assert_eq!(scene.channel(&actor, "y", 99.0), y);
+        let plan = scene.finish().unwrap();
+        let ids = plan
+            .continuous_channels
+            .iter()
+            .map(|channel| match channel.initial {
+                crate::plan::ScalarPlan::Literal(value) => (channel.id.as_str(), value),
+                _ => unreachable!(),
+            })
+            .collect::<Vec<_>>();
+        assert_eq!(
+            ids,
+            vec![("a.y", 10.0), ("a.opacity", 0.0)],
+            "a repeated channel keeps its first initial value"
+        );
+    }
+
+    #[test]
     fn handles_construct_valid_deterministic_channels() {
         let mut scene = PlanBuilder::new("demo", 2_000_000_000);
         let title = scene
@@ -390,9 +429,9 @@ mod tests {
         let plan = scene.finish().unwrap();
 
         assert_eq!(opacity.id(), "title.opacity");
-        assert_eq!(subtitle.id(), "title.subtitle");
+        assert_eq!(plan.state_channels[0].id, "title.subtitle");
         assert_eq!(plan.continuous_channels[0].actor_id, title.id());
-        assert_eq!(target.id(), "title-text");
+        assert_eq!(plan.semantic_targets[0].id, "title-text");
         assert_eq!(plan.cues[0].id, "change");
         assert_eq!(plan.presentation_steps[0].title, "Change the title");
     }
