@@ -1205,16 +1205,7 @@ fn blur_task_layer(
 
 fn srgb_to_linear_lut() -> &'static [f32; 256] {
     static LUT: OnceLock<[f32; 256]> = OnceLock::new();
-    LUT.get_or_init(|| {
-        std::array::from_fn(|value| {
-            let encoded = value as f32 / 255.0;
-            if encoded <= 0.04045 {
-                encoded / 12.92
-            } else {
-                ((encoded + 0.055) / 1.055).powf(2.4)
-            }
-        })
-    })
+    LUT.get_or_init(|| std::array::from_fn(|value| super::theme::srgb_to_linear(value as u8)))
 }
 
 fn linear_to_srgb_lut() -> &'static [u8; 65536] {

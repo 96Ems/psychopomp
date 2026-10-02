@@ -216,14 +216,16 @@ impl Theme {
 }
 
 pub(super) fn linear(rgb: [u8; 3]) -> [f32; 3] {
-    rgb.map(|c| {
-        let c = f32::from(c) / 255.;
-        if c <= 0.04045 {
-            c / 12.92
-        } else {
-            ((c + 0.055) / 1.055).powf(2.4)
-        }
-    })
+    rgb.map(srgb_to_linear)
+}
+
+pub(super) fn srgb_to_linear(byte: u8) -> f32 {
+    let c = f32::from(byte) / 255.;
+    if c <= 0.04045 {
+        c / 12.92
+    } else {
+        ((c + 0.055) / 1.055).powf(2.4)
+    }
 }
 
 #[cfg(test)]
