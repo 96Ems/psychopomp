@@ -17,6 +17,9 @@ use kinograph::{
 pub const MAX_COLUMNS: usize = 76;
 /// Rows visible in the editor card.
 pub const MAX_ROWS: usize = 14;
+/// How long a pure insertion or removal holds blank rows, so moving code never
+/// crosses entering or leaving code.
+const ROOM: u64 = 300_000_000;
 
 pub struct Line {
     pub text: &'static str,
@@ -106,42 +109,41 @@ impl Diff {
                 self.file_name
             );
         }
+        let mut snapshots = Vec::new();
+        let mut gaps = 0;
+        for (step, &at) in step_times.iter().enumerate() {
+            let next = self.rows(step + 1);
+            let mut settle = at;
+            if let Some(room) = make_room(&self.rows(step), &next) {
+                gaps = gaps.max(room.iter().filter(|id| id.starts_with("gap-")).count());
+                snapshots.push(EditorSnapshotPlan {
+                    at_nanos: at,
+                    line_ids: room,
+                });
+                settle += ROOM;
+            }
+            snapshots.push(EditorSnapshotPlan {
+                at_nanos: settle,
+                line_ids: next,
+            });
+        }
         let lines = self
             .lines
             .iter()
             .enumerate()
             .map(|(index, line)| {
-                let spans = if line.text.trim().is_empty() {
-                    vec![StyledSpan::new(" ", kinograph::code::SyntaxStyle::Plain)]
+                let mark = if line.until.is_some() {
+                    Some(LineMarkPlan::Removed)
+                } else if line.from > 0 {
+                    Some(LineMarkPlan::Added)
                 } else {
-                    highlight::typescript(line.text)
+                    None
                 };
-                EditorLinePlan {
-                    id: id(index),
-                    parts: vec![EditorPartPlan {
-                        id: "code".to_owned(),
-                        spans,
-                    }],
-                    semantic_ranges: Vec::new(),
-                    mark: if line.until.is_some() {
-                        Some(LineMarkPlan::Removed)
-                    } else if line.from > 0 {
-                        Some(LineMarkPlan::Added)
-                    } else {
-                        None
-                    },
-                }
+                editor_line(id(index), line.text, mark)
             })
+            .chain((0..gaps).map(|gap| editor_line(format!("gap-{gap}"), "", None)))
             .collect::<Vec<_>>();
         let initial = self.rows(0);
-        let snapshots = step_times
-            .iter()
-            .enumerate()
-            .map(|(step, at)| EditorSnapshotPlan {
-                at_nanos: *at,
-                line_ids: self.rows(step + 1),
-            })
-            .collect::<Vec<_>>();
         let final_ids = self.rows(steps);
         let recipe = EditorRecipePlan {
             file_name: self.file_name.to_owned(),
@@ -173,6 +175,57 @@ impl Diff {
             scene.spring(&opacity, 0, 1.0, 0.5, 0.0);
         }
         Ok(())
+    }
+}
+
+/// A pure insertion first opens blank rows where the new lines go; a pure
+/// removal first leaves blank rows where the old lines were. Mixed steps and
+/// steps where no retained line moves need no room.
+fn make_room(previous: &[String], next: &[String]) -> Option<Vec<String>> {
+    let entering = next.iter().filter(|id| !previous.contains(id)).count();
+    let leaving = previous.iter().filter(|id| !next.contains(id)).count();
+    let (base, other) = match (entering, leaving) {
+        (0, 0) => return None,
+        (_, 0) => (next, previous),
+        (0, _) => (previous, next),
+        _ => return None,
+    };
+    let row = |ids: &[String], id: &String| ids.iter().position(|candidate| candidate == id);
+    if !next
+        .iter()
+        .any(|id| row(previous, id).is_some_and(|from| Some(from) != row(next, id)))
+    {
+        return None;
+    }
+    let mut gap = 0;
+    Some(
+        base.iter()
+            .map(|id| {
+                if other.contains(id) {
+                    id.clone()
+                } else {
+                    gap += 1;
+                    format!("gap-{}", gap - 1)
+                }
+            })
+            .collect(),
+    )
+}
+
+fn editor_line(id: String, text: &str, mark: Option<LineMarkPlan>) -> EditorLinePlan {
+    let spans = if text.trim().is_empty() {
+        vec![StyledSpan::new(" ", kinograph::code::SyntaxStyle::Plain)]
+    } else {
+        highlight::typescript(text)
+    };
+    EditorLinePlan {
+        id,
+        parts: vec![EditorPartPlan {
+            id: "code".to_owned(),
+            spans,
+        }],
+        semantic_ranges: Vec::new(),
+        mark,
     }
 }
 

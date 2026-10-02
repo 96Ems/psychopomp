@@ -1751,11 +1751,97 @@
                     }
                   ],
                   "semanticRanges": []
+                },
+                {
+                  "id": "gap-0",
+                  "parts": [
+                    {
+                      "id": "code",
+                      "spans": [
+                        {
+                          "style": "plain",
+                          "text": " "
+                        }
+                      ]
+                    }
+                  ],
+                  "semanticRanges": []
+                },
+                {
+                  "id": "gap-1",
+                  "parts": [
+                    {
+                      "id": "code",
+                      "spans": [
+                        {
+                          "style": "plain",
+                          "text": " "
+                        }
+                      ]
+                    }
+                  ],
+                  "semanticRanges": []
+                },
+                {
+                  "id": "gap-2",
+                  "parts": [
+                    {
+                      "id": "code",
+                      "spans": [
+                        {
+                          "style": "plain",
+                          "text": " "
+                        }
+                      ]
+                    }
+                  ],
+                  "semanticRanges": []
+                },
+                {
+                  "id": "gap-3",
+                  "parts": [
+                    {
+                      "id": "code",
+                      "spans": [
+                        {
+                          "style": "plain",
+                          "text": " "
+                        }
+                      ]
+                    }
+                  ],
+                  "semanticRanges": []
+                },
+                {
+                  "id": "gap-4",
+                  "parts": [
+                    {
+                      "id": "code",
+                      "spans": [
+                        {
+                          "style": "plain",
+                          "text": " "
+                        }
+                      ]
+                    }
+                  ],
+                  "semanticRanges": []
                 }
               ],
               "snapshots": [
                 {
                   "atNanos": 4280000000,
+                  "lineIds": [
+                    "line-0",
+                    "line-1",
+                    "line-10",
+                    "line-11",
+                    "gap-0",
+                    "line-13"
+                  ]
+                },
+                {
+                  "atNanos": 4580000000,
                   "lineIds": [
                     "line-0",
                     "line-1",
@@ -1769,6 +1855,19 @@
                   "lineIds": [
                     "line-0",
                     "line-1",
+                    "gap-0",
+                    "gap-1",
+                    "gap-2",
+                    "line-10",
+                    "line-11",
+                    "line-13"
+                  ]
+                },
+                {
+                  "atNanos": 6560000000,
+                  "lineIds": [
+                    "line-0",
+                    "line-1",
                     "line-2",
                     "line-3",
                     "line-4",
@@ -1779,6 +1878,24 @@
                 },
                 {
                   "atNanos": 10120000000,
+                  "lineIds": [
+                    "line-0",
+                    "line-1",
+                    "line-2",
+                    "line-3",
+                    "line-4",
+                    "gap-0",
+                    "gap-1",
+                    "gap-2",
+                    "gap-3",
+                    "gap-4",
+                    "line-10",
+                    "line-11",
+                    "line-13"
+                  ]
+                },
+                {
+                  "atNanos": 10420000000,
                   "lineIds": [
                     "line-0",
                     "line-1",
