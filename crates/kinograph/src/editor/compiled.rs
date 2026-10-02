@@ -26,7 +26,6 @@ pub struct CompiledEditor {
 enum Placement {
     Legacy(CodeTransition),
     Keyed {
-        initial: CodeSnapshot,
         snapshots: Vec<EditorSnapshotPlan>,
         lines: Vec<KeyedLine>,
     },
@@ -55,11 +54,10 @@ impl CompiledEditor {
             .iter()
             .map(|line| LineId::new(&line.id))
             .collect::<Vec<_>>();
-        let initial = CodeSnapshot::new(recipe.initial_line_ids.iter().cloned());
         let placement = if recipe.snapshots.is_empty() {
             Placement::Legacy(CodeTransition::compile(
                 &document,
-                &initial,
+                &CodeSnapshot::new(recipe.initial_line_ids.iter().cloned()),
                 &CodeSnapshot::new(recipe.final_line_ids.iter().cloned()),
                 CodeLayout {
                     line_height: recipe.line_height,
@@ -95,7 +93,6 @@ impl CompiledEditor {
                 })
                 .collect();
             Placement::Keyed {
-                initial,
                 snapshots: recipe.snapshots.clone(),
                 lines,
             }
@@ -301,23 +298,6 @@ impl CompiledEditor {
             }
         }
         Ok(channels)
-    }
-
-    /// Existing public compatibility entrypoint only. Real keyed consumers use
-    /// sample_lines rather than a fabricated initial-to-catalog transition.
-    pub(super) fn into_transition(self) -> Result<CodeTransition> {
-        match self.placement {
-            Placement::Legacy(transition) => Ok(transition),
-            Placement::Keyed { initial, .. } => CodeTransition::compile(
-                &self.document,
-                &initial,
-                &CodeSnapshot::new(self.catalog.iter().map(|id| id.as_str().to_owned())),
-                CodeLayout {
-                    line_height: self.line_height,
-                    entering_offset_x: 0.,
-                },
-            ),
-        }
     }
 }
 
