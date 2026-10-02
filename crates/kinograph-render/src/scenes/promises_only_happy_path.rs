@@ -16,10 +16,13 @@ use kinograph::{
     transcript::Transcript,
 };
 
-use crate::render::{HeadlessRenderer, InlineRevealFrame, RenderSpec};
+use crate::{
+    plan_runtime::new_renderer,
+    render::{HeadlessRenderer, InlineRevealFrame},
+};
 
 use super::{
-    HEIGHT, WIDTH, WORKSPACE_ROOT, editor_frame, encode_scene, measure_target, measure_text_width,
+    WORKSPACE_ROOT, editor_frame, encode_scene, measure_target, measure_text_width,
     plan_temporal_samples, span,
 };
 
@@ -31,12 +34,7 @@ pub(crate) async fn render(output: &Path) -> Result<()> {
         .join("promises-only-happy-path");
     let transcript = Transcript::load(&asset_directory.join("timings.json"))?;
     let transition = promises_only_happy_path_transition()?;
-    let mut renderer = HeadlessRenderer::new(RenderSpec {
-        width: WIDTH,
-        height: HEIGHT,
-        file_name: "checkout.ts".to_owned(),
-    })
-    .await?;
+    let mut renderer = new_renderer("checkout.ts").await?;
     let settled_lines = transition.sample(TransitionProgress {
         layout: 1.0,
         content: 1.0,

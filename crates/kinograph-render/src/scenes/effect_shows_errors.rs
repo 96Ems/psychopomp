@@ -16,13 +16,14 @@ use kinograph::{
     transcript::Transcript,
 };
 
-use crate::render::{
-    EditorFrame, HeadlessRenderer, InlineRevealFrame, RenderSpec, SquiggleFrame, TokenHighlight,
+use crate::{
+    plan_runtime::new_renderer,
+    render::{EditorFrame, HeadlessRenderer, InlineRevealFrame, SquiggleFrame, TokenHighlight},
 };
 
 use super::{
-    HEIGHT, WIDTH, WORKSPACE_ROOT, encode_scene, measure_target, measure_text_width,
-    plan_temporal_samples, sample_pointer_frame, span,
+    WORKSPACE_ROOT, encode_scene, measure_target, measure_text_width, plan_temporal_samples,
+    sample_pointer_frame, span,
 };
 
 const LESSON_AUDIO_DURATION: f64 = 31.708;
@@ -33,12 +34,7 @@ pub(crate) async fn render(output: &Path) -> Result<()> {
         .join("effect-shows-errors");
     let transcript = Transcript::load(&asset_directory.join("timings.json"))?;
     let transitions = effect_shows_errors_transitions()?;
-    let mut renderer = HeadlessRenderer::new(RenderSpec {
-        width: WIDTH,
-        height: HEIGHT,
-        file_name: "slow-die.ts".to_owned(),
-    })
-    .await?;
+    let mut renderer = new_renderer("slow-die.ts").await?;
     let initial_lines = transitions.split.sample(TransitionProgress {
         layout: 0.0,
         content: 0.0,

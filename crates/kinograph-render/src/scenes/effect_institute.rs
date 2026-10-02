@@ -26,11 +26,12 @@ use kinograph::{
 };
 
 use crate::render::{
-    BrightTextFrame, EditorFrame, HeadlessRenderer, InlineRevealFrame, PointerFrame, RenderSpec,
-    SquiggleFrame, TaskLinkFrame, TaskSceneFrame, TokenHighlight,
+    BrightTextFrame, EditorFrame, HeadlessRenderer, InlineRevealFrame, PointerFrame, SquiggleFrame,
+    TaskLinkFrame, TaskSceneFrame, TokenHighlight,
 };
 
 use super::{HEIGHT, WIDTH, WORKSPACE_ROOT, encode_scene};
+use crate::plan_runtime::new_renderer;
 
 const LINE_HEIGHT: f32 = 44.0;
 const OPENER_DURATION: f64 = 3.0;
@@ -38,36 +39,26 @@ const GROUP_DURATION: f64 = 2.5;
 const GAP_DURATION: f64 = 0.5;
 const OUTRO_DURATION: f64 = 0.5;
 
-pub(crate) async fn render(chapter_id: &str, output: &Path) -> Result<()> {
-    let assets = Path::new(WORKSPACE_ROOT)
-        .join("assets/effect-institute")
-        .join(chapter_id);
-    let chapter = PublishedChapter::load(chapter_id, &assets)?;
-    let mut renderer = HeadlessRenderer::new(RenderSpec {
-        width: WIDTH,
-        height: HEIGHT,
-        file_name: chapter.title.clone(),
-    })
-    .await?;
-
-    encode_scene(
-        &mut renderer,
-        output,
-        &chapter.scene,
-        |_| 2,
-        |renderer, time| chapter.render_sample(renderer, time),
-    )
-}
-
-pub(crate) async fn render_section(
+/// Render a whole published chapter, or only one of its sections.
+pub(crate) async fn render(
     chapter_id: &str,
-    section_id: &str,
+    section_id: Option<&str>,
     output: &Path,
 ) -> Result<()> {
     let assets = Path::new(WORKSPACE_ROOT)
         .join("assets/effect-institute")
         .join(chapter_id);
     let chapter = PublishedChapter::load(chapter_id, &assets)?;
+    let Some(section_id) = section_id else {
+        let mut renderer = new_renderer(&chapter.title).await?;
+        return encode_scene(
+            &mut renderer,
+            output,
+            &chapter.scene,
+            |_| 2,
+            |renderer, time| chapter.render_sample(renderer, time),
+        );
+    };
     let section = chapter
         .sections
         .iter()
@@ -75,12 +66,7 @@ pub(crate) async fn render_section(
         .with_context(|| format!("chapter '{chapter_id}' has no section '{section_id}'"))?;
     let scene = Scene::new(Vec::<(PropertyId, Scalar)>::new(), section.composition())
         .compile(&HashMap::new())?;
-    let mut renderer = HeadlessRenderer::new(RenderSpec {
-        width: WIDTH,
-        height: HEIGHT,
-        file_name: format!("{chapter_id}/{section_id}.ts"),
-    })
-    .await?;
+    let mut renderer = new_renderer(&format!("{chapter_id}/{section_id}.ts")).await?;
     encode_scene(
         &mut renderer,
         output,
@@ -2583,12 +2569,8 @@ mod tests {
     #[test]
     #[ignore = "requires headless GPU and fonts; bounded published overlay/scroll artifact proof"]
     fn published_overlay_pixels_are_deterministic_and_select_the_expected_lines() {
-        let mut renderer = pollster::block_on(super::HeadlessRenderer::new(super::RenderSpec {
-            width: super::WIDTH,
-            height: super::HEIGHT,
-            file_name: "published-overlay-proof".into(),
-        }))
-        .unwrap();
+        let mut renderer =
+            pollster::block_on(super::new_renderer("published-overlay-proof")).unwrap();
         let output =
             std::env::var_os("KINOGRAPH_PUBLISHED_ARTIFACTS").map(std::path::PathBuf::from);
         if let Some(directory) = &output {

@@ -69,8 +69,10 @@ fn main() -> Result<()> {
             fs::create_dir_all(parent)
                 .with_context(|| format!("create output directory {}", parent.display()))?;
         }
-        return pollster::block_on(scenes::effect_institute::render_section(
-            chapter, section, &output,
+        return pollster::block_on(scenes::effect_institute::render(
+            chapter,
+            Some(section),
+            &output,
         ));
     }
     let (scene, explicit_output) = match arguments.as_slice() {
@@ -126,10 +128,10 @@ fn main() -> Result<()> {
             pollster::block_on(scenes::effect_is_a_description::render(&output))
         }
         RenderScene::IntroChapter => {
-            pollster::block_on(scenes::effect_institute::render("intro", &output))
+            pollster::block_on(scenes::effect_institute::render("intro", None, &output))
         }
         RenderScene::BasicsChapter => {
-            pollster::block_on(scenes::effect_institute::render("basics", &output))
+            pollster::block_on(scenes::effect_institute::render("basics", None, &output))
         }
         RenderScene::VisualEffects => pollster::block_on(scenes::visual_effects::render(&output)),
         RenderScene::OpencodeCommandHotReload => {

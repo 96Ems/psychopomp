@@ -16,10 +16,13 @@ use kinograph::{
     transcript::Transcript,
 };
 
-use crate::render::{HeadlessRenderer, InlineRevealFrame, RenderSpec, TaskSceneFrame};
+use crate::{
+    plan_runtime::new_renderer,
+    render::{HeadlessRenderer, InlineRevealFrame, TaskSceneFrame},
+};
 
 use super::{
-    HEIGHT, WIDTH, WORKSPACE_ROOT, boosted_samples, editor_frame, encode_scene, measure_target,
+    WIDTH, WORKSPACE_ROOT, boosted_samples, editor_frame, encode_scene, measure_target,
     measure_text_width, span,
 };
 
@@ -31,12 +34,7 @@ pub(crate) async fn render(output: &Path) -> Result<()> {
         .join("effect-is-a-description");
     let transcript = Transcript::load(&asset_directory.join("timings.json"))?;
     let transitions = effect_is_a_description_transitions()?;
-    let mut renderer = HeadlessRenderer::new(RenderSpec {
-        width: WIDTH,
-        height: HEIGHT,
-        file_name: "effect.ts".to_owned(),
-    })
-    .await?;
+    let mut renderer = new_renderer("effect.ts").await?;
     let initial = transitions.effect_run.sample(TransitionProgress {
         layout: 0.0,
         content: 0.0,

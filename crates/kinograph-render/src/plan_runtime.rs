@@ -356,7 +356,7 @@ async fn render_loaded_plan(
     delivery::render_video(&prepared, &mut renderer, output, window)
 }
 
-async fn new_renderer(file_name: &str) -> Result<HeadlessRenderer> {
+pub(crate) async fn new_renderer(file_name: &str) -> Result<HeadlessRenderer> {
     HeadlessRenderer::new(RenderSpec {
         width: WIDTH,
         height: HEIGHT,

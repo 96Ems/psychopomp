@@ -12,13 +12,12 @@ use kinograph::{
 };
 
 use crate::{
-    render::{
-        CommandFileFrame, HeadlessRenderer, RenderSpec, TerminalBackground, TerminalSceneFrame,
-    },
+    plan_runtime::new_renderer,
+    render::{CommandFileFrame, TerminalBackground, TerminalSceneFrame},
     video::VideoFrameCache,
 };
 
-use super::{HEIGHT, WIDTH, WORKSPACE_ROOT, boosted_samples, encode_scene};
+use super::{WORKSPACE_ROOT, boosted_samples, encode_scene};
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -98,12 +97,7 @@ pub(crate) async fn render(output: &Path) -> Result<()> {
         capture.viewport.height,
         capture.fps,
     )?;
-    let mut renderer = HeadlessRenderer::new(RenderSpec {
-        width: WIDTH,
-        height: HEIGHT,
-        file_name: "opencode-v2".to_owned(),
-    })
-    .await?;
+    let mut renderer = new_renderer("opencode-v2").await?;
     let source_size = recording.size();
 
     encode_scene(
