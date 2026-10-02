@@ -1,0 +1,74 @@
+{
+  "clips": [
+    {
+      "id": "intro",
+      "file": "intro.mp3",
+      "words": "intro.words.json",
+      "durationNanos": 10079000000,
+      "textHash": "4b8554fd51d8fe08",
+      "engine": "elevenlabs",
+      "model": "eleven_v4",
+      "requestId": "rD8gMVciMOaRnhgphMNW"
+    },
+    {
+      "id": "settings",
+      "file": "settings.mp3",
+      "words": "settings.words.json",
+      "durationNanos": 16878999999,
+      "textHash": "b21e8575360bd94e",
+      "engine": "elevenlabs",
+      "model": "eleven_v4",
+      "requestId": "qferEGZBa6KEag34F6Fb"
+    },
+    {
+      "id": "tools-before",
+      "file": "tools-before.mp3",
+      "words": "tools-before.words.json",
+      "durationNanos": 13919000000,
+      "textHash": "041bdf7a90ce7fd9",
+      "engine": "elevenlabs",
+      "model": "eleven_v4",
+      "requestId": "VFMwjQMM6MHSI0QyXkMe"
+    },
+    {
+      "id": "tools-after",
+      "file": "tools-after.mp3",
+      "words": "tools-after.words.json",
+      "durationNanos": 12399000000,
+      "textHash": "44d510d8248941f6",
+      "engine": "elevenlabs",
+      "model": "eleven_v4",
+      "requestId": "MZ4nCvGwEFZdaqxln3BG"
+    },
+    {
+      "id": "permissions-before",
+      "file": "permissions-before.mp3",
+      "words": "permissions-before.words.json",
+      "durationNanos": 15919000000,
+      "textHash": "d2bbe733c712e64d",
+      "engine": "elevenlabs",
+      "model": "eleven_v4",
+      "requestId": "TJmj4owpF52W5SabKzBf"
+    },
+    {
+      "id": "permissions-after",
+      "file": "permissions-after.mp3",
+      "words": "permissions-after.words.json",
+      "durationNanos": 8159000000,
+      "textHash": "4224ae132e56429e",
+      "engine": "elevenlabs",
+      "model": "eleven_v4",
+      "requestId": "AYAr1YJvgCwJNdCSQulQ"
+    },
+    {
+      "id": "outro",
+      "file": "outro.mp3",
+      "words": "outro.words.json",
+      "durationNanos": 9039000000,
+      "textHash": "c7c0625c0ffd9b4f",
+      "engine": "elevenlabs",
+      "model": "eleven_v4",
+      "requestId": "TabnTXrSqRDVTVt1HIzS"
+    }
+  ]
+}

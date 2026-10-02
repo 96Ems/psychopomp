@@ -1,0 +1,109 @@
+{
+ "wordTimings": [
+  {
+   "word": "All",
+   "start": 0,
+   "end": 0.12
+  },
+  {
+   "word": "eight",
+   "start": 0.12,
+   "end": 0.38
+  },
+  {
+   "word": "checks",
+   "start": 0.38,
+   "end": 0.66
+  },
+  {
+   "word": "pass",
+   "start": 0.66,
+   "end": 0.96
+  },
+  {
+   "word": "on",
+   "start": 0.96,
+   "end": 1.48
+  },
+  {
+   "word": "Linux",
+   "start": 1.48,
+   "end": 1.82
+  },
+  {
+   "word": "and",
+   "start": 1.82,
+   "end": 2.12
+  },
+  {
+   "word": "Windows.",
+   "start": 2.12,
+   "end": 2.58
+  },
+  {
+   "word": "That's",
+   "start": 2.84,
+   "end": 3.32
+  },
+  {
+   "word": "pull",
+   "start": 3.32,
+   "end": 3.5
+  },
+  {
+   "word": "request",
+   "start": 3.5,
+   "end": 3.76
+  },
+  {
+   "word": "50231.",
+   "start": 3.76,
+   "end": 5.08
+  },
+  {
+   "word": "A",
+   "start": 5.32,
+   "end": 5.82
+  },
+  {
+   "word": "newer",
+   "start": 5.82,
+   "end": 6.06
+  },
+  {
+   "word": "effect",
+   "start": 6.06,
+   "end": 6.38
+  },
+  {
+   "word": "and",
+   "start": 6.38,
+   "end": 7.08
+  },
+  {
+   "word": "nothing",
+   "start": 7.08,
+   "end": 7.44
+  },
+  {
+   "word": "you",
+   "start": 7.44,
+   "end": 7.64
+  },
+  {
+   "word": "depend",
+   "start": 7.64,
+   "end": 7.84
+  },
+  {
+   "word": "on",
+   "start": 7.84,
+   "end": 8.16
+  },
+  {
+   "word": "changes.",
+   "start": 8.16,
+   "end": 8.44
+  }
+ ]
+}

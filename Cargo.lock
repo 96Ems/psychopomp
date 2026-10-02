@@ -989,6 +989,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "kinograph-pr-50231"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "kinograph",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "kinograph-pr-walkthrough"
 version = "0.1.0"
 dependencies = [

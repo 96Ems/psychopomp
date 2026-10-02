@@ -17,6 +17,7 @@ members = [
   "scenes/rolling-number",
   "scenes/config-migration",
   "scenes/opencode-jr-architecture",
+  "scenes/pr-50231",
 ]
 default-members = ["crates/kinograph-render"]
 resolver = "3"

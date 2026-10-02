@@ -1,0 +1,172 @@
+//! The version jumps five release candidates; the compiler wires into every
+//! renamed call and checks it off; then the three things it could not see
+//! arrive beyond its reach.
+use anyhow::{Context, Result};
+use kinograph::{
+    author::PlanBuilder,
+    caption::CaptionAlign,
+    effects::spinner,
+    plan::ScenePlan,
+    rolling::{RollingNumberActor, RollingNumberPlan},
+    stage::{StageActor, StagePlan},
+    tone::Tone,
+};
+
+use crate::{
+    MARK, POST, TICK, beam, card, footer, header, narration::Narration, ns, sound, span, status,
+};
+
+const COMPILER: [f32; 3] = [300.0, 716.0, 0.0];
+const RENAMES: [&str; 4] = [
+    "Flag.string → Flag.String",
+    "Argument.string → Argument.String",
+    "Config.redacted → Config.Redacted",
+    "callback runner → socket.reader",
+];
+const UNCAUGHT: [&str; 3] = ["saved settings", "tool schemas", "permission order"];
+
+fn stage_plan() -> StagePlan {
+    let mut elements = vec![card(
+        "compiler",
+        COMPILER,
+        [260.0, 110.0],
+        "compiler",
+        vec![status("typecheck", Tone::Muted)],
+        Tone::Request,
+    )];
+    for (index, title) in RENAMES.iter().enumerate() {
+        elements.push(card(
+            &format!("rename-{index}"),
+            [820.0, 560.0 + index as f32 * 104.0, 0.0],
+            [620.0, 88.0],
+            title,
+            vec![
+                status("renamed", Tone::Muted),
+                status("caught", Tone::Success),
+            ],
+            Tone::Plain,
+        ));
+        elements.push(beam(
+            &format!("check-{index}"),
+            "compiler",
+            &format!("rename-{index}"),
+            Tone::Request,
+        ));
+    }
+    for (index, title) in UNCAUGHT.iter().enumerate() {
+        elements.push(card(
+            &format!("uncaught-{index}"),
+            [1530.0, 612.0 + index as f32 * 104.0, 0.0],
+            [400.0, 88.0],
+            title,
+            vec![status("runtime behavior", Tone::Warning)],
+            Tone::Warning,
+        ));
+    }
+    StagePlan {
+        post: POST,
+        elements,
+    }
+}
+
+pub fn build(narration: &Narration) -> Result<ScenePlan> {
+    let clip = narration.clip("intro")?;
+    let lead = ns(0.5);
+    let duration = lead + clip.duration() + ns(0.6);
+    let mut scene = PlanBuilder::new("intro", duration);
+    let spoken = clip.place(&mut scene, lead);
+    let w = |phrase: &str| spoken.at(phrase);
+    let mut stage = StageActor::declare(&mut scene, "stage", &stage_plan())?;
+    let s = &mut stage;
+    let sc = &mut scene;
+
+    s.channel(sc, "camera.z", -160.0);
+    s.to(sc, "camera.z", 0, 0.0, 2.2);
+    header(sc, "chore: upgrade Effect to rc.117", Some(ns(0.25)))?;
+    // The version rolls five release candidates in one jump.
+    let mut version = RollingNumberActor::declare(
+        sc,
+        "version",
+        RollingNumberPlan::new([960.0, 300.0], 64.0, "rc.112")
+            .aligned(CaptionAlign::Center)
+            .tone(Tone::Accent)
+            .prefix(vec![
+                span("effect ", Tone::Plain),
+                span("4.0.0-", Tone::Muted),
+            ])
+            .duration_nanos(ns(0.9)),
+    )?;
+    version.show(sc, ns(0.3));
+    let roll = w("five release candidates");
+    version.roll(sc, roll, "rc.117")?;
+    sc.media(sound("roll", TICK, roll + ns(0.75), -20.0));
+
+    // The compiler plugs into every renamed call and checks it off.
+    let compiler = w("the compiler");
+    s.settle_in(sc, "compiler", compiler.saturating_sub(ns(0.2)));
+    for index in 0..RENAMES.len() {
+        s.settle_in(
+            sc,
+            &format!("rename-{index}"),
+            compiler + ns(0.1 * index as f64),
+        );
+    }
+    let caught = w("caught every");
+    for index in 0..RENAMES.len() {
+        let card = format!("rename-{index}");
+        let link = format!("check-{index}");
+        let contact = s.connect(sc, &link, caught + ns(0.12 * index as f64), 0.42);
+        s.to(sc, &format!("{link}.flow"), contact + ns(0.7), 0.0, 0.45);
+        s.to(sc, &format!("{card}.status"), contact, 1.0, 0.3);
+        s.clock(sc, &format!("{card}.spinner"), contact);
+        let mark = contact + ns(f64::from(spinner::handoff(0.25)));
+        s.clock(sc, &format!("{card}.mark"), mark);
+        sc.media(sound(&format!("check-{index}"), TICK, contact, -24.0));
+        sc.media(sound(
+            &format!("mark-{index}"),
+            MARK,
+            mark + ns(f64::from(spinner::DRAW)),
+            -23.0 - index as f32,
+        ));
+    }
+
+    // What it couldn't catch: the checked work cools, the camera leans right.
+    let hard = w("the hard part");
+    s.to(sc, "camera.x", hard, 50.0, 1.6);
+    s.to(sc, "camera.z", hard, 30.0, 1.6);
+    for name in ["compiler"]
+        .into_iter()
+        .map(str::to_owned)
+        .chain((0..RENAMES.len()).map(|index| format!("rename-{index}")))
+    {
+        s.to(sc, &format!("{name}.dim"), hard + ns(0.2), 0.5, 0.8);
+    }
+    let everything = w("everything");
+    for index in 0..UNCAUGHT.len() {
+        s.settle_in(
+            sc,
+            &format!("uncaught-{index}"),
+            everything + ns(0.12 * index as f64),
+        );
+    }
+    let catch = w("couldn't catch");
+    for index in 0..UNCAUGHT.len() {
+        s.hit(
+            sc,
+            &format!("uncaught-{index}.glow"),
+            catch + ns(0.1 * index as f64),
+            0.7,
+            0.2,
+        );
+    }
+    let mut note = footer(
+        sc,
+        "footer",
+        vec![
+            span("the hard part: ", Tone::Plain),
+            span("what the compiler couldn't catch", Tone::Warning),
+        ],
+    )?;
+    note.type_in(sc, everything, 48.0, 0.6);
+    scene.finish().context("intro")
+}

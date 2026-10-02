@@ -1,0 +1,25 @@
+{
+  "model": "eleven_text_to_sound_v2",
+  "effects": [
+    {
+      "id": "rewind",
+      "text": "A single subtle time reversal: a short backwards rush of air with a fast descending granular tape rewind texture, tiny reverse electric sparks drawing inward, ending in a precise soft click. One continuous gesture. Tactile and quiet, not a melody. No speech, no music.",
+      "duration": 1.4
+    },
+    {
+      "id": "shuffle",
+      "text": "Two small rigid glass panels slide quickly past each other and settle into place: a soft airy swish with a tiny dry tick as each lands. Close, clean, quiet software interface sound. No music, no voice, no reverb tail.",
+      "duration": 1.0
+    },
+    {
+      "id": "drop",
+      "text": "A small light object slips off an edge and falls away: a short soft descending whoosh fading into silence, with a faint glassy tick at the start. Quiet, dry, interface-like. No impact at the end, no music, no voice.",
+      "duration": 0.9
+    },
+    {
+      "id": "resolution",
+      "text": "One understated warm electronic confirmation: a soft rounded glass plink with two closely spaced sympathetic harmonics and a subtle airy shimmer that resolves and fades quickly. Calm relief, precise software interface, no jingle, no music, no voice.",
+      "duration": 0.9
+    }
+  ]
+}

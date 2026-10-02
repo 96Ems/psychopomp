@@ -1,0 +1,244 @@
+{
+ "wordTimings": [
+  {
+   "word": "First,",
+   "start": 0,
+   "end": 0.44
+  },
+  {
+   "word": "saved",
+   "start": 0.58,
+   "end": 1.22
+  },
+  {
+   "word": "settings.",
+   "start": 1.22,
+   "end": 1.64
+  },
+  {
+   "word": "The",
+   "start": 2,
+   "end": 2.4
+  },
+  {
+   "word": "new",
+   "start": 2.4,
+   "end": 2.56
+  },
+  {
+   "word": "parser",
+   "start": 2.56,
+   "end": 3.02
+  },
+  {
+   "word": "drops",
+   "start": 3.02,
+   "end": 3.22
+  },
+  {
+   "word": "any",
+   "start": 3.22,
+   "end": 3.64
+  },
+  {
+   "word": "field",
+   "start": 3.64,
+   "end": 4.02
+  },
+  {
+   "word": "the",
+   "start": 4.02,
+   "end": 4.22
+  },
+  {
+   "word": "schema",
+   "start": 4.22,
+   "end": 4.48
+  },
+  {
+   "word": "doesn't",
+   "start": 4.48,
+   "end": 4.94
+  },
+  {
+   "word": "name,",
+   "start": 4.94,
+   "end": 5.22
+  },
+  {
+   "word": "so",
+   "start": 5.36,
+   "end": 5.7
+  },
+  {
+   "word": "an",
+   "start": 5.7,
+   "end": 6
+  },
+  {
+   "word": "unknown",
+   "start": 6,
+   "end": 6.38
+  },
+  {
+   "word": "setting",
+   "start": 6.38,
+   "end": 6.74
+  },
+  {
+   "word": "would",
+   "start": 6.74,
+   "end": 7.02
+  },
+  {
+   "word": "vanish",
+   "start": 7.02,
+   "end": 7.44
+  },
+  {
+   "word": "on",
+   "start": 7.44,
+   "end": 7.68
+  },
+  {
+   "word": "the",
+   "start": 7.68,
+   "end": 7.8
+  },
+  {
+   "word": "next",
+   "start": 7.8,
+   "end": 7.94
+  },
+  {
+   "word": "save.",
+   "start": 7.94,
+   "end": 8.3
+  },
+  {
+   "word": "Now",
+   "start": 8.56,
+   "end": 8.98
+  },
+  {
+   "word": "every",
+   "start": 8.98,
+   "end": 9.24
+  },
+  {
+   "word": "legacy",
+   "start": 9.24,
+   "end": 9.82
+  },
+  {
+   "word": "shape",
+   "start": 9.82,
+   "end": 10.14
+  },
+  {
+   "word": "has",
+   "start": 10.14,
+   "end": 10.38
+  },
+  {
+   "word": "an",
+   "start": 10.38,
+   "end": 10.56
+  },
+  {
+   "word": "open",
+   "start": 10.56,
+   "end": 10.8
+  },
+  {
+   "word": "rest,",
+   "start": 10.8,
+   "end": 11.08
+  },
+  {
+   "word": "the",
+   "start": 11.32,
+   "end": 11.58
+  },
+  {
+   "word": "known",
+   "start": 11.58,
+   "end": 11.74
+  },
+  {
+   "word": "fields",
+   "start": 11.74,
+   "end": 12.24
+  },
+  {
+   "word": "plus",
+   "start": 12.24,
+   "end": 12.62
+  },
+  {
+   "word": "a",
+   "start": 12.62,
+   "end": 12.94
+  },
+  {
+   "word": "catch",
+   "start": 12.94,
+   "end": 13.18
+  },
+  {
+   "word": "-all",
+   "start": 13.18,
+   "end": 13.38
+  },
+  {
+   "word": "record.",
+   "start": 13.38,
+   "end": 13.64
+  },
+  {
+   "word": "Unknown",
+   "start": 13.88,
+   "end": 14.32
+  },
+  {
+   "word": "fields",
+   "start": 14.32,
+   "end": 14.7
+  },
+  {
+   "word": "come",
+   "start": 14.7,
+   "end": 14.98
+  },
+  {
+   "word": "back",
+   "start": 14.98,
+   "end": 15.2
+  },
+  {
+   "word": "exactly",
+   "start": 15.2,
+   "end": 15.68
+  },
+  {
+   "word": "as",
+   "start": 15.68,
+   "end": 16.06
+  },
+  {
+   "word": "you",
+   "start": 16.06,
+   "end": 16.18
+  },
+  {
+   "word": "left",
+   "start": 16.18,
+   "end": 16.36
+  },
+  {
+   "word": "them.",
+   "start": 16.36,
+   "end": 16.54
+  }
+ ]
+}

@@ -1,0 +1,124 @@
+{
+ "wordTimings": [
+  {
+   "word": "The",
+   "start": 0,
+   "end": 0.14
+  },
+  {
+   "word": "fix",
+   "start": 0.14,
+   "end": 0.42
+  },
+  {
+   "word": "rebuilds",
+   "start": 0.42,
+   "end": 1.1
+  },
+  {
+   "word": "the",
+   "start": 1.1,
+   "end": 1.12
+  },
+  {
+   "word": "rules",
+   "start": 1.12,
+   "end": 1.4
+  },
+  {
+   "word": "in",
+   "start": 1.4,
+   "end": 1.62
+  },
+  {
+   "word": "the",
+   "start": 1.62,
+   "end": 1.7
+  },
+  {
+   "word": "order",
+   "start": 1.7,
+   "end": 1.94
+  },
+  {
+   "word": "you",
+   "start": 1.94,
+   "end": 2.16
+  },
+  {
+   "word": "wrote",
+   "start": 2.16,
+   "end": 2.36
+  },
+  {
+   "word": "them.",
+   "start": 2.36,
+   "end": 2.58
+  },
+  {
+   "word": "Shell",
+   "start": 2.96,
+   "end": 3.42
+  },
+  {
+   "word": "asks",
+   "start": 3.42,
+   "end": 3.64
+  },
+  {
+   "word": "again.",
+   "start": 3.64,
+   "end": 4.08
+  },
+  {
+   "word": "Edits",
+   "start": 4.56,
+   "end": 5.02
+  },
+  {
+   "word": "are",
+   "start": 5.02,
+   "end": 5.14
+  },
+  {
+   "word": "denied.",
+   "start": 5.14,
+   "end": 5.5
+  },
+  {
+   "word": "And",
+   "start": 5.76,
+   "end": 6.22
+  },
+  {
+   "word": "the",
+   "start": 6.22,
+   "end": 6.34
+  },
+  {
+   "word": "new",
+   "start": 6.34,
+   "end": 6.46
+  },
+  {
+   "word": "tests",
+   "start": 6.46,
+   "end": 6.78
+  },
+  {
+   "word": "fail",
+   "start": 6.78,
+   "end": 7.18
+  },
+  {
+   "word": "without",
+   "start": 7.18,
+   "end": 7.54
+  },
+  {
+   "word": "it.",
+   "start": 7.54,
+   "end": 7.82
+  }
+ ]
+}
