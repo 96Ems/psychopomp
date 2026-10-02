@@ -1,6 +1,6 @@
 use anyhow::{Result, bail};
 
-use super::{super::blend_pixel, Bounds};
+use super::{super::blend_pixel, Bounds, rounded_rect_distance};
 
 const CAMERA_DISTANCE: f32 = 1_800.0;
 const BYTES_PER_PIXEL: usize = 4;
@@ -948,13 +948,6 @@ fn sample_layer_blurred(pixels: &[u8], size: [u32; 2], x: f32, y: f32, blur: f32
 fn rounded_coverage(point: [f32; 2], bounds: Bounds, radius: f32) -> f32 {
     let local = [point[0] - bounds.center()[0], point[1] - bounds.center()[1]];
     (0.75 - rounded_rect_distance(local, bounds.size, radius)).clamp(0.0, 1.0)
-}
-
-fn rounded_rect_distance(local: [f32; 2], size: [f32; 2], radius: f32) -> f32 {
-    let radius = radius.min(size[0].min(size[1]) * 0.5);
-    let dx = local[0].abs() - (size[0] * 0.5 - radius);
-    let dy = local[1].abs() - (size[1] * 0.5 - radius);
-    dx.max(0.0).hypot(dy.max(0.0)) + dx.max(dy).min(0.0) - radius
 }
 
 fn card_corners([half_width, half_height]: [f32; 2]) -> [[f32; 2]; 4] {

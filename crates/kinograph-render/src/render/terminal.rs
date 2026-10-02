@@ -7,6 +7,7 @@ use super::{
     ui::{
         Bounds, Edges, VerticalFlow,
         card::{CardFrame, CardProjection, CardStyle, ContentFit, RgbaSource},
+        rounded_rect_distance,
     },
 };
 
@@ -736,7 +737,7 @@ fn fill_rounded_rect(
             let local_x = x as f32 + 0.5 - center[0];
             let local_y = y as f32 + 0.5 - center[1];
             let coverage =
-                (0.5 - rounded_rect_distance(local_x, local_y, size, radius)).clamp(0.0, 1.0);
+                (0.5 - rounded_rect_distance([local_x, local_y], size, radius)).clamp(0.0, 1.0);
             if coverage > 0.0 {
                 blend_pixel_at(pixels, width, height, x, y, color, opacity * coverage);
             }
@@ -763,20 +764,13 @@ fn stroke_rounded_rect(
         for x in min_x..=max_x {
             let local_x = x as f32 + 0.5 - center[0];
             let local_y = y as f32 + 0.5 - center[1];
-            let distance = rounded_rect_distance(local_x, local_y, size, radius);
+            let distance = rounded_rect_distance([local_x, local_y], size, radius);
             let coverage = (1.25 - distance.abs()).clamp(0.0, 1.0);
             if coverage > 0.0 {
                 blend_pixel_at(pixels, width, height, x, y, color, opacity * coverage);
             }
         }
     }
-}
-
-fn rounded_rect_distance(local_x: f32, local_y: f32, size: [f32; 2], radius: f32) -> f32 {
-    let radius = radius.min(size[0].min(size[1]) * 0.5);
-    let dx = local_x.abs() - (size[0] * 0.5 - radius);
-    let dy = local_y.abs() - (size[1] * 0.5 - radius);
-    dx.max(0.0).hypot(dy.max(0.0)) + dx.max(dy).min(0.0) - radius
 }
 
 fn reveal_text(text: &str, progress: f32, start: f32, end: f32) -> &str {
