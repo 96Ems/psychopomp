@@ -33,6 +33,7 @@ mod theme;
 mod ui;
 mod value;
 mod venn;
+mod wipe;
 use text::{PlainTextSpec, TextSprite, blend_pixel, blend_pixel_at, make_sprite, paint_rect};
 
 pub(crate) use component_prototype::PrototypeGlyphs;

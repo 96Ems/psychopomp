@@ -69,6 +69,7 @@ pub fn build_reel(narration_dir: &Path) -> Result<ReelPlan> {
                 },
                 transition_style: style,
                 transition_focus: focus,
+                transition_wipe: None,
                 plan,
             })
             .collect(),
