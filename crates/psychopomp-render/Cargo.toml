@@ -22,7 +22,6 @@ wgpu = "30.0"
 winit = "0.30"
 
 [dev-dependencies]
-psychopomp-deployment-queue = { path = "../../scenes/deployment-queue" }
 psychopomp-opencode-session-tool = { path = "../../scenes/opencode-session-tool" }
 psychopomp-hero = { path = "../../scenes/hero" }
 psychopomp-effect-succeed-slides = { path = "../../scenes/effect-succeed-slides" }

@@ -86,21 +86,6 @@ impl Bounds {
             },
         )
     }
-
-    pub(crate) fn split_bottom(self, height: f32) -> (Self, Self) {
-        let height = height.clamp(0.0, self.size[1]);
-        let top_height = self.size[1] - height;
-        (
-            Self {
-                origin: self.origin,
-                size: [self.size[0], top_height],
-            },
-            Self {
-                origin: [self.origin[0], self.origin[1] + top_height],
-                size: [self.size[0], height],
-            },
-        )
-    }
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
@@ -174,18 +159,5 @@ mod tests {
         assert_eq!(gutter.size, [24.0, 72.0]);
         assert_eq!(rows.next().origin, [52.0, 54.0]);
         assert_eq!(rows.next().origin, [52.0, 70.0]);
-    }
-
-    #[test]
-    fn bounds_split_from_bottom() {
-        let bounds = Bounds {
-            origin: [10.0, 20.0],
-            size: [100.0, 80.0],
-        };
-
-        let (top, bottom) = bounds.split_bottom(30.0);
-        assert_eq!(top.size, [100.0, 50.0]);
-        assert_eq!(bottom.origin, [10.0, 70.0]);
-        assert_eq!(bottom.size, [100.0, 30.0]);
     }
 }

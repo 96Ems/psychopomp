@@ -3,7 +3,6 @@ pub mod caption;
 pub mod code;
 pub mod component_prototype;
 pub mod composition;
-pub mod deployment;
 pub mod editor;
 pub mod effects;
 pub mod grid;

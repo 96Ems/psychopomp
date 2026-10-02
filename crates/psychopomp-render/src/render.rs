@@ -14,7 +14,6 @@ use psychopomp::code::{CodeLine, LineId, PlacedLine, StyledSpan, SyntaxStyle};
 mod caption;
 mod component_prototype;
 mod debug;
-mod deployment_queue;
 mod diagram;
 mod fonts;
 mod grid;
@@ -34,8 +33,6 @@ mod venn;
 use text::{PlainTextSpec, TextSprite, blend_pixel, blend_pixel_at, make_sprite, paint_rect};
 
 pub(crate) use component_prototype::PrototypeGlyphs;
-pub(crate) use deployment_queue::deployment_row_center_y;
-pub use deployment_queue::{DeploymentItemFrame, DeploymentQueueFrame};
 pub(crate) use diagram::DiagramGlyphs;
 pub use grid::{
     GridFrame, GridItemFrame, GridLabelStyle, GridLinePalette, GridTextClip, GridTextDisclosure,
@@ -210,7 +207,6 @@ pub struct HeadlessRenderer {
     plain_text_sprites: text::PlainTextCache,
     editor_background_pixels: Vec<u8>,
     terminal_neutral_background_pixels: Vec<u8>,
-    deployment_background_pixels: Vec<u8>,
     ui_card_pixels: Vec<u8>,
     ui_overlay_pixels: Vec<u8>,
     interactive_preview: bool,
@@ -343,7 +339,6 @@ impl HeadlessRenderer {
             plain_text_sprites: text::PlainTextCache::default(),
             editor_background_pixels: Vec::new(),
             terminal_neutral_background_pixels: Vec::new(),
-            deployment_background_pixels: Vec::new(),
             ui_card_pixels: Vec::new(),
             ui_overlay_pixels: Vec::new(),
             interactive_preview: false,

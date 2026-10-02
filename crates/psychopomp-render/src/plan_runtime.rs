@@ -27,13 +27,11 @@ mod attachments;
 mod caption;
 mod component_prototype;
 pub(crate) mod delivery;
-mod deployment_queue;
 mod diagram;
 mod editor;
 mod generated;
 mod grid;
 mod header;
-mod keyed_layout;
 mod preflight;
 mod presentation;
 #[cfg(test)]
@@ -51,7 +49,6 @@ mod terminal;
 mod value;
 mod venn;
 
-use deployment_queue::{DeploymentQueueVisualKey, PreparedDeploymentQueue};
 use editor::PreparedEditor;
 use terminal::PreparedTerminal;
 
@@ -427,7 +424,6 @@ enum PreparedRoot {
         pointer: Option<String>,
     },
     Terminal(Box<PreparedTerminal>),
-    Deployment(Box<PreparedDeploymentQueue>),
     Grid(Box<grid::PreparedGrid>),
     Diagram(Box<diagram::PreparedDiagram>),
     Stage(Box<stage::PreparedStage>),
@@ -464,7 +460,6 @@ struct VisualSampleKey {
     motion: Vec<[u32; 4]>,
     states: Vec<Value>,
     video_frame: Option<u64>,
-    deployment_queue: Option<DeploymentQueueVisualKey>,
     ambient_time: Option<u64>,
 }
 
@@ -568,7 +563,6 @@ impl PreparedPlan {
             preflight::RootPlan::Terminal(input) => {
                 PreparedRoot::Terminal(Box::new(PreparedTerminal::open(*input, base)?))
             }
-            preflight::RootPlan::Deployment(queue) => PreparedRoot::Deployment(queue),
             preflight::RootPlan::Grid(grid) => PreparedRoot::Grid(grid),
             preflight::RootPlan::Stage { id, recipe } => PreparedRoot::Stage(Box::new(
                 stage::PreparedStage::from_recipe(id, *recipe, renderer)?,
@@ -684,7 +678,6 @@ impl PreparedPlan {
         match &self.root {
             PreparedRoot::Editor { editor, .. } => editor.file_name(),
             PreparedRoot::Terminal(terminal) => terminal.file_name(),
-            PreparedRoot::Deployment(queue) => queue.file_name(),
             _ => &self.plan.id,
         }
     }
@@ -738,7 +731,6 @@ impl CompiledPlan {
             motion,
             states,
             video_frame: None,
-            deployment_queue: None,
             ambient_time: None,
         })
     }
@@ -778,10 +770,6 @@ impl PreparedPlan {
         let mut key = self.compiled.visual_sample_key_using(time, timeline)?;
         key.video_frame = match &self.root {
             PreparedRoot::Terminal(terminal) => Some(terminal.frame_index_at(time)?),
-            _ => None,
-        };
-        key.deployment_queue = match &self.root {
-            PreparedRoot::Deployment(queue) => Some(queue.visual_key(time)),
             _ => None,
         };
         // A stage always moves (spin, flow, grain), so every temporal sample renders.
@@ -889,11 +877,6 @@ impl PreparedPlan {
             PreparedRoot::Terminal(terminal) => {
                 terminal.render(renderer, time, |property, default| {
                     value(terminal.actor_id(), property, default)
-                })?
-            }
-            PreparedRoot::Deployment(deployment) => {
-                deployment.render(renderer, time, |property, default| {
-                    value(deployment.actor_id(), property, default)
                 })?
             }
             PreparedRoot::Grid(grid) => grid.render(
@@ -1449,16 +1432,9 @@ mod tests {
     fn concrete_validation_rejects_unpreparable_and_unknown_recipes() {
         let mut plan = ScenePlan::new("demo", 1_000_000_000);
         plan.actors.push(ActorPlan {
-            id: "deployments".to_owned(),
-            recipe: "deployment-queue".to_owned(),
-            data: json!({
-                "product": "NORTHSTAR",
-                "title": "Release Control",
-                "subtitle": "Live deployment telemetry",
-                "environment": "PRODUCTION",
-                "release": "release-2026.07.16",
-                "items": []
-            }),
+            id: "grid".to_owned(),
+            recipe: "keyed-grid".to_owned(),
+            data: json!({}),
         });
         assert!(validate_renderer_plan(&plan).is_err());
 

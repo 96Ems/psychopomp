@@ -3,7 +3,6 @@
 use super::{
     caption::PreparedCaption,
     component_prototype::{self, ComponentInput},
-    deployment_queue::PreparedDeploymentQueue,
     diagram,
     editor::{EditorSelection, PreparedEditor},
     generated,
@@ -23,7 +22,6 @@ use psychopomp::{
         COLLECTION, CONNECTOR, DIAGRAM, DiagramPlan, HEADER, HeaderPlan, RICH_TEXT, TYPESET, VENN,
         WIDTH_TEXT,
     },
-    deployment::DEPLOYMENT_QUEUE_RECIPE,
     editor::{EDITOR_RECIPE, EditorTargetSelector, POINTER_RECIPE, PointerRecipePlan},
     grid::GRID_RECIPE,
     plan::{ActorPlan, ContinuousChannelPlan, MediaKindPlan, ScenePlan, StateChannelPlan},
@@ -62,7 +60,6 @@ pub(super) enum RootPlan {
         selectors: Vec<(String, EditorSelection)>,
     },
     Terminal(Box<TerminalInput>),
-    Deployment(Box<PreparedDeploymentQueue>),
     Grid(Box<PreparedGrid>),
     Diagram {
         id: String,
@@ -314,7 +311,6 @@ impl RootPlan {
             Self::Title(_) => Some("title-card"),
             Self::Editor { .. } => Some(EDITOR_RECIPE),
             Self::Terminal(_) => Some(TERMINAL_RECORDING_RECIPE),
-            Self::Deployment(_) => Some(DEPLOYMENT_QUEUE_RECIPE),
             Self::Grid(_) => Some(GRID_RECIPE),
             Self::Diagram { .. } => Some(DIAGRAM),
             Self::Stage { .. } => Some(STAGE_RECIPE),
@@ -327,7 +323,7 @@ fn put_root(root: &mut RootPlan, next: RootPlan) -> Result<()> {
             bail!("plan renderer currently supports at most one {existing} root actor");
         }
         bail!(
-            "editor, title-card, terminal-recording, deployment-queue, keyed-grid, prototype-diagram, and stage actors are exclusive root recipes"
+            "editor, title-card, terminal-recording, keyed-grid, prototype-diagram, and stage actors are exclusive root recipes"
         );
     }
     *root = next;
@@ -372,14 +368,6 @@ impl Plan {
                     RootPlan::Terminal(Box::new(TerminalInput::new(
                         actor,
                         &plan.media,
-                        &plan.state_channels,
-                        plan.duration_nanos,
-                    )?)),
-                )?,
-                DEPLOYMENT_QUEUE_RECIPE => put_root(
-                    &mut root,
-                    RootPlan::Deployment(Box::new(PreparedDeploymentQueue::new(
-                        actor,
                         &plan.state_channels,
                         plan.duration_nanos,
                     )?)),
@@ -545,7 +533,7 @@ impl Plan {
             | RootPlan::Grid(_)
             | RootPlan::Diagram { .. }
             | RootPlan::Stage { .. } => true,
-            RootPlan::Terminal(_) | RootPlan::Deployment(_) => false,
+            RootPlan::Terminal(_) => false,
         };
         root && self.plan.state_channels.is_empty()
             && self.plan.media.is_empty()
