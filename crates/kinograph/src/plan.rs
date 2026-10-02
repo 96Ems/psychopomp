@@ -772,6 +772,14 @@ impl TrackEventPlan {
             | Self::Ease { at_nanos, .. } => *at_nanos,
         }
     }
+
+    /// The value a Set holds or a Spring or Ease approaches.
+    pub fn scalar(&self) -> &ScalarPlan {
+        match self {
+            Self::Set { value, .. } => value,
+            Self::Spring { target, .. } | Self::Ease { target, .. } => target,
+        }
+    }
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]

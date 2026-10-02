@@ -526,13 +526,12 @@ impl Plan {
             rolling,
             native,
         };
-        let editors = match &result.root {
-            RootPlan::Editor { editor, .. } => std::slice::from_ref(editor.as_ref()),
-            _ => &[],
-        };
-        super::compile_editor_channels(&mut result.plan, editors)?;
-        if let RootPlan::Grid(grid) = &result.root {
-            generated::extend(&mut result.plan, grid.channels(), generated::Owner::Grid)?;
+        match &result.root {
+            RootPlan::Editor { editor, .. } => editor.compile_channels(&mut result.plan)?,
+            RootPlan::Grid(grid) => {
+                generated::extend(&mut result.plan, grid.channels(), generated::Owner::Grid)?
+            }
+            _ => {}
         }
         header::compile_inputs(&mut result.plan, &result.headers)?;
         let mut slots = generated::Reservations::new(&result.plan.continuous_channels);

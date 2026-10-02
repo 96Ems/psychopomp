@@ -1,14 +1,15 @@
 use std::{collections::HashMap, ops::Range};
 
-use anyhow::{Context, Result};
+use anyhow::{Context, Result, bail};
 use kinograph::{
     code::RangeId,
     dsl::TargetGeometry,
     editor::{CompiledEditor, EditorRecipePlan, EditorTargetSelector},
     motion::MotionState,
-    plan::ActorPlan,
+    plan::{ActorPlan, ScalarPlan, ScenePlan, TrackEventPlan},
 };
 
+use super::generated;
 use crate::render::{
     EditorFrame, HeadlessRenderer, InlineRangeMetrics, InlineRevealFrame, LineMarkFrame,
     PointerFrame, TokenHighlight,
@@ -182,7 +183,34 @@ impl PreparedEditor {
         })
     }
 
-    pub(super) fn geometry_channels(&self) -> Vec<String> {
+    /// Add the snapshot schedule's generated line channels to `plan`. Channels
+    /// that drive code geometry must be literal: a semantic attachment would
+    /// make the geometry depend on itself.
+    pub(super) fn compile_channels(&self, plan: &mut ScenePlan) -> Result<()> {
+        generated::extend(
+            plan,
+            self.editor
+                .snapshot_channels(&self.actor_id, plan.duration_nanos)?,
+            generated::Owner::Editor,
+        )?;
+        let drivers = self.geometry_channels();
+        for channel in plan.continuous_channels.iter().filter(|channel| {
+            channel.actor_id == self.actor_id && drivers.contains(&channel.property)
+        }) {
+            if std::iter::once(&channel.initial)
+                .chain(channel.events.iter().map(TrackEventPlan::scalar))
+                .any(|value| matches!(value, ScalarPlan::Target(_)))
+            {
+                bail!(
+                    "editor geometry channel '{}' must use literal values, not a cyclic semantic attachment",
+                    channel.id
+                );
+            }
+        }
+        Ok(())
+    }
+
+    fn geometry_channels(&self) -> Vec<String> {
         std::iter::once("layout".into())
             .chain(std::iter::once("content".into()))
             .chain(
@@ -197,14 +225,6 @@ impl PreparedEditor {
                     .map(|line| format!("line.{}.y", line.id.as_str())),
             )
             .collect()
-    }
-
-    pub(super) fn snapshot_channels(
-        &self,
-        duration_nanos: u64,
-    ) -> Result<Vec<kinograph::plan::ContinuousChannelPlan>> {
-        self.editor
-            .snapshot_channels(&self.actor_id, duration_nanos)
     }
 
     pub(super) fn render(

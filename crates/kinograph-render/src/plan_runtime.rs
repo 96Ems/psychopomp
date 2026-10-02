@@ -11,7 +11,6 @@ use kinograph::{
     dsl::{Scalar, Scene, TargetGeometry},
     plan::{
         MediaKindPlan, MediaRolePlan, ReadPlanError, ScalarPlan, ScenePlan, TargetComponentPlan,
-        TrackEventPlan,
     },
     state::{StateTrack, TimedState},
     timeline::{PropertyId, Timeline},
@@ -1212,44 +1211,6 @@ fn resolve_scalar(scalar: &ScalarPlan, targets: &HashMap<String, TargetGeometry>
             Ok(value + target.offset)
         }
     }
-}
-
-fn compile_editor_channels(plan: &mut ScenePlan, editors: &[PreparedEditor]) -> Result<()> {
-    if plan
-        .continuous_channels
-        .iter()
-        .any(|channel| channel.property.starts_with("__attachment-"))
-    {
-        bail!("authored channels cannot use the reserved __attachment- namespace");
-    }
-    for editor in editors {
-        generated::extend(
-            plan,
-            editor.snapshot_channels(plan.duration_nanos)?,
-            generated::Owner::Editor,
-        )?;
-        let drivers = editor.geometry_channels();
-        for channel in plan.continuous_channels.iter().filter(|channel| {
-            channel.actor_id == editor.actor_id() && drivers.contains(&channel.property)
-        }) {
-            if std::iter::once(&channel.initial)
-                .chain(channel.events.iter().map(|event| match event {
-                    TrackEventPlan::Set { value, .. } => value,
-                    TrackEventPlan::Spring { target, .. } | TrackEventPlan::Ease { target, .. } => {
-                        target
-                    }
-                }))
-                .any(|value| matches!(value, ScalarPlan::Target(_)))
-            {
-                bail!(
-                    "editor geometry channel '{}' must use literal values, not a cyclic semantic attachment",
-                    channel.id
-                );
-            }
-        }
-    }
-    plan.validate()?;
-    Ok(())
 }
 
 fn validate_renderer_plan(plan: &ScenePlan) -> Result<()> {
