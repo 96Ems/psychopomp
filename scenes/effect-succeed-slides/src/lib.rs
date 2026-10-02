@@ -2,7 +2,7 @@
 //! The two stable declaration lines are a display reflow, not a changing slot.
 use anyhow::Result;
 use kinograph::{
-    author::PlanBuilder,
+    author::{PlanBuilder, SECOND},
     code::{StyledSpan, SyntaxStyle},
     editor::{
         EDITOR_RECIPE, EditorInlineRevealPlan, EditorLinePlan, EditorPartPlan, EditorRecipePlan,
@@ -10,8 +10,6 @@ use kinograph::{
     },
     plan::ScenePlan,
 };
-
-const SECOND: u64 = 1_000_000_000;
 
 pub fn build_plan() -> Result<ScenePlan> {
     let mut scene = PlanBuilder::new("effect-succeed", 14 * SECOND);

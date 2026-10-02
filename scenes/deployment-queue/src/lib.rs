@@ -1,6 +1,6 @@
 use anyhow::Result;
 use kinograph::{
-    author::PlanBuilder,
+    author::{PlanBuilder, SECOND},
     deployment::{
         DeploymentItemPlan, DeploymentQueueHandle, DeploymentQueueRecipePlan,
         DeploymentQueueSnapshotPlan,
@@ -8,7 +8,6 @@ use kinograph::{
     plan::ScenePlan,
 };
 
-const SECOND: u64 = 1_000_000_000;
 const DURATION: u64 = 9 * SECOND;
 
 pub fn build_plan() -> Result<ScenePlan> {

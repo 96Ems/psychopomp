@@ -20,7 +20,7 @@ use std::path::{Path, PathBuf};
 
 use anyhow::Result;
 use kinograph::{
-    author::PlanBuilder,
+    author::{PlanBuilder, seconds},
     caption::{CaptionActor, CaptionAlign, CaptionPlan, CaptionSpanPlan},
     effects::spinner::Mark,
     plan::{
@@ -65,8 +65,8 @@ pub fn build_reel(narration_dir: &Path) -> Result<ReelPlan> {
             .map(|(index, (plan, style, focus))| ReelSegmentPlan {
                 transition_nanos: match (index, style) {
                     (0, _) => 0,
-                    (_, ReelTransitionStyle::Zoom) => ns(1.15),
-                    _ => ns(TRANSITION),
+                    (_, ReelTransitionStyle::Zoom) => seconds(1.15),
+                    _ => seconds(TRANSITION),
                 },
                 transition_style: style,
                 transition_focus: focus,
@@ -81,10 +81,6 @@ pub fn build_reel(narration_dir: &Path) -> Result<ReelPlan> {
 // ---------------------------------------------------------------------------
 // Shared pieces
 // ---------------------------------------------------------------------------
-
-fn ns(seconds: f64) -> u64 {
-    (seconds * 1e9).round() as u64
-}
 
 fn span(text: &str, tone: Tone) -> CaptionSpanPlan {
     CaptionSpanPlan::new(text, tone)
@@ -111,8 +107,8 @@ fn begin<'a>(
     stage: &StagePlan,
 ) -> Result<Film<'a>> {
     let clip = narration.clip(id)?;
-    let mut sc = PlanBuilder::new(id, ns(lead) + clip.duration() + ns(tail));
-    let v = clip.place(&mut sc, ns(lead));
+    let mut sc = PlanBuilder::new(id, seconds(lead) + clip.duration() + seconds(tail));
+    let v = clip.place(&mut sc, seconds(lead));
     let mut s = StageActor::declare(&mut sc, "stage", stage)?;
     s.channel(&mut sc, "camera.z", -140.0);
     s.channel(&mut sc, "camera.dof", 0.4);
@@ -122,7 +118,7 @@ fn begin<'a>(
 
 /// `3  the workspace`, typed top left.
 fn header(sc: &mut PlanBuilder, number: &str, title: &str) -> Result<()> {
-    header_at(sc, number, title, Some(ns(0.3)))
+    header_at(sc, number, title, Some(seconds(0.3)))
 }
 
 /// The header, typed at `typed`, or already present when `None`.
@@ -145,7 +141,7 @@ fn header_at(sc: &mut PlanBuilder, number: &str, title: &str, typed: Option<u64>
 
 /// The source the chapter is read from, as a chip top right.
 fn chip(sc: &mut PlanBuilder, text: &str) -> Result<CaptionActor> {
-    chip_at(sc, text, Some(ns(0.7)))
+    chip_at(sc, text, Some(seconds(0.7)))
 }
 
 fn chip_at(sc: &mut PlanBuilder, text: &str, shown: Option<u64>) -> Result<CaptionActor> {
@@ -305,13 +301,19 @@ fn status(s: &mut StageActor, sc: &mut PlanBuilder, card: &str, at: u64, index: 
 /// Returns the contact time. Flow rests again after its brief proof.
 fn arrive(s: &mut StageActor, sc: &mut PlanBuilder, card: &str, wire: &str, at: u64) -> u64 {
     let ready = s.settle_in(sc, card, at);
-    plug(s, sc, wire, ready.saturating_sub(ns(0.3)))
+    plug(s, sc, wire, ready.saturating_sub(seconds(0.3)))
 }
 
 /// Draw `wire` in, then let its flow rest.
 fn plug(s: &mut StageActor, sc: &mut PlanBuilder, wire: &str, at: u64) -> u64 {
     let contact = s.connect(sc, wire, at, 0.6);
-    s.to(sc, &format!("{wire}.flow"), contact + ns(0.85), 0.0, 0.45);
+    s.to(
+        sc,
+        &format!("{wire}.flow"),
+        contact + seconds(0.85),
+        0.0,
+        0.45,
+    );
     sc.media(sound(&format!("plug-{wire}"), TICK, contact, -22.0));
     contact
 }
@@ -337,8 +339,8 @@ const RESET: Sfx = Sfx("visual-effects/task-reset.wav", 0.33);
 const BLOOM: Sfx = Sfx("effect-shows-errors/prismatic-bloom.wav", 0.785);
 const CONFIRM: Sfx = Sfx("opencode-hot-reload/confirm.wav", 0.33);
 
-fn sound(id: &str, Sfx(file, seconds): Sfx, at: u64, gain_db: f32) -> MediaPlan {
-    let length = ns(seconds);
+fn sound(id: &str, Sfx(file, length): Sfx, at: u64, gain_db: f32) -> MediaPlan {
+    let length = seconds(length);
     MediaPlan {
         id: id.to_owned(),
         path: PathBuf::from(format!("../../assets/{file}")),

@@ -2,7 +2,7 @@
 //! authored here as a fixed row/column catalog; this is not a sorting/editing API.
 use anyhow::Result;
 use kinograph::{
-    author::PlanBuilder,
+    author::{PlanBuilder, SECOND},
     component_prototype::{Font, TYPESET, TextPart, TypesetPlan},
     grid::{
         GRID_RECIPE, GridAlignment, GridArrangement, GridAxisPlan, GridCellLabelPlan,
@@ -10,8 +10,6 @@ use kinograph::{
     },
     plan::{DeckPlan, ScenePlan, SlidePlan},
 };
-
-const SECOND: u64 = 1_000_000_000;
 
 /// The plain-table slide shared by the grid and slideshow showrooms.
 pub fn build_plain_table_slide() -> Result<SlidePlan> {

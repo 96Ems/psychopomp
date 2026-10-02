@@ -3,14 +3,13 @@
 //! place and later shrinks. Every change is one `roll` call at a time.
 use anyhow::Result;
 use kinograph::{
-    author::PlanBuilder,
+    author::{PlanBuilder, SECOND},
     caption::{CaptionAlign, CaptionSpanPlan},
     plan::ScenePlan,
     rolling::{RollingNumberActor, RollingNumberPlan},
     tone::Tone,
 };
 
-const SECOND: u64 = 1_000_000_000;
 const MS: u64 = 1_000_000;
 
 pub fn build_plan() -> Result<ScenePlan> {

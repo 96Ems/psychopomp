@@ -8,7 +8,8 @@ use kinograph::{
 
 use crate::{
     BLOOM, Film, MARK, arrive, beam, begin, card, chip, footer, header, label,
-    narration::Narration, ns, orb, orb_in, packet, plug, post, ring, send, show, sound, status,
+    narration::Narration, orb, orb_in, packet, plug, post, ring, seconds, send, show, sound,
+    status,
 };
 
 const MAILBOX: [f32; 3] = [330.0, 510.0, 0.0];
@@ -169,27 +170,27 @@ pub fn film(narration: &Narration) -> Result<ScenePlan> {
 
     // Exactly one object, named by its conversation root.
     let one = v.at("exactly one session object");
-    s.settle_in(sc, "mailbox", ns(0.5));
-    arrive(s, sc, "admission", "mb", ns(0.66));
-    orb_in(s, sc, "runtime", one - ns(0.2));
-    show(s, sc, "runtime-name", one + ns(0.5));
-    plug(s, sc, "ad", one + ns(0.4));
+    s.settle_in(sc, "mailbox", seconds(0.5));
+    arrive(s, sc, "admission", "mb", seconds(0.66));
+    orb_in(s, sc, "runtime", one - seconds(0.2));
+    show(s, sc, "runtime-name", one + seconds(0.5));
+    plug(s, sc, "ad", one + seconds(0.4));
     s.type_in(sc, "name", v.at("named by its team"), 30.0);
 
     // The alarm: a ring sweeps closed, and the mailbox takes its energy.
     let alarm = v.at("an alarm wakes");
-    s.to(sc, "alarm.opacity", alarm - ns(0.2), 1.0, 0.3);
+    s.to(sc, "alarm.opacity", alarm - seconds(0.2), 1.0, 0.3);
     s.ease(
         sc,
         "alarm.sweep",
-        alarm - ns(0.2),
+        alarm - seconds(0.2),
         1.0,
         0.7,
         Ease::Smootherstep,
     );
     s.type_in(sc, "alarm-name", alarm, 40.0);
-    s.hit(sc, "mailbox.flash", alarm + ns(0.5), 0.6, 0.0);
-    sc.media(sound("alarm", MARK, alarm + ns(0.4), -18.0));
+    s.hit(sc, "mailbox.flash", alarm + seconds(0.5), 0.6, 0.0);
+    sc.media(sound("alarm", MARK, alarm + seconds(0.4), -18.0));
     let decides = v.at("admission decides");
     s.hit(sc, "admission.flash", decides, 0.5, 0.0);
     let mut decides_footer = footer(
@@ -224,13 +225,13 @@ pub fn film(narration: &Narration) -> Result<ScenePlan> {
         ),
     ];
     for (message, decision, row, left, verdict, at) in rows {
-        let arrived = send(s, sc, message, at - ns(0.2), 0.75);
+        let arrived = send(s, sc, message, at - seconds(0.2), 0.75);
         status(s, sc, "mailbox", at, left);
         s.land(sc, "admission", arrived);
         status(s, sc, "admission", arrived, verdict);
         s.type_in(sc, row, arrived, 45.0);
         if decision != "p-context" {
-            let landed = send(s, sc, decision, arrived + ns(0.42), 0.75);
+            let landed = send(s, sc, decision, arrived + seconds(0.42), 0.75);
             s.hit(sc, "runtime.pulse", landed, 0.6, 0.0);
         }
     }
@@ -246,27 +247,27 @@ pub fn film(narration: &Narration) -> Result<ScenePlan> {
     for row in ["o-wake", "o-steer", "o-classify", "o-context"] {
         s.to(sc, &format!("{row}.opacity"), embedded, 0.35, 0.6);
     }
-    s.to(sc, "camera.x", embedded - ns(0.2), 110.0, 1.6);
-    s.to(sc, "camera.y", embedded - ns(0.2), 30.0, 1.6);
-    s.to(sc, "camera.z", embedded - ns(0.2), 40.0, 1.8);
+    s.to(sc, "camera.x", embedded - seconds(0.2), 110.0, 1.6);
+    s.to(sc, "camera.y", embedded - seconds(0.2), 30.0, 1.6);
+    s.to(sc, "camera.z", embedded - seconds(0.2), 40.0, 1.8);
     s.to(sc, "camera.focus", embedded, 0.0, 0.8);
-    s.type_in(sc, "runtime-embedded", embedded + ns(0.2), 40.0);
+    s.type_in(sc, "runtime-embedded", embedded + seconds(0.2), 40.0);
     let sqlite = v.at("own sqlite");
-    let contact = arrive(s, sc, "sqlite", "db", sqlite - ns(0.3));
-    let stored = send(s, sc, "state", contact + ns(0.5), 0.6);
+    let contact = arrive(s, sc, "sqlite", "db", sqlite - seconds(0.3));
+    let stored = send(s, sc, "state", contact + seconds(0.5), 0.6);
     s.land(sc, "sqlite", stored);
 
     // One message ID, saved at enqueue: a retry is the same prompt.
     let upfront = v.at("generated up front");
-    s.to(sc, "camera.x", upfront - ns(0.4), 0.0, 1.6);
-    s.to(sc, "camera.y", upfront - ns(0.4), 0.0, 1.6);
-    s.to(sc, "camera.z", upfront - ns(0.4), 20.0, 1.6);
+    s.to(sc, "camera.x", upfront - seconds(0.4), 0.0, 1.6);
+    s.to(sc, "camera.y", upfront - seconds(0.4), 0.0, 1.6);
+    s.to(sc, "camera.z", upfront - seconds(0.4), 20.0, 1.6);
     s.type_in(sc, "msg-id", upfront, 40.0);
     status(s, sc, "admission", upfront, 5);
-    let prompted = send(s, sc, "prompt", upfront + ns(0.5), 0.8);
+    let prompted = send(s, sc, "prompt", upfront + seconds(0.5), 0.8);
     s.hit(sc, "runtime.pulse", prompted, 0.6, 0.0);
     let twice = v.at("never submits twice");
-    let retried = send(s, sc, "retry", twice.max(prompted + ns(0.4)), 0.8);
+    let retried = send(s, sc, "retry", twice.max(prompted + seconds(0.4)), 0.8);
     s.hit(sc, "runtime.pulse", retried, 0.2, 0.0);
     s.type_in(sc, "once", retried, 40.0);
     sc.media(sound("once", BLOOM, retried, -15.0));

@@ -9,7 +9,7 @@ use kinograph::{
     tone::Tone,
 };
 
-use crate::{chip_at, footer, header_at, narration::Narration, ns};
+use crate::{chip_at, footer, header_at, narration::Narration, seconds};
 
 /// The widest line that fits the editor card at 28 px CommitMono.
 const MAX_COLUMNS: usize = 76;
@@ -112,8 +112,8 @@ fn editor(scene: &mut PlanBuilder, step_times: [u64; 3]) -> Result<()> {
 
 pub fn film(narration: &Narration) -> Result<ScenePlan> {
     let clip = narration.clip("edge-code")?;
-    let lead = ns(0.9);
-    let mut sc = PlanBuilder::new("edge-code", lead + clip.duration() + ns(1.8));
+    let lead = seconds(0.9);
+    let mut sc = PlanBuilder::new("edge-code", lead + clip.duration() + seconds(1.8));
     let v = clip.place(&mut sc, lead);
     header_at(&mut sc, "1", "the edge", None)?;
     chip_at(&mut sc, "src/ingress.ts", None)?;
@@ -132,7 +132,7 @@ pub fn film(narration: &Narration) -> Result<ScenePlan> {
             ("condensed for display · ", Tone::Muted),
             ("200 only after the write", Tone::Accent),
         ],
-        v.at("mailbox write") + ns(0.6),
+        v.at("mailbox write") + seconds(0.6),
     )?;
     sc.finish().context("edge-code")
 }

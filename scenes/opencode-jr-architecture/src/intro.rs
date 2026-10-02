@@ -5,8 +5,8 @@ use kinograph::{
 };
 
 use crate::{
-    BLOOM, Film, arrive, beam, begin, card, footer, label, ns, orb, orb_in, packet, plug, post,
-    send, sound,
+    BLOOM, Film, arrive, beam, begin, card, footer, label, orb, orb_in, packet, plug, post,
+    seconds, send, sound,
 };
 
 const ROWS: [f32; 3] = [330.0, 540.0, 750.0];
@@ -93,12 +93,12 @@ pub fn film(narration: &crate::narration::Narration) -> Result<ScenePlan> {
     );
     kinograph::caption::CaptionActor::declare(sc, "header", &title)?.type_in(
         sc,
-        ns(0.3),
+        seconds(0.3),
         50.0,
         0.6,
     );
 
-    s.settle_in(sc, "slack", ns(0.45));
+    s.settle_in(sc, "slack", seconds(0.45));
     // One thread per mention: each settles and plugs into slack.
     let mention = v.at("mention it in");
     for index in 0..3 {
@@ -107,39 +107,39 @@ pub fn film(narration: &crate::narration::Narration) -> Result<ScenePlan> {
             sc,
             &format!("thread-{index}"),
             &format!("in-{index}"),
-            mention + ns(index as f64 * 0.14),
+            mention + seconds(index as f64 * 0.14),
         );
     }
     // Each thread gathers its own agent out of a blur.
     let agent = v.at("its own coding agent");
     for index in 0..3 {
-        let at = agent + ns(index as f64 * 0.14);
+        let at = agent + seconds(index as f64 * 0.14);
         orb_in(s, sc, &format!("agent-{index}"), at);
-        plug(s, sc, &format!("own-{index}"), at + ns(0.35));
+        plug(s, sc, &format!("own-{index}"), at + seconds(0.35));
     }
     let durable = v.at("durable state");
     s.type_in(sc, "agents-name", durable, 40.0);
     let sandbox = v.at("sandboxed computer");
     for index in 0..3 {
         let card = format!("sandbox-{index}");
-        let ready = s.settle_in(sc, &card, sandbox + ns(index as f64 * 0.14));
+        let ready = s.settle_in(sc, &card, sandbox + seconds(index as f64 * 0.14));
         plug(
             s,
             sc,
             &format!("hands-{index}"),
-            ready.saturating_sub(ns(0.6)),
+            ready.saturating_sub(seconds(0.6)),
         );
     }
     s.to(sc, "camera.x", sandbox, 60.0, 1.6);
 
     // Follow one message: the camera leans into the middle row.
     let follow = v.at("follow one message");
-    s.to(sc, "camera.x", follow - ns(0.3), -120.0, 1.6);
-    s.to(sc, "camera.z", follow - ns(0.3), 90.0, 1.8);
+    s.to(sc, "camera.x", follow - seconds(0.3), -120.0, 1.6);
+    s.to(sc, "camera.z", follow - seconds(0.3), 90.0, 1.8);
     hide_others(s, sc, follow);
-    let landed = send(s, sc, "mention", follow + ns(0.3), 0.8);
+    let landed = send(s, sc, "mention", follow + seconds(0.3), 0.8);
     s.land(sc, "thread-1", landed);
-    let woke = send(s, sc, "wake", landed + ns(0.42), 0.7);
+    let woke = send(s, sc, "wake", landed + seconds(0.42), 0.7);
     s.hit(sc, "agent-1.pulse", woke, 0.75, 0.0);
     sc.media(sound("wake", BLOOM, woke, -14.0));
     footer(
@@ -149,7 +149,7 @@ pub fn film(narration: &crate::narration::Narration) -> Result<ScenePlan> {
             ("every thread is its own ", Tone::Plain),
             ("durable agent", Tone::Accent),
         ],
-        durable + ns(0.3),
+        durable + seconds(0.3),
     )?;
     scene.finish().context("intro")
 }

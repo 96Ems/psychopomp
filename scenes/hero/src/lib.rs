@@ -1,6 +1,6 @@
 use anyhow::Result;
 use kinograph::{
-    author::PlanBuilder,
+    author::{PlanBuilder, SECOND, seconds},
     code::{StyledSpan, SyntaxStyle},
     editor::{
         EDITOR_RECIPE, EditorInlineRevealPlan, EditorLinePlan, EditorPartPlan, EditorRecipePlan,
@@ -9,7 +9,6 @@ use kinograph::{
     plan::{ScenePlan, TargetComponentPlan},
 };
 
-const SECOND: u64 = 1_000_000_000;
 const FOCUS_LINE_ID: &str = "find-effect";
 
 pub fn build_plan() -> Result<ScenePlan> {
@@ -80,33 +79,26 @@ pub fn build_plan() -> Result<ScenePlan> {
     let pointer_scale = scene.continuous(&pointer, "scale", 0.7);
     let pointer_blur = scene.continuous(&pointer, "blur", 4.0);
 
-    spring(&mut scene, &panel_y, 0.08, 0.0, 0.3, 0.0);
-    spring(&mut scene, &layout, 0.88, 1.0, 0.3, 0.0);
-    spring(&mut scene, &content, 1.12, 1.0, 0.3, 0.0);
-    spring(&mut scene, &focus, 1.55, 1.0, 0.3, 0.0);
-    spring_to(&mut scene, &highlight_x, 1.72, effect.x(), 0.3, 0.0);
-    spring_to(&mut scene, &highlight_y, 1.72, effect.line_y(), 0.3, 0.0);
-    spring_to(&mut scene, &highlight_width, 1.72, effect.width(), 0.3, 0.0);
-    spring(&mut scene, &highlight_opacity, 1.72, 1.0, 0.3, 0.0);
+    scene.spring(&panel_y, seconds(0.08), 0.0, 0.3, 0.0);
+    scene.spring(&layout, seconds(0.88), 1.0, 0.3, 0.0);
+    scene.spring(&content, seconds(1.12), 1.0, 0.3, 0.0);
+    scene.spring(&focus, seconds(1.55), 1.0, 0.3, 0.0);
+    scene.spring_to(&highlight_x, seconds(1.72), effect.x(), 0.3, 0.0);
+    scene.spring_to(&highlight_y, seconds(1.72), effect.line_y(), 0.3, 0.0);
+    scene.spring_to(&highlight_width, seconds(1.72), effect.width(), 0.3, 0.0);
+    scene.spring(&highlight_opacity, seconds(1.72), 1.0, 0.3, 0.0);
 
-    spring(&mut scene, &pointer_opacity, 1.72, 1.0, 0.42, 0.18);
-    spring(&mut scene, &pointer_scale, 1.72, 1.0, 0.42, 0.18);
-    spring(&mut scene, &pointer_blur, 1.72, 0.0, 0.42, 0.18);
+    scene.spring(&pointer_opacity, seconds(1.72), 1.0, 0.42, 0.18);
+    scene.spring(&pointer_scale, seconds(1.72), 1.0, 0.42, 0.18);
+    scene.spring(&pointer_blur, seconds(1.72), 0.0, 0.42, 0.18);
     move_pointer(&mut scene, &pointer_x, &pointer_y, 1.72, &effect);
     move_pointer(&mut scene, &pointer_x, &pointer_y, 2.35, &string);
 
-    spring(&mut scene, &inline_reveal, 2.72, 1.0, 0.3, 0.0);
-    spring_to(&mut scene, &highlight_x, 3.15, not_found.x(), 0.3, 0.0);
-    spring_to(&mut scene, &highlight_y, 3.15, not_found.line_y(), 0.3, 0.0);
-    spring_to(
-        &mut scene,
-        &highlight_width,
-        3.15,
-        not_found.width(),
-        0.3,
-        0.0,
-    );
-    spring(&mut scene, &highlight_opacity, 3.15, 1.0, 0.3, 0.0);
+    scene.spring(&inline_reveal, seconds(2.72), 1.0, 0.3, 0.0);
+    scene.spring_to(&highlight_x, seconds(3.15), not_found.x(), 0.3, 0.0);
+    scene.spring_to(&highlight_y, seconds(3.15), not_found.line_y(), 0.3, 0.0);
+    scene.spring_to(&highlight_width, seconds(3.15), not_found.width(), 0.3, 0.0);
+    scene.spring(&highlight_opacity, seconds(3.15), 1.0, 0.3, 0.0);
     move_pointer(&mut scene, &pointer_x, &pointer_y, 3.15, &not_found);
     move_pointer(&mut scene, &pointer_x, &pointer_y, 4.05, &context);
 
@@ -122,41 +114,14 @@ fn move_pointer(
     at: f64,
     target: &kinograph::author::SemanticTargetHandle,
 ) {
-    spring_to(scene, x, at, target.center_x(), 0.42, 0.18);
-    spring_to(
-        scene,
+    scene.spring_to(x, seconds(at), target.center_x(), 0.42, 0.18);
+    scene.spring_to(
         y,
-        at,
+        seconds(at),
         target.offset(TargetComponentPlan::LineY, 55.0),
         0.42,
         0.18,
     );
-}
-
-fn spring(
-    scene: &mut PlanBuilder,
-    channel: &kinograph::author::ContinuousHandle,
-    at: f64,
-    target: f32,
-    visual_duration: f32,
-    bounce: f32,
-) {
-    scene.spring(channel, nanos(at), target, visual_duration, bounce);
-}
-
-fn spring_to(
-    scene: &mut PlanBuilder,
-    channel: &kinograph::author::ContinuousHandle,
-    at: f64,
-    target: kinograph::plan::ScalarPlan,
-    visual_duration: f32,
-    bounce: f32,
-) {
-    scene.spring_to(channel, nanos(at), target, visual_duration, bounce);
-}
-
-fn nanos(seconds: f64) -> u64 {
-    (seconds * SECOND as f64).round() as u64
 }
 
 fn editor_recipe() -> EditorRecipePlan {

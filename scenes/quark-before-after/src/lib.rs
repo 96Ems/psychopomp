@@ -1,6 +1,6 @@
 use anyhow::Result;
 use kinograph::{
-    author::PlanBuilder,
+    author::{PlanBuilder, SECOND},
     code::{StyledSpan, SyntaxStyle},
     editor::{
         EDITOR_RECIPE, EditorInlineRevealPlan, EditorLinePlan, EditorPartPlan, EditorRecipePlan,
@@ -11,7 +11,6 @@ use kinograph::{
 use serde_json::json;
 use std::path::PathBuf;
 
-const SECOND: u64 = 1_000_000_000;
 const DURATION: u64 = 23 * SECOND;
 const NARRATION_DURATION: u64 = 22_151_837_000;
 

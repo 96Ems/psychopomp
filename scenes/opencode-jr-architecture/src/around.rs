@@ -7,7 +7,8 @@ use kinograph::{
 
 use crate::{
     BLOOM, CONFIRM, Film, MARK, SUCCESS, beam, begin, card, chip, footer, header, label,
-    narration::Narration, ns, orb, orb_in, packet, plug, post, ring, send, show, sound, status,
+    narration::Narration, orb, orb_in, packet, plug, post, ring, seconds, send, show, sound,
+    status,
 };
 
 const SESSION: [f32; 3] = [960.0, 470.0, 0.0];
@@ -150,8 +151,8 @@ pub fn film(narration: &Narration) -> Result<ScenePlan> {
     header(sc, "6", "around the core")?;
     chip(sc, "src/session/approval-lifecycle.ts")?;
 
-    orb_in(s, sc, "session", ns(0.3));
-    show(s, sc, "session-name", ns(0.9));
+    orb_in(s, sc, "session", seconds(0.3));
+    show(s, sc, "session-name", seconds(0.9));
     // The shared objects take their places, dim, until each one is named.
     let shared = v.at("shared objects");
     for (index, card) in [
@@ -165,16 +166,16 @@ pub fn film(narration: &Narration) -> Result<ScenePlan> {
     .enumerate()
     {
         s.channel(sc, &format!("{card}.dim"), 0.6);
-        s.settle_in(sc, card, shared + ns(index as f64 * 0.12));
+        s.settle_in(sc, card, shared + seconds(index as f64 * 0.12));
     }
 
     // A gated tool records its call and posts a card; the turn ends.
     let approval = v.at("humans approval");
-    s.to(sc, "approval.dim", approval - ns(0.4), 0.0, 0.5);
-    let contact = plug(s, sc, "ap", approval - ns(0.4));
-    s.to(sc, "camera.x", approval - ns(0.4), -80.0, 1.6);
-    s.to(sc, "camera.y", approval - ns(0.4), -40.0, 1.6);
-    let call = send(s, sc, "call", contact + ns(0.3), 0.8);
+    s.to(sc, "approval.dim", approval - seconds(0.4), 0.0, 0.5);
+    let contact = plug(s, sc, "ap", approval - seconds(0.4));
+    s.to(sc, "camera.x", approval - seconds(0.4), -80.0, 1.6);
+    s.to(sc, "camera.y", approval - seconds(0.4), -40.0, 1.6);
+    let call = send(s, sc, "call", contact + seconds(0.3), 0.8);
     s.land(sc, "approval", call);
     s.type_in(sc, "args", v.at("full arguments").max(call), 44.0);
     s.hit(sc, "approval.flash", v.at("card is posted"), 0.5, 0.0);
@@ -203,46 +204,58 @@ pub fn film(narration: &Narration) -> Result<ScenePlan> {
     let double = v.at("double click");
     s.hit(sc, "approval.flash", double, 0.35, 0.0);
     sc.media(sound("click-again", CONFIRM, double, -18.0));
-    s.type_in(sc, "already", double + ns(0.2), 44.0);
+    s.type_in(sc, "already", double + seconds(0.2), 44.0);
     let wakes = v.at("wakes the model");
-    let returned = send(s, sc, "result", wakes - ns(0.2), 0.8);
-    s.set(sc, "approval.spinner", returned - ns(0.8), -1.0);
-    status(s, sc, "approval", returned - ns(0.8), 2);
+    let returned = send(s, sc, "result", wakes - seconds(0.2), 0.8);
+    s.set(sc, "approval.spinner", returned - seconds(0.8), -1.0);
+    status(s, sc, "approval", returned - seconds(0.8), 2);
     s.to(sc, "session.opacity", returned, 1.0, 0.4);
     s.hit(sc, "session.pulse", returned, 0.75, 0.0);
     sc.media(sound("woke", SUCCESS, returned, -13.0));
 
     // The scheduler fires an ordinary new session; catch-up fires once.
     let scheduler = v.at("scheduler object");
-    claim_footer.hide(sc, scheduler - ns(0.3));
+    claim_footer.hide(sc, scheduler - seconds(0.3));
     for id in ["args", "claim", "already"] {
-        s.to(sc, &format!("{id}.opacity"), scheduler - ns(0.3), 0.3, 0.5);
+        s.to(
+            sc,
+            &format!("{id}.opacity"),
+            scheduler - seconds(0.3),
+            0.3,
+            0.5,
+        );
     }
-    s.to(sc, "camera.y", scheduler - ns(0.3), 80.0, 1.6);
-    s.to(sc, "scheduler.dim", scheduler - ns(0.2), 0.0, 0.5);
-    s.to(sc, "clock.opacity", scheduler + ns(0.3), 1.0, 0.3);
+    s.to(sc, "camera.y", scheduler - seconds(0.3), 80.0, 1.6);
+    s.to(sc, "scheduler.dim", scheduler - seconds(0.2), 0.0, 0.5);
+    s.to(sc, "clock.opacity", scheduler + seconds(0.3), 1.0, 0.3);
     s.ease(
         sc,
         "clock.sweep",
-        scheduler + ns(0.3),
+        scheduler + seconds(0.3),
         1.0,
         1.0,
         Ease::Smootherstep,
     );
     let fresh = v.at("new session");
-    status(s, sc, "scheduler", fresh - ns(0.6), 1);
-    let contact = plug(s, sc, "sf", fresh - ns(0.9));
-    let fired = send(s, sc, "fire", (fresh - ns(0.1)).max(contact + ns(0.2)), 0.6);
-    orb_in(s, sc, "fresh", fired - ns(0.1));
-    s.hit(sc, "fresh.pulse", fired + ns(0.3), 0.6, 0.0);
-    s.type_in(sc, "fresh-name", fired + ns(0.2), 44.0);
+    status(s, sc, "scheduler", fresh - seconds(0.6), 1);
+    let contact = plug(s, sc, "sf", fresh - seconds(0.9));
+    let fired = send(
+        s,
+        sc,
+        "fire",
+        (fresh - seconds(0.1)).max(contact + seconds(0.2)),
+        0.6,
+    );
+    orb_in(s, sc, "fresh", fired - seconds(0.1));
+    s.hit(sc, "fresh.pulse", fired + seconds(0.3), 0.6, 0.0);
+    s.type_in(sc, "fresh-name", fired + seconds(0.2), 44.0);
     sc.media(sound("fired", BLOOM, fired, -16.0));
     let once = v.at("fires once");
     status(s, sc, "scheduler", once, 2);
     s.type_in(
         sc,
         "burst",
-        v.at("never in a burst").max(once + ns(0.3)),
+        v.at("never in a burst").max(once + seconds(0.3)),
         44.0,
     );
     let mut once_footer = footer(
@@ -257,18 +270,18 @@ pub fn film(narration: &Narration) -> Result<ScenePlan> {
 
     // Behind the dashboard: settings and connectors.
     let dashboard = v.at("web dashboard");
-    once_footer.hide(sc, dashboard - ns(0.3));
-    s.to(sc, "camera.x", dashboard - ns(0.4), 90.0, 1.6);
-    s.to(sc, "camera.y", dashboard - ns(0.4), 0.0, 1.6);
-    s.to(sc, "dashboard.dim", dashboard - ns(0.2), 0.0, 0.5);
+    once_footer.hide(sc, dashboard - seconds(0.3));
+    s.to(sc, "camera.x", dashboard - seconds(0.4), 90.0, 1.6);
+    s.to(sc, "camera.y", dashboard - seconds(0.4), 0.0, 1.6);
+    s.to(sc, "dashboard.dim", dashboard - seconds(0.2), 0.0, 0.5);
     let objects = v.at("settings and connectors");
     for card in ["settings", "connectors"] {
-        s.to(sc, &format!("{card}.dim"), objects - ns(0.3), 0.0, 0.5);
+        s.to(sc, &format!("{card}.dim"), objects - seconds(0.3), 0.0, 0.5);
     }
-    plug(s, sc, "ds", objects - ns(0.3));
-    plug(s, sc, "dc", objects - ns(0.14));
-    plug(s, sc, "ss", objects + ns(0.5));
-    plug(s, sc, "cs", objects + ns(0.64));
+    plug(s, sc, "ds", objects - seconds(0.3));
+    plug(s, sc, "dc", objects - seconds(0.14));
+    plug(s, sc, "ss", objects + seconds(0.5));
+    plug(s, sc, "cs", objects + seconds(0.64));
     s.to(sc, "camera.x", v.end(), 0.0, 1.6);
     s.to(sc, "camera.z", v.end(), -40.0, 1.8);
     footer(
@@ -278,7 +291,7 @@ pub fn film(narration: &Narration) -> Result<ScenePlan> {
             ("shared objects around ", Tone::Plain),
             ("one object per thread", Tone::Accent),
         ],
-        objects + ns(0.6),
+        objects + seconds(0.6),
     )?;
     scene.finish().context("around")
 }

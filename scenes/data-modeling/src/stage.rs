@@ -1,13 +1,12 @@
 //! Scene-local layout and step helpers. No additional playback state machine.
 use anyhow::Result;
 use kinograph::{
-    author::{ActorHandle, PlanBuilder},
+    author::{ActorHandle, PlanBuilder, SECOND},
     plan::ScenePlan,
     value::{VALUE_TOKEN_RECIPE, ValueTokenPlan},
 };
 use serde_json::json;
 
-pub const SECOND: u64 = 1_000_000_000;
 pub const BEAT: u64 = 3 * SECOND;
 pub const INK: [u8; 3] = [234, 239, 247];
 pub const MUTED: [u8; 3] = [143, 159, 184];

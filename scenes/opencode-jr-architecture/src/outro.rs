@@ -4,8 +4,8 @@ use anyhow::{Context, Result};
 use kinograph::{caption::CaptionAlign, plan::ScenePlan, stage::StagePlan, tone::Tone};
 
 use crate::{
-    BLOOM, Film, arrive, beam, begin, card, footer, header, label, narration::Narration, ns, orb,
-    orb_in, packet, plug, post, send, show, sound,
+    BLOOM, Film, arrive, beam, begin, card, footer, header, label, narration::Narration, orb,
+    orb_in, packet, plug, post, seconds, send, show, sound,
 };
 
 const Y: f32 = 500.0;
@@ -71,28 +71,28 @@ pub fn film(narration: &Narration) -> Result<ScenePlan> {
     let (s, sc) = (&mut actor, &mut scene);
     header(sc, "→", "the shape")?;
 
-    s.settle_in(sc, "slack", ns(0.4));
+    s.settle_in(sc, "slack", seconds(0.4));
     let edge = v.at("hits the edge");
-    arrive(s, sc, "worker", "a", edge - ns(0.5));
-    let at_worker = send(s, sc, "a-out", edge + ns(0.3), 0.6);
+    arrive(s, sc, "worker", "a", edge - seconds(0.5));
+    let at_worker = send(s, sc, "a-out", edge + seconds(0.3), 0.6);
     s.land(sc, "worker", at_worker);
     let object = v.at("one durable object");
-    orb_in(s, sc, "session", object - ns(0.4));
-    show(s, sc, "session-name", object + ns(0.3));
-    let contact = plug(s, sc, "b", object - ns(0.1));
-    let at_session = send(s, sc, "b-out", contact + ns(0.3), 0.6);
+    orb_in(s, sc, "session", object - seconds(0.4));
+    show(s, sc, "session-name", object + seconds(0.3));
+    let contact = plug(s, sc, "b", object - seconds(0.1));
+    let at_session = send(s, sc, "b-out", contact + seconds(0.3), 0.6);
     s.hit(sc, "session.pulse", at_session, 0.6, 0.0);
     let sandbox = v.at("in a sandbox");
-    arrive(s, sc, "workspace", "c", sandbox - ns(0.6));
-    arrive(s, sc, "sandbox", "d", sandbox - ns(0.4));
-    let at_workspace = send(s, sc, "c-out", sandbox + ns(0.3), 0.55);
-    let at_sandbox = send(s, sc, "d-out", at_workspace + ns(0.42), 0.55);
+    arrive(s, sc, "workspace", "c", sandbox - seconds(0.6));
+    arrive(s, sc, "sandbox", "d", sandbox - seconds(0.4));
+    let at_workspace = send(s, sc, "c-out", sandbox + seconds(0.3), 0.55);
+    let at_sandbox = send(s, sc, "d-out", at_workspace + seconds(0.42), 0.55);
     s.land(sc, "sandbox", at_sandbox);
     // The answer runs the chain back to Slack.
-    let back = v.at("flows back").max(at_sandbox + ns(0.2));
+    let back = v.at("flows back").max(at_sandbox + seconds(0.2));
     let mut at = send(s, sc, "d-back", back, 0.5);
     for packet in ["c-back", "answer", "a-back"] {
-        at = send(s, sc, packet, at + ns(0.42), 0.5);
+        at = send(s, sc, packet, at + seconds(0.42), 0.5);
     }
     s.hit(sc, "slack.flash", at, 0.7, 0.0);
     sc.media(sound("answered", BLOOM, at, -13.0));

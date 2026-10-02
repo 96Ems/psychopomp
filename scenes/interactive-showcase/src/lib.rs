@@ -1,7 +1,7 @@
 //! Native presentation examples sharing one Scene Plan model with video export.
 use anyhow::Result;
 use kinograph::{
-    author::PlanBuilder,
+    author::{PlanBuilder, SECOND},
     code::{StyledSpan, SyntaxStyle},
     dsl::TaskState,
     editor::{
@@ -12,8 +12,6 @@ use kinograph::{
     task::{TASK_RECIPE, TaskEventPlan, TaskRecipePlan},
 };
 use serde_json::json;
-
-const SECOND: u64 = 1_000_000_000;
 
 pub fn build_deck() -> Result<DeckPlan> {
     use TaskState::*;

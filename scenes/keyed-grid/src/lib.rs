@@ -1,7 +1,7 @@
 //! The first procedural 3D diagram: finite products and reassociation.
 use anyhow::Result;
 use kinograph::{
-    author::PlanBuilder,
+    author::{PlanBuilder, SECOND},
     grid::{
         GRID_RECIPE, GridArrangement, GridAxisPlan, GridCellLabelPlan, GridEventPlan,
         GridRecipePlan, GridSnapshotPlan,
@@ -12,8 +12,6 @@ use serde_json::json;
 
 mod styles;
 pub use styles::{build_plain_table_slide, build_style_deck};
-
-const SECOND: u64 = 1_000_000_000;
 
 struct Step {
     title: &'static str,

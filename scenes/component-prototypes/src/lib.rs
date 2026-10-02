@@ -3,13 +3,12 @@
 use anyhow::Result;
 mod slideshow;
 use kinograph::{
-    author::{ActorHandle, PlanBuilder},
+    author::{ActorHandle, PlanBuilder, SECOND},
     component_prototype::*,
     plan::{DeckPlan, ScenePlan, SlidePlan},
 };
 pub use slideshow::build_slideshow_deck;
 
-const SECOND: u64 = 1_000_000_000;
 const BEAT: u64 = 3 * SECOND;
 const INK: [u8; 3] = [235, 233, 227];
 const MUTED: [u8; 3] = [127, 133, 141];

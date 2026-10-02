@@ -2,7 +2,7 @@
 //! The diagram recipe knows boxes/wires; this Scene Program knows daemon history.
 use anyhow::Result;
 use kinograph::{
-    author::{ActorHandle, PlanBuilder},
+    author::{ActorHandle, PlanBuilder, SECOND},
     component_prototype::{
         DIAGRAM, DiagramAnchor, DiagramDelay, DiagramLink, DiagramNode, DiagramPlan, DiagramView,
         Side,
@@ -10,7 +10,6 @@ use kinograph::{
     plan::{DeckPlan, ScenePlan, SlidePlan},
 };
 
-const SECOND: u64 = 1_000_000_000;
 const BEAT: u64 = 3 * SECOND;
 const CAPTIONS: [&str; 4] = [
     "v1 · one server per client",

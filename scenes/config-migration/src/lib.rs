@@ -12,7 +12,7 @@ use std::path::Path;
 use anyhow::{Context, Result};
 use diff::{Diff, add, keep, remove};
 use kinograph::{
-    author::PlanBuilder,
+    author::{PlanBuilder, seconds},
     caption::{CaptionActor, CaptionAlign, CaptionPlan, CaptionSpanPlan},
     plan::{ReelPlan, ReelSegmentPlan, ReelTransitionStyle, ScenePlan},
     sequence::{SequenceActor, SequenceParticipantPlan, SequencePlan, SequenceRowPlan},
@@ -25,10 +25,6 @@ const LEFT: f32 = 140.0;
 const RIGHT: f32 = 1780.0;
 const HEADER_Y: f32 = 96.0;
 const FOOTER_Y: f32 = 1004.0;
-
-fn ns(seconds: f64) -> u64 {
-    (seconds * 1e9).round() as u64
-}
 
 struct Pr {
     number: &'static str,
@@ -217,13 +213,13 @@ struct Flow {
 fn behavior(pr: &Pr, narration: &Narration, flow: Flow) -> Result<ScenePlan> {
     let before_clip = narration.clip(&format!("{}-before", pr.slug))?;
     let after_clip = narration.clip(&format!("{}-after", pr.slug))?;
-    let lead = ns(1.0);
-    let gap = ns(1.6);
-    let duration = lead + before_clip.duration() + gap + after_clip.duration() + ns(1.4);
+    let lead = seconds(1.0);
+    let gap = seconds(1.6);
+    let duration = lead + before_clip.duration() + gap + after_clip.duration() + seconds(1.4);
     let mut scene = PlanBuilder::new(format!("{}-behavior", pr.slug), duration);
     let spoken_before = before_clip.place(&mut scene, lead);
     let spoken_after = after_clip.place(&mut scene, spoken_before.end() + gap);
-    let switch = spoken_before.end() + ns(0.4);
+    let switch = spoken_before.end() + seconds(0.4);
     let time = |at: At| -> u64 {
         let base = match at.0 {
             When::Before(phrase) => spoken_before.at(phrase),
@@ -232,16 +228,16 @@ fn behavior(pr: &Pr, narration: &Narration, flow: Flow) -> Result<ScenePlan> {
         (base as i64 + (at.1 * 1e9) as i64).max(0) as u64
     };
 
-    header(&mut scene, pr, Some(ns(0.25)))?;
+    header(&mut scene, pr, Some(seconds(0.25)))?;
     let mut before_chip = chip(&mut scene, "chip-before", Tone::Error, "before")?;
-    before_chip.show(&mut scene, ns(0.5));
+    before_chip.show(&mut scene, seconds(0.5));
     before_chip.hide(&mut scene, switch);
     let mut after_chip = chip(&mut scene, "chip-after", Tone::Success, "after the fix")?;
-    after_chip.show(&mut scene, switch + ns(0.25));
+    after_chip.show(&mut scene, switch + seconds(0.25));
 
     let mut sequence = SequenceActor::declare(&mut scene, "flow", &flow.sequence)?;
-    sequence.animate(&mut scene, "opacity", 0.0, ns(0.2), 1.0, 0.5);
-    sequence.animate(&mut scene, "lifelines", 0.0, ns(0.35), 1.0, 0.9);
+    sequence.animate(&mut scene, "opacity", 0.0, seconds(0.2), 1.0, 0.5);
+    sequence.animate(&mut scene, "lifelines", 0.0, seconds(0.35), 1.0, 0.9);
     for (row, at) in &flow.reveals {
         sequence.reveal(&mut scene, row, time(*at));
     }
@@ -300,20 +296,20 @@ fn code(
     entrance: bool,
 ) -> Result<ScenePlan> {
     let clip = narration.clip(&format!("{}-code", pr.slug))?;
-    let lead = ns(0.9);
-    let duration = lead + clip.duration() + ns(1.6);
+    let lead = seconds(0.9);
+    let duration = lead + clip.duration() + seconds(1.6);
     let mut scene = PlanBuilder::new(format!("{}-code", pr.slug), duration);
     let spoken = clip.place(&mut scene, lead);
     header(&mut scene, pr, None)?;
     let mut change = chip(&mut scene, "chip-change", Tone::Accent, "the change")?;
-    change.show(&mut scene, ns(0.2));
+    change.show(&mut scene, seconds(0.2));
     let times = steps
         .iter()
         .map(|phrase| spoken.at(phrase))
         .collect::<Vec<_>>();
-    diff.declare(&mut scene, &times, ns(0.9), entrance)?;
+    diff.declare(&mut scene, &times, seconds(0.9), entrance)?;
     let mut caption = footer(&mut scene, "footer", vec![span(note, Tone::Muted)])?;
-    caption.show(&mut scene, ns(0.6));
+    caption.show(&mut scene, seconds(0.6));
     scene.finish().with_context(|| format!("{}-code", pr.slug))
 }
 

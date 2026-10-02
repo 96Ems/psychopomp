@@ -8,7 +8,8 @@ use kinograph::{
 
 use crate::{
     Film, MARK, RESET, SUCCESS, arrive, beam, begin, card, chip, footer, header, hide, label,
-    narration::Narration, ns, orb, orb_in, packet, plug, post, ring, send, show, sound, status,
+    narration::Narration, orb, orb_in, packet, plug, post, ring, seconds, send, show, sound,
+    status,
 };
 
 const SESSION: [f32; 3] = [330.0, 580.0, 0.0];
@@ -135,12 +136,12 @@ pub fn film(narration: &Narration) -> Result<ScenePlan> {
     for wire in ["sb", "tp"] {
         s.channel(sc, &format!("{wire}.opacity"), 1.0);
     }
-    orb_in(s, sc, "session", ns(0.3));
-    show(s, sc, "session-name", ns(0.9));
+    orb_in(s, sc, "session", seconds(0.3));
+    show(s, sc, "session-name", seconds(0.9));
     let object = v.at("workspace object");
-    arrive(s, sc, "workspace", "ws", object - ns(0.2));
+    arrive(s, sc, "workspace", "ws", object - seconds(0.2));
     let sandbox = v.at("modal sandbox");
-    let contact = arrive(s, sc, "sandbox", "sb", sandbox - ns(0.2));
+    let contact = arrive(s, sc, "sandbox", "sb", sandbox - seconds(0.2));
     status(s, sc, "workspace", contact, 1);
     s.to(sc, "camera.x", sandbox, 140.0, 1.6);
     s.type_in(sc, "daemon", v.at("small daemon"), 40.0);
@@ -150,38 +151,38 @@ pub fn film(narration: &Narration) -> Result<ScenePlan> {
     s.to(sc, "camera.x", shell, 40.0, 1.6);
     let at_workspace = send(s, sc, "cmd", shell, 0.75);
     s.land(sc, "workspace", at_workspace);
-    let at_sandbox = send(s, sc, "cmd-2", at_workspace + ns(0.42), 0.7);
+    let at_sandbox = send(s, sc, "cmd-2", at_workspace + seconds(0.42), 0.7);
     s.land(sc, "sandbox", at_sandbox);
     status(s, sc, "sandbox", at_sandbox, 1);
     s.clock(sc, "sandbox.spinner", at_sandbox);
-    let back = send(s, sc, "out-2", at_sandbox + ns(0.9), 0.7);
+    let back = send(s, sc, "out-2", at_sandbox + seconds(0.9), 0.7);
     s.set(sc, "sandbox.spinner", back, -1.0);
     status(s, sc, "sandbox", back, 0);
-    let returned = send(s, sc, "out", back + ns(0.42), 0.75);
+    let returned = send(s, sc, "out", back + seconds(0.42), 0.75);
     s.hit(sc, "session.pulse", returned, 0.6, 0.0);
     s.type_in(sc, "no-wait", v.at("dont wait"), 40.0);
 
     // The template registry keeps a prepared checkout; cloning mounts it.
     let hour = v.at("every hour");
-    s.to(sc, "camera.x", hour - ns(0.2), 90.0, 1.6);
-    s.to(sc, "camera.y", hour - ns(0.2), -60.0, 1.6);
-    s.settle_in(sc, "template", hour - ns(0.3));
+    s.to(sc, "camera.x", hour - seconds(0.2), 90.0, 1.6);
+    s.to(sc, "camera.y", hour - seconds(0.2), -60.0, 1.6);
+    s.settle_in(sc, "template", hour - seconds(0.3));
     s.to(sc, "hourly.opacity", hour, 1.0, 0.3);
     s.ease(sc, "hourly.sweep", hour, 1.0, 1.2, Ease::Smootherstep);
-    show(s, sc, "hourly-name", hour + ns(0.2));
-    status(s, sc, "template", hour + ns(0.2), 1);
-    s.clock(sc, "template.spinner", hour + ns(0.2));
-    let refreshed = hour + ns(1.4);
+    show(s, sc, "hourly-name", hour + seconds(0.2));
+    status(s, sc, "template", hour + seconds(0.2), 1);
+    s.clock(sc, "template.spinner", hour + seconds(0.2));
+    let refreshed = hour + seconds(1.4);
     s.set(sc, "template.spinner", refreshed, -1.0);
     status(s, sc, "template", refreshed, 2);
     sc.media(sound("refreshed", MARK, refreshed, -18.0));
     let mount = v.at("not a download");
-    let contact = plug(s, sc, "tp", mount - ns(1.3));
+    let contact = plug(s, sc, "tp", mount - seconds(1.3));
     let mounted = send(
         s,
         sc,
         "mount",
-        (mount - ns(0.2)).max(contact + ns(0.3)),
+        (mount - seconds(0.2)).max(contact + seconds(0.3)),
         0.7,
     );
     s.land(sc, "sandbox", mounted);
@@ -199,30 +200,30 @@ pub fn film(narration: &Narration) -> Result<ScenePlan> {
 
     // Idle: a timer ring sweeps closed, then snapshot, then shut down.
     let idle = v.at("idle minutes");
-    mount_footer.hide(sc, idle - ns(0.6));
-    s.to(sc, "camera.x", idle - ns(0.6), 120.0, 1.6);
-    s.to(sc, "camera.y", idle - ns(0.6), 30.0, 1.6);
-    s.to(sc, "tp.opacity", idle - ns(0.6), 0.25, 0.6);
-    s.to(sc, "template.dim", idle - ns(0.6), 0.6, 0.8);
-    s.to(sc, "idle.opacity", idle - ns(0.5), 0.7, 0.3);
+    mount_footer.hide(sc, idle - seconds(0.6));
+    s.to(sc, "camera.x", idle - seconds(0.6), 120.0, 1.6);
+    s.to(sc, "camera.y", idle - seconds(0.6), 30.0, 1.6);
+    s.to(sc, "tp.opacity", idle - seconds(0.6), 0.25, 0.6);
+    s.to(sc, "template.dim", idle - seconds(0.6), 0.6, 0.8);
+    s.to(sc, "idle.opacity", idle - seconds(0.5), 0.7, 0.3);
     s.ease(
         sc,
         "idle.sweep",
-        idle - ns(0.5),
+        idle - seconds(0.5),
         1.0,
         1.4,
         Ease::Smootherstep,
     );
-    s.type_in(sc, "idle-name", idle - ns(0.3), 40.0);
-    let snapshotted = v.at("snapshotted").max(idle + ns(1.0));
+    s.type_in(sc, "idle-name", idle - seconds(0.3), 40.0);
+    let snapshotted = v.at("snapshotted").max(idle + seconds(1.0));
     hide(s, sc, "idle", snapshotted);
-    hide(s, sc, "idle-name", snapshotted + ns(0.2));
+    hide(s, sc, "idle-name", snapshotted + seconds(0.2));
     status(s, sc, "sandbox", snapshotted, 3);
     s.hit(sc, "sandbox.flash", snapshotted, 0.5, 0.0);
-    let saved = send(s, sc, "snapshot", snapshotted + ns(0.2), 0.7);
+    let saved = send(s, sc, "snapshot", snapshotted + seconds(0.2), 0.7);
     s.land(sc, "workspace", saved);
     status(s, sc, "workspace", saved, 2);
-    let down = saved + ns(0.5);
+    let down = saved + seconds(0.5);
     status(s, sc, "sandbox", down, 4);
     s.to(sc, "sandbox.dim", down, 0.7, 0.6);
     s.to(sc, "sb.flow", down, 0.0, 0.3);
@@ -230,10 +231,10 @@ pub fn film(narration: &Narration) -> Result<ScenePlan> {
     sc.media(sound("down", RESET, down, -16.0));
 
     // Restored from that snapshot when it is needed again.
-    let restored = v.at("restored").max(down + ns(0.8));
-    status(s, sc, "workspace", restored - ns(0.4), 3);
-    let reached = send(s, sc, "restore", restored - ns(0.2), 0.7);
-    s.to(sc, "sb.opacity", restored - ns(0.4), 1.0, 0.4);
+    let restored = v.at("restored").max(down + seconds(0.8));
+    status(s, sc, "workspace", restored - seconds(0.4), 3);
+    let reached = send(s, sc, "restore", restored - seconds(0.2), 0.7);
+    s.to(sc, "sb.opacity", restored - seconds(0.4), 1.0, 0.4);
     s.to(sc, "sandbox.dim", reached, 0.0, 0.5);
     s.land(sc, "sandbox", reached);
     s.twang(sc, "sb", reached);

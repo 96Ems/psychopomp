@@ -11,6 +11,14 @@ pub struct PlanBuilder {
     plan: ScenePlan,
 }
 
+/// One second on the plan clock, in nanoseconds.
+pub const SECOND: u64 = 1_000_000_000;
+
+/// `seconds` on the plan clock, rounded to the nearest nanosecond.
+pub fn seconds(seconds: f64) -> u64 {
+    (seconds * 1e9).round() as u64
+}
+
 /// Whole milliseconds in nanoseconds: an f32 duration such as 0.8 is not exact
 /// in nanoseconds, so eases and helpers that chain them round alike.
 pub(crate) fn whole_millis(seconds: f32) -> u64 {

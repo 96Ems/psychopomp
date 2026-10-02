@@ -1,6 +1,9 @@
 use std::{env, fs, path::Path};
 
-use kinograph::{author::PlanBuilder, plan::ScenePlan};
+use kinograph::{
+    author::{PlanBuilder, SECOND},
+    plan::ScenePlan,
+};
 use serde_json::json;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -19,7 +22,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 fn build_plan() -> ScenePlan {
-    const SECOND: u64 = 1_000_000_000;
     let phrases = ["Rust computes the scene", "The renderer stays hot"];
     let mut scene = PlanBuilder::new("agent-demo", 3 * SECOND);
     let title = scene

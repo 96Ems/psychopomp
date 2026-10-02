@@ -11,7 +11,7 @@ use kinograph::{
 
 use crate::{
     CONFIRM, Film, SUCCESS, arrive, beam, begin, card, chip, footer, header, label,
-    narration::Narration, ns, packet, post, send, sound, status,
+    narration::Narration, packet, post, seconds, send, sound, status,
 };
 
 const SLACK: [f32; 3] = [330.0, 440.0, 0.0];
@@ -144,9 +144,9 @@ pub fn film(narration: &Narration) -> Result<(ScenePlan, [f32; 4])> {
     header(sc, "1", "the edge")?;
     let mut chip = chip(sc, "src/ingress.ts")?;
 
-    s.settle_in(sc, "slack", ns(0.4));
-    arrive(s, sc, "worker", "in", ns(0.56));
-    arrive(s, sc, "session", "enq", ns(0.72));
+    s.settle_in(sc, "slack", seconds(0.4));
+    arrive(s, sc, "worker", "in", seconds(0.56));
+    arrive(s, sc, "session", "enq", seconds(0.72));
 
     // Slack posts the event; the Worker starts its checks.
     let landed = send(s, sc, "event", v.at("posts the event"), 0.85);
@@ -180,12 +180,12 @@ pub fn film(narration: &Narration) -> Result<(ScenePlan, [f32; 4])> {
     let commits = v.at("write commits");
     s.type_in(sc, "sqlite", commits, 40.0);
     s.hit(sc, "session.flash", commits, 0.5, 0.0);
-    let back = send(s, sc, "commit", commits + ns(0.5), 0.7);
+    let back = send(s, sc, "commit", commits + seconds(0.5), 0.7);
     s.land(sc, "worker", back);
     let receipt_at = v.at("get its");
     status(s, sc, "worker", receipt_at, 3);
     s.to(sc, "camera.x", receipt_at, -40.0, 1.6);
-    let receipt = send(s, sc, "ok", receipt_at.max(back + ns(0.4)), 0.8);
+    let receipt = send(s, sc, "ok", receipt_at.max(back + seconds(0.4)), 0.8);
     s.hit(sc, "slack.flash", receipt, 0.6, 0.0);
     s.clock(sc, "slack.mark", receipt);
     status(s, sc, "slack", receipt, 2);
@@ -204,21 +204,27 @@ pub fn film(narration: &Narration) -> Result<(ScenePlan, [f32; 4])> {
     let retry = v.at("slack retries");
     receipt_footer.hide(sc, retry);
     for clock in ["spinner", "mark"] {
-        s.set(sc, &format!("slack.{clock}"), retry - ns(0.4), -1.0);
+        s.set(sc, &format!("slack.{clock}"), retry - seconds(0.4), -1.0);
     }
-    status(s, sc, "slack", retry - ns(0.3), 3);
+    status(s, sc, "slack", retry - seconds(0.3), 3);
     for id in ["signature", "envelope", "team", "chatter", "actor"] {
-        s.to(sc, &format!("{id}.opacity"), retry - ns(0.3), 0.35, 0.5);
+        s.to(
+            sc,
+            &format!("{id}.opacity"),
+            retry - seconds(0.3),
+            0.35,
+            0.5,
+        );
     }
     let again = send(s, sc, "again", retry, 0.75);
     s.land(sc, "worker", again);
-    let duplicate = send(s, sc, "enqueue-2", again + ns(0.42), 0.75);
+    let duplicate = send(s, sc, "enqueue-2", again + seconds(0.42), 0.75);
     status(s, sc, "session", duplicate, 2);
     s.hit(sc, "session.flash", duplicate, 0.4, 0.0);
     sc.media(sound("dedupe", CONFIRM, duplicate, -16.0));
     let dedupe = v.at("by message timestamp").max(duplicate);
     s.type_in(sc, "dedupe", dedupe, 40.0);
-    let answered = send(s, sc, "ok-2", duplicate + ns(0.5), 0.75);
+    let answered = send(s, sc, "ok-2", duplicate + seconds(0.5), 0.75);
     s.hit(sc, "slack.flash", answered, 0.5, 0.0);
     status(s, sc, "slack", answered, 2);
     let mut dedupe_footer = footer(
@@ -232,7 +238,7 @@ pub fn film(narration: &Narration) -> Result<(ScenePlan, [f32; 4])> {
     )?;
 
     // Lean into the Worker; the reel zooms through it into its code.
-    let close = v.end() + ns(0.2);
+    let close = v.end() + seconds(0.2);
     s.to(sc, "camera.x", close, CLOSING_CAMERA[0], 1.2);
     s.to(sc, "camera.y", close, CLOSING_CAMERA[1], 1.2);
     s.to(sc, "camera.z", close, CLOSING_CAMERA[2], 1.2);

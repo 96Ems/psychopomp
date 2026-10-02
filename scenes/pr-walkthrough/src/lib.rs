@@ -15,7 +15,7 @@ use std::path::Path;
 use anyhow::{Context, Result};
 use diff::{Diff, add, keep, remove};
 use kinograph::{
-    author::PlanBuilder,
+    author::{PlanBuilder, seconds},
     caption::{CaptionActor, CaptionAlign, CaptionPlan, CaptionSpanPlan},
     plan::{ReelPlan, ReelSegmentPlan, ReelTransitionStyle, ScenePlan},
     sequence::{SequenceActor, SequenceParticipantPlan, SequencePlan, SequenceRowPlan},
@@ -28,10 +28,6 @@ const LEFT: f32 = 140.0;
 const RIGHT: f32 = 1780.0;
 const HEADER_Y: f32 = 96.0;
 const FOOTER_Y: f32 = 1004.0;
-
-fn ns(seconds: f64) -> u64 {
-    (seconds * 1e9).round() as u64
-}
 
 struct Pr {
     number: &'static str,
@@ -276,13 +272,13 @@ struct Flow {
 fn behavior(pr: &Pr, narration: &Narration, flow: Flow) -> Result<ScenePlan> {
     let before_clip = narration.clip(&format!("{}-before", pr.slug))?;
     let after_clip = narration.clip(&format!("{}-after", pr.slug))?;
-    let lead = ns(1.0);
-    let gap = ns(1.6);
-    let duration = lead + before_clip.duration() + gap + after_clip.duration() + ns(1.4);
+    let lead = seconds(1.0);
+    let gap = seconds(1.6);
+    let duration = lead + before_clip.duration() + gap + after_clip.duration() + seconds(1.4);
     let mut scene = PlanBuilder::new(format!("{}-behavior", pr.slug), duration);
     let spoken_before = before_clip.place(&mut scene, lead);
     let spoken_after = after_clip.place(&mut scene, spoken_before.end() + gap);
-    let switch = spoken_before.end() + ns(0.4);
+    let switch = spoken_before.end() + seconds(0.4);
     let time = |at: At| -> u64 {
         let base = match at.0 {
             When::Before(phrase) => spoken_before.at(phrase),
@@ -292,16 +288,16 @@ fn behavior(pr: &Pr, narration: &Narration, flow: Flow) -> Result<ScenePlan> {
         (base as i64 + (at.1 * 1e9) as i64).max(0) as u64
     };
 
-    header(&mut scene, pr, Some(ns(0.25)))?;
+    header(&mut scene, pr, Some(seconds(0.25)))?;
     let mut before_chip = chip(&mut scene, "chip-before", Tone::Error, "before")?;
-    before_chip.show(&mut scene, ns(0.5));
+    before_chip.show(&mut scene, seconds(0.5));
     before_chip.hide(&mut scene, switch);
     let mut after_chip = chip(&mut scene, "chip-after", Tone::Success, "after the fix")?;
-    after_chip.show(&mut scene, switch + ns(0.25));
+    after_chip.show(&mut scene, switch + seconds(0.25));
 
     let mut sequence = SequenceActor::declare(&mut scene, "flow", &flow.sequence)?;
-    sequence.animate(&mut scene, "opacity", 0.0, ns(0.2), 1.0, 0.5);
-    sequence.animate(&mut scene, "lifelines", 0.0, ns(0.35), 1.0, 0.9);
+    sequence.animate(&mut scene, "opacity", 0.0, seconds(0.2), 1.0, 0.5);
+    sequence.animate(&mut scene, "lifelines", 0.0, seconds(0.35), 1.0, 0.9);
     for (row, at) in &flow.reveals {
         sequence.reveal(&mut scene, row, time(*at));
     }
@@ -360,27 +356,27 @@ fn code(
     entrance: bool,
 ) -> Result<ScenePlan> {
     let clip = narration.clip(&format!("{}-code", pr.slug))?;
-    let lead = ns(0.9);
-    let duration = lead + clip.duration() + ns(1.6);
+    let lead = seconds(0.9);
+    let duration = lead + clip.duration() + seconds(1.6);
     let mut scene = PlanBuilder::new(format!("{}-code", pr.slug), duration);
     let spoken = clip.place(&mut scene, lead);
     header(&mut scene, pr, None)?;
     let mut change = chip(&mut scene, "chip-change", Tone::Accent, "the change")?;
-    change.show(&mut scene, ns(0.2));
+    change.show(&mut scene, seconds(0.2));
     let times = steps
         .iter()
         .map(|phrase| spoken.at(phrase))
         .collect::<Vec<_>>();
-    diff.declare(&mut scene, &times, ns(0.9), entrance)?;
+    diff.declare(&mut scene, &times, seconds(0.9), entrance)?;
     let mut caption = footer(&mut scene, "footer", vec![span(note, Tone::Muted)])?;
-    caption.show(&mut scene, ns(0.6));
+    caption.show(&mut scene, seconds(0.6));
     scene.finish().with_context(|| format!("{}-code", pr.slug))
 }
 
 fn intro(narration: &Narration) -> Result<ScenePlan> {
     let clip = narration.clip("intro")?;
-    let lead = ns(0.8);
-    let duration = lead + clip.duration() + ns(2.2);
+    let lead = seconds(0.8);
+    let duration = lead + clip.duration() + seconds(2.2);
     let mut scene = PlanBuilder::new("intro", duration);
     let spoken = clip.place(&mut scene, lead);
 
@@ -392,7 +388,12 @@ fn intro(narration: &Narration) -> Result<ScenePlan> {
             span("  background service", Tone::Plain),
         ],
     );
-    CaptionActor::declare(&mut scene, "header", &title)?.type_in(&mut scene, ns(0.25), 50.0, 0.8);
+    CaptionActor::declare(&mut scene, "header", &title)?.type_in(
+        &mut scene,
+        seconds(0.25),
+        50.0,
+        0.8,
+    );
 
     let flow = SequencePlan {
         origin: [250.0, 190.0],
@@ -420,8 +421,8 @@ fn intro(narration: &Narration) -> Result<ScenePlan> {
         ],
     };
     let mut sequence = SequenceActor::declare(&mut scene, "flow", &flow)?;
-    sequence.animate(&mut scene, "opacity", 0.0, ns(0.3), 1.0, 0.5);
-    sequence.animate(&mut scene, "lifelines", 0.0, ns(0.5), 1.0, 1.0);
+    sequence.animate(&mut scene, "opacity", 0.0, seconds(0.3), 1.0, 0.5);
+    sequence.animate(&mut scene, "lifelines", 0.0, seconds(0.5), 1.0, 1.0);
     let connect = spoken.at("connect to it");
     sequence.reveal(&mut scene, "tui", spoken.at("every terminal"));
     sequence.reveal(&mut scene, "desktop", spoken.at("the desktop app"));
@@ -429,10 +430,17 @@ fn intro(narration: &Narration) -> Result<ScenePlan> {
     sequence.reveal(&mut scene, "timeout", spoken.at("vague timeout"));
     sequence.reveal(&mut scene, "killed", spoken.at("got killed"));
     let list_at = spoken.at("these five small pull requests");
-    sequence.animate(&mut scene, "opacity", 0.0, list_at - ns(0.3), 0.0, 0.45);
+    sequence.animate(
+        &mut scene,
+        "opacity",
+        0.0,
+        list_at - seconds(0.3),
+        0.0,
+        0.45,
+    );
 
     // One caret at a time: each row starts typing when the previous one lands.
-    let mut cursor = list_at + ns(0.25);
+    let mut cursor = list_at + seconds(0.25);
     for (index, pr) in PRS.iter().enumerate() {
         let plan = CaptionPlan::line(
             [560.0, 330.0 + index as f32 * 84.0],
@@ -444,15 +452,15 @@ fn intro(narration: &Narration) -> Result<ScenePlan> {
             ],
         );
         let mut row = CaptionActor::declare(&mut scene, format!("pr-{}", pr.slug), &plan)?;
-        cursor = row.type_in(&mut scene, cursor, 80.0, 0.0) + ns(0.12);
+        cursor = row.type_in(&mut scene, cursor, 80.0, 0.0) + seconds(0.12);
     }
     scene.finish().context("intro")
 }
 
 fn outro(narration: &Narration) -> Result<ScenePlan> {
     let clip = narration.clip("outro")?;
-    let lead = ns(0.7);
-    let duration = lead + clip.duration() + ns(2.6);
+    let lead = seconds(0.7);
+    let duration = lead + clip.duration() + seconds(2.6);
     let mut scene = PlanBuilder::new("outro", duration);
     let spoken = clip.place(&mut scene, lead);
     let title = CaptionPlan::line(
@@ -463,7 +471,7 @@ fn outro(narration: &Narration) -> Result<ScenePlan> {
             span("  small · tested · independent", Tone::Muted),
         ],
     );
-    CaptionActor::declare(&mut scene, "header", &title)?.show(&mut scene, ns(0.1));
+    CaptionActor::declare(&mut scene, "header", &title)?.show(&mut scene, seconds(0.1));
     let first_two = spoken.at("start with the first two");
     let the_rest = spoken.at("then bind retries");
     for (index, pr) in PRS.iter().enumerate() {
@@ -480,10 +488,16 @@ fn outro(narration: &Narration) -> Result<ScenePlan> {
         );
         let mut row = CaptionActor::declare(&mut scene, format!("pr-{}", pr.slug), &plan)?;
         let opacity = row.channel(&mut scene, "opacity", 0.0);
-        scene.spring(&opacity, ns(0.3 + index as f64 * 0.12), 0.35, 0.5, 0.0);
+        scene.spring(&opacity, seconds(0.3 + index as f64 * 0.12), 0.35, 0.5, 0.0);
         let highlight = if index < 2 { first_two } else { the_rest };
-        scene.spring(&opacity, highlight + ns(index as f64 * 0.25), 1.0, 0.4, 0.0);
-        scene.spring(&opacity, duration - ns(1.2), 0.0, 0.6, 0.0);
+        scene.spring(
+            &opacity,
+            highlight + seconds(index as f64 * 0.25),
+            1.0,
+            0.4,
+            0.0,
+        );
+        scene.spring(&opacity, duration - seconds(1.2), 0.0, 0.6, 0.0);
     }
     let mut closing = CaptionActor::declare(
         &mut scene,
@@ -499,7 +513,7 @@ fn outro(narration: &Narration) -> Result<ScenePlan> {
         .aligned(CaptionAlign::Center),
     )?;
     closing.type_in(&mut scene, spoken.at("each one is small"), 40.0, 1.2);
-    closing.hide(&mut scene, duration - ns(1.2));
+    closing.hide(&mut scene, duration - seconds(1.2));
     scene.finish().context("outro")
 }
 
