@@ -552,7 +552,7 @@ impl HeadlessRenderer {
                 let raster = size * TEXT_RASTER;
                 let line = (raster * 1.35).ceil();
                 let attrs = Attrs::new()
-                    .family(Family::Name("CommitMono"))
+                    .family(fonts::MONO)
                     .color(Color::rgb(255, 255, 255));
                 let width = ((text.chars().count() as f32 * raster * 0.7) as u32 + 64).min(4096);
                 make_sprite(

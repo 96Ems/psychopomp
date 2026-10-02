@@ -55,8 +55,8 @@ impl HeadlessRenderer {
         size: f32,
     ) -> PrototypeGlyphs {
         let family = match font {
-            Font::Sans => Family::Name("Helvetica Neue"),
-            Font::Mono => Family::Name("CommitMono"),
+            Font::Sans => fonts::SANS,
+            Font::Mono => fonts::MONO,
         };
         let attrs = Attrs::new().family(family).weight(Weight::NORMAL);
         let height = (size * 1.4).ceil() as u32;

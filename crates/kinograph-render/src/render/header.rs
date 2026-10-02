@@ -37,7 +37,7 @@ impl HeadlessRenderer {
         let height = (plan.font_size * 1.4).ceil() as u32;
         let width = plan.width.ceil() as u32;
         let attrs = Attrs::new()
-            .family(Family::Name("Helvetica Neue"))
+            .family(fonts::SANS)
             .weight(Weight::BOLD)
             .color(Color::rgb(235, 233, 227));
         let mut buffer = Buffer::new(

@@ -239,18 +239,14 @@ impl HeadlessRenderer {
             let mut buffer = Buffer::new(&mut self.font_system, Metrics::new(size, line_height));
             buffer.set_size(Some(width), None);
             buffer.set_wrap(Wrap::WordOrGlyph);
-            let base = Attrs::new().family(Family::Name("Helvetica Neue"));
+            let base = Attrs::new().family(fonts::SANS);
             let spans = block
                 .runs
                 .iter()
                 .map(|r| {
                     let attrs = base
                         .clone()
-                        .family(if r.code {
-                            Family::Name("CommitMono")
-                        } else {
-                            Family::Name("Helvetica Neue")
-                        })
+                        .family(if r.code { fonts::MONO } else { fonts::SANS })
                         .weight(if r.bold || block.heading > 0 {
                             Weight::BOLD
                         } else {

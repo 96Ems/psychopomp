@@ -657,7 +657,7 @@ fn table_label_sprite(
             continue;
         }
         let attrs = Attrs::new()
-            .family(Family::Name("Helvetica Neue"))
+            .family(fonts::SANS)
             .color(Color::rgb(255, 255, 255));
         let height = (size * 1.4).ceil() as u32;
         lines.push(make_sprite(
@@ -724,7 +724,7 @@ fn label_sprite(
         }
         let mut rasterize = |size| {
             let attrs = Attrs::new()
-                .family(Family::Name("CommitMono"))
+                .family(fonts::MONO)
                 .color(Color::rgb(255, 255, 255));
             make_sprite(
                 fonts,

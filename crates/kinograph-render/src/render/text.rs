@@ -1,7 +1,7 @@
 //! Immutable plain CommitMono text, separate from authored inline identities,
 //! SVG/bubble resources and bounded debug slots. Callers choose paint policy.
-use super::HeadlessRenderer;
-use cosmic_text::{Attrs, Color, Family, FontSystem, Metrics, SwashCache, Weight};
+use super::{HeadlessRenderer, fonts};
+use cosmic_text::{Attrs, Color, FontSystem, Metrics, SwashCache, Weight};
 use std::collections::HashMap;
 mod raster;
 pub(super) use raster::{TextSprite, blend_pixel, blend_pixel_at, make_sprite, paint_rect};
@@ -57,7 +57,7 @@ impl PlainTextCache {
         let sprites = self.sprites.entry(spec.into()).or_default();
         if !sprites.contains_key(text) {
             let attrs = Attrs::new()
-                .family(Family::Name("CommitMono"))
+                .family(fonts::MONO)
                 .weight(if spec.semibold {
                     Weight::SEMIBOLD
                 } else {
@@ -133,7 +133,7 @@ mod tests {
                 };
                 let actual = cache.get(&mut fonts, &mut swash, text, spec).clone();
                 let attrs = Attrs::new()
-                    .family(Family::Name("CommitMono"))
+                    .family(fonts::MONO)
                     .weight(if semibold {
                         Weight::SEMIBOLD
                     } else {
@@ -226,7 +226,7 @@ mod tests {
             // The baked corpus supports immutable white CommitMono requests;
             // this key intentionally does not claim arbitrary styled text.
             let attrs = Attrs::new()
-                .family(Family::Name("CommitMono"))
+                .family(fonts::MONO)
                 .color(Color::rgb(255, 255, 255));
             let actual = make_sprite(
                 &mut fonts,

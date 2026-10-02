@@ -6,9 +6,7 @@ use std::{
 
 use anyhow::{Context, Result, bail};
 use bytemuck::{Pod, Zeroable};
-use cosmic_text::{
-    Attrs, Buffer, Color, Family, FontSystem, Metrics, Shaping, SwashCache, Weight, Wrap,
-};
+use cosmic_text::{Attrs, Buffer, Color, FontSystem, Metrics, Shaping, SwashCache, Weight, Wrap};
 use wgpu::util::DeviceExt;
 
 use kinograph::code::{CodeLine, LineId, PlacedLine, StyledSpan, SyntaxStyle};
@@ -358,8 +356,8 @@ impl HeadlessRenderer {
         let code_column_width = make_sprite(
             &mut font_system,
             &mut swash_cache,
-            vec![("M", Attrs::new().family(Family::Name("CommitMono")))],
-            Attrs::new().family(Family::Name("CommitMono")),
+            vec![("M", Attrs::new().family(fonts::MONO))],
+            Attrs::new().family(fonts::MONO),
             Metrics::new(28.0, LINE_HEIGHT),
             64,
             LINE_HEIGHT as u32,
@@ -1291,7 +1289,7 @@ fn measure_code_spans(
             bail!("text byte range is outside the code line");
         }
     }
-    let base = Attrs::new().family(Family::Name("CommitMono"));
+    let base = Attrs::new().family(fonts::MONO);
     let spans: Vec<_> = spans
         .iter()
         .map(|span| (span.text.as_str(), attributes(base.clone(), span.style)))
@@ -1436,7 +1434,7 @@ fn make_title_sprite(
     file_name: &str,
 ) -> TextSprite {
     let attrs = Attrs::new()
-        .family(Family::Name("CommitMono"))
+        .family(fonts::MONO)
         .weight(Weight::NORMAL)
         .color(Color::rgb(161, 161, 170));
     make_sprite(
@@ -1552,7 +1550,7 @@ fn make_spans_sprite_at_size(
     font_size: f32,
     line_height: f32,
 ) -> TextSprite {
-    let base = Attrs::new().family(Family::Name("CommitMono"));
+    let base = Attrs::new().family(fonts::MONO);
     let spans: Vec<_> = if line_spans.is_empty() {
         vec![(" ", attributes(base.clone(), SyntaxStyle::Plain))]
     } else {
@@ -2023,7 +2021,7 @@ mod tests {
             {
                 bail!("text byte range is outside the code line");
             }
-            let base = Attrs::new().family(Family::Name("CommitMono"));
+            let base = Attrs::new().family(fonts::MONO);
             let spans = spans
                 .iter()
                 .map(|span| (span.text.as_str(), attributes(base.clone(), span.style)))

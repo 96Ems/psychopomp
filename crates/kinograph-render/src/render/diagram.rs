@@ -131,7 +131,7 @@ impl HeadlessRenderer {
         for node in &p.nodes {
             let mut add = |text: &str| -> Result<usize> {
                 let attrs = Attrs::new()
-                    .family(Family::Name("CommitMono"))
+                    .family(fonts::MONO)
                     .color(Color::rgb(255, 255, 255));
                 let sprite = make_sprite(
                     &mut self.font_system,
