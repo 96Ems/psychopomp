@@ -26,7 +26,7 @@ use kinograph::{
     deployment::DEPLOYMENT_QUEUE_RECIPE,
     editor::{EDITOR_RECIPE, EditorTargetSelector, POINTER_RECIPE, PointerRecipePlan},
     grid::GRID_RECIPE,
-    plan::{ActorPlan, MediaKindPlan, ScenePlan, StateChannelPlan},
+    plan::{ActorPlan, ContinuousChannelPlan, MediaKindPlan, ScenePlan, StateChannelPlan},
     rolling::ROLLING_NUMBER_RECIPE,
     sequence::SEQUENCE_RECIPE,
     stage::{STAGE_RECIPE, StagePlan},
@@ -35,6 +35,7 @@ use kinograph::{
     terminal::TERMINAL_RECORDING_RECIPE,
     value::VALUE_TOKEN_RECIPE,
 };
+use serde::de::DeserializeOwned;
 use serde_json::Value;
 use std::collections::HashSet;
 
@@ -169,6 +170,38 @@ impl Title {
             subtitle,
         })
     }
+}
+
+/// Decode an actor's recipe and run its own validation, naming the actor in
+/// either failure.
+pub(super) fn decode<T: DeserializeOwned>(
+    actor: &ActorPlan,
+    kind: &str,
+    validate: impl FnOnce(&T) -> Result<()>,
+) -> Result<T> {
+    let recipe: T = serde_json::from_value(actor.data.clone())
+        .with_context(|| format!("parse {kind} recipe for actor '{}'", actor.id))?;
+    validate(&recipe).with_context(|| format!("{kind} actor '{}'", actor.id))?;
+    Ok(recipe)
+}
+
+/// Typos in channel names would silently do nothing, so they fail preflight.
+pub(super) fn strict_channels(
+    actor_id: &str,
+    channels: &[ContinuousChannelPlan],
+    kind: &str,
+    accepts: impl Fn(&str) -> bool,
+) -> Result<()> {
+    if let Some(channel) = channels
+        .iter()
+        .find(|channel| channel.actor_id == actor_id && !accepts(&channel.property))
+    {
+        bail!(
+            "{kind} actor '{actor_id}' has unknown property '{}'",
+            channel.property
+        );
+    }
+    Ok(())
 }
 
 pub(super) fn vertical_mask(actor: &ActorPlan) -> Result<Option<VerticalMask>> {

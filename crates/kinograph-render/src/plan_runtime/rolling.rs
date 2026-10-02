@@ -1,12 +1,13 @@
 //! Rolling Numbers: the recipe is decoded and its channels checked during
 //! preflight; preparation measures its glyphs and compiles every change into
 //! closed-form tracks once.
-use anyhow::{Context, Result, bail, ensure};
+use anyhow::{Result, ensure};
 use kinograph::{
     plan::{ActorPlan, ContinuousChannelPlan},
     rolling::{CompiledRoll, RollingNumberPlan},
 };
 
+use super::preflight::{decode, strict_channels};
 use crate::render::HeadlessRenderer;
 
 pub(super) struct RollingNumberInput {
@@ -20,10 +21,7 @@ impl RollingNumberInput {
         channels: &[ContinuousChannelPlan],
         duration_nanos: u64,
     ) -> Result<Self> {
-        let plan: RollingNumberPlan = serde_json::from_value(actor.data.clone())
-            .with_context(|| format!("parse rolling number recipe for actor '{}'", actor.id))?;
-        plan.validate()
-            .with_context(|| format!("rolling number actor '{}'", actor.id))?;
+        let plan = decode(actor, "rolling number", RollingNumberPlan::validate)?;
         ensure!(
             plan.rolls
                 .last()
@@ -31,15 +29,9 @@ impl RollingNumberInput {
             "rolling number actor '{}' changes after the scene ends",
             actor.id
         );
-        for channel in channels.iter().filter(|c| c.actor_id == actor.id) {
-            if !matches!(channel.property.as_str(), "opacity" | "x" | "y") {
-                bail!(
-                    "rolling number actor '{}' has unknown property '{}'",
-                    actor.id,
-                    channel.property
-                );
-            }
-        }
+        strict_channels(&actor.id, channels, "rolling number", |property| {
+            matches!(property, "opacity" | "x" | "y")
+        })?;
         Ok(Self {
             id: actor.id.clone(),
             plan,

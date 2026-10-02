@@ -1,33 +1,22 @@
 //! Prepared Stage root: decoded and validated once, with strict channel names,
 //! and GPU resources (text atlas, bloom chain, pipelines) built at preparation.
-use anyhow::{Context, Result, bail};
+use anyhow::Result;
 use kinograph::{
     plan::{ActorPlan, ContinuousChannelPlan},
     stage::StagePlan,
 };
 
+use super::preflight::{decode, strict_channels};
 use crate::render::{HeadlessRenderer, StageGpu};
 
 pub(super) fn validate_recipe(
     actor: &ActorPlan,
     channels: &[ContinuousChannelPlan],
 ) -> Result<StagePlan> {
-    let plan: StagePlan = serde_json::from_value(actor.data.clone())
-        .with_context(|| format!("parse stage recipe for actor '{}'", actor.id))?;
-    plan.validate()
-        .with_context(|| format!("stage actor '{}'", actor.id))?;
-    for channel in channels
-        .iter()
-        .filter(|channel| channel.actor_id == actor.id)
-    {
-        if !plan.accepts(&channel.property) {
-            bail!(
-                "stage actor '{}' has unknown property '{}'",
-                actor.id,
-                channel.property
-            );
-        }
-    }
+    let plan = decode(actor, "stage", StagePlan::validate)?;
+    strict_channels(&actor.id, channels, "stage", |property| {
+        plan.accepts(property)
+    })?;
     Ok(plan)
 }
 
