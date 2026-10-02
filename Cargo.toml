@@ -15,6 +15,7 @@ members = [
   "scenes/quark-before-after",
   "scenes/pr-walkthrough",
   "scenes/rolling-number",
+  "scenes/callouts",
   "scenes/config-migration",
   "scenes/opencode-jr-architecture",
   "scenes/pr-50231",
