@@ -214,6 +214,18 @@ channel reveals characters in order and the accent block caret marks the typing
 position; alignment uses each line's full width, so centered text never slides
 while it appears. An optional chip draws a rounded surface behind the text.
 
+## Rolling Number
+
+A value such as `rc.112`, `0/8`, or `1,383` whose digits roll in place when it
+changes, ported from `@kitlangton/rolling-number`. Each digit place (by numeric
+run and place value, independent of separators) is a wheel; a change turns every
+changed wheel the way that number moved, while unchanged digits stay still. New
+places rise in after their room opens and old ones fade out as every glyph glides
+to its new position; separators and literals fade rather than roll. Static prefix
+and suffix spans slide with the layout. The values and their times belong to the
+recipe; a later change redirects wheels from their current position and velocity.
+It is a display of authored values, not a numeric tween.
+
 ## Tone
 
 A semantic color role shared by explainer recipes: plain, request, success,

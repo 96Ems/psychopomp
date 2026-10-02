@@ -41,6 +41,7 @@ mod presentation;
 mod proof;
 mod reel;
 mod rich_text;
+mod rolling;
 mod sequence;
 #[cfg(test)]
 mod stability_tests;
@@ -401,6 +402,7 @@ struct PreparedPlan {
     venn: Vec<venn::PreparedVenn>,
     sequences: Vec<sequence::PreparedSequence>,
     captions: Vec<caption::PreparedCaption>,
+    rolling: Vec<rolling::PreparedRollingNumber>,
     headers: Vec<header::PreparedHeader>,
 }
 
@@ -468,6 +470,7 @@ impl PreparedPlan {
             venn,
             sequences,
             captions,
+            rolling,
             native,
         } = input;
         let components = component_prototype::PreparedComponents::prepare_inputs(
@@ -512,6 +515,10 @@ impl PreparedPlan {
             .into_iter()
             .map(|(id, recipe)| header::PreparedHeader::from_recipe(id, recipe, renderer))
             .collect::<Result<Vec<_>>>()?;
+        let rolling = rolling
+            .into_iter()
+            .map(|input| input.prepare(renderer))
+            .collect();
         let root = match root {
             preflight::RootPlan::Blank => PreparedRoot::Blank,
             preflight::RootPlan::Title(title) => PreparedRoot::Title(title),
@@ -548,6 +555,7 @@ impl PreparedPlan {
             venn,
             sequences,
             captions,
+            rolling,
             headers,
         })
     }
@@ -752,6 +760,7 @@ impl PreparedPlan {
         // A stage always moves (spin, flow, grain), so every temporal sample renders.
         let stage = matches!(&self.root, PreparedRoot::Stage(_));
         key.ambient_time = (stage
+            || self.rolling_moves(time)
             || self.running_properties().iter().any(|property| {
                 timeline
                     .sample_at(property, time)
@@ -824,7 +833,13 @@ impl PreparedPlan {
                 *motion = [0; 4];
             }
         }
+        key.ambient_time = self.rolling_moves(time).then_some(time.to_bits());
         Ok(key)
+    }
+
+    /// A settling Rolling Number changes every sample without a channel moving.
+    fn rolling_moves(&self, time: f64) -> bool {
+        self.rolling.iter().any(|number| number.moving(time))
     }
 
     fn render_sample_using(
@@ -914,6 +929,11 @@ impl PreparedPlan {
         }
         for caption in &self.captions {
             caption.render(pixels, renderer, |actor, property, default| {
+                self.property_value(timeline, actor, property, time, default)
+            });
+        }
+        for number in &self.rolling {
+            number.render(pixels, renderer, time, |actor, property, default| {
                 self.property_value(timeline, actor, property, time, default)
             });
         }

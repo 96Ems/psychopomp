@@ -14,6 +14,7 @@ members = [
   "scenes/opencode-session-tool",
   "scenes/quark-before-after",
   "scenes/pr-walkthrough",
+  "scenes/rolling-number",
   "scenes/config-migration",
 ]
 default-members = ["crates/kinograph-render"]

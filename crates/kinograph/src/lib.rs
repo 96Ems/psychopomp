@@ -13,6 +13,7 @@ pub mod math;
 pub mod motion;
 pub mod plan;
 pub mod playback;
+pub mod rolling;
 pub mod sequence;
 pub mod stage;
 pub mod state;

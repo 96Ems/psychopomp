@@ -447,6 +447,26 @@ Components used by explainers:
 - `caption`: `origin`, `align`, `size`, `lines` of `{ text, tone }` spans, `chip`.
   Channels: `opacity`, `x`, `y`, `typed`, `caret`. `CaptionActor::type_in` writes
   one exact step per character; `show` and `hide` fade.
+- `rolling-number`: `origin` (aligned edge x, center y), `align`, `size`, `bold`,
+  `tone`, static `prefix`/`suffix` spans (`{ text, tone }`), the initial `value`,
+  and `rolls` of `{ atNanos, value }` in increasing time. Optional
+  `durationNanos` (500 ms), `stagger` (`outward` | `start` | `end` | `none`),
+  `direction` (`auto` | `up` | `down`), `blur` (smear strength, 1; 0 disables),
+  and `chip`. Channels: `opacity`, `x`, `y`. Digits roll; `,` between digits
+  groups and `.` between digits starts a fraction, so `rc.` and `/` are literals.
+  `RollingNumberActor::roll` appends a change at a phrase's time; `show`/`hide`
+  fade like a caption. Plans using it are export-only (not `plan present`).
+  ```rust
+  let mut version = RollingNumberActor::declare(&mut scene, "version",
+      RollingNumberPlan::new([960.0, 300.0], 72.0, "rc.112")
+          .aligned(CaptionAlign::Center).tone(Tone::Accent)
+          .prefix(vec![CaptionSpanPlan::new("opencode ", Tone::Muted)]).chip())?;
+  version.show(&mut scene, at);
+  version.roll(&mut scene, phrase_start, "rc.117")?;
+  ```
+  The showroom is `cargo run -p kinograph-rolling-number` (writes
+  `target/rolling-number.json`); render it with
+  `cargo run --release -- plan render target/rolling-number.json output/rolling-number.mp4 --theme opencode`.
 - Editor Line Marks: `"mark": "added" | "removed"` on a line, with presence
   channel `mark.<line-id>`; `panel-x` and `panel-opacity` move and fade the card.
 - `--theme opencode` renders with the OpenCode TUI's tokens; `--theme neutral`
@@ -497,7 +517,7 @@ Components used by explainers:
   `curve` one of `linear`, `smoothstep`, `smootherstep`, `cubic-out`, `cubic-in-out`,
   `{ "decelerate": s }`, or `{ "cubic-bezier": [x1, y1, x2, y2] }`). Use `ease` for
   timed curves; never approximate one with stepped `set` events, which stutter.
-- Reusable math is `kinograph::math` (`lerp`, `remap_clamp`, `smoothstep`, `easing`,
+- Reusable math is `kinograph::math` (`lerp`, `remap_clamp`, `smoothstep`, `easing`, `dynamics::settle`,
   `curve::Polyline`, `shapes::connect`, glam vectors). Use it in Scene Programs too.
 
 `scenes/pr-walkthrough` also emits `pr-50825.reel.json`, a Stage film of #50825

@@ -1024,6 +1024,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "kinograph-rolling-number"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "kinograph",
+]
+
+[[package]]
 name = "kurbo"
 version = "0.13.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"

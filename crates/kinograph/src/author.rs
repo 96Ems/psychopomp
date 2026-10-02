@@ -105,6 +105,23 @@ impl PlanBuilder {
         Ok(ActorHandle { id })
     }
 
+    /// Replace a declared actor's recipe data, for handles whose recipe grows
+    /// as the scene is authored (such as a Rolling Number's later values).
+    pub fn replace_actor_data(
+        &mut self,
+        actor: &ActorHandle,
+        data: impl Serialize,
+    ) -> Result<(), serde_json::Error> {
+        let data = serde_json::to_value(data)?;
+        self.plan
+            .actors
+            .iter_mut()
+            .find(|candidate| candidate.id == actor.id)
+            .expect("actor handle belongs to this plan builder")
+            .data = data;
+        Ok(())
+    }
+
     pub fn continuous(
         &mut self,
         actor: &ActorHandle,

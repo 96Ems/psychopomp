@@ -25,6 +25,7 @@ mod grid;
 mod header;
 mod line_marks;
 mod rich_text;
+mod rolling;
 mod sequence;
 mod stage;
 mod task;
@@ -1606,9 +1607,9 @@ fn composite_text_sprite(
 #[allow(clippy::too_many_arguments)]
 fn composite_text_region(
     canvas: &mut [u8],
-    [canvas_width, canvas_height]: [u32; 2],
+    size: [u32; 2],
     sprite: &TextSprite,
-    [x, y]: [f32; 2],
+    origin: [f32; 2],
     source_left: f32,
     clip_width: f32,
     blur: f32,
@@ -1616,9 +1617,82 @@ fn composite_text_region(
     clip_y: [f32; 2],
     mask: Option<VerticalMask>,
 ) {
+    composite_text_filtered(
+        canvas,
+        size,
+        sprite,
+        origin,
+        source_left,
+        clip_width,
+        TextFilter::Blur(blur),
+        opacity,
+        clip_y,
+        mask,
+    );
+}
+
+/// How a text sprite is resampled: a soft radial blur, or a vertical smear
+/// that crossfades a sharp copy into a Gaussian streak (a Rolling Number's
+/// fast wheel).
+#[derive(Clone, Copy)]
+enum TextFilter {
+    Blur(f32),
+    Smear { sigma: f32, amount: f32 },
+}
+
+impl TextFilter {
+    /// Vertical taps out to three sigma, at most a pixel apart so thin
+    /// strokes streak rather than repeat; the sharp copy keeps `1 - amount`.
+    fn smear_taps(sigma: f32, amount: f32) -> Vec<(f32, f32)> {
+        let steps = (3.0 * sigma).ceil().max(1.0) as i32;
+        let gaussian = (-steps..=steps)
+            .map(|step| {
+                let offset = step as f32 * 3.0 * sigma / steps as f32;
+                (offset, (-0.5 * (offset / sigma).powi(2)).exp())
+            })
+            .collect::<Vec<_>>();
+        let total: f32 = gaussian.iter().map(|(_, weight)| weight).sum();
+        gaussian
+            .into_iter()
+            .map(|(offset, weight)| {
+                let sharp = if offset == 0.0 { 1.0 - amount } else { 0.0 };
+                (offset, amount * weight / total + sharp)
+            })
+            .collect()
+    }
+
+    /// Extra source support, in pixels, along x and y.
+    fn reach(self) -> [f32; 2] {
+        match self {
+            Self::Blur(blur) => [blur, blur],
+            Self::Smear { sigma, .. } => [0.0, 3.0 * sigma],
+        }
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
+fn composite_text_filtered(
+    canvas: &mut [u8],
+    [canvas_width, canvas_height]: [u32; 2],
+    sprite: &TextSprite,
+    [x, y]: [f32; 2],
+    source_left: f32,
+    clip_width: f32,
+    filter: TextFilter,
+    opacity: f32,
+    clip_y: [f32; 2],
+    mask: Option<VerticalMask>,
+) {
     if opacity <= 0.0 || clip_width <= 0.0 {
         return;
     }
+    let [reach_x, reach_y] = filter.reach();
+    let smear = match filter {
+        TextFilter::Smear { sigma, amount } if sigma > 0.0 && amount > 0.0 => {
+            TextFilter::smear_taps(sigma, amount)
+        }
+        _ => Vec::new(),
+    };
     let source_clip = [
         source_left,
         (source_left + clip_width).min(sprite.width as f32),
@@ -1628,10 +1702,10 @@ fn composite_text_region(
     });
     // The source mask is filtered with the glyph. Include its complete support;
     // otherwise changing floor/ceil bounds would discard nonzero filtered texels.
-    let left = x - source_left + source_clip[0].floor() - blur - 1.0;
-    let right = x - source_left + source_clip[1].ceil() + blur + 1.0;
-    let top = (y - blur - 1.0).max(clip_y[0]);
-    let bottom = (y + sprite.height as f32 + blur + 1.0).min(clip_y[1]);
+    let left = x - source_left + source_clip[0].floor() - reach_x - 1.0;
+    let right = x - source_left + source_clip[1].ceil() + reach_x + 1.0;
+    let top = (y - reach_y - 1.0).max(clip_y[0]);
+    let bottom = (y + sprite.height as f32 + reach_y + 1.0).min(clip_y[1]);
     for target_y in (top.floor() as i32).max(0)..(bottom.ceil() as i32).min(canvas_height as i32) {
         let row_start = (target_y as f32).max(clip_y[0]);
         let row_end = (target_y as f32 + 1.).min(clip_y[1]);
@@ -1647,24 +1721,34 @@ fn composite_text_region(
             let source_x = source_left + target_x as f32 - x;
             let source_y = target_y as f32 - y;
             let mut color = [0.0; 4];
-            if blur <= 0.0 {
-                color = sample_text_sprite(sprite, source_x, source_y, source_clip);
-            } else {
-                // Bilinear sample locations vary continuously with blur; no
-                // rounded taps that suddenly turn a sharp glyph into a 3x3 copy.
-                for (dy, wy) in [(-1.0, 0.25), (0.0, 0.5), (1.0, 0.25)] {
-                    for (dx, wx) in [(-1.0, 0.25), (0.0, 0.5), (1.0, 0.25)] {
-                        let sample = sample_text_sprite(
-                            sprite,
-                            source_x + dx * blur,
-                            source_y + dy * blur,
-                            source_clip,
-                        );
-                        for channel in 0..4 {
-                            color[channel] += sample[channel] * wx * wy;
+            match filter {
+                TextFilter::Blur(blur) if blur > 0.0 => {
+                    // Bilinear sample locations vary continuously with blur; no
+                    // rounded taps that suddenly turn a sharp glyph into a 3x3 copy.
+                    for (dy, wy) in [(-1.0, 0.25), (0.0, 0.5), (1.0, 0.25)] {
+                        for (dx, wx) in [(-1.0, 0.25), (0.0, 0.5), (1.0, 0.25)] {
+                            let sample = sample_text_sprite(
+                                sprite,
+                                source_x + dx * blur,
+                                source_y + dy * blur,
+                                source_clip,
+                            );
+                            for channel in 0..4 {
+                                color[channel] += sample[channel] * wx * wy;
+                            }
                         }
                     }
                 }
+                TextFilter::Smear { .. } if !smear.is_empty() => {
+                    for &(offset, weight) in &smear {
+                        let sample =
+                            sample_text_sprite(sprite, source_x, source_y + offset, source_clip);
+                        for channel in 0..4 {
+                            color[channel] += sample[channel] * weight;
+                        }
+                    }
+                }
+                _ => color = sample_text_sprite(sprite, source_x, source_y, source_clip),
             }
             if color[3] <= 0.0 {
                 continue;

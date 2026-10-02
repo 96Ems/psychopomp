@@ -40,6 +40,8 @@ cargo run --release -- plan present target/grid-styles/deck.json
 cargo run -p kinograph-component-prototypes -- --slideshow
 cargo run --release -- plan present target/slideshow-components/deck.json
 cargo run -p kinograph-pr-walkthrough
+cargo run -p kinograph-rolling-number
+cargo run --release -- plan render target/rolling-number.json output/rolling-number.mp4 --theme opencode
 cargo run --release -- plan render scenes/pr-walkthrough/pr-walkthrough.reel.json output/pr-walkthrough.mp4 --theme opencode
 bun scripts/narrate.ts <scene>/narration/script.json [--draft]
 bun scripts/sheet.ts <plan-or-reel.json> <from:to:step | t1,t2,...> [--theme NAME] [--crop x,y,w,h] [--shutter]
@@ -79,13 +81,15 @@ Do not run the full render as routine validation when unit tests and static chec
 - `crates/kinograph/src/transcript.rs`: word timing ingestion, word and phrase cue lookup
 - `crates/kinograph/src/sequence.rs`: Sequence Diagram recipe values, slot geometry, validation, and the `SequenceActor` authoring handle
 - `crates/kinograph/src/caption.rs`: Caption recipe values and the `CaptionActor` authoring handle (typing, show, hide)
-- `crates/kinograph/src/math.rs` and `math/`: shared motion and geometry math (glam vectors, lerp/remap/smoothstep, easing, arc-length curves, shape ports and connectors, deterministic hash)
+- `crates/kinograph/src/rolling.rs`: Rolling Number recipe values, value tokenization, the closed-form roll compiler, and the `RollingNumberActor` handle (`roll`, show, hide)
+- `crates/kinograph/src/math.rs` and `math/`: shared motion and geometry math (glam vectors, lerp/remap/smoothstep, easing, closed-form dynamics such as the settling spring, arc-length curves, shape ports and connectors, deterministic hash)
 - `crates/kinograph/src/stage.rs`: Stage elements, strict channels, perspective camera, orb geometry, the packet clock (`stage::packet`), and the `StageActor` authoring handle (`settle_in`, `ease`, `clock`, `connect`, `send`, `hit`, `twang`, `land`)
 - `crates/kinograph/src/tone.rs`: semantic Tone roles shared by explainer recipes
 - `crates/kinograph/src/highlight.rs`: line-local TypeScript highlighting into editor spans
 - `crates/kinograph-render/src/plan_runtime/reel.rs`: Reel preparation, layer mixing, media retiming, and reel frame/video delivery
 - `crates/kinograph-render/src/plan_runtime/sequence.rs` and `caption.rs`: strict-channel preflight for the explainer overlays
 - `crates/kinograph-render/src/render/sequence.rs` and `render/caption.rs`: Sequence Diagram and Caption pixels
+- `crates/kinograph-render/src/plan_runtime/rolling.rs` and `render/rolling.rs`: Rolling Number preflight/compilation and its masked, smeared wheels
 - `crates/kinograph-render/src/plan_runtime/stage.rs`: Stage root preflight and preparation
 - `crates/kinograph-render/src/render/stage.rs`, `stage.wgsl`, `stage_post.wgsl`: Stage primitives, HDR bloom, and composite; `KINOGRAPH_SHADER_DIR` loads the WGSL live
 - `crates/kinograph/src/effects/`: GPU-free special-effect clocks and particle poses; shared dynamics stay in `kinograph::math::dynamics`
@@ -141,6 +145,7 @@ Do not run the full render as routine validation when unit tests and static chec
 - `scenes/opencode-architecture/`: four-step Daemon / merge port using the provisional box-and-wire diagram surface
 - `scenes/opencode-session-tool/`: rapid-fire OpenCode v2 hot-reload proof using split Vim/OpenCode terminal video, layered SFX, text, and discrete state
 - `scenes/deployment-queue/`: canonical state-driven simulated UI proof with keyed insertion, phase replacement, failure focus, and retry
+- `scenes/rolling-number/`: Rolling Number showroom: roll up and down, a mid-roll redirect, a carry into a new place, and a shrink
 - `crates/kinograph-render/src/scene.wgsl`: editor geometry and focus shader
 
 Preserve these boundaries unless a concrete scene or second implementation demonstrates a better seam. The lightweight `kinograph` and heavyweight `kinograph-render` crates are a demonstrated process and compilation seam. Do not introduce a generic scene graph, renderer or encoder traits, plugins, or additional crate splits merely for future flexibility.

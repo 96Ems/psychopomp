@@ -46,7 +46,7 @@ pub enum CaptionAlign {
 }
 
 impl CaptionAlign {
-    fn is_default(&self) -> bool {
+    pub fn is_default(&self) -> bool {
         *self == Self::Left
     }
 }

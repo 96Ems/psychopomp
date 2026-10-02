@@ -402,6 +402,20 @@ Sequences draw with the other diagram surfaces (after Venn and Value Tokens);
 captions draw above rich text and below plain text. Semantic colors resolve through
 `Theme::tone`, the one place status colors are fixed (Neutral overrides them).
 
+A `rolling-number` overlay (drawn just after captions) carries its own timed
+values, like editor or grid snapshots, rather than a State Channel. The
+lightweight `rolling.rs` tokenizes each value into stable digit places,
+separators, and literals, then folds the changes in order into closed-form
+settling tracks (`math::dynamics::settle`) per column: x, wheel position,
+opacity, and rise. Each change samples the earlier tracks at its time, so a
+redirect keeps position and velocity, and any time samples without history.
+The renderer supplies only glyph advances to that compilation, then paints each
+wheel's two straddling faces through a stationary `VerticalMask` window with a
+speed-driven vertical smear (`TextFilter::Smear`). Because its motion lives
+outside Continuous Channels, a settling number marks its samples distinct
+(`ambient_time`), including over a Stage, so shutter samples are not merged. Its
+schedule follows the authored clock, so plans using it are export-only.
+
 ### Stage
 
 `stage` is an exclusive root recipe. The lightweight crate (`stage.rs`) owns the

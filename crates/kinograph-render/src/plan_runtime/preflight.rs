@@ -9,6 +9,7 @@ use super::{
     generated,
     grid::PreparedGrid,
     header,
+    rolling::RollingNumberInput,
     sequence::PreparedSequence,
     terminal::TerminalInput,
     value::PreparedValueToken,
@@ -26,6 +27,7 @@ use kinograph::{
     editor::{EDITOR_RECIPE, EditorTargetSelector, POINTER_RECIPE, PointerRecipePlan},
     grid::GRID_RECIPE,
     plan::{ActorPlan, MediaKindPlan, ScenePlan, StateChannelPlan},
+    rolling::ROLLING_NUMBER_RECIPE,
     sequence::SEQUENCE_RECIPE,
     stage::{STAGE_RECIPE, StagePlan},
     state::{StateTrack, TimedState},
@@ -48,6 +50,7 @@ pub(super) struct Plan {
     pub venn: Vec<PreparedVenn>,
     pub sequences: Vec<PreparedSequence>,
     pub captions: Vec<PreparedCaption>,
+    pub rolling: Vec<RollingNumberInput>,
     pub native: bool,
 }
 pub(super) enum RootPlan {
@@ -313,6 +316,7 @@ impl Plan {
         let mut venn = Vec::new();
         let mut sequences = Vec::new();
         let mut captions = Vec::new();
+        let mut rolling = Vec::new();
         for actor in &plan.actors {
             match actor.recipe.as_str() {
                 "title-card" => put_root(&mut root, RootPlan::Title(Title::new(actor, &plan)?))?,
@@ -399,6 +403,11 @@ impl Plan {
                 CAPTION_RECIPE => {
                     captions.push(PreparedCaption::new(actor, &plan.continuous_channels)?)
                 }
+                ROLLING_NUMBER_RECIPE => rolling.push(RollingNumberInput::new(
+                    actor,
+                    &plan.continuous_channels,
+                    plan.duration_nanos,
+                )?),
                 recipe => bail!("unsupported actor recipe '{recipe}'"),
             }
         }
@@ -466,7 +475,9 @@ impl Plan {
             | RootPlan::Stage { .. } => true,
             RootPlan::Terminal(_) | RootPlan::Deployment(_) => false,
         } && plan.state_channels.is_empty()
-            && plan.media.is_empty();
+            && plan.media.is_empty()
+            // Their changes follow the authored clock, not Playback destinations.
+            && rolling.is_empty();
         let mut result = Self {
             plan,
             root,
@@ -479,6 +490,7 @@ impl Plan {
             venn,
             sequences,
             captions,
+            rolling,
             native,
         };
         let editors = match &result.root {
