@@ -495,7 +495,8 @@ Components used by explainers:
   `twang`, and `land`. `bounce` and `to` spring any channel (undeclared
   channels start at 0; declare other starting poses with `channel`), `ease` follows
   any curve, and `clock` starts an elapsed-seconds channel that runs to the scene's
-  end for effect rigs such as the card spinner. Use a `Smootherstep` ease for staged
+  end for effect rigs such as the card spinner (`clock_for` stops it after a fixed
+  lifetime, as for `burst` or `post.rewind`). Use a `Smootherstep` ease for staged
   camera moves with exact timing, springs for responsive camera/panel settling,
   and instant-attack fades for light.
   Orb `pulse` changes illumination, not geometry or attached beam ports. Card

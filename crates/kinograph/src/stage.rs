@@ -9,7 +9,7 @@ use anyhow::{Result, bail, ensure};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    author::{ActorHandle, ContinuousHandle, PlanBuilder},
+    author::{ActorHandle, ContinuousHandle, PlanBuilder, whole_millis},
     caption::{self, CaptionAlign, CaptionSpanPlan},
     effects::spinner::Mark,
     math::{
@@ -36,7 +36,8 @@ pub struct StagePlan {
     pub elements: Vec<StageElement>,
 }
 
-/// Look of the whole frame; the matching `post.*` channels animate these.
+/// Look of the whole frame. The `post.bloom` and `post.vignette` channels
+/// override `bloom` and `vignette`; `grain` and `backdrop` stay fixed.
 #[derive(Clone, Copy, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct StagePost {
@@ -566,9 +567,21 @@ impl StageActor {
     /// the scene; before it starts the channel reads -1 ("not yet"). Effect
     /// rigs sample their own poses from it.
     pub fn clock(&mut self, scene: &mut PlanBuilder, property: &str, at_nanos: u64) {
-        let channel = self.channel(scene, property, -1.0);
         // Whole milliseconds, as `ease` durations are, so the slope is exactly 1.
         let seconds = (scene.duration_nanos().saturating_sub(at_nanos) / 1_000_000) as f32 / 1000.0;
+        self.clock_for(scene, property, at_nanos, seconds);
+    }
+
+    /// Like [`Self::clock`], but the clock stops at `seconds`, as for an effect
+    /// with a fixed lifetime (a packet, a burst, a rewind).
+    pub fn clock_for(
+        &mut self,
+        scene: &mut PlanBuilder,
+        property: &str,
+        at_nanos: u64,
+        seconds: f32,
+    ) {
+        let channel = self.channel(scene, property, -1.0);
         scene.set(&channel, at_nanos, 0.0);
         if seconds > 0.0 {
             scene.ease(&channel, at_nanos, seconds, seconds, Ease::Linear);
@@ -682,20 +695,12 @@ impl StageActor {
         at_nanos: u64,
         seconds: f32,
     ) -> u64 {
-        let dispatch = at_nanos.saturating_sub(millis(packet::GATHER));
-        let age = self.channel(scene, &format!("{packet}.age"), -1.0);
-        scene.set(&age, dispatch, 0.0);
+        let dispatch = at_nanos.saturating_sub(whole_millis(packet::GATHER));
         // The clock runs at real speed until every phase has finished.
-        scene.ease(
-            &age,
-            dispatch,
-            packet::LIFETIME,
-            packet::LIFETIME,
-            Ease::Linear,
-        );
+        self.clock_for(scene, &format!("{packet}.age"), dispatch, packet::LIFETIME);
         let flight = self.channel(scene, &format!("{packet}.flight"), seconds);
         scene.set(&flight, dispatch, seconds);
-        dispatch + millis(packet::GATHER) + millis(seconds)
+        dispatch + whole_millis(packet::GATHER) + whole_millis(seconds)
     }
 
     /// Plug `beam` in, starting at `at_nanos`: the port resolves softly,
@@ -711,11 +716,11 @@ impl StageActor {
     ) -> u64 {
         let port = self.channel(scene, &format!("{beam}.port"), 0.0);
         scene.ease(&port, at_nanos, 1.0, PORT_POP_SECONDS, Ease::Smootherstep);
-        let start = at_nanos + millis(PORT_POP_SECONDS);
+        let start = at_nanos + whole_millis(PORT_POP_SECONDS);
         let draw = self.channel(scene, &format!("{beam}.draw"), 0.0);
         scene.set(&draw, start, 0.0);
         scene.ease(&draw, start, 1.0, seconds, DRAW_CURVE);
-        let contact = start + millis(seconds);
+        let contact = start + whole_millis(seconds);
         self.hit(scene, &format!("{beam}.surge"), contact, 0.45, 0.0);
         self.twang(scene, beam, contact);
         if let Some(StageElement::Beam { to, .. }) = self.plan.element(beam) {
@@ -753,12 +758,6 @@ impl StageActor {
             _ => {}
         }
     }
-}
-
-/// Whole milliseconds, like `PlanBuilder::ease`: an f32 duration such as 0.8 is
-/// not exact in nanoseconds.
-fn millis(seconds: f32) -> u64 {
-    (f64::from(seconds) * 1000.0).round() as u64 * 1_000_000
 }
 
 #[cfg(test)]

@@ -137,10 +137,7 @@ pub fn film(narration: &Narration) -> Result<ScenePlan> {
 
     // The reset: the object bursts and its unflushed write is gone.
     let reset = v.at("object resets");
-    s.channel(sc, "session.burst", -1.0);
-    s.set(sc, "session.burst", reset, 0.0);
-    let life = combustion::DURATION;
-    s.ease(sc, "session.burst", reset, life, life, Ease::Linear);
+    s.clock_for(sc, "session.burst", reset, combustion::DURATION);
     s.to(sc, "session.hurt", reset, 1.0, 0.2);
     s.hit(sc, "post.chroma", reset, 0.14, 0.0);
     s.hit(sc, "post.bloom", reset, 0.35, 0.18);
@@ -183,9 +180,7 @@ pub fn film(narration: &Narration) -> Result<ScenePlan> {
     // Rewind: the object reassembles, and the pass is time-boxed.
     let boxed = v.at("coordinator");
     let rewind = boxed - ns(0.4);
-    s.channel(sc, "post.rewind", -1.0);
-    s.set(sc, "post.rewind", rewind, 0.0);
-    s.ease(sc, "post.rewind", rewind, 1.4, 1.4, Ease::Linear);
+    s.clock_for(sc, "post.rewind", rewind, 1.4);
     sc.media(sound("rewind", LAUNCH, rewind - ns(0.1), -15.0));
     s.ease(
         sc,

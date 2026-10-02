@@ -509,10 +509,7 @@ fn stage_film(narration: &Narration) -> Result<ScenePlan> {
     sc.media(sound("kill-impact", IMPACT, kill_arrival, -5.0));
     sc.media(sound("shatter", TASK_DEATH, kill_arrival + ns(0.05), -7.0));
     // The burst clock owns collapse, fire, smoke, and embers (combustion.rs).
-    s.channel(sc, "service.burst", -1.0);
-    s.set(sc, "service.burst", kill_arrival, 0.0);
-    let life = combustion::DURATION;
-    s.ease(sc, "service.burst", kill_arrival, life, life, Ease::Linear);
+    s.clock_for(sc, "service.burst", kill_arrival, combustion::DURATION);
     s.to(sc, "service.hurt", kill_arrival, 1.0, 0.2);
     s.hit(sc, "post.chroma", kill_arrival, 0.16, 0.0);
     // The blow pushes the frame the way the SIGTERM travelled; then each
@@ -605,9 +602,7 @@ fn stage_film(narration: &Narration) -> Result<ScenePlan> {
 
     // Rewind: everything returns to the moment before the probe.
     let switch = before.end() + ns(0.5);
-    s.channel(sc, "post.rewind", -1.0);
-    s.set(sc, "post.rewind", switch, 0.0);
-    s.ease(sc, "post.rewind", switch, 1.4, 1.4, Ease::Linear);
+    s.clock_for(sc, "post.rewind", switch, 1.4);
     before_chip.hide(sc, switch);
     footer_before.hide(sc, switch);
     let mut rewind_chip = chip(sc, "chip-rewind", Tone::Accent, "◀◀ rewind")?;
