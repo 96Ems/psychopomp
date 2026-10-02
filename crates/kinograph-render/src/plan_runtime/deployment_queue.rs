@@ -15,7 +15,10 @@ use crate::render::{
     DeploymentItemFrame, DeploymentQueueFrame, HeadlessRenderer, deployment_row_center_y,
 };
 
-use super::keyed_layout::{KeyedLayoutTrack, LayoutMotion, LayoutSnapshot, LayoutTarget};
+use super::{
+    keyed_layout::{KeyedLayoutTrack, LayoutMotion, LayoutSnapshot, LayoutTarget},
+    seconds_f64,
+};
 
 pub(super) struct PreparedDeploymentQueue {
     actor_id: String,
@@ -532,10 +535,6 @@ fn progress_spring() -> SpringProfile {
 
 fn transition_spring() -> SpringProfile {
     SpringProfile::from_visual_duration(0.24, 0.0, 0.001, 0.001)
-}
-
-fn seconds_f64(nanos: u64) -> f64 {
-    nanos as f64 / 1_000_000_000.0
 }
 
 #[cfg(test)]

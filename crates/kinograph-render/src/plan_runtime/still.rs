@@ -1,11 +1,16 @@
-//! Single frames and frame snapshots of a plan or reel, optionally exposed
-//! through the same shutter as video export, and compared pixel by pixel.
+//! A loaded plan or reel delivered as video, single frames, or frame
+//! snapshots; stills may be exposed through the same shutter as video export
+//! and compared pixel by pixel.
 use std::{fs, path::Path};
 
 use anyhow::{Context, Result, bail, ensure};
 use serde_json::json;
 
-use super::{PreparedPlan, Theme, delivery, new_renderer, preflight, read_plan, reel};
+use kinograph::composition::TimeRange;
+
+use super::{
+    DECK_UNSUPPORTED, PlanFile, PreparedPlan, Theme, delivery, new_renderer, preflight, reel,
+};
 use crate::{
     render::HeadlessRenderer,
     scenes::{HEIGHT, WIDTH, exposure, merge_equal_samples},
@@ -20,19 +25,44 @@ pub(super) enum Loaded {
 impl Loaded {
     pub(super) async fn load(path: &Path, theme: Theme) -> Result<(Self, HeadlessRenderer)> {
         let base = path.parent().unwrap_or_else(|| Path::new("."));
-        if reel::is_reel(path)? {
-            let plan = reel::read(path)?;
-            let mut renderer = new_renderer(&plan.id).await?;
-            renderer.set_theme(theme);
-            let prepared = reel::PreparedReel::prepare(plan, base, &mut renderer)?;
-            return Ok((Self::Reel(prepared), renderer));
+        Self::prepare(PlanFile::read(path)?, base, theme).await
+    }
+
+    pub(super) async fn prepare(
+        file: PlanFile,
+        base: &Path,
+        theme: Theme,
+    ) -> Result<(Self, HeadlessRenderer)> {
+        match file {
+            PlanFile::Reel(plan) => {
+                let mut renderer = new_renderer(&plan.id).await?;
+                renderer.set_theme(theme);
+                let prepared = reel::PreparedReel::prepare(plan, base, &mut renderer)?;
+                Ok((Self::Reel(prepared), renderer))
+            }
+            PlanFile::Plan(plan) => {
+                let input = preflight::Plan::new(plan)?;
+                let mut renderer = new_renderer(&input.plan.id).await?;
+                renderer.set_theme(theme);
+                let prepared = PreparedPlan::prepare_preflight(input, base, &mut renderer)?;
+                renderer.set_file_name(prepared.file_name());
+                Ok((Self::Plan(Box::new(prepared)), renderer))
+            }
+            PlanFile::Deck(_) => bail!(DECK_UNSUPPORTED),
         }
-        let input = preflight::Plan::new(read_plan(path)?)?;
-        let mut renderer = new_renderer(&input.plan.id).await?;
-        renderer.set_theme(theme);
-        let prepared = PreparedPlan::prepare_preflight(input, base, &mut renderer)?;
-        renderer.set_file_name(prepared.file_name());
-        Ok((Self::Plan(Box::new(prepared)), renderer))
+    }
+
+    /// Encode `window` of the global clock to `output`.
+    pub(super) fn render_video(
+        &self,
+        renderer: &mut HeadlessRenderer,
+        output: &Path,
+        window: TimeRange,
+    ) -> Result<()> {
+        match self {
+            Self::Plan(plan) => delivery::render_video(plan, renderer, output, window),
+            Self::Reel(reel) => delivery::render_reel(reel, renderer, output, window),
+        }
     }
 
     fn duration_seconds(&self) -> f64 {

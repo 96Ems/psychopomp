@@ -1,11 +1,12 @@
 //! Prepared Sequence Diagrams: the recipe is decoded and validated once, and
 //! every channel on the actor must name a real participant, row, or property.
-use anyhow::{Context, Result, bail};
+use anyhow::Result;
 use kinograph::{
     plan::{ActorPlan, ContinuousChannelPlan},
     sequence::SequencePlan,
 };
 
+use super::preflight::{decode, strict_channels};
 use crate::render::HeadlessRenderer;
 
 pub(super) struct PreparedSequence {
@@ -15,22 +16,10 @@ pub(super) struct PreparedSequence {
 
 impl PreparedSequence {
     pub(super) fn new(actor: &ActorPlan, channels: &[ContinuousChannelPlan]) -> Result<Self> {
-        let plan: SequencePlan = serde_json::from_value(actor.data.clone())
-            .with_context(|| format!("parse sequence recipe for actor '{}'", actor.id))?;
-        plan.validate()
-            .with_context(|| format!("sequence actor '{}'", actor.id))?;
-        for channel in channels
-            .iter()
-            .filter(|channel| channel.actor_id == actor.id)
-        {
-            if !accepts(&plan, &channel.property) {
-                bail!(
-                    "sequence actor '{}' has unknown property '{}'",
-                    actor.id,
-                    channel.property
-                );
-            }
-        }
+        let plan = decode(actor, "sequence", SequencePlan::validate)?;
+        strict_channels(&actor.id, channels, "sequence", |property| {
+            accepts(&plan, property)
+        })?;
         Ok(Self {
             id: actor.id.clone(),
             plan,
@@ -49,7 +38,6 @@ impl PreparedSequence {
     }
 }
 
-/// Typos in channel names would silently do nothing, so they fail preflight.
 fn accepts(plan: &SequencePlan, property: &str) -> bool {
     if matches!(property, "opacity" | "x" | "y" | "lifelines") {
         return true;

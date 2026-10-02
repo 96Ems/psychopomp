@@ -123,7 +123,7 @@ fn title_and_text_are_typed_before_resources_but_keep_distinct_state_rules() {
     p.state_channels
         .push(state("subtitle", json!("live"), Value::Null));
     let checked = Plan::new(p).unwrap();
-    assert!(!checked.native);
+    assert!(!checked.native());
     let RootPlan::Title(title) = checked.root else {
         panic!("title root")
     };

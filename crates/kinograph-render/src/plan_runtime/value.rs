@@ -98,31 +98,7 @@ mod tests {
                 );
                 now += Duration::from_millis(130);
             }
-            // Reduced motion reaches the identical authored hold, not a second
-            // rendering interpretation of the destination.
-            let mut reduced = p.playback(true).unwrap();
-            for step in 0..p.plan.presentation_steps.len() {
-                let sample = reduced.sample(Duration::ZERO);
-                let actual = p
-                    .render_sample_using(
-                        &mut renderer,
-                        sample.at_nanos as f64 / 1e9,
-                        &reduced.timeline(),
-                    )
-                    .unwrap();
-                let expected = p
-                    .render_sample(
-                        &mut renderer,
-                        p.plan.presentation_steps[step].hold_nanos as f64 / 1e9,
-                    )
-                    .unwrap();
-                assert!(
-                    actual == expected,
-                    "{} reduced-motion step {step}",
-                    p.plan.id
-                );
-                reduced.command(PlaybackCommand::Next, Duration::ZERO);
-            }
+            crate::plan_runtime::proof::assert_reduced_motion_holds(&p, &mut renderer);
         }
     }
 

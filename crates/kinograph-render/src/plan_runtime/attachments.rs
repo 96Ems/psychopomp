@@ -3,7 +3,7 @@
 //! Timeline and Playback as authored channels, preserving interruption continuity.
 use std::collections::{HashMap, HashSet};
 
-use anyhow::Result;
+use anyhow::{Result, bail};
 use kinograph::{
     dsl::TargetGeometry,
     plan::{ContinuousChannelPlan, ScalarPlan, ScenePlan, TargetComponentPlan, TrackEventPlan},
@@ -27,15 +27,8 @@ struct CompanionRequest<'a> {
 fn requests(plan: &ScenePlan) -> Vec<CompanionRequest<'_>> {
     let mut requests = Vec::new();
     for (index, channel) in plan.continuous_channels.iter().enumerate() {
-        let values =
-            std::iter::once(&channel.initial).chain(channel.events.iter().map(
-                |event| match event {
-                    TrackEventPlan::Set { value, .. } => value,
-                    TrackEventPlan::Spring { target, .. } | TrackEventPlan::Ease { target, .. } => {
-                        target
-                    }
-                },
-            ));
+        let values = std::iter::once(&channel.initial)
+            .chain(channel.events.iter().map(TrackEventPlan::scalar));
         let mut seen = HashSet::new();
         for value in values {
             let ScalarPlan::Target(reference) = value else {
@@ -59,6 +52,13 @@ pub(super) fn reserve(
     plan: &ScenePlan,
     reservations: &mut super::generated::Reservations,
 ) -> Result<()> {
+    if plan
+        .continuous_channels
+        .iter()
+        .any(|channel| channel.property.starts_with("__attachment-"))
+    {
+        bail!("authored channels cannot use the reserved __attachment- namespace");
+    }
     for request in requests(plan) {
         reservations.reserve(
             &request.id,

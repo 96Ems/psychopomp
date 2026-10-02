@@ -1,10 +1,11 @@
 //! Prepared captions: decoded and validated once; channel names are strict.
-use anyhow::{Context, Result, bail};
+use anyhow::Result;
 use kinograph::{
     caption::CaptionPlan,
     plan::{ActorPlan, ContinuousChannelPlan},
 };
 
+use super::preflight::{decode, strict_channels};
 use crate::render::HeadlessRenderer;
 
 pub(super) struct PreparedCaption {
@@ -14,25 +15,10 @@ pub(super) struct PreparedCaption {
 
 impl PreparedCaption {
     pub(super) fn new(actor: &ActorPlan, channels: &[ContinuousChannelPlan]) -> Result<Self> {
-        let plan: CaptionPlan = serde_json::from_value(actor.data.clone())
-            .with_context(|| format!("parse caption recipe for actor '{}'", actor.id))?;
-        plan.validate()
-            .with_context(|| format!("caption actor '{}'", actor.id))?;
-        for channel in channels
-            .iter()
-            .filter(|channel| channel.actor_id == actor.id)
-        {
-            if !matches!(
-                channel.property.as_str(),
-                "opacity" | "x" | "y" | "typed" | "caret"
-            ) {
-                bail!(
-                    "caption actor '{}' has unknown property '{}'",
-                    actor.id,
-                    channel.property
-                );
-            }
-        }
+        let plan = decode(actor, "caption", CaptionPlan::validate)?;
+        strict_channels(&actor.id, channels, "caption", |property| {
+            matches!(property, "opacity" | "x" | "y" | "typed" | "caret")
+        })?;
         Ok(Self {
             id: actor.id.clone(),
             plan,
