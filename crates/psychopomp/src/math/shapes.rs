@@ -128,6 +128,36 @@ pub struct Port {
     pub normal: Vec2,
 }
 
+/// Move a measured box the least distance needed to keep it outside both
+/// ports' tangent planes, with `gap` of clearance. Normals point into the
+/// space between the connected bodies. Returns `None` when it cannot fit.
+pub fn fit_between_ports(bounds: Box2, ports: [Port; 2], gap: f32) -> Option<Box2> {
+    let center = bounds.center();
+    let extents = bounds.extents();
+    let [a, b] = ports;
+    let required =
+        |port: Port| gap + port.normal.abs().dot(extents) - (center - port.point).dot(port.normal);
+    let [ra, rb] = [required(a), required(b)];
+    let mut candidates = vec![Vec2::ZERO, a.normal * ra.max(0.0), b.normal * rb.max(0.0)];
+    let det = a.normal.perp_dot(b.normal);
+    if det.abs() > 1e-6 {
+        candidates.push(
+            Vec2::new(
+                ra * b.normal.y - rb * a.normal.y,
+                rb * a.normal.x - ra * b.normal.x,
+            ) / det,
+        );
+    }
+    let shift = candidates
+        .into_iter()
+        .filter(|shift| a.normal.dot(*shift) >= ra - 1e-4 && b.normal.dot(*shift) >= rb - 1e-4)
+        .min_by(|a, b| a.length_squared().total_cmp(&b.length_squared()))?;
+    Some(Box2 {
+        min: bounds.min + shift,
+        max: bounds.max + shift,
+    })
+}
+
 /// An outline that connectors attach to.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Shape {
@@ -232,6 +262,69 @@ pub fn segment_distance(point: Vec2, a: Vec2, b: Vec2) -> f32 {
 mod tests {
     use super::*;
     use crate::math::vec2;
+
+    #[test]
+    fn measured_boxes_stop_before_either_port_without_changing_size() {
+        let ports = [
+            Port {
+                point: vec2(100.0, 0.0),
+                normal: Vec2::X,
+            },
+            Port {
+                point: vec2(400.0, 0.0),
+                normal: -Vec2::X,
+            },
+        ];
+        for x in [80.0, 160.0, 250.0, 380.0, 420.0] {
+            let bounds = Box2::from_center_size(vec2(x, -26.0), vec2(120.0, 24.0));
+            let fitted = fit_between_ports(bounds, ports, 8.0).unwrap();
+            assert!(fitted.min.x >= 108.0 && fitted.max.x <= 392.0);
+            assert_eq!(fitted.extents(), bounds.extents());
+            assert_eq!(fitted.center().y, -26.0);
+        }
+        let too_wide = Box2::from_center_size(Vec2::ZERO, vec2(300.0, 24.0));
+        assert_eq!(fit_between_ports(too_wide, ports, 8.0), None);
+    }
+
+    #[test]
+    fn port_clearance_supports_vertical_and_diagonal_connections() {
+        for normal in [Vec2::Y, vec2(1.0, 1.0).normalize()] {
+            let ports = [
+                Port {
+                    point: Vec2::ZERO,
+                    normal,
+                },
+                Port {
+                    point: normal * 200.0,
+                    normal: -normal,
+                },
+            ];
+            let bounds = Box2::from_center_size(normal * 190.0, vec2(80.0, 30.0));
+            let fitted = fit_between_ports(bounds, ports, 8.0).unwrap();
+            for port in ports {
+                let clearance = (fitted.center() - port.point).dot(port.normal)
+                    - fitted.extents().dot(port.normal.abs());
+                assert!(clearance >= 8.0 - 1e-4);
+            }
+        }
+    }
+
+    #[test]
+    fn nonparallel_port_planes_fit_the_box_at_their_intersection() {
+        let ports = [
+            Port {
+                point: Vec2::ZERO,
+                normal: Vec2::X,
+            },
+            Port {
+                point: Vec2::ZERO,
+                normal: Vec2::Y,
+            },
+        ];
+        let bounds = Box2::from_center_size(vec2(-20.0, -30.0), vec2(40.0, 20.0));
+        let fitted = fit_between_ports(bounds, ports, 8.0).unwrap();
+        assert_eq!(fitted.min, Vec2::splat(8.0));
+    }
 
     #[test]
     fn segment_distance_measures_to_the_nearest_point_or_end() {

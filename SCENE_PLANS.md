@@ -675,8 +675,8 @@ their fuller documentation elsewhere.
   `bend` at 0 unless two beams need separating.
 - `StageActor` implements the `explainer-motion` beats: `settle_in` (a panel drifts
   16 px into place, scales from 1.035, and sharpens; its content follows 65 ms later),
-  `connect` (soft port reveal, bead draw, surge and
-  twang), `send` (gather, flight, landing), `hit` (instant attack, convex decay),
+  `connect` (soft fixed-size port reveal, eased wire draw, then a quiet hold),
+  `send` (gather, flight, landing), `hit` (instant attack, convex decay),
   `kick` (a two-frame shove that springs back past rest), `jolt` (an impact: the
   camera kicks along the blow, a squared-trauma noise rumble with slight roll
   decays, and the frame punches in about 2%),
@@ -688,8 +688,11 @@ their fuller documentation elsewhere.
   camera moves with exact timing, springs for responsive camera/panel settling,
   and instant-attack fades for light.
   Orb `pulse` changes illumination, not geometry or attached beam ports. Card
-  `flash` lifts ink and rim, not the entire fill. Connected wires can rest: the
-  flagship stops `flow` after its brief connection beat.
+  `flash` lifts ink and rim, not the entire fill. Connecting does not implicitly
+  trigger `land`, `twang`, `surge`, or `flow`; author those only when the story
+  calls for an impact or ongoing traffic. Packet labels use measured text bounds
+  to stop short of the endpoint bodies while their packets finish travelling.
+  A label that cannot fit in the corridor is omitted rather than partially hidden.
   Packets entering an orb trigger a directional surface ripple at the visible
   shell, before reaching the submerged endpoint. The flagship now uses critical
   `to` springs for camera moves; a `Smootherstep` ease remains available for

@@ -20,7 +20,7 @@ use psychopomp::{
         lerp,
         random::hash,
         remap_clamp,
-        shapes::{Box2, Shape, connect, sphere_ring},
+        shapes::{Box2, Port, Shape, connect, fit_between_ports, sphere_ring},
         smoothstep, stops, vec2, vec3,
     },
     stage::{
@@ -941,6 +941,8 @@ struct Placement {
 /// A beam's path on screen and what sits at its ends.
 struct Link {
     path: Polyline,
+    /// Full visible body boundaries, not an orb's submerged wire endpoints.
+    label_ports: [Port; 2],
     /// World depth and on-screen scale at the `from` and `to` ends.
     depth: [f32; 2],
     scale: [f32; 2],
@@ -973,6 +975,7 @@ impl Link {
             depth: ends(self.depth, reverse),
             scale: ends(self.scale, reverse),
             socket: ends(self.socket, reverse),
+            label_ports: ends(self.label_ports, reverse),
             source: if reverse { None } else { self.source },
         }
     }
@@ -1184,8 +1187,10 @@ impl<'a> Scene<'a> {
             bend * (a.scale + b.scale) * 0.5,
         );
         let card = |id: &str| matches!(self.plan.element(id), Some(StageElement::Card { .. }));
+        let end = b.outline.port_toward(curve.start);
         Some(Link {
             path: curve.flatten(BEAM_SAMPLES),
+            label_ports: [a.outline.port_toward(end.point), end],
             depth: [a.world.z, b.world.z],
             scale: [a.scale, b.scale],
             socket: [card(from), card(to)],
@@ -1273,20 +1278,21 @@ impl Scene<'_> {
                 };
                 let opacity = self.unit(id, "opacity", 1.0);
                 let draw = self.unit(id, "draw", 1.0);
-                // The bead lights what it passes; on contact the surge pools in the target.
-                let (fraction, strength, pool) = if draw < 0.999 {
-                    (draw, bead(draw), false)
+                // A plain draw-on emits no travelling bead or arrival light.
+                // An explicitly authored surge may still light the receiver.
+                let strength = if draw >= 0.999 {
+                    self.unit(id, "surge", 0.0) * 0.5
                 } else {
-                    (1.0, self.unit(id, "surge", 0.0) * 0.5, true)
+                    0.0
                 };
                 if strength * opacity > 0.01 {
                     lights.push(Light {
-                        at: link.path.at(fraction),
+                        at: link.path.at(1.0),
                         tone: *tone,
                         strength: strength * opacity,
-                        radius: if pool { 150.0 } else { REFLECTION_RADIUS },
-                        pool,
-                        scale: link.scale_at(fraction),
+                        radius: 150.0,
+                        pool: true,
+                        scale: link.scale_at(1.0),
                     });
                 }
             }
@@ -2030,33 +2036,6 @@ impl<'a> Painter<'a> {
                 self.frame.polyline(&half, 1.0, [width, blur], line, SOLID);
             }
         }
-        if draw > 0.001 && draw < 0.999 && broken <= 0.001 {
-            // A bead of light draws the wire: born as it leaves the port, gone
-            // as it reaches the target.
-            let light = bead(draw) * opacity;
-            let head = 13.0 * DIAGRAM_SCALE * scale / link.path.length().max(1.0);
-            self.frame.polyline(
-                &link.path.slice(draw - head, draw),
-                1.0,
-                [2.8 * scale, blur],
-                Paint {
-                    stroke: rgba(own.lerp(Vec3::ONE, 0.45) * 1.1, light),
-                    glow: glow4(own * (0.1 * light), 4.0 * scale),
-                    ..Default::default()
-                },
-                COMET,
-            );
-            self.frame.circle(
-                link.path.at(draw),
-                [2.6 * scale, 0.0],
-                blur,
-                Paint {
-                    fill: rgba(own.lerp(Vec3::ONE, 0.6) * 1.1, light),
-                    glow: glow4(own * (0.12 * light), 4.0 * scale),
-                    ..Default::default()
-                },
-            );
-        }
         if flow > 0.001 && broken <= 0.001 && draw > 0.98 {
             // Small beads of light travel toward the `to` end.
             let bead = Paint {
@@ -2093,19 +2072,18 @@ impl<'a> Painter<'a> {
             );
             self.frame.close(link.depth[0] - 0.3, order);
         }
-        // Sockets where the beam plugs into cards, in front of them. The source
-        // port pops in (large and soft, then crisp) before the wire draws; the
-        // target's pops with the surge.
-        let popped = if draw > 0.001 {
+        // Fixed-size sockets resolve softly; connecting alone does not strike
+        // or overshoot the receiver.
+        let source = if draw > 0.001 {
             1.0
         } else {
             scene.unit(id, "port", 0.0)
         };
         for end in [0, 1] {
-            let (shown, size, soft) = if end == 0 {
-                (popped, 1.6 - 0.6 * popped, 2.0 * (1.0 - popped))
+            let shown = if end == 0 {
+                source
             } else {
-                (f32::from(u8::from(draw > 0.999)), 1.0 + 0.5 * surge, 0.0)
+                smoothstep(remap_clamp(draw, [0.92, 1.0], [0.0, 1.0]))
             };
             if !link.socket[end] || shown <= 0.001 {
                 continue;
@@ -2113,8 +2091,8 @@ impl<'a> Painter<'a> {
             let scale = link.scale[end];
             self.frame.circle(
                 link.path.at(end as f32),
-                [4.4 * scale * size, 1.3 * scale],
-                blur + soft * scale,
+                [4.4 * scale, 1.3 * scale],
+                blur,
                 Paint {
                     fill: rgba(color, opacity * shown),
                     stroke: rgba(look.background, opacity * shown),
@@ -2195,15 +2173,22 @@ impl<'a> Painter<'a> {
         if label_alpha > 0.001 {
             let travel = packet::travel(age, flight);
             let scale = scale_at(travel);
-            self.frame.text(
-                &text_key(id, "label"),
-                path.at(travel) - vec2(0.0, 26.0 * scale),
-                scale,
-                CaptionAlign::Center,
-                rgba(own, opacity * label_alpha),
-                f32::MAX,
-                0.0,
-            );
+            let key = text_key(id, "label");
+            let at = path.at(travel) - vec2(0.0, 26.0 * scale);
+            if let Some(at) = self
+                .frame
+                .packet_label_at(&key, at, scale, link.label_ports)
+            {
+                self.frame.text(
+                    &key,
+                    at,
+                    scale,
+                    CaptionAlign::Center,
+                    rgba(own, opacity * label_alpha),
+                    f32::MAX,
+                    0.0,
+                );
+            }
         }
         if let Some(q) = packet::landing(age, flight)
             && link.socket[1]
@@ -2592,6 +2577,19 @@ impl<'a> StageFrame<'a> {
         })
     }
 
+    /// Let the packet finish travelling, but hold its complete measured label
+    /// in the open corridor. Depth sorting still keeps the packet behind bodies.
+    fn packet_label_at(&self, key: &str, at: Vec2, scale: f32, ports: [Port; 2]) -> Option<Vec2> {
+        let text = self.texts.get(key)?;
+        let size = vec2(text.rect[2], text.rect[3]) * (scale / TEXT_RASTER);
+        // Center alignment uses ink width; the atlas also contains transparent
+        // raster padding. Include it, plus clearance for the soft backing.
+        let offset = vec2((size.x - self.width(key, scale)) * 0.5, 0.0);
+        let bounds = Box2::from_center_size(at + offset, size);
+        let fitted = fit_between_ports(bounds, ports, 8.0 * scale)?;
+        Some(at + fitted.center() - bounds.center())
+    }
+
     /// One atlas string at `scale`, anchored on its vertical center. `reveal`
     /// clips it to a width, for typing.
     #[allow(clippy::too_many_arguments)]
@@ -2671,6 +2669,187 @@ mod tests {
     use psychopomp::stage::StagePlan;
 
     use crate::render::HeadlessRenderer;
+
+    #[test]
+    fn packet_labels_hold_their_full_atlas_bounds_outside_both_cards() {
+        let texts = std::collections::HashMap::from([(
+            "request#label".into(),
+            super::AtlasText {
+                rect: [0.0, 0.0, 220.0, 48.0],
+            },
+        )]);
+        let mut frame = super::StageFrame::new(&texts, super::Vec3::ZERO);
+        let ports = [
+            super::Port {
+                point: vec2(720.0, 560.0),
+                normal: super::Vec2::X,
+            },
+            super::Port {
+                point: vec2(1200.0, 560.0),
+                normal: -super::Vec2::X,
+            },
+        ];
+        for scale in [0.5, 1.0, 1.5] {
+            for x in [720.0, 850.0, 960.0, 1180.0, 1200.0] {
+                let at = frame
+                    .packet_label_at("request#label", vec2(x, 534.0), scale, ports)
+                    .unwrap();
+                let text = frame
+                    .text(
+                        "request#label",
+                        at,
+                        scale,
+                        super::CaptionAlign::Center,
+                        [1.0; 4],
+                        f32::MAX,
+                        0.0,
+                    )
+                    .unwrap();
+                assert!(text.bbox[0] > 720.0 && text.bbox[2] < 1200.0);
+            }
+        }
+        let short = [
+            ports[0],
+            super::Port {
+                point: vec2(780.0, 560.0),
+                ..ports[1]
+            },
+        ];
+        assert!(
+            frame
+                .packet_label_at("request#label", vec2(760.0, 534.0), 1.0, short)
+                .is_none()
+        );
+    }
+
+    #[test]
+    #[ignore = "requires a headless GPU; a completed connection cannot wake or pulse afterward"]
+    fn a_completed_connection_holds_identical_pixels_after_contact() {
+        use psychopomp::{
+            author::PlanBuilder,
+            plan::{ScalarPlan, compile_channels},
+            stage::StageActor,
+            timeline::PropertyId,
+        };
+        let recipe: StagePlan = serde_json::from_value(serde_json::json!({
+            "post": { "bloom": 0, "grain": 0, "vignette": 0, "backdrop": 0 },
+            "elements": [
+                { "kind": "card", "id": "client", "at": [560, 560, 0], "size": [320, 120], "title": "client" },
+                { "kind": "card", "id": "api", "at": [1360, 560, 0], "size": [320, 120], "title": "api" },
+                { "kind": "beam", "id": "link", "from": "client", "to": "api" }
+            ]
+        })).unwrap();
+        let mut builder = PlanBuilder::new("quiet-connection", 4_000_000_000);
+        let mut actor = StageActor::declare(&mut builder, "stage", &recipe).unwrap();
+        let contact = actor.connect(&mut builder, "link", 0, 0.5) as f64 / 1e9;
+        let plan = builder.finish().unwrap();
+        let timeline = compile_channels(
+            plan.continuous_channels
+                .iter()
+                .map(|c| (c, PropertyId::new(&c.property))),
+            plan.duration_nanos,
+            |scalar| match scalar {
+                ScalarPlan::Literal(value) => Ok(*value),
+                _ => unreachable!(),
+            },
+        )
+        .unwrap();
+        let mut renderer = pollster::block_on(HeadlessRenderer::new(crate::render::RenderSpec {
+            width: 1920,
+            height: 1080,
+            file_name: "quiet-connection".into(),
+        }))
+        .unwrap();
+        let gpu = renderer.prepare_stage(&recipe).unwrap();
+        let render = |renderer: &mut HeadlessRenderer, time| {
+            renderer
+                .render_stage(&recipe, &gpu, time, |property, default| {
+                    timeline
+                        .sample_at(&PropertyId::new(property), time)
+                        .map_or(default, |state| state.position)
+                })
+                .unwrap()
+        };
+        let settled = render(&mut renderer, contact);
+        for time in [
+            contact + 0.02,
+            contact + 0.2,
+            contact + 0.5,
+            contact + 1.0,
+            contact,
+        ] {
+            assert!(
+                render(&mut renderer, time) == settled,
+                "connection changed at {time}"
+            );
+        }
+        assert!(
+            render(&mut renderer, 0.5) != settled,
+            "the draw still animates"
+        );
+    }
+
+    #[test]
+    #[ignore = "requires a headless GPU; measured packet labels clear moving bodies in either direction"]
+    fn measured_packet_labels_clear_endpoints_through_camera_motion_and_reversal() {
+        let mut renderer = pollster::block_on(HeadlessRenderer::new(crate::render::RenderSpec {
+            width: 1920,
+            height: 1080,
+            file_name: "packet-label-proof".into(),
+        }))
+        .unwrap();
+        for destination in [
+            serde_json::json!({
+                "kind": "card", "id": "api", "at": [1360, 560, 0], "size": [320, 120], "title": "api"
+            }),
+            serde_json::json!({
+                "kind": "orb", "id": "api", "at": [1360, 560, 0], "radius": 100
+            }),
+        ] {
+            let plan: StagePlan = serde_json::from_value(serde_json::json!({
+                "elements": [
+                    { "kind": "card", "id": "client", "at": [560, 560, 0], "size": [320, 120], "title": "client" },
+                    destination,
+                    { "kind": "beam", "id": "link", "from": "client", "to": "api", "bend": 40 },
+                    { "kind": "packet", "id": "request", "beam": "link", "label": "GET /user" }
+                ]
+            })).unwrap();
+            let gpu = renderer.prepare_stage(&plan).unwrap();
+            let frame = super::StageFrame::new(&gpu.texts, super::Vec3::ZERO);
+            let key = "request#label";
+            for camera in [0.0, 340.0, 100.0, 0.0] {
+                let value = |property: &str, default| {
+                    if property == "camera.z" {
+                        camera
+                    } else {
+                        default
+                    }
+                };
+                let scene = Scene::sample(&plan, &value, 1.0, vec2(1920.0, 1080.0));
+                for reverse in [false, true] {
+                    let link = scene.links["link"].toward(reverse);
+                    for travel in [0.0, 0.1, 0.5, 0.9, 1.0, 0.5] {
+                        let scale = link.scale_at(travel);
+                        let desired = link.path.at(travel) - vec2(0.0, 26.0 * scale);
+                        let at = frame
+                            .packet_label_at(key, desired, scale, link.label_ports)
+                            .unwrap();
+                        let text = &gpu.texts[key];
+                        let size = vec2(text.rect[2], text.rect[3]) * (scale / super::TEXT_RASTER);
+                        let bounds = super::Box2::from_center_size(
+                            at + vec2((size.x - frame.width(key, scale)) * 0.5, 0.0),
+                            size,
+                        );
+                        for port in link.label_ports {
+                            let clearance = (bounds.center() - port.point).dot(port.normal)
+                                - bounds.extents().dot(port.normal.abs());
+                            assert!(clearance >= 8.0 * scale - 0.001);
+                        }
+                    }
+                }
+            }
+        }
+    }
 
     #[test]
     fn stage_anchors_follow_the_camera_and_the_developed_punch() {

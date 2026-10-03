@@ -78,6 +78,11 @@ floods, the frame sweep, port pop, and bead wire draw, settle-in entrances, and
 instant-attack flashes. Receivers never scale on a hit. The constants live in the
 `explainer-motion` skill's `TECHNIQUES.md`.
 
+The connection treatment is now deliberately quieter: a matte eased draw-on and
+fixed-size socket reveals, then stillness. The travelling draw bead and automatic
+contact surge, cable twang, receiver flash, and flow were removed after visual
+review. Packets and explicitly authored impacts retain their separate treatment.
+
 ## Procedural Fire And Smoke
 
 [Inigo Quilez's domain warping](https://iquilezles.org/articles/warp/) informs

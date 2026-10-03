@@ -54,8 +54,7 @@ pub fn build_stage() -> Result<ScenePlan> {
     let mut stage = StageActor::declare(&mut scene, "stage", &recipe)?;
     stage.settle_in(&mut scene, "client", 100 * MS);
     stage.settle_in(&mut scene, "api", 220 * MS);
-    let contact = stage.connect(&mut scene, "link", 700 * MS, 0.5);
-    stage.to(&mut scene, "link.flow", contact + 1200 * MS, 0.0, 0.6);
+    stage.connect(&mut scene, "link", 700 * MS, 0.5);
 
     let mut retries = CalloutActor::declare(
         &mut scene,

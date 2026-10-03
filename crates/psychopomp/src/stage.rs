@@ -702,10 +702,9 @@ impl StageActor {
         dispatch + whole_millis(packet::GATHER) + whole_millis(seconds)
     }
 
-    /// Plug `beam` in, starting at `at_nanos`: the port resolves softly,
-    /// the wire draws over `seconds` with a gentle
-    /// start and stop, and on contact it surges and twangs taut while its target
-    /// takes the energy; then data starts to flow. Returns the contact time.
+    /// Plug `beam` in, starting at `at_nanos`: the port resolves softly and
+    /// the wire draws over `seconds`, then stays still. Returns the contact
+    /// time. Packets, impacts, twangs, and flow are separate authored actions.
     pub fn connect(
         &mut self,
         scene: &mut PlanBuilder,
@@ -719,21 +718,7 @@ impl StageActor {
         let draw = self.channel(scene, &format!("{beam}.draw"), 0.0);
         scene.set(&draw, start, 0.0);
         scene.ease(&draw, start, 1.0, seconds, DRAW_CURVE);
-        let contact = start + whole_millis(seconds);
-        self.hit(scene, &format!("{beam}.surge"), contact, 0.45, 0.0);
-        self.twang(scene, beam, contact);
-        if let Some(StageElement::Beam { to, .. }) = self.plan.element(beam) {
-            let to = to.clone();
-            self.land(scene, &to, contact);
-        }
-        self.to(
-            scene,
-            &format!("{beam}.flow"),
-            contact + 180_000_000,
-            1.0,
-            0.6,
-        );
-        contact
+        start + whole_millis(seconds)
     }
 
     /// `beam` is struck like a cable: it bows out over a few frames, then its
@@ -932,7 +917,7 @@ mod tests {
     }
 
     #[test]
-    fn connecting_sweeps_pops_draws_and_lands() {
+    fn connecting_draws_once_then_rests_without_implicit_impacts_or_flow() {
         let mut scene = PlanBuilder::new("stage-demo", 5_000_000_000);
         let mut stage = StageActor::declare(&mut scene, "stage", &plan()).unwrap();
         let contact = stage.connect(&mut scene, "link", 1_000_000_000, 0.6);
@@ -953,14 +938,14 @@ mod tests {
                 ..
             }
         ));
-        for property in [
-            "link.port",
-            "link.surge",
-            "link.twang",
-            "link.flow",
-            "service.pulse",
-        ] {
-            channel(property);
+        channel("link.port");
+        for property in ["link.surge", "link.twang", "link.flow", "service.pulse"] {
+            assert!(
+                !plan
+                    .continuous_channels
+                    .iter()
+                    .any(|c| c.property == property)
+            );
         }
     }
 

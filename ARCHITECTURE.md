@@ -554,17 +554,23 @@ element kind; `StageFrame` owns primitive helpers and depth-sorted layers. A bea
 a `math::shapes::connect` connector between the two outlines on screen: it leaves the
 middle of the card side that faces the other end, perpendicular to it, and enters an
 orb radially beneath its shell, with a socket where it plugs into a card. A dark
-orb body occludes submerged endpoints and packet landing rings; packet labels
-fade before entering the shell. Packets sort behind the connected bodies too.
+orb body occludes submerged endpoints and packet landing rings. Measured packet
+label boxes stay outside the full bodies' port tangent planes (`math::shapes::fit_between_ports`),
+not the submerged wire endpoints; the label stops early while the packet finishes.
+Labels still fade before an orb contact and do not render when the complete text
+cannot fit. Packets sort behind the connected bodies too.
 A packet is one clock (`age`, `flight`); `stage::packet` derives its phases (gather,
 minimum-jerk quintic flight by arc length, landing ring, and a trail whose points cool with
 the time since the packet crossed them, found by inverting the ease), so rewinding
 the clock un-cools the trail. Lights are collected per sample from packets and
-drawing beams: a reflection (edges only, the diagrams' radial falloff) and pools
+explicit beam surges: a reflection (edges only, the diagrams' radial falloff) and pools
 (ember, flood, surge) that also enter the glass. Each card takes its strongest
 reflection and strongest pool as two shader lights; the orb's shell points sum
 them. Polyline points carry a heat that scales their light. A beam
-sorts behind both of its ends, so it never crosses the cards it connects. The
+sorts behind both of its ends, so it never crosses the cards it connects.
+`StageActor::connect` draws a matte wire with softly revealed, fixed-size sockets,
+then holds; it emits no travelling bead and schedules no impact, twang, or flow.
+Those remain separate authored channels for deliberate physical beats. The
 renderer emits depth-sorted signed-distance primitives (rounded rect, circle, arc, polyline with drawn length,
 dash, flow, and fade, atlas text, backdrop gradient) into one storage buffer;
 `stage.wgsl` draws them as instanced quads into an `Rgba16Float` target with
