@@ -1,6 +1,7 @@
 //! A team proposal, not a report of completed OpenCode repairs.
 //! Uses the native showroom's bounded typography and quiet Stage diagrams.
 use anyhow::Result;
+pub mod video;
 use psychopomp::{
     author::{ActorHandle, PlanBuilder, SECOND},
     component_prototype::{Font, RICH_TEXT, RichTextPlan, TYPESET, TextPart, TypesetPlan},

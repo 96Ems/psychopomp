@@ -1,0 +1,90 @@
+{
+  "engine": "fish",
+  "clips": [
+    {
+      "id": "quality-01",
+      "beats": [null, "Second stress", "Third check"],
+      "text": "The proposal is simple: spend tokens once, and keep the protection. First, turn real user failures into permanent regressions. Second, stress the transitions where working features can still break: restarts, retries, and upgrades. Third, check the actual experience, using matched interface comparisons and newcomer exercises. Start with a bounded two-week pilot. The goal is not more agent activity. It is useful evidence that survives the agent session."
+    },
+    {
+      "id": "quality-02",
+      "beats": [null, "To keep working", "To return"],
+      "text": "Users experience journeys, not modules. To start working, they must install, configure, and connect. A setup failure means they never reach the model. To keep working, submission, tools, and reconnects must preserve the intended contract. To return, an upgrade must leave existing sessions discoverable and usable. These checks complement unit tests. We should prioritize blocked workflows, not how much code an agent can inspect."
+    },
+    {
+      "id": "quality-03",
+      "beats": [null, "The desktop report", "The protocol report"],
+      "text": "Three reported failures show different blind spots. The migration report describes stored sessions missing from the terminal list. The desktop report describes launch failure associated with accumulated workspace state. The protocol report describes a strict server rejecting initialization before authentication. We read these reports; we did not reproduce them for this presentation. The earlier bounded issue sample was directional, not a measure of how common these defects are."
+    },
+    {
+      "id": "quality-04",
+      "beats": [null, "Build a failing proof", "Make a scoped repair", "Keep a routine replay"],
+      "text": "Do not rent the same insight twice. Begin with one reported user outcome. Build a failing proof that captures the intended contract in a small fixture. Make a scoped repair, then run the same proof and healthy controls. Keep a routine replay linked to the issue. Future healthy checks become ordinary test work. Execution and maintenance still cost, but they do not need another model investigation every time."
+    },
+    {
+      "id": "quality-05",
+      "beats": [null, "After the repair", "Then retain"],
+      "text": "Require evidence on both sides of a repair. Before changing code, pin the base and show that the intended assertion fails for the intended reason. After the repair, the unchanged proof must pass, along with working controls and the original journey. Then retain the fixture, replay command, revisions, and evidence limits. A test rewritten to fit the patch is weak evidence. One repair should own one behavioral contract."
+    },
+    {
+      "id": "quality-06",
+      "beats": [null, "Run the migration", "Find the session", "Reopen it"],
+      "text": "A migration is not done when rows copy. For the reported session visibility problem, start with synthetic old data: root sessions, subdirectory sessions, and legacy path cases. Run the migration in a disposable profile. Find the session through the same project and subpath view the terminal uses. Reopen it and verify retained content and location. Counting copied rows, or using a different listing query, would miss the reported user failure."
+    },
+    {
+      "id": "quality-07",
+      "beats": [null, "Prompt delivery", "Version boundaries"],
+      "text": "Stress the transition, and preserve the promise. Ownership checks should cover racing starters, delayed readiness, and bootstrap interruption. Prompt delivery checks should cover lost acknowledgements, retries, and tool interruption, against an explicitly agreed contract. Version boundaries need old clients and synthetic old state. Use controlled faults, owned processes, and bounded deadlines. Record seeds, but prefer ordering barriers where possible. Random run count is not coverage."
+    },
+    {
+      "id": "quality-08",
+      "beats": [null, "Controlled simulations", "Platform checks"],
+      "text": "A green check can still miss the bug. A terminal scenario pinned to an explicit server can bypass managed discovery and election. Controlled simulations may exercise real processes and sockets without exercising full application boot or the interface. Platform checks remain separate: local success cannot establish native Windows or packaged desktop behavior. Existing proof work gives us a head start. Extend the missing boundaries, and state exactly what each result establishes."
+    },
+    {
+      "id": "quality-09",
+      "beats": [null, "Newcomer exercises"],
+      "text": "Make product polish repeatable. Compare actual production interfaces in the same state, viewport, and theme before and after a change. Include focus, scrolling, long content, pending dialogs, and narrow terminals. Newcomer exercises ask a different question: can someone using only public documentation complete a bounded journey on the packaged build? Record every undocumented workaround. Agents can flag concrete friction. Humans remain responsible for taste."
+    },
+    {
+      "id": "quality-10",
+      "beats": [null, "Reproduced means", "Repaired means", "Released means"],
+      "text": "Closed is not the same as recovered. Reported means we have a described behavior and environment. Reproduced means we have a replayable failure, or explicitly say we do not. Repaired means a candidate passes the unchanged proof and controls. Released means the fix shipped; user-confirmed recovery is still separate. Keep public problems in GitHub, private campaign work in Organizer, and executable proof in the repository. Link them instead of duplicating backlogs."
+    },
+    {
+      "id": "quality-11",
+      "beats": [null, "The fixer", "The verifier"],
+      "text": "Parallelize independent problems, not opinions. The reproducer establishes one claim, a small replay, and its limits. The fixer repairs that contract without moving the acceptance criterion or expanding into unrelated cleanup. The verifier reruns the unchanged proof and challenges controls and the original journey. Separate roles help review; they do not guarantee independence or correctness. Bound time, tokens, and attempts. Repeated failures without new evidence should trigger escalation, not an endless loop."
+    },
+    {
+      "id": "quality-12",
+      "beats": [null, "Real model evaluations"],
+      "text": "There are two different evaluation loops. Deterministic replay tests runtime contracts using controlled responses. Routine reruns need no model calls, although compute and upkeep still cost. Real model evaluations test whether the agent still solves tasks, follows steering, uses tools, and retains important context. Keep that suite small, with pinned tasks, budgets, and outcome checks. Repeat trials where variance matters. Scripted transport tests cannot substitute for real task outcomes."
+    },
+    {
+      "id": "quality-13",
+      "beats": [null, "Add selectively", "Do not default"],
+      "text": "Concentrate effort before expanding scope. Start with issue regressions, critical transitions, and user experience checks. Add selectively: backlog evidence audits, a small real-model suite, and mutation tests that ask whether a deliberate defect makes the intended assertion fail. Do not default to recurring whole-repository opinion sweeps, duplicate reviews, or a generic orchestration platform. These rankings are expected-return judgments. The pilot must measure OpenCode-specific value and cost."
+    },
+    {
+      "id": "quality-14",
+      "beats": [null, "Week two", "Every day"],
+      "text": "The pilot lasts two weeks. In week one, assess five high-impact clusters, choose three proof targets, and capture intended baseline failures and healthy controls. Week two verifies available candidates or routes narrow repairs through normal review, plus a newcomer journey and relevant interface comparisons. Every day, send one short brief: what failed, what is protected, and what needs a decision. Three durable proofs are a target, not a promise of three shipped fixes."
+    },
+    {
+      "id": "quality-15",
+      "beats": [null, "Track operating cost", "At day fourteen"],
+      "text": "Prove that the loop pays for itself. Track recovered workflows and protection another maintainer can replay. Recurrence reduction needs longer follow-up. Track operating cost too: model spend, reviewer minutes, flakiness, maintenance, and abandoned attempts. At day fourteen, continue if the proofs expose intended failures and remain useful, stable, and affordable. Narrow or stop if outputs are mostly opinions or brittle fixtures. Approve the pilot, name its owner, and agree on a spend ceiling."
+    },
+    {
+      "id": "quality-16",
+      "beats": [null, "The interface tools", "The provider fixtures"],
+      "text": "The starting point is not zero. Existing service tests and process-fault proof work can inform missing reliability boundaries. The interface tools include terminal driving and app visual-stability scenarios. The provider fixtures include recorded transport interactions for deterministic replay. These assets are reuse opportunities, not a coverage guarantee or a claim that every suite is green. Audit the chosen contract narrowly. Add the missing observable boundary before adding infrastructure."
+    },
+    {
+      "id": "quality-17",
+      "beats": [null, "Our existing", "The testing references"],
+      "text": "Finally, keep the evidence limits honest. The user reports and bounded issue sample are inputs for investigation, not reproductions performed for this deck. Our existing proof work provides recorded results, with explicit simulation and platform limits. The testing references inform the method, not a forecast of savings. The companion notes include sources and fuller context. We have concrete pain signals, useful assets, and a small experiment that can show whether this allocation of agent effort deserves to grow."
+    }
+  ]
+}

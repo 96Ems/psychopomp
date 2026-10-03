@@ -1,8 +1,9 @@
 # OpenCode quality loops — team proposal
 
-A 17-slide **native Psychopomp presentation**, with progressive reveals and three
-quiet Stage card-and-beam diagrams. It argues for a bounded pilot, not a new platform
-or a claim that the proposed OpenCode repairs are already complete.
+A 17-slide **native Psychopomp presentation** and a phrase-timed narrated video,
+with progressive reveals and three quiet Stage card-and-beam diagrams. It argues
+for a bounded pilot, not a new platform or a claim that the proposed OpenCode
+repairs are already complete.
 
 ## Present
 
@@ -43,11 +44,35 @@ The exporter reads the generated deck; rerun the Scene Program after editing Rus
 PDF pages show every reveal, while the native deck starts with its first beat.
 PDF text is rasterized and links live in the companion notes.
 
+## Narrated video
+
+The video uses the same actors and spring profiles as the deck. Reveal events are
+retimed to phrases in the generated narration; speaking rate is not approximated
+with a uniform slide duration. A short dip separates slides without overlapping
+readable text. Clips begin one second into each slide and retain a quiet tail.
+
+```sh
+mkdir -p output/opencode-quality/narration
+cp scenes/opencode-quality/narration/script.json output/opencode-quality/narration/script.json
+2password run --env 'FISH_AUDIO_API_KEY=op://Personal/Fish Audio OpenCode API Key/credential' -- bun scripts/narrate.ts output/opencode-quality/narration/script.json
+cargo run -p psychopomp-opencode-quality -- --video output/opencode-quality/narration
+cargo run --release -- plan validate output/opencode-quality/reel.json
+cargo run --release -- plan render output/opencode-quality/reel.json output/opencode-quality/opencode-quality.mp4 --theme neutral
+```
+
+Final narration uses Kit's default Fish Audio voice. `--draft` on the narration
+command uses system speech for a timing study; do not present it as the final
+voice. Narration audio and word timings stay in ignored `output/`, while the
+script and phrase anchors live in `narration/script.json`. No secrets are saved in
+the scene. `video.rs` rejects reordered or unsettled beats instead of silently
+guessing missing timings.
+
 ## Scope and proof
 
 This adds a Scene Program only. It does not alter the engine, OpenCode, GitHub,
-Organizer, or the status of any proposed repair. There is no narration or model
-API call in the presentation. Ordinary prose uses sharp 160 ms reveals; existing
+Organizer, or the status of any proposed repair. The native presentation needs no
+model API calls; the separate video export uses generated narration. Ordinary
+prose uses sharp 160 ms reveals; existing
 cards and text never move when another beat is introduced. Wires draw only when
 the next part of the causal argument appears. Forward, backward, and interrupted
 navigation use the renderer's existing deterministic Playback tracks.
@@ -62,16 +87,27 @@ presenter notes before quoting these numbers elsewhere.
 - `cargo test --workspace`: passed (default GPU tests remain ignored).
 - `cargo fmt --check`: passed.
 - Scene-only strict Clippy: passed.
-- Workspace strict Clippy: run, but blocked by unrelated unused helpers in
-  `render/ui.rs` and the unused `ContentFit::Fill` variant in `render/ui/card.rs`
-  during concurrent engine cleanup. Those files were left untouched.
+- Workspace strict Clippy: rerun, but blocked by existing constant-size
+  `chunks_exact` / `chunks_exact_mut` loops flagged by the current toolchain in
+  renderer files. Those files were left untouched; scene-only strict Clippy passes.
 - All 17 final-reveal slides rendered on Metal and inspected in a contact sheet;
   representative dense slides and the Stage loop were inspected at full resolution.
 - Native slide switching, reveal, retreat, and skip input exercised; the returned
   final poses were inspected. This is not an exhaustive pixel-continuity test.
 - A 1.4-second, 1920×1080, 60 fps shutter-sampled Stage study rendered successfully.
-  Eight motion frames at 40 ms intervals were inspected. No claim of a complete
-  film playback review is made.
+  Eight motion frames at 40 ms intervals were inspected.
 - PDFKit readback confirmed 17 pages at 960×540 points (16:9).
+- All 17 final Fish narration clips generated; the phrase-timed reel validates at
+  640.711 seconds. Fifty-one shutter-sampled video frames inspected across all
+  sections: initial pose, a reveal in progress, and the final reveal.
+- A complete diagram section rendered with narration; its encoded motion frame
+  inspected at full resolution. FFprobe confirmed 1920×1080, 60 fps, and AAC;
+  measured loudness was -16.16 LUFS with -1.98 dBTP peaks.
+- The complete 17-section MP4 rendered on Metal. FFprobe confirmed 1920×1080,
+  60 fps, AAC, and 640.716667 seconds (frame-rounded from the reel clock).
+  Encoded frames from the beginning, diagrams, decision gate, and ending were
+  inspected. Full-film loudness measured -16.43 LUFS with -1.86 dBTP peaks.
+  This is artifact and sampled-frame verification, not a complete perceptual
+  listening or uninterrupted playback review.
 
 No GPU, font, or FFmpeg limitation prevented artifact verification.
