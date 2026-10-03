@@ -10,13 +10,12 @@ use psychopomp::{
 use super::{
     HeadlessRenderer,
     chart::{
-        Anchor, AxisDraw, HAIRLINE, Label, Side, TICK_SIZE, diamond, disclosure, path, points,
-        stroke,
+        Anchor, Avoid, AxisDraw, HAIRLINE, Label, Side, TICK_LABEL_OFFSET, TICK_SIZE, TITLE_SIZE,
+        diamond, disclosure, path, points, stroke,
     },
     theme::mix,
 };
 
-const LABEL_SIZE: f32 = 17.0;
 const KEY_RADIUS: f32 = 6.5;
 /// Playhead seconds over which a crossed keyframe cools from the accent.
 const KEY_FLASH: f32 = 0.45;
@@ -51,6 +50,16 @@ impl HeadlessRenderer {
         let played = |t: f32| playhead.is_finite() && t <= playhead;
 
         let playhead_x = time_x(playhead.clamp(plan.time.range[0], plan.time.range[1])) + shift[0];
+        let readout = format!(
+            "{playhead:.decimals$}{}",
+            plan.time.unit,
+            decimals = (plan.time.decimals() + 2).min(3)
+        );
+        let tab = (head > 0.0).then(|| Avoid {
+            x: playhead_x,
+            width: self.chart_tab_width(&readout),
+            strength: head,
+        });
         self.chart_axis(
             pixels,
             AxisDraw {
@@ -60,7 +69,7 @@ impl HeadlessRenderer {
                 reveal: remap_clamp(reveal, [0.0, 0.45], [0.0, 1.0]),
                 opacity,
                 shift,
-                avoid: (head > 0.0).then_some((playhead_x, head)),
+                avoid: tab,
             },
         );
 
@@ -76,7 +85,7 @@ impl HeadlessRenderer {
             }
             let active = playhead.is_finite() && (cue.start..cue.end).contains(&playhead);
             let color = if active { palette.text } else { palette.muted };
-            let y = top + 32.0;
+            let y = top + 36.0;
             let bracket = [
                 [start + 1.5, y + 8.0],
                 [start + 1.5, y],
@@ -99,7 +108,7 @@ impl HeadlessRenderer {
                     size: TICK_SIZE,
                     color,
                     anchor: Anchor::Center,
-                    at: [(start + end) * 0.5, top + 14.0],
+                    at: [(start + end) * 0.5, top + 16.0],
                     opacity: cues,
                 },
                 shift,
@@ -135,7 +144,7 @@ impl HeadlessRenderer {
                 pixels,
                 Label {
                     text: &lane.label,
-                    size: LABEL_SIZE,
+                    size: TITLE_SIZE,
                     color: mix(palette.muted, palette.text, 0.35 + 0.65 * emphasis),
                     anchor: Anchor::Left,
                     at: [left, row_top + plan.lane_height * 0.5],
@@ -225,17 +234,18 @@ impl HeadlessRenderer {
             stroke(
                 pixels,
                 canvas,
-                &[[x, ruler_y - 30.0 + shift[1]], [x, bottom + shift[1]]],
+                &[
+                    [x, ruler_y - TICK_LABEL_OFFSET + shift[1]],
+                    [x, bottom + shift[1]],
+                ],
                 1.5,
                 palette.accent,
                 head * 0.85,
             );
-            let decimals = (plan.time.decimals() + 2).min(3);
-            let readout = format!("{playhead:.decimals$}{}", plan.time.unit);
             self.chart_tab(
                 pixels,
                 &readout,
-                [x, ruler_y - 25.0 + shift[1]],
+                [x, ruler_y - TICK_LABEL_OFFSET + shift[1]],
                 palette.accent,
                 palette.background,
                 head,

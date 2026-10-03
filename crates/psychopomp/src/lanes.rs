@@ -63,15 +63,15 @@ pub struct LaneCuePlan {
 }
 
 fn default_label_width() -> f32 {
-    300.0
+    400.0
 }
 
 fn default_lane_height() -> f32 {
-    48.0
+    52.0
 }
 
 /// Height of the cue row and time ruler above the first lane.
-pub const LANES_HEADER: f32 = 96.0;
+pub const LANES_HEADER: f32 = 104.0;
 
 impl LanePlan {
     pub fn new(id: impl Into<String>, label: impl Into<String>) -> Self {
@@ -386,7 +386,7 @@ mod tests {
         plan.validate().unwrap();
         let json = serde_json::to_value(&plan).unwrap();
         assert_eq!(serde_json::from_value::<LanesPlan>(json).unwrap(), plan);
-        assert_eq!(plan.height(), LANES_HEADER + 96.0);
+        assert_eq!(plan.height(), LANES_HEADER + 2.0 * 52.0);
         assert_eq!(plan.lanes[1].value_range(), Some([0.0, 1.0]));
         // Lane ids may contain dots; the property is matched by prefix and suffix.
         for property in [

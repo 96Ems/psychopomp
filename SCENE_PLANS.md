@@ -587,7 +587,7 @@ their fuller documentation elsewhere.
   plot.stop_ride(&mut scene, "bouncy", arrived);
   ```
 - `lanes`: `origin` (top-left, above the cue row), `width`, `time` axis (seconds),
-  optional `labelWidth` (300) and `laneHeight` (48), `lanes` of `{ id, label,
+  optional `labelWidth` (400) and `laneHeight` (52), `lanes` of `{ id, label,
   tone?, keys?: [seconds], curve?: [[seconds, value]] }` (sparklines scale to
   their own range), and `cues` of `{ id, start, end, label? }`. Channels:
   `opacity`, `x`, `y`, `reveal` (ruler, lanes top to bottom, then cues),
