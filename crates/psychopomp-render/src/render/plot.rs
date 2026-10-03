@@ -10,19 +10,21 @@ use psychopomp::{
 use super::{
     HeadlessRenderer,
     chart::{
-        Anchor, AxisDraw, HAIRLINE, Label, Side, TICK_SIZE, dashed, disclosure, dot, path, points,
-        stroke,
+        Anchor, Avoid, AxisDraw, HAIRLINE, Label, Side, TICK_LABEL_OFFSET, TICK_SIZE, TITLE_SIZE,
+        dashed, disclosure, dot, path, points, stroke,
     },
     theme::mix,
 };
 
 const CURVE: f32 = 2.5;
-const LABEL_SIZE: f32 = 17.0;
 /// The velocity arrow spans this fraction of the x range ahead of its dot.
 const VELOCITY_LEAD: f32 = 0.08;
 const MAX_ARROW: f32 = 240.0;
 /// The legend row and y label, above the frame's top edge.
-const LEGEND_Y: f32 = -46.0;
+const LEGEND_Y: f32 = -54.0;
+/// The x axis title, below its tick labels and the playhead tab.
+const X_TITLE_Y: f32 = 72.0;
+const SWATCH: f32 = 28.0;
 
 impl HeadlessRenderer {
     pub(crate) fn composite_plot(
@@ -52,6 +54,16 @@ impl HeadlessRenderer {
             0.0
         };
         let playhead_x = plan.to_canvas([playhead, plan.y.range[0]])[0] + shift[0];
+        let readout = format!(
+            "{playhead:.decimals$}{}",
+            plan.x.unit,
+            decimals = (plan.x.decimals() + 1).min(3)
+        );
+        let tab = (head > 0.0).then(|| Avoid {
+            x: playhead_x,
+            width: self.chart_tab_width(&readout),
+            strength: head,
+        });
 
         // Gridlines at the y ticks draw across with the axes.
         for &tick in &plan.y.ticks {
@@ -86,16 +98,11 @@ impl HeadlessRenderer {
         );
         self.chart_axis(
             pixels,
-            axis(
-                &plan.x,
-                [[left, bottom], [right, bottom]],
-                Side::Below,
-                (head > 0.0).then_some((playhead_x, head)),
-            ),
+            axis(&plan.x, [[left, bottom], [right, bottom]], Side::Below, tab),
         );
         let axis_label = |text, anchor, at| Label {
             text,
-            size: TICK_SIZE,
+            size: TITLE_SIZE,
             color: palette.muted,
             anchor,
             at,
@@ -108,7 +115,7 @@ impl HeadlessRenderer {
         );
         self.chart_label(
             pixels,
-            axis_label(&plan.x.label, Anchor::Right, [right, bottom + 58.0]),
+            axis_label(&plan.x.label, Anchor::Right, [right, bottom + X_TITLE_Y]),
             shift,
         );
 
@@ -136,7 +143,7 @@ impl HeadlessRenderer {
                     size: TICK_SIZE,
                     color: palette.muted,
                     anchor: Anchor::Left,
-                    at: [x + 10.0, top + 14.0],
+                    at: [x + 10.0, top + 16.0],
                     opacity: alpha,
                 },
                 shift,
@@ -148,7 +155,7 @@ impl HeadlessRenderer {
         };
         // The legend flows after the y label. An entry claims its room as its
         // curve appears or fades, so later entries glide rather than jump.
-        let mut legend_left = left + self.chart_advance(&plan.y.label, TICK_SIZE).ceil() + 64.0;
+        let mut legend_left = left + self.chart_advance(&plan.y.label, TITLE_SIZE).ceil() + 64.0;
         for series in plan.series.iter().filter(|series| !series.label.is_empty()) {
             let series_opacity = self.series_opacity(series, &sample);
             let drawn = smoothstep(draw_of(series) / 0.25);
@@ -197,12 +204,10 @@ impl HeadlessRenderer {
                 palette.accent,
                 head * 0.5,
             );
-            let decimals = (plan.x.decimals() + 1).min(3);
-            let readout = format!("{playhead:.decimals$}{}", plan.x.unit);
             self.chart_tab(
                 pixels,
                 &readout,
-                [x, bottom + 27.0 + shift[1]],
+                [x, bottom + TICK_LABEL_OFFSET + shift[1]],
                 palette.accent,
                 palette.background,
                 head,
@@ -248,11 +253,11 @@ impl HeadlessRenderer {
         alpha: f32,
     ) -> f32 {
         let color = self.theme.tone(series.tone);
-        let width = self.chart_advance(&series.label, LABEL_SIZE);
+        let width = self.chart_advance(&series.label, TITLE_SIZE);
         if alpha > 0.001 {
             let ends = [
                 [left + shift[0], y.round() + shift[1]],
-                [left + 24.0 + shift[0], y.round() + shift[1]],
+                [left + SWATCH + shift[0], y.round() + shift[1]],
             ];
             let canvas = [self.spec.width, self.spec.height];
             if series.dashed {
@@ -265,16 +270,16 @@ impl HeadlessRenderer {
                 pixels,
                 Label {
                     text: &series.label,
-                    size: LABEL_SIZE,
+                    size: TITLE_SIZE,
                     color: text,
                     anchor: Anchor::Left,
-                    at: [36.0, y],
+                    at: [SWATCH + 12.0, y],
                     opacity: alpha,
                 },
                 [left + shift[0], shift[1]],
             );
         }
-        width.ceil() + 36.0 + 40.0
+        width.ceil() + SWATCH + 12.0 + 44.0
     }
 
     /// The tangent at the riding dot: where the dot will be a short time
@@ -340,7 +345,7 @@ impl HeadlessRenderer {
                 at: [0.0, 0.0],
                 opacity: alpha,
             },
-            [point[0], plan.origin[1] + shift[1] - 16.0],
+            [point[0], plan.origin[1] + shift[1] - 18.0],
         );
     }
 }

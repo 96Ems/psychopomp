@@ -110,24 +110,11 @@ impl Diff {
                 self.file_name
             );
         }
-        let mut snapshots = Vec::new();
-        let mut gaps = 0;
-        for (step, &at) in step_times.iter().enumerate() {
-            let next = self.rows(step + 1);
-            let mut settle = at;
-            if let Some(room) = make_room(&self.rows(step), &next) {
-                gaps = gaps.max(room.iter().filter(|id| id.starts_with("gap-")).count());
-                snapshots.push(EditorSnapshotPlan {
-                    at_nanos: at,
-                    line_ids: room,
-                });
-                settle += ROOM;
-            }
-            snapshots.push(EditorSnapshotPlan {
-                at_nanos: settle,
-                line_ids: next,
-            });
-        }
+        let snapshots = step_times
+            .iter()
+            .enumerate()
+            .flat_map(|(step, &at)| step_snapshots(&self.rows(step), &self.rows(step + 1), at))
+            .collect::<Vec<_>>();
         let lines = self
             .lines
             .iter()
@@ -142,7 +129,7 @@ impl Diff {
                 };
                 editor_line(id(index), line.text, mark)
             })
-            .chain((0..gaps).map(|gap| editor_line(format!("gap-{gap}"), "", None)))
+            .chain(gap_lines(&snapshots))
             .collect::<Vec<_>>();
         let initial = self.rows(0);
         let final_ids = self.rows(steps);
@@ -177,6 +164,43 @@ impl Diff {
         }
         Ok(())
     }
+}
+
+/// The snapshots that change an editor's rows from `previous` to `next` at
+/// `at`. A pure insertion or removal that moves retained lines first holds
+/// blank `gap-N` rows for a moment, so moving code never crosses entering or
+/// leaving code; declare [`gap_lines`] alongside the recipe's own lines.
+pub fn step_snapshots(previous: &[String], next: &[String], at: u64) -> Vec<EditorSnapshotPlan> {
+    let settled = |at_nanos| EditorSnapshotPlan {
+        at_nanos,
+        line_ids: next.to_vec(),
+    };
+    match make_room(previous, next) {
+        Some(room) => vec![
+            EditorSnapshotPlan {
+                at_nanos: at,
+                line_ids: room,
+            },
+            settled(at + ROOM),
+        ],
+        None => vec![settled(at)],
+    }
+}
+
+/// Blank lines for every `gap-N` row that `snapshots` hold.
+pub fn gap_lines(snapshots: &[EditorSnapshotPlan]) -> impl Iterator<Item = EditorLinePlan> {
+    let gaps = snapshots
+        .iter()
+        .map(|snapshot| {
+            snapshot
+                .line_ids
+                .iter()
+                .filter(|id| id.starts_with("gap-"))
+                .count()
+        })
+        .max()
+        .unwrap_or(0);
+    (0..gaps).map(|gap| editor_line(format!("gap-{gap}"), "", None))
 }
 
 /// A pure insertion first opens blank rows where the new lines go; a pure
@@ -262,6 +286,18 @@ mod tests {
             ]
         );
         assert_eq!(recipe.lines[1].mark, Some(LineMarkPlan::Added));
+    }
+
+    #[test]
+    fn only_steps_that_move_retained_lines_hold_room() {
+        let rows = |ids: &str| ids.split(' ').map(str::to_owned).collect::<Vec<_>>();
+        let appended = step_snapshots(&rows("a b"), &rows("a b c"), 5);
+        assert_eq!(appended.len(), 1);
+        assert_eq!(gap_lines(&appended).count(), 0);
+        let inserted = step_snapshots(&rows("a b"), &rows("x y a b"), 5);
+        assert_eq!(inserted[0].line_ids, rows("gap-0 gap-1 a b"));
+        assert_eq!(inserted[1].at_nanos, 5 + ROOM);
+        assert_eq!(gap_lines(&inserted).count(), 2);
     }
 
     #[test]

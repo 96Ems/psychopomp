@@ -15,9 +15,17 @@ use super::{
     },
 };
 
-pub(super) const TICK_SIZE: f32 = 16.0;
+/// Tick labels, readouts, and other small chart text, sized to read in a
+/// 1080p film watched at normal size.
+pub(super) const TICK_SIZE: f32 = 20.0;
+/// Axis titles, legend entries, and lane names.
+pub(super) const TITLE_SIZE: f32 = 22.0;
 pub(super) const HAIRLINE: f32 = 1.25;
-const TICK_LENGTH: f32 = 6.0;
+const TICK_LENGTH: f32 = 7.0;
+/// From an axis line to the middle of its tick labels; a playhead tab on the
+/// axis centers here too, so it reads in the labels' row.
+pub(super) const TICK_LABEL_OFFSET: f32 = TICK_LENGTH + 6.0 + TICK_SIZE * 0.6;
+const TAB_PADDING: f32 = 16.0;
 
 #[derive(Clone, Copy)]
 pub(super) enum Anchor {
@@ -35,8 +43,9 @@ pub(super) enum Side {
 }
 
 /// An axis line from `line[0]` (range start) to `line[1]` (range end) in
-/// static layout, moved by `shift`. Tick labels within reach of the canvas x
-/// in `avoid` fade by its strength, so a playhead readout never sits on one.
+/// static layout, moved by `shift`. Tick labels that would touch the
+/// readout tab in `avoid` fade by its strength, so a playhead readout never
+/// sits on one.
 pub(super) struct AxisDraw<'a> {
     pub axis: &'a AxisPlan,
     pub line: [[f32; 2]; 2],
@@ -44,7 +53,15 @@ pub(super) struct AxisDraw<'a> {
     pub reveal: f32,
     pub opacity: f32,
     pub shift: [f32; 2],
-    pub avoid: Option<(f32, f32)>,
+    pub avoid: Option<Avoid>,
+}
+
+/// A playhead readout tab on an axis: its canvas x, width, and strength.
+#[derive(Clone, Copy)]
+pub(super) struct Avoid {
+    pub x: f32,
+    pub width: f32,
+    pub strength: f32,
 }
 
 /// One line of text vertically centered on `at[1]`, anchored at `at[0]`.
@@ -154,20 +171,25 @@ impl HeadlessRenderer {
                 palette.muted,
                 alpha * 0.7,
             );
-            let gap = TICK_LENGTH + 6.0;
             let layout = [lerp(from[0], to[0], f), lerp(from[1], to[1], f)];
             let (anchor, position) = match side {
-                Side::Below => (Anchor::Center, [layout[0], layout[1] + gap + 9.0]),
-                Side::Above => (Anchor::Center, [layout[0], layout[1] - gap - 9.0]),
-                Side::Left => (Anchor::Right, [layout[0] - gap, layout[1]]),
+                Side::Below => (Anchor::Center, [layout[0], layout[1] + TICK_LABEL_OFFSET]),
+                Side::Above => (Anchor::Center, [layout[0], layout[1] - TICK_LABEL_OFFSET]),
+                Side::Left => (Anchor::Right, [layout[0] - TICK_LENGTH - 8.0, layout[1]]),
             };
-            let clear = avoid.map_or(1.0, |(x, strength)| {
-                1.0 - strength * (1.0 - smoothstep(((base[0] - x).abs() - 34.0) / 20.0))
-            });
+            let text = axis.tick_label(tick);
+            let clear = match avoid {
+                Some(tab) if matches!(side, Side::Below | Side::Above) => {
+                    let reach = (tab.width + self.chart_advance(&text, TICK_SIZE)) * 0.5;
+                    let room = (base[0] - tab.x).abs() - reach - 6.0;
+                    1.0 - tab.strength * (1.0 - smoothstep(room / 18.0))
+                }
+                _ => 1.0,
+            };
             self.chart_label(
                 pixels,
                 Label {
-                    text: &axis.tick_label(tick),
+                    text: &text,
                     size: TICK_SIZE,
                     color: palette.muted,
                     anchor,
@@ -177,6 +199,11 @@ impl HeadlessRenderer {
                 shift,
             );
         }
+    }
+
+    /// The width of the readout tab `chart_tab` draws for `text`.
+    pub(super) fn chart_tab_width(&mut self, text: &str) -> f32 {
+        self.chart_advance(text, TICK_SIZE) + TAB_PADDING
     }
 
     /// A small rounded tab with knocked-out text, as for a playhead readout.
@@ -192,10 +219,10 @@ impl HeadlessRenderer {
         if opacity <= 0.001 {
             return;
         }
-        let width = self.chart_advance(text, TICK_SIZE) + 14.0;
+        let width = self.chart_tab_width(text);
         UiCanvas::new(pixels, self.canvas()).fill(
-            Bounds::from_center(center, [width, 24.0]),
-            5.0,
+            Bounds::from_center(center, [width, (TICK_SIZE * 1.5).round()]),
+            6.0,
             solid(fill),
             opacity,
         );
@@ -209,7 +236,7 @@ impl HeadlessRenderer {
                 at: [0.0, 0.0],
                 opacity,
             },
-            [center[0] - (width - 14.0) * 0.5, center[1]],
+            [center[0] - (width - TAB_PADDING) * 0.5, center[1]],
         );
     }
 }

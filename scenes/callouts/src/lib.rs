@@ -9,7 +9,7 @@ use psychopomp::{
     code::{StyledSpan, SyntaxStyle},
     editor::{
         EDITOR_RECIPE, EditorLinePlan, EditorPartPlan, EditorRecipePlan, EditorSemanticRangePlan,
-        EditorSnapshotPlan, EditorTargetSelector,
+        EditorTargetSelector, diff,
     },
     highlight,
     math::easing::Ease,
@@ -191,39 +191,29 @@ fn user_line() -> EditorLinePlan {
 /// it, then follows the panel as it zooms and shifts.
 pub fn build_editor() -> Result<ScenePlan> {
     let mut scene = PlanBuilder::new("callouts-editor", 7 * SECOND);
+    let ids = |ids: &[&str]| ids.iter().map(|id| (*id).to_owned()).collect::<Vec<_>>();
+    let before = ids(&["import", "blank", "open", "user", "close", "end"]);
+    let after = ids(&[
+        "import", "blank", "open", "log", "id", "user", "close", "end",
+    ]);
+    // As in a Stepped Diff, blank rows open first and the new lines enter
+    // that room, so the moving call never crosses entering code.
+    let snapshots = diff::step_snapshots(&before, &after, 2600 * MS);
     let lines = FILE
         .iter()
         .map(|(id, text)| match *id {
             "user" => user_line(),
             _ => code_line(id, text),
         })
-        .chain(["gap-0", "gap-1"].map(|id| code_line(id, " ")))
+        .chain(diff::gap_lines(&snapshots))
         .collect::<Vec<_>>();
-    let ids = |ids: &[&str]| ids.iter().map(|id| (*id).to_owned()).collect::<Vec<_>>();
-    let before = ids(&["import", "blank", "open", "user", "close", "end"]);
-    // Blank rows open first, so the moving call never crosses entering code.
-    let room = ids(&[
-        "import", "blank", "open", "gap-0", "gap-1", "user", "close", "end",
-    ]);
-    let after = ids(&[
-        "import", "blank", "open", "log", "id", "user", "close", "end",
-    ]);
     let recipe = EditorRecipePlan {
         file_name: "program.ts".into(),
         focus_line_id: "user".into(),
         lines,
         initial_line_ids: before,
-        final_line_ids: after.clone(),
-        snapshots: vec![
-            EditorSnapshotPlan {
-                at_nanos: 2600 * MS,
-                line_ids: room,
-            },
-            EditorSnapshotPlan {
-                at_nanos: 2900 * MS,
-                line_ids: after,
-            },
-        ],
+        final_line_ids: after,
+        snapshots,
         line_height: 44.0,
         entering_offset_x: 0.0,
         focus_height: 44.0,

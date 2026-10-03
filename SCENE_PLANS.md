@@ -406,6 +406,9 @@ reusable for any code explainer:
   `Spoken` whose `at(phrase)`, `at_any`, and `at_after` give plan-clock times.
 - `psychopomp::editor::diff::Diff` of `keep`/`add(step, ..)`/`remove(step, ..)`
   lines declares the stepped editor; `declare(scene, step_times, warning, entrance)`.
+  A hand-built editor recipe (one with semantic ranges to pin a callout, say)
+  gets the same room-opening steps from `diff::step_snapshots(previous, next,
+  at)` plus `diff::gap_lines(&snapshots)`.
 - `SequenceRowPlan::message|reply|note|end(..)` with `.in_slot(n)` and
   `.with_aside(text)` build rows; `SequenceParticipantPlan::new(id, label, detail)`
   builds participants; `SequenceActor::row_channel`/`participant_channel` address
@@ -587,7 +590,7 @@ their fuller documentation elsewhere.
   plot.stop_ride(&mut scene, "bouncy", arrived);
   ```
 - `lanes`: `origin` (top-left, above the cue row), `width`, `time` axis (seconds),
-  optional `labelWidth` (300) and `laneHeight` (48), `lanes` of `{ id, label,
+  optional `labelWidth` (400) and `laneHeight` (52), `lanes` of `{ id, label,
   tone?, keys?: [seconds], curve?: [[seconds, value]] }` (sparklines scale to
   their own range), and `cues` of `{ id, start, end, label? }`. Channels:
   `opacity`, `x`, `y`, `reveal` (ruler, lanes top to bottom, then cues),
