@@ -19,6 +19,11 @@ machinery:
 | A system, as a 3D film of cards, orbs, and packets | `scenes/opencode-jr-architecture`, `scenes/pr-walkthrough/src/flagship.rs` | `stage::StageActor` (`settle_in`, `send`, `hit`, `jolt`), `caption` |
 | Code changing step by step, presented live | `scenes/effect-succeed-slides`, `scenes/interactive-showcase` | `editor` recipes, `PresentationStepPlan` |
 | Springs, easing, retargeting, or a metric as curves; a plan's channels over time | `scenes/charts` | `plot::PlotActor` (`draw`, `ride`, `velocity`), `lanes::LanesPlan::from_scene_plan` |
+| A payload, config, or emitted plan as structured data | `scenes/tree` | `tree::TreeActor` (`open`, `reveal`, `highlight`, `set`) |
+| Pointing at a card or code range while it moves | `scenes/callouts` | `callout::CalloutActor` (`show`, `move_to`, `emphasize`) |
+| Real product behavior from a screen recording | `scenes/video`, `scenes/opencode-session-tool` | `video::VideoActor` (`fly_in`, `focus`, `unfocus`) |
+| Before and after, side by side | `scenes/compare` | `ReelSegmentPlan::wiped` with `ReelWipePlan` holds and labels |
+| A version or count changing | `scenes/rolling-number` | `rolling::RollingNumberActor::roll` |
 | A single titled idea | `scenes/agent-demo` | `PlanBuilder` channels and cues |
 
 1. Write the narration script and voice it with `bun scripts/narrate.ts` (`--draft`
@@ -35,8 +40,8 @@ machinery:
    whole film. When refactoring, `plan snapshot <plan> <times> <dir>` before and
    `--compare` after proves the pixels did not change.
 
-The sections below cover presentation, narrated reels, every recipe's payload and
-channels, and the persistent renderer.
+The sections below cover presentation, narrated reels, [every recipe's payload and
+channels](#recipe-payloads-and-channels), and the persistent renderer.
 
 ## Run The Example
 
@@ -250,10 +255,10 @@ sampling cap without changing video FPS or disabling FIFO synchronization. A
 explicit GPU-completion waits to the benchmark and separates completed rendering
 work from waiting for a drawable; it is a diagnostic mode, not normal playback.
 
-The interruptible player accepts editor, pointer, text, title-card, planned
-Effect Task, and keyed-grid scenes. Task and grid snapshots lower into continuous visual tracks;
-generic State Channels and recorded-media scenes are still rejected until
-their interactive timing is defined. The same Scene Plan still exports as MP4
+The interruptible player accepts any plan driven only by Continuous Channels:
+Task, grid, editor, and Tree snapshots lower into continuous visual tracks.
+Plans with generic State Channels, media (including Video Cards), or Rolling
+Numbers are still rejected until their interactive timing is defined. The same Scene Plan still exports as MP4
 through `plan render`, with its original timing and media placements. Live source
 reloading, native higher-DPI glyph rasterization, and presentation audio remain open.
 
@@ -475,8 +480,29 @@ ReelSegmentPlan::wiped(after, seconds(4.4), ReelWipePlan::new(WipeDirection::Lef
 The showroom is `cargo run -p psychopomp-compare` (writes `target/compare.json`):
 a held before/after between two Stage frames, then a plain downward wipe.
 
-Components used by explainers:
+`scenes/pr-walkthrough` also emits `pr-50825.reel.json`, a Stage film of #50825
+that zooms from the client card into its code:
 
+```sh
+cargo run -p psychopomp-pr-walkthrough pr-50825
+PSYCHOPOMP_SHADER_DIR=crates/psychopomp-render/src/render \
+  bun scripts/sheet.ts scenes/pr-walkthrough/pr-50825.reel.json 2,13,19,46 --theme neutral
+cargo run --release -- plan render scenes/pr-walkthrough/pr-50825.reel.json output/pr-50825.mp4 --theme neutral
+```
+
+## Recipe Payloads And Channels
+
+Every renderer recipe, by actor `recipe` name. The first two bullets point to
+their fuller documentation elsewhere.
+
+- `title-card` (root, `{ title }`), `text` (`text`, `center`, `fontSize`, and options
+  such as [`verticalMask`](#mask-rolling-text)), `editor` (root, `EditorRecipePlan`) with an optional
+  attached `pointer` (`PointerRecipePlan`), `effect-task` (`TaskRecipePlan`),
+  `keyed-grid` (root, `GridRecipePlan`), and `value-token` (`ValueTokenPlan`).
+- The provisional `prototype-typeset`, `prototype-width-text`,
+  `prototype-collection`, `prototype-connector`, `prototype-rich-text`,
+  `prototype-header`, and `prototype-venn` overlays (`psychopomp::component_prototype`);
+  see `scenes/component-prototypes/README.md`.
 - `sequence`: `participants` (`id`, `label`, `detail`) and `rows` of `kind`
   `message` (`from`, `to`, `label`, `tone`, `reply`), `note` (`over`, `text`), and
   `end` (`participant`, `label`), each with optional `slot` and `aside`. Channels:
@@ -630,8 +656,6 @@ Components used by explainers:
 - Editor Line Marks: `"mark": "added" | "removed"` on a line, with presence
   channel `mark.<line-id>`; `panel-x`, `panel-y`, and `panel-opacity` move and fade the card (the Stepped Diff
   enters on `panel-y`).
-- `--theme opencode` renders with the OpenCode TUI's tokens; `--theme neutral`
-  with the OpenCode blog's clear-neutral diagram palette (the #50825 film's look).
 - `stage` (root): `elements` of `kind` `card` (`at`, `size`, `title`, `status`,
   `tone`), `orb` (`at`, `radius`, `points`), `beam` (`from`, `to`, `bend`),
   `packet` (`beam`, `reverse`, `label`), `label` (`at`, `size`, `spans`), and `ring`
@@ -674,23 +698,17 @@ Components used by explainers:
   that clock to reassemble, then set -1 when it reaches zero. The first active
   burst also supplies the composite's gravity pinch and refractive shockwave.
   Volumes and sparks respect orb opacity; the pressure wave is a scene response.
-- Continuous channel events are `set`, `spring`, and `ease`
-  (`{ "operation": "ease", "atNanos", "target", "durationNanos", "curve" }` with
-  `curve` one of `linear`, `smoothstep`, `smootherstep`, `cubic-out`, `cubic-in-out`,
-  `{ "decelerate": s }`, or `{ "cubic-bezier": [x1, y1, x2, y2] }`). Use `ease` for
-  timed curves; never approximate one with stepped `set` events, which stutter.
-- Reusable math is `psychopomp::math` (`lerp`, `remap_clamp`, `smoothstep`, `easing`, `dynamics::settle`,
-  `curve::Polyline`, `shapes::connect`, glam vectors). Use it in Scene Programs too.
 
-`scenes/pr-walkthrough` also emits `pr-50825.reel.json`, a Stage film of #50825
-that zooms from the client card into its code:
-
-```sh
-cargo run -p psychopomp-pr-walkthrough pr-50825
-PSYCHOPOMP_SHADER_DIR=crates/psychopomp-render/src/render \
-  bun scripts/sheet.ts scenes/pr-walkthrough/pr-50825.reel.json 2,13,19,46 --theme neutral
-cargo run --release -- plan render scenes/pr-walkthrough/pr-50825.reel.json output/pr-50825.mp4 --theme neutral
-```
+Continuous channel events are `set`, `spring`, and `ease`
+(`{ "operation": "ease", "atNanos", "target", "durationNanos", "curve" }` with
+`curve` one of `linear`, `smoothstep`, `smootherstep`, `cubic-out`, `cubic-in-out`,
+`{ "decelerate": s }`, or `{ "cubic-bezier": [x1, y1, x2, y2] }`). Use `ease` for
+timed curves; never approximate one with stepped `set` events, which stutter.
+Reusable math is `psychopomp::math` (`lerp`, `remap_clamp`, `smoothstep`, `easing`,
+`dynamics::settle`, `curve::Polyline`, `shapes::connect`, glam vectors); use it in
+Scene Programs too. `--theme opencode` renders with the OpenCode TUI's tokens;
+`--theme neutral` with the OpenCode blog's clear-neutral diagram palette (the
+#50825 film's look).
 
 ## Keep The Renderer Running
 
@@ -747,12 +765,11 @@ scene.cue("intro", 0, 2_000_000_000);
 let plan = scene.finish()?;
 ```
 
-Renderer Recipe payloads remain adapter-owned. The lightweight core validates stable IDs, channel references, event ordering, finite values, cue ranges, exact media ranges, and Scene Plan versioning without knowing what a Task, editor, terminal, or title card looks like.
+Renderer Recipe payloads remain adapter-owned. The lightweight core validates stable IDs, channel references, event ordering, finite values, cue ranges, exact media ranges, and Scene Plan versioning without knowing what a Task, editor, Video Card, or title card looks like.
 
 Scene Plan v2 scalar values may reference a component of a stable Semantic Target. The target's selector remains recipe-owned; for the hero, the editor recipe resolves logical code range IDs through `cosmic-text` before compiling highlight and pointer channels into the shared Timeline.
 
-The current plan runtime demonstrates `title-card`, `text`, `editor`, attached `pointer`, `effect-task`, `keyed-grid`, `video`, and `deployment-queue` renderer recipes. Planned audio lowers into exact script or layer placements for FFmpeg. Planned video is accepted only when a `video` actor consumes its media ID; unconsumed video and all image media still return request errors. The Video Card maps the global scene clock through the media placement into source time, so cue and range renders do not restart footage. Editor, video, and deployment recipes independently produce RGBA content but delegate framing to the same private immediate-mode card compositor; this reuse does not add recursive presentation nodes to Scene Plan. The deployment recipe compiles ordered semantic snapshots into private stable keyed row tracks, keeping layout destinations distinct from velocity-preserving motion.
-The current plan runtime demonstrates `title-card`, `text`, `editor`, attached `pointer`, `effect-task`, `keyed-grid`, and `terminal-recording` renderer recipes. Planned audio lowers into exact script or layer placements for FFmpeg. Planned video is accepted only when a prepared visual recipe consumes its media ID; unconsumed video and all image media still return request errors. The terminal recipe maps the global scene clock through the media placement into source time, so cue and range renders do not restart footage. Editor and terminal recipes independently produce RGBA content but delegate framing to the same private immediate-mode card compositor; this reuse does not add recursive presentation nodes to Scene Plan.
+The plan runtime's recipes are listed under [Recipe Payloads And Channels](#recipe-payloads-and-channels). Planned audio lowers into exact script or layer placements for FFmpeg. Planned video is accepted only when a `video` actor consumes its media ID; unconsumed video and all image media still return request errors. The Video Card maps the global scene clock through the media placement into source time, so cue and range renders do not restart footage. Editor and Video Card recipes independently produce RGBA content but delegate framing to the same private immediate-mode card compositor; this reuse does not add recursive presentation nodes to Scene Plan.
 
 ## Package Direction
 

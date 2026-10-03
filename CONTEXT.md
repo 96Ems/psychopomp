@@ -102,7 +102,7 @@ segment with its predecessor: a crossfade mixes the incoming frame over the
 outgoing one, while a dip fades the outgoing segment to the empty background before
 the incoming one appears, so dense frames never overlap. A zoom flies into a focus
 rectangle of the outgoing frame, such as a card, while the incoming segment grows
-out of it, so a detail visibly becomes the next scene. A wipe sweeps a divider
+out of it, so a detail visibly becomes the next scene. A **Wipe** sweeps a divider
 across the frame with the incoming segment behind it; its holds rest the divider
 mid-frame so a before/after comparison shows both segments side by side, each on
 its own running clock, before the sweep goes on. At most two segments are
@@ -231,7 +231,7 @@ keyframe diamonds at its event times and a sparkline of its values, cue
 brackets above the ruler, and a scrubbing playhead. Keys the playhead has
 crossed light and cool by playhead distance, so scrubbing either way samples
 deterministically. Built from a Scene Plan, its sparklines are the compiled
-Property Tracks the renderer would play. Plot and Lanes share one Axis
+Property Tracks the renderer would play. Plot and Lanes share one **Axis**
 vocabulary (range, ticks, label, unit).
 
 ## Callout

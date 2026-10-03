@@ -6,89 +6,129 @@ Video export and native interactive presentation share Scene Plan preparation, s
 
 ## Module Map
 
+Lightweight crate (`crates/psychopomp/src`):
+
+- `crates/psychopomp/src/lib.rs`: lightweight public library boundary used by Rust Scene Programs
 - `crates/psychopomp/src/code.rs`: stable line identity, code documents and snapshots, validation, and sampled line placement
 - `crates/psychopomp/src/composition.rs`: exact media time, immutable assets and clips, script/layer media placements, and cues
 - `crates/psychopomp/src/editor.rs`: typed editor recipe data lowering stable inline parts and logical ranges into Code Transitions
 - `crates/psychopomp/src/editor/compiled.rs`: shared validated catalog, reveal ranges, and legacy/keyed placement used by inspection and rendering
 - `crates/psychopomp/src/editor/stability.rs`: GPU-free step deltas and heuristic common-text stability warnings
 - `crates/psychopomp/src/editor/diff.rs`: Stepped Diff recipe builder (keep/add/remove lines, room-opening snapshots, Line Mark warnings)
+- `crates/psychopomp/src/highlight.rs`: line-local TypeScript highlighting into editor spans
 - `crates/psychopomp/src/task.rs`: `TaskState` and typed planned Task state schedules
 - `crates/psychopomp/src/grid.rs`: finite keyed product catalogs and semantic Grid Snapshots
 - `crates/psychopomp/src/value.rs`: immutable Value Token recipe data for finite teaching diagrams
+- `crates/psychopomp/src/component_prototype.rs`: provisional Typeset, width-text, Collection, Connector, rich-text, header, and Venn payloads
 - `crates/psychopomp/src/author.rs`: typed Scene Plan builder and stable actor/channel handles for lightweight Scene Programs
-- `crates/psychopomp/src/plan.rs`: versioned renderer-independent Scene Plan values and structured validation
+- `crates/psychopomp/src/plan.rs`: versioned renderer-independent Scene Plan, Deck, and Reel values and structured validation
 - `crates/psychopomp/src/plan/channels.rs`: exact scalar-event lowering and opt-in snapshot-destination reduction; raw event ordering remains distinct
+- `crates/psychopomp/src/plan/wipe.rs`: Reel wipe values (direction, mid-frame holds, labels) and the closed-form divider position
 - `crates/psychopomp/src/state.rs`: deterministic arbitrary-time discrete State Tracks
 - `crates/psychopomp/src/playback.rs`: interruptible step destinations, continuous track retargeting, and a pausable local presentation clock
-- `crates/psychopomp/src/terminal.rs`: lightweight terminal-recording recipe values for planned video media
 - `crates/psychopomp/src/timeline.rs`: explicit-time continuous Property Track compilation
 - `crates/psychopomp/src/timeline/retarget.rs`: shared cancellation-safe numeric schedule for Playback and authored resting entrances
 - `crates/psychopomp/src/motion.rs`: deterministic arbitrary-time analytic spring sampling with position and velocity
 - `crates/psychopomp/src/transcript.rs`: word timing ingestion, word and phrase cue lookup
 - `crates/psychopomp/src/narration.rs`: `scripts/narrate.ts` manifests loaded as narration clips, placed as Script Clips, with panicking phrase lookups
+- `crates/psychopomp/src/tone.rs`: semantic Tone roles shared by explainer recipes
 - `crates/psychopomp/src/sequence.rs`: Sequence Diagram recipe values and row constructors, slot geometry, validation, and the `SequenceActor` authoring handle
 - `crates/psychopomp/src/caption.rs`: Caption recipe values and the `CaptionActor` authoring handle (typing, show, hide)
 - `crates/psychopomp/src/rolling.rs`: Rolling Number recipe values, value tokenization, the closed-form roll compiler, and the `RollingNumberActor` handle (`roll`, show, hide)
-- `crates/psychopomp/src/math.rs` and `math/`: shared motion and geometry math (glam vectors, lerp/remap/smoothstep, easing, closed-form dynamics such as the settling spring, arc-length curves, shape ports and connectors, deterministic hash)
+- `crates/psychopomp/src/tree.rs`: Tree recipe values, JSONPath identity, the fold-driven pure layout, and the `TreeActor` handle (`open`, `close`, `highlight`, `set`, `scroll_to`, `reveal`, show, hide)
+- `crates/psychopomp/src/axis.rs`: `AxisPlan` (range, ticks, label, unit), `nice_ticks`, and tabular tick labels shared by Plot and Lanes
+- `crates/psychopomp/src/plot.rs`: Plot recipe values (frame, axes, sampled series with optional exact slopes, marks), interpolation, strict channel matching, and the `PlotActor` handle (`show`, `draw`, `fade`, `ride`, `velocity`, `mark`)
+- `crates/psychopomp/src/lanes.rs`: Lanes recipe values (time axis, lanes with keys and sparklines, cues), `LanesPlan::from_scene_plan`, and the `LanesActor` handle (`show`, `scrub`, `emphasize`)
+- `crates/psychopomp/src/callout.rs`: Callout recipe values, anchor edges, leader shape and frame-avoiding layout, and the `CalloutActor` handle (`show`, `hide`, `move_to`, `emphasize`)
+- `crates/psychopomp/src/video.rs`: Video Card recipe values (footage size, card rect, title), focus-window math, placement helper, and the `VideoActor` handle (`fly_in`, `focus`, `unfocus`, `hide`)
 - `crates/psychopomp/src/stage.rs`: Stage elements, strict channels, perspective camera, orb geometry, the packet clock (`stage::packet`), and the `StageActor` authoring handle (`to`, `ease`, `bounce`, `settle_in`, `clock`/`clock_for`, `connect`, `send`, `hit`, `kick`, `jolt`, `twang`, `land`)
-- `crates/psychopomp/src/tone.rs`: semantic Tone roles shared by explainer recipes
-- `crates/psychopomp/src/highlight.rs`: line-local TypeScript highlighting into editor spans
-- `crates/psychopomp-render/src/plan_runtime/reel.rs`: Reel preparation, layer mixing, media retiming, and reel frame/video delivery
-- `crates/psychopomp-render/src/plan_runtime/sequence.rs` and `caption.rs`: strict-channel preflight for the explainer overlays
-- `crates/psychopomp-render/src/render/sequence.rs` and `render/caption.rs`: Sequence Diagram and Caption pixels
-- `crates/psychopomp-render/src/plan_runtime/rolling.rs` and `render/rolling.rs`: Rolling Number preflight/compilation and its masked, smeared wheels
-- `crates/psychopomp-render/src/plan_runtime/stage.rs`: Stage root preflight and preparation
-- `crates/psychopomp-render/src/render/stage.rs`, `stage.wgsl`, `stage_post.wgsl`: Stage primitives, HDR bloom, and composite; `PSYCHOPOMP_SHADER_DIR` loads the WGSL live
 - `crates/psychopomp/src/effects/`: GPU-free special-effect clocks and particle poses; shared dynamics stay in `psychopomp::math::dynamics`
-- `crates/psychopomp-render/src/render/effects/*.wgsl`: binding-free noise, combustion, and pressure Modules, composed by the Stage shaders; see `EFFECTS.md`
-- `crates/psychopomp-render/src/render.rs`: concrete headless `wgpu` renderer and sprite compositor
-- `crates/psychopomp-render/src/render/task.rs`: concrete Effect Task recipe and compositing
-- `crates/psychopomp-render/src/render/grid.rs`: opaque connected 3D grid, sampled-bounds centering, and cached symbols/labels
-- `crates/psychopomp-render/src/render/grid/edges.rs`: centered screen-space grid strokes, nearest-depth selection, and shared-edge coverage union
-- `crates/psychopomp-render/src/render/value.rs`: Value Token tiles using shared card coverage and cached fractional text
-- `crates/psychopomp-render/src/render/theme.rs`: named native/export paint palettes; no layout or motion
-- `crates/psychopomp-render/src/render/rich_text.rs`: bounded Markdown shaping, decoration, and theme-aware glyph cache
-- `crates/psychopomp-render/src/render/text.rs` and `text/raster.rs`: typed plain-text cache and exact native glyph rasterization
-- `crates/psychopomp-render/src/render/venn.rs`: sampled rounded-set geometry and exact intersection hatching
-- `crates/psychopomp-render/src/render/header.rs`: fixed-edge line/word rises and mirrored, fading reflection ink
-- `crates/psychopomp-render/src/render/terminal.rs`: concrete terminal recording and command-file presentation
-- `crates/psychopomp-render/src/render/ui.rs`: private bounds, inset, split, and terminal line-flow primitives for pixel UI
-- `crates/psychopomp-render/src/render/ui/card.rs`: shared immediate-mode RGBA composition and projected card presentation used by editor and recorded-video producers
-- `crates/psychopomp-render/src/encode.rs`: concrete FFmpeg subprocess, raw RGBA protocol, and compiled audio placement
-- `crates/psychopomp-render/src/exposure.rs`: delivery dimensions, shutter samples and weights, linear-light accumulation, and encoding a timeline one exposed frame at a time
+- `crates/psychopomp/src/math.rs` and `math/`: shared motion and geometry math (glam vectors, lerp/remap/smoothstep, easing, closed-form dynamics such as the settling spring, arc-length curves, shape ports and connectors, deterministic hash)
+
+Renderer crate (`crates/psychopomp-render/src`), plan runtime:
+
 - `crates/psychopomp-render/src/main.rs`: command parsing and the default hero render
-- `crates/psychopomp/src/lib.rs`: lightweight public library boundary used by Rust Scene Programs
 - `crates/psychopomp-render/src/plan_runtime.rs`: Scene Plan inspection, validation, rendering, and persistent JSON server
 - `crates/psychopomp-render/src/plan_runtime/preflight.rs`: owned typed recipe inputs, root selection, references, and native eligibility before resources
 - `crates/psychopomp-render/src/plan_runtime/generated.rs`: generated-channel reservation/insertion, including the explicit Task position override
+- `crates/psychopomp-render/src/plan_runtime/attachments.rs`: private companion-track compilation for layout-aware semantic coordinates
 - `crates/psychopomp-render/src/plan_runtime/delivery.rs`: PNG and MP4 delivery from a prepared scene
+- `crates/psychopomp-render/src/plan_runtime/still.rs`: plan or reel delivery as video, single frames, or compared frame snapshots
+- `crates/psychopomp-render/src/plan_runtime/reel.rs`: Reel preparation, layer mixing, media retiming, and reel frame/video delivery
+- `crates/psychopomp-render/src/plan_runtime/proof.rs`: small test primitives for recipe-specific pixel and interruption checks
 - `crates/psychopomp-render/src/plan_runtime/presentation.rs`: native winit window, step navigation, and smooth/pixelated display filtering
 - `crates/psychopomp-render/src/plan_runtime/presentation/worker.rs`: persistent render worker with bounded in-flight sampling and immutable timeline revisions
 - `crates/psychopomp-render/src/plan_runtime/presentation/scheduler.rs`: GPU-free request eligibility, invalidation, completion freshness, and deadlines
 - `crates/psychopomp-render/src/plan_runtime/presentation/debug.rs`: sample-coherent optional native motion diagnostics
 - `crates/psychopomp-render/src/plan_runtime/presentation/gpu.rs`: native wgpu surface and GPU-backed smooth/pixelated frame presentation
+- `crates/psychopomp-render/src/plan_runtime/presentation/preferences.rs` and `benchmark.rs`: saved theme preference and the native interruption benchmark
 - `crates/psychopomp-render/src/plan_runtime/editor.rs`: concrete editor and attached pointer Scene Plan recipe
-- `crates/psychopomp-render/src/plan_runtime/attachments.rs`: private companion-track compilation for layout-aware semantic coordinates
 - `crates/psychopomp-render/src/plan_runtime/task.rs`: Task state schedules lowered into interruptible scalar visual destinations
 - `crates/psychopomp-render/src/plan_runtime/grid.rs`: GPU-free keyed grid layout and continuous destination compilation
-- `crates/psychopomp-render/src/plan_runtime/grid/table.rs`: fixed-anchor table placement, display headings, and padding/alignment over the same grid catalog
+- `crates/psychopomp-render/src/plan_runtime/grid/table.rs` and `grid/disclosure.rs`: fixed-anchor table placement over the same grid catalog, and growth-edge label disclosure
 - `crates/psychopomp-render/src/plan_runtime/value.rs`: Value Token validation and ordinary scalar-channel sampling
+- `crates/psychopomp-render/src/plan_runtime/component_prototype.rs`, `rich_text.rs`, `venn.rs`: provisional overlay preparation
 - `crates/psychopomp-render/src/plan_runtime/header.rs`: header word tracks and opt-in resting-entrance delays with cancellation
-- `crates/psychopomp-render/src/plan_runtime/terminal.rs`: concrete planned terminal-recording recipe and video source-time mapping
-- `scenes/`: lightweight Rust Scene Programs that emit Scene Plans
+- `crates/psychopomp-render/src/plan_runtime/sequence.rs` and `caption.rs`: strict-channel preflight for the explainer overlays
+- `crates/psychopomp-render/src/plan_runtime/rolling.rs`: Rolling Number preflight and compilation
+- `crates/psychopomp-render/src/plan_runtime/tree.rs`: Tree per-path channel preflight
+- `crates/psychopomp-render/src/plan_runtime/plot.rs` and `lanes.rs`: Plot and Lanes strict-channel preflight
+- `crates/psychopomp-render/src/plan_runtime/callout.rs`: anchor validation and per-sample resolution from the prepared root (`render::stage_anchor`, `PreparedEditor::anchor`)
+- `crates/psychopomp-render/src/plan_runtime/video.rs`: Video Card preflight, frame caches, and source-time mapping
+- `crates/psychopomp-render/src/plan_runtime/stage.rs`: Stage root preflight and preparation
+
+Renderer crate, pixels and delivery:
+
+- `crates/psychopomp-render/src/render.rs`: concrete headless `wgpu` renderer and sprite compositor
+- `crates/psychopomp-render/src/scene.wgsl`: editor geometry and focus shader
+- `crates/psychopomp-render/src/render/theme.rs`: named native/export paint palettes; no layout or motion
+- `crates/psychopomp-render/src/render/fonts.rs`: bundled CommitMono faces
+- `crates/psychopomp-render/src/render/text.rs` and `text/raster.rs`: typed plain-text cache and exact native glyph rasterization
+- `crates/psychopomp-render/src/render/rich_text.rs`: bounded Markdown shaping, decoration, and theme-aware glyph cache
+- `crates/psychopomp-render/src/render/line_marks.rs`: coverage union for editor diff backgrounds
+- `crates/psychopomp-render/src/render/ui.rs`: private bounds and inset primitives for pixel UI
+- `crates/psychopomp-render/src/render/ui/card.rs`: shared immediate-mode RGBA composition and projected card presentation used by editor and Video Card producers
+- `crates/psychopomp-render/src/render/task.rs` and `task/content.rs`: concrete Effect Task recipe, sampled content poses, and compositing
+- `crates/psychopomp-render/src/render/grid.rs`: opaque connected 3D grid, sampled-bounds centering, and cached symbols/labels
+- `crates/psychopomp-render/src/render/grid/edges.rs` and `grid/palette.rs`: centered screen-space grid strokes with shared-edge coverage union, and native line-color auditions
+- `crates/psychopomp-render/src/render/value.rs`: Value Token tiles using shared card coverage and cached fractional text
+- `crates/psychopomp-render/src/render/component_prototype.rs`, `venn.rs`, `header.rs`: provisional measured glyph runs and Bezier ink, rounded-set hatching, and fixed-edge header rises with reflections
+- `crates/psychopomp-render/src/render/sequence.rs` and `caption.rs`: Sequence Diagram and Caption pixels
+- `crates/psychopomp-render/src/render/rolling.rs`: Rolling Number masked, smeared wheels
+- `crates/psychopomp-render/src/render/tree.rs`: Tree rows, chevrons, guides, highlight bars, and rolling values
+- `crates/psychopomp-render/src/render/plot.rs`, `lanes.rs`, and `chart.rs`: Plot and Lanes pixels over the shared chart ink (snapped labels, axis rulers, dashes, dots, diamonds, readout tabs)
+- `crates/psychopomp-render/src/render/callout.rs`: callout mark, leader, and label pixels
+- `crates/psychopomp-render/src/render/video.rs`: projected Video Card pixels with a focus window
+- `crates/psychopomp-render/src/render/wipe.rs`: Reel wipe pixels: antialiased split, divider line and shadow, riding labels
+- `crates/psychopomp-render/src/render/stage.rs`, `stage.wgsl`, `stage_post.wgsl`: Stage primitives, HDR bloom, and composite; `PSYCHOPOMP_SHADER_DIR` loads the WGSL live
+- `crates/psychopomp-render/src/render/effects/*.wgsl`: binding-free noise, combustion, pressure, and rewind Modules, composed by the Stage shaders; see `EFFECTS.md`
+- `crates/psychopomp-render/src/render/debug.rs`: optional native debug HUD
+- `crates/psychopomp-render/src/video.rs`: FFmpeg-decoded seekable RGBA frame cache for input video
+- `crates/psychopomp-render/src/exposure.rs`: delivery dimensions, shutter samples and weights, linear-light accumulation, and encoding a timeline one exposed frame at a time
+- `crates/psychopomp-render/src/encode.rs`: concrete FFmpeg subprocess, raw RGBA protocol, and compiled audio placement
+
+Scene Programs (`scenes/`), each emitting a Scene Plan, Deck, or Reel:
+
 - `scenes/agent-demo/`: smallest Scene Program: one title card, a state channel, and cues
-- `scenes/quark-before-after/`: compact narrated Solid Store versus Quark keyed-identity tutorial
 - `scenes/hero/`: canonical editor-heavy Scene Program and generated plan used by the default render command
+- `scenes/quark-before-after/`: compact narrated Solid Store versus Quark keyed-identity tutorial
 - `scenes/effect-succeed-slides/`: Effect Institute code-reveal adaptation proving manual presentation and video export from one source
 - `scenes/interactive-showcase/`: four-slide native deck covering inline reveals, Task lifecycle/retry, parallel Tasks, and keyed code edits
 - `scenes/keyed-grid/`: native row/table/3D-layer growth and product-reassociation proof
 - `scenes/data-modeling/`: seven-slide types/cardinality, finite correspondence, joystick, sum/product, and illegal-state adaptation
-- `scenes/component-prototypes/`: provisional reusable Typeset, Collection, and Connector showroom; payloads and adapters remain in the three `component_prototype.rs` modules until visual approval
+- `scenes/component-prototypes/`: provisional reusable Typeset, Collection, and Connector showroom (plus the `--slideshow` typography deck); payloads and adapters remain in the three `component_prototype.rs` modules until visual approval
+- `scenes/opencode-session-tool/`: rapid-fire OpenCode v2 hot-reload proof using a split Vim/OpenCode Video Card, layered SFX, and text
 - `scenes/opencode-jr-architecture/`: narrated Stage-film teaching reel of the OpenCode Jr Slack bot, with one condensed code zoom
-- `scenes/opencode-session-tool/`: rapid-fire OpenCode v2 hot-reload proof using split Vim/OpenCode terminal video, layered SFX, text, and discrete state
-- `scenes/pr-walkthrough/`: narrated PR explainer reels; `src/film.rs` is the shared PR-film template (header, chips, behavior and code segments) that `scenes/config-migration/` also uses
+- `scenes/pr-walkthrough/`: narrated PR explainer reels; `src/film.rs` is the shared PR-film template (header, chips, behavior and code segments)
+- `scenes/config-migration/`: narrated reels of two OpenCode config pull requests built on the PR-film template
+- `scenes/pr-50231/`: narrated Stage film of the Effect rc.112 → rc.117 upgrade and the three behaviors the compiler could not catch
+- `scenes/opencode-quality/`: team-proposal deck; still written against the removed box/wire diagram recipe, so it does not currently build
 - `scenes/rolling-number/`: Rolling Number showroom: roll up and down, a mid-roll redirect, a carry into a new place, and a shrink
-- `crates/psychopomp-render/src/scene.wgsl`: editor geometry and focus shader
+- `scenes/tree/`: Tree showroom: the plan `agent-demo` emits, opened node by node, scrolled, highlighted, a value rolled, then folded
+- `scenes/charts/`: Plot and Lanes showroom: critically damped vs bouncy springs, a riding playhead with its velocity arrow, a retarget beside a restart from rest (all from compiled Property Tracks), then Lanes of the plot's own channels
+- `scenes/callouts/`: Callout showroom reel: callouts pinned to Stage cards through a dolly, a jolt, and a glide between anchors, then to a code range that moves as lines are inserted and the panel zooms
+- `scenes/video/`: Video Card showroom: a screen recording flies in, zooms into the prompt, and back out
+- `scenes/compare/`: wipe showroom: a held before/after wipe between two Stage frames, then a plain wipe
 
 ## Scene Programs And Rendering Compile Separately
 
@@ -124,7 +164,6 @@ Shared rules have narrow owners rather than a recipe registry:
   pairs. Task x/y is the sole explicit authored override, not last-writer-wins.
 
 Planned audio and visual media share the same exact source and timeline ranges but have different concrete consumers. Audio lowers into `Composition` and the FFmpeg encoder. A video placement is accepted only when a `video` actor explicitly consumes its media ID; unconsumed video and image media remain errors. The Video Card recipe (`plan_runtime/video.rs`) maps the original global clock through the planned timeline range into source time, samples its own `VideoFrameCache`, and presents the footage through the shared projected card compositor. Video Cards are overlays, not roots: they draw first, beneath diagram and text overlays, over any root (a blank background, an editor, or a Stage). Each card's source-frame index joins the visual sample key (and a Stage's overlay key), so settled footage still renders every new frame. Video never reaches the audio-only encoder, and there is no generic video layer or media graph.
-Planned audio and visual media share the same exact source and timeline ranges but have different concrete consumers. Audio lowers into `MediaPlacement`s and the FFmpeg encoder. A video placement is accepted only when a prepared renderer recipe explicitly consumes its media ID; unconsumed video and image media remain errors. The `terminal-recording` recipe maps the original global clock through the planned timeline range into source time, samples `VideoFrameCache`, and presents authentic TUI pixels through the existing terminal compositor. It does not pass video to the audio-only encoder or create a generic video layer.
 
 Scene Plan v2 allows a scalar initial value or event target to reference one component of a stable Semantic Target plus an offset. The core validates target identity, component names, and finite offsets without interpreting the target selector. During renderer preparation, the actor's concrete recipe resolves selectors into geometry; only then are ordinary numeric Property Tracks compiled. This keeps font measurement renderer-owned while preserving pointer and highlight trajectories as inspectable general channels.
 
@@ -171,8 +210,7 @@ Each compiled spring has a deterministic settling time. Underdamped motion uses 
 
 Media time is stored as integer nanoseconds, so repeated source-range edits retain exact boundaries.
 
-`crates/psychopomp-render/src/video.rs` is the narrow input-video boundary used by the `terminal-recording` recipe. FFmpeg decodes a checked-in H.264 terminal recording into an ignored seekable RGBA cache under `target/`; fixed-size frame offsets then provide deterministic arbitrary-time sampling without codec bindings or retaining the decoded recording in memory. The cache is regenerated when the immutable source changes.
-`crates/psychopomp-render/src/video.rs` is the narrow input-video boundary shared by Video Cards and the legacy OpenCode command-hot-reload scene. FFmpeg decodes a checked-in H.264 recording into an ignored seekable RGBA cache under `target/`; fixed-size frame offsets then provide deterministic arbitrary-time sampling without codec bindings or retaining the decoded recording in memory. The cache is regenerated when the immutable source changes.
+`crates/psychopomp-render/src/video.rs` is the narrow input-video boundary used by Video Cards. FFmpeg decodes a checked-in H.264 recording into an ignored seekable RGBA cache under `target/`; fixed-size frame offsets then provide deterministic arbitrary-time sampling without codec bindings or retaining the decoded recording in memory. The cache is regenerated when the immutable source changes.
 
 The decoder receives null stdin, never the persistent server's request stream.
 A failed seek/read invalidates the in-memory frame identity before it can expose
@@ -372,13 +410,12 @@ The Adapter also resolves semantic token targets from `cosmic-text` glyph cluste
 Code-target measurement shapes each inline partition once for both its advance
 and selected cluster bounds, without rasterizing discarded pixels. The separate
 `render/text/raster.rs` leaf owns exact glyph rasterization. `render/text.rs` owns
-the typed plain-text cache; root, Task, and terminal callers retain their different width, line-height, crop, and color
+the typed plain-text cache; root, Task, and overlay callers retain their different width, line-height, crop, and color
 policies. Debug, inline-code, SVG, and bubble resources keep their own lifetimes.
 
 Editor panel translation, three-axis rotation, and scale are sampled properties. The editor shader remains flat and transparent; `render/ui/card.rs` is the sole perspective implementation for both editor and recorded-video surfaces. Depth-weighted Gaussian sampling softens the near edge during the opening pose, while increased entrance shutter sampling keeps fast perspective motion continuous.
 
-Prepared Scene Plans derive an exact visual key from sampled motion position and velocity, prior pointer-motion state, discrete State Track values, video source-frame identity, and recipe-owned internal tracks. Shutter samples with the same key render once and contribute their multiplicity to linear-light accumulation. Concrete renderer-owned scenes retain unique time keys because their private recipes may depend directly on time. This optimization preserves arbitrary-time semantics and cannot collapse active motion merely because neighboring encoded frames happen to look similar.
-Prepared Scene Plans derive an exact visual key from sampled motion position and velocity, prior pointer-motion state, discrete State Track values, terminal source-frame identity, and recipe-owned internal tracks. Shutter samples with the same key render once and contribute their multiplicity to linear-light accumulation. This optimization preserves arbitrary-time semantics and cannot collapse active motion merely because neighboring encoded frames happen to look similar.
+Prepared Scene Plans derive an exact visual key from sampled motion position and velocity, prior pointer-motion state, discrete State Track values, video source-frame identity, and recipe-owned internal tracks. Shutter samples with the same key render once and contribute their multiplicity to linear-light accumulation. This optimization preserves arbitrary-time semantics and cannot collapse active motion merely because neighboring encoded frames happen to look similar.
 
 SVG assets are parsed and rasterized once into reusable cached sprites, then transformed and composited for each temporal sample. The pointer uses the exact filled Phosphor `HandPointingIcon` path selected by default in `effect-institute`; the same path supports future SVG actors without adding asset-specific shader geometry.
 
@@ -396,16 +433,14 @@ The compositor supports multiple non-overlapping reveals on one stable line. Foc
 
 `crates/psychopomp-render/src/render/task.rs` owns the concrete Effect Task visual recipe: compressed running nodes, energy sweeps, icons, result text, error bubbles, and labels, composited as `TaskVisualFrame` actors over other pixels. All moving pixel layers share one fractional transform, rounded signed-distance edge, and analytic coverage so the body, sweep, border, and glow remain one coherent material. Result content keeps its natural transform but is analytically masked by the current sampled rounded body after text blur, preventing spring intermediates from leaking outside the Task without scaling content to fit.
 
-`crates/psychopomp-render/src/render/terminal.rs` now serves only the legacy `opencode-hot-reload` scene: source-frame selection, a short split-screen command-file editor, and the missile payoff. Its command file and missiles are bespoke to that one film, so they stayed concrete rather than becoming plan recipes.
 
 `render/video.rs` draws a Video Card in one direct pass: `ContentFit::Region` maps the focus window (fractional source pixels) onto the footage rectangle below the optional title bar, so zoomed footage is resampled once through the projection. The title bar is rasterized at twice its size into a small transparent strip and composited through `FrameUi::card_layer`, which reuses the card's projection and rounded clip without a second shell or shadow. Material, border, and shadow come from the theme palette. The lightweight `video.rs` owns the focus math: a window center and size, clamped inside the frame, whose corners move linearly on one spring so every point of the focused region travels monotonically.
 
-`scenes/opencode-session-tool` combines planned video, layered SFX, continuous card motion, and named cues through the process seam. Its immutable source recording aligns a real Vim session on the left with one already-running OpenCode v2 client on the right; a titled Video Card preserves those source pixels and their aspect ratio while ordinary `text` actors carry explanatory overlays. It replaced the former `terminal-recording` root recipe, whose only planned use was this scene and whose command-file presentation was never reachable from a plan. The 20.5-second rapid-fire artifact demonstrates live command, agent, project-skill, reference, model, permission, ambient-instruction, and local-plugin generation changes without restarting the OpenCode service, client, or session.
+`scenes/opencode-session-tool` combines planned video, layered SFX, continuous card motion, and named cues through the process seam. Its immutable source recording aligns a real Vim session on the left with one already-running OpenCode v2 client on the right; a titled Video Card preserves those source pixels and their aspect ratio while ordinary `text` actors carry explanatory overlays. The 20.5-second rapid-fire artifact demonstrates live command, agent, project-skill, reference, model, permission, ambient-instruction, and local-plugin generation changes without restarting the OpenCode service, client, or session.
 
 `scenes/quark-before-after` is a compact narrated tutorial contrasting Solid Store reconciliation with explicit keyed identity. It uses the existing editor, text, and Script Clip recipes rather than introducing a reactive-system visualization or another renderer abstraction. The scene also demonstrates the planned editor's shared perspective-card entrance and multiple channel-driven Inline Reveals: one new Stable Line enters before opposing variable parts exchange inside otherwise stable lines, then the update call changes on its own narration cue.
 
-`crates/psychopomp-render/src/render/ui.rs` is a private, GPUI-inspired immediate-mode vocabulary for renderer-owned pixel interfaces. Immutable `Bounds` values split and inset child regions; `VerticalFlow` places the terminal's source lines. Deployment row centers come directly from their index and fixed row height/gap, not a general layout engine. `render/ui/card.rs` adds nested rounded clips, fills, strokes, packed or strided RGBA sources, fit modes, card-local overlays, and projected cards with one material, border, shadow, surface blur, and depth-dependent near-edge blur. Draw order is z-order and closures provide local composition without retaining public nodes. Flattened editor pixels, decoded video pixels, and the composed deployment dashboard all enter through this Module. A direct borrowed-source operation preserves the same presentation semantics without first rasterizing a second full-card intermediate; the closure path remains available when a card needs multiple composed layers. The Module intentionally stops before an element tree, flexbox engine, event model, retained widgets, renderer trait, or public UI framework.
-`crates/psychopomp-render/src/render/ui.rs` is a private, GPUI-inspired immediate-mode vocabulary for renderer-owned pixel interfaces. Immutable `Bounds` values split and inset child regions; `VerticalFlow` places the terminal's source lines. `render/ui/card.rs` adds nested rounded clips, fills, strokes, packed or strided RGBA sources, fit modes, card-local overlays, and projected cards with one material, border, shadow, surface blur, and depth-dependent near-edge blur. Draw order is z-order and closures provide local composition without retaining public nodes. Flattened editor pixels and decoded terminal-video pixels enter through this Module. A direct borrowed-source operation preserves the same presentation semantics without first rasterizing a second full-card intermediate; the closure path remains available when a card needs multiple composed layers. The Module intentionally stops before an element tree, flexbox engine, event model, retained widgets, renderer trait, or public UI framework.
+`crates/psychopomp-render/src/render/ui.rs` is a private, GPUI-inspired immediate-mode vocabulary for renderer-owned pixel interfaces. Immutable `Bounds` and `Edges` values place and inset child regions. `render/ui/card.rs` adds nested rounded clips, fills, strokes, packed or strided RGBA sources, fit modes, card-local overlays, and projected cards with one material, border, shadow, surface blur, and depth-dependent near-edge blur. Draw order is z-order and closures provide local composition without retaining public nodes. Flattened editor pixels and decoded Video Card pixels enter through this Module. A direct borrowed-source operation preserves the same presentation semantics without first rasterizing a second full-card intermediate; the closure path remains available when a card needs multiple composed layers. The Module intentionally stops before an element tree, flexbox engine, event model, retained widgets, renderer trait, or public UI framework.
 
 The Adapter keeps these details private:
 
@@ -661,7 +696,7 @@ the reel sample key, so sweeps get motion blur and holds collapse to one sample.
 
 `psychopomp/src/playback.rs` derives numeric step destinations from a renderer-prepared Timeline, after semantic geometry has resolved. Next, Previous, First, and Last append only changed channel targets through the shared Timeline compiler. Each spring therefore inherits position and velocity, including mid-flight reversals; unchanged destinations do not restart motion. Per-channel motion profiles come from the destination's latest authored spring (or its first spring before any event; set-only channels use a 0.4-second zero-bounce default). Replay alone resets to the entry pose. The local clock freezes on pause or once all channels settle, without retiming the authored video. Immutable `Arc<Timeline>` revisions make sampling history-independent even while input creates a newer revision.
 
-`plan_runtime/presentation.rs` owns winit lifecycle, slide/step navigation, full screen, letterboxed resizing, and smooth/pixelated display filtering. `presentation/worker.rs` retains the deck's prepared scenes, fonts, and GPU. At most one render is in flight; requests and results carry slide identity and immutable timeline revisions, so switching slides cannot display a stale result from another scene. Each slide retains its selected step and paused local clock while inactive. Explicit pause stays paused on return; previously running motion resumes. Held/paused scenes sleep unless a planned Task requests ambient clock advancement. Generic State Channels and recorded media remain unsupported by interruptible playback; video support is unchanged.
+`plan_runtime/presentation.rs` owns winit lifecycle, slide/step navigation, full screen, letterboxed resizing, and smooth/pixelated display filtering. `presentation/worker.rs` retains the deck's prepared scenes, fonts, and GPU. At most one render is in flight; requests and results carry slide identity and immutable timeline revisions, so switching slides cannot display a stale result from another scene. Each slide retains its selected step and paused local clock while inactive. Explicit pause stays paused on return; previously running motion resumes. Held/paused scenes sleep unless a planned Task requests ambient clock advancement. Generic State Channels, recorded media, and Rolling Numbers (whose changes follow the authored clock) remain unsupported by interruptible playback; video export supports them.
 
 The GPU-free `presentation/scheduler.rs` owns request eligibility, complete-sample
 equality, invalidation, completion freshness, and phase-preserving deadlines.
@@ -690,7 +725,7 @@ Semantic coordinates retain a numeric expanded-layout baseline plus private comp
 
 `render/task/content.rs` contains sampled `ContentPose`, `BubblePose`, and `TaskContentFrame` values. It does not remap a shared state-progress spring through a second easing or delayed visibility window. Preparation compiles `content.<state>.*` and `bubble.<state>.*` channels, including the source's independent bubble rise/fade/deblur. These channels enter native Playback like any other trajectory; no edge-triggered timer or direction branch can reset a reversing pose. The symbol rotates independently while its clip remains aligned with the body. Error text, background, and tail share one cached bubble sprite so its entrance transforms the whole surface. An outgoing bubble is not culled by its faster icon fade. Unchanged channels keep content still. No public Scene Plan fields or generic transition framework are added.
 
-The source's instantaneous running toggle becomes a short 0.06-second continuity ramp, without waiting for content to disappear. Retained symbols use a symmetric 0.7 hidden scale instead of the source's new-icon mount resets and 0.9 exit scale; selective symbol rotation remains an intentional native flourish. Results retain a 0.5 hidden scale. These adaptations preserve arbitrary-step continuity, so the timing tests claim source spring-curve parity, not complete source-renderer pixel equivalence. `tests/fixtures/effect-task-timing.json` comes from the source project's pinned Motion DOM 12.42.2 generator and tests actual compiled channel samples, including overshoot and separate result deblur.
+The source's instantaneous running toggle becomes a short 0.06-second continuity ramp, without waiting for content to disappear. Retained symbols use a symmetric 0.7 hidden scale instead of the source's new-icon mount resets and 0.9 exit scale; selective symbol rotation remains an intentional native flourish. Results retain a 0.5 hidden scale. These adaptations preserve arbitrary-step continuity, so the timing tests claim source spring-curve parity, not complete source-renderer pixel equivalence. `crates/psychopomp-render/tests/fixtures/effect-task-timing.json` comes from the source project's pinned Motion DOM 12.42.2 generator and tests actual compiled channel samples, including overshoot and separate result deblur.
 
 Transformed sprites use denser 5×5 binomial filter taps: the larger content defocus exposed visible displaced copies with the former 3×3 taps, particularly in error-bubble text. Tap positions still vary continuously, and the unblurred identity case retains direct bilinear sampling. This improves a sampled optical effect, not the trajectory or the export shutter model.
 
