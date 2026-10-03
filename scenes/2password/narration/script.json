@@ -1,0 +1,23 @@
+{
+  "engine": "elevenlabs",
+  "model": "eleven_v4",
+  "voice": "8olojUk4IXpvKgaOCHXj",
+  "settings": {
+    "stability": 0.2,
+    "similarity": 0.65
+  },
+  "clips": [
+    {
+      "id": "problem",
+      "text": "[tired, quiet, exasperated] My coding agent needs one API key. So it asks the 1Password command line. [annoyed, clipped] Allow. [irritated, raising his voice] Approve! [SHOUTING angrily at the screen] AUTHORIZE!! [yelling at the top of his lungs, completely losing it] UNLOCK THE APP! SIGN IN AGAIN! [screaming, furious, voice cracking] WHY IS IT STUCK AGAIN?! [suddenly quiet, seething, through gritted teeth] And when it finally works... [explosive, outraged yell] it prints my secret... RIGHT INTO THE CHAT!!"
+    },
+    {
+      "id": "layer",
+      "text": "[long, relieved exhale, suddenly calm] Okay. [bursting with delight, bubbly and bright] Meet two password! A tiny layer on top of the 1Password command line. [cheerful, bouncy, sing-song] Your agent asks two password for everything it needs, and two password asks 1Password just once. [ecstatic, gleeful] One approval! [warm, sparkling, overjoyed] And your agent only ever sees references. Never the secret itself."
+    },
+    {
+      "id": "features",
+      "text": "[giddy, playful, light as air] It runs your commands with the secrets injected. [delighted, gushing] It saves new keys straight from your clipboard, and checks that they landed. [dreamy, blissful, floating like a butterfly] And with a service account... no prompts. At all. [happy, joyful laugh] [warm, radiant, utterly content] Two password. Install it, add the skill, and let your agent fly."
+    }
+  ]
+}

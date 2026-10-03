@@ -1,0 +1,209 @@
+{
+ "wordTimings": [
+  {
+   "word": "It",
+   "start": 0,
+   "end": 0.14
+  },
+  {
+   "word": "runs",
+   "start": 0.14,
+   "end": 0.38
+  },
+  {
+   "word": "your",
+   "start": 0.38,
+   "end": 0.6
+  },
+  {
+   "word": "commands",
+   "start": 0.6,
+   "end": 0.96
+  },
+  {
+   "word": "with",
+   "start": 0.96,
+   "end": 1.22
+  },
+  {
+   "word": "the",
+   "start": 1.22,
+   "end": 1.36
+  },
+  {
+   "word": "secrets",
+   "start": 1.36,
+   "end": 1.74
+  },
+  {
+   "word": "injected.",
+   "start": 1.74,
+   "end": 2.18
+  },
+  {
+   "word": "It",
+   "start": 2.6,
+   "end": 2.98
+  },
+  {
+   "word": "saves",
+   "start": 2.98,
+   "end": 3.28
+  },
+  {
+   "word": "new",
+   "start": 3.28,
+   "end": 3.52
+  },
+  {
+   "word": "keys",
+   "start": 3.52,
+   "end": 3.82
+  },
+  {
+   "word": "straight",
+   "start": 3.82,
+   "end": 4.14
+  },
+  {
+   "word": "from",
+   "start": 4.14,
+   "end": 4.42
+  },
+  {
+   "word": "your",
+   "start": 4.42,
+   "end": 4.6
+  },
+  {
+   "word": "clipboard",
+   "start": 4.6,
+   "end": 5.12
+  },
+  {
+   "word": "and",
+   "start": 5.12,
+   "end": 5.5
+  },
+  {
+   "word": "checks",
+   "start": 5.5,
+   "end": 5.86
+  },
+  {
+   "word": "that",
+   "start": 5.86,
+   "end": 6.06
+  },
+  {
+   "word": "they",
+   "start": 6.06,
+   "end": 6.18
+  },
+  {
+   "word": "landed.",
+   "start": 6.18,
+   "end": 6.54
+  },
+  {
+   "word": "And",
+   "start": 6.72,
+   "end": 7.1
+  },
+  {
+   "word": "with",
+   "start": 7.1,
+   "end": 7.26
+  },
+  {
+   "word": "a",
+   "start": 7.26,
+   "end": 7.36
+  },
+  {
+   "word": "service",
+   "start": 7.36,
+   "end": 7.72
+  },
+  {
+   "word": "account,",
+   "start": 7.72,
+   "end": 8.02
+  },
+  {
+   "word": "no",
+   "start": 8.32,
+   "end": 8.86
+  },
+  {
+   "word": "prompts",
+   "start": 8.86,
+   "end": 9.22
+  },
+  {
+   "word": "at",
+   "start": 9.22,
+   "end": 9.94
+  },
+  {
+   "word": "all.",
+   "start": 9.94,
+   "end": 10.26
+  },
+  {
+   "word": "2Password.",
+   "start": 12.14,
+   "end": 12.74
+  },
+  {
+   "word": "Install",
+   "start": 12.92,
+   "end": 13.52
+  },
+  {
+   "word": "it,",
+   "start": 13.52,
+   "end": 13.84
+  },
+  {
+   "word": "add",
+   "start": 13.9,
+   "end": 14.14
+  },
+  {
+   "word": "the",
+   "start": 14.14,
+   "end": 14.34
+  },
+  {
+   "word": "skill,",
+   "start": 14.34,
+   "end": 14.6
+  },
+  {
+   "word": "and",
+   "start": 14.74,
+   "end": 15.04
+  },
+  {
+   "word": "let",
+   "start": 15.04,
+   "end": 15.24
+  },
+  {
+   "word": "your",
+   "start": 15.24,
+   "end": 15.44
+  },
+  {
+   "word": "agent",
+   "start": 15.44,
+   "end": 15.78
+  },
+  {
+   "word": "fly.",
+   "start": 15.78,
+   "end": 16.06
+  }
+ ]
+}

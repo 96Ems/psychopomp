@@ -1,0 +1,34 @@
+{
+  "clips": [
+    {
+      "id": "problem",
+      "file": "problem.mp3",
+      "words": "problem.words.json",
+      "durationNanos": 17839000000,
+      "textHash": "61eb1f32d84160c0",
+      "engine": "elevenlabs",
+      "model": "eleven_v4",
+      "requestId": "Zq2ulEH3LT7Rw8PxN15b"
+    },
+    {
+      "id": "layer",
+      "file": "layer.mp3",
+      "words": "layer.words.json",
+      "durationNanos": 18398999999,
+      "textHash": "19e60f2ec049f4af",
+      "engine": "elevenlabs",
+      "model": "eleven_v4",
+      "requestId": "rj5NLINJcx7pA9ebATej"
+    },
+    {
+      "id": "features",
+      "file": "features.mp3",
+      "words": "features.words.json",
+      "durationNanos": 16639000000,
+      "textHash": "6e48c755a1648d06",
+      "engine": "elevenlabs",
+      "model": "eleven_v4",
+      "requestId": "LK0yYmeA5rkin2t6E4DP"
+    }
+  ]
+}

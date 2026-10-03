@@ -1767,6 +1767,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "psychopomp-two-password"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "psychopomp",
+ "psychopomp-pr-walkthrough",
+ "serde_json",
+]
+
+[[package]]
 name = "psychopomp-video"
 version = "0.1.0"
 dependencies = [

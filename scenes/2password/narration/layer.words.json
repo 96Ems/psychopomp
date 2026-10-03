@@ -1,0 +1,204 @@
+{
+ "wordTimings": [
+  {
+   "word": "Okay.",
+   "start": 0.7000000000000008,
+   "end": 1.32
+  },
+  {
+   "word": "Meet",
+   "start": 1.92,
+   "end": 2.54
+  },
+  {
+   "word": "2Password,",
+   "start": 2.54,
+   "end": 3.46
+  },
+  {
+   "word": "a",
+   "start": 3.6,
+   "end": 3.88
+  },
+  {
+   "word": "tiny",
+   "start": 3.88,
+   "end": 4.2
+  },
+  {
+   "word": "layer",
+   "start": 4.2,
+   "end": 4.48
+  },
+  {
+   "word": "on",
+   "start": 4.48,
+   "end": 4.74
+  },
+  {
+   "word": "top",
+   "start": 4.74,
+   "end": 4.96
+  },
+  {
+   "word": "of",
+   "start": 4.96,
+   "end": 5.14
+  },
+  {
+   "word": "the",
+   "start": 5.14,
+   "end": 5.22
+  },
+  {
+   "word": "1Password",
+   "start": 5.22,
+   "end": 5.94
+  },
+  {
+   "word": "command",
+   "start": 5.94,
+   "end": 6.18
+  },
+  {
+   "word": "line.",
+   "start": 6.18,
+   "end": 6.56
+  },
+  {
+   "word": "Your",
+   "start": 6.76,
+   "end": 7.06
+  },
+  {
+   "word": "agent",
+   "start": 7.06,
+   "end": 7.38
+  },
+  {
+   "word": "asks",
+   "start": 7.38,
+   "end": 7.72
+  },
+  {
+   "word": "2Password",
+   "start": 7.72,
+   "end": 8.52
+  },
+  {
+   "word": "for",
+   "start": 8.52,
+   "end": 8.7
+  },
+  {
+   "word": "everything",
+   "start": 8.7,
+   "end": 9.08
+  },
+  {
+   "word": "it",
+   "start": 9.08,
+   "end": 9.34
+  },
+  {
+   "word": "needs,",
+   "start": 9.34,
+   "end": 9.7
+  },
+  {
+   "word": "and",
+   "start": 9.78,
+   "end": 10
+  },
+  {
+   "word": "2Password",
+   "start": 10,
+   "end": 10.68
+  },
+  {
+   "word": "asks",
+   "start": 10.68,
+   "end": 10.96
+  },
+  {
+   "word": "1Password",
+   "start": 10.96,
+   "end": 11.8
+  },
+  {
+   "word": "just",
+   "start": 11.8,
+   "end": 12.1
+  },
+  {
+   "word": "once.",
+   "start": 12.1,
+   "end": 12.46
+  },
+  {
+   "word": "One",
+   "start": 12.66,
+   "end": 13
+  },
+  {
+   "word": "approval!",
+   "start": 13,
+   "end": 13.38
+  },
+  {
+   "word": "And",
+   "start": 13.78,
+   "end": 14.06
+  },
+  {
+   "word": "your",
+   "start": 14.06,
+   "end": 14.24
+  },
+  {
+   "word": "agent",
+   "start": 14.24,
+   "end": 14.62
+  },
+  {
+   "word": "only",
+   "start": 14.62,
+   "end": 14.96
+  },
+  {
+   "word": "ever",
+   "start": 14.96,
+   "end": 15.28
+  },
+  {
+   "word": "sees",
+   "start": 15.28,
+   "end": 15.58
+  },
+  {
+   "word": "references,",
+   "start": 15.58,
+   "end": 16
+  },
+  {
+   "word": "never",
+   "start": 16.26,
+   "end": 16.96
+  },
+  {
+   "word": "the",
+   "start": 16.96,
+   "end": 17.24
+  },
+  {
+   "word": "secret",
+   "start": 17.24,
+   "end": 17.52
+  },
+  {
+   "word": "itself.",
+   "start": 17.52,
+   "end": 17.78
+  }
+ ]
+}

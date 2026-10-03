@@ -1,0 +1,209 @@
+{
+ "wordTimings": [
+  {
+   "word": "My",
+   "start": 0,
+   "end": 0.2
+  },
+  {
+   "word": "coding",
+   "start": 0.2,
+   "end": 0.5
+  },
+  {
+   "word": "agent",
+   "start": 0.5,
+   "end": 0.82
+  },
+  {
+   "word": "needs",
+   "start": 0.82,
+   "end": 1.16
+  },
+  {
+   "word": "one",
+   "start": 1.16,
+   "end": 1.5
+  },
+  {
+   "word": "API",
+   "start": 1.5,
+   "end": 2.02
+  },
+  {
+   "word": "key,",
+   "start": 2.02,
+   "end": 2.58
+  },
+  {
+   "word": "so",
+   "start": 2.72,
+   "end": 3.3
+  },
+  {
+   "word": "it",
+   "start": 3.3,
+   "end": 3.46
+  },
+  {
+   "word": "asks",
+   "start": 3.46,
+   "end": 3.72
+  },
+  {
+   "word": "the",
+   "start": 3.72,
+   "end": 3.92
+  },
+  {
+   "word": "1Password",
+   "start": 3.92,
+   "end": 4.54
+  },
+  {
+   "word": "command",
+   "start": 4.54,
+   "end": 4.78
+  },
+  {
+   "word": "line.",
+   "start": 4.78,
+   "end": 5.22
+  },
+  {
+   "word": "Allow!",
+   "start": 5.44,
+   "end": 5.98
+  },
+  {
+   "word": "Approve!",
+   "start": 6.7,
+   "end": 7.3
+  },
+  {
+   "word": "Authorize!",
+   "start": 7.68,
+   "end": 8.28
+  },
+  {
+   "word": "Unlock",
+   "start": 8.62,
+   "end": 9.22
+  },
+  {
+   "word": "the",
+   "start": 9.22,
+   "end": 9.38
+  },
+  {
+   "word": "app!",
+   "start": 9.38,
+   "end": 9.66
+  },
+  {
+   "word": "Sign",
+   "start": 9.88,
+   "end": 10.26
+  },
+  {
+   "word": "in",
+   "start": 10.26,
+   "end": 10.48
+  },
+  {
+   "word": "again!",
+   "start": 10.48,
+   "end": 10.74
+  },
+  {
+   "word": "Why",
+   "start": 11.14,
+   "end": 11.5
+  },
+  {
+   "word": "is",
+   "start": 11.5,
+   "end": 11.72
+  },
+  {
+   "word": "it",
+   "start": 11.72,
+   "end": 11.84
+  },
+  {
+   "word": "stuck",
+   "start": 11.84,
+   "end": 12.2
+  },
+  {
+   "word": "again?!",
+   "start": 12.2,
+   "end": 12.9
+  },
+  {
+   "word": "And",
+   "start": 12.9,
+   "end": 13.3
+  },
+  {
+   "word": "when",
+   "start": 13.3,
+   "end": 13.46
+  },
+  {
+   "word": "it",
+   "start": 13.46,
+   "end": 13.58
+  },
+  {
+   "word": "finally",
+   "start": 13.58,
+   "end": 14.02
+  },
+  {
+   "word": "works,",
+   "start": 14.02,
+   "end": 14.5
+  },
+  {
+   "word": "it",
+   "start": 14.76,
+   "end": 15.1
+  },
+  {
+   "word": "prints",
+   "start": 15.1,
+   "end": 15.48
+  },
+  {
+   "word": "my",
+   "start": 15.48,
+   "end": 15.68
+  },
+  {
+   "word": "secret",
+   "start": 15.68,
+   "end": 16.12
+  },
+  {
+   "word": "right",
+   "start": 16.12,
+   "end": 16.68
+  },
+  {
+   "word": "into",
+   "start": 16.68,
+   "end": 16.98
+  },
+  {
+   "word": "the",
+   "start": 16.98,
+   "end": 17.14
+  },
+  {
+   "word": "chat!",
+   "start": 17.14,
+   "end": 17.44
+  }
+ ]
+}
