@@ -5,7 +5,7 @@
 use anyhow::{Result, bail};
 use psychopomp::{
     callout::{CalloutAnchorPlan, CalloutLeg, CalloutPlan},
-    math::{Vec2, vec2},
+    math::{Vec2, shapes::Box2, vec2},
     motion::MotionState,
     plan::{ActorPlan, ContinuousChannelPlan, SemanticTargetPlan},
     stage::StageElement,
@@ -83,6 +83,10 @@ impl PreparedCallout {
         Ok(())
     }
 
+    pub(super) fn id(&self) -> &str {
+        &self.id
+    }
+
     /// Whether any anchor follows the Stage camera.
     pub(super) fn on_stage(&self) -> bool {
         self.plan
@@ -140,6 +144,15 @@ impl PreparedCallout {
         pose: CalloutPose,
     ) {
         renderer.composite_callout(pixels, &self.plan, pose);
+    }
+
+    /// Everything `render` may ink for `pose`.
+    pub(super) fn bounds(
+        &self,
+        renderer: &mut HeadlessRenderer,
+        pose: CalloutPose,
+    ) -> Option<Box2> {
+        renderer.callout_bounds(&self.plan, pose)
     }
 }
 

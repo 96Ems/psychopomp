@@ -3,7 +3,7 @@
 //! that rises in at the leader's end. Geometry comes from the lightweight
 //! `callout::layout`; this module only measures the label and paints.
 use psychopomp::{
-    callout::{CalloutLeg, CalloutPlan, layout},
+    callout::{CalloutLayout, CalloutLeg, CalloutPlan, layout},
     math::{Vec2, curve::Polyline, lerp, shapes::Box2, smoothstep, vec2},
 };
 
@@ -25,7 +25,7 @@ const RISE: f32 = 8.0;
 
 /// A callout at one sample: its resolved anchor, its blended leader shape,
 /// and its channels.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub(crate) struct CalloutPose {
     pub anchor: Vec2,
     pub leg: CalloutLeg,
@@ -35,20 +35,42 @@ pub(crate) struct CalloutPose {
     pub emphasis: f32,
 }
 
+impl CalloutPose {
+    fn inks(&self) -> bool {
+        let opacity = self.opacity.clamp(0.0, 1.0);
+        opacity > 0.001 && (self.draw.clamp(0.0, 1.0) > 0.001 || self.label.clamp(0.0, 1.0) > 0.001)
+    }
+}
+
+/// A callout's measured label and where it lands for one pose.
+struct PlacedCallout {
+    spec: PlainTextSpec,
+    widths: Vec<Vec<f32>>,
+    padding: Vec2,
+    size: Vec2,
+    layout: CalloutLayout,
+}
+
 impl HeadlessRenderer {
-    pub(crate) fn composite_callout(
-        &mut self,
-        pixels: &mut [u8],
-        plan: &CalloutPlan,
-        pose: CalloutPose,
-    ) {
-        let opacity = pose.opacity.clamp(0.0, 1.0);
-        let draw = pose.draw.clamp(0.0, 1.0);
-        let label = pose.label.clamp(0.0, 1.0);
-        let emphasis = pose.emphasis.clamp(0.0, 1.0);
-        if opacity <= 0.001 || (draw <= 0.001 && label <= 0.001) {
-            return;
+    /// Everything `composite_callout` may ink for `pose`, padded for the
+    /// emphasis halo, antialiasing, and glyph overhang; `None` when it draws
+    /// nothing.
+    pub(crate) fn callout_bounds(&mut self, plan: &CalloutPlan, pose: CalloutPose) -> Option<Box2> {
+        if !pose.inks() {
+            return None;
         }
+        let PlacedCallout { size, layout, .. } = self.place_callout(plan, pose);
+        let [anchor, knee, end] = layout.leader;
+        let mark = RING + 2.0 + 8.0 + LEADER + 4.0;
+        let glyphs = Vec2::splat(plan.size);
+        Some(Box2 {
+            min: (anchor.min(knee).min(end) - mark).min(layout.label.min - glyphs),
+            max: (anchor.max(knee).max(end) + mark)
+                .max(layout.label.min + size + vec2(0.0, RISE) + glyphs),
+        })
+    }
+
+    fn place_callout(&mut self, plan: &CalloutPlan, pose: CalloutPose) -> PlacedCallout {
         let canvas = self.size();
         let spec = PlainTextSpec {
             font_size: plan.size,
@@ -73,13 +95,12 @@ impl HeadlessRenderer {
                     .collect::<Vec<_>>()
             })
             .collect::<Vec<_>>();
-        let line_height = plan.line_height();
         let text = vec2(
             widths
                 .iter()
                 .map(|line| line.iter().sum::<f32>())
                 .fold(0.0, f32::max),
-            line_height * plan.lines.len() as f32,
+            plan.line_height() * plan.lines.len() as f32,
         );
         let padding = if plan.chip {
             vec2(plan.size * 0.6, plan.size * 0.3)
@@ -92,7 +113,37 @@ impl HeadlessRenderer {
             max: vec2(canvas[0] as f32, canvas[1] as f32) - MARGIN,
         };
         let gap = if plan.chip { 0.0 } else { 10.0 };
-        let placed = layout(pose.anchor, pose.leg, size, gap, frame);
+        PlacedCallout {
+            spec,
+            widths,
+            padding,
+            size,
+            layout: layout(pose.anchor, pose.leg, size, gap, frame),
+        }
+    }
+
+    pub(crate) fn composite_callout(
+        &mut self,
+        pixels: &mut [u8],
+        plan: &CalloutPlan,
+        pose: CalloutPose,
+    ) {
+        if !pose.inks() {
+            return;
+        }
+        let opacity = pose.opacity.clamp(0.0, 1.0);
+        let draw = pose.draw.clamp(0.0, 1.0);
+        let label = pose.label.clamp(0.0, 1.0);
+        let emphasis = pose.emphasis.clamp(0.0, 1.0);
+        let canvas = self.size();
+        let PlacedCallout {
+            spec,
+            widths,
+            padding,
+            size,
+            layout: placed,
+        } = self.place_callout(plan, pose);
+        let line_height = plan.line_height();
         let tone = self.theme.ink(self.theme.tone(plan.tone));
 
         // The leader leaves the ring's edge and draws out toward the label.

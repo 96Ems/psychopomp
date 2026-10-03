@@ -535,7 +535,12 @@ carries velocity across redirects. `render/callout.rs` paints the mark, the
 analytic leader (`composite_prototype_path`), and the label. Over a Stage, the
 overlay sample key includes each stage-pinned callout's resolved anchor, so
 overlays re-render per shutter sample exactly while the camera moves and merge
-again once it rests. Sequence Diagram anchors are not implemented.
+again once it rests. When only callouts differ across a frame's samples, the
+per-sample composite and linear-light average cover just the row spans the
+moving callouts ink (`HeadlessRenderer::callout_bounds`, `exposure::accumulate_region`);
+still callouts outside them draw once, and every other pixel takes the same
+weighted average through a per-value table, so the exposure is bit-identical.
+Sequence Diagram anchors are not implemented.
 
 ### Stage
 

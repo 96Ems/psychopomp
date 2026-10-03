@@ -8,6 +8,7 @@ use std::{
 use anyhow::{Context, Result, bail};
 use psychopomp::{
     composition::{Asset, Duration, MediaPlacement, MediaRole, Time, TimeRange},
+    math::shapes::Box2,
     plan::{
         DeckPlan, MediaKindPlan, MediaRolePlan, ReadPlanError, ReelPlan, ScalarPlan, ScenePlan,
         TargetComponentPlan,
@@ -799,7 +800,8 @@ impl PreparedPlan {
 
     /// One exposed frame from weighted shutter samples. A Stage accumulates
     /// its light on the GPU; overlays drawn over it are averaged only across
-    /// samples where they differ.
+    /// samples where they differ, and only where they differ when that is
+    /// just callouts.
     fn render_exposure(
         &self,
         renderer: &mut HeadlessRenderer,
@@ -819,16 +821,90 @@ impl PreparedPlan {
         let overlays = crate::exposure::merge_equal_samples(exposure.iter().copied(), |time| {
             self.overlay_key(time, stage.id(), size)
         })?;
-        crate::exposure::accumulate(renderer, &overlays, |renderer, time| {
-            let mut pixels = base.clone();
-            self.render_overlays(&mut pixels, renderer, time, timeline)?;
-            Ok(pixels)
+        if !self.only_callouts_differ(&overlays, stage.id())? {
+            return crate::exposure::accumulate(renderer, &overlays, |renderer, time| {
+                let mut pixels = base.clone();
+                self.render_overlays(&mut pixels, renderer, time, timeline)?;
+                Ok(pixels)
+            });
+        }
+        // Only callouts differ: repaint just where moving ones ink, and draw a
+        // still callout once unless a moving one overlaps it.
+        let mut inked = Vec::new();
+        for callout in &self.callouts {
+            let poses = overlays
+                .iter()
+                .map(|&(time, _)| self.callout_pose(callout, time, timeline, size))
+                .collect::<Vec<_>>();
+            let moves = poses.windows(2).any(|pair| pair[0] != pair[1]);
+            let bounds = poses
+                .into_iter()
+                .flatten()
+                .filter_map(|pose| callout.bounds(renderer, pose))
+                .collect::<Vec<_>>();
+            inked.push((moves, bounds));
+        }
+        let moving = inked
+            .iter()
+            .filter(|(moves, _)| *moves)
+            .flat_map(|(_, bounds)| bounds.iter().copied())
+            .collect::<Vec<_>>();
+        let overlaps = |a: &Box2, b: &Box2| {
+            (a.min - 1.0).cmplt(b.max + 1.0).all() && (b.min - 1.0).cmplt(a.max + 1.0).all()
+        };
+        let redraw = inked
+            .iter()
+            .map(|(moves, bounds)| {
+                *moves || bounds.iter().any(|a| moving.iter().any(|b| overlaps(a, b)))
+            })
+            .collect::<Vec<_>>();
+        let region = crate::exposure::Region::covering(moving);
+        let mut first = base.clone();
+        self.render_overlays(&mut first, renderer, overlays[0].0, timeline)?;
+        crate::exposure::accumulate_region(&overlays, &region, first, |frame, time| {
+            region.copy(&base, frame);
+            self.render_overlays_drawing(frame, renderer, time, timeline, |callout| redraw[callout])
         })
+    }
+
+    /// Whether `samples` differ in nothing but their callouts.
+    fn only_callouts_differ(&self, samples: &[(f64, f32)], stage: &str) -> Result<bool> {
+        let mut keys = samples.iter().map(|&(time, _)| {
+            self.overlay_key_ignoring(time, |actor| {
+                actor == stage || self.callouts.iter().any(|callout| callout.id() == actor)
+            })
+        });
+        let Some(first) = keys.next().transpose()? else {
+            return Ok(true);
+        };
+        for key in keys {
+            if key? != first {
+                return Ok(false);
+            }
+        }
+        Ok(true)
     }
 
     /// The visual state of everything but the root `stage` actor, plus where
     /// any callout pinned to it lands.
     fn overlay_key(&self, time: f64, stage: &str, size: [u32; 2]) -> Result<VisualSampleKey> {
+        let mut key = self.overlay_key_ignoring(time, |actor| actor == stage)?;
+        key.anchors = self
+            .callouts
+            .iter()
+            .filter(|callout| callout.on_stage())
+            .filter_map(|callout| self.callout_pose(callout, time, &self.timeline, size))
+            .map(|pose| pose.anchor.to_array().map(f32::to_bits))
+            .collect();
+        Ok(key)
+    }
+
+    /// The visual state of overlays, without the channels of `ignored` actors.
+    fn overlay_key_ignoring(
+        &self,
+        time: f64,
+        ignored: impl Fn(&str) -> bool,
+    ) -> Result<VisualSampleKey> {
         let mut key = self
             .compiled
             .visual_sample_key_using(time, &self.timeline)?;
@@ -837,19 +913,12 @@ impl PreparedPlan {
             .iter_mut()
             .zip(&self.compiled.plan.continuous_channels)
         {
-            if channel.actor_id == stage {
+            if ignored(&channel.actor_id) {
                 *motion = [0; 4];
             }
         }
         key.video_frames = self.video_frames(time);
         key.ambient_time = self.rolling_moves(time).then_some(time.to_bits());
-        key.anchors = self
-            .callouts
-            .iter()
-            .filter(|callout| callout.on_stage())
-            .filter_map(|callout| self.callout_pose(callout, time, &self.timeline, size))
-            .map(|pose| pose.anchor.to_array().map(f32::to_bits))
-            .collect();
         Ok(key)
     }
 
@@ -930,6 +999,18 @@ impl PreparedPlan {
         time: f64,
         timeline: &Timeline,
     ) -> Result<()> {
+        self.render_overlays_drawing(pixels, renderer, time, timeline, |_| true)
+    }
+
+    /// `render_overlays`, drawing only the callouts whose index `callouts` accepts.
+    fn render_overlays_drawing(
+        &self,
+        pixels: &mut [u8],
+        renderer: &mut HeadlessRenderer,
+        time: f64,
+        timeline: &Timeline,
+        callouts: impl Fn(usize) -> bool,
+    ) -> Result<()> {
         let value = |actor: &str, property: &str, default: f32| {
             self.property_value(timeline, actor, property, time, default)
         };
@@ -970,7 +1051,10 @@ impl PreparedPlan {
         for number in &self.rolling {
             number.render(pixels, renderer, time, value);
         }
-        for callout in &self.callouts {
+        for (index, callout) in self.callouts.iter().enumerate() {
+            if !callouts(index) {
+                continue;
+            }
             if let Some(pose) = self.callout_pose(callout, time, timeline, renderer.size()) {
                 callout.render(pixels, renderer, pose);
             }
