@@ -406,6 +406,9 @@ reusable for any code explainer:
   `Spoken` whose `at(phrase)`, `at_any`, and `at_after` give plan-clock times.
 - `psychopomp::editor::diff::Diff` of `keep`/`add(step, ..)`/`remove(step, ..)`
   lines declares the stepped editor; `declare(scene, step_times, warning, entrance)`.
+  A hand-built editor recipe (one with semantic ranges to pin a callout, say)
+  gets the same room-opening steps from `diff::step_snapshots(previous, next,
+  at)` plus `diff::gap_lines(&snapshots)`.
 - `SequenceRowPlan::message|reply|note|end(..)` with `.in_slot(n)` and
   `.with_aside(text)` build rows; `SequenceParticipantPlan::new(id, label, detail)`
   builds participants; `SequenceActor::row_channel`/`participant_channel` address
