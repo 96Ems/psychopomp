@@ -12,6 +12,7 @@ use super::{
     plot::PreparedPlot,
     rolling::RollingNumberInput,
     sequence::PreparedSequence,
+    terminal::PreparedTerminal,
     tree::PreparedTree,
     value::PreparedValueToken,
     venn::PreparedVenn,
@@ -35,6 +36,7 @@ use psychopomp::{
     stage::{STAGE_RECIPE, StagePlan},
     state::{StateTrack, TimedState},
     task::{TASK_RECIPE, TaskRecipePlan},
+    terminal::TERMINAL_RECIPE,
     tree::TREE_RECIPE,
     value::VALUE_TOKEN_RECIPE,
     video::VIDEO_RECIPE,
@@ -61,6 +63,7 @@ pub(super) struct Plan {
     pub lanes: Vec<PreparedLanes>,
     pub videos: Vec<VideoInput>,
     pub callouts: Vec<PreparedCallout>,
+    pub terminals: Vec<PreparedTerminal>,
 }
 pub(super) enum RootPlan {
     Blank,
@@ -352,6 +355,7 @@ impl Plan {
         let mut lanes = Vec::new();
         let mut videos = Vec::new();
         let mut callouts = Vec::new();
+        let mut terminals = Vec::new();
         for actor in &plan.actors {
             match actor.recipe.as_str() {
                 "title-card" => put_root(&mut root, RootPlan::Title(Title::new(actor, &plan)?))?,
@@ -425,6 +429,9 @@ impl Plan {
                 )?),
                 CALLOUT_RECIPE => {
                     callouts.push(PreparedCallout::new(actor, &plan.continuous_channels)?)
+                }
+                TERMINAL_RECIPE => {
+                    terminals.push(PreparedTerminal::new(actor, &plan.continuous_channels)?)
                 }
                 recipe => bail!("unsupported actor recipe '{recipe}'"),
             }
@@ -505,6 +512,7 @@ impl Plan {
             lanes,
             videos,
             callouts,
+            terminals,
         };
         match &result.root {
             RootPlan::Editor { editor, .. } => editor.compile_channels(&mut result.plan)?,

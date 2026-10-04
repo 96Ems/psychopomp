@@ -48,6 +48,7 @@ mod stability_tests;
 mod stage;
 mod still;
 mod task;
+mod terminal;
 mod tree;
 mod value;
 mod venn;
@@ -450,6 +451,7 @@ struct PreparedPlan {
     callouts: Vec<callout::PreparedCallout>,
     headers: Vec<header::PreparedHeader>,
     videos: Vec<video::PreparedVideo>,
+    terminals: Vec<terminal::PreparedTerminal>,
 }
 
 // A prepared scene exposes a read-only view of its compiled data. There is no
@@ -521,6 +523,7 @@ impl PreparedPlan {
             lanes,
             videos,
             callouts,
+            terminals,
         } = input;
         let components = component_prototype::PreparedComponents::prepare_inputs(
             &mut plan, components, renderer,
@@ -599,6 +602,7 @@ impl PreparedPlan {
             callouts,
             headers,
             videos,
+            terminals,
         })
     }
 }
@@ -1019,6 +1023,10 @@ impl PreparedPlan {
         // regardless of declaration order.
         for video in &self.videos {
             video.render(pixels, renderer, time, value)?;
+        }
+        // Text-surface windows sit just above recordings, beneath diagrams and text.
+        for terminal in &self.terminals {
+            terminal.render(pixels, renderer, value)?;
         }
         for diagram in &self.venn {
             diagram.render(pixels, renderer, value);
