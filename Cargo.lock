@@ -1734,6 +1734,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "psychopomp-generated-media"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "psychopomp",
+ "psychopomp-media",
+ "serde_json",
+]
+
+[[package]]
 name = "psychopomp-hello"
 version = "0.1.0"
 dependencies = [
