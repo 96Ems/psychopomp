@@ -116,17 +116,7 @@ pub fn checklist() -> Result<ScenePlan> {
 /// through its thresholds, and an upload bar.
 pub fn meters() -> Result<ScenePlan> {
     let mut scene = PlanBuilder::new("meters", seconds(11.0));
-    header(
-        &mut scene,
-        vec![
-            span("meters", Tone::Accent),
-            span(
-                "  ·  one value drives arc, ticks, tone, and readout",
-                Tone::Muted,
-            ),
-        ],
-        seconds(0.2),
-    )?;
+    header(&mut scene, vec![span("meters", Tone::Accent)], seconds(0.2))?;
     let countdown = MeterPlan::countdown([640.0, 500.0], 170.0, 8.0).label("approval expires");
     let mut timer = MeterActor::declare(&mut scene, "timer", &countdown, 8.0)?;
     timer.show(&mut scene, seconds(0.3));
