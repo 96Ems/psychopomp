@@ -2,6 +2,7 @@
 members = [
   "crates/psychopomp",
   "crates/psychopomp-render",
+  "crates/psychopomp-media",
   "scenes/agent-demo",
   "scenes/hero",
   "scenes/effect-succeed-slides",
