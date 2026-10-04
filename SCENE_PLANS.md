@@ -26,6 +26,7 @@ machinery:
 | A version or count changing | `scenes/rolling-number` | `rolling::RollingNumberActor::roll` |
 | A CLI session, an agent run, or a build in a terminal | `scenes/text-surfaces` | `terminal::TerminalActor` (`type_command`, `print`, `stream`, `spin`, `resolve`, `clear`) |
 | A Slack thread or text conversation reacting | `scenes/text-surfaces` | `chat::ChatActor` (`typing`, `say`, `stream`, `react`, `highlight`) |
+| Who is speaking, or what a subject is | `scenes/text-surfaces` | `lower_third::LowerThirdActor` (`show`, `hide`) |
 | A pull request's changed files and diffstat | `scenes/text-surfaces` | `changed_files::ChangedFilesActor` (`reveal`, `focus`, `highlight`) |
 | A single titled idea | `scenes/agent-demo` | `PlanBuilder` channels and cues |
 
@@ -739,6 +740,19 @@ their fuller documentation elsewhere.
   let shown = files.show(&mut scene, 0);
   let landed = files.reveal(&mut scene, shown, 0.11)?;
   files.focus(&mut scene, "compaction", landed + SECOND)?;
+  ```
+- `lower-third`: `origin` (the bar's left edge, the name's vertical center),
+  `name`, optional `role`, `tone` (the bar's, `accent`), and `size` (46; the
+  role is set at about half). Channels: `opacity`, `x`, `y`, and the phases
+  `bar` (draws up from its foot), `name`, and `role` (each slides out from
+  behind the bar), 0 to 1. `LowerThirdActor::show` draws the bar on
+  `cubic-bezier(.45, 0, .2, 1)` with the name 140 ms and the role 280 ms behind;
+  `hide` reverses them. Channel-only: runs in `plan present`.
+  ```rust
+  let mut intro = LowerThirdActor::declare(&mut scene, "intro",
+      &LowerThirdPlan::new([120.0, 905.0], "opencode").role("coding agent"))?;
+  intro.show(&mut scene, at);
+  intro.hide(&mut scene, at + 4 * SECOND);
   ```
   The showroom is `cargo run -p psychopomp-text-surfaces` (writes the reel
   `target/text-surfaces.json` and its segments under `target/text-surfaces/`);

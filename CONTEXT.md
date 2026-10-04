@@ -278,6 +278,12 @@ renamed badges, `+N −M` counts, and GitHub's five-block **Diffstat**. Rows hol
 fixed slots, so revealing one never moves another; focus lights one row while the
 rest recede. The header's totals are Rolling Numbers that roll as rows land.
 
+## Lower Third
+
+A name and an optional role beside an accent bar, introducing a speaker or
+subject. The bar draws up, the name slides out from behind it, and the role
+follows; leaving reverses the order. Text never shows beyond the bar.
+
 ## Tone
 
 A semantic color role shared by explainer recipes: plain, request, success,

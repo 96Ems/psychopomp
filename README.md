@@ -17,7 +17,8 @@ vibe-coded prototype, tested on macOS (Metal).
 - **Overlays**: callouts pinned to anything, rolling numbers, captions, sequence
   diagrams, charts, trees, and video cards.
 - **Text surfaces**: a terminal, a Slack or iMessage thread, and a pull request's
-  changed files, drawn natively so they follow the theme and re-time with the scene.
+  changed files, drawn natively so they follow the theme and re-time with the
+  scene, plus lower thirds that introduce who or what is on screen.
 - **Narration**: optional ElevenLabs or Fish Audio voice-over. Each beat waits
   for the word that triggers it, so re-voicing re-times the film.
 

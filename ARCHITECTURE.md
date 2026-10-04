@@ -44,6 +44,7 @@ Lightweight crate (`crates/psychopomp/src`):
 - `crates/psychopomp/src/window.rs`: the text surfaces' shared Window channels (`opacity`, `x`, `y`, `scale`, `content`), title-bar height, `settle_in`/`dismiss`, and dot-free sub-channel IDs
 - `crates/psychopomp/src/terminal.rs`: Terminal recipe values, the reveal-driven pure layout with its scroll floor, deterministic `keystrokes`, and the `TerminalActor` handle (`type_command`, `prompt`, `idle`, `print`, `stream`, `spin`, `resolve`, `highlight`, `clear`, `scroll_to`)
 - `crates/psychopomp/src/chat.rs`: Chat Thread recipe values (Slack and bubbles styles), per-style geometry, the composer-anchored pure layout over renderer-measured `ChatMetrics`, typing-dot poses, and the `ChatActor` handle (`typing`, `say`, `stream`, `react`, `highlight`, `stamp`)
+- `crates/psychopomp/src/lower_third.rs`: Lower Third recipe values, bar and text geometry, and the `LowerThirdActor` handle (`show`, `hide`)
 - `crates/psychopomp/src/changed_files.rs`: Changed Files recipe values, GitHub's `diffstat`, fixed row slots, the totals schedule, and the `ChangedFilesActor` handle (`reveal`, `reveal_row`, `focus`, `unfocus`, `highlight`, `scroll_to`)
 - `crates/psychopomp/src/stage.rs`: Stage elements, strict channels, perspective camera, orb geometry, the packet clock (`stage::packet`), and the `StageActor` authoring handle (`to`, `ease`, `bounce`, `settle_in`, `clock`/`clock_for`, `connect`, `send`, `hit`, `kick`, `jolt`, `twang`, `land`)
 - `crates/psychopomp/src/effects/`: GPU-free special-effect clocks and particle poses; shared dynamics stay in `psychopomp::math::dynamics`
@@ -80,6 +81,7 @@ Renderer crate (`crates/psychopomp-render/src`), plan runtime:
 - `crates/psychopomp-render/src/plan_runtime/callout.rs`: anchor validation and per-sample resolution from the prepared root (`render::stage_anchor`, `PreparedEditor::anchor`)
 - `crates/psychopomp-render/src/plan_runtime/video.rs`: Video Card preflight, frame caches, and source-time mapping
 - `crates/psychopomp-render/src/plan_runtime/stage.rs`: Stage root preflight and preparation
+- `crates/psychopomp-render/src/plan_runtime/lower_third.rs`: Lower Third strict-channel preflight
 - `crates/psychopomp-render/src/plan_runtime/terminal.rs`, `chat.rs`, and `changed_files.rs`: text-surface preflight (per-line, per-message, per-reaction, and per-row channels checked against their IDs and kinds); chat preparation measures wrapped text, changed-files preparation measures columns and compiles its rolling totals
 
 Renderer crate, pixels and delivery:
@@ -107,6 +109,7 @@ Renderer crate, pixels and delivery:
 - `crates/psychopomp-render/src/render/wipe.rs`: Reel wipe pixels: antialiased split, divider line and shadow, riding labels
 - `crates/psychopomp-render/src/render/window.rs`: the text surfaces' Window shell (composed once per pose through the projected card and cached as a layer), title bar, CommitMono span runs, and weighted strokes
 - `crates/psychopomp-render/src/render/terminal.rs`, `chat.rs`, and `changed_files.rs`: Terminal, Chat Thread, and Changed Files pixels
+- `crates/psychopomp-render/src/render/lower_third.rs`: Lower Third pixels: the accent bar and sans name and role clipped at a stationary edge
 - `crates/psychopomp-render/src/render/stage.rs`, `stage.wgsl`, `stage_post.wgsl`: Stage primitives, HDR bloom, and composite; `PSYCHOPOMP_SHADER_DIR` loads the WGSL live
 - `crates/psychopomp-render/src/render/effects/*.wgsl`: binding-free noise, combustion, pressure, and rewind Modules, composed by the Stage shaders; see `EFFECTS.md`
 - `crates/psychopomp-render/src/render/debug.rs`: optional native debug HUD
@@ -135,7 +138,7 @@ Scene Programs (`scenes/`), each emitting a Scene Plan, Deck, or Reel:
 - `scenes/callouts/`: Callout showroom reel: callouts pinned to Stage cards through a dolly, a jolt, and a glide between anchors, then to a code range that moves as lines are inserted and the panel zooms
 - `scenes/video/`: Video Card showroom: a screen recording flies in, zooms into the prompt, and back out
 - `scenes/compare/`: wipe showroom: a held before/after wipe between two Stage frames, then a plain wipe
-- `scenes/text-surfaces/`: text-surface showroom reel: an agent session in a Terminal that overflows, scrolls, and clears; a Slack-style Chat Thread reacting while the agent streams its fix; the bubbles style; and a pull request's Changed Files with rolling totals and focus
+- `scenes/text-surfaces/`: text-surface showroom reel: an agent, introduced by a Lower Third, in a Terminal session that overflows, scrolls, and clears; a Slack-style Chat Thread reacting while the agent streams its fix; the bubbles style; and a pull request's Changed Files with rolling totals and focus
 
 ## Scene Programs And Rendering Compile Separately
 
@@ -553,6 +556,13 @@ preparation from a `totals` schedule the handle writes as rows land, reusing the
 Rolling Number compiler and painter. Terminals and chats are channel-only and run
 in `plan present`; a changed-files card whose totals roll is export-only, like a
 Rolling Number.
+
+A `lower-third` overlay (drawn just after Rolling Numbers) is a name and role
+beside an accent bar. Its `bar`, `name`, and `role` channels are independent
+phases: the bar draws up on the draw-on curve, and each line slides out from
+behind it through a stationary clip edge, so nothing ever shows on the bar's far
+side. Sans sprites are cached per theme. It is channel-only and presents
+natively; it is not a header or chapter template.
 
 ### Callouts
 
