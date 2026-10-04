@@ -188,8 +188,10 @@ mod tests {
             solid
                 .sprite
                 .pixels
-                .chunks_exact(4)
-                .zip(styled.sprite.pixels.chunks_exact(4))
+                .as_chunks::<4>()
+                .0
+                .iter()
+                .zip(styled.sprite.pixels.as_chunks::<4>().0)
                 .all(|(a, b)| a[3] == b[3]),
             "syntax colors must not change glyph geometry"
         );
@@ -198,7 +200,9 @@ mod tests {
                 styled
                     .sprite
                     .pixels
-                    .chunks_exact(4)
+                    .as_chunks::<4>()
+                    .0
+                    .iter()
                     .any(|p| p[..3] == color && p[3] > 200),
                 "missing syntax color {color:?}"
             );

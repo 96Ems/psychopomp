@@ -194,8 +194,10 @@ impl Change {
             bounds: None,
         };
         for (index, (a, b)) in before
-            .chunks_exact(4)
-            .zip(after.chunks_exact(4))
+            .as_chunks::<4>()
+            .0
+            .iter()
+            .zip(after.as_chunks::<4>().0)
             .enumerate()
         {
             let delta = (0..3).map(|c| a[c].abs_diff(b[c])).max().unwrap_or(0);

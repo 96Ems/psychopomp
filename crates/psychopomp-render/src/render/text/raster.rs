@@ -114,7 +114,7 @@ mod tests {
         assert_eq!(pixel, [85, 0, 170, 192]);
         let mut pixels = vec![0; 3 * 2 * 4];
         paint_rect(&mut pixels, 3, 2, -1, -1, 3, 3, [12, 34, 56, 128]);
-        for (i, pixel) in pixels.chunks_exact(4).enumerate() {
+        for (i, pixel) in pixels.as_chunks::<4>().0.iter().enumerate() {
             assert_eq!(
                 pixel,
                 if [0, 1, 3, 4].contains(&i) {

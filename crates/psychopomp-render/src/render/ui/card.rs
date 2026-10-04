@@ -1396,8 +1396,20 @@ mod tests {
             1.0,
         );
 
-        assert!(output.chunks_exact(4).any(|pixel| pixel[0] > pixel[1]));
-        assert!(output.chunks_exact(4).any(|pixel| pixel[1] > pixel[0]));
+        assert!(
+            output
+                .as_chunks::<4>()
+                .0
+                .iter()
+                .any(|pixel| pixel[0] > pixel[1])
+        );
+        assert!(
+            output
+                .as_chunks::<4>()
+                .0
+                .iter()
+                .any(|pixel| pixel[1] > pixel[0])
+        );
     }
 
     #[test]
@@ -1457,8 +1469,8 @@ mod tests {
             )
             .unwrap();
 
-        assert!(output.chunks_exact(4).any(|pixel| pixel[0] > 80));
-        assert!(output.chunks_exact(4).any(|pixel| pixel[3] > 0));
+        assert!(output.as_chunks::<4>().0.iter().any(|pixel| pixel[0] > 80));
+        assert!(output.as_chunks::<4>().0.iter().any(|pixel| pixel[3] > 0));
         let _ = UiColor::srgb8(1, 2, 3, 4);
     }
 
