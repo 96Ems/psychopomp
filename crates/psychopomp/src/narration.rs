@@ -1,8 +1,14 @@
-//! Narration clips produced by `scripts/narrate.ts`: exact durations plus word
-//! timings, so choreography is keyed to what is said rather than to seconds.
-//! A placed clip is a Script Clip at `narration/<file>`; its phrase lookups
+//! Narration clips: exact durations plus word timings, so choreography is
+//! keyed to what is said rather than to seconds. `Narration::load` reads the
+//! manifests `scripts/narrate.ts` writes (clips at `narration/<file>`);
+//! `psychopomp-media` builds clips from Generated Resources with
+//! [`NarrationClip::new`]. A placed clip is a Script Clip whose phrase lookups
 //! panic with the clip and phrase when the narration no longer says them.
-use std::{collections::HashMap, fs, path::Path};
+use std::{
+    collections::HashMap,
+    fs,
+    path::{Path, PathBuf},
+};
 
 use anyhow::{Context, Result};
 use serde::Deserialize;
@@ -34,9 +40,10 @@ pub struct Narration {
 }
 
 /// One voiced clip and its word timings.
+#[derive(Clone, Debug)]
 pub struct NarrationClip {
     id: String,
-    file: String,
+    path: PathBuf,
     duration: u64,
     transcript: Transcript,
 }
@@ -59,7 +66,7 @@ impl Narration {
                     clip.id.clone(),
                     NarrationClip {
                         id: clip.id,
-                        file: clip.file,
+                        path: format!("narration/{}", clip.file).into(),
                         duration: clip.duration_nanos,
                         transcript,
                     },
@@ -77,15 +84,43 @@ impl Narration {
 }
 
 impl NarrationClip {
+    /// A clip of the audio at `path` (relative to the plan file), lasting
+    /// `duration` nanoseconds, whose words are `transcript`.
+    pub fn new(
+        id: impl Into<String>,
+        path: impl Into<PathBuf>,
+        duration: u64,
+        transcript: Transcript,
+    ) -> Self {
+        Self {
+            id: id.into(),
+            path: path.into(),
+            duration,
+            transcript,
+        }
+    }
+
+    pub fn id(&self) -> &str {
+        &self.id
+    }
+
+    pub fn path(&self) -> &Path {
+        &self.path
+    }
+
     pub fn duration(&self) -> u64 {
         self.duration
+    }
+
+    pub fn transcript(&self) -> &Transcript {
+        &self.transcript
     }
 
     /// Place this clip in a plan, starting at `start` on the plan clock.
     pub fn place(&self, scene: &mut PlanBuilder, start: u64) -> Spoken<'_> {
         scene.media(MediaPlan {
             id: format!("narration-{}", self.id),
-            path: format!("narration/{}", self.file).into(),
+            path: self.path.clone(),
             kind: MediaKindPlan::Audio,
             role: MediaRolePlan::Script,
             source_start_nanos: 0,
@@ -128,6 +163,18 @@ impl Spoken<'_> {
                     self.clip.id
                 )
             })
+    }
+
+    /// When every occurrence of `phrase` starts, in order: one beat per word
+    /// of a chant. Panics like [`at`](Self::at) when it is never said.
+    pub fn words(&self, phrase: &str) -> Vec<u64> {
+        self.clip
+            .transcript
+            .phrases(phrase)
+            .unwrap_or_else(|error| panic!("clip '{}': {error:#}", self.clip.id))
+            .iter()
+            .map(|cue| self.start + cue.start().as_nanos())
+            .collect()
     }
 
     /// `phrase`, searching only after `earlier` is said.
