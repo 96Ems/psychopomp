@@ -30,6 +30,10 @@ machinery:
 | A Slack thread or text conversation reacting | `scenes/text-surfaces` | `chat::ChatActor` (`typing`, `say`, `stream`, `react`, `highlight`) |
 | Who is speaking, or what a subject is | `scenes/text-surfaces` | `lower_third::LowerThirdActor` (`show`, `hide`) |
 | A pull request's changed files and diffstat | `scenes/text-surfaces` | `changed_files::ChangedFilesActor` (`reveal`, `focus`, `highlight`) |
+| Steps or checks running, failing, retrying, passing | `scenes/viz-components` (`checklist`) | `checklist::ChecklistActor` (`reveal`, `start`, `resolve`, `skip`), `confetti::ConfettiActor::burst` |
+| A timeout, a load, or progress | `scenes/viz-components` (`meters`) | `meter::MeterActor` (`countdown`, `set`, `sweep`) |
+| Before/after numbers from a perf change | `scenes/viz-components` (`bars`) | `bars::BarsActor` (`grow`, `reveal_deltas`, `sort`) |
+| Captions for a narrated film | `scenes/viz-components` (`subtitles`) | `subtitles::SubtitlesPlan::from_spoken` |
 | A single titled idea | `scenes/agent-demo` | `PlanBuilder` channels and cues |
 
 1. Write the narration script and voice it with `bun scripts/narrate.ts` (`--draft`
@@ -263,8 +267,9 @@ work from waiting for a drawable; it is a diagnostic mode, not normal playback.
 
 The interruptible player accepts any plan driven only by Continuous Channels:
 Task, grid, editor, and Tree snapshots lower into continuous visual tracks.
-Plans with generic State Channels, media (including Video Cards), or Rolling
 Numbers (including Changed Files totals that roll) are still rejected until their interactive timing is defined. The same Scene Plan still exports as MP4
+Plans with generic State Channels, media (including Video Cards), Rolling
+Numbers, or Subtitles are still rejected until their interactive timing is defined. The same Scene Plan still exports as MP4
 through `plan render`, with its original timing and media placements. Live source
 reloading, native higher-DPI glyph rasterization, and presentation audio remain open.
 
@@ -794,6 +799,82 @@ their fuller documentation elsewhere.
   `target/text-surfaces.json` and its segments under `target/text-surfaces/`);
   render it with
   `cargo run --release -- plan render target/text-surfaces.json output/text-surfaces.mp4 --theme opencode`.
+- Readouts (shared by meters, bars, and checklist counts): `{ decimals? (0–3),
+  grouping?, rounding?: "nearest" | "up" | "down", prefix?, unit? }`. Digit
+  wheels follow the sampled value like an odometer and smear by the value's
+  velocity, so a label counts with its bar. `ReadoutFormat::new(0).grouped().unit("ms")`.
+- `checklist`: `origin` (top-left), `width` (results right-align there), `size`
+  (28), `rowHeight` (1.9 × size), `items` of `{ id, label, result?, failure? }`
+  (`failure` replaces `result` when the item fails), `title` (a heading with a
+  done count), `rail`, and `panel`. Channels: `opacity`, `x`, `y`, and per item
+  `item.<id>.reveal` (0..1), `item.<id>.spinner` and `item.<id>.mark` (clocks in
+  seconds, -1 inactive), and `item.<id>.outcome` (0 pending, 1 done, 2 failed,
+  3 skipped; rounded). `ChecklistActor` writes `reveal` (rows 120 ms apart),
+  `start(item, at)`, `resolve(item, at, Outcome | Mark)` (waits for the
+  spinner's handoff crossing; returns when the mark finishes), `skip`, `show`,
+  and `hide`. Starting a resolved item again is a retry.
+  let mut checks = ChecklistActor::declare(&mut scene, "checks",
+      &ChecklistPlan::new([580.0, 300.0], 760.0).title("checks").rail().panel()
+          .item(ChecklistItemPlan::new("unit", "unit tests").result("812 passed").failure("2 failed")))?;
+  checks.reveal(&mut scene, at)?;
+  checks.start(&mut scene, "unit", at)?;
+  let failed = checks.resolve(&mut scene, "unit", later, Outcome::Failed)?;
+  checks.start(&mut scene, "unit", failed + seconds(0.7))?; // retry
+- `meter`: `kind` (`ring` | `bar`), `center`, `size` (ring radius or bar length),
+  `scale` (an Axis: range, ticks, unit), `sweep` (270°; 360 closes the ring at
+  twelve), `thickness`, `readout` (a Readout format; omitted hides the number),
+  `label`, `tone` (accent), `thresholds` of `{ at, tone }` (whole at `at`,
+  blending just below it), and `tickLabels`. Channels: `opacity`, `x`, `y`,
+  `value`, `reveal` (track and ticks draw on), and `flash`. `MeterPlan::countdown(center,
+  radius, seconds)` is a closed ring with a tick per second, rounded-up whole
+  seconds, and warning/error tones near the end. `MeterActor::declare(.., initial)`
+  then `set` (spring), `sweep` (linear, for timers), `countdown` (sweeps to zero
+  and flashes at each threshold crossing and at zero), `flash`, `show`, `hide`.
+  let mut timer = MeterActor::declare(&mut scene, "timer",
+      &MeterPlan::countdown([640.0, 500.0], 170.0, 8.0).label("approval expires"), 8.0)?;
+  timer.show(&mut scene, at);
+  timer.countdown(&mut scene, at + SECOND, 8.0);
+- `bars`: `origin` (where bars start, top of the first row), `width` (axis
+  length), `axis`, `series` of `{ id, label?, tone? }` (1–4), `rows` of `{ id,
+  label }` (1–12; ids without dots), `rowHeight` (64), `size` (24), `readout`,
+  and `delta` `{ from, to, better?: "lower" | "higher", format?: "percent" | "factor" }`.
+  Channels: `opacity`, `x`, `y`, `axes` (draw-on), `row.<id>.slot` (display
+  position; defaults to declaration order), `row.<id>.opacity`,
+  `bar.<row>.<series>` (the bar's value), and `delta.<row>` (chip presence).
+  `BarsActor` writes `grow(at, series, &[(row, value)])` (staggered down the
+  display order), `set`, `sort(at, series, SortOrder)` (springs only rows that
+  move; ties keep declaration order), `reveal_rows`, `reveal_deltas`, `show`, `hide`.
+  let mut bench = BarsActor::declare(&mut scene, "bench",
+      &BarsPlan::new([520.0, 330.0], 900.0, AxisPlan::new([0.0, 2000.0]).every(500.0))
+          .series(BarSeriesPlan::new("before", "before", Tone::Muted))
+          .series(BarSeriesPlan::new("after", "after", Tone::Accent))
+          .row("cold", "cold start")
+          .readout(ReadoutFormat::new(0).grouped().unit("ms"))
+          .delta(BarDeltaPlan::new("before", "after")))?;
+  bench.grow(&mut scene, at, "before", &[("cold", 1840.0)])?;
+  bench.grow(&mut scene, later, "after", &[("cold", 1214.0)])?;
+  bench.reveal_deltas(&mut scene, later + SECOND)?;
+  bench.sort(&mut scene, later + 2 * SECOND, "after", SortOrder::Ascending)?;
+- `subtitles`: `origin` (lines' center x, the bottom line's center y),
+  `maxWidth`, `size` (40), `maxLines` (2), `highlight` (accent), `backing`
+  (true), and `words` of `{ text, startNanos, endNanos }` on the plan clock.
+  Channels: `opacity`, `x`, `y`. Pages break at sentence ends, pauses, and
+  width, with balanced lines; the spoken word takes the highlight with a
+  gliding pill. `SubtitlesPlan::from_spoken(&spoken, origin, max_width)` takes a
+  placed narration clip's words (`.spoken(&other)` appends another). Plans
+  using subtitles are export-only, like Rolling Numbers.
+  let spoken = narration.clip("layer")?.place(&mut scene, start);
+  SubtitlesActor::declare(&mut scene, "subtitles",
+      &SubtitlesPlan::from_spoken(&spoken, [960.0, 900.0], 1300.0).size(44.0))?;
+- `confetti`: `origin`, `count` (140), `seed`, `speed` (1700 px/s), `angle`
+  (degrees clockwise from up), `spread` (55° half-angle), `gravity` (1200 px/s²),
+  and `tones` (accent, success, request, warning, plain). Channels: `opacity`,
+  `x`, `y`, and `burst` (seconds since launch, -1 before). `ConfettiActor::burst(at)`
+  runs the 3.6 s clock; the same seed always gives the same burst.
+  The showroom for all five is `cargo run -p psychopomp-viz-components` (writes
+  `target/viz-components/reel.json`, each segment beside it, and the narration
+  it plays); render it with
+  `cargo run --release -- plan render target/viz-components/reel.json output/viz-components.mp4 --theme opencode`.
 - Editor Line Marks: `"mark": "added" | "removed"` on a line, with presence
   channel `mark.<line-id>`; `panel-x`, `panel-y`, and `panel-opacity` move and fade the card (the Stepped Diff
   enters on `panel-y`).

@@ -29,6 +29,7 @@ members = [
   "scenes/effects-showroom",
   "scenes/stage-forms",
   "scenes/text-surfaces",
+  "scenes/viz-components",
 ]
 default-members = ["crates/psychopomp-render"]
 resolver = "3"

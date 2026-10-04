@@ -74,6 +74,7 @@ pub(super) struct Plan {
     pub chats: Vec<ChatInput>,
     pub changed_files: Vec<ChangedFilesInput>,
     pub lower_thirds: Vec<PreparedLowerThird>,
+    pub viz: super::viz::VizInputs,
 }
 pub(super) enum RootPlan {
     Blank,
@@ -370,6 +371,7 @@ impl Plan {
         let mut chats = Vec::new();
         let mut changed_files = Vec::new();
         let mut lower_thirds = Vec::new();
+        let mut viz = super::viz::VizInputs::default();
         for actor in &plan.actors {
             if let Some(annotation) = PreparedAnnotation::parse(actor, &plan.continuous_channels)? {
                 annotations.push(annotation);
@@ -460,6 +462,9 @@ impl Plan {
                 LOWER_THIRD_RECIPE => {
                     lower_thirds.push(PreparedLowerThird::new(actor, &plan.continuous_channels)?)
                 }
+                recipe if super::viz::accepts(recipe) => {
+                    viz.parse(actor, &plan.continuous_channels)?
+                }
                 recipe => bail!("unsupported actor recipe '{recipe}'"),
             }
         }
@@ -549,6 +554,7 @@ impl Plan {
             chats,
             changed_files,
             lower_thirds,
+            viz,
         };
         match &result.root {
             RootPlan::Editor { editor, .. } => editor.compile_channels(&mut result.plan)?,
@@ -581,6 +587,7 @@ impl Plan {
             // Their changes follow the authored clock, not Playback destinations.
             && self.rolling.is_empty()
             && self.changed_files.iter().all(ChangedFilesInput::native)
+            && self.viz.native()
     }
 
     pub(super) fn require_native(&self) -> Result<()> {

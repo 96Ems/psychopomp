@@ -39,6 +39,7 @@ mod ui;
 mod value;
 mod venn;
 mod video;
+mod viz;
 mod window;
 mod wipe;
 use text::{PlainTextSpec, TextSprite, blend_pixel, blend_pixel_at, make_sprite, paint_rect};

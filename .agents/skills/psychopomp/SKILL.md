@@ -71,7 +71,12 @@ authoring. Engineering rules are in `AGENTS.md`.
    cards `settle_in`, beams `connect`, messages `send`, impacts `hit`; use
    `CalloutActor` to pin annotations to Stage elements or Editor code ranges and
    `RollingNumberActor` for live counters/timers; then camera moves, rewind,
-   resolution, and a `zoom` into the code.
+   resolution, and a `zoom` into the code. Reach for the visualization overlays
+   instead of hand-building them from Stage labels and rings: `ChecklistActor`
+   for checks that run and resolve, `MeterActor::countdown` for a timeout ring,
+   `BarsActor` for before/after numbers, `ConfettiActor` for a success beat, and
+   `SubtitlesPlan::from_spoken` to burn in word-timed captions
+   (`scenes/viz-components` shows all five).
    Changes are `Diff`s of `keep`, `add(step)`, and `remove(step)` lines, each step
    keyed to a phrase. Done when `cargo run -p <crate>` writes the reel and
    `cargo run --release -- plan validate <reel>` reports valid. A missing phrase panics
