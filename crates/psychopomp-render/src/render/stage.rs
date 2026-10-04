@@ -207,7 +207,7 @@ pub(crate) fn icon_svg(icon: &str, path: &str, view: f32) -> Option<String> {
 }
 
 /// Rasterize an icon's coverage at `pixels` square, for the atlas.
-pub(crate) fn icon_sprite(svg: &str, pixels: u32) -> Result<TextSprite> {
+fn icon_sprite(svg: &str, pixels: u32) -> Result<TextSprite> {
     rasterize_svg(svg, pixels, pixels)
 }
 
@@ -3096,7 +3096,8 @@ struct FigureStyle<'a> {
 
 impl Painter<'_> {
     /// A flat figure: an optional fill, then a stroke that draws on along its
-    /// outline from twelve o'clock, clockwise. It turns about its center.
+    /// outline from twelve o'clock, clockwise. It turns about its center. A
+    /// flash lifts the stroke, never the whole fill.
     fn shape(&mut self, order: usize, id: &str, style: FigureStyle, place: Placement) {
         let (scene, look) = (self.scene, self.look);
         let opacity = scene.unit(id, "opacity", 1.0);
@@ -3113,6 +3114,17 @@ impl Painter<'_> {
             .map(|point| place.center + point * scale)
             .collect::<Vec<_>>();
         let closed = !matches!(style.figure, Figure::Arc { .. });
+        // Like a card: the strongest reflection rides the outline, and the
+        // strongest pool floods the fill from where an arrival entered.
+        let strongest = |pool: bool| {
+            scene
+                .lights_on(place.outline)
+                .filter(|light| light.pool == pool)
+                .max_by(|a, b| a.strength.total_cmp(&b.strength))
+                .map_or(([0.0; 4], [0.0; 4]), |light| light.uniform(&look, opacity))
+        };
+        let (light, light_color) = strongest(false);
+        let (pool, pool_color) = strongest(true);
         if let Some(fill) = style.fill
             && closed
         {
@@ -3127,7 +3139,9 @@ impl Painter<'_> {
                 0.0,
                 blur,
                 Paint {
-                    fill: rgba(color.lerp(Vec3::ONE, 0.12 * flash.min(1.0)), amount),
+                    fill: rgba(color, amount),
+                    pool,
+                    pool_color,
                     ..Default::default()
                 },
             );
@@ -3139,6 +3153,8 @@ impl Painter<'_> {
             let paint = Paint {
                 stroke: rgba(color, alpha),
                 glow: glow4(own * ((0.04 * emphasis + 0.1 * flash) * alpha), 4.0 * scale),
+                light,
+                light_color,
                 ..Default::default()
             };
             let mut line = outline.clone();
@@ -3555,6 +3571,8 @@ impl<'a> StageFrame<'a> {
             stroke: paint.stroke,
             glow: paint.glow,
             uv: [first as f32, points.len() as f32, 0.0, 0.0],
+            pool: paint.pool,
+            pool_color: paint.pool_color,
             ..Default::default()
         });
     }
@@ -3643,6 +3661,8 @@ impl<'a> StageFrame<'a> {
             stroke: paint.stroke,
             glow: paint.glow,
             uv: [first as f32, points.len() as f32, 0.0, 0.0],
+            light: paint.light,
+            light_color: paint.light_color,
             ..Default::default()
         });
     }
@@ -3967,6 +3987,23 @@ mod tests {
                 }
             }
         }
+    }
+
+    #[test]
+    fn every_bundled_icon_rasterizes_to_visible_coverage() {
+        for name in psychopomp::stage::ICONS {
+            let svg = super::icon_svg(name, "", 256.0).unwrap_or_else(|| panic!("{name}"));
+            let sprite = super::icon_sprite(&svg, 48).unwrap();
+            let covered = sprite.pixels.chunks(4).filter(|p| p[3] > 128).count();
+            assert!(covered > 60, "{name} covers {covered} pixels");
+        }
+        assert!(super::icon_svg("nope", "", 256.0).is_none());
+        let square = super::icon_svg("", "M0 0 H24 V24 H0 Z", 24.0).unwrap();
+        let sprite = super::icon_sprite(&square, 16).unwrap();
+        assert!(
+            sprite.pixels.chunks(4).all(|p| p[3] == 255),
+            "path data fills its view"
+        );
     }
 
     #[test]

@@ -230,6 +230,11 @@ fn fs(in: VOut) -> @location(0) vec4<f32> {
             let strength = mix(1.0, clamp(along / max(drawn, 1.0), 0.0, 1.0), prim.b.w) * heat;
             alpha = prim.stroke.a * coverage(d, prim.a.w) * strength;
             color = prim.stroke.rgb * alpha + prim.glow.rgb * halo(d, prim.glow.w) * strength;
+            // A shape's outline catches a passing packet's reflection.
+            if prim.light.w > 0.0 {
+                let r = length(px - prim.light.xy) / max(prim.light.z, 1.0);
+                color += prim.light_color.rgb * prim.light.w * reflection(r) * coverage(d, prim.a.w) * strength * 0.6;
+            }
         }
         // Text: a = (kind, left, top, blur), b = (width, height, revealed width, 0)
         // uv = atlas rectangle in texels. light = (shimmer phase, strength, 0, 0).
@@ -289,6 +294,11 @@ fn fs(in: VOut) -> @location(0) vec4<f32> {
             alpha = fill_a + stroke_a * (1.0 - fill_a);
             color = prim.fill.rgb * fill_a + prim.stroke.rgb * stroke_a * (1.0 - fill_a);
             color += prim.glow.rgb * halo(d, prim.glow.w);
+            // An arrival's flood enters the filled glass, as on a card.
+            if prim.pool.w > 0.0 {
+                let r = length(px - prim.pool.xy) / max(prim.pool.z, 1.0);
+                color += prim.pool_color.rgb * prim.pool.w * exp(-2.0 * r * r) * fill_a * 0.12;
+            }
         }
         default: {}
     }

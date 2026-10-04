@@ -44,7 +44,7 @@ pub use grid::{
 };
 pub(crate) use header::{HeaderGlyphs, header_words};
 pub(crate) use rich_text::{RichTextGlyphs, RichTextSource, parse as parse_rich_text};
-pub(crate) use stage::{StageGpu, stage_anchor};
+pub(crate) use stage::{StageGpu, icon_svg, stage_anchor};
 pub use task::{BubblePose, ContentPose, TaskContentFrame, TaskVisualFrame};
 pub use theme::Theme;
 pub(crate) use tree::TreeNames;

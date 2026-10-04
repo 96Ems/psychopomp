@@ -1,5 +1,6 @@
 //! Stage: a 2.5D motion-graphics surface for explainers. Elements (cards, particle
-//! orbs, light beams, travelling packets, labels, rings) sit at world positions seen
+//! orbs and forms, light beams, drawn paths, flat shapes, icons, travelling
+//! packets, labels, rings) sit at world positions seen
 //! through a perspective camera, and every change is an ordinary Continuous
 //! Channel. Geometry that depends on time (orb spin, beam flow) is a pure function
 //! of the sample time, so any frame renders identically in any order.
@@ -979,8 +980,8 @@ impl StagePlan {
                         ICONS.join(", ")
                     );
                     ensure!(
-                        path.len() <= 20_000,
-                        "icon '{id}' path data is longer than 20000 characters"
+                        path.len() <= 20_000 && !path.contains(['"', '<', '>', '&']),
+                        "icon '{id}' path data must be at most 20000 characters of SVG path commands"
                     );
                 }
                 StageElement::Label { size, spans, .. } => {
