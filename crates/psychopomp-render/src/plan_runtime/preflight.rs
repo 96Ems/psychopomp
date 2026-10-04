@@ -3,6 +3,7 @@
 use super::{
     callout::PreparedCallout,
     caption::PreparedCaption,
+    changed_files::ChangedFilesInput,
     chat::ChatInput,
     component_prototype::{self, ComponentInput},
     editor::{EditorSelection, PreparedEditor},
@@ -24,6 +25,7 @@ use anyhow::{Context, Result, bail};
 use psychopomp::{
     callout::CALLOUT_RECIPE,
     caption::CAPTION_RECIPE,
+    changed_files::CHANGED_FILES_RECIPE,
     chat::CHAT_RECIPE,
     component_prototype::{
         COLLECTION, CONNECTOR, HEADER, HeaderPlan, RICH_TEXT, TYPESET, VENN, WIDTH_TEXT,
@@ -67,6 +69,7 @@ pub(super) struct Plan {
     pub callouts: Vec<PreparedCallout>,
     pub terminals: Vec<PreparedTerminal>,
     pub chats: Vec<ChatInput>,
+    pub changed_files: Vec<ChangedFilesInput>,
 }
 pub(super) enum RootPlan {
     Blank,
@@ -360,6 +363,7 @@ impl Plan {
         let mut callouts = Vec::new();
         let mut terminals = Vec::new();
         let mut chats = Vec::new();
+        let mut changed_files = Vec::new();
         for actor in &plan.actors {
             match actor.recipe.as_str() {
                 "title-card" => put_root(&mut root, RootPlan::Title(Title::new(actor, &plan)?))?,
@@ -438,6 +442,11 @@ impl Plan {
                     terminals.push(PreparedTerminal::new(actor, &plan.continuous_channels)?)
                 }
                 CHAT_RECIPE => chats.push(ChatInput::new(actor, &plan.continuous_channels)?),
+                CHANGED_FILES_RECIPE => changed_files.push(ChangedFilesInput::new(
+                    actor,
+                    &plan.continuous_channels,
+                    plan.duration_nanos,
+                )?),
                 recipe => bail!("unsupported actor recipe '{recipe}'"),
             }
         }
@@ -519,6 +528,7 @@ impl Plan {
             callouts,
             terminals,
             chats,
+            changed_files,
         };
         match &result.root {
             RootPlan::Editor { editor, .. } => editor.compile_channels(&mut result.plan)?,
@@ -550,6 +560,7 @@ impl Plan {
             && self.plan.media.is_empty()
             // Their changes follow the authored clock, not Playback destinations.
             && self.rolling.is_empty()
+            && self.changed_files.iter().all(ChangedFilesInput::native)
     }
 
     pub(super) fn require_native(&self) -> Result<()> {

@@ -13,6 +13,7 @@ use psychopomp::code::{CodeLine, LineId, PlacedLine, StyledSpan, SyntaxStyle};
 
 mod callout;
 mod caption;
+mod changed_files;
 mod chart;
 mod chat;
 mod component_prototype;
@@ -41,6 +42,7 @@ mod wipe;
 use text::{PlainTextSpec, TextSprite, blend_pixel, blend_pixel_at, make_sprite, paint_rect};
 
 pub(crate) use callout::CalloutPose;
+pub(crate) use changed_files::ChangedFilesLayout;
 pub(crate) use chat::ChatGlyphs;
 pub(crate) use component_prototype::PrototypeGlyphs;
 pub use grid::{

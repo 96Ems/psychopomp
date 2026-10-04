@@ -27,6 +27,7 @@ use crate::{
 mod attachments;
 mod callout;
 mod caption;
+mod changed_files;
 mod chat;
 mod component_prototype;
 pub(crate) mod delivery;
@@ -454,6 +455,7 @@ struct PreparedPlan {
     videos: Vec<video::PreparedVideo>,
     terminals: Vec<terminal::PreparedTerminal>,
     chats: Vec<chat::PreparedChat>,
+    changed_files: Vec<changed_files::PreparedChangedFiles>,
 }
 
 // A prepared scene exposes a read-only view of its compiled data. There is no
@@ -527,6 +529,7 @@ impl PreparedPlan {
             callouts,
             terminals,
             chats,
+            changed_files,
         } = input;
         let components = component_prototype::PreparedComponents::prepare_inputs(
             &mut plan, components, renderer,
@@ -578,6 +581,10 @@ impl PreparedPlan {
             .into_iter()
             .map(|input| input.prepare(renderer))
             .collect();
+        let changed_files = changed_files
+            .into_iter()
+            .map(|input| input.prepare(renderer))
+            .collect();
         let root = match root {
             preflight::RootPlan::Blank => PreparedRoot::Blank,
             preflight::RootPlan::Title(title) => PreparedRoot::Title(title),
@@ -611,6 +618,7 @@ impl PreparedPlan {
             videos,
             terminals,
             chats,
+            changed_files,
         })
     }
 }
@@ -968,6 +976,7 @@ impl PreparedPlan {
     /// A settling Rolling Number changes every sample without a channel moving.
     fn rolling_moves(&self, time: f64) -> bool {
         self.rolling.iter().any(|number| number.moving(time))
+            || self.changed_files.iter().any(|files| files.moving(time))
     }
 
     fn render_sample_using(
@@ -1038,6 +1047,9 @@ impl PreparedPlan {
         }
         for chat in &self.chats {
             chat.render(pixels, renderer, value)?;
+        }
+        for files in &self.changed_files {
+            files.render(pixels, renderer, time, value)?;
         }
         for diagram in &self.venn {
             diagram.render(pixels, renderer, value);
