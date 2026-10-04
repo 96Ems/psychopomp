@@ -27,6 +27,7 @@ members = [
   "scenes/camera",
   "scenes/diagnostics",
   "scenes/effects-showroom",
+  "scenes/stage-forms",
 ]
 default-members = ["crates/psychopomp-render"]
 resolver = "3"

@@ -10,10 +10,12 @@ vibe-coded prototype, tested on macOS (Metal).
 
 ## What it draws
 
-- **Stage**: a 2.5D camera over particle orbs, cards, wires, travelling packets,
-  labels, and rings, with bloom, depth of field, screen shake, zoom streaks,
   explosions, and a VHS rewind. The camera frames, follows packets, racks focus,
   orbits, dolly-zooms, whips, and sways handheld.
+- **Stage**: a 2.5D camera over particle orbs and forms (cubes, slabs, dot
+  matrices, tori that tumble and morph), cards, shapes, icons, arrowed paths,
+  travelling packets, labels, and rings, with bloom, depth of field, screen
+  shake, zoom streaks, explosions, and a VHS rewind.
 - **Code**: an editor that animates diffs while every line keeps its identity.
 - **Overlays**: callouts pinned to anything, rolling numbers, captions, sequence
   diagrams, charts, trees, and video cards.
@@ -67,6 +69,7 @@ bun scripts/sheet.ts target/hello.json 0.5,1.5,2.7 --theme neutral --shutter
 | [`callouts`](scenes/callouts), [`rolling-number`](scenes/rolling-number), [`charts`](scenes/charts), [`tree`](scenes/tree), [`diagnostics`](scenes/diagnostics) | Component showrooms |
 | [`effects-showroom`](scenes/effects-showroom) | Lightning, charge, shields, dissolve, and scans on the Stage |
 | [`interactive-showcase`](scenes/interactive-showcase) | A native, steppable presentation (`plan present`) |
+| [`stage-forms`](scenes/stage-forms) | Stage diagram vocabulary: particle forms that morph and tumble, shapes, icons, arrows, a relaying packet |
 
 ## Use it with a coding agent
 
@@ -107,4 +110,5 @@ cargo clippy --workspace --all-targets --all-features -- -D warnings
 ```
 
 [AGENTS.md](AGENTS.md) has the engineering and verification rules. CommitMono is
-bundled under the SIL Open Font License (`assets/fonts`).
+bundled under the SIL Open Font License (`assets/fonts`); Phosphor icons under
+the MIT License (`assets/icons`).

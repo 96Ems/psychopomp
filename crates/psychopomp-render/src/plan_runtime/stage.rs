@@ -1,13 +1,13 @@
 //! Prepared Stage root: decoded and validated once, with strict channel names,
 //! and GPU resources (text atlas, bloom chain, pipelines) built at preparation.
-use anyhow::Result;
+use anyhow::{Context, Result};
 use psychopomp::{
     plan::{ActorPlan, ContinuousChannelPlan},
-    stage::StagePlan,
+    stage::{StageElement, StagePlan},
 };
 
 use super::preflight::{decode, strict_channels};
-use crate::render::{HeadlessRenderer, StageGpu};
+use crate::render::{HeadlessRenderer, StageGpu, icon_svg};
 
 pub(super) fn validate_recipe(
     actor: &ActorPlan,
@@ -17,6 +17,27 @@ pub(super) fn validate_recipe(
     strict_channels(&actor.id, channels, "stage", |property| {
         plan.accepts(property)
     })?;
+    // Icon SVG must parse before any GPU work, so a typo in path data fails
+    // validation rather than the first render.
+    for element in &plan.elements {
+        if let StageElement::Icon {
+            id,
+            icon,
+            path,
+            view,
+            ..
+        } = element
+        {
+            let svg = icon_svg(icon, path, *view)
+                .with_context(|| format!("stage icon '{id}' names no bundled icon"))?;
+            let tree = resvg::usvg::Tree::from_str(&svg, &resvg::usvg::Options::default())
+                .with_context(|| format!("stage icon '{id}' SVG does not parse"))?;
+            anyhow::ensure!(
+                tree.root().has_children(),
+                "stage icon '{id}' path data draws nothing"
+            );
+        }
+    }
     Ok(plan)
 }
 
@@ -95,6 +116,22 @@ mod tests {
             stage.to(&mut scene, property, 0, 1.0, 0.3);
         }
         scene.finish().unwrap()
+    }
+
+    #[test]
+    fn icon_path_data_must_draw_something() {
+        for (path, valid) in [("M32 32 H224 V224 Z", true), ("Q", false)] {
+            let recipe = serde_json::from_value(serde_json::json!({
+                "elements": [
+                    { "kind": "icon", "id": "mark", "at": [960, 540, 0], "size": 64, "path": path }
+                ]
+            }))
+            .unwrap();
+            let mut scene = PlanBuilder::new("icon-preflight", 1_000_000_000);
+            StageActor::declare(&mut scene, "stage", &recipe).unwrap();
+            let result = validate_renderer_plan(&scene.finish().unwrap());
+            assert_eq!(result.is_ok(), valid, "{path}: {result:?}");
+        }
     }
 
     #[test]

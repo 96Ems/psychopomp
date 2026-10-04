@@ -20,7 +20,12 @@ use anyhow::{Context, Result, bail, ensure};
 use super::{FOCAL, StageElement, StagePlan};
 use crate::{
     author::{ActorHandle, PlanBuilder, whole_millis},
-    math::{Quat, Vec2, Vec3, easing::Ease, shapes::Box2, vec2, vec3},
+    math::{
+        Quat, Vec2, Vec3,
+        easing::Ease,
+        shapes::{Box2, Shape},
+        vec2, vec3,
+    },
 };
 
 /// Every `camera.*` channel and the value it has when a plan never writes it.
@@ -359,8 +364,29 @@ fn footprint(element: &StageElement, at: Vec3, scale: f32) -> Option<Footprint> 
             };
             (half, vec2(shift, 0.0))
         }
+        // A form turns, so it frames by its farthest point.
+        StageElement::Form { shapes, .. } => (
+            Vec2::splat(
+                shapes
+                    .iter()
+                    .map(|shape| shape.radius())
+                    .fold(0.0, f32::max),
+            ),
+            Vec2::ZERO,
+        ),
+        StageElement::Shape { shape, .. } => match shape.outline(Vec2::ZERO, 1.0) {
+            Shape::Box(bounds) => (bounds.extents(), Vec2::ZERO),
+            Shape::Circle(circle) => (Vec2::splat(circle.radius), Vec2::ZERO),
+            Shape::Polygon(polygon) => {
+                let bounds = polygon.bounds();
+                (bounds.extents(), bounds.center())
+            }
+            Shape::Point(_) => (Vec2::ZERO, Vec2::ZERO),
+        },
+        StageElement::Icon { size, .. } => (Vec2::splat(size * 0.5), Vec2::ZERO),
         StageElement::Beam { .. }
         | StageElement::Packet { .. }
+        | StageElement::Path { .. }
         | StageElement::Bolt { .. }
         | StageElement::Shield { .. } => return None,
     };

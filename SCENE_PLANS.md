@@ -18,6 +18,7 @@ machinery:
 | A pull request: broken behavior, the fix, the diff | `scenes/config-migration` (smallest) or `scenes/pr-walkthrough` | `psychopomp_pr_walkthrough::film`, `narration`, `editor::diff`, `sequence` rows |
 | A system, as a 3D film of cards, orbs, and packets | `scenes/opencode-jr-architecture`, `scenes/pr-walkthrough/src/flagship.rs` | `stage::StageActor` (`settle_in`, `send`, `hit`, `jolt`), `caption` |
 | Lightning, charge, a forcefield, a burn-away, a scan | `scenes/effects-showroom` | `stage::StageActor` (`zap`, `charge`, `hum`, `raise`, `dissolve`, `materialize`, `scan`) |
+| A diagram of shapes, icons, arrows, and particle forms | `scenes/stage-forms` | `stage` `form`/`shape`/`path`/`icon`, `StageActor` (`connect`, `relay`, `morph`) |
 | Code changing step by step, presented live | `scenes/effect-succeed-slides`, `scenes/interactive-showcase` | `editor` recipes, `PresentationStepPlan` |
 | Springs, easing, retargeting, or a metric as curves; a plan's channels over time | `scenes/charts` | `plot::PlotActor` (`draw`, `ride`, `velocity`), `lanes::LanesPlan::from_scene_plan` |
 | A payload, config, or emitted plan as structured data | `scenes/tree` | `tree::TreeActor` (`open`, `reveal`, `highlight`, `set`) |
@@ -705,8 +706,9 @@ their fuller documentation elsewhere.
 - `stage` (root): `elements` of `kind` `card` (`at`, `size`, `title`, `status`,
   `tone`), `orb` (`at`, `radius`, `points`), `beam` (`from`, `to`, `bend`),
   `packet` (`beam`, `reverse`, `label`), `label` (`at`, `size`, `spans`), `ring`
-  (`at`, `radius`, `thickness`), `bolt`, and `shield` (see Effects below), plus
-  `post` (`bloom`, `grain`, `vignette`,
+  (`at`, `radius`, `thickness`), `bolt` and `shield` (see Effects below), and the
+  diagram vocabulary below (`form`, `shape`, `path`, `icon`), plus `post` (`bloom`,
+  `grain`, `vignette`,
   `backdrop`). Channels are `<element>.<property>` (for example `service.shatter`,
   `link.draw`, `probe.age`, `client.blur|content`) and `camera.x|y|z|focus|dof|shake|quake|kick-x|kick-y|punch`,
    `camera.yaw|pitch|roll|zoom|pivot|handheld`, `camera.track.<id>`,
@@ -786,6 +788,60 @@ their fuller documentation elsewhere.
   the authored and followed pose. The showroom is `cargo run -p psychopomp-camera`
   (writes `target/camera.json`); render it with
   `cargo run --release -- plan render target/camera.json output/camera.mp4 --theme neutral`.
+- Stage diagram vocabulary (`scenes/stage-forms`; `cargo run -p psychopomp-stage-forms`
+  writes `target/stage-forms.json`):
+  ```json
+  { "kind": "form", "id": "store", "at": [1500, 470, 0], "points": 720, "tone": "accent", "tilt": 0.42,
+    "shapes": [{ "shape": "plane", "size": [340, 184] },
+               { "shape": "box", "size": [210, 210, 210], "edges": 0.5 },
+               { "shape": "sphere", "radius": 142 }] }
+  { "kind": "shape", "id": "gateway", "at": [900, 500, 0], "shape": { "rect": [232, 132] },
+    "corner": 22, "fill": "surface", "fillOpacity": 1, "stroke": "muted", "width": 1.4, "dash": [6, 7] }
+  { "kind": "shape", "id": "retry", "at": [900, 392, 0],
+    "shape": { "arc": { "radius": 30, "start": 0.6, "sweep": 0.8 } }, "arrow": "end" }
+  { "kind": "path", "id": "write", "through": ["client", [700, 640, 0], "gateway", "store"],
+    "curve": "straight", "corner": 24, "bend": 0, "tone": "plain", "arrow": "end" }
+  { "kind": "icon", "id": "db", "at": [900, 482, -1], "size": 46, "icon": "database", "tone": "plain" }
+  { "kind": "packet", "id": "put", "beam": "write", "label": "PUT /doc" }
+  - `form`: `shapes` (one to eight) of `sphere` (`radius`), `box` (`size` w/h/d; a
+    cube or a slab; `edges`, the share of points on its edges, 0.5), `plane`
+    (`size`, a dot matrix facing the camera at tilt 0), `lattice` (`size`), `cylinder`
+    (`radius`, `height`), and `torus` (`radius`, `tube`); `points` (720; a plane or
+    lattice needs a count that factors into its grid, such as 720 = 36 × 20 or
+    729 = 9³), `tone` (accent), `tilt` (0.42 radians, the orb's view). Channels and
+    their defaults: `opacity` 1, `x`/`y`/`z` 0, `scale` 1, `blur` 0, `rotation` 0
+    (about the vertical axis, plus ambient `spin` 1), `pitch` 0 and `roll` 0
+    (radians; ease them to tumble), `morph` 0 (a fractional index into `shapes`),
+    `burst` -1, `shatter` 0, `pulse` 0, `hurt` 0. `StageActor::morph(form, at,
+    index, seconds)` eases to a shape on a minimum-jerk curve; `land` pulses a form.
+  - `shape`: `shape` is `{ "rect": [w, h] }`, `{ "circle": r }`, `{ "arc": { radius,
+    start, sweep } }` (turns clockwise from twelve o'clock), or `{ "polygon": [[x,
+    y], ...] }` relative to `at`. `corner` rounds a rectangle or polygon; `fill` is a
+    tone or `surface`/`background` (an opaque panel), scaled by `fillOpacity`;
+    `stroke` is a tone (muted) or `null`; `width` (1.4), `dash` ([on, off] pixels),
+    and `arrow` (`none`, `start`, `end`, `both`; arcs only). Channels: `opacity` 1,
+    `x`/`y`/`z` 0, `scale` 1, `rotation` 0 (radians), `blur` 0, `draw` 1 (the stroke
+    draws on from twelve o'clock, clockwise), `fill` 1, `emphasis` 0, `flash` 0
+    (`land` flashes it). Beams and paths attach to shapes.
+  - `path`: `through` is two to 32 waypoints, each a positioned element's id or a
+    world point `[x, y, z]`. Element hops attach like beams (`bend` bows them);
+    point runs follow `curve`: `straight` with `corner` rounding, `smooth`
+    (Catmull-Rom through points only), or `bezier` (points only: start, then two
+    controls and an end per curve). `tone`, `width` (1.4), `dash`, and `arrow` as
+    for shapes. Channels: `opacity` 1, `draw` 1, `trim` 0 (erases from the start),
+    `flow` 0, `emphasis` 0, `surge` 0. Arrowheads ride the drawn tip and sit on a
+    body's silhouette. `StageActor::connect` draws a path without a port.
+  - A `packet` rides a beam or a path (its `beam` field names either). An element
+    waypoint between a path's ends is a stop: each leg is a whole packet life,
+    the route's `flight` shared equally by its legs, and each next leg gathers
+    `packet::RELAY` (0.12 s) after the previous lands. `StageActor::relay(packet,
+    at, seconds)` sends it and lands every element it reaches, returning each
+    leg's arrival; `send` returns the last. A packet can be sent again once its
+    previous life (`packet::lifetime`) has ended.
+  - `icon`: `size` in world pixels, one of `icon` (a bundled Phosphor name:
+    `stage::ICONS`, from `assets/icons`, MIT) or `path` (SVG path data, filled, in a
+    `view`-unit square, 256), and `tone` (plain draws in the text color).
+    Channels: `opacity` 1, `x`/`y`/`z` 0, `scale` 1, `blur` 0, `flash` 0.
 - Orb `rotation` is an angular offset in radians; animate it for a spin entrance
   rather than changing the ambient `spin` multiplier. `blur` adds defocus in world
   pixels. `burst` defaults to -1 (intact): set 0 on impact and ease linearly to

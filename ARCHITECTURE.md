@@ -45,6 +45,7 @@ Lightweight crate (`crates/psychopomp/src`):
 - `crates/psychopomp/src/stage.rs`: Stage elements, strict channels, perspective camera, orb geometry, the packet clock (`stage::packet`), and the `StageActor` authoring handle (`to`, `ease`, `glide`, `bounce`, `settle_in`, `clock`/`clock_for`, `connect`, `send`, `hit`, `kick`, `jolt`, `twang`, `land`, and `camera` for the `CameraRig`)
 - `crates/psychopomp/src/stage/camera.rs`: the Stage `Camera` pose and projection (pan, dolly, orbit about a pivot, zoom, roll, billboard screen boxes, framing) shared by the renderer, callouts, and Scene Programs, and the `CameraRig` shots (`frame`, `move_to`, `establish`, `push_in`, `pull_back`, `drift`, `whip`, `orbit`, `dolly_zoom`, `roll`, `focus_on`, `aperture`, `follow`, `release`, `handheld`)
 - `crates/psychopomp/src/effects/`: GPU-free special-effect clocks and particle poses (combustion, lightning, dissolve, shield, surface, shake, spinner); shared dynamics stay in `psychopomp::math::dynamics`
+- `crates/psychopomp/src/stage.rs`: Stage elements, strict channels, perspective camera, orb geometry, form shapes and morphs (`form_points`, `morph_point`), the packet clock and relay legs (`stage::packet`), and the `StageActor` authoring handle (`to`, `ease`, `bounce`, `settle_in`, `clock`/`clock_for`, `connect`, `send`, `relay`, `morph`, `hit`, `kick`, `jolt`, `twang`, `land`)
 - `crates/psychopomp/src/math.rs` and `math/`: shared motion and geometry math (glam vectors, lerp/remap/smoothstep, easing, closed-form dynamics such as the settling spring, arc-length curves, shape ports and connectors, deterministic hash)
 
 Renderer crate (`crates/psychopomp-render/src`), plan runtime:
@@ -135,6 +136,7 @@ Scene Programs (`scenes/`), each emitting a Scene Plan, Deck, or Reel:
 - `scenes/compare/`: wipe showroom: a held before/after wipe between two Stage frames, then a plain wipe
 - `scenes/camera/`: camera showroom: establish, frame, follow a packet, rack focus, orbit an orb, dolly zoom on an impact, whip, handheld drift, and a push-in, all `CameraRig` shots
 - `scenes/effects-showroom/`: Stage effects reel: a charged build zaps a deploy, a shield blocks an attack and passes a request, a stale config burns away and its replacement materializes and is scanned, a live link hums
+- `scenes/stage-forms/`: Stage diagram vocabulary showroom: shapes, icons, and arrowed paths; a packet relaying through a stop; a dot-matrix plane morphing into a tumbling cube and a sphere over a slab; a cube that bursts
 
 ## Scene Programs And Rendering Compile Separately
 
@@ -732,6 +734,50 @@ identically on the CPU, so ash leaves exactly where the rim passes. Charge
 crackle and scans draw after the mask and after glitch/cut copies, so neither
 is clipped or duplicated.
 
+#### Forms, shapes, paths, and icons
+The diagram vocabulary beyond cards and orbs is four more element kinds, each an
+arm of `StageElement` and a method on `Painter`, with no new pipeline:
+- `form` reuses the orb's material. `stage::form_points` generates each shape's
+  deterministic points (`math::shapes`: `fibonacci_sphere`, `box_points`,
+  `grid_points`, `cylinder_points`, `torus_points`) and pairs every shape with
+  the one before it (`match_points`: greedy nearest claims, then pairwise swaps
+  that shorten squared travel), once at preparation (`StageGpu::forms`). Each
+  sample, `Scene::form` evaluates `stage::morph_point` for every point, turns it
+  by tilt, spin, pitch, and roll, and takes the projected convex hull
+  (`math::shapes::Polygon`, collinear points dropped, at most 32 vertices) as the
+  form's outline, so beams, paths, packet labels, and lights meet its actual
+  silhouette. `Polygon::port_toward` leaves where the ray toward the target
+  crosses the outline, with the normal rounded over each corner, so a port
+  slides continuously while a form tumbles. The painter shares the orb's dot
+  loop (`Painter::particles`) and burst embers (`Painter::embers`); the dark body
+  is the hull as a filled polygon. The orb itself is unchanged and keeps its
+  exact pixels; the surface ripple stays spherical. Callout anchors resolve
+  through `Scene::place` and use a form's resting outline, not its hull.
+- `shape` flattens its figure to an outline (`figure_outline`, rounded corners
+  as cubic quarter-curves), fills it as a polygon, and strokes it as a
+  polyline, so draw-on, dashes, and arrowheads come from the existing polyline
+  primitive. Unrotated rectangles attach like cards (side midpoints); a turned
+  rectangle or polygon attaches to its hull. Wires meet a shape's outline
+  rather than submerging. Like a card, its stroke catches the strongest
+  reflection and its fill the strongest pool.
+- `path` resolves waypoints each sample (`Scene::route`) into legs split at its
+  stops. A hop touching an element is `math::shapes::connect` between outlines,
+  exactly as a beam; point-to-point runs are straight and joined with rounded
+  corners (`join_rounded`), or a Catmull-Rom or authored Bézier chain. Each leg
+  is a `Link`. `Link::landing` marks open ends that show an arrival (cards,
+  shapes, icons, free ends; for beams it equals the card sockets, so existing
+  plans are unchanged) and `Link::tips` where a body's silhouette cuts a
+  submerged leg, so arrowheads sit on the silhouette. A packet asks
+  `Scene::packet_legs` for its legs: one for a beam, one per path leg on the
+  same clock offset by `stage::packet::leg_start`; each leg paints and lights
+  exactly as a beam packet.
+- `icon` SVG (bundled Phosphor from `assets/icons`, compiled in, or path data)
+  rasterizes into the Stage's R8 atlas after the text, so text-only plans pack
+  identically, and draws as an atlas quad. Preflight parses icon SVG without a
+  GPU.
+Primitive kind 7 is a filled polygon (Quilez's crossing-count signed distance,
+optional border, glow, and a flood pool); its points share the polyline point
+buffer. Kinds 8 and 9 are reserved for this vocabulary.
 Editor diff backgrounds union their weighted vertical intervals before pixel
 coverage (`render/line_marks.rs`). Adjacent fractional rows therefore share a
 single tint instead of double-blending an antialiased seam. Gutter signs remain
@@ -750,8 +796,10 @@ timed curves, which stutter at 60 fps, and hands its velocity to a later spring.
 pmndrs `math`: scalar `lerp`, `inverse_lerp`, `remap`, `remap_clamp`, and
 `smoothstep`; glam's `Vec2`, `Vec3`, and `Quat`; `easing` curves; `curve`
 (`CubicBezier`, and `Polyline` with arc-length sampling and slicing); `shapes`
-(`Box2`, `Circle`, `Shape` outlines with facing `Port`s, `connect`, and
-`fibonacci_sphere`); and `random::hash`. Renderers and Scene Programs compose these
+(`Box2`, `Circle`, convex `Polygon`, `Shape` outlines with facing `Port`s,
+`connect`, deterministic 3D point sets from `fibonacci_sphere` to
+`torus_points`, the `r2` low-discrepancy sequence, and `match_points`); and
+`random::hash`. Renderers and Scene Programs compose these
 instead of carrying private lerps, easings, or geometry.
 
 Live shaders: when `PSYCHOPOMP_SHADER_DIR` is set, the stage reads `stage.wgsl` and
