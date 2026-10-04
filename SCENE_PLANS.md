@@ -224,6 +224,11 @@ scene.presentation_step("initial", "Start with a value", 0, 0);
 scene.presentation_step("reveal", "Reveal the type", 1_000_000_000, 2_500_000_000);
 ```
 
+A deck of evenly spaced steps is `scene.steps("step", titles, 3 * SECOND, 2 *
+SECOND)`: step `i` enters at `i × 3 s` and holds 2 s later (the first is a still
+at zero); it returns the entry times. `scene.cue_steps(3 * SECOND)` adds a Cue
+per step so `--cue step-2` renders one.
+
 Build the Effect Institute `effect-succeed` adaptation:
 
 ```bash

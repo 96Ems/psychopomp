@@ -424,6 +424,42 @@ impl PlanBuilder {
         });
     }
 
+    /// One Presentation Step per title, `beat` apart from time zero, with IDs
+    /// `{prefix}-0`, `{prefix}-1`, …: each enters at its beat and holds
+    /// `settle` later, once its motion rests; the first is a still at zero.
+    /// Returns each step's entry time.
+    pub fn steps<T: Into<String>>(
+        &mut self,
+        prefix: &str,
+        titles: impl IntoIterator<Item = T>,
+        beat: u64,
+        settle: u64,
+    ) -> Vec<u64> {
+        (0..)
+            .zip(titles)
+            .map(|(index, title)| {
+                let at = index * beat;
+                let hold = if index == 0 { 0 } else { at + settle };
+                self.presentation_step(format!("{prefix}-{index}"), title, at, hold);
+                at
+            })
+            .collect()
+    }
+
+    /// A Cue for every Presentation Step declared so far, named like the step
+    /// and spanning `beat` from its entry, so one step can be rendered alone.
+    pub fn cue_steps(&mut self, beat: u64) {
+        let steps = self
+            .plan
+            .presentation_steps
+            .iter()
+            .map(|step| (step.id.clone(), step.start_nanos))
+            .collect::<Vec<_>>();
+        for (id, start) in steps {
+            self.cue(id, start, start + beat);
+        }
+    }
+
     pub fn finish(self) -> Result<ScenePlan, crate::plan::PlanValidationError> {
         self.plan.validate()?;
         Ok(self.plan)
@@ -589,5 +625,34 @@ mod timing_tests {
         ] {
             assert_eq!(feel, SpringPlan::visual(duration, bounce));
         }
+    }
+}
+
+#[cfg(test)]
+mod step_tests {
+    use super::*;
+
+    #[test]
+    fn a_step_deck_holds_each_beat_once_it_settles() {
+        let mut scene = PlanBuilder::new("deck", 9 * SECOND);
+        let entries = scene.steps("step", ["one", "two", "three"], 3 * SECOND, 2 * SECOND);
+        assert_eq!(entries, [0, 3 * SECOND, 6 * SECOND]);
+        scene.cue_steps(3 * SECOND);
+        let plan = scene.finish().unwrap();
+        let holds = plan
+            .presentation_steps
+            .iter()
+            .map(|step| (step.id.as_str(), step.start_nanos, step.hold_nanos))
+            .collect::<Vec<_>>();
+        assert_eq!(
+            holds,
+            [
+                ("step-0", 0, 0),
+                ("step-1", 3 * SECOND, 5 * SECOND),
+                ("step-2", 6 * SECOND, 8 * SECOND)
+            ]
+        );
+        assert_eq!(plan.cues[2].id, "step-2");
+        assert_eq!(plan.cues[2].end_nanos, 9 * SECOND);
     }
 }

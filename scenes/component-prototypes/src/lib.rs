@@ -55,16 +55,8 @@ pub fn build_deck() -> Result<DeckPlan> {
 
 fn scene(id: &str, steps: &[&str]) -> PlanBuilder {
     let mut p = PlanBuilder::new(id, steps.len() as u64 * BEAT);
-    for (i, title) in steps.iter().enumerate() {
-        let at = i as u64 * BEAT;
-        p.presentation_step(
-            format!("step-{i}"),
-            *title,
-            at,
-            if i == 0 { 0 } else { at + 2 * SECOND },
-        );
-        p.cue(format!("step-{i}"), at, at + BEAT);
-    }
+    p.steps("step", steps.iter().copied(), BEAT, 2 * SECOND);
+    p.cue_steps(BEAT);
     p
 }
 fn text(

@@ -33,16 +33,10 @@ impl Stage {
         )?;
         stage.text("heading", title, [960., 118.], 46., INK)?;
         stage.text("controls", "← / →  step     ⌘← / ⌘→  slide     1–7  choose slide     R  replay     M  reduced motion", [960., 1020.], 17., MUTED)?;
-        for (i, caption) in captions.iter().enumerate() {
-            let at = i as u64 * BEAT;
-            stage.scene.presentation_step(
-                format!("step-{i}"),
-                *caption,
-                at,
-                if i == 0 { 0 } else { at + 2 * SECOND },
-            );
-            stage.scene.cue(format!("step-{i}"), at, at + BEAT);
-        }
+        stage
+            .scene
+            .steps("step", captions.iter().copied(), BEAT, 2 * SECOND);
+        stage.scene.cue_steps(BEAT);
         for (i, caption) in captions.iter().enumerate() {
             let actor = stage.scene.actor(
                 format!("caption-{i}"),
