@@ -139,15 +139,16 @@ impl HeadlessRenderer {
             let target = ((shell.origin[1] + row) * width + shell.origin[0]) * 4;
             let source = &shell.pixels[source..source + shell.size[0] * 4];
             let target = &mut pixels[target..target + shell.size[0] * 4];
-            for (pixel, layer) in target.chunks_exact_mut(4).zip(source.chunks_exact(4)) {
+            for (pixel, layer) in target
+                .as_chunks_mut::<4>()
+                .0
+                .iter_mut()
+                .zip(source.as_chunks::<4>().0)
+            {
                 if layer[3] == 255 && pose.opacity >= 1.0 {
-                    pixel.copy_from_slice(layer);
+                    *pixel = *layer;
                 } else if layer[3] != 0 {
-                    blend_pixel(
-                        pixel,
-                        [layer[0], layer[1], layer[2], layer[3]],
-                        pose.opacity,
-                    );
+                    blend_pixel(pixel, *layer, pose.opacity);
                 }
             }
         }
