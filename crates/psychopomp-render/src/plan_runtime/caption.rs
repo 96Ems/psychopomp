@@ -1,7 +1,7 @@
 //! Prepared captions: decoded and validated once; channel names are strict.
 use anyhow::Result;
 use psychopomp::{
-    caption::CaptionPlan,
+    caption::{CAPTION_RECIPE, CaptionPlan},
     plan::{ActorPlan, ContinuousChannelPlan},
 };
 
@@ -15,10 +15,8 @@ pub(super) struct PreparedCaption {
 
 impl PreparedCaption {
     pub(super) fn new(actor: &ActorPlan, channels: &[ContinuousChannelPlan]) -> Result<Self> {
-        let plan = decode(actor, "caption", CaptionPlan::validate)?;
-        strict_channels(&actor.id, channels, "caption", |property| {
-            matches!(property, "opacity" | "x" | "y" | "typed" | "caret")
-        })?;
+        let plan = decode(actor, CAPTION_RECIPE, CaptionPlan::validate)?;
+        strict_channels(&actor.id, channels, CAPTION_RECIPE, CaptionPlan::accepts)?;
         Ok(Self {
             id: actor.id.clone(),
             plan,

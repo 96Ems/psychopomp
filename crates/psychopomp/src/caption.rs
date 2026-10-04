@@ -5,11 +5,28 @@ use anyhow::{Result, ensure};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    author::{ActorHandle, ContinuousHandle, PlanBuilder},
+    author::{ActorHandle, ContinuousHandle, PlanBuilder, recipe_channels},
     tone::Tone,
 };
 
-pub const CAPTION_RECIPE: &str = "caption";
+recipe_channels! {
+    recipe: CAPTION_RECIPE = "caption",
+    plan: CaptionPlan,
+    actor: CaptionActor,
+    /// Sampled continuous channels for a [`CaptionPlan`] at one instant.
+    sampled: pub struct CaptionChannels {
+        /// Whole-caption opacity (`0.0..=1.0`, rest `1.0`).
+        opacity: "opacity", default = 1.0, initial = 0.0,
+        /// Horizontal translation in canvas pixels (rest `0.0`).
+        x: "x", default = 0.0, initial = 0.0,
+        /// Vertical translation in canvas pixels (rest `0.0`).
+        y: "y", default = 0.0, initial = 0.0,
+        /// Fraction of characters revealed (`0.0..=1.0`, rest `1.0`).
+        typed: "typed", default = 1.0, initial = 0.0,
+        /// Block caret opacity (`0.0..=1.0`, rest `0.0`).
+        caret: "caret", default = 0.0, initial = 0.0,
+    }
+}
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
@@ -176,9 +193,9 @@ impl CaptionActor {
         chars_per_second: f32,
         caret_hold_seconds: f32,
     ) -> u64 {
-        let opacity = self.channel(scene, "opacity", 0.0);
-        let typed = self.channel(scene, "typed", 0.0);
-        let caret = self.channel(scene, "caret", 0.0);
+        let opacity = self.opacity(scene);
+        let typed = self.typed(scene);
+        let caret = self.caret(scene);
         scene.set(&opacity, at_nanos, 1.0);
         scene.set(&caret, at_nanos, 1.0);
         let done = type_steps(scene, &typed, at_nanos, self.chars, chars_per_second);
@@ -276,5 +293,32 @@ mod tests {
             .find(|channel| channel.property == "typed")
             .unwrap();
         assert_eq!(typed.events.len(), 25);
+    }
+
+    #[test]
+    fn recipe_channels_macro_generates_strict_schema_and_typed_handles() {
+        assert_eq!(
+            CaptionPlan::CHANNELS,
+            &["opacity", "x", "y", "typed", "caret"]
+        );
+        for valid in CaptionPlan::CHANNELS {
+            assert!(CaptionPlan::accepts(valid), "{valid}");
+        }
+        assert!(!CaptionPlan::accepts("typo"));
+        assert_eq!(
+            CaptionChannels::sample(|_, default| default),
+            CaptionChannels::REST
+        );
+
+        let mut scene = PlanBuilder::new("caption-typed", 2_000_000_000);
+        let mut caption = CaptionActor::declare(&mut scene, "line", &plan()).unwrap();
+        let x = caption.x(&mut scene);
+        let y = caption.y(&mut scene);
+        scene.spring(&x, 0, 24.0, 0.4, 0.0);
+        scene.spring(&y, 0, -12.0, 0.4, 0.0);
+        let built = scene.finish().unwrap();
+        assert_eq!(x.id(), "line.x");
+        assert_eq!(y.id(), "line.y");
+        assert_eq!(built.continuous_channels.len(), 2);
     }
 }

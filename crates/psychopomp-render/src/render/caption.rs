@@ -1,7 +1,7 @@
 //! Caption pixels: styled CommitMono lines, an optional chip surface, a typing
 //! reveal by character, and the accent block caret. Alignment uses each line's
 //! full width, so typed text never slides while it appears.
-use psychopomp::caption::{CaptionAlign, CaptionPlan};
+use psychopomp::caption::{CaptionAlign, CaptionChannels, CaptionPlan};
 
 use super::{
     HeadlessRenderer, PlainTextSpec, TextDraw, composite_text,
@@ -18,16 +18,14 @@ impl HeadlessRenderer {
         plan: &CaptionPlan,
         sample: impl Fn(&str, f32) -> f32,
     ) {
-        let opacity = sample("opacity", 1.0).clamp(0.0, 1.0);
+        let ch = CaptionChannels::sample(sample);
+        let opacity = ch.opacity.clamp(0.0, 1.0);
         if opacity <= 0.001 {
             return;
         }
-        let origin = [
-            plan.origin[0] + sample("x", 0.0),
-            plan.origin[1] + sample("y", 0.0),
-        ];
-        let typed = sample("typed", 1.0).clamp(0.0, 1.0);
-        let caret = sample("caret", 0.0).clamp(0.0, 1.0);
+        let origin = [plan.origin[0] + ch.x, plan.origin[1] + ch.y];
+        let typed = ch.typed.clamp(0.0, 1.0);
+        let caret = ch.caret.clamp(0.0, 1.0);
         let canvas = [self.spec.width, self.spec.height];
         let spec = PlainTextSpec {
             font_size: plan.size,
