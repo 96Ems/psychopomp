@@ -1,11 +1,12 @@
 //! Loupe showroom: a lens of thick glass condenses over a code range, glides
 //! to another as if it were a puck on the page, stretches into a capsule to
 //! read along a line, then follows a Stage card's status through a camera move
-//! and glides to the next card.
+//! and glides to the next card, while a packet flies beneath a liquid-glass label.
 use anyhow::Result;
 use psychopomp::{
     author::{PlanBuilder, SECOND},
     callout::{CalloutAnchorPlan, CalloutSide},
+    caption::{CaptionActor, CaptionAlign, CaptionPlan, CaptionSpanPlan},
     code::StyledSpan,
     editor::{
         EDITOR_RECIPE, EditorLinePlan, EditorPartPlan, EditorRecipePlan, EditorSemanticRangePlan,
@@ -15,6 +16,7 @@ use psychopomp::{
     lens::{LensActor, LensPlan},
     plan::{ReelPlan, ScenePlan},
     stage::{StageActor, StagePlan},
+    tone::Tone,
 };
 
 const MS: u64 = 1_000_000;
@@ -207,6 +209,21 @@ pub fn build_stage() -> Result<ScenePlan> {
     // The status line sits 19 px below the card's center.
     loupe.channel(&mut scene, "y", 19.0);
     loupe.show(&mut scene, 1400 * MS);
+
+    // A liquid-glass label sits on the wire; the retry flies beneath it.
+    let mut label = CaptionActor::declare(
+        &mut scene,
+        "label",
+        &CaptionPlan::line(
+            [690.0, 540.0],
+            22.0,
+            vec![CaptionSpanPlan::new("GET /user", Tone::Plain)],
+        )
+        .aligned(CaptionAlign::Center)
+        .glass(),
+    )?;
+    label.show(&mut scene, 1000 * MS);
+    label.hide(&mut scene, 3600 * MS);
 
     // A retry lands and the status changes under the glass.
     let landed = stage.send(&mut scene, "retry", 2400 * MS, 0.7);

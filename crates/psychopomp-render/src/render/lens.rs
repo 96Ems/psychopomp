@@ -59,6 +59,7 @@ pub(crate) fn composite_lens(pixels: &mut [u8], [width, height]: [u32; 2], glass
         glass,
         bends: BendTable::new(glass),
         soft: page.blurred(2, 2),
+        frosted: (glass.frost > 0.0).then(|| page.blurred(8, 3)),
         page,
         sharpness: lerp(-0.5, SHARPEST, (glass.magnification - 1.0).clamp(0.0, 1.0)),
         strength: smoothstep(glass.presence),
@@ -93,8 +94,10 @@ struct Composite<'a> {
     glass: &'a Glass,
     bends: BendTable,
     page: Tile,
-    /// The page softened by about two pixels, for the rim and frost.
+    /// The page softened by about two pixels, for the rim.
     soft: Tile,
+    /// The page softened by about eight pixels, for frosted glass.
+    frosted: Option<Tile>,
     /// Keys' cubic parameter, crisper as the glass enlarges.
     sharpness: f32,
     /// How lit the glass is: its presence, eased.
@@ -160,11 +163,16 @@ impl Composite<'_> {
         } else {
             0.0
         };
-        let soften = (rim.powf(1.5) * RIM_SOFTEN + glass.frost).min(1.0);
+        let soften = (rim.powf(1.5) * RIM_SOFTEN).min(1.0);
         if soften > 1e-3 {
             let blurred = self.soft.bilinear(source(1.0));
             color = [0, 1, 2].map(|c| color[c] + (blurred[c] - color[c]) * soften);
         }
+        if let Some(frosted) = &self.frosted {
+            let blurred = frosted.bilinear(source(1.0));
+            color = [0, 1, 2].map(|c| color[c] + (blurred[c] - color[c]) * glass.frost);
+        }
+        let dim = 1.0 - glass.dim * self.strength;
         // Light: a sheen that reflects a sky brighter above, a crisp line where
         // the rim faces the light, a fainter one opposite where light leaving
         // the glass catches the far wall, and a hairline all around the edge.
@@ -180,7 +188,7 @@ impl Composite<'_> {
         let edge = (-((depth - 0.5) / 0.7).powi(2)).exp() * EDGE;
         let light =
             (LIFT + glass.frost * 0.012 + fresnel + specular + inner + edge) * self.strength;
-        color.map(|value| value + light)
+        color.map(|value| value * dim + light)
     }
 }
 

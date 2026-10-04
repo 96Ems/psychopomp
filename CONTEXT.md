@@ -256,7 +256,9 @@ the overlays drawn before it) at every Temporal Sample. It pins to the same
 anchors as a Callout and glides between them like a puck of glass, following
 its card or code range as they move. A lens **condenses** rather than fades:
 its presence grows its size, rim, and magnification together. Its focus can
-sit away from its center, so the glass can float beside what it reads.
+sit away from its center, so the glass can float beside what it reads. The
+same glass, frosted and unmagnified, is a material for chips: a glass caption
+refracts the scene behind its text instead of covering it.
 
 ## Tone
 

@@ -573,9 +573,13 @@ inner glow opposite, and an edge hairline; a drop shadow and contact darkening
 fall outside the outline. Pixels outside the bounds are untouched, so plans
 without a lens keep identical pixels.
 
-Each temporal sample refracts its own frame. On CPU roots the lens is part of
-`render_sample`; over a Stage it refracts the developed exposure (a motion-
-blurred base, like every overlay there) at each overlay sample. A Stage lens's
+Each temporal sample refracts its own frame. On CPU roots with nothing above
+the glass (no plain text or Tasks), `render_lensed_exposure` renders the page
+beneath the lenses once per distinct non-lens sample key and refracts a copy per
+sample, so a lens gliding over still code costs a lens per sample rather than a
+page; a GPU test proves it bit-identical to whole samples. Otherwise the lens is
+part of `render_sample`. Over a Stage it refracts the developed exposure (a
+motion-blurred base, like every overlay there) at each overlay sample. A Stage lens's
 resolved anchor joins the overlay key, so a lens riding a card through a dolly
 re-composites per shutter sample even while its own channels rest, and any
 visible lens takes the whole-sample composite rather than the callout-region
@@ -583,6 +587,13 @@ shortcut, because it reads pixels beyond its own ink. Anchors resolve through
 `callout::resolve` (and `LensAnchorPlan` is the callout anchor type), so moving
 to a shared anchor Module is a rename. Stage grain is developed before overlays,
 so a lens enlarges it with the page.
+
+`Glass::pane` reuses the same optics as a panel material: no magnification, a
+thick pill rim, heavy frost (an eight-pixel softened page), and a dim so light
+text reads over light pixels. A caption with `glass` composites that pane in
+place of its solid chip, before its text, so the scene behind refracts at the
+pill's rim and diffuses through it, the way a packet's light passes under a
+label on its wire.
 
 ### Stage
 

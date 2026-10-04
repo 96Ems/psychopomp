@@ -273,6 +273,7 @@ impl LensPlan {
             magnification: magnification.clamp(0.25, 8.0),
             dispersion: self.dispersion,
             frost: value("frost", self.frost).clamp(0.0, 1.0),
+            dim: 0.0,
             shadow: self.shadow,
             presence,
         })
@@ -296,12 +297,39 @@ pub struct Glass {
     /// How much farther the rim bends blue than red.
     pub dispersion: f32,
     pub frost: f32,
+    /// How much the glass darkens what it shows, for legible text on top.
+    pub dim: f32,
     pub shadow: f32,
     /// 0 (absent) to 1, slightly more during a springy settle.
     pub presence: f32,
 }
 
 impl Glass {
+    /// Liquid glass as a panel material: a frosted pane with a thick rounded
+    /// rim and no magnification, for a chip that refracts the scene behind
+    /// its text. Like a lens it condenses as `presence` rises.
+    pub fn pane(outline: RoundedBox, presence: f32) -> Option<Self> {
+        let presence = presence.clamp(0.0, 1.3);
+        if presence <= 1e-3 {
+            return None;
+        }
+        let condense = lerp(CONDENSED, 1.0, presence);
+        let half = outline.half * condense;
+        let bevel = (half.min_element() * PANE_BEVEL).max(1.0);
+        Some(Self {
+            outline: RoundedBox::new(outline.center, half, outline.corner * condense),
+            bevel,
+            depth: PANE_REFRACTION * bevel * presence,
+            focus: outline.center,
+            magnification: 1.0,
+            dispersion: default_dispersion(),
+            frost: PANE_FROST,
+            dim: PANE_DIM,
+            shadow: PANE_SHADOW,
+            presence,
+        })
+    }
+
     /// How far into the rim `point` is: 0 at the edge, 1 on the flat top.
     pub fn rim(&self, point: Vec2) -> f32 {
         (-self.outline.distance(point) / self.bevel).clamp(0.0, 1.0)
@@ -350,6 +378,15 @@ impl Glass {
 
 /// How far a lens's shadow reaches beyond its outline.
 const SHADOW_REACH: f32 = 48.0;
+/// A pane's rim, as a fraction of its shorter half side: thick, like a slab.
+const PANE_BEVEL: f32 = 0.6;
+/// A pane's rim bends gently: it is a sheet, not a loupe.
+const PANE_REFRACTION: f32 = 0.45;
+/// Frosted enough that text over busy pixels stays legible.
+const PANE_FROST: f32 = 0.9;
+/// And dimmed, as dark-mode glass is, so light text reads over light pixels.
+const PANE_DIM: f32 = 0.35;
+const PANE_SHADOW: f32 = 0.35;
 
 /// Authoring handle for one lens. Channels are declared on first use.
 pub struct LensActor {
@@ -594,6 +631,25 @@ mod tests {
         }
         let outer = glass.bounds();
         assert!(outer.min.x < 250.0 && outer.max.y > 450.0 + glass.drop());
+    }
+
+    #[test]
+    fn panes_frost_without_magnifying_and_condense_in() {
+        let outline = RoundedBox::new(vec2(500.0, 900.0), vec2(300.0, 30.0), 30.0);
+        assert!(Glass::pane(outline, 0.0).is_none());
+        let pane = Glass::pane(outline, 1.0).unwrap();
+        assert_eq!(pane.magnification, 1.0);
+        assert_eq!(pane.outline, outline);
+        assert!(pane.frost > 0.5 && pane.bevel < 30.0);
+        assert_eq!(pane.source(vec2(600.0, 900.0), 1.0), vec2(600.0, 900.0));
+        let rim = pane.source(vec2(799.0, 900.0), 1.0);
+        assert!(rim.x < 799.0, "the rim still bends inward: {rim}");
+        let half = Glass::pane(outline, 0.5).unwrap();
+        assert!(half.outline.half.x < 300.0);
+        assert!(
+            (half.outline.corner / half.outline.half.y - 1.0).abs() < 1e-5,
+            "a pill stays a pill"
+        );
     }
 
     #[test]

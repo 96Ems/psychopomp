@@ -24,6 +24,10 @@ pub struct CaptionPlan {
     /// A rounded surface behind the text, as for a status chip.
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub chip: bool,
+    /// Make the chip liquid glass: a frosted pane that refracts the scene
+    /// behind the text instead of covering it.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub glass: bool,
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
@@ -67,6 +71,7 @@ impl CaptionPlan {
             size,
             lines: vec![spans],
             chip: false,
+            glass: false,
         }
     }
 
@@ -77,6 +82,13 @@ impl CaptionPlan {
 
     pub fn chip(mut self) -> Self {
         self.chip = true;
+        self
+    }
+
+    /// A chip of liquid glass.
+    pub fn glass(mut self) -> Self {
+        self.chip = true;
+        self.glass = true;
         self
     }
 
@@ -245,6 +257,7 @@ mod tests {
         assert_eq!(plan.char_count(), 25);
         let json = serde_json::to_value(&plan).unwrap();
         assert!(json.get("align").is_none() && json.get("chip").is_none());
+        assert!(json.get("glass").is_none());
         assert_eq!(json["lines"][0][0]["tone"], "accent");
         assert!(json["lines"][0][1].get("tone").is_none());
         assert_eq!(serde_json::from_value::<CaptionPlan>(json).unwrap(), plan);

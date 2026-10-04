@@ -512,7 +512,9 @@ their fuller documentation elsewhere.
   `end` (`participant`, `label`), each with optional `slot` and `aside`. Channels:
   `opacity`, `x`, `y`, `lifelines`, `participant.<id>.opacity|emphasis`,
   `row.<id>.reveal|opacity|strike`. Use `SequenceActor` to write reveals by row.
-- `caption`: `origin`, `align`, `size`, `lines` of `{ text, tone }` spans, `chip`.
+- `caption`: `origin`, `align`, `size`, `lines` of `{ text, tone }` spans, `chip`,
+  and `glass` (the chip is a frosted liquid-glass pane that refracts the scene
+  behind it and condenses in with `opacity`; `CaptionPlan::glass()`).
   Channels: `opacity`, `x`, `y`, `typed`, `caret`. `CaptionActor::type_in` writes
   one exact step per character; `show` and `hide` fade.
 - `rolling-number`: `origin` (aligned edge x, center y), `align`, `size`, `bold`,
