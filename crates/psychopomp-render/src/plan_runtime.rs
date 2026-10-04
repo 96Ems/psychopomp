@@ -52,6 +52,7 @@ mod tree;
 mod value;
 mod venn;
 mod video;
+mod viz;
 
 use editor::PreparedEditor;
 
@@ -450,6 +451,7 @@ struct PreparedPlan {
     callouts: Vec<callout::PreparedCallout>,
     headers: Vec<header::PreparedHeader>,
     videos: Vec<video::PreparedVideo>,
+    viz: viz::PreparedViz,
 }
 
 // A prepared scene exposes a read-only view of its compiled data. There is no
@@ -521,6 +523,7 @@ impl PreparedPlan {
             lanes,
             videos,
             callouts,
+            viz,
         } = input;
         let components = component_prototype::PreparedComponents::prepare_inputs(
             &mut plan, components, renderer,
@@ -568,6 +571,7 @@ impl PreparedPlan {
             .into_iter()
             .map(|input| input.open(base))
             .collect::<Result<Vec<_>>>()?;
+        let viz = viz.prepare(renderer);
         let root = match root {
             preflight::RootPlan::Blank => PreparedRoot::Blank,
             preflight::RootPlan::Title(title) => PreparedRoot::Title(title),
@@ -599,6 +603,7 @@ impl PreparedPlan {
             callouts,
             headers,
             videos,
+            viz,
         })
     }
 }
@@ -768,6 +773,7 @@ impl PreparedPlan {
         let stage = matches!(&self.root, PreparedRoot::Stage(_));
         key.ambient_time = (stage
             || self.rolling_moves(time)
+            || self.viz.moving(time)
             || self.running_properties().iter().any(|property| {
                 timeline
                     .sample_at(property, time)
@@ -918,7 +924,8 @@ impl PreparedPlan {
             }
         }
         key.video_frames = self.video_frames(time);
-        key.ambient_time = self.rolling_moves(time).then_some(time.to_bits());
+        key.ambient_time =
+            (self.rolling_moves(time) || self.viz.moving(time)).then_some(time.to_bits());
         Ok(key)
     }
 
@@ -1035,6 +1042,11 @@ impl PreparedPlan {
         for lanes in &self.lanes {
             lanes.render(pixels, renderer, value);
         }
+        self.viz
+            .render_diagrams(pixels, renderer, value, |actor, property| {
+                self.motion_value(timeline, actor, property, time)
+                    .map_or(0.0, |state| state.velocity)
+            });
         self.components.render(pixels, renderer, value)?;
         for header in &self.headers {
             header.render(pixels, renderer, value);
@@ -1078,6 +1090,7 @@ impl PreparedPlan {
                 self.motion_value(timeline, actor, property, time)
             })?;
         }
+        self.viz.render_foreground(pixels, renderer, time, value);
         Ok(())
     }
 

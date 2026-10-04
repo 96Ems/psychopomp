@@ -61,6 +61,7 @@ pub(super) struct Plan {
     pub lanes: Vec<PreparedLanes>,
     pub videos: Vec<VideoInput>,
     pub callouts: Vec<PreparedCallout>,
+    pub viz: super::viz::VizInputs,
 }
 pub(super) enum RootPlan {
     Blank,
@@ -352,6 +353,7 @@ impl Plan {
         let mut lanes = Vec::new();
         let mut videos = Vec::new();
         let mut callouts = Vec::new();
+        let mut viz = super::viz::VizInputs::default();
         for actor in &plan.actors {
             match actor.recipe.as_str() {
                 "title-card" => put_root(&mut root, RootPlan::Title(Title::new(actor, &plan)?))?,
@@ -425,6 +427,9 @@ impl Plan {
                 )?),
                 CALLOUT_RECIPE => {
                     callouts.push(PreparedCallout::new(actor, &plan.continuous_channels)?)
+                }
+                recipe if super::viz::accepts(recipe) => {
+                    viz.parse(actor, &plan.continuous_channels)?
                 }
                 recipe => bail!("unsupported actor recipe '{recipe}'"),
             }
@@ -505,6 +510,7 @@ impl Plan {
             lanes,
             videos,
             callouts,
+            viz,
         };
         match &result.root {
             RootPlan::Editor { editor, .. } => editor.compile_channels(&mut result.plan)?,
@@ -536,6 +542,7 @@ impl Plan {
             && self.plan.media.is_empty()
             // Their changes follow the authored clock, not Playback destinations.
             && self.rolling.is_empty()
+            && self.viz.native()
     }
 
     pub(super) fn require_native(&self) -> Result<()> {
