@@ -17,6 +17,7 @@ machinery:
 | --- | --- | --- |
 | A pull request: broken behavior, the fix, the diff | `scenes/config-migration` (smallest) or `scenes/pr-walkthrough` | `psychopomp_pr_walkthrough::film`, `narration`, `editor::diff`, `sequence` rows |
 | A system, as a 3D film of cards, orbs, and packets | `scenes/opencode-jr-architecture`, `scenes/pr-walkthrough/src/flagship.rs` | `stage::StageActor` (`settle_in`, `send`, `hit`, `jolt`), `caption` |
+| Lightning, charge, a forcefield, a burn-away, a scan | `scenes/effects-showroom` | `stage::StageActor` (`zap`, `charge`, `hum`, `raise`, `dissolve`, `materialize`, `scan`) |
 | Code changing step by step, presented live | `scenes/effect-succeed-slides`, `scenes/interactive-showcase` | `editor` recipes, `PresentationStepPlan` |
 | Springs, easing, retargeting, or a metric as curves; a plan's channels over time | `scenes/charts` | `plot::PlotActor` (`draw`, `ride`, `velocity`), `lanes::LanesPlan::from_scene_plan` |
 | A payload, config, or emitted plan as structured data | `scenes/tree` | `tree::TreeActor` (`open`, `reveal`, `highlight`, `set`) |
@@ -661,8 +662,9 @@ their fuller documentation elsewhere.
   enters on `panel-y`).
 - `stage` (root): `elements` of `kind` `card` (`at`, `size`, `title`, `status`,
   `tone`), `orb` (`at`, `radius`, `points`), `beam` (`from`, `to`, `bend`),
-  `packet` (`beam`, `reverse`, `label`), `label` (`at`, `size`, `spans`), and `ring`
-  (`at`, `radius`, `thickness`), plus `post` (`bloom`, `grain`, `vignette`,
+  `packet` (`beam`, `reverse`, `label`), `label` (`at`, `size`, `spans`), `ring`
+  (`at`, `radius`, `thickness`), `bolt`, and `shield` (see Effects below), plus
+  `post` (`bloom`, `grain`, `vignette`,
   `backdrop`). Channels are `<element>.<property>` (for example `service.shatter`,
   `link.draw`, `probe.age`, `client.blur|content`) and `camera.x|y|z|focus|dof|shake|quake|kick-x|kick-y|punch`,
    `post.bloom|chroma|exposure|vignette|rewind|zoom|flash`. `post.rewind` is a 1.4-second local
@@ -670,7 +672,8 @@ their fuller documentation elsewhere.
    trauma (0..2) added to a jolt's `shake`; `post.zoom` is a radial streak toward
    the frame center (0..0.5); `post.flash` washes the frame toward white (0..1). Cards also take the deletion
    channels `cool|damage|glitch|cut|ghost` and the status-spinner clocks
-   `spinner|release|mark` (seconds; -1 inactive), with `mark: "check" | "cross"`.
+   `spinner|release|mark` (seconds; -1 inactive), with `mark: "check" | "cross"`,
+   plus `charge|dissolve|scan` (orbs take `charge`).
    A packet is one clock: `age` (seconds since
   dispatch, -1 before) and `flight`; the renderer derives its gather, flight, trail,
   landing ring, and light from them. Beams choose their own ports and curve; leave
@@ -706,6 +709,32 @@ their fuller documentation elsewhere.
   that clock to reassemble, then set -1 when it reaches zero. The first active
   burst also supplies the composite's gravity pinch and refractive shockwave.
   Volumes and sparks respect orb opacity; the pressure wave is a scene response.
+- Effects ([EFFECTS.md](EFFECTS.md)). `bolt` (`from`, `to`: an element or shield
+  ID, or a world point `[x, y, z]`; `strikes` 1..8, default 3; `branching`
+  0..1.5, default 0.6; `tone`, default `request`) is lightning. Its channels are
+  `age` (the discharge clock in seconds, -1 idle), `seed` (an integer that
+  re-rolls the path; 0), `opacity` (1), and `hum` (a sustained arc, 0..1.5; 0).
+  `shield` (`around`, a positioned element; `radius`; `tone`, default `accent`)
+  is a hex bubble with `opacity` (1), `up` (raised, 0..1; 1), and `scale` (1);
+  packets crossing into it and bolts striking it ripple it. Cards and orbs take
+  `charge` (crawling crackle, 0..1.5; 0). Cards take `dissolve` (a burn clock in
+  seconds, -1 intact, gone at 1.1, ash cold at 2.05) and `scan` (a sweep, 0..1,
+  invisible at both ends; 0). `StageActor` beats:
+  `zap(bolt, at) -> contact` (the leader sets out at `at`, the first stroke
+  lands 75 ms later; pair it with `land` or `jolt`), `charge(element, at,
+  intensity, seconds)`, `hum(bolt, at, intensity, seconds)`, `dissolve(card, at)
+  -> gone`, `materialize(card, at, seconds) -> whole` (the dissolve reversed,
+  decelerating), `scan(card, at, seconds) -> done`, and `raise`/`lower(shield, at,
+  seconds)` (raising first declares the shield down).
+  ```rust
+  stage.charge(&mut scene, "build", at, 1.0, 1.4);       // crackle builds
+  let contact = stage.zap(&mut scene, "strike", later);  // leader, then strokes
+  stage.charge(&mut scene, "build", contact, 0.0, 0.0);  // it discharges
+  stage.land(&mut scene, "deploy", contact);
+  ```
+  The showroom is `cargo run -p psychopomp-effects-showroom` (writes the reel
+  `target/effects-showroom.json`); render it with
+  `cargo run --release -- plan render target/effects-showroom.json output/effects-showroom.mp4 --theme neutral`.
 
 Continuous channel events are `set`, `spring`, and `ease`
 (`{ "operation": "ease", "atNanos", "target", "durationNanos", "curve" }` with

@@ -42,7 +42,7 @@ Lightweight crate (`crates/psychopomp/src`):
 - `crates/psychopomp/src/callout.rs`: Callout recipe values, anchor edges, leader shape and frame-avoiding layout, and the `CalloutActor` handle (`show`, `hide`, `move_to`, `emphasize`)
 - `crates/psychopomp/src/video.rs`: Video Card recipe values (footage size, card rect, title), focus-window math, placement helper, and the `VideoActor` handle (`fly_in`, `focus`, `unfocus`, `hide`)
 - `crates/psychopomp/src/stage.rs`: Stage elements, strict channels, perspective camera, orb geometry, the packet clock (`stage::packet`), and the `StageActor` authoring handle (`to`, `ease`, `bounce`, `settle_in`, `clock`/`clock_for`, `connect`, `send`, `hit`, `kick`, `jolt`, `twang`, `land`)
-- `crates/psychopomp/src/effects/`: GPU-free special-effect clocks and particle poses; shared dynamics stay in `psychopomp::math::dynamics`
+- `crates/psychopomp/src/effects/`: GPU-free special-effect clocks and particle poses (combustion, lightning, dissolve, shield, surface, shake, spinner); shared dynamics stay in `psychopomp::math::dynamics`
 - `crates/psychopomp/src/math.rs` and `math/`: shared motion and geometry math (glam vectors, lerp/remap/smoothstep, easing, closed-form dynamics such as the settling spring, arc-length curves, shape ports and connectors, deterministic hash)
 
 Renderer crate (`crates/psychopomp-render/src`), plan runtime:
@@ -101,7 +101,7 @@ Renderer crate, pixels and delivery:
 - `crates/psychopomp-render/src/render/video.rs`: projected Video Card pixels with a focus window
 - `crates/psychopomp-render/src/render/wipe.rs`: Reel wipe pixels: antialiased split, divider line and shadow, riding labels
 - `crates/psychopomp-render/src/render/stage.rs`, `stage.wgsl`, `stage_post.wgsl`: Stage primitives, HDR bloom, and composite; `PSYCHOPOMP_SHADER_DIR` loads the WGSL live
-- `crates/psychopomp-render/src/render/effects/*.wgsl`: binding-free noise, combustion, pressure, and rewind Modules, composed by the Stage shaders; see `EFFECTS.md`
+- `crates/psychopomp-render/src/render/effects/*.wgsl`: binding-free noise, combustion, pressure, rewind, lightning, dissolve, shield, and scan Modules, composed by the Stage shaders; see `EFFECTS.md`
 - `crates/psychopomp-render/src/render/debug.rs`: optional native debug HUD
 - `crates/psychopomp-render/src/video.rs`: FFmpeg-decoded seekable RGBA frame cache for input video
 - `crates/psychopomp-render/src/exposure.rs`: delivery dimensions, shutter samples and weights, linear-light accumulation, and encoding a timeline one exposed frame at a time
@@ -128,6 +128,7 @@ Scene Programs (`scenes/`), each emitting a Scene Plan, Deck, or Reel:
 - `scenes/callouts/`: Callout showroom reel: callouts pinned to Stage cards through a dolly, a jolt, and a glide between anchors, then to a code range that moves as lines are inserted and the panel zooms
 - `scenes/video/`: Video Card showroom: a screen recording flies in, zooms into the prompt, and back out
 - `scenes/compare/`: wipe showroom: a held before/after wipe between two Stage frames, then a plain wipe
+- `scenes/effects-showroom/`: Stage effects reel: a charged build zaps a deploy, a shield blocks an attack and passes a request, a stale config burns away and its replacement materializes and is scanned, a live link hums
 
 ## Scene Programs And Rendering Compile Separately
 
@@ -546,7 +547,7 @@ Sequence Diagram anchors are not implemented.
 `stage` is an exclusive root recipe. The lightweight crate (`stage.rs`) owns the
 element model, strict channel names, the perspective `Camera`, element outlines, and
 the deterministic orb geometry (Fibonacci points, shatter trajectories), so authoring
-helpers (`StageActor`: `to`, `ease`, `clock`, `hit`, `send`, `type_in`) and tests need no GPU.
+helpers (`StageActor`: `to`, `ease`, `clock`, `hit`, `send`, `type_in`, and the effect beats `zap`, `charge`, `hum`, `dissolve`, `materialize`, `scan`, `raise`, `lower`) and tests need no GPU.
 `render/stage.rs` is small pieces: `Scene` samples the camera, every element's
 placement, and every beam's path once per sample; `Painter` has one method per
 element kind; `StageFrame` owns primitive helpers and depth-sorted layers. A beam is
@@ -634,6 +635,23 @@ Incoming packets also sample `effects::surface` from the first visible-shell
 contact, found by `Circle::entry_fraction` and the inverse packet travel curve.
 The local dimple, particle emission, and hemisphere-masked spherical trace travel
 outward from that contact; they do not scale the receiver or shift its ports.
+
+Bolts, charge, shields, dissolve, and scans follow the same split
+(`EFFECTS.md`): `effects::lightning`, `dissolve`, and `shield` own clocks,
+seeded geometry, and particles; the Stage places them and adds their lights to
+the sample's local-light list, and binding-free WGSL owns the optics.
+Primitive kinds 10 (a plasma channel: a polyline whose points carry energy,
+pure emission), 11 (a shield bubble with up to four contacts), and 12 (a scan
+line) are emitted like the others. A bolt's endpoints are each outline's
+crossing of the straight line between them (`Shape::boundary_toward`); a shield
+is placed after the element it surrounds, so bolts can strike it. Struck orbs
+and shields find each stroke with `Scene::strikes_on`, beside packet contacts.
+Any primitive may carry a dissolve mask (`Prim::mask`, zero for none): a card
+stamps it on its own primitives after drawing them, so fills, rims, and glyphs
+burn along one field. That field is integer-hashed value noise evaluated
+identically on the CPU, so ash leaves exactly where the rim passes. Charge
+crackle and scans draw after the mask and after glitch/cut copies, so neither
+is clipped or duplicated.
 
 Editor diff backgrounds union their weighted vertical intervals before pixel
 coverage (`render/line_marks.rs`). Adjacent fractional rows therefore share a
