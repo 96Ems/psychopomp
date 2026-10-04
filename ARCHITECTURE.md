@@ -43,7 +43,7 @@ Lightweight crate (`crates/psychopomp/src`):
 - `crates/psychopomp/src/lanes.rs`: Lanes recipe values (time axis, lanes with keys and sparklines, cues), `LanesPlan::from_scene_plan`, and the `LanesActor` handle (`show`, `scrub`, `emphasize`)
 - `crates/psychopomp/src/callout.rs`: Callout recipe values, anchor edges, leader shape and frame-avoiding layout, and the `CalloutActor` handle (`show`, `hide`, `move_to`, `emphasize`)
 - `crates/psychopomp/src/video.rs`: Video Card recipe values (footage size, card rect, title), focus-window math, placement helper, and the `VideoActor` handle (`fly_in`, `focus`, `unfocus`, `hide`)
-- `crates/psychopomp/src/stage.rs`: Stage elements, strict channels, perspective camera, orb geometry, the packet clock (`stage::packet`), and the `StageActor` authoring handle (`to`, `ease`, `bounce`, `settle_in`, `clock`/`clock_for`, `connect`, `send`, `hit`, `kick`, `jolt`, `twang`, `land`)
+- `crates/psychopomp/src/stage.rs`: Stage elements and their builder constructors, strict channels and their one table of defaults, perspective camera (`project`, `project_rect`), orb geometry, the packet clock (`stage::packet`), `reply_after`, and the `StageActor` authoring handle: primitives (`to`, `spring`, `ease`, `bounce`, `set`, `fade_in`/`fade_out`, `clock`/`clock_for`) and beats (`settle_in`, `connect`/`connect_contacting`/`disconnect`, `send`/`send_arriving`, `hit`, `kick`, `jolt`, `twang`, `land`, `orb_in`, `glitch`, `rewind`, `unburst`, `shock_kick`, `resolve_spinner`, `swap_status`, `swap_labels`, `dim`, `halo`, `ring_timer`)
 - `crates/psychopomp/src/effects/`: GPU-free special-effect clocks and particle poses; shared dynamics stay in `psychopomp::math::dynamics`
 - `crates/psychopomp/src/math.rs` and `math/`: shared motion and geometry math (glam vectors, lerp/remap/smoothstep, easing, closed-form dynamics such as the settling spring, arc-length curves, shape ports and connectors, deterministic hash)
 
@@ -551,7 +551,10 @@ element model, strict channel names and their one table of defaults
 declares new channels at them and the renderer falls back to them, so authoring
 and pixels agree), the perspective `Camera`, element outlines, and
 the deterministic orb geometry (Fibonacci points, shatter trajectories), so authoring
-helpers (`StageActor`: `to`, `ease`, `clock`, `hit`, `send`, `type_in`) and tests need no GPU.
+helpers (`StageActor`: `to`, `ease`, `clock`, `hit`, `send`, `type_in`, and the
+composed beats such as `orb_in` and `rewind`) and tests need no GPU. Every
+renderer read of a Stage channel falls back to `StagePlan::channel_default`, the
+same value `StageActor` declares a new channel at.
 `render/stage.rs` is small pieces: `Scene` samples the camera, every element's
 placement, and every beam's path once per sample; `Painter` has one method per
 element kind; `StageFrame` owns primitive helpers and depth-sorted layers. A beam is

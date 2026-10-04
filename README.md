@@ -22,14 +22,15 @@ vibe-coded prototype, tested on macOS (Metal).
 ## Example
 
 ```rust
-let plan: StagePlan = serde_json::from_value(serde_json::json!({
-    "elements": [
-        { "kind": "card", "id": "client", "at": [560, 540, 0], "size": [300, 110], "title": "client" },
-        { "kind": "orb", "id": "server", "at": [1360, 540, 0], "radius": 140 },
-        { "kind": "beam", "id": "link", "from": "client", "to": "server" },
-        { "kind": "packet", "id": "hello", "beam": "link", "label": "GET /hello" }
-    ]
-}))?;
+let plan = StagePlan {
+    post: Default::default(),
+    elements: vec![
+        StageElement::card("client", [560.0, 540.0, 0.0], [300.0, 110.0], "client"),
+        StageElement::orb("server", [1360.0, 540.0, 0.0], 140.0),
+        StageElement::beam("link", "client", "server"),
+        StageElement::packet("hello", "link").labeled("GET /hello"),
+    ],
+};
 let mut scene = PlanBuilder::new("hello", 4 * SECOND);
 let mut stage = StageActor::declare(&mut scene, "stage", &plan)?;
 let ready = stage.settle_in(&mut scene, "client", 0); // the card drifts into place

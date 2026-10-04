@@ -24,6 +24,7 @@ restrained calibration immediately below.
 - **Rigid panels:** scale 1.035 → 1, spring duration 0.6 / bounce 0.12; y 16 → 0,
   duration 0.55 / bounce 0.16. Opacity 180 ms, blur 3 → 0 over 300 ms. Content
   follows after 65 ms on its own 0.36 / zero-bounce spring. No entrance flash.
+  (`StageActor::settle_in`; `SpringPlan::PANEL` and `CONTENT` name these feels.)
 - **Contact:** surge peak 0.45; cable bow 10 px, builds over 90 ms then settles
   on a 0.42 / bounce 0.28 spring. Brief flow establishes the connection, then
   returns to stillness.
@@ -34,7 +35,8 @@ restrained calibration immediately below.
   Measured packet labels stop short of connected bodies (`fit_between_ports`).
 - **Hero entrance:** scale 0.58 → 1 on a 0.85 s / 0.2-bounce spring, blur 11 → 0
   on its own 0.7 s zero-bounce spring, angular offset −1.8 → 0 radians over
-  1.25 s cubic-out. Never animate a multiplier of absolute time for spin.
+  1.25 s cubic-out (`StageActor::orb_in(.., OrbEntrance::HERO)`). Never animate
+  a multiplier of absolute time for spin.
 - **Material:** card flashes lift ink and rim without tinting the substrate.
   An overhead key gives the neutral rim depth; local packet reflections and
   socket floods supply color. Orb pulses only change illumination, never radius.
@@ -129,6 +131,9 @@ One clock per packet: `age` in seconds since dispatch, and its flight time.
 
 ## Pacing
 
-React 0.3 s, step 0.8 s, settle 1.2 s, read 1 s. Rows ripple 0.12 s apart.
+React 0.3 s, step 0.8 s, settle 1.2 s, read 1 s. Rows ripple 0.12 s apart
+(`author::stagger(rows, at, millis(120), ..)`). A reply launches no earlier than
+`stage::reply_after(arrival)`: its 340 ms gather waits for the request, plus an
+80 ms reaction.
 Rewind: hold 0.15 s, then 1.25 s on `cubic-bezier(.65, 0, .25, 1)`, blurred by
 its speed.

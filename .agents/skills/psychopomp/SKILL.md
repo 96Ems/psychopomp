@@ -67,8 +67,12 @@ authoring. Engineering rules are in `AGENTS.md`.
 
 4. **Author the Scene Program** in `scenes/<name>` (add it to the workspace). Behavior
    stories are Stage films built with `StageActor` (see `flagship.rs` and
-   `stop_stage.rs`). Load the `explainer-motion` skill and apply it to every beat:
-   cards `settle_in`, beams `connect`, messages `send`, impacts `hit`; use
+   `stop_stage.rs`). Schedule the clips with `Narration::reading`, build elements
+   with `StageElement::card|orb|beam|packet|label|ring` on `StagePost::RESTRAINED`,
+   frame the film with `psychopomp::chrome` (header, chips, footer), and play
+   sounds from `psychopomp::sfx`. Load the `explainer-motion` skill and apply it
+   to every beat: cards `settle_in`, beams `connect`, messages `send`, impacts
+   `hit`, the hero `orb_in`, the fix's `rewind`; use
    `CalloutActor` to pin annotations to Stage elements or Editor code ranges and
    `RollingNumberActor` for live counters/timers; then camera moves, rewind,
    resolution, and a `zoom` into the code.
