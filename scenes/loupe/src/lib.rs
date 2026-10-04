@@ -200,13 +200,12 @@ pub fn build_stage() -> Result<ScenePlan> {
     let mut loupe = LensActor::declare(
         &mut scene,
         "loupe",
-        &LensPlan::circle(status("api"), 230.0)
+        &LensPlan::capsule(status("api"), [300.0, 96.0])
             .anchor(status("cache"))
-            .magnification(1.9),
+            .magnification(1.8),
     )?;
     // The status line sits 19 px below the card's center.
-    let y = loupe.channel(&mut scene, "y", 19.0);
-    let _ = y;
+    loupe.channel(&mut scene, "y", 19.0);
     loupe.show(&mut scene, 1400 * MS);
 
     // A retry lands and the status changes under the glass.

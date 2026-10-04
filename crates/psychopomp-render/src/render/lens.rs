@@ -8,7 +8,7 @@
 use psychopomp::{
     lens::{Glass, MAX_BEND},
     math::{
-        Vec2,
+        Vec2, lerp,
         shapes::{Box2, RoundedBox},
         smoothstep, vec2,
     },
@@ -22,15 +22,18 @@ const LIGHT: Vec2 = Vec2::new(-0.5, -0.866);
 const SOURCE_MARGIN: f32 = 10.0;
 /// How much brighter the glass body is than what it shows (linear).
 const LIFT: f32 = 0.0015;
-const FRESNEL: f32 = 0.05;
+const FRESNEL: f32 = 0.035;
 const SPECULAR: f32 = 0.9;
 const COUNTER_SPECULAR: f32 = 0.35;
+/// The soft light around the specular line, inside the rim.
+const SPECULAR_GLOW: f32 = 0.08;
 const INNER_GLOW: f32 = 0.06;
 const EDGE: f32 = 0.10;
 /// Rim softening where it compresses the page most.
 const RIM_SOFTEN: f32 = 0.55;
-/// Unsharp amount at 2× (and beyond), against the barely softened page.
-const SHARPEN: f32 = 0.4;
+/// The cubic's sharpness at 2× and beyond: Keys' `a`, from Catmull-Rom's
+/// -0.5 at rest toward a crisper kernel as the glass enlarges.
+const SHARPEST: f32 = -0.75;
 
 /// Refract the page beneath `glass` and light it, in place.
 pub(crate) fn composite_lens(pixels: &mut [u8], [width, height]: [u32; 2], glass: &Glass) {
@@ -55,10 +58,9 @@ pub(crate) fn composite_lens(pixels: &mut [u8], [width, height]: [u32; 2], glass
     let lens = Composite {
         glass,
         bends: BendTable::new(glass),
-        fine: page.blurred(1, 1),
         soft: page.blurred(2, 2),
         page,
-        sharpen: SHARPEN * (glass.magnification - 1.0).clamp(0.0, 1.0),
+        sharpness: lerp(-0.5, SHARPEST, (glass.magnification - 1.0).clamp(0.0, 1.0)),
         strength: smoothstep(glass.presence),
         shadow_box: RoundedBox {
             center: glass.outline.center + vec2(0.0, glass.drop()),
@@ -91,12 +93,10 @@ struct Composite<'a> {
     glass: &'a Glass,
     bends: BendTable,
     page: Tile,
-    /// The page barely softened, to sharpen against.
-    fine: Tile,
     /// The page softened by about two pixels, for the rim and frost.
     soft: Tile,
-    /// Unsharp amount that offsets the softness of enlarging.
-    sharpen: f32,
+    /// Keys' cubic parameter, crisper as the glass enlarges.
+    sharpness: f32,
     /// How lit the glass is: its presence, eased.
     strength: f32,
     shadow_box: RoundedBox,
@@ -143,7 +143,7 @@ impl Composite<'_> {
         let bend = self.bends.at(t);
         let source =
             |spread: f32| glass.focus + (local - normal * bend * spread) / glass.magnification;
-        let sample = |spread: f32| self.page.sharp(&self.fine, source(spread), self.sharpen);
+        let sample = |spread: f32| self.page.cubic(source(spread), self.sharpness);
         let mut color = if bend * glass.dispersion > 0.02 {
             let spread = glass.dispersion;
             [
@@ -171,9 +171,11 @@ impl Composite<'_> {
         let facing = normal.dot(LIGHT).max(0.0);
         let away = (-normal.dot(LIGHT)).max(0.0);
         let sky = (0.5 - 0.5 * local.y / glass.outline.half.y).clamp(0.0, 1.0);
-        let fresnel = (1.0 - t).powi(5) * FRESNEL * (0.35 + 0.65 * sky);
+        let fresnel = (1.0 - t).powi(3) * FRESNEL * (0.25 + 0.75 * sky);
         let line = (-((depth - 1.2) / 1.0).powi(2)).exp();
-        let specular = line * (SPECULAR * facing.powf(2.5) + COUNTER_SPECULAR * away.powi(3));
+        let glow = (-((depth - 2.0) / 3.5).powi(2)).exp();
+        let specular = line * (SPECULAR * facing.powf(2.5) + COUNTER_SPECULAR * away.powi(3))
+            + glow * SPECULAR_GLOW * facing.powi(4);
         let inner = (-((t - 0.32) / 0.18).powi(2)).exp() * away * away * INNER_GLOW;
         let edge = (-((depth - 0.5) / 0.7).powi(2)).exp() * EDGE;
         let light =
@@ -335,34 +337,23 @@ impl Tile {
         out
     }
 
-    /// Catmull-Rom sampling at a canvas point: sharp enough to keep enlarged
-    /// text crisp, clamped to its four nearest texels so bright strokes on a
-    /// dark page do not ring.
-    #[cfg(test)]
-    fn cubic(&self, point: Vec2) -> [f32; 3] {
-        let (value, low, high) = self.cubic_bounds(point);
+    /// Cubic sampling at a canvas point with Keys' parameter `a` (-0.5 is
+    /// Catmull-Rom; lower is crisper), sharp enough to keep enlarged text
+    /// legible, and held within its four nearest texels so bright strokes on a
+    /// dark page neither ring nor halo.
+    fn cubic(&self, point: Vec2, a: f32) -> [f32; 3] {
+        let (value, low, high) = self.cubic_bounds(point, a);
         [0, 1, 2].map(|c| value[c].clamp(low[c], high[c]))
     }
 
-    /// `cubic`, sharpened by `amount` against the softened `fine` copy and
-    /// held within the same neighborhood, so edges steepen without halos.
-    fn sharp(&self, fine: &Self, point: Vec2, amount: f32) -> [f32; 3] {
-        let (value, low, high) = self.cubic_bounds(point);
-        if amount <= 0.0 {
-            return [0, 1, 2].map(|c| value[c].clamp(low[c], high[c]));
-        }
-        let soft = fine.bilinear(point);
-        [0, 1, 2].map(|c| (value[c] + amount * (value[c] - soft[c])).clamp(low[c], high[c]))
-    }
-
-    /// The Catmull-Rom value at `point` and the range of its four nearest texels.
-    fn cubic_bounds(&self, point: Vec2) -> ([f32; 3], [f32; 3], [f32; 3]) {
+    /// The cubic value at `point` and the range of its four nearest texels.
+    fn cubic_bounds(&self, point: Vec2, a: f32) -> ([f32; 3], [f32; 3], [f32; 3]) {
         let p = point - self.origin - 0.5;
         let base = p.floor();
         let f = p - base;
         let (x0, y0) = (base.x as isize, base.y as isize);
-        let wx = catmull_rom(f.x);
-        let wy = catmull_rom(f.y);
+        let wx = keys(f.x, a);
+        let wy = keys(f.y, a);
         let mut sum = [0.0; 3];
         let mut low = [f32::INFINITY; 3];
         let mut high = [f32::NEG_INFINITY; 3];
@@ -401,15 +392,13 @@ impl Tile {
     }
 }
 
-/// Catmull-Rom weights for the taps at -1, 0, 1, and 2 around `t`.
-fn catmull_rom(t: f32) -> [f32; 4] {
-    let (t2, t3) = (t * t, t * t * t);
-    [
-        -0.5 * t3 + t2 - 0.5 * t,
-        1.5 * t3 - 2.5 * t2 + 1.0,
-        -1.5 * t3 + 2.0 * t2 + 0.5 * t,
-        0.5 * t3 - 0.5 * t2,
-    ]
+/// Keys' cubic convolution weights for the taps at -1, 0, 1, and 2 around
+/// `t`: Catmull-Rom at `a` = -0.5. Every `a` reproduces texels exactly at
+/// `t` = 0.
+fn keys(t: f32, a: f32) -> [f32; 4] {
+    let near = |x: f32| ((a + 2.0) * x - (a + 3.0)) * x * x + 1.0;
+    let far = |x: f32| ((a * x - 5.0 * a) * x + 8.0 * a) * x - 4.0 * a;
+    [far(1.0 + t), near(t), near(1.0 - t), far(2.0 - t)]
 }
 
 #[cfg(test)]
@@ -534,11 +523,11 @@ mod tests {
         );
         for x in 0..32 {
             let center = vec2(x as f32 + 0.5, 1.5);
-            assert_eq!(tile.cubic(center), tile.texel(x, 1));
+            assert_eq!(tile.cubic(center, -0.5), tile.texel(x, 1));
         }
         let dark = tile.texel(4, 1)[0];
         for step in 0..40 {
-            let value = tile.cubic(vec2(2.0 + step as f32 * 0.1, 1.5))[0];
+            let value = tile.cubic(vec2(2.0 + step as f32 * 0.1, 1.5), -1.0)[0];
             assert!(value >= dark - 1e-6, "no undershoot below the dark ground");
         }
     }

@@ -164,6 +164,75 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "requires a headless GPU; a Stage lens rides the camera and touches only its own bounds"]
+    fn stage_lenses_ride_the_camera_and_change_only_their_bounds() {
+        use std::path::Path;
+
+        use super::super::{PreparedPlan, PreparedRoot, new_renderer};
+        use crate::render::composite_lens;
+
+        let mut plan = plan(stage("client"), None);
+        let camera = psychopomp::plan::ContinuousChannelPlan {
+            id: "stage.camera.z".into(),
+            actor_id: "stage".into(),
+            property: "camera.z".into(),
+            initial: 0.0.into(),
+            events: vec![psychopomp::plan::TrackEventPlan::Ease {
+                at_nanos: 1_000_000_000,
+                target: 300.0.into(),
+                duration_nanos: 1_000_000_000,
+                curve: psychopomp::math::easing::Ease::Smootherstep,
+            }],
+        };
+        plan.continuous_channels.push(camera);
+        let mut renderer = pollster::block_on(new_renderer(&plan.id)).unwrap();
+        let prepared = PreparedPlan::prepare(plan, Path::new("."), &mut renderer).unwrap();
+        let PreparedRoot::Stage(stage) = &prepared.root else {
+            panic!("a stage root");
+        };
+        let size = renderer.size();
+        // The lens's own channels rest while the camera dollies: only its
+        // resolved anchor tells the shutter samples apart.
+        let key = |time| prepared.overlay_key(time, stage.id(), size).unwrap();
+        assert_ne!(key(1.5), key(1.51));
+        assert_eq!(key(2.5), key(2.51), "a resting lens merges its samples");
+        assert!(
+            !prepared
+                .only_callouts_differ(&[(1.5, 0.5), (1.51, 0.5)], stage.id())
+                .unwrap(),
+            "a visible lens composes whole samples"
+        );
+        let glass = prepared
+            .lens_glass(&prepared.lenses[0], 0.9, &prepared.timeline, size)
+            .unwrap();
+        let center = glass.outline.center;
+        assert!((center.x - 420.0).abs() < 1.0 && (center.y - 540.0).abs() < 1.0);
+        let base = renderer.render_title_card("", None, 0.0);
+        let mut lensed = base.clone();
+        composite_lens(&mut lensed, size, &glass);
+        let bounds = glass.bounds();
+        let outside = |x: f32, y: f32| {
+            x + 1.0 < bounds.min.x || x > bounds.max.x || y + 1.0 < bounds.min.y || y > bounds.max.y
+        };
+        for (index, (a, b)) in base
+            .as_chunks::<4>()
+            .0
+            .iter()
+            .zip(lensed.as_chunks::<4>().0)
+            .enumerate()
+        {
+            let (x, y) = (
+                (index % size[0] as usize) as f32,
+                (index / size[0] as usize) as f32,
+            );
+            if outside(x, y) {
+                assert_eq!(a, b, "{x},{y}");
+            }
+        }
+        assert!(base != lensed);
+    }
+
+    #[test]
     fn lens_preflight_checks_anchors_against_the_root_and_channels_strictly() {
         validate_renderer_plan(&plan(stage("api"), Some("anchor.pin"))).unwrap();
         validate_renderer_plan(&plan(stage("api"), Some("focus-y"))).unwrap();
