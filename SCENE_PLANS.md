@@ -24,6 +24,7 @@ machinery:
 | A payload, config, or emitted plan as structured data | `scenes/tree` | `tree::TreeActor` (`open`, `reveal`, `highlight`, `set`) |
 | Pointing at a card or code range while it moves | `scenes/callouts` | `callout::CalloutActor` (`show`, `move_to`, `emphasize`) |
 | Labels, counters, or images riding a card or code range | `scenes/anchors` | `anchor::AnchorPlan` on captions, Rolling Numbers, `text::TextActor`, `image::ImageActor` (`move_to`) |
+| Magnifying a code range or a card's status | `scenes/loupe` | `lens::LensActor` (`show`, `move_to`, `slide`, `resize`, `focus`) |
 | Real product behavior from a screen recording | `scenes/video`, `scenes/opencode-session-tool` | `video::VideoActor` (`fly_in`, `focus`, `unfocus`) |
 | Before and after, side by side | `scenes/compare` | `ReelSegmentPlan::wiped` with `ReelWipePlan` holds and labels |
 | A version or count changing | `scenes/rolling-number` | `rolling::RollingNumberActor::roll` |
@@ -535,6 +536,8 @@ their fuller documentation elsewhere.
   and optional [`anchors`](#pin-overlays-to-anchors).
   Channels: `opacity`, `x`, `y`, `typed`, `caret`, `anchor.<id>`. `CaptionActor::type_in` writes
   one exact step per character; `show` and `hide` fade; `move_to` glides between anchors.
+  and `glass` (the chip is a frosted liquid-glass pane that refracts the scene
+  behind it and condenses in with `opacity`; `CaptionPlan::glass()`).
 - `rolling-number`: `origin` (aligned edge x, center y), `align`, `size`, `bold`,
   `tone`, static `prefix`/`suffix` spans (`{ text, tone }`), the initial `value`,
   and `rolls` of `{ atNanos, value }` in increasing time. Optional
@@ -918,6 +921,35 @@ their fuller documentation elsewhere.
   `cargo run --release -- plan render target/viz-components/reel.json output/viz-components.mp4 --theme opencode`.
   Callout anchors are the shared [Anchor](#pin-overlays-to-anchors) targets
   plus a per-anchor label `side`; `CalloutSide` is `psychopomp::anchor::Edge`.
+- `lens`: a loupe of thick glass that magnifies and refracts the frame beneath
+  it. `anchors` (one to eight, callout anchors without a `side`; the first is
+  where it starts), `size` (`[width, height]` at full presence), optional
+  `corner` (omitted: fully round, so a square is a circle and a wide lens a
+  capsule at every size), `magnification` (1.6; 0.5..4), optional `bevel` (rim
+  width in px; 28% of the shorter half side), `refraction` (page depth in rim
+  widths, 0.6: how hard the rim bends), `dispersion` (0.04), `frost` (0), and
+  `shadow` (0.5). Channels: `presence` (0 absent, 1 full; it condenses rather
+  than fades), `x` and `y` (offsets from the blended anchor), `width`,
+  `height`, `magnification`, `focus-x` and `focus-y` (the point shown at the
+  center, from the center), `frost`, and `anchor.<id>` weights. A lens draws
+  after callouts and before plain text and Tasks, refracting the root and every
+  overlay beneath it at each temporal sample, over any root.
+  `LensActor` writes `show` (a springy condense), `hide`, `move_to(anchor)`
+  (weights on one critically damped profile, so a redirected glide keeps its
+  velocity), `slide([dx, dy])`, `magnify`, `resize([w, h])` (a round loupe
+  stretches into a capsule), and `focus([dx, dy])`, which with an opposite
+  `slide` floats the glass beside what it reads.
+  let mut loupe = LensActor::declare(&mut scene, "loupe",
+      &LensPlan::circle(CalloutAnchorPlan::Editor { id: "call".into(),
+          target: "call".into(), edge: CalloutSide::Center, side: None }, 250.0)
+          .anchor(schedule).magnification(1.7))?;
+  loupe.show(&mut scene, at);
+  loupe.move_to(&mut scene, "schedule", later)?;
+  loupe.resize(&mut scene, [560.0, 96.0], later + SECOND);  // read along the line
+  loupe.slide(&mut scene, [150.0, 0.0], later + 2 * SECOND);
+  The showroom is `cargo run -p psychopomp-loupe` (writes the reel
+  `target/loupe.json` and its segments under `target/loupe/`); render it with
+  `cargo run --release -- plan render target/loupe.json output/loupe.mp4 --theme neutral`.
 - Editor Line Marks: `"mark": "added" | "removed"` on a line, with presence
   channel `mark.<line-id>`; `panel-x`, `panel-y`, and `panel-opacity` move and fade the card (the Stepped Diff
   enters on `panel-y`).

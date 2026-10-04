@@ -1702,6 +1702,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "psychopomp-loupe"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "psychopomp",
+ "serde_json",
+]
+
+[[package]]
 name = "psychopomp-opencode-jr-architecture"
 version = "0.1.0"
 dependencies = [

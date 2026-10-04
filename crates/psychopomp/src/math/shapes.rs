@@ -759,6 +759,55 @@ pub fn segment_distance(point: Vec2, a: Vec2, b: Vec2) -> f32 {
     point.distance(a + along * t)
 }
 
+/// A box with rounded corners, as a signed-distance field: a circle when it is
+/// square with `corner` at half its side, a capsule when `corner` is half its
+/// shorter side.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct RoundedBox {
+    pub center: Vec2,
+    /// Half the size.
+    pub half: Vec2,
+    pub corner: f32,
+}
+
+impl RoundedBox {
+    /// `corner` held between square and fully round.
+    pub fn new(center: Vec2, half: Vec2, corner: f32) -> Self {
+        let half = half.max(Vec2::ZERO);
+        Self {
+            center,
+            half,
+            corner: corner.clamp(0.0, half.min_element()),
+        }
+    }
+
+    /// Signed distance from `point` to the outline: negative inside.
+    pub fn distance(&self, point: Vec2) -> f32 {
+        let q = (point - self.center).abs() - self.half + self.corner;
+        q.max(Vec2::ZERO).length() + q.x.max(q.y).min(0.0) - self.corner
+    }
+
+    /// The outward unit normal of the nearest outline point: the distance
+    /// field's gradient, radial around a rounded corner and straight out of a
+    /// side. Inside, the deepest side wins, so it is constant along each side.
+    pub fn normal(&self, point: Vec2) -> Vec2 {
+        let offset = point - self.center;
+        let q = offset.abs() - self.half + self.corner;
+        let sign = Vec2::new(
+            if offset.x < 0.0 { -1.0 } else { 1.0 },
+            if offset.y < 0.0 { -1.0 } else { 1.0 },
+        );
+        let local = if q.x > 0.0 && q.y > 0.0 {
+            q.normalize()
+        } else if q.x > q.y {
+            Vec2::X
+        } else {
+            Vec2::Y
+        };
+        local * sign
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1143,5 +1192,31 @@ mod tests {
         assert!(points.iter().all(|p| (p.length() - 1.0).abs() < 1e-4));
         assert_eq!(points[0].y, 1.0);
         assert_eq!(points, fibonacci_sphere(64));
+    }
+
+    #[test]
+    fn rounded_boxes_span_circles_capsules_and_boxes() {
+        let circle = RoundedBox::new(vec2(100.0, 100.0), vec2(50.0, 50.0), 80.0);
+        assert_eq!(circle.corner, 50.0, "the corner never exceeds round");
+        for angle in [0.0_f32, 0.7, 2.0, 4.0] {
+            let at = vec2(100.0, 100.0) + Vec2::from_angle(angle) * 60.0;
+            assert!((circle.distance(at) - 10.0).abs() < 1e-3);
+            assert!(circle.normal(at).abs_diff_eq(Vec2::from_angle(angle), 1e-4));
+        }
+        let capsule = RoundedBox::new(Vec2::ZERO, vec2(200.0, 40.0), 40.0);
+        assert_eq!(capsule.distance(vec2(0.0, -40.0)), 0.0);
+        assert_eq!(capsule.distance(vec2(0.0, -30.0)), -10.0);
+        assert_eq!(capsule.normal(vec2(30.0, -30.0)), -Vec2::Y);
+        assert!(
+            capsule
+                .normal(vec2(-170.0, 5.0))
+                .abs_diff_eq(vec2(-10.0, 5.0).normalize(), 1e-5),
+            "radial around the cap"
+        );
+        assert!((capsule.distance(vec2(240.0, 0.0)) - 40.0).abs() < 1e-4);
+        let card = RoundedBox::new(Vec2::ZERO, vec2(100.0, 40.0), 10.0);
+        assert_eq!(card.normal(vec2(-95.0, 0.0)), -Vec2::X);
+        let square = RoundedBox::new(Vec2::ZERO, vec2(10.0, 10.0), 0.0);
+        assert_eq!(square.distance(vec2(13.0, 14.0)), 5.0);
     }
 }

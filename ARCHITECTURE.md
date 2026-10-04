@@ -47,6 +47,7 @@ Lightweight crate (`crates/psychopomp/src`):
 - `crates/psychopomp/src/bars.rs`: Benchmark Bars recipe values, row geometry, delta chip text, stable `ranking` and crossing `paint_order`, and the `BarsActor` handle (`grow`, `set`, `sort`, `reveal_rows`, `reveal_deltas`, show, hide)
 - `crates/psychopomp/src/subtitles.rs`: Subtitles recipe values (from a placed narration clip), page chunking and line balancing, and the time-sampled page, word-ink, pill, and backing poses
 - `crates/psychopomp/src/confetti.rs`: Confetti recipe values and the `ConfettiActor` handle (`burst`)
+- `crates/psychopomp/src/lens.rs`: Lens recipe values, the sampled `Glass` (outline, rim bend, source mapping, bounds), and the `LensActor` handle (`show`, `hide`, `move_to`, `slide`, `magnify`, `resize`, `focus`)
 - `crates/psychopomp/src/video.rs`: Video Card recipe values (footage size, card rect, title), focus-window math, placement helper, and the `VideoActor` handle (`fly_in`, `focus`, `unfocus`, `hide`)
 - `crates/psychopomp/src/stage.rs`: Stage elements, strict channels, perspective camera, orb geometry, the packet clock (`stage::packet`), and the `StageActor` authoring handle (`to`, `ease`, `glide`, `bounce`, `settle_in`, `clock`/`clock_for`, `connect`, `send`, `hit`, `kick`, `jolt`, `twang`, `land`, and `camera` for the `CameraRig`)
 - `crates/psychopomp/src/stage/camera.rs`: the Stage `Camera` pose and projection (pan, dolly, orbit about a pivot, zoom, roll, billboard screen boxes, framing) shared by the renderer, callouts, and Scene Programs, and the `CameraRig` shots (`frame`, `move_to`, `establish`, `push_in`, `pull_back`, `drift`, `whip`, `orbit`, `dolly_zoom`, `roll`, `focus_on`, `aperture`, `follow`, `release`, `handheld`)
@@ -61,7 +62,7 @@ Lightweight crate (`crates/psychopomp/src`):
 - `crates/psychopomp/src/anchor.rs`: the shared Anchor model: `Edge` (re-exported as `CalloutSide`), `AnchorPlan` (point, stage, editor, with offsets), the borrowed `AnchorTarget` every renderer path resolves, weight channel names, validation, `blend`, and `move_to`
 - `crates/psychopomp/src/text.rs`: typed `text` recipe values in the hand-built JSON shape and the `TextActor` handle (`show`, `hide`, `show_during`, `swap`, `move_to`)
 - `crates/psychopomp/src/image.rs`: Image recipe values (bare or framed, title, radius, anchors), the image placement helper, and the `ImageActor` handle (`fly_in`, `hide`, `move_to`)
-- `crates/psychopomp/src/math.rs` and `math/`: shared motion and geometry math (glam vectors, lerp/remap/smoothstep, easing, closed-form dynamics such as the settling spring, arc-length curves, shape ports and connectors, deterministic hash)
+- `crates/psychopomp/src/math.rs` and `math/`: shared motion and geometry math (glam vectors, lerp/remap/smoothstep, easing, closed-form dynamics such as the settling spring, arc-length curves, shape ports and connectors, rounded-box distance fields, thin-surface glass optics, deterministic hash)
 
 Renderer crate (`crates/psychopomp-render/src`), plan runtime:
 
@@ -94,6 +95,7 @@ Renderer crate (`crates/psychopomp-render/src`), plan runtime:
 - `crates/psychopomp-render/src/plan_runtime/ide.rs`: strict preflight of Diagnostics, Hover Cards, and Cursors attached to the editor root, and their per-sample frames from measured targets
 - `crates/psychopomp-render/src/plan_runtime/viz.rs` and `viz/`: the visualization overlays as one group (`VizInputs`, `PreparedViz`) with strict-channel preflight per recipe in `viz/{checklist,meter,bars,subtitles,confetti}.rs`
 - `crates/psychopomp-render/src/plan_runtime/callout.rs`: callout poses from anchors validated and resolved through the shared `plan_runtime/anchor.rs`
+- `crates/psychopomp-render/src/plan_runtime/lens.rs`: Lens preflight, anchor validation, and per-sample glass from blended anchors
 - `crates/psychopomp-render/src/plan_runtime/video.rs`: Video Card preflight, frame caches, and source-time mapping
 - `crates/psychopomp-render/src/plan_runtime/anchor.rs`: shared anchor validation against the root, per-sample resolution (`render::stage_anchor`, `PreparedEditor::anchor`), and weighted pinning for every pinnable overlay
 - `crates/psychopomp-render/src/plan_runtime/image.rs`: Image preflight (recipe, channels, image placement) and one-time decoding
@@ -124,6 +126,7 @@ Renderer crate, pixels and delivery:
 - `crates/psychopomp-render/src/render/callout.rs`: callout mark, leader, and label pixels
 - `crates/psychopomp-render/src/render/ide.rs`: selection, Inlay Hint chip, diagnostic wave and gutter icon, caret, and Hover Card pixels on the flat editor surface
 - `crates/psychopomp-render/src/render/viz.rs` and `viz/`: checklist, meter, bars, subtitles, and confetti pixels over the chart ink, plus the shared Readout painter (`viz/readout.rs`), a weighted stroke, arcs, and rotated rectangles
+- `crates/psychopomp-render/src/render/lens.rs`: Lens pixels: linear-light refraction of the composed frame, rim softening, specular light, and contact shadow
 - `crates/psychopomp-render/src/render/video.rs`: projected Video Card pixels with a focus window
 - `crates/psychopomp-render/src/render/image.rs`: PNG/JPEG/WebP decoding by signature, premultiplied halving, and bare or framed projected image pixels
 - `crates/psychopomp-render/src/render/wipe.rs`: Reel wipe pixels: antialiased split, divider line and shadow, riding labels
@@ -165,6 +168,7 @@ Scene Programs (`scenes/`), each emitting a Scene Plan, Deck, or Reel:
 - `scenes/text-surfaces/`: text-surface showroom reel: an agent, introduced by a Lower Third, in a Terminal session that overflows, scrolls, and clears; a Slack-style Chat Thread reacting while the agent streams its fix; the bubbles style; and a pull request's Changed Files with rolling totals and focus
 - `scenes/viz-components/`: visualization showroom reel: a CI checklist that fails, retries, and celebrates with confetti; a countdown ring, a gauge, and an upload bar; a before/after benchmark that grows and re-sorts; and word-timed subtitles over a narrated Stage clip
 - `scenes/anchors/`: Anchor showroom reel: a caption, a Rolling Number, text labels, a callout, and a framed image riding Stage cards through a dolly, a jolt, and glides between anchors; then a caption and a Rolling Number on code ranges while lines insert and the panel zooms; then a cursor caption, a counter, and a callout on Sequence Diagram rows and headers as the diagram slides
+- `scenes/loupe/`: Lens showroom reel: a loupe reads code ranges (glide, capsule scan, floating focus), then follows a Stage card's changing status through a dolly
 
 ## Scene Programs And Rendering Compile Separately
 
@@ -726,6 +730,51 @@ marks transition samples distinct (`ambient_time`, including over a Stage) and
 plans using them are export-only. Confetti poses come from
 `effects::confetti::Burst` over `math::dynamics::ballistic` with seeded
 `random::hash` per piece; reversing the clock reassembles the burst.
+### Lenses
+A `lens` overlay is thick glass over the composed frame. The lightweight
+`lens.rs` owns the payload and the sampled `Glass`: a `math::shapes::RoundedBox`
+outline (circle, capsule, or rounded box), a superellipse rim whose surface
+slope (`math::optics::superellipse_slope`) refracts a vertical ray by Snell's law
+(`math::optics::refraction_offset`) toward the center over a page `depth` below,
+and an even magnification about a focus point on the flat top. `Glass::source`
+maps a canvas point to the page point it shows; the bend is zero on the flat
+top, so the middle is undistorted and only the rim splits color. Presence
+condenses the glass: size, rim depth, and magnification grow together. None of
+this needs a GPU, and the optics are tested directly.
+The lens is a pass over the composed frame, not a root feature, so one
+implementation serves every root. `render_overlays` applies each visible lens
+after callouts and before plain text and Tasks: `render/lens.rs` copies the
+page under the source bounds into linear light (plus a two-pixel softened copy
+from running box sums), then shades each pixel inside `Glass::bounds` in row
+bands on scoped threads. The flat top samples with a Keys cubic that sharpens
+from Catmull-Rom toward `a = -0.75` as magnification rises, clamped to the four
+nearest texels so enlarged strokes neither ring nor halo; the rim softens where
+it compresses the page so moving text does not crawl. Light is additive in
+linear light: a fresnel sheen of a sky brighter above, a crisp specular line
+with a soft glow where the rim faces the upper-left light, a fainter line and
+inner glow opposite, and an edge hairline; a drop shadow and contact darkening
+fall outside the outline. Pixels outside the bounds are untouched, so plans
+without a lens keep identical pixels.
+Each temporal sample refracts its own frame. On CPU roots with nothing above
+the glass (no plain text or Tasks), `render_lensed_exposure` renders the page
+beneath the lenses once per distinct non-lens sample key and refracts a copy per
+sample, so a lens gliding over still code costs a lens per sample rather than a
+page; a GPU test proves it bit-identical to whole samples. Otherwise the lens is
+part of `render_sample`. Over a Stage it refracts the developed exposure (a
+motion-blurred base, like every overlay there) at each overlay sample. A Stage lens's
+resolved anchor joins the overlay key, so a lens riding a card through a dolly
+re-composites per shutter sample even while its own channels rest, and any
+visible lens takes the whole-sample composite rather than the callout-region
+shortcut, because it reads pixels beyond its own ink. Anchors resolve through
+`callout::resolve` (and `LensAnchorPlan` is the callout anchor type), so moving
+to a shared anchor Module is a rename. Stage grain is developed before overlays,
+so a lens enlarges it with the page.
+`Glass::pane` reuses the same optics as a panel material: no magnification, a
+thick pill rim, heavy frost (an eight-pixel softened page), and a dim so light
+text reads over light pixels. A caption with `glass` composites that pane in
+place of its solid chip, before its text, so the scene behind refracts at the
+pill's rim and diffuses through it, the way a packet's light passes under a
+label on its wire.
 ### Stage
 
 `stage` is an exclusive root recipe. The lightweight crate (`stage.rs`) owns the

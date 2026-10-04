@@ -423,6 +423,19 @@ One planned image media placement (PNG, JPEG, or WebP) drawn bare or inside a
 framed card, through the same projected card as a Video Card, so it can move,
 scale, rotate, tilt, defocus, and pin to an Anchor. The file is decoded once;
 its width at rest is authored and its height follows the image.
+## Lens
+A loupe of thick glass laid over the frame: a circle, or a capsule for reading
+along a line. Its flat top enlarges a focus point evenly, so what it shows stays
+legible; its rounded rim bends sight inward by Snell's law, strongest at the
+edge, splits color slightly there, catches a specular light, and casts a soft
+contact shadow. A lens refracts whatever is composed beneath it (any root and
+the overlays drawn before it) at every Temporal Sample. It pins to the same
+anchors as a Callout and glides between them like a puck of glass, following
+its card or code range as they move. A lens **condenses** rather than fades:
+its presence grows its size, rim, and magnification together. Its focus can
+sit away from its center, so the glass can float beside what it reads. The
+same glass, frosted and unmagnified, is a material for chips: a glass caption
+refracts the scene behind its text instead of covering it.
 ## Tone
 
 A semantic color role shared by explainer recipes: plain, request, success,
