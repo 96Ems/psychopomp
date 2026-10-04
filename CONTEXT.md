@@ -185,6 +185,54 @@ hot combustion, an expanding refractive pressure wave, cooling smoke, and
 ballistic embers. Its procedural volume and trajectories need no simulation
 history. Wires and arrivals pass beneath the intact orb's occluding shell.
 
+## Particle Form
+
+The orb's material, glowing points over a dark occluding body, on any of a few
+deterministic shapes: a sphere, a box (a cube with emphasized edges, or a flat
+slab), a dot-matrix plane, a lattice, a cylinder, or a torus. A form turns in 3D
+(ambient spin, an authored `rotation`, and `pitch` and `roll` for tumbling),
+pulses, shatters, and bursts like an orb. Wires attach to its sampled, turned
+silhouette (a convex hull), not a fixed circle. The orb's surface ripple is
+spherical and stays the orb's alone.
+
+A **Morph** carries every point of a form from one of its shapes to the next.
+Point identity is stable: point `i` of every shape is the same particle, and each
+shape's points are paired with the previous shape's so each point travels a short
+way. The `morph` channel is a fractional index into the shapes; each point leaves
+at a seed-staggered moment, bows slightly outward, and lands exactly on the next
+shape at the next whole value.
+
+## Stage Shape
+
+A flat Stage element with no card chrome, drawn as a **Figure**: a rectangle,
+circle, arc, or polygon
+with an optional fill (a tone, or the card `surface` for an opaque panel) and a
+stroke that draws on along its outline from twelve o'clock. Figures turn about
+their center; an arc may carry arrowheads. Like a card, a figure's outline catches
+a passing packet's reflection and its fill takes an arrival's flood; a flash lifts
+its stroke, not the whole fill.
+
+## Path
+
+A drawn Stage connection through **Waypoints**: world points and positioned
+elements. Hops that leave or enter an element attach like a beam; runs between
+points are straight with rounded corners, a Catmull-Rom curve, or an authored
+cubic Bézier chain. A path draws on and can be trimmed from its start; its
+**Arrowheads** ride the drawn tip, so an arrow grows as it draws. An element
+waypoint between a path's ends is a **Stop**: it splits the path into legs.
+
+A packet rides a beam or a path. On a path it **Relays**: each leg is a whole
+packet life (gather, flight, landing) on the one packet clock, and the next leg
+gathers at the stop's far side a moment after the previous leg lands, so one
+packet element crosses a whole chain. A packet whose life has ended can be sent
+again; the new dispatch restarts its clock.
+
+## Icon
+
+A monochrome SVG drawn on the Stage through the camera: a bundled Phosphor icon
+by name, or SVG path data. It is rasterized once into the Stage's text atlas and
+tinted by its Tone, so it sizes in world pixels and defocuses like text.
+
 ## Caption
 
 Short lines of styled CommitMono text in an explainer's terminal voice. Spans carry

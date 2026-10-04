@@ -49,6 +49,12 @@ copies of the card's primitives by their bounding quads; no offscreen target is
 needed. The card's `spinner`, `release`, and `mark` clocks drive
 `effects::spinner`; its `mark` field chooses a check or a cross.
 
+A Stage `form` takes the same `burst` and `shatter` as an orb: embers leave each
+point along its direction from the form's center, and the volume and pressure
+wave size to its bounding radius. The first active orb or form drives the
+composite's wave. `effects::surface` is spherical, so a form takes no contact
+ripple; it pulses instead.
+
 `Burst` uses seconds and world pixels. Negative age is intact; zero preserves
 the shell pose; 5.2 seconds is spent. Direction is a unit vector and each seed
 component is in 0..1. Sample any age in any order. Scene/camera transforms and
