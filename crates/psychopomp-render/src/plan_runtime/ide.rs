@@ -79,6 +79,10 @@ impl PreparedAnnotation {
         &self.id
     }
 
+    pub(super) fn is_cursor(&self) -> bool {
+        matches!(self.kind, Kind::Cursor(_))
+    }
+
     fn targets(&self) -> Vec<&str> {
         match &self.kind {
             Kind::Diagnostic(plan) => vec![&plan.target],
@@ -291,6 +295,27 @@ mod tests {
             format!("{error:#}").contains("unknown property 'drew'"),
             "{error:#}"
         );
+    }
+
+    #[test]
+    #[ignore = "requires a headless GPU; a steady caret's shutter samples merge though its clock runs"]
+    fn steady_carets_share_visual_keys_and_fading_ones_do_not() {
+        let plan = plan(|scene| {
+            CursorActor::declare(scene, "caret", &CursorPlan::new("arg", "arg"))
+                .unwrap()
+                .show(scene, 0);
+        });
+        let mut renderer = pollster::block_on(super::super::new_renderer(&plan.id)).unwrap();
+        let prepared =
+            super::super::PreparedPlan::prepare(plan, std::path::Path::new("."), &mut renderer)
+                .unwrap();
+        let key = |time| prepared.visual_sample_key(time).unwrap();
+        // After the inlay settles: on from 1.5 s, fading out from 1.91 s, off
+        // from 2.0 s.
+        assert_eq!(key(1.55), key(1.65), "steady on");
+        assert_eq!(key(2.1), key(2.2), "steady off");
+        assert_ne!(key(1.65), key(2.1));
+        assert_ne!(key(1.95), key(1.96), "fading");
     }
 
     #[test]

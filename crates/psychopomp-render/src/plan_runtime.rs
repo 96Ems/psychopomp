@@ -775,7 +775,32 @@ impl PreparedPlan {
                     .is_some_and(|state| state.position > 0.001)
             }))
         .then_some(time.to_bits());
+        self.key_caret_blinks(&mut key, time, timeline);
         Ok(key)
+    }
+
+    /// A caret's blink clock always runs, but its pixels change only while the
+    /// blink fades: key the blink's opacity instead, so samples of a steady
+    /// caret merge.
+    fn key_caret_blinks(&self, key: &mut VisualSampleKey, time: f64, timeline: &Timeline) {
+        let Some(editor) = self.editor() else {
+            return;
+        };
+        for actor in editor.cursor_ids() {
+            let Some(index) = self
+                .plan
+                .continuous_channels
+                .iter()
+                .position(|c| c.actor_id == actor && c.property == "blink")
+            else {
+                continue;
+            };
+            let clock = self
+                .property(actor, "blink")
+                .and_then(|property| timeline.sample_at(property, time))
+                .map_or(-1.0, |state| state.position);
+            key.motion[index] = [psychopomp::ide::caret_blink(clock).to_bits(), 0, 0, 0];
+        }
     }
 
     fn running_properties(&self) -> Vec<PropertyId> {

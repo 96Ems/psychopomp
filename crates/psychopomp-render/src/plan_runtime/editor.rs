@@ -70,6 +70,14 @@ impl PreparedEditor {
         })
     }
 
+    /// The actor IDs of attached Cursors.
+    pub(super) fn cursor_ids(&self) -> impl Iterator<Item = &str> {
+        self.annotations
+            .iter()
+            .filter(|annotation| annotation.is_cursor())
+            .map(ide::PreparedAnnotation::id)
+    }
+
     /// Attach a Diagnostic, Hover Card, or Cursor drawn on this editor.
     pub(super) fn attach(
         &mut self,
