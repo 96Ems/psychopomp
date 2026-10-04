@@ -10,6 +10,7 @@ use anyhow::{Result, bail, ensure};
 use serde::{Deserialize, Serialize};
 
 use crate::{
+    anchor::{self, AnchorPlan},
     author::{ActorHandle, ContinuousHandle, PlanBuilder},
     caption::{self, CaptionAlign, CaptionSpanPlan},
     math::{dynamics::settle, remap_clamp},
@@ -69,6 +70,10 @@ pub struct RollingNumberPlan {
     /// A rounded surface behind the text, as for a status chip.
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub chip: bool,
+    /// Places the number can pin to; while it has any, the blended anchor
+    /// (plus that anchor's offset) replaces `origin`.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub anchors: Vec<AnchorPlan>,
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
@@ -168,6 +173,7 @@ impl RollingNumberPlan {
             direction: RollDirection::Auto,
             blur: 1.0,
             chip: false,
+            anchors: Vec::new(),
         }
     }
 
@@ -199,6 +205,17 @@ impl RollingNumberPlan {
     pub fn chip(mut self) -> Self {
         self.chip = true;
         self
+    }
+
+    /// Pin the number's origin to `anchor`; the first anchor is where it starts.
+    pub fn anchor(mut self, anchor: AnchorPlan) -> Self {
+        self.anchors.push(anchor);
+        self
+    }
+
+    /// True when `property` names one of this number's channels.
+    pub fn accepts(&self, property: &str) -> bool {
+        matches!(property, "opacity" | "x" | "y") || anchor::accepts(property, &self.anchors)
     }
 
     pub fn duration_nanos(mut self, nanos: u64) -> Self {
@@ -283,7 +300,7 @@ impl RollingNumberPlan {
         {
             bail!("rolling number changes must be in strictly increasing time order");
         }
-        Ok(())
+        anchor::validate("rolling number", &self.anchors)
     }
 
     /// Tokens for the full text shown with `value`: prefix spans, the value's
@@ -989,6 +1006,7 @@ fn collapse_positions(
 pub struct RollingNumberActor {
     actor: ActorHandle,
     plan: RollingNumberPlan,
+    anchors: Vec<String>,
 }
 
 impl RollingNumberActor {
@@ -999,7 +1017,12 @@ impl RollingNumberActor {
     ) -> Result<Self> {
         plan.validate()?;
         let actor = scene.actor(id, ROLLING_NUMBER_RECIPE, &plan)?;
-        Ok(Self { actor, plan })
+        let anchors = anchor::ids(&plan.anchors);
+        Ok(Self {
+            actor,
+            plan,
+            anchors,
+        })
     }
 
     /// Roll to `value` at `at_nanos`, after every earlier change.
@@ -1033,6 +1056,11 @@ impl RollingNumberActor {
     /// Fade out in place.
     pub fn hide(&mut self, scene: &mut PlanBuilder, at_nanos: u64) {
         caption::hide(scene, &self.actor, at_nanos);
+    }
+
+    /// Glide to the anchor `to`, carrying velocity through interruptions.
+    pub fn move_to(&mut self, scene: &mut PlanBuilder, to: &str, at_nanos: u64) -> Result<()> {
+        anchor::move_to(scene, &self.actor, &self.anchors, to, at_nanos)
     }
 }
 

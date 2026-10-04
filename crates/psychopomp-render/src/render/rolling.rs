@@ -26,22 +26,22 @@ impl HeadlessRenderer {
         })
     }
 
-    pub(crate) fn composite_rolling_number(
+    /// The number with its origin at `origin`: the plan's own, or where its
+    /// anchors resolve.
+    pub(crate) fn composite_rolling_number_at(
         &mut self,
         pixels: &mut [u8],
         plan: &RollingNumberPlan,
         roll: &CompiledRoll,
         seconds: f64,
+        origin: [f32; 2],
         sample: impl Fn(&str, f32) -> f32,
     ) {
         let opacity = sample("opacity", 1.0).clamp(0.0, 1.0);
         if opacity <= 0.001 {
             return;
         }
-        let origin = [
-            plan.origin[0] + sample("x", 0.0),
-            plan.origin[1] + sample("y", 0.0),
-        ];
+        let origin = [origin[0] + sample("x", 0.0), origin[1] + sample("y", 0.0)];
         let glyphs = roll.sample(seconds);
         if plan.chip {
             self.rolling_chip(pixels, plan, &glyphs, origin, opacity);
@@ -204,9 +204,14 @@ mod gpu_tests {
         let background = renderer.render_title_card("", None, 0.);
         let mut draw = |seconds: f64, opacity: f32| {
             let mut pixels = background.clone();
-            renderer.composite_rolling_number(&mut pixels, &plan, &roll, seconds, |p, d| {
-                if p == "opacity" { opacity } else { d }
-            });
+            renderer.composite_rolling_number_at(
+                &mut pixels,
+                &plan,
+                &roll,
+                seconds,
+                plan.origin,
+                |p, d| if p == "opacity" { opacity } else { d },
+            );
             pixels
         };
         assert!(draw(0.5, 0.0) == background, "hidden numbers leave no ink");

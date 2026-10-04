@@ -263,14 +263,19 @@ impl HeadlessRenderer {
             header - plan.header_center(),
         ];
         for (number, roll) in &layout.totals {
-            self.composite_rolling_number(pixels, number, roll, seconds, |property, default| {
-                match property {
+            self.composite_rolling_number_at(
+                pixels,
+                number,
+                roll,
+                seconds,
+                number.origin,
+                |property, default| match property {
                     "opacity" => ink,
                     "x" => offset[0],
                     "y" => offset[1],
                     _ => default,
-                }
-            });
+                },
+            );
         }
         let sum = plan.sum();
         let progress = reveals.iter().sum::<f32>() / reveals.len() as f32;

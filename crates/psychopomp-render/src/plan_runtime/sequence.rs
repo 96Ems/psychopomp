@@ -1,7 +1,11 @@
 //! Prepared Sequence Diagrams: the recipe is decoded and validated once, and
 //! every channel on the actor must name a real participant, row, or property.
+//! Preparation measures header and note widths, so participants and rows can
+//! serve as anchors for other overlays.
 use anyhow::Result;
 use psychopomp::{
+    anchor::AnchorTarget,
+    math::{Vec2, shapes::Shape, vec2},
     plan::{ActorPlan, ContinuousChannelPlan},
     sequence::SequencePlan,
 };
@@ -12,6 +16,10 @@ use crate::render::HeadlessRenderer;
 pub(super) struct PreparedSequence {
     id: String,
     plan: SequencePlan,
+    /// Measured header widths, per participant.
+    headers: Vec<f32>,
+    /// Measured note text widths, per row (zero for other rows).
+    notes: Vec<f32>,
 }
 
 impl PreparedSequence {
@@ -23,7 +31,46 @@ impl PreparedSequence {
         Ok(Self {
             id: actor.id.clone(),
             plan,
+            headers: Vec::new(),
+            notes: Vec::new(),
         })
+    }
+
+    pub(super) fn id(&self) -> &str {
+        &self.id
+    }
+
+    pub(super) fn plan(&self) -> &SequencePlan {
+        &self.plan
+    }
+
+    /// Measure the text that sizes headers and notes, once.
+    pub(super) fn measure(&mut self, renderer: &mut HeadlessRenderer) {
+        (self.headers, self.notes) = renderer.sequence_widths(&self.plan);
+    }
+
+    /// Where a participant or row anchor is at one sample: its measured box
+    /// moved by the actor's `x`/`y` channels.
+    pub(super) fn anchor(
+        &self,
+        target: AnchorTarget<'_>,
+        value: impl Fn(&str, &str, f32) -> f32,
+    ) -> Option<Vec2> {
+        let (bounds, edge) = match target {
+            AnchorTarget::Participant {
+                participant, edge, ..
+            } => {
+                let index = self.plan.participant_index(participant)?;
+                (self.plan.header_box(index, *self.headers.get(index)?), edge)
+            }
+            AnchorTarget::Row { row, edge, .. } => {
+                let index = self.plan.row_index(row)?;
+                (self.plan.row_box(index, *self.notes.get(index)?)?, edge)
+            }
+            _ => return None,
+        };
+        let offset = vec2(value(&self.id, "x", 0.0), value(&self.id, "y", 0.0));
+        Some(edge.on(Shape::Box(bounds)) + offset)
     }
 
     pub(super) fn render(

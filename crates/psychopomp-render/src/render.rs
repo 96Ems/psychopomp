@@ -22,6 +22,7 @@ mod fonts;
 mod grid;
 mod header;
 mod ide;
+mod image;
 mod lanes;
 mod line_marks;
 mod lower_third;
@@ -55,6 +56,7 @@ pub(crate) use header::{HeaderGlyphs, header_words};
 pub use ide::{
     CaretFrame, DiagnosticFrame, EditorAnnotations, HoverFrame, InlayFrame, SelectionFrame,
 };
+pub(crate) use image::{DecodedImage, ImagePose, decode_image};
 pub(crate) use lower_third::LowerThirdGlyphs;
 pub(crate) use rich_text::{RichTextGlyphs, RichTextSource, parse as parse_rich_text};
 pub(crate) use stage::{StageGpu, icon_svg, stage_anchor};

@@ -316,8 +316,8 @@ vocabulary (range, ticks, label, unit).
 A short label on a crisp leader line pinned to something on screen: a dot and
 ring mark the Callout Anchor, the leader draws out from it, and the label rises
 in at its end. A **Callout Anchor** is a fixed canvas point, an edge of a
-positioned Stage element seen through the camera, or an edge of an editor
-Semantic Target. Anchors are resolved by the root recipe at every Temporal
+positioned Stage element seen through the camera, an edge of an editor
+Semantic Target, or a Sequence Diagram participant header or row. Anchors are resolved by the root recipe at every Temporal
 Sample, so the callout follows its target with no lag; moving to another
 anchor springs weight channels that blend the two resolved positions. Labels
 slide back inside the frame rather than leave it, and the leader follows.
@@ -403,6 +403,26 @@ A success burst: seeded paper pieces and sparkles launched in a cone under
 gravity and drag, fluttering and tumbling as they fall, all closed-form from
 one `burst` clock, so the burst samples in any order and is the same for its
 seed every time.
+## Anchor
+A place an overlay pins to whose position only the renderer knows: a fixed
+canvas point, an edge of a positioned Stage element seen through the camera
+(including a jolt's roll and punch-in), an edge of an editor Semantic Target
+after line motion and the panel's projection, or an edge of a Sequence Diagram
+participant's measured header or a row's span (a message's arrow, a note, an
+End mark) as the diagram moves. An overlay lists its anchors, each
+with an optional pixel offset, and `anchor.<id>` weight channels choose among
+them; the first holds the overlay until a weight moves. The renderer resolves
+every weighted anchor at every Temporal Sample and the overlay draws at the blended
+point, so it never lags its target. Moving between anchors springs the weights,
+so an interrupted move keeps its velocity. Callouts, captions, Rolling Numbers,
+text, and images share this model. An anchor names a target; it does not parent
+one actor to another, so there is no hierarchy, and a pinned overlay follows its
+target's position, not its scale.
+## Image
+One planned image media placement (PNG, JPEG, or WebP) drawn bare or inside a
+framed card, through the same projected card as a Video Card, so it can move,
+scale, rotate, tilt, defocus, and pin to an Anchor. The file is decoded once;
+its width at rest is authored and its height follows the image.
 ## Tone
 
 A semantic color role shared by explainer recipes: plain, request, success,

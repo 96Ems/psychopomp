@@ -33,7 +33,7 @@ Lightweight crate (`crates/psychopomp/src`):
 - `crates/psychopomp/src/transcript.rs`: word timing ingestion, word and phrase cue lookup
 - `crates/psychopomp/src/narration.rs`: `scripts/narrate.ts` manifests loaded as narration clips, placed as Script Clips, with panicking phrase lookups
 - `crates/psychopomp/src/tone.rs`: semantic Tone roles shared by explainer recipes
-- `crates/psychopomp/src/sequence.rs`: Sequence Diagram recipe values and row constructors, slot geometry, validation, and the `SequenceActor` authoring handle
+- `crates/psychopomp/src/sequence.rs`: Sequence Diagram recipe values and row constructors, slot, header, and row-box geometry, validation, and the `SequenceActor` authoring handle
 - `crates/psychopomp/src/caption.rs`: Caption recipe values and the `CaptionActor` authoring handle (typing, show, hide)
 - `crates/psychopomp/src/rolling.rs`: Rolling Number recipe values, value tokenization, the closed-form roll compiler, and the `RollingNumberActor` handle (`roll`, show, hide)
 - `crates/psychopomp/src/tree.rs`: Tree recipe values, JSONPath identity, the fold-driven pure layout, and the `TreeActor` handle (`open`, `close`, `highlight`, `set`, `scroll_to`, `reveal`, show, hide)
@@ -58,6 +58,9 @@ Lightweight crate (`crates/psychopomp/src`):
 - `crates/psychopomp/src/lower_third.rs`: Lower Third recipe values, bar and text geometry, and the `LowerThirdActor` handle (`show`, `hide`)
 - `crates/psychopomp/src/changed_files.rs`: Changed Files recipe values, GitHub's `diffstat`, fixed row slots, the totals schedule, and the `ChangedFilesActor` handle (`reveal`, `reveal_row`, `focus`, `unfocus`, `highlight`, `scroll_to`)
 - `crates/psychopomp/src/effects/`: GPU-free special-effect clocks and particle poses (combustion, the status spinner, confetti); shared dynamics stay in `psychopomp::math::dynamics`
+- `crates/psychopomp/src/anchor.rs`: the shared Anchor model: `Edge` (re-exported as `CalloutSide`), `AnchorPlan` (point, stage, editor, with offsets), the borrowed `AnchorTarget` every renderer path resolves, weight channel names, validation, `blend`, and `move_to`
+- `crates/psychopomp/src/text.rs`: typed `text` recipe values in the hand-built JSON shape and the `TextActor` handle (`show`, `hide`, `show_during`, `swap`, `move_to`)
+- `crates/psychopomp/src/image.rs`: Image recipe values (bare or framed, title, radius, anchors), the image placement helper, and the `ImageActor` handle (`fly_in`, `hide`, `move_to`)
 - `crates/psychopomp/src/math.rs` and `math/`: shared motion and geometry math (glam vectors, lerp/remap/smoothstep, easing, closed-form dynamics such as the settling spring, arc-length curves, shape ports and connectors, deterministic hash)
 
 Renderer crate (`crates/psychopomp-render/src`), plan runtime:
@@ -88,10 +91,12 @@ Renderer crate (`crates/psychopomp-render/src`), plan runtime:
 - `crates/psychopomp-render/src/plan_runtime/rolling.rs`: Rolling Number preflight and compilation
 - `crates/psychopomp-render/src/plan_runtime/tree.rs`: Tree per-path channel preflight
 - `crates/psychopomp-render/src/plan_runtime/plot.rs` and `lanes.rs`: Plot and Lanes strict-channel preflight
-- `crates/psychopomp-render/src/plan_runtime/callout.rs`: anchor validation and per-sample resolution from the prepared root (`render::stage_anchor`, `PreparedEditor::anchor`)
 - `crates/psychopomp-render/src/plan_runtime/ide.rs`: strict preflight of Diagnostics, Hover Cards, and Cursors attached to the editor root, and their per-sample frames from measured targets
 - `crates/psychopomp-render/src/plan_runtime/viz.rs` and `viz/`: the visualization overlays as one group (`VizInputs`, `PreparedViz`) with strict-channel preflight per recipe in `viz/{checklist,meter,bars,subtitles,confetti}.rs`
+- `crates/psychopomp-render/src/plan_runtime/callout.rs`: callout poses from anchors validated and resolved through the shared `plan_runtime/anchor.rs`
 - `crates/psychopomp-render/src/plan_runtime/video.rs`: Video Card preflight, frame caches, and source-time mapping
+- `crates/psychopomp-render/src/plan_runtime/anchor.rs`: shared anchor validation against the root, per-sample resolution (`render::stage_anchor`, `PreparedEditor::anchor`), and weighted pinning for every pinnable overlay
+- `crates/psychopomp-render/src/plan_runtime/image.rs`: Image preflight (recipe, channels, image placement) and one-time decoding
 - `crates/psychopomp-render/src/plan_runtime/stage.rs`: Stage root preflight and preparation
 - `crates/psychopomp-render/src/plan_runtime/lower_third.rs`: Lower Third strict-channel preflight
 - `crates/psychopomp-render/src/plan_runtime/terminal.rs`, `chat.rs`, and `changed_files.rs`: text-surface preflight (per-line, per-message, per-reaction, and per-row channels checked against their IDs and kinds); chat preparation measures wrapped text, changed-files preparation measures columns and compiles its rolling totals
@@ -120,6 +125,7 @@ Renderer crate, pixels and delivery:
 - `crates/psychopomp-render/src/render/ide.rs`: selection, Inlay Hint chip, diagnostic wave and gutter icon, caret, and Hover Card pixels on the flat editor surface
 - `crates/psychopomp-render/src/render/viz.rs` and `viz/`: checklist, meter, bars, subtitles, and confetti pixels over the chart ink, plus the shared Readout painter (`viz/readout.rs`), a weighted stroke, arcs, and rotated rectangles
 - `crates/psychopomp-render/src/render/video.rs`: projected Video Card pixels with a focus window
+- `crates/psychopomp-render/src/render/image.rs`: PNG/JPEG/WebP decoding by signature, premultiplied halving, and bare or framed projected image pixels
 - `crates/psychopomp-render/src/render/wipe.rs`: Reel wipe pixels: antialiased split, divider line and shadow, riding labels
 - `crates/psychopomp-render/src/render/window.rs`: the text surfaces' Window shell (composed once per pose through the projected card and cached as a layer), title bar, CommitMono span runs, and weighted strokes
 - `crates/psychopomp-render/src/render/terminal.rs`, `chat.rs`, and `changed_files.rs`: Terminal, Chat Thread, and Changed Files pixels
@@ -158,6 +164,7 @@ Scene Programs (`scenes/`), each emitting a Scene Plan, Deck, or Reel:
 - `scenes/stage-forms/`: Stage diagram vocabulary showroom: shapes, icons, and arrowed paths; a packet relaying through a stop; a dot-matrix plane morphing into a tumbling cube and a sphere over a slab; a cube that bursts
 - `scenes/text-surfaces/`: text-surface showroom reel: an agent, introduced by a Lower Third, in a Terminal session that overflows, scrolls, and clears; a Slack-style Chat Thread reacting while the agent streams its fix; the bubbles style; and a pull request's Changed Files with rolling totals and focus
 - `scenes/viz-components/`: visualization showroom reel: a CI checklist that fails, retries, and celebrates with confetti; a countdown ring, a gauge, and an upload bar; a before/after benchmark that grows and re-sorts; and word-timed subtitles over a narrated Stage clip
+- `scenes/anchors/`: Anchor showroom reel: a caption, a Rolling Number, text labels, a callout, and a framed image riding Stage cards through a dolly, a jolt, and glides between anchors; then a caption and a Rolling Number on code ranges while lines insert and the panel zooms; then a cursor caption, a counter, and a callout on Sequence Diagram rows and headers as the diagram slides
 
 ## Scene Programs And Rendering Compile Separately
 
@@ -192,7 +199,7 @@ Shared rules have narrow owners rather than a recipe registry:
 - `plan_runtime/generated.rs` reserves generated channel IDs and actor/property
   pairs. Task x/y is the sole explicit authored override, not last-writer-wins.
 
-Planned audio and visual media share the same exact source and timeline ranges but have different concrete consumers. Audio lowers into `Composition` and the FFmpeg encoder. A video placement is accepted only when a `video` actor explicitly consumes its media ID; unconsumed video and image media remain errors. The Video Card recipe (`plan_runtime/video.rs`) maps the original global clock through the planned timeline range into source time, samples its own `VideoFrameCache`, and presents the footage through the shared projected card compositor. Video Cards are overlays, not roots: they draw first, beneath diagram and text overlays, over any root (a blank background, an editor, or a Stage). Each card's source-frame index joins the visual sample key (and a Stage's overlay key), so settled footage still renders every new frame. Video never reaches the audio-only encoder, and there is no generic video layer or media graph.
+Planned audio and visual media share the same exact source and timeline ranges but have different concrete consumers. Audio lowers into `Composition` and the FFmpeg encoder. A video placement is accepted only when a `video` actor explicitly consumes its media ID; unconsumed video and image media remain errors. The Video Card recipe (`plan_runtime/video.rs`) maps the original global clock through the planned timeline range into source time, samples its own `VideoFrameCache`, and presents the footage through the shared projected card compositor. Video Cards are overlays, not roots: they draw first, beneath diagram and text overlays, over any root (a blank background, an editor, or a Stage). Each card's source-frame index joins the visual sample key (and a Stage's overlay key), so settled footage still renders every new frame. Video never reaches the audio-only encoder, and there is no generic video layer or media graph. Image placements are likewise accepted only when an `image` actor consumes them; `plan_runtime/image.rs` reads and decodes the file once at preparation (never at preflight) and draws it with the Video Cards, through the same projected card.
 
 Scene Plan v2 allows a scalar initial value or event target to reference one component of a stable Semantic Target plus an offset. The core validates target identity, component names, and finite offsets without interpreting the target selector. During renderer preparation, the actor's concrete recipe resolves selectors into geometry; only then are ordinary numeric Property Tracks compiled. This keeps font measurement renderer-owned while preserving pointer and highlight trajectories as inspectable general channels.
 
@@ -611,7 +618,49 @@ per-sample composite and linear-light average cover just the row spans the
 moving callouts ink (`HeadlessRenderer::callout_bounds`, `exposure::accumulate_region`);
 still callouts outside them draw once, and every other pixel takes the same
 weighted average through a per-value table, so the exposure is bit-identical.
-Sequence Diagram anchors are not implemented.
+Callouts may also point at Sequence Diagram participants and rows (see Anchors).
+
+### Anchors
+
+Callouts were the first overlay to pin to things; captions, Rolling Numbers,
+text, and images now share the same Anchor model rather than literal canvas
+coordinates. The lightweight `anchor.rs` owns `Edge` (callouts re-export it as
+`CalloutSide`), the serializable `AnchorPlan` (`point`, `stage`, `editor`,
+`participant`, and `row`, each with an optional `offset`), and the borrowed `AnchorTarget` that both
+`AnchorPlan` and the callout-specific `CalloutAnchorPlan` (which adds a label
+`side`) lower into, so callout JSON is unchanged. It also owns `anchor.<id>`
+weight names, strict acceptance, validation, the weighted `blend`, and
+`move_to`, which every handle's `move_to` delegates to.
+
+`plan_runtime/anchor.rs` is the renderer seam: `validate` checks each anchor
+against what the plan can place (`Placeable`: the root, its Semantic Targets,
+and its Sequence Diagrams) at preflight, `resolve` asks the prepared root or
+Sequence Diagram for a point (`render::stage_anchor`, `PreparedEditor::anchor`,
+`PreparedSequence::anchor`), and `pin` blends an overlay's weighted anchors
+plus their offsets. Sequence Diagrams are overlays, not roots: preparation
+measures their header and note text once (`HeadlessRenderer::sequence_widths`,
+sharing `SequencePlan::header_width` and `note_span` with the painter), and the
+lightweight `header_box` and `row_box` place a participant's header or a row's
+span, moved by the diagram's `x`/`y` channels. Their channels are already in
+every sample key, so anchors on a moving diagram need nothing more. `PreparedPlan::pin` returns the
+literal origin while an overlay has no anchors, so unpinned overlays take the
+exact pixels they always did. A pinned caption or Rolling Number draws its
+origin at the pin; text and images put their center there (text's absolute
+`x`/`y` channels move it by their displacement from `center`). Nothing pinned
+is compiled into tracks: the anchor is resolved fresh each sample, so it never
+lags, and an overlay pinned to a Stage element follows its position, not its
+perspective scale.
+
+Over a Stage, every Stage-pinned overlay's resolved origin joins the overlay
+sample key (`PreparedPlan::stage_pins`), so its shutter samples stay apart
+while the camera moves and merge once it rests. The callout-only region
+exposure applies only while nothing else differs: `only_callouts_differ` also
+compares those origins, so a pinned caption riding a dolly takes the full
+per-sample composite. Other overlays adopt anchors the same way: add
+`anchors: Vec<AnchorPlan>` to the payload (validated with
+`anchor::validate`, channels with `anchor::accepts`), list the actor in
+`PreparedPlan::pinnable` and in preflight's anchor validation, and draw at
+`PreparedPlan::pin`.
 
 ### IDE annotations
 

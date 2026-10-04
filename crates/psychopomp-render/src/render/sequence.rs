@@ -120,8 +120,7 @@ impl HeadlessRenderer {
             } else {
                 self.sequence_advance(&participant.detail, DETAIL_SIZE, palette.muted)
             };
-            let column = plan.width / plan.participants.len() as f32;
-            let width = (label_width.max(detail_width) + 60.0).clamp(150.0, column * 0.92);
+            let width = plan.header_width(label_width, detail_width);
             let center = [
                 x_of(index),
                 plan.origin[1] + offset[1] + header_height * 0.5,
@@ -439,12 +438,7 @@ impl HeadlessRenderer {
         let palette = self.theme.palette();
         let appear = cubic_out((reveal / 0.7).clamp(0.0, 1.0));
         let text_width = self.sequence_advance(text, NOTE_SIZE, color);
-        let natural = text_width + 56.0;
-        let span = if (max - min).abs() < 1.0 {
-            natural
-        } else {
-            (max - min + 150.0).max(natural)
-        };
+        let span = SequencePlan::note_span(min, max, text_width);
         let bounds = Bounds::from_center(
             [(min + max) * 0.5, y],
             [span - (1.0 - appear) * 16.0, 46.0 - (1.0 - appear) * 6.0],
@@ -531,6 +525,32 @@ impl HeadlessRenderer {
     }
 
     /// Width of `text` as drawn, from the same cached sprite used to draw it.
+    /// Each participant's header width and each row's note text width (zero
+    /// for other rows), as `composite_sequence` measures them; anchors use them.
+    pub(crate) fn sequence_widths(&mut self, plan: &SequencePlan) -> (Vec<f32>, Vec<f32>) {
+        let palette = self.theme.palette();
+        let headers = plan
+            .participants
+            .iter()
+            .map(|participant| {
+                let label = self.sequence_advance(&participant.label, LABEL_SIZE, palette.text);
+                let detail = self.sequence_advance(&participant.detail, DETAIL_SIZE, palette.muted);
+                plan.header_width(label, detail)
+            })
+            .collect();
+        let notes = plan
+            .rows
+            .iter()
+            .map(|row| match row {
+                SequenceRowPlan::Note { text, .. } => {
+                    self.sequence_advance(text, NOTE_SIZE, palette.text)
+                }
+                _ => 0.0,
+            })
+            .collect();
+        (headers, notes)
+    }
+
     fn sequence_advance(&mut self, text: &str, size: f32, color: [u8; 3]) -> f32 {
         if text.is_empty() {
             return 0.0;

@@ -11,6 +11,7 @@ use super::{
     grid::PreparedGrid,
     header,
     ide::PreparedAnnotation,
+    image::ImageInput,
     lanes::PreparedLanes,
     lower_third::PreparedLowerThird,
     plot::PreparedPlot,
@@ -25,6 +26,7 @@ use super::{
 use crate::render::{RichTextSource, VerticalMask};
 use anyhow::{Context, Result, bail};
 use psychopomp::{
+    anchor::{self, AnchorPlan},
     callout::CALLOUT_RECIPE,
     caption::CAPTION_RECIPE,
     changed_files::CHANGED_FILES_RECIPE,
@@ -34,6 +36,7 @@ use psychopomp::{
     },
     editor::{EDITOR_RECIPE, EditorTargetSelector, POINTER_RECIPE, PointerRecipePlan},
     grid::GRID_RECIPE,
+    image::IMAGE_RECIPE,
     lanes::LANES_RECIPE,
     lower_third::LOWER_THIRD_RECIPE,
     plan::{ActorPlan, ContinuousChannelPlan, MediaKindPlan, ScenePlan, StateChannelPlan},
@@ -44,6 +47,7 @@ use psychopomp::{
     state::{StateTrack, TimedState},
     task::{TASK_RECIPE, TaskRecipePlan},
     terminal::TERMINAL_RECIPE,
+    text::{TEXT_CHANNELS, TEXT_RECIPE},
     tree::TREE_RECIPE,
     value::VALUE_TOKEN_RECIPE,
     video::VIDEO_RECIPE,
@@ -75,6 +79,7 @@ pub(super) struct Plan {
     pub changed_files: Vec<ChangedFilesInput>,
     pub lower_thirds: Vec<PreparedLowerThird>,
     pub viz: super::viz::VizInputs,
+    pub images: Vec<ImageInput>,
 }
 pub(super) enum RootPlan {
     Blank,
@@ -102,6 +107,8 @@ pub(super) struct PlainText {
     pub font_size: f32,
     pub color: [u8; 3],
     pub mask: Option<VerticalMask>,
+    /// While non-empty, the blended anchor replaces `center`.
+    pub anchors: Vec<AnchorPlan>,
 }
 
 pub(super) const NATIVE_UNSUPPORTED: &str = "interruptible native playback supports continuous-channel editor, pointer, text, effect-task, keyed-grid, value-token, and provisional component scenes; generic State Channels and recorded media still support video export";
@@ -313,6 +320,15 @@ impl PlainText {
                     .context("text actor requires string data.text or content state")
             },
         )?;
+        let anchors = match actor.data.get("anchors") {
+            None => Vec::new(),
+            Some(value) => serde_json::from_value::<Vec<AnchorPlan>>(value.clone())
+                .with_context(|| format!("parse text actor '{}' anchors", actor.id))?,
+        };
+        anchor::validate("text", &anchors).with_context(|| format!("text actor '{}'", actor.id))?;
+        strict_channels(&actor.id, &plan.continuous_channels, "text", |property| {
+            TEXT_CHANNELS.contains(&property) || anchor::accepts(property, &anchors)
+        })?;
         Ok(Self {
             id: actor.id.clone(),
             content,
@@ -320,6 +336,7 @@ impl PlainText {
             font_size,
             color,
             mask,
+            anchors,
         })
     }
 }
@@ -372,6 +389,7 @@ impl Plan {
         let mut changed_files = Vec::new();
         let mut lower_thirds = Vec::new();
         let mut viz = super::viz::VizInputs::default();
+        let mut images = Vec::new();
         for actor in &plan.actors {
             if let Some(annotation) = PreparedAnnotation::parse(actor, &plan.continuous_channels)? {
                 annotations.push(annotation);
@@ -408,7 +426,7 @@ impl Plan {
                         )?),
                     },
                 )?,
-                "text" => texts.push(PlainText::new(actor, &plan)?),
+                TEXT_RECIPE => texts.push(PlainText::new(actor, &plan)?),
                 TASK_RECIPE => {
                     let recipe: TaskRecipePlan = serde_json::from_value(actor.data.clone())
                         .context("parse Effect task recipe")?;
@@ -465,6 +483,11 @@ impl Plan {
                 recipe if super::viz::accepts(recipe) => {
                     viz.parse(actor, &plan.continuous_channels)?
                 }
+                IMAGE_RECIPE => images.push(ImageInput::new(
+                    actor,
+                    &plan.media,
+                    &plan.continuous_channels,
+                )?),
                 recipe => bail!("unsupported actor recipe '{recipe}'"),
             }
         }
@@ -515,13 +538,44 @@ impl Plan {
             .iter()
             .map(VideoInput::media_id)
             .collect::<HashSet<_>>();
+        let drawn = images
+            .iter()
+            .map(ImageInput::media_id)
+            .collect::<HashSet<_>>();
+        let placeable = super::anchor::Placeable {
+            root: &root,
+            targets: &plan.semantic_targets,
+            sequences: &sequences,
+        };
         for callout in &callouts {
-            callout.validate_anchors(&root, &plan.semantic_targets)?;
+            callout.validate_anchors(&placeable)?;
+        }
+        let pinned = captions
+            .iter()
+            .map(|caption| ("caption", caption.id(), caption.anchors()))
+            .chain(
+                rolling
+                    .iter()
+                    .map(|number| ("rolling number", number.id(), number.anchors())),
+            )
+            .chain(
+                texts
+                    .iter()
+                    .map(|text| ("text", text.id.as_str(), text.anchors.as_slice())),
+            )
+            .chain(
+                images
+                    .iter()
+                    .map(|image| ("image", image.id(), image.anchors())),
+            );
+        for (kind, owner, anchors) in pinned {
+            super::anchor::validate_plans(kind, owner, anchors, &placeable)?;
         }
         for media in &plan.media {
             if matches!(media.kind, MediaKindPlan::Audio)
                 || (matches!(media.kind, MediaKindPlan::Video)
                     && consumed.contains(media.id.as_str()))
+                || (matches!(media.kind, MediaKindPlan::Image) && drawn.contains(media.id.as_str()))
             {
                 continue;
             }
@@ -555,6 +609,7 @@ impl Plan {
             changed_files,
             lower_thirds,
             viz,
+            images,
         };
         match &result.root {
             RootPlan::Editor { editor, .. } => editor.compile_channels(&mut result.plan)?,
