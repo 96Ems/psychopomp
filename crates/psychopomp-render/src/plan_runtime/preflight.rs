@@ -3,6 +3,7 @@
 use super::{
     callout::PreparedCallout,
     caption::PreparedCaption,
+    chat::ChatInput,
     component_prototype::{self, ComponentInput},
     editor::{EditorSelection, PreparedEditor},
     generated,
@@ -23,6 +24,7 @@ use anyhow::{Context, Result, bail};
 use psychopomp::{
     callout::CALLOUT_RECIPE,
     caption::CAPTION_RECIPE,
+    chat::CHAT_RECIPE,
     component_prototype::{
         COLLECTION, CONNECTOR, HEADER, HeaderPlan, RICH_TEXT, TYPESET, VENN, WIDTH_TEXT,
     },
@@ -64,6 +66,7 @@ pub(super) struct Plan {
     pub videos: Vec<VideoInput>,
     pub callouts: Vec<PreparedCallout>,
     pub terminals: Vec<PreparedTerminal>,
+    pub chats: Vec<ChatInput>,
 }
 pub(super) enum RootPlan {
     Blank,
@@ -356,6 +359,7 @@ impl Plan {
         let mut videos = Vec::new();
         let mut callouts = Vec::new();
         let mut terminals = Vec::new();
+        let mut chats = Vec::new();
         for actor in &plan.actors {
             match actor.recipe.as_str() {
                 "title-card" => put_root(&mut root, RootPlan::Title(Title::new(actor, &plan)?))?,
@@ -433,6 +437,7 @@ impl Plan {
                 TERMINAL_RECIPE => {
                     terminals.push(PreparedTerminal::new(actor, &plan.continuous_channels)?)
                 }
+                CHAT_RECIPE => chats.push(ChatInput::new(actor, &plan.continuous_channels)?),
                 recipe => bail!("unsupported actor recipe '{recipe}'"),
             }
         }
@@ -513,6 +518,7 @@ impl Plan {
             videos,
             callouts,
             terminals,
+            chats,
         };
         match &result.root {
             RootPlan::Editor { editor, .. } => editor.compile_channels(&mut result.plan)?,

@@ -27,6 +27,7 @@ use crate::{
 mod attachments;
 mod callout;
 mod caption;
+mod chat;
 mod component_prototype;
 pub(crate) mod delivery;
 mod editor;
@@ -452,6 +453,7 @@ struct PreparedPlan {
     headers: Vec<header::PreparedHeader>,
     videos: Vec<video::PreparedVideo>,
     terminals: Vec<terminal::PreparedTerminal>,
+    chats: Vec<chat::PreparedChat>,
 }
 
 // A prepared scene exposes a read-only view of its compiled data. There is no
@@ -524,6 +526,7 @@ impl PreparedPlan {
             videos,
             callouts,
             terminals,
+            chats,
         } = input;
         let components = component_prototype::PreparedComponents::prepare_inputs(
             &mut plan, components, renderer,
@@ -571,6 +574,10 @@ impl PreparedPlan {
             .into_iter()
             .map(|input| input.open(base))
             .collect::<Result<Vec<_>>>()?;
+        let chats = chats
+            .into_iter()
+            .map(|input| input.prepare(renderer))
+            .collect();
         let root = match root {
             preflight::RootPlan::Blank => PreparedRoot::Blank,
             preflight::RootPlan::Title(title) => PreparedRoot::Title(title),
@@ -603,6 +610,7 @@ impl PreparedPlan {
             headers,
             videos,
             terminals,
+            chats,
         })
     }
 }
@@ -1027,6 +1035,9 @@ impl PreparedPlan {
         // Text-surface windows sit just above recordings, beneath diagrams and text.
         for terminal in &self.terminals {
             terminal.render(pixels, renderer, value)?;
+        }
+        for chat in &self.chats {
+            chat.render(pixels, renderer, value)?;
         }
         for diagram in &self.venn {
             diagram.render(pixels, renderer, value);
