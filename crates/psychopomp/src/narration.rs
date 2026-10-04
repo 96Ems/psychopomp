@@ -247,13 +247,26 @@ impl Spoken<'_> {
         (self.origin + source as i64).max(0) as u64
     }
 
-    /// Every spoken word with its start and end on the plan clock, as
+    /// Every word this placement speaks (for a [range](NarrationClip::place_range),
+    /// those that overlap it) with its start and end on the plan clock, as
     /// subtitles show them.
     pub fn words(&self) -> impl Iterator<Item = (&str, u64, u64)> + '_ {
-        self.clip.transcript.words().iter().map(|timing| {
-            let at = |seconds: f64| self.start + (seconds * 1e9).round() as u64;
-            (timing.word.as_str(), at(timing.start), at(timing.end))
-        })
+        let nanos = |seconds: f64| (seconds * 1e9).round() as u64;
+        let from = (self.start as i64 - self.origin) as u64;
+        let to = from + (self.end - self.start);
+        self.clip
+            .transcript
+            .words()
+            .iter()
+            .filter(move |timing| from == 0 || nanos(timing.end) > from)
+            .filter(move |timing| to == self.clip.duration || nanos(timing.start) < to)
+            .map(move |timing| {
+                (
+                    timing.word.as_str(),
+                    self.plan_time(nanos(timing.start)),
+                    self.plan_time(nanos(timing.end)),
+                )
+            })
     }
 
     /// When `phrase` starts being spoken. Panics with the clip and phrase if the
@@ -392,6 +405,14 @@ mod tests {
             "a word before the range clamps to zero"
         );
         assert_eq!(second.end(), 1_800_000_000);
+        assert_eq!(
+            first.words().collect::<Vec<_>>(),
+            [("bye", SECOND, 1_400_000_000)]
+        );
+        assert_eq!(
+            second.words().collect::<Vec<_>>(),
+            [("now", 800_000_000, 1_100_000_000)]
+        );
         let plan = scene.finish().unwrap();
         assert_eq!(plan.media[1].id, "narration-outro-rest");
         assert_eq!(plan.media[1].source_start_nanos, 1_700_000_000);
