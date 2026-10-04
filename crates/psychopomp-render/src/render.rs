@@ -29,6 +29,7 @@ mod stage;
 mod task;
 mod text;
 mod theme;
+mod transition;
 mod tree;
 mod ui;
 mod value;
