@@ -105,6 +105,28 @@ fn direction(angle: f32) -> vec2<f32> {
     return vec2<f32>(cos(angle), sin(angle));
 }
 
+// Signed distance to a closed polygon of `count` points from `first`:
+// negative inside, by counting edge crossings (Quilez's sdPolygon).
+fn sd_polygon(p: vec2<f32>, first: u32, count: u32) -> f32 {
+    var d = 1.0e12;
+    var s = 1.0;
+    var j = count - 1u;
+    for (var i = 0u; i < count; i = i + 1u) {
+        let vi = points[first + i].xy;
+        let vj = points[first + j].xy;
+        let e = vj - vi;
+        let w = p - vi;
+        let b = w - e * clamp(dot(w, e) / max(dot(e, e), 1.0e-6), 0.0, 1.0);
+        d = min(d, dot(b, b));
+        let c = vec3<bool>((p.y >= vi.y), (p.y < vj.y), (e.x * w.y > e.y * w.x));
+        if all(c) || !any(c) {
+            s = -s;
+        }
+        j = i;
+    }
+    return s * sqrt(d);
+}
+
 @fragment
 fn fs(in: VOut) -> @location(0) vec4<f32> {
     let prim = prims[in.index];
@@ -255,6 +277,18 @@ fn fs(in: VOut) -> @location(0) vec4<f32> {
         // Raymarched fire and smoke: a = (kind, cx, cy, radius), b = (age, opacity, 0, 0)
         case 6u: {
             return combustion_volume(px - prim.a.yz, prim.a.w, prim.b.x) * prim.b.y;
+        }
+        // Polygon: a = (kind, border, 0, blur), uv = (first point, count).
+        // Points are (x, y, 0, 0), any simple polygon; inside by crossings.
+        case 7u: {
+            let d = sd_polygon(px, u32(prim.uv.x + 0.5), u32(prim.uv.y + 0.5));
+            let outer = coverage(d, prim.a.w);
+            let inner = coverage(d + prim.a.y, prim.a.w);
+            let fill_a = prim.fill.a * select(outer, inner, prim.a.y > 0.0);
+            let stroke_a = prim.stroke.a * max(outer - inner, 0.0) * select(0.0, 1.0, prim.a.y > 0.0);
+            alpha = fill_a + stroke_a * (1.0 - fill_a);
+            color = prim.fill.rgb * fill_a + prim.stroke.rgb * stroke_a * (1.0 - fill_a);
+            color += prim.glow.rgb * halo(d, prim.glow.w);
         }
         default: {}
     }
