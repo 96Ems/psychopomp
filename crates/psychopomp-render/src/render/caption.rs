@@ -18,14 +18,23 @@ impl HeadlessRenderer {
         plan: &CaptionPlan,
         sample: impl Fn(&str, f32) -> f32,
     ) {
+        self.composite_caption_at(pixels, plan, plan.origin, sample);
+    }
+
+    /// `composite_caption` with its origin at `origin` (as when anchored)
+    /// rather than the plan's.
+    pub(crate) fn composite_caption_at(
+        &mut self,
+        pixels: &mut [u8],
+        plan: &CaptionPlan,
+        origin: [f32; 2],
+        sample: impl Fn(&str, f32) -> f32,
+    ) {
         let opacity = sample("opacity", 1.0).clamp(0.0, 1.0);
         if opacity <= 0.001 {
             return;
         }
-        let origin = [
-            plan.origin[0] + sample("x", 0.0),
-            plan.origin[1] + sample("y", 0.0),
-        ];
+        let origin = [origin[0] + sample("x", 0.0), origin[1] + sample("y", 0.0)];
         let typed = sample("typed", 1.0).clamp(0.0, 1.0);
         let caret = sample("caret", 0.0).clamp(0.0, 1.0);
         let canvas = [self.spec.width, self.spec.height];

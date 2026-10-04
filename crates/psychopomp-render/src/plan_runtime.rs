@@ -7,8 +7,9 @@ use std::{
 
 use anyhow::{Context, Result, bail};
 use psychopomp::{
+    anchor::{AnchorPlan, AnchorTarget},
     composition::{Asset, Duration, MediaPlacement, MediaRole, Time, TimeRange},
-    math::shapes::Box2,
+    math::{Vec2, shapes::Box2},
     plan::{
         DeckPlan, MediaKindPlan, MediaRolePlan, ReadPlanError, ReelPlan, ScalarPlan, ScenePlan,
         TargetComponentPlan,
@@ -24,6 +25,7 @@ use crate::{
     render::{HeadlessRenderer, RenderSpec, Theme},
 };
 
+mod anchor;
 mod attachments;
 mod callout;
 mod caption;
@@ -467,7 +469,8 @@ struct VisualSampleKey {
     states: Vec<Value>,
     video_frames: Vec<u64>,
     ambient_time: Option<u64>,
-    /// Stage-pinned callout anchors, which move with the camera.
+    /// Stage-pinned callout anchors and pinned overlay origins, which move
+    /// with the camera.
     anchors: Vec<[u32; 2]>,
 }
 
@@ -821,7 +824,7 @@ impl PreparedPlan {
         let overlays = crate::exposure::merge_equal_samples(exposure.iter().copied(), |time| {
             self.overlay_key(time, stage.id(), size)
         })?;
-        if !self.only_callouts_differ(&overlays, stage.id())? {
+        if !self.only_callouts_differ(&overlays, stage.id(), size)? {
             return crate::exposure::accumulate(renderer, &overlays, |renderer, time| {
                 let mut pixels = base.clone();
                 self.render_overlays(&mut pixels, renderer, time, timeline)?;
@@ -867,12 +870,20 @@ impl PreparedPlan {
         })
     }
 
-    /// Whether `samples` differ in nothing but their callouts.
-    fn only_callouts_differ(&self, samples: &[(f64, f32)], stage: &str) -> Result<bool> {
+    /// Whether `samples` differ in nothing but their callouts. An overlay
+    /// pinned to a Stage element differs while the camera moves it.
+    fn only_callouts_differ(
+        &self,
+        samples: &[(f64, f32)],
+        stage: &str,
+        size: [u32; 2],
+    ) -> Result<bool> {
         let mut keys = samples.iter().map(|&(time, _)| {
-            self.overlay_key_ignoring(time, |actor| {
+            let mut key = self.overlay_key_ignoring(time, |actor| {
                 actor == stage || self.callouts.iter().any(|callout| callout.id() == actor)
-            })
+            })?;
+            key.anchors = self.stage_pins(time, size);
+            Ok::<_, anyhow::Error>(key)
         });
         let Some(first) = keys.next().transpose()? else {
             return Ok(true);
@@ -896,7 +907,81 @@ impl PreparedPlan {
             .filter_map(|callout| self.callout_pose(callout, time, &self.timeline, size))
             .map(|pose| pose.anchor.to_array().map(f32::to_bits))
             .collect();
+        key.anchors.extend(self.stage_pins(time, size));
         Ok(key)
+    }
+
+    /// Every overlay that can pin to anchors, callouts aside.
+    fn pinnable(&self) -> impl Iterator<Item = (&str, &[AnchorPlan])> {
+        self.captions
+            .iter()
+            .map(|caption| (caption.id(), caption.anchors()))
+            .chain(
+                self.rolling
+                    .iter()
+                    .map(|number| (number.id(), number.anchors())),
+            )
+            .chain(
+                self.texts
+                    .iter()
+                    .map(|text| (text.id.as_str(), text.anchors.as_slice())),
+            )
+    }
+
+    /// Where every overlay pinned to a Stage element lands at `time`: they
+    /// move with the camera while no channel of theirs does.
+    fn stage_pins(&self, time: f64, size: [u32; 2]) -> Vec<[u32; 2]> {
+        self.pinnable()
+            .filter(|(_, anchors)| anchor::on_stage(anchors))
+            .map(|(actor, anchors)| {
+                self.pin(actor, anchors, Vec2::ZERO, time, &self.timeline, size)
+                    .map_or([u32::MAX; 2], |origin| origin.to_array().map(f32::to_bits))
+            })
+            .collect()
+    }
+
+    /// Where `target` is on the frame at `time`, from the prepared root.
+    fn resolve_anchor(
+        &self,
+        target: AnchorTarget<'_>,
+        time: f64,
+        timeline: &Timeline,
+        size: [u32; 2],
+    ) -> Option<Vec2> {
+        anchor::resolve(
+            &self.root,
+            target,
+            size,
+            |actor, property, default| {
+                self.property_value(timeline, actor, property, time, default)
+            },
+            |actor, property| self.raw_motion_value(timeline, actor, property, time),
+            time,
+        )
+    }
+
+    /// An overlay's origin at `time`: `literal` while it has no anchors, else
+    /// its weighted anchors blended; `None` when none of them can be placed.
+    fn pin(
+        &self,
+        actor: &str,
+        anchors: &[AnchorPlan],
+        literal: Vec2,
+        time: f64,
+        timeline: &Timeline,
+        size: [u32; 2],
+    ) -> Option<Vec2> {
+        if anchors.is_empty() {
+            return Some(literal);
+        }
+        anchor::pin(
+            actor,
+            anchors,
+            |actor, property, default| {
+                self.property_value(timeline, actor, property, time, default)
+            },
+            |target| self.resolve_anchor(target, time, timeline, size),
+        )
     }
 
     /// The visual state of overlays, without the channels of `ignored` actors.
@@ -941,15 +1026,8 @@ impl PreparedPlan {
         let value = |actor: &str, property: &str, default: f32| {
             self.property_value(timeline, actor, property, time, default)
         };
-        callout.pose(value, |anchor| {
-            callout::resolve(
-                &self.root,
-                anchor,
-                size,
-                value,
-                |actor, property| self.raw_motion_value(timeline, actor, property, time),
-                time,
-            )
+        callout.pose(value, |target| {
+            self.resolve_anchor(target, time, timeline, size)
         })
     }
 
@@ -1017,6 +1095,7 @@ impl PreparedPlan {
         // Video cards are the bottom media surface. Value tiles are diagram
         // surfaces; ordinary text is their foreground annotation layer,
         // regardless of declaration order.
+        let size = renderer.size();
         for video in &self.videos {
             video.render(pixels, renderer, time, value)?;
         }
@@ -1046,27 +1125,59 @@ impl PreparedPlan {
             tree.render(pixels, renderer, value);
         }
         for caption in &self.captions {
-            caption.render(pixels, renderer, value);
+            if let Some(origin) = self.pin(
+                caption.id(),
+                caption.anchors(),
+                caption.origin(),
+                time,
+                timeline,
+                size,
+            ) {
+                caption.render(pixels, renderer, origin, value);
+            }
         }
         for number in &self.rolling {
-            number.render(pixels, renderer, time, value);
+            if let Some(origin) = self.pin(
+                number.id(),
+                number.anchors(),
+                number.origin(),
+                time,
+                timeline,
+                size,
+            ) {
+                number.render(pixels, renderer, time, origin, value);
+            }
         }
         for (index, callout) in self.callouts.iter().enumerate() {
             if !callouts(index) {
                 continue;
             }
-            if let Some(pose) = self.callout_pose(callout, time, timeline, renderer.size()) {
+            if let Some(pose) = self.callout_pose(callout, time, timeline, size) {
                 callout.render(pixels, renderer, pose);
             }
         }
         for text in &self.texts {
+            let mut center = [
+                value(&text.id, "x", text.center[0]),
+                value(&text.id, "y", text.center[1]),
+            ];
+            if !text.anchors.is_empty() {
+                // Pinned text moves from its anchor by the channels'
+                // displacement from its declared center.
+                let Some(pinned) =
+                    self.pin(&text.id, &text.anchors, Vec2::ZERO, time, timeline, size)
+                else {
+                    continue;
+                };
+                center = [
+                    pinned.x + center[0] - text.center[0],
+                    pinned.y + center[1] - text.center[1],
+                ];
+            }
             renderer.composite_centered_text_masked(
                 pixels,
                 text.content.sample_at(time).current,
-                [
-                    value(&text.id, "x", text.center[0]),
-                    value(&text.id, "y", text.center[1]),
-                ],
+                center,
                 text.font_size,
                 text.color,
                 value(&text.id, "opacity", 1.).clamp(0., 1.),

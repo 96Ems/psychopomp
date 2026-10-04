@@ -1,21 +1,18 @@
 //! Prepared callouts: decoded and validated once with strict channel names.
 //! Anchors are resolved against the prepared root at every sample (the Stage
-//! camera, the editor's measured code ranges), so a callout is as attached as
-//! the pixels it points at, including across shutter samples.
-use anyhow::{Result, bail};
+//! camera, the editor's measured code ranges) through the shared
+//! `plan_runtime::anchor`, so a callout is as attached as the pixels it points
+//! at, including across shutter samples.
+use anyhow::Result;
 use psychopomp::{
-    callout::{CalloutAnchorPlan, CalloutLeg, CalloutPlan},
-    math::{Vec2, shapes::Box2, vec2},
-    motion::MotionState,
+    anchor::{self, AnchorTarget},
+    callout::{CalloutLeg, CalloutPlan},
+    math::{Vec2, shapes::Box2},
     plan::{ActorPlan, ContinuousChannelPlan, SemanticTargetPlan},
-    stage::StageElement,
 };
 
-use super::{
-    PreparedRoot,
-    preflight::{RootPlan, decode, strict_channels},
-};
-use crate::render::{CalloutPose, HeadlessRenderer, stage_anchor};
+use super::preflight::{RootPlan, decode, strict_channels};
+use crate::render::{CalloutPose, HeadlessRenderer};
 
 pub(super) struct PreparedCallout {
     id: String,
@@ -40,47 +37,16 @@ impl PreparedCallout {
         root: &RootPlan,
         targets: &[SemanticTargetPlan],
     ) -> Result<()> {
-        for anchor in &self.plan.anchors {
-            match (anchor, root) {
-                (CalloutAnchorPlan::Point { .. }, _) => {}
-                (CalloutAnchorPlan::Stage { element, .. }, RootPlan::Stage { recipe, .. }) => {
-                    if recipe
-                        .element(element)
-                        .and_then(StageElement::anchor)
-                        .is_none()
-                    {
-                        bail!(
-                            "callout '{}' anchor '{}' needs a positioned stage element; '{element}' is not one",
-                            self.id,
-                            anchor.id()
-                        );
-                    }
-                }
-                (CalloutAnchorPlan::Editor { target, .. }, RootPlan::Editor { editor, .. }) => {
-                    if !targets
-                        .iter()
-                        .any(|t| &t.id == target && t.actor_id == editor.actor_id())
-                    {
-                        bail!(
-                            "callout '{}' anchor '{}' references unknown editor semantic target '{target}'",
-                            self.id,
-                            anchor.id()
-                        );
-                    }
-                }
-                (CalloutAnchorPlan::Stage { .. }, _) => bail!(
-                    "callout '{}' anchor '{}' needs a stage root",
-                    self.id,
-                    anchor.id()
-                ),
-                (CalloutAnchorPlan::Editor { .. }, _) => bail!(
-                    "callout '{}' anchor '{}' needs an editor root",
-                    self.id,
-                    anchor.id()
-                ),
-            }
-        }
-        Ok(())
+        super::anchor::validate(
+            "callout",
+            &self.id,
+            self.plan
+                .anchors
+                .iter()
+                .map(|anchor| (anchor.id(), anchor.target())),
+            root,
+            targets,
+        )
     }
 
     pub(super) fn id(&self) -> &str {
@@ -92,7 +58,7 @@ impl PreparedCallout {
         self.plan
             .anchors
             .iter()
-            .any(|anchor| matches!(anchor, CalloutAnchorPlan::Stage { .. }))
+            .any(|anchor| anchor.target().on_stage())
     }
 
     /// The callout at one sample: anchors resolved and blended by their weights.
@@ -100,7 +66,7 @@ impl PreparedCallout {
     pub(super) fn pose(
         &self,
         value: impl Fn(&str, &str, f32) -> f32,
-        resolve: impl Fn(&CalloutAnchorPlan) -> Option<Vec2>,
+        resolve: impl Fn(AnchorTarget<'_>) -> Option<Vec2>,
     ) -> Option<CalloutPose> {
         let opacity = value(&self.id, "opacity", 1.0);
         let draw = value(&self.id, "draw", 1.0);
@@ -108,27 +74,26 @@ impl PreparedCallout {
         if opacity <= 0.001 || (draw <= 0.001 && label <= 0.001) {
             return None;
         }
-        let mut anchor = Vec2::ZERO;
+        let mut points = Vec::new();
         let mut legs = Vec::new();
         for (index, plan) in self.plan.anchors.iter().enumerate() {
             let weight = value(
                 &self.id,
                 &CalloutPlan::weight_property(plan.id()),
-                if index == 0 { 1.0 } else { 0.0 },
+                anchor::initial_weight(index),
             );
             if weight.abs() < 1e-6 {
                 continue;
             }
-            let Some(point) = resolve(plan) else {
+            let Some(point) = resolve(plan.target()) else {
                 continue;
             };
-            anchor += point * weight;
+            points.push((point, weight));
             legs.push((self.plan.leg(plan), weight));
         }
-        let total = legs.iter().map(|(_, weight)| weight).sum::<f32>();
         let leg = CalloutLeg::blend(legs)?;
         Some(CalloutPose {
-            anchor: anchor / total,
+            anchor: anchor::blend(points)?,
             leg,
             opacity,
             draw,
@@ -153,35 +118,6 @@ impl PreparedCallout {
         pose: CalloutPose,
     ) -> Option<Box2> {
         renderer.callout_bounds(&self.plan, pose)
-    }
-}
-
-/// Where `anchor` is on the delivered frame at `time`, from the prepared root:
-/// the root recipe owns the layout, the callout only asks for a point.
-pub(super) fn resolve(
-    root: &PreparedRoot,
-    anchor: &CalloutAnchorPlan,
-    size: [u32; 2],
-    value: impl Fn(&str, &str, f32) -> f32,
-    motion: impl Fn(&str, &str) -> Option<MotionState>,
-    time: f64,
-) -> Option<Vec2> {
-    match (anchor, root) {
-        (CalloutAnchorPlan::Point { at, .. }, _) => Some(Vec2::from(*at)),
-        (CalloutAnchorPlan::Stage { element, edge, .. }, PreparedRoot::Stage(stage)) => {
-            stage_anchor(
-                stage.plan(),
-                &|property, default| value(stage.id(), property, default),
-                time,
-                vec2(size[0] as f32, size[1] as f32),
-                element,
-                *edge,
-            )
-        }
-        (CalloutAnchorPlan::Editor { target, edge, .. }, PreparedRoot::Editor { editor, .. }) => {
-            editor.anchor(target, *edge, size, motion)
-        }
-        _ => None,
     }
 }
 

@@ -20,6 +20,7 @@ use super::{
 use crate::render::{RichTextSource, VerticalMask};
 use anyhow::{Context, Result, bail};
 use psychopomp::{
+    anchor::{self, AnchorPlan},
     callout::CALLOUT_RECIPE,
     caption::CAPTION_RECIPE,
     component_prototype::{
@@ -35,6 +36,7 @@ use psychopomp::{
     stage::{STAGE_RECIPE, StagePlan},
     state::{StateTrack, TimedState},
     task::{TASK_RECIPE, TaskRecipePlan},
+    text::{TEXT_CHANNELS, TEXT_RECIPE},
     tree::TREE_RECIPE,
     value::VALUE_TOKEN_RECIPE,
     video::VIDEO_RECIPE,
@@ -88,6 +90,8 @@ pub(super) struct PlainText {
     pub font_size: f32,
     pub color: [u8; 3],
     pub mask: Option<VerticalMask>,
+    /// While non-empty, the blended anchor replaces `center`.
+    pub anchors: Vec<AnchorPlan>,
 }
 
 pub(super) const NATIVE_UNSUPPORTED: &str = "interruptible native playback supports continuous-channel editor, pointer, text, effect-task, keyed-grid, value-token, and provisional component scenes; generic State Channels and recorded media still support video export";
@@ -299,6 +303,15 @@ impl PlainText {
                     .context("text actor requires string data.text or content state")
             },
         )?;
+        let anchors = match actor.data.get("anchors") {
+            None => Vec::new(),
+            Some(value) => serde_json::from_value::<Vec<AnchorPlan>>(value.clone())
+                .with_context(|| format!("parse text actor '{}' anchors", actor.id))?,
+        };
+        anchor::validate("text", &anchors).with_context(|| format!("text actor '{}'", actor.id))?;
+        strict_channels(&actor.id, &plan.continuous_channels, "text", |property| {
+            TEXT_CHANNELS.contains(&property) || anchor::accepts(property, &anchors)
+        })?;
         Ok(Self {
             id: actor.id.clone(),
             content,
@@ -306,6 +319,7 @@ impl PlainText {
             font_size,
             color,
             mask,
+            anchors,
         })
     }
 }
@@ -384,7 +398,7 @@ impl Plan {
                         )?),
                     },
                 )?,
-                "text" => texts.push(PlainText::new(actor, &plan)?),
+                TEXT_RECIPE => texts.push(PlainText::new(actor, &plan)?),
                 TASK_RECIPE => {
                     let recipe: TaskRecipePlan = serde_json::from_value(actor.data.clone())
                         .context("parse Effect task recipe")?;
@@ -472,6 +486,22 @@ impl Plan {
             .collect::<HashSet<_>>();
         for callout in &callouts {
             callout.validate_anchors(&root, &plan.semantic_targets)?;
+        }
+        let pinned = captions
+            .iter()
+            .map(|caption| ("caption", caption.id(), caption.anchors()))
+            .chain(
+                rolling
+                    .iter()
+                    .map(|number| ("rolling number", number.id(), number.anchors())),
+            )
+            .chain(
+                texts
+                    .iter()
+                    .map(|text| ("text", text.id.as_str(), text.anchors.as_slice())),
+            );
+        for (kind, owner, anchors) in pinned {
+            super::anchor::validate_plans(kind, owner, anchors, &root, &plan.semantic_targets)?;
         }
         for media in &plan.media {
             if matches!(media.kind, MediaKindPlan::Audio)

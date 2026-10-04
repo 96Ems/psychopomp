@@ -3,6 +3,8 @@
 //! closed-form tracks once.
 use anyhow::{Result, ensure};
 use psychopomp::{
+    anchor::AnchorPlan,
+    math::Vec2,
     plan::{ActorPlan, ContinuousChannelPlan},
     rolling::{CompiledRoll, RollingNumberPlan},
 };
@@ -30,12 +32,20 @@ impl RollingNumberInput {
             actor.id
         );
         strict_channels(&actor.id, channels, "rolling number", |property| {
-            matches!(property, "opacity" | "x" | "y")
+            plan.accepts(property)
         })?;
         Ok(Self {
             id: actor.id.clone(),
             plan,
         })
+    }
+
+    pub(super) fn id(&self) -> &str {
+        &self.id
+    }
+
+    pub(super) fn anchors(&self) -> &[AnchorPlan] {
+        &self.plan.anchors
     }
 
     pub(super) fn prepare(self, renderer: &mut HeadlessRenderer) -> PreparedRollingNumber {
@@ -60,16 +70,35 @@ impl PreparedRollingNumber {
         self.roll.moving(time)
     }
 
+    pub(super) fn id(&self) -> &str {
+        &self.id
+    }
+
+    pub(super) fn anchors(&self) -> &[AnchorPlan] {
+        &self.plan.anchors
+    }
+
+    /// The literal origin, used while the number has no anchors.
+    pub(super) fn origin(&self) -> Vec2 {
+        Vec2::from(self.plan.origin)
+    }
+
     pub(super) fn render(
         &self,
         pixels: &mut [u8],
         renderer: &mut HeadlessRenderer,
         time: f64,
+        origin: Vec2,
         sample: impl Fn(&str, &str, f32) -> f32,
     ) {
-        renderer.composite_rolling_number(pixels, &self.plan, &self.roll, time, |property, d| {
-            sample(&self.id, property, d)
-        });
+        renderer.composite_rolling_number_at(
+            pixels,
+            &self.plan,
+            &self.roll,
+            time,
+            origin.to_array(),
+            |property, d| sample(&self.id, property, d),
+        );
     }
 }
 

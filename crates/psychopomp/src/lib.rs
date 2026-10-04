@@ -1,3 +1,4 @@
+pub mod anchor;
 pub mod author;
 pub mod axis;
 pub mod callout;
@@ -21,6 +22,7 @@ pub mod sequence;
 pub mod stage;
 pub mod state;
 pub mod task;
+pub mod text;
 pub mod timeline;
 pub mod tone;
 pub mod transcript;

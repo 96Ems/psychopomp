@@ -5,6 +5,7 @@ use anyhow::{Result, ensure};
 use serde::{Deserialize, Serialize};
 
 use crate::{
+    anchor::{self, AnchorPlan},
     author::{ActorHandle, ContinuousHandle, PlanBuilder},
     tone::Tone,
 };
@@ -24,6 +25,11 @@ pub struct CaptionPlan {
     /// A rounded surface behind the text, as for a status chip.
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub chip: bool,
+    /// Places the caption can pin to; while it has any, the blended anchor
+    /// (plus that anchor's offset) replaces `origin`. The first is where it
+    /// starts.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub anchors: Vec<AnchorPlan>,
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
@@ -67,6 +73,7 @@ impl CaptionPlan {
             size,
             lines: vec![spans],
             chip: false,
+            anchors: Vec::new(),
         }
     }
 
@@ -80,8 +87,20 @@ impl CaptionPlan {
         self
     }
 
+    /// Pin the caption's origin to `anchor`; the first anchor is where it starts.
+    pub fn anchor(mut self, anchor: AnchorPlan) -> Self {
+        self.anchors.push(anchor);
+        self
+    }
+
     pub fn line_height(&self) -> f32 {
         self.size * 1.45
+    }
+
+    /// True when `property` names one of this caption's channels.
+    pub fn accepts(&self, property: &str) -> bool {
+        matches!(property, "opacity" | "x" | "y" | "typed" | "caret")
+            || anchor::accepts(property, &self.anchors)
     }
 
     /// Characters revealed by the `typed` channel, across all lines in order.
@@ -122,7 +141,7 @@ impl CaptionPlan {
             self.char_count() <= 320,
             "captions are limited to 320 characters"
         );
-        Ok(())
+        anchor::validate("caption", &self.anchors)
     }
 }
 
@@ -131,6 +150,7 @@ impl CaptionPlan {
 pub struct CaptionActor {
     actor: ActorHandle,
     chars: usize,
+    anchors: Vec<String>,
 }
 
 impl CaptionActor {
@@ -144,6 +164,7 @@ impl CaptionActor {
         Ok(Self {
             actor,
             chars: plan.char_count(),
+            anchors: anchor::ids(&plan.anchors),
         })
     }
 
@@ -164,6 +185,11 @@ impl CaptionActor {
     /// Fade out in place.
     pub fn hide(&mut self, scene: &mut PlanBuilder, at_nanos: u64) {
         hide(scene, &self.actor, at_nanos);
+    }
+
+    /// Glide to the anchor `to`, carrying velocity through interruptions.
+    pub fn move_to(&mut self, scene: &mut PlanBuilder, to: &str, at_nanos: u64) -> Result<()> {
+        anchor::move_to(scene, &self.actor, &self.anchors, to, at_nanos)
     }
 
     /// Type the caption in at `chars_per_second`, showing the block caret while

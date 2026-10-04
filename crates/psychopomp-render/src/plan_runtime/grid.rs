@@ -1002,7 +1002,8 @@ mod tests {
                     channel.actor_id
                 },
                 property: if id_collision {
-                    "unrelated".into()
+                    // A real text channel, so only the ID collides.
+                    "x".into()
                 } else {
                     channel.property
                 },
