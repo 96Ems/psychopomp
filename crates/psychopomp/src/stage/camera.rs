@@ -634,6 +634,13 @@ impl CameraRig {
         Ok(self.move_to(scene, &target, at_nanos, motion))
     }
 
+    /// Roll the image to `radians` (clockwise on screen), a Dutch angle for
+    /// unease; 0 levels it.
+    pub fn roll(&self, scene: &mut PlanBuilder, at_nanos: u64, radians: f32, motion: Move) -> u64 {
+        self.write(scene, "camera.roll", at_nanos, radians, motion);
+        at_nanos + motion.nanos()
+    }
+
     /// Pull focus to the plane of `element` (depth of field needs
     /// `camera.dof` above zero; see [`Self::aperture`]).
     pub fn focus_on(
@@ -775,7 +782,8 @@ impl CameraRig {
             .map_or(0.0, |state| state.position.max(0.0))
     }
 
-    /// Write `target` to a channel by `motion`, unless it is already there.
+    /// Write `target` to a channel by `motion`, unless it is already headed
+    /// there: an unchanged destination keeps its trajectory.
     fn write(
         &self,
         scene: &mut PlanBuilder,
@@ -784,11 +792,10 @@ impl CameraRig {
         target: f32,
         motion: Move,
     ) {
-        let current = scene.sample(&self.actor, property, at_nanos);
-        if current
-            .is_some_and(|state| (state.position - target).abs() < 1e-4 && state.velocity == 0.0)
-            || current.is_none() && (camera_default(property) - target).abs() < 1e-4
-        {
+        let destination = scene
+            .destination(&self.actor, property, at_nanos)
+            .unwrap_or_else(|| camera_default(property));
+        if (destination - target).abs() <= 1e-3 {
             return;
         }
         let channel = scene.channel(&self.actor, property, camera_default(property));
