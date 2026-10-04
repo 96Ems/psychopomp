@@ -15,6 +15,7 @@ Lightweight crate (`crates/psychopomp/src`):
 - `crates/psychopomp/src/editor/compiled.rs`: shared validated catalog, reveal ranges, and legacy/keyed placement used by inspection and rendering
 - `crates/psychopomp/src/editor/stability.rs`: GPU-free step deltas and heuristic common-text stability warnings
 - `crates/psychopomp/src/editor/diff.rs`: Stepped Diff recipe builder (keep/add/remove lines, room-opening snapshots, Line Mark warnings)
+- `crates/psychopomp/src/ide.rs`: Diagnostic, Hover Card, and Cursor payloads and handles (`DiagnosticActor`, `HoverActor`, `CursorActor`), Inlay Hint insertion (`insert_inlay`, `InlayHint`), and their GPU-free geometry: the wave, the caret blink, and hover layout
 - `crates/psychopomp/src/highlight.rs`: line-local TypeScript highlighting into editor spans
 - `crates/psychopomp/src/task.rs`: `TaskState` and typed planned Task state schedules
 - `crates/psychopomp/src/grid.rs`: finite keyed product catalogs and semantic Grid Snapshots
@@ -74,6 +75,7 @@ Renderer crate (`crates/psychopomp-render/src`), plan runtime:
 - `crates/psychopomp-render/src/plan_runtime/tree.rs`: Tree per-path channel preflight
 - `crates/psychopomp-render/src/plan_runtime/plot.rs` and `lanes.rs`: Plot and Lanes strict-channel preflight
 - `crates/psychopomp-render/src/plan_runtime/callout.rs`: anchor validation and per-sample resolution from the prepared root (`render::stage_anchor`, `PreparedEditor::anchor`)
+- `crates/psychopomp-render/src/plan_runtime/ide.rs`: strict preflight of Diagnostics, Hover Cards, and Cursors attached to the editor root, and their per-sample frames from measured targets
 - `crates/psychopomp-render/src/plan_runtime/video.rs`: Video Card preflight, frame caches, and source-time mapping
 - `crates/psychopomp-render/src/plan_runtime/stage.rs`: Stage root preflight and preparation
 
@@ -98,6 +100,7 @@ Renderer crate, pixels and delivery:
 - `crates/psychopomp-render/src/render/tree.rs`: Tree rows, chevrons, guides, highlight bars, and rolling values
 - `crates/psychopomp-render/src/render/plot.rs`, `lanes.rs`, and `chart.rs`: Plot and Lanes pixels over the shared chart ink (snapped labels, axis rulers, dashes, dots, diamonds, readout tabs)
 - `crates/psychopomp-render/src/render/callout.rs`: callout mark, leader, and label pixels
+- `crates/psychopomp-render/src/render/ide.rs`: selection, Inlay Hint chip, diagnostic wave and gutter icon, caret, and Hover Card pixels on the flat editor surface
 - `crates/psychopomp-render/src/render/video.rs`: projected Video Card pixels with a focus window
 - `crates/psychopomp-render/src/render/wipe.rs`: Reel wipe pixels: antialiased split, divider line and shadow, riding labels
 - `crates/psychopomp-render/src/render/stage.rs`, `stage.wgsl`, `stage_post.wgsl`: Stage primitives, HDR bloom, and composite; `PSYCHOPOMP_SHADER_DIR` loads the WGSL live
@@ -126,6 +129,7 @@ Scene Programs (`scenes/`), each emitting a Scene Plan, Deck, or Reel:
 - `scenes/tree/`: Tree showroom: the plan `agent-demo` emits, opened node by node, scrolled, highlighted, a value rolled, then folded
 - `scenes/charts/`: Plot and Lanes showroom: critically damped vs bouncy springs, a riding playhead with its velocity arrow, a retarget beside a restart from rest (all from compiled Property Tracks), then Lanes of the plot's own channels
 - `scenes/callouts/`: Callout showroom reel: callouts pinned to Stage cards through a dolly, a jolt, and a glide between anchors, then to a code range that moves as lines are inserted and the panel zooms
+- `scenes/diagnostics/`: IDE annotation showroom: an Effect program's error wave, inferred-type Inlay Hint, Hover Card, caret selection, and a Stepped Diff fix that the error rides down with before it clears
 - `scenes/video/`: Video Card showroom: a screen recording flies in, zooms into the prompt, and back out
 - `scenes/compare/`: wipe showroom: a held before/after wipe between two Stage frames, then a plain wipe
 
@@ -540,6 +544,36 @@ moving callouts ink (`HeadlessRenderer::callout_bounds`, `exposure::accumulate_r
 still callouts outside them draw once, and every other pixel takes the same
 weighted average through a per-value table, so the exposure is bit-identical.
 Sequence Diagram anchors are not implemented.
+
+### IDE annotations
+
+Diagnostics (`diagnostic`), Hover Cards (`hover-card`), and Cursors (`cursor`)
+are separate actors attached to the editor root by Semantic Target ID, as a
+pointer attaches by editor ID; they add no fields to `EditorRecipePlan`.
+`plan_runtime/ide.rs` decodes each once with strict channels, and preflight
+attaches it to the `PreparedEditor` after checking its targets belong to that
+editor. At every sample `PreparedEditor::render` measures each target through
+the same `MeasuredTarget::sample` that attachments and callouts use, so an
+annotation follows Stable Line motion, Inline Reveals (including an Inlay Hint
+opening before it), and the line's opacity, with no companion tracks. The
+frames enter `EditorFrame::annotations`; `render/ide.rs` paints them on the flat
+editor surface, so the card projection carries them and the interactive preview
+path draws them too: selections under the code, waves, gutter icons, and carets
+over it, Hover Cards last (before the pointer), clamped inside the code body.
+The wave is `psychopomp::ide::wave`, a sine phased from the range start and
+sliced by arc length for `draw`; hover placement is `ide::hover_layout`, which
+slides rather than flips; the caret blink is `ide::caret_blink` of a `blink`
+clock channel. Hover text reuses the editor's syntax sprites (smaller) and the
+plain-text cache for toned prose.
+
+An Inlay Hint is not an actor: `insert_inlay` adds an `inlay:<id>` part, a
+semantic range, and an Inline Reveal on the `inlay.<id>` editor channel, so
+measurement, room-opening, Maximum Stability, and `plan steps` all treat it as
+the Inline Reveal it is. The compositor recognizes the part-ID prefix to draw a
+chip behind the segment's ghost ink. Stepped Diff lines name ranges by text
+(`Line::range`), carry hints (`Line::inlay`), and may override their mark;
+`Diff::declare` returns a `DiffEditor` whose `target` pins Semantic Targets to
+those ranges, so callouts and annotations pin to diff code directly.
 
 ### Stage
 

@@ -409,6 +409,13 @@ reusable for any code explainer:
   A hand-built editor recipe (one with semantic ranges to pin a callout, say)
   gets the same room-opening steps from `diff::step_snapshots(previous, next,
   at)` plus `diff::gap_lines(&snapshots)`.
+- A diff line can name a range of its text (`keep("..").range("sigkill",
+  "signal(..)")`), carry an Inlay Hint after one (`.inlay(id, after, text)`), and
+  override its Line Mark (`.marked(LineMarkPlan::Added)`). `declare` returns a
+  `DiffEditor`: `target(scene, id, line_index, range)` declares a Semantic Target
+  for callouts, diagnostics, hovers, and cursors, and `inlay(scene, id)` reveals a
+  hint. `film::code_with(pr, narration, change, entrance, |scene, editor, spoken|
+  ..)` annotates a PR film's code segment (see `stop_stage.rs`).
 - `SequenceRowPlan::message|reply|note|end(..)` with `.in_slot(n)` and
   `.with_aside(text)` build rows; `SequenceParticipantPlan::new(id, label, detail)`
   builds participants; `SequenceActor::row_channel`/`participant_channel` address
@@ -656,6 +663,40 @@ their fuller documentation elsewhere.
   The showroom is `cargo run -p psychopomp-callouts` (writes the reel
   `target/callouts.json` and its segments under `target/callouts/`); render it
   with `cargo run --release -- plan render target/callouts.json output/callouts.mp4 --theme neutral`.
+- `diagnostic`: `target` (a Semantic Target of the editor root), `severity`
+  (`error` by default, `warning`, `info`), and `gutter` (true). Channels: `draw`
+  (0..1 of the wave's length; the gutter icon pops in with it), `opacity`, and
+  `wave` (amplitude, 1). `DiagnosticActor` writes `show` (draw on) and `clear`
+  (the wave relaxes flat as it fades).
+- `hover-card`: `target`, `sections` (one to four; each `{ "code": [[spans]] }`
+  of highlighted lines or `{ "text": [[{ text, tone }]] }` of prose, ten lines in
+  all, divided by rules), and `side` (`above` by default, or `below`). Channel:
+  `presence` (fade and an 8 px rise from the range). `HoverPlan::new(target)
+  .code(line).text(spans).below()` builds it; `HoverActor` writes `show` (a pop
+  with slight overshoot) and `hide`. The card slides to stay inside the editor.
+- `cursor`: `anchors` of `{ id, target }`. Channels: `opacity`, `head` (the
+  caret's fraction of the weighted range, 1), `tail` (the selection's other end;
+  defaults to `head`), `blink` (seconds since the caret moved; -1 holds it solid),
+  and `anchor.<id>` weights. `CursorActor` writes `show`, `hide`, `move_to(anchor,
+  head, at)`, `select(anchor, at, seconds)` (the caret sweeps the range as the
+  selection grows), and `collapse`. Several cursors make a multi-cursor.
+- Inlay Hints are editor parts, not actors: `EditorRecipePlan::insert_inlay(id,
+  line, after_range, ide::ghost(": Effect<User>"))` (or a diff line's `.inlay`)
+  inserts an `inlay:<id>` part revealed by the editor channel `inlay.<id>`;
+  `InlayHint::on(scene, &editor, id).show(scene, at)` opens it. Code after it moves
+  aside and Semantic Targets after it follow.
+  ```rust
+  let editor = diff.declare(&mut scene, &[fix], 0, true)?;   // a line has .range("run", ..)
+  editor.target(&mut scene, "run", 10, "run")?;
+  DiagnosticActor::declare(&mut scene, "error", &DiagnosticPlan::error("run"))?.show(&mut scene, at);
+  HoverActor::declare(&mut scene, "why", &HoverPlan::new("run")
+      .code("const program: Effect<User, NotFound, Database>")
+      .text(vec![CaptionSpanPlan::new("Type 'Database' is not assignable to type 'never'.", Tone::Plain)]))?
+      .show(&mut scene, later);
+  ```
+  The showroom is `cargo run -p psychopomp-diagnostics` (writes
+  `target/diagnostics.json`); render it with
+  `cargo run --release -- plan render target/diagnostics.json output/diagnostics.mp4 --theme opencode`.
 - Editor Line Marks: `"mark": "added" | "removed"` on a line, with presence
   channel `mark.<line-id>`; `panel-x`, `panel-y`, and `panel-opacity` move and fade the card (the Stepped Diff
   enters on `panel-y`).
