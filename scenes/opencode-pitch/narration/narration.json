@@ -1,0 +1,44 @@
+{
+  "clips": [
+    {
+      "id": "rented",
+      "file": "rented.mp3",
+      "words": "rented.words.json",
+      "durationNanos": 14666479166,
+      "textHash": "df771c845458e2fe",
+      "engine": "fish"
+    },
+    {
+      "id": "kept",
+      "file": "kept.mp3",
+      "words": "kept.words.json",
+      "durationNanos": 15764145833,
+      "textHash": "2c8b35f73e5d76da",
+      "engine": "fish"
+    },
+    {
+      "id": "loops",
+      "file": "loops.mp3",
+      "words": "loops.words.json",
+      "durationNanos": 15341979166,
+      "textHash": "284bb1d48ba1c37c",
+      "engine": "fish"
+    },
+    {
+      "id": "pilot",
+      "file": "pilot.mp3",
+      "words": "pilot.words.json",
+      "durationNanos": 14497604166,
+      "textHash": "d1a10c5847582a87",
+      "engine": "fish"
+    },
+    {
+      "id": "close",
+      "file": "close.mp3",
+      "words": "close.words.json",
+      "durationNanos": 3309791666,
+      "textHash": "e08bbd1feb39d086",
+      "engine": "fish"
+    }
+  ]
+}

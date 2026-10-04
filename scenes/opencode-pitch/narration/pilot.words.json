@@ -1,0 +1,184 @@
+{
+ "wordTimings": [
+  {
+   "word": "Start",
+   "start": 0,
+   "end": 0.38
+  },
+  {
+   "word": "small.",
+   "start": 0.38,
+   "end": 0.6
+  },
+  {
+   "word": "A",
+   "start": 0.98,
+   "end": 1.54
+  },
+  {
+   "word": "two",
+   "start": 1.54,
+   "end": 1.86
+  },
+  {
+   "word": "-week",
+   "start": 1.86,
+   "end": 2.08
+  },
+  {
+   "word": "pilot.",
+   "start": 2.08,
+   "end": 2.46
+  },
+  {
+   "word": "Five",
+   "start": 2.94,
+   "end": 3.5
+  },
+  {
+   "word": "candidate",
+   "start": 3.5,
+   "end": 4.04
+  },
+  {
+   "word": "problems.",
+   "start": 4.04,
+   "end": 4.46
+  },
+  {
+   "word": "Three",
+   "start": 4.84,
+   "end": 5.32
+  },
+  {
+   "word": "lasting",
+   "start": 5.32,
+   "end": 5.8
+  },
+  {
+   "word": "proofs.",
+   "start": 5.8,
+   "end": 6.44
+  },
+  {
+   "word": "One",
+   "start": 6.44,
+   "end": 6.98
+  },
+  {
+   "word": "owner.",
+   "start": 6.98,
+   "end": 7.44
+  },
+  {
+   "word": "And",
+   "start": 7.6,
+   "end": 8.14
+  },
+  {
+   "word": "a",
+   "start": 8.14,
+   "end": 8.22
+  },
+  {
+   "word": "spending",
+   "start": 8.22,
+   "end": 8.52
+  },
+  {
+   "word": "limit",
+   "start": 8.52,
+   "end": 8.82
+  },
+  {
+   "word": "we",
+   "start": 8.82,
+   "end": 9.08
+  },
+  {
+   "word": "agree",
+   "start": 9.08,
+   "end": 9.3
+  },
+  {
+   "word": "on",
+   "start": 9.3,
+   "end": 9.54
+  },
+  {
+   "word": "up",
+   "start": 9.54,
+   "end": 9.74
+  },
+  {
+   "word": "front.",
+   "start": 9.74,
+   "end": 9.98
+  },
+  {
+   "word": "On",
+   "start": 10.14,
+   "end": 10.36
+  },
+  {
+   "word": "day",
+   "start": 10.36,
+   "end": 10.6
+  },
+  {
+   "word": "14,",
+   "start": 10.6,
+   "end": 11.08
+  },
+  {
+   "word": "we",
+   "start": 11.3,
+   "end": 11.54
+  },
+  {
+   "word": "keep",
+   "start": 11.54,
+   "end": 11.76
+  },
+  {
+   "word": "going",
+   "start": 11.76,
+   "end": 12.02
+  },
+  {
+   "word": "only",
+   "start": 12.02,
+   "end": 12.48
+  },
+  {
+   "word": "if",
+   "start": 12.48,
+   "end": 12.68
+  },
+  {
+   "word": "the",
+   "start": 12.68,
+   "end": 12.8
+  },
+  {
+   "word": "proofs",
+   "start": 12.8,
+   "end": 13.24
+  },
+  {
+   "word": "paid",
+   "start": 13.24,
+   "end": 13.44
+  },
+  {
+   "word": "for",
+   "start": 13.44,
+   "end": 13.68
+  },
+  {
+   "word": "themselves.",
+   "start": 13.68,
+   "end": 13.96
+  }
+ ]
+}

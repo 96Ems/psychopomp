@@ -1,0 +1,169 @@
+{
+ "wordTimings": [
+  {
+   "word": "Run",
+   "start": 0,
+   "end": 0.34
+  },
+  {
+   "word": "three",
+   "start": 0.34,
+   "end": 0.7
+  },
+  {
+   "word": "of",
+   "start": 0.7,
+   "end": 0.86
+  },
+  {
+   "word": "these",
+   "start": 0.86,
+   "end": 1.04
+  },
+  {
+   "word": "loops,",
+   "start": 1.04,
+   "end": 1.38
+  },
+  {
+   "word": "replay",
+   "start": 1.6,
+   "end": 2.32
+  },
+  {
+   "word": "real",
+   "start": 2.32,
+   "end": 2.9
+  },
+  {
+   "word": "failures",
+   "start": 2.9,
+   "end": 3.5
+  },
+  {
+   "word": "from",
+   "start": 3.5,
+   "end": 3.82
+  },
+  {
+   "word": "user",
+   "start": 3.82,
+   "end": 4.14
+  },
+  {
+   "word": "reports,",
+   "start": 4.14,
+   "end": 4.54
+  },
+  {
+   "word": "stress",
+   "start": 4.86,
+   "end": 5.48
+  },
+  {
+   "word": "the",
+   "start": 5.48,
+   "end": 5.74
+  },
+  {
+   "word": "moments",
+   "start": 5.74,
+   "end": 6.02
+  },
+  {
+   "word": "where",
+   "start": 6.02,
+   "end": 6.32
+  },
+  {
+   "word": "working",
+   "start": 6.32,
+   "end": 6.62
+  },
+  {
+   "word": "features",
+   "start": 6.62,
+   "end": 7.1
+  },
+  {
+   "word": "break,",
+   "start": 7.1,
+   "end": 7.54
+  },
+  {
+   "word": "restarts,",
+   "start": 7.74,
+   "end": 8.74
+  },
+  {
+   "word": "retries,",
+   "start": 8.86,
+   "end": 9.64
+  },
+  {
+   "word": "and",
+   "start": 9.76,
+   "end": 10.06
+  },
+  {
+   "word": "upgrades,",
+   "start": 10.06,
+   "end": 10.5
+  },
+  {
+   "word": "and",
+   "start": 10.78,
+   "end": 11.48
+  },
+  {
+   "word": "check",
+   "start": 11.48,
+   "end": 11.72
+  },
+  {
+   "word": "the",
+   "start": 11.72,
+   "end": 11.9
+  },
+  {
+   "word": "experience",
+   "start": 11.9,
+   "end": 12.22
+  },
+  {
+   "word": "itself",
+   "start": 12.22,
+   "end": 12.76
+  },
+  {
+   "word": "on",
+   "start": 12.76,
+   "end": 13.42
+  },
+  {
+   "word": "the",
+   "start": 13.42,
+   "end": 13.52
+  },
+  {
+   "word": "build",
+   "start": 13.52,
+   "end": 13.76
+  },
+  {
+   "word": "people",
+   "start": 13.76,
+   "end": 14.06
+  },
+  {
+   "word": "actually",
+   "start": 14.06,
+   "end": 14.54
+  },
+  {
+   "word": "install.",
+   "start": 14.54,
+   "end": 14.94
+  }
+ ]
+}

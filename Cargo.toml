@@ -22,6 +22,7 @@ members = [
   "scenes/video",
   "scenes/compare",
   "scenes/opencode-quality",
+  "scenes/opencode-pitch",
   "scenes/2password",
 ]
 default-members = ["crates/psychopomp-render"]

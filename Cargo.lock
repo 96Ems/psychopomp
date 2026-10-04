@@ -1676,6 +1676,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "psychopomp-opencode-pitch"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "psychopomp",
+ "serde_json",
+]
+
+[[package]]
 name = "psychopomp-opencode-quality"
 version = "0.1.0"
 dependencies = [

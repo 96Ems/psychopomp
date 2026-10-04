@@ -1,0 +1,219 @@
+{
+ "wordTimings": [
+  {
+   "word": "Instead,",
+   "start": 0,
+   "end": 0.46
+  },
+  {
+   "word": "make",
+   "start": 0.7,
+   "end": 1.2
+  },
+  {
+   "word": "every",
+   "start": 1.2,
+   "end": 1.58
+  },
+  {
+   "word": "investigation",
+   "start": 1.58,
+   "end": 2.16
+  },
+  {
+   "word": "leave",
+   "start": 2.16,
+   "end": 2.66
+  },
+  {
+   "word": "something",
+   "start": 2.66,
+   "end": 3.04
+  },
+  {
+   "word": "behind.",
+   "start": 3.04,
+   "end": 3.5
+  },
+  {
+   "word": "Turn",
+   "start": 4.1000000000000005,
+   "end": 4.62
+  },
+  {
+   "word": "the",
+   "start": 4.62,
+   "end": 4.82
+  },
+  {
+   "word": "report",
+   "start": 4.82,
+   "end": 5
+  },
+  {
+   "word": "into",
+   "start": 5,
+   "end": 5.32
+  },
+  {
+   "word": "a",
+   "start": 5.32,
+   "end": 5.46
+  },
+  {
+   "word": "test",
+   "start": 5.46,
+   "end": 5.74
+  },
+  {
+   "word": "that",
+   "start": 5.74,
+   "end": 5.96
+  },
+  {
+   "word": "fails",
+   "start": 5.96,
+   "end": 6.28
+  },
+  {
+   "word": "for",
+   "start": 6.28,
+   "end": 6.54
+  },
+  {
+   "word": "the",
+   "start": 6.54,
+   "end": 6.66
+  },
+  {
+   "word": "right",
+   "start": 6.66,
+   "end": 6.84
+  },
+  {
+   "word": "reason.",
+   "start": 6.84,
+   "end": 7.2
+  },
+  {
+   "word": "Fix",
+   "start": 7.62,
+   "end": 8.14
+  },
+  {
+   "word": "the",
+   "start": 8.14,
+   "end": 8.32
+  },
+  {
+   "word": "code",
+   "start": 8.32,
+   "end": 8.58
+  },
+  {
+   "word": "until",
+   "start": 8.58,
+   "end": 8.88
+  },
+  {
+   "word": "that",
+   "start": 8.88,
+   "end": 9.1
+  },
+  {
+   "word": "same",
+   "start": 9.1,
+   "end": 9.34
+  },
+  {
+   "word": "test",
+   "start": 9.34,
+   "end": 9.68
+  },
+  {
+   "word": "passes,",
+   "start": 9.68,
+   "end": 10.22
+  },
+  {
+   "word": "then",
+   "start": 10.46,
+   "end": 11.06
+  },
+  {
+   "word": "keep",
+   "start": 11.06,
+   "end": 11.32
+  },
+  {
+   "word": "it.",
+   "start": 11.32,
+   "end": 11.56
+  },
+  {
+   "word": "Now",
+   "start": 11.62,
+   "end": 11.9
+  },
+  {
+   "word": "when",
+   "start": 11.9,
+   "end": 12.16
+  },
+  {
+   "word": "the",
+   "start": 12.16,
+   "end": 12.26
+  },
+  {
+   "word": "bug",
+   "start": 12.26,
+   "end": 12.46
+  },
+  {
+   "word": "comes",
+   "start": 12.46,
+   "end": 12.68
+  },
+  {
+   "word": "back,",
+   "start": 12.68,
+   "end": 13.1
+  },
+  {
+   "word": "it",
+   "start": 13.22,
+   "end": 13.68
+  },
+  {
+   "word": "hits",
+   "start": 13.68,
+   "end": 13.94
+  },
+  {
+   "word": "the",
+   "start": 13.94,
+   "end": 14.08
+  },
+  {
+   "word": "test,",
+   "start": 14.08,
+   "end": 14.46
+  },
+  {
+   "word": "not",
+   "start": 14.58,
+   "end": 15.02
+  },
+  {
+   "word": "the",
+   "start": 15.02,
+   "end": 15.2
+  },
+  {
+   "word": "user.",
+   "start": 15.2,
+   "end": 15.46
+  }
+ ]
+}
