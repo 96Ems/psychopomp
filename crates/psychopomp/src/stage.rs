@@ -935,7 +935,9 @@ impl StageActor {
 
     /// Form `card` out of ash: the dissolve played backwards over `seconds`
     /// (its full clock is [`dissolve::DURATION`]), so flakes fly home and the
-    /// rim recedes. Returns when the card is whole.
+    /// rim recedes. It rushes through the empty end of the clock and settles
+    /// at a third of its average speed. The card is cold ash until `at_nanos`;
+    /// returns when it is whole.
     pub fn materialize(
         &mut self,
         scene: &mut PlanBuilder,
@@ -945,7 +947,7 @@ impl StageActor {
     ) -> u64 {
         let channel = self.channel(scene, &format!("{card}.dissolve"), dissolve::DURATION);
         scene.set(&channel, at_nanos, dissolve::DURATION);
-        scene.ease(&channel, at_nanos, 0.0, seconds, Ease::Linear);
+        scene.ease(&channel, at_nanos, 0.0, seconds, Ease::Decelerate(0.35));
         at_nanos + whole_millis(seconds)
     }
 
