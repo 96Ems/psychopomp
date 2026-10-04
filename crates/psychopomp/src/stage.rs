@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     author::{ActorHandle, ContinuousHandle, PlanBuilder, whole_millis},
     caption::{self, CaptionAlign, CaptionSpanPlan},
-    effects::spinner::Mark,
+    effects::{dissolve, lightning, shield, spinner::Mark},
     math::{
         Vec2, Vec3,
         easing::Ease,
@@ -143,6 +143,41 @@ pub enum StageElement {
         #[serde(default, skip_serializing_if = "Tone::is_default")]
         tone: Tone,
     },
+    /// Lightning between two positioned elements (or shields) or world
+    /// points. Its `age` clock runs a stepped leader, `strikes` strobing
+    /// return strokes that re-roll the path, contact sparks, and afterglow;
+    /// `hum` keeps a writhing arc alive.
+    #[serde(rename_all = "camelCase")]
+    Bolt {
+        id: String,
+        from: BoltEnd,
+        to: BoltEnd,
+        #[serde(default = "default_strikes")]
+        strikes: u32,
+        /// Forks per stroke, about six at 1.
+        #[serde(default = "default_branching")]
+        branching: f32,
+        #[serde(default = "request")]
+        tone: Tone,
+    },
+    /// A forcefield bubble around a positioned element: faint hexagonal
+    /// cells that ripple wherever a packet crosses it or a bolt strikes it.
+    #[serde(rename_all = "camelCase")]
+    Shield {
+        id: String,
+        around: String,
+        radius: f32,
+        #[serde(default = "accent")]
+        tone: Tone,
+    },
+}
+
+/// One end of a bolt: a positioned element or shield by ID, or a world point.
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[serde(untagged)]
+pub enum BoltEnd {
+    Element(String),
+    Point([f32; 3]),
 }
 
 fn default_points() -> u32 {
@@ -153,6 +188,15 @@ fn default_thickness() -> f32 {
 }
 fn accent() -> Tone {
     Tone::Accent
+}
+fn request() -> Tone {
+    Tone::Request
+}
+fn default_strikes() -> u32 {
+    3
+}
+fn default_branching() -> f32 {
+    0.6
 }
 fn is_center(align: &CaptionAlign) -> bool {
     *align == CaptionAlign::Center
@@ -169,7 +213,9 @@ impl StageElement {
             | Self::Beam { id, .. }
             | Self::Packet { id, .. }
             | Self::Label { id, .. }
-            | Self::Ring { id, .. } => id,
+            | Self::Ring { id, .. }
+            | Self::Bolt { id, .. }
+            | Self::Shield { id, .. } => id,
         }
     }
 
@@ -180,7 +226,9 @@ impl StageElement {
             | Self::Orb { at, .. }
             | Self::Label { at, .. }
             | Self::Ring { at, .. } => Some(*at),
-            Self::Beam { .. } | Self::Packet { .. } => None,
+            Self::Beam { .. } | Self::Packet { .. } | Self::Bolt { .. } | Self::Shield { .. } => {
+                None
+            }
         }
     }
 
@@ -195,11 +243,13 @@ impl StageElement {
                 center,
                 radius: radius * scale,
             }),
-            Self::Ring { radius, .. } => Shape::Circle(Circle {
+            Self::Ring { radius, .. } | Self::Shield { radius, .. } => Shape::Circle(Circle {
                 center,
                 radius: radius * scale,
             }),
-            Self::Label { .. } | Self::Beam { .. } | Self::Packet { .. } => Shape::Point(center),
+            Self::Label { .. } | Self::Beam { .. } | Self::Packet { .. } | Self::Bolt { .. } => {
+                Shape::Point(center)
+            }
         }
     }
 
@@ -209,11 +259,11 @@ impl StageElement {
             Self::Card { .. } => &[
                 "opacity", "x", "y", "z", "scale", "blur", "glow", "flash", "alarm", "dim",
                 "status", "content", "cool", "damage", "glitch", "cut", "ghost", "spinner",
-                "release", "mark",
+                "release", "mark", "charge", "dissolve", "scan",
             ],
             Self::Orb { .. } => &[
                 "opacity", "x", "y", "z", "scale", "blur", "rotation", "burst", "shatter", "pulse",
-                "hurt", "spin",
+                "hurt", "spin", "charge",
             ],
             Self::Beam { .. } => &[
                 "opacity", "sweep", "port", "draw", "break", "flow", "emphasis", "surge", "twang",
@@ -221,6 +271,8 @@ impl StageElement {
             Self::Packet { .. } => &["opacity", "age", "flight"],
             Self::Label { .. } => &["opacity", "x", "y", "z", "scale", "typed"],
             Self::Ring { .. } => &["opacity", "x", "y", "z", "scale", "sweep", "expand"],
+            Self::Bolt { .. } => &["opacity", "age", "seed", "hum"],
+            Self::Shield { .. } => &["opacity", "up", "scale"],
         }
     }
 }
@@ -357,6 +409,48 @@ impl StagePlan {
                     ensure!(
                         (2.0..=900.0).contains(radius) && (0.5..=80.0).contains(thickness),
                         "ring '{id}' radius or thickness is out of range"
+                    );
+                }
+                StageElement::Bolt {
+                    from,
+                    to,
+                    strikes,
+                    branching,
+                    ..
+                } => {
+                    for end in [from, to] {
+                        match end {
+                            BoltEnd::Element(end) => ensure!(
+                                end != id
+                                    && self.element(end).is_some_and(|element| {
+                                        element.anchor().is_some()
+                                            || matches!(element, StageElement::Shield { .. })
+                                    }),
+                                "bolt '{id}' must strike positioned elements or shields; '{end}' is not one"
+                            ),
+                            BoltEnd::Point(at) => ensure!(
+                                at.iter().all(|v| v.is_finite()) && at[2] > -FOCAL * 0.8,
+                                "bolt '{id}' points must be finite and in front of the camera"
+                            ),
+                        }
+                    }
+                    ensure!(from != to, "bolt '{id}' needs two different ends");
+                    ensure!(
+                        (1..=lightning::MAX_STRIKES).contains(strikes)
+                            && (0.0..=1.5).contains(branching),
+                        "bolt '{id}' needs 1..=8 strikes and branching in 0..1.5"
+                    );
+                }
+                StageElement::Shield { around, radius, .. } => {
+                    ensure!(
+                        self.element(around)
+                            .and_then(StageElement::anchor)
+                            .is_some(),
+                        "shield '{id}' must surround a positioned element"
+                    );
+                    ensure!(
+                        (10.0..=900.0).contains(radius),
+                        "shield '{id}' radius is out of range"
                     );
                 }
             }
@@ -751,6 +845,139 @@ impl StageActor {
     }
 }
 
+/// Effect beats: lightning, charge, dissolve, scans, and shields. Each writes
+/// one clock or amount channel; the renderer derives every phase from it.
+impl StageActor {
+    /// Lightning strikes along `bolt`: its stepped leader sets out at
+    /// `at_nanos` and the first return stroke connects [`lightning::LEADER`]
+    /// later; further strokes strobe a few frames apart, each re-rolling the
+    /// path, then the channel cools. Every zap rolls a fresh seed. Returns the
+    /// contact time; pair it with `land` or `jolt` for the receiver.
+    pub fn zap(&mut self, scene: &mut PlanBuilder, bolt: &str, at_nanos: u64) -> u64 {
+        let strikes = match self.plan.element(bolt) {
+            Some(StageElement::Bolt { strikes, .. }) => *strikes,
+            _ => default_strikes(),
+        };
+        let seed = lightning::seed_for(at_nanos);
+        let discharge = lightning::Discharge::new(strikes, seed);
+        // A receiver's reaction (an orb's surface wave, a shield's ripple)
+        // outlasts the bolt's own glow.
+        let last = discharge.strike_time(discharge.strikes - 1);
+        let lifetime = discharge.lifetime().max(last + shield::RIPPLE);
+        let channel = self.channel(scene, &format!("{bolt}.seed"), 0.0);
+        scene.set(&channel, at_nanos, seed as f32);
+        // Whole milliseconds, so the clock's slope is exactly one.
+        let seconds = (lifetime * 1000.0).ceil() / 1000.0;
+        self.clock_for(scene, &format!("{bolt}.age"), at_nanos, seconds);
+        at_nanos + whole_millis(lightning::LEADER)
+    }
+
+    /// Ease `element`'s (a card's or orb's) charge to `intensity` (0..1,
+    /// overdriven to 1.5) over `seconds`: short arcs crawl its outline and
+    /// strobe, lighting its rim. Zero discharges it; zero seconds is instant.
+    pub fn charge(
+        &mut self,
+        scene: &mut PlanBuilder,
+        element: &str,
+        at_nanos: u64,
+        intensity: f32,
+        seconds: f32,
+    ) {
+        self.amount(
+            scene,
+            &format!("{element}.charge"),
+            at_nanos,
+            intensity,
+            seconds,
+        );
+    }
+
+    /// Keep an arc alive along `bolt` at `intensity` (eased over `seconds`):
+    /// it re-strikes 24 times a second while its channel writhes. Zero stops it.
+    pub fn hum(
+        &mut self,
+        scene: &mut PlanBuilder,
+        bolt: &str,
+        at_nanos: u64,
+        intensity: f32,
+        seconds: f32,
+    ) {
+        self.amount(scene, &format!("{bolt}.hum"), at_nanos, intensity, seconds);
+    }
+
+    fn amount(
+        &mut self,
+        scene: &mut PlanBuilder,
+        property: &str,
+        at_nanos: u64,
+        target: f32,
+        seconds: f32,
+    ) {
+        if seconds > 0.0 {
+            self.ease(scene, property, at_nanos, target, seconds, Ease::Smoothstep);
+        } else {
+            self.set(scene, property, at_nanos, target);
+        }
+    }
+
+    /// Burn `card` away from `at_nanos`: a noisy front with a hot rim crosses
+    /// it in [`dissolve::BURN`] seconds, shedding ash that drifts up and
+    /// cools. Returns when the card is gone; the ash cools a little longer.
+    pub fn dissolve(&mut self, scene: &mut PlanBuilder, card: &str, at_nanos: u64) -> u64 {
+        self.clock_for(
+            scene,
+            &format!("{card}.dissolve"),
+            at_nanos,
+            dissolve::DURATION,
+        );
+        at_nanos + whole_millis(dissolve::BURN)
+    }
+
+    /// Form `card` out of ash: the dissolve played backwards over `seconds`
+    /// (its full clock is [`dissolve::DURATION`]), so flakes fly home and the
+    /// rim recedes. Returns when the card is whole.
+    pub fn materialize(
+        &mut self,
+        scene: &mut PlanBuilder,
+        card: &str,
+        at_nanos: u64,
+        seconds: f32,
+    ) -> u64 {
+        let channel = self.channel(scene, &format!("{card}.dissolve"), dissolve::DURATION);
+        scene.set(&channel, at_nanos, dissolve::DURATION);
+        scene.ease(&channel, at_nanos, 0.0, seconds, Ease::Linear);
+        at_nanos + whole_millis(seconds)
+    }
+
+    /// Sweep a scan line down `card` over `seconds`: a bright line with a
+    /// fading wake, lighting the rim where it crosses. Returns when it ends.
+    pub fn scan(
+        &mut self,
+        scene: &mut PlanBuilder,
+        card: &str,
+        at_nanos: u64,
+        seconds: f32,
+    ) -> u64 {
+        let channel = self.channel(scene, &format!("{card}.scan"), 0.0);
+        scene.set(&channel, at_nanos, 0.0);
+        scene.ease(&channel, at_nanos, 1.0, seconds, Ease::Linear);
+        at_nanos + whole_millis(seconds)
+    }
+
+    /// Raise `shield` over `seconds`: its cells switch on in seeded order.
+    /// A shield is up by default; raising one first declares it down.
+    pub fn raise(&mut self, scene: &mut PlanBuilder, shield: &str, at_nanos: u64, seconds: f32) {
+        let channel = self.channel(scene, &format!("{shield}.up"), 0.0);
+        scene.ease(&channel, at_nanos, 1.0, seconds, Ease::Smoothstep);
+    }
+
+    /// Lower `shield` over `seconds`: its cells switch off in reverse order.
+    pub fn lower(&mut self, scene: &mut PlanBuilder, shield: &str, at_nanos: u64, seconds: f32) {
+        let channel = self.channel(scene, &format!("{shield}.up"), 1.0);
+        scene.ease(&channel, at_nanos, 0.0, seconds, Ease::Smoothstep);
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -954,6 +1181,94 @@ mod tests {
                     .any(|c| c.property == property)
             );
         }
+    }
+
+    fn effects_plan() -> StagePlan {
+        serde_json::from_value(serde_json::json!({
+            "elements": [
+                { "kind": "card", "id": "build", "at": [420, 540, 0], "size": [300, 110], "title": "build" },
+                { "kind": "orb", "id": "deploy", "at": [1400, 540, 0], "radius": 120 },
+                { "kind": "shield", "id": "guard", "around": "deploy", "radius": 190 },
+                { "kind": "bolt", "id": "zap", "from": "build", "to": "deploy" },
+                { "kind": "bolt", "id": "strike", "from": [960, -40, 0], "to": "guard", "strikes": 4 }
+            ]
+        }))
+        .unwrap()
+    }
+
+    #[test]
+    fn bolts_and_shields_validate_and_round_trip() {
+        let plan = effects_plan();
+        plan.validate().unwrap();
+        let json = serde_json::to_value(&plan).unwrap();
+        assert_eq!(
+            json["elements"][3]["tone"], "request",
+            "bolts default to the request tone"
+        );
+        assert_eq!(
+            json["elements"][4]["from"],
+            serde_json::json!([960.0, -40.0, 0.0])
+        );
+        assert_eq!(serde_json::from_value::<StagePlan>(json).unwrap(), plan);
+        for property in [
+            "zap.age",
+            "zap.hum",
+            "guard.up",
+            "build.charge",
+            "build.dissolve",
+            "build.scan",
+            "deploy.charge",
+        ] {
+            assert!(plan.accepts(property), "{property}");
+        }
+        assert!(!plan.accepts("guard.charge") && !plan.accepts("zap.x"));
+        let mut dangling = effects_plan();
+        if let StageElement::Bolt { to, .. } = &mut dangling.elements[3] {
+            *to = BoltEnd::Element("zap".into());
+        }
+        assert!(dangling.validate().is_err(), "a bolt cannot strike a bolt");
+        let mut storm = effects_plan();
+        if let StageElement::Bolt { strikes, .. } = &mut storm.elements[3] {
+            *strikes = 9;
+        }
+        assert!(storm.validate().is_err());
+    }
+
+    #[test]
+    fn a_zap_starts_its_clock_with_a_fresh_seed_and_returns_contact() {
+        let mut scene = PlanBuilder::new("zap", 5_000_000_000);
+        let mut stage = StageActor::declare(&mut scene, "stage", &effects_plan()).unwrap();
+        let contact = stage.zap(&mut scene, "strike", 1_000_000_000);
+        assert_eq!(contact, 1_075_000_000, "the leader comes first");
+        stage.zap(&mut scene, "strike", 3_000_000_000);
+        let gone = stage.dissolve(&mut scene, "build", 2_000_000_000);
+        assert_eq!(gone, 3_100_000_000);
+        let plan = scene.finish().unwrap();
+        let channel = |property: &str| {
+            plan.continuous_channels
+                .iter()
+                .find(|c| c.property == property)
+                .unwrap()
+        };
+        let seeds = channel("strike.seed")
+            .events
+            .iter()
+            .filter_map(|event| match event {
+                crate::plan::TrackEventPlan::Set {
+                    value: crate::plan::ScalarPlan::Literal(v),
+                    ..
+                } => Some(*v),
+                _ => None,
+            })
+            .collect::<Vec<_>>();
+        assert_eq!(seeds.len(), 2);
+        assert!(seeds[0] != seeds[1] && seeds.iter().all(|s| s.fract() == 0.0));
+        assert!(
+            matches!(channel("strike.age").initial, crate::plan::ScalarPlan::Literal(v) if v == -1.0)
+        );
+        assert!(
+            matches!(channel("build.dissolve").initial, crate::plan::ScalarPlan::Literal(v) if v == -1.0)
+        );
     }
 
     #[test]

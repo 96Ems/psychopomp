@@ -10,9 +10,11 @@ use psychopomp::{
     callout::CalloutSide,
     caption::{CaptionAlign, CaptionSpanPlan},
     effects::combustion::{self, Burst},
+    effects::lightning::{self, Discharge},
     effects::shake,
     effects::spinner::{self, Mark},
     effects::surface,
+    effects::{dissolve, shield},
     math::{
         Quat, Vec2, Vec3,
         curve::Polyline,
@@ -24,7 +26,8 @@ use psychopomp::{
         smoothstep, stops, vec2, vec3,
     },
     stage::{
-        Camera, OrbPoint, StageElement, StagePlan, StatusText, orb_points, packet, shatter_offset,
+        BoltEnd, Camera, OrbPoint, StageElement, StagePlan, StatusText, orb_points, packet,
+        shatter_offset,
     },
     tone::Tone,
 };
@@ -53,6 +56,12 @@ struct Prim {
     light_color: [f32; 4],
     pool: [f32; 4],
     pool_color: [f32; 4],
+    /// A dissolve over any primitive: age (0 for none), the card's center
+    /// x and y, and its scale; its half size in world pixels and field seed;
+    /// and the rim's tone.
+    mask: [f32; 4],
+    mask_shape: [f32; 4],
+    mask_color: [f32; 4],
 }
 
 #[repr(C)]
@@ -260,12 +269,22 @@ impl HeadlessRenderer {
             label: Some("stage primitives"),
             source: wgpu::ShaderSource::Wgsl(
                 format!(
-                    "{}\n{}\n{}",
+                    "{}\n{}\n{}\n{}\n{}\n{}\n{}",
                     shader("effects/noise.wgsl", include_str!("effects/noise.wgsl")),
                     shader(
                         "effects/combustion.wgsl",
                         include_str!("effects/combustion.wgsl")
                     ),
+                    shader(
+                        "effects/lightning.wgsl",
+                        include_str!("effects/lightning.wgsl")
+                    ),
+                    shader(
+                        "effects/dissolve.wgsl",
+                        include_str!("effects/dissolve.wgsl")
+                    ),
+                    shader("effects/shield.wgsl", include_str!("effects/shield.wgsl")),
+                    shader("effects/scan.wgsl", include_str!("effects/scan.wgsl")),
                     shader("stage.wgsl", include_str!("stage.wgsl")),
                 )
                 .into(),
@@ -996,6 +1015,83 @@ impl Link {
     }
 }
 
+/// Where a bolt's ends are this sample.
+#[derive(Clone, Copy)]
+struct BoltEnds {
+    from: Port,
+    to: Port,
+    scale: [f32; 2],
+    depth: [f32; 2],
+}
+
+impl BoltEnds {
+    fn scale(&self) -> f32 {
+        (self.scale[0] + self.scale[1]) * 0.5
+    }
+
+    fn near(&self) -> f32 {
+        self.depth[0].min(self.depth[1])
+    }
+}
+
+/// Something touching a shield's surface: where, its direction on the
+/// sphere (toward the viewer is -z), seconds since contact, and strength.
+#[derive(Clone, Copy)]
+struct Contact {
+    point: Vec2,
+    direction: Vec3,
+    age: f32,
+    strength: f32,
+}
+
+/// A closed card or orb outline, sampled by fraction of its perimeter.
+enum Perimeter {
+    Path(Polyline),
+    Round(psychopomp::math::shapes::Circle),
+}
+
+impl Perimeter {
+    fn of(outline: Shape, scale: f32) -> Option<Self> {
+        match outline {
+            Shape::Box(frame) => Some(Self::Path(
+                frame.perimeter_from(vec2(frame.center().x, frame.min.y), 14.0 * scale),
+            )),
+            Shape::Circle(circle) => Some(Self::Round(circle)),
+            Shape::Point(_) => None,
+        }
+    }
+
+    fn at(&self, fraction: f32) -> Vec2 {
+        match self {
+            Self::Path(path) => path.at(fraction.rem_euclid(1.0)),
+            Self::Round(circle) => lightning::on_circle(circle.center, circle.radius, fraction),
+        }
+    }
+
+    fn length(&self) -> f32 {
+        match self {
+            Self::Path(path) => path.length(),
+            Self::Round(circle) => TAU * circle.radius,
+        }
+    }
+}
+
+/// A stable 32-bit salt for an element ID (FNV-1a).
+fn salt(id: &str) -> u32 {
+    id.bytes().fold(0x811C_9DC5_u32, |h, byte| {
+        (h ^ u32::from(byte)).wrapping_mul(0x0100_0193)
+    })
+}
+
+/// Electricity and scans on a plain card take the request tone.
+fn spark_tone(tone: Tone) -> Tone {
+    if tone == Tone::Plain {
+        Tone::Request
+    } else {
+        tone
+    }
+}
+
 /// Light cast by something that moves. A reflection lights only the edges it
 /// nears (a packet gathering, flying, and landing, or a drawing beam's bead); a
 /// pool also enters a card's glass (the ember left at a port, the flood where a
@@ -1104,6 +1200,14 @@ impl<'a> Scene<'a> {
             .iter()
             .filter_map(|element| Some((element.id(), scene.place(element)?)))
             .collect();
+        // Shields wrap what they surround, so they are placed after it.
+        for element in &plan.elements {
+            if let StageElement::Shield { id, around, .. } = element
+                && let Some(place) = scene.shield_place(element, around)
+            {
+                scene.placements.insert(id.as_str(), place);
+            }
+        }
         scene.links = plan
             .elements
             .iter()
@@ -1175,6 +1279,54 @@ impl<'a> Scene<'a> {
             scale,
             outline: element.outline(center, scale),
         })
+    }
+
+    /// A shield is centered on what it surrounds, at its own scale.
+    fn shield_place(&self, element: &StageElement, around: &str) -> Option<Placement> {
+        let host = self.placements.get(around)?;
+        let (_, perspective) = self.camera.project(host.world)?;
+        let scale = perspective * self.v(element.id(), "scale", 1.0).max(0.01);
+        Some(Placement {
+            world: host.world,
+            center: host.center,
+            scale,
+            outline: element.outline(host.center, scale),
+        })
+    }
+
+    /// One end of a bolt: an element's outline, or a projected world point,
+    /// with its scale and depth.
+    fn bolt_end(&self, end: &BoltEnd) -> Option<(Shape, f32, f32)> {
+        match end {
+            BoltEnd::Element(id) => {
+                let place = self.placements.get(id.as_str())?;
+                Some((place.outline, place.scale, place.world.z))
+            }
+            BoltEnd::Point(at) => {
+                let (center, scale) = self.camera.project(Vec3::from(*at))?;
+                Some((Shape::Point(center), scale, at[2]))
+            }
+        }
+    }
+
+    /// Where a bolt leaves and strikes: each outline where the straight line
+    /// between them crosses it.
+    fn bolt_ends(&self, from: &BoltEnd, to: &BoltEnd) -> Option<BoltEnds> {
+        let (a, scale_a, depth_a) = self.bolt_end(from)?;
+        let (b, scale_b, depth_b) = self.bolt_end(to)?;
+        let start = a.boundary_toward(b.center());
+        Some(BoltEnds {
+            from: start,
+            to: b.boundary_toward(start.point),
+            scale: [scale_a, scale_b],
+            depth: [depth_a, depth_b],
+        })
+    }
+
+    /// A bolt's discharge seed: its latest zap's `seed`, mixed with its ID so
+    /// bolts zapped at the same moment still differ.
+    fn bolt_seed(&self, id: &str) -> u32 {
+        (self.v(id, "seed", 0.0).max(0.0).round() as u32) ^ salt(id)
     }
 
     fn link(&self, id: &str, from: &str, to: &str, bend: f32) -> Option<Link> {
@@ -1262,13 +1414,160 @@ impl Scene<'_> {
                     self.unit(packet_id, "opacity", 1.0),
                 ))
             })
+            .chain(
+                self.strikes_on(id)
+                    .into_iter()
+                    .map(|(point, since, tone, strength)| {
+                        let normal = (point - place.center).normalize_or(Vec2::X);
+                        (
+                            vec3(normal.x, normal.y, -0.34).normalize(),
+                            since,
+                            tone,
+                            strength,
+                        )
+                    }),
+            )
             .collect()
+    }
+
+    /// Return strokes of bolts striking `target` within a surface ripple's
+    /// life: contact point, seconds since the stroke, tone, and strength.
+    fn strikes_on(&self, target: &str) -> Vec<(Vec2, f32, Tone, f32)> {
+        let mut strikes = Vec::new();
+        for element in &self.plan.elements {
+            let StageElement::Bolt {
+                id,
+                from,
+                to: to @ BoltEnd::Element(end),
+                strikes: count,
+                tone,
+                ..
+            } = element
+            else {
+                continue;
+            };
+            let age = self.v(id, "age", -1.0);
+            if end != target || age < 0.0 {
+                continue;
+            }
+            let Some(ends) = self.bolt_ends(from, to) else {
+                continue;
+            };
+            let discharge = Discharge::new(*count, self.bolt_seed(id));
+            let opacity = self.unit(id, "opacity", 1.0);
+            for k in 0..discharge.strikes {
+                let since = age - discharge.strike_time(k);
+                if (0.0..shield::RIPPLE).contains(&since) {
+                    // Re-strikes ripple more softly than the first contact.
+                    let strength = 0.65 * discharge.strength(k).powi(2) * opacity;
+                    strikes.push((ends.to.point, since, *tone, strength));
+                }
+            }
+        }
+        strikes
+    }
+
+    /// What touches a shield: packets crossing into it on their way to what
+    /// it surrounds (softly), and bolts striking it. The four most recent.
+    fn shield_contacts(&self, id: &str, place: Placement) -> Vec<Contact> {
+        let (Shape::Circle(circle), Some(StageElement::Shield { around, .. })) =
+            (place.outline, self.plan.element(id))
+        else {
+            return Vec::new();
+        };
+        let toward = |point: Vec2| {
+            let normal = (point - circle.center) / circle.radius.max(1.0);
+            let z = -(1.0 - normal.length_squared()).max(0.0).sqrt();
+            vec3(normal.x, normal.y, z.min(-0.2)).normalize()
+        };
+        let mut contacts = self
+            .strikes_on(id)
+            .into_iter()
+            .map(|(point, age, _, strength)| Contact {
+                point,
+                direction: toward(point),
+                age,
+                strength,
+            })
+            .collect::<Vec<_>>();
+        for element in &self.plan.elements {
+            let StageElement::Packet {
+                id: packet,
+                beam,
+                reverse,
+                ..
+            } = element
+            else {
+                continue;
+            };
+            let Some(StageElement::Beam { from, to, .. }) = self.plan.element(beam) else {
+                continue;
+            };
+            if (if *reverse { from } else { to }) != around {
+                continue;
+            }
+            let Some(link) = self.links.get(beam.as_str()) else {
+                continue;
+            };
+            let path = link.toward(*reverse).path;
+            let Some(fraction) = circle.entry_fraction(&path).filter(|f| *f > 0.0) else {
+                continue;
+            };
+            let since = packet::since_crossing(
+                self.v(packet, "age", -1.0),
+                self.v(packet, "flight", 0.8).max(0.05),
+                fraction,
+            );
+            if let Some(age) = since.filter(|age| *age < shield::RIPPLE) {
+                let point = path.at(fraction);
+                contacts.push(Contact {
+                    point,
+                    direction: toward(point),
+                    age,
+                    strength: 0.55 * self.unit(packet, "opacity", 1.0),
+                });
+            }
+        }
+        contacts.sort_by(|a, b| a.age.total_cmp(&b.age));
+        contacts.truncate(4);
+        contacts
+    }
+
+    /// A charged outline lights its own rim where its brightest arcs crawl.
+    fn charge_lights(&self, id: &str, tone: Tone, lights: &mut Vec<Light>) {
+        let charge = self.v(id, "charge", 0.0);
+        if charge <= 0.0 {
+            return;
+        }
+        let Some(place) = self.placements.get(id) else {
+            return;
+        };
+        let Some(perimeter) = Perimeter::of(place.outline, place.scale) else {
+            return;
+        };
+        let opacity = self.unit(id, "opacity", 1.0);
+        let mut creeps = lightning::crackle(self.time, charge, salt(id));
+        creeps.sort_by(|a, b| b.energy.total_cmp(&a.energy));
+        for creep in creeps.iter().take(3) {
+            lights.push(Light {
+                at: perimeter.at(creep.center),
+                tone: spark_tone(tone),
+                strength: 1.4 * creep.energy * opacity,
+                radius: REFLECTION_RADIUS * 0.8,
+                pool: false,
+                scale: place.scale,
+            });
+        }
     }
 
     /// The lights a beam, packet, or combusting orb casts this sample.
     fn lights_of(&self, element: &StageElement, lights: &mut Vec<Light>) {
         match element {
-            StageElement::Orb { id, radius, .. } => {
+            StageElement::Card { id, tone, .. } => self.charge_lights(id, *tone, lights),
+            StageElement::Orb {
+                id, radius, tone, ..
+            } => {
+                self.charge_lights(id, *tone, lights);
                 let age = self.v(id, "burst", -1.0);
                 let burst = Burst::sample(age);
                 if burst.rim_strength == 0.0 {
@@ -1368,6 +1667,92 @@ impl Scene<'_> {
                         let strength =
                             1.4 * smoothstep(t / 0.07) * (0.12 / (0.12 + width)).sqrt() * fade;
                         cast(1.0, strength, width * 300.0 * DIAGRAM_SCALE, true);
+                    }
+                }
+            }
+            StageElement::Bolt {
+                id,
+                from,
+                to,
+                strikes,
+                tone,
+                ..
+            } => {
+                let Some(ends) = self.bolt_ends(from, to) else {
+                    return;
+                };
+                let opacity = self.unit(id, "opacity", 1.0);
+                let seed = self.bolt_seed(id);
+                let discharge = Discharge::new(*strikes, seed);
+                let age = self.v(id, "age", -1.0);
+                let hum = lightning::hum(self.time, self.v(id, "hum", 0.0), seed)
+                    .map_or(0.0, |(_, energy)| 0.6 * energy);
+                let mut cast = |at: Vec2, strength: f32, radius: f32, pool: bool, scale: f32| {
+                    if strength * opacity > 0.01 {
+                        lights.push(Light {
+                            at,
+                            tone: *tone,
+                            strength: strength * opacity,
+                            radius,
+                            pool,
+                            scale,
+                        });
+                    }
+                };
+                // The leader's tip lights what it nears; a stroke lights both
+                // rims it touches and floods into the one it struck.
+                if let Some(progress) = discharge.leader(age) {
+                    let tip = ends.from.point.lerp(ends.to.point, progress);
+                    cast(
+                        tip,
+                        discharge.light(age),
+                        REFLECTION_RADIUS,
+                        false,
+                        ends.scale(),
+                    );
+                }
+                let strength = if discharge.leader(age).is_some() {
+                    hum
+                } else {
+                    discharge.light(age).max(hum)
+                };
+                // A bolt outshines a packet: its rims blaze, then cool with it.
+                cast(
+                    ends.to.point,
+                    1.8 * strength,
+                    REFLECTION_RADIUS * 1.5,
+                    false,
+                    ends.scale[1],
+                );
+                cast(
+                    ends.from.point,
+                    1.4 * strength,
+                    REFLECTION_RADIUS * 1.3,
+                    false,
+                    ends.scale[0],
+                );
+                let flood = discharge
+                    .glowing(age)
+                    .map(|(k, since)| discharge.core(k, since))
+                    .fold(0.5 * hum, f32::max);
+                cast(ends.to.point, 0.8 * flood, 150.0, true, ends.scale[1]);
+            }
+            StageElement::Shield { id, tone, .. } => {
+                let Some(place) = self.placements.get(id.as_str()) else {
+                    return;
+                };
+                let opacity = self.unit(id, "opacity", 1.0);
+                for contact in self.shield_contacts(id, *place) {
+                    let strength = 0.9 * shield::flare(contact.age) * contact.strength * opacity;
+                    if strength > 0.01 {
+                        lights.push(Light {
+                            at: contact.point,
+                            tone: *tone,
+                            strength,
+                            radius: REFLECTION_RADIUS,
+                            pool: false,
+                            scale: place.scale,
+                        });
                     }
                 }
             }
@@ -1484,6 +1869,24 @@ impl<'a> Painter<'a> {
                 if let Some(link) = scene.links.get(beam.as_str()) {
                     self.packet(order, id, *reverse, *tone, link);
                 }
+            }
+            (
+                StageElement::Bolt {
+                    from,
+                    to,
+                    strikes,
+                    branching,
+                    tone,
+                    ..
+                },
+                _,
+            ) => {
+                if let Some(ends) = scene.bolt_ends(from, to) {
+                    self.bolt(order, id, ends, *strikes, *branching, *tone);
+                }
+            }
+            (StageElement::Shield { tone, .. }, Some(place)) => {
+                self.shield(order, id, *tone, place)
             }
             // A positioned element behind the camera.
             _ => {}
@@ -1610,7 +2013,146 @@ impl<'a> Painter<'a> {
         }
         self.glitch(first, id, place, half);
         self.cut(first, id, place, half, &pen);
+        self.dissolve(first, id, tone, size, place, opacity);
+        self.crackle(id, place.outline, tone, place.scale, opacity, blur);
+        self.scan(id, tone, half, place, opacity, blur);
         self.frame.close(place.world.z, order);
+    }
+
+    /// Burn the card's primitives away along its dissolve field, glowing at
+    /// the front, and shed ash from wherever it has passed.
+    fn dissolve(
+        &mut self,
+        first: usize,
+        id: &str,
+        tone: Tone,
+        size: Vec2,
+        place: Placement,
+        opacity: f32,
+    ) {
+        let age = self.scene.v(id, "dissolve", -1.0);
+        if age <= 0.0 {
+            return;
+        }
+        let seed = salt(id) & 0xFFFF;
+        let rim = self.look.tone(spark_tone(tone));
+        let half = size * 0.5;
+        for prim in &mut self.frame.prims[first..] {
+            prim.mask = [age, place.center.x, place.center.y, place.scale];
+            prim.mask_shape = [half.x, half.y, seed as f32, 0.0];
+            prim.mask_color = rgba(rim, 1.0);
+        }
+        let hot = vec3(2.4, 2.1, 1.8);
+        for index in 0..dissolve::ASH {
+            let Some(ash) = dissolve::ash(index, seed, half, age) else {
+                continue;
+            };
+            let alpha = ash.opacity * opacity;
+            let color = rim.lerp(hot, ash.heat.powi(4)) * (0.15 + 0.65 * ash.heat);
+            self.frame.circle(
+                place.center + ash.local * place.scale,
+                [ash.radius * place.scale, 0.0],
+                0.0,
+                Paint {
+                    fill: rgba(color, alpha),
+                    glow: glow4(color * (0.06 * alpha * ash.heat), 2.5 * place.scale),
+                    ..Default::default()
+                },
+            );
+        }
+    }
+
+    /// Charge: short arcs crawl the outline, bowing off it, and strobe.
+    fn crackle(
+        &mut self,
+        id: &str,
+        outline: Shape,
+        tone: Tone,
+        scale: f32,
+        opacity: f32,
+        blur: f32,
+    ) {
+        let charge = self.scene.v(id, "charge", 0.0);
+        if charge <= 0.0 || opacity <= 0.001 {
+            return;
+        }
+        let Some(perimeter) = Perimeter::of(outline, scale) else {
+            return;
+        };
+        let own = self.look.tone(spark_tone(tone));
+        let white = Vec3::ONE.lerp(own, 0.15);
+        let center = outline.center();
+        let length = perimeter.length();
+        for creep in lightning::crackle(self.scene.time, charge, salt(id)) {
+            let base = |t: f32| perimeter.at(creep.center + creep.span * (t - 0.5));
+            let reach = creep.span * length;
+            let points = lightning::jag(base, 4, creep.roll, 0.42)
+                .into_iter()
+                .enumerate()
+                .map(|(index, point)| {
+                    let bow = (PI * index as f32 / 16.0).sin() * reach * 0.18;
+                    point + (point - center).normalize_or_zero() * bow
+                })
+                .collect::<Vec<_>>();
+            let energy = creep.energy * opacity;
+            let arc = Plasma {
+                half: 0.45 * scale,
+                taper: 0.0,
+                blur,
+                core: white * (2.2 * energy),
+                corona: own * (0.9 * energy),
+                radius: 3.0 * scale,
+            };
+            self.frame.plasma(&points, 1.0, |_| 1.0, arc);
+            // Half the arcs throw a twig off the surface.
+            let fork = hash(creep.roll.strike, 1);
+            if fork < 0.5 {
+                let at = 4 + (fork * 16.0) as usize;
+                let out = (points[at] - center).normalize_or(Vec2::NEG_Y);
+                let turn = (hash(creep.roll.strike, 2) - 0.5) * 1.6;
+                let twig = lightning::twig(
+                    points[at],
+                    Vec2::from_angle(turn).rotate(out),
+                    reach * (0.25 + 0.3 * hash(creep.roll.strike, 3)),
+                    3,
+                    creep.roll,
+                );
+                self.frame
+                    .plasma(&twig, 1.0, |_| 0.7, Plasma { taper: 0.8, ..arc });
+            }
+        }
+    }
+
+    /// A scan line sweeps down the card, fading in and out at its ends,
+    /// with a wake behind it and light where it crosses the rim.
+    fn scan(
+        &mut self,
+        id: &str,
+        tone: Tone,
+        half: Vec2,
+        place: Placement,
+        opacity: f32,
+        blur: f32,
+    ) {
+        let scan = self.scene.v(id, "scan", 0.0);
+        if scan <= 0.0 || scan >= 1.0 || opacity <= 0.001 {
+            return;
+        }
+        let strength = smoothstep(scan / 0.1) * (1.0 - smoothstep((scan - 0.9) / 0.1)) * opacity;
+        let scale = place.scale;
+        self.frame.prims.push(Prim {
+            bbox: around(place.center, half + Vec2::splat(30.0 * scale + blur)),
+            a: [12.0, place.center.x, place.center.y, 14.0 * scale],
+            b: [
+                half.x,
+                half.y,
+                (scan * 2.0 - 1.0) * (half.y + 4.0 * scale),
+                1.0,
+            ],
+            fill: rgba(self.look.tone(spark_tone(tone)), strength),
+            stroke: [half.y * 0.9, 1.0 * scale, blur, 0.0],
+            ..Default::default()
+        });
     }
 
     /// The status line: statuses cross-fade by the fractional `status`
@@ -1789,6 +2331,251 @@ impl<'a> Painter<'a> {
                 self.burst(order, id, radius, place, age, opacity);
             }
         }
+        if age < 0.0 && self.scene.v(id, "charge", 0.0) > 0.0 {
+            let scene = self.scene;
+            let blur =
+                scene.blur_at(place.world.z) + scene.v(id, "blur", 0.0).max(0.0) * place.scale;
+            let opacity = scene.unit(id, "opacity", 1.0);
+            self.crackle(id, place.outline, tone, place.scale, opacity, blur);
+            self.frame.close(place.world.z - 0.1, order);
+        }
+    }
+
+    /// Lightning from its discharge clock: a dim stepped leader, then
+    /// white-hot return strokes that re-roll the path a few frames apart,
+    /// each flashing both contacts and throwing sparks from the receiver,
+    /// then a cooling channel. A humming bolt re-strikes continuously.
+    /// Its light on nearby rims comes from `Scene::lights_of`.
+    fn bolt(
+        &mut self,
+        order: usize,
+        id: &str,
+        ends: BoltEnds,
+        strikes: u32,
+        branching: f32,
+        tone: Tone,
+    ) {
+        let scene = self.scene;
+        let opacity = scene.unit(id, "opacity", 1.0);
+        if opacity <= 0.001 {
+            return;
+        }
+        let seed = scene.bolt_seed(id);
+        let discharge = Discharge::new(strikes, seed);
+        let age = scene.v(id, "age", -1.0);
+        let own = self.look.tone(tone);
+        let white = Vec3::ONE.lerp(own, 0.1);
+        let scale = ends.scale();
+        let blur = scene.blur_at(ends.near());
+        let (a, b) = (ends.from.point, ends.to.point);
+        if let Some(progress) = discharge.leader(age) {
+            // The leader feels its way out along the first stroke's channel:
+            // dim, branching, brightest at its tip.
+            let bolt = lightning::bolt(a, b, discharge.roll(0), branching);
+            let glow = 0.5 * opacity;
+            let leader = Plasma {
+                half: 0.7 * scale,
+                taper: 0.0,
+                blur,
+                core: (white * 0.6 + own * 0.6) * glow,
+                corona: own * (0.7 * glow),
+                radius: 4.0 * scale,
+            };
+            self.frame.plasma(
+                &bolt.main,
+                progress,
+                |f| 0.35 + 0.65 * (f / progress).clamp(0.0, 1.0).powi(6),
+                leader,
+            );
+            for branch in bolt.branches.iter().filter(|branch| branch.fork < progress) {
+                let grown = ((progress - branch.fork) / 0.3).min(1.0);
+                self.frame.plasma(
+                    &branch.points,
+                    grown,
+                    |_| 0.5 * branch.energy,
+                    Plasma {
+                        half: 0.5 * scale,
+                        taper: 0.6,
+                        ..leader
+                    },
+                );
+            }
+            let tip = Polyline::new(bolt.main.clone()).at(progress);
+            self.flare(
+                tip,
+                2.5 * scale,
+                white * (2.5 * glow),
+                own * (0.5 * glow),
+                18.0 * scale,
+            );
+        }
+        for (k, since) in discharge.glowing(age) {
+            let core = discharge.core(k, since) * opacity;
+            let glow = discharge.afterglow(k, since) * opacity;
+            let bolt = lightning::bolt(a, b, discharge.roll(k), branching);
+            self.frame.plasma(
+                &bolt.main,
+                1.0,
+                |_| 1.0,
+                Plasma {
+                    half: 0.85 * scale,
+                    taper: 0.25,
+                    blur,
+                    core: white * (3.4 * core) + own * (1.2 * glow),
+                    corona: own * (1.3 * core + 0.6 * glow),
+                    radius: 4.5 * scale,
+                },
+            );
+            // Branches carry less current and cool first.
+            for branch in &bolt.branches {
+                let share = branch.energy * if branch.depth > 1 { 0.75 } else { 1.0 };
+                self.frame.plasma(
+                    &branch.points,
+                    1.0,
+                    |_| 1.0,
+                    Plasma {
+                        half: 0.65 * scale * share.sqrt(),
+                        taper: 0.85,
+                        blur,
+                        core: white * (3.4 * core * share) + own * (0.4 * glow * share),
+                        corona: own * (1.2 * core * share + 0.15 * glow * share),
+                        radius: 3.5 * scale,
+                    },
+                );
+            }
+            // The contact flashes; the source flickers with it.
+            self.flare(
+                b,
+                2.6 * scale,
+                white * (3.5 * core),
+                own * (1.0 * core + 0.25 * glow),
+                30.0 * scale,
+            );
+            self.flare(
+                a,
+                1.8 * scale,
+                white * (2.0 * core),
+                own * (0.5 * core),
+                18.0 * scale,
+            );
+            for index in 0..lightning::spark_count(k) {
+                if let Some(spark) = lightning::spark(seed, k, index, ends.to.normal, since) {
+                    let color =
+                        own.lerp(vec3(4.0, 3.6, 3.0), spark.heat) * (0.25 + 0.75 * spark.heat);
+                    let alpha = spark.opacity * opacity;
+                    let (head, tail) = (
+                        b + spark.offset * ends.scale[1],
+                        b + spark.tail * ends.scale[1],
+                    );
+                    self.frame.polyline(
+                        &Polyline::new(vec![tail, head]),
+                        1.0,
+                        [1.2 * ends.scale[1], 0.0],
+                        Paint {
+                            stroke: rgba(color, alpha),
+                            glow: glow4(color * (0.12 * alpha), 3.0 * ends.scale[1]),
+                            ..Default::default()
+                        },
+                        COMET,
+                    );
+                }
+            }
+        }
+        if let Some((roll, energy)) = lightning::hum(scene.time, scene.v(id, "hum", 0.0), seed) {
+            let energy = energy * opacity;
+            let bolt = lightning::bolt(a, b, roll, branching * 0.4);
+            let arc = Plasma {
+                half: 0.9 * scale,
+                taper: 0.0,
+                blur,
+                core: white * (3.5 * energy),
+                corona: own * (1.5 * energy),
+                radius: 4.5 * scale,
+            };
+            self.frame.plasma(&bolt.main, 1.0, |_| 1.0, arc);
+            for branch in &bolt.branches {
+                self.frame.plasma(
+                    &branch.points,
+                    1.0,
+                    |_| branch.energy,
+                    Plasma {
+                        half: 0.6 * scale,
+                        taper: 0.85,
+                        ..arc
+                    },
+                );
+            }
+            for end in [a, b] {
+                self.flare(
+                    end,
+                    2.2 * scale,
+                    white * (2.0 * energy),
+                    own * (0.6 * energy),
+                    16.0 * scale,
+                );
+            }
+        }
+        self.frame.close(ends.near() - 1.0, order);
+    }
+
+    /// A point of light: a hot disc of `radius` and a soft tone-colored bloom
+    /// of `reach`, both pure emission.
+    fn flare(&mut self, at: Vec2, radius: f32, hot: Vec3, tone: Vec3, reach: f32) {
+        if hot.max_element() + tone.max_element() <= 1e-4 {
+            return;
+        }
+        self.frame.circle(
+            at,
+            [radius, 0.0],
+            0.0,
+            Paint {
+                glow: glow4(hot, radius),
+                ..Default::default()
+            },
+        );
+        self.frame.circle(
+            at,
+            [0.0, 0.0],
+            0.0,
+            Paint {
+                glow: glow4(tone, reach * 0.3),
+                ..Default::default()
+            },
+        );
+    }
+
+    /// A forcefield bubble: faint cells, a Fresnel rim, and ripples from what
+    /// crosses or strikes it.
+    fn shield(&mut self, order: usize, id: &str, tone: Tone, place: Placement) {
+        let scene = self.scene;
+        let opacity = scene.unit(id, "opacity", 1.0);
+        let up = scene.unit(id, "up", 1.0);
+        let contacts = scene.shield_contacts(id, place);
+        let Shape::Circle(circle) = place.outline else {
+            return;
+        };
+        if opacity <= 0.001 || (up <= 0.001 && contacts.is_empty()) {
+            return;
+        }
+        // Each contact is its direction on the sphere scaled by its strength,
+        // and its age; a negative age is empty.
+        let mut slots = [[0.0, 0.0, 0.0, -1.0]; 4];
+        for (slot, contact) in slots.iter_mut().zip(&contacts) {
+            let d = contact.direction * contact.strength.max(1e-3);
+            *slot = [d.x, d.y, d.z, contact.age];
+        }
+        self.frame.prims.push(Prim {
+            bbox: around(circle.center, Vec2::splat(circle.radius + 14.0)),
+            a: [11.0, circle.center.x, circle.center.y, circle.radius],
+            b: [up, scene.time, opacity, scene.blur_at(place.world.z)],
+            fill: rgba(self.look.tone(tone), 1.0),
+            light: slots[0],
+            pool: slots[1],
+            uv: slots[2],
+            light_color: slots[3],
+            ..Default::default()
+        });
+        self.frame.close(place.world.z - 2.0, order);
     }
 
     fn orb_shell(
@@ -2372,6 +3159,18 @@ struct Paint {
     pool_color: [f32; 4],
 }
 
+/// How a lightning channel shines: core half width and its taper toward the
+/// end, defocus, white-hot core and corona light, and the corona's radius.
+#[derive(Clone, Copy)]
+struct Plasma {
+    half: f32,
+    taper: f32,
+    blur: f32,
+    core: Vec3,
+    corona: Vec3,
+    radius: f32,
+}
+
 /// The primitives of one sample, grouped into depth-sorted layers.
 struct StageFrame<'a> {
     texts: &'a HashMap<String, AtlasText>,
@@ -2539,6 +3338,41 @@ impl<'a> StageFrame<'a> {
             b: style,
             stroke: paint.stroke,
             glow: paint.glow,
+            uv: [first as f32, points.len() as f32, 0.0, 0.0],
+            ..Default::default()
+        });
+    }
+
+    /// A lightning channel through `points`, drawn to `drawn` of its length,
+    /// whose points carry `energy` (of their fraction along it).
+    fn plasma(&mut self, points: &[Vec2], drawn: f32, energy: impl Fn(f32) -> f32, style: Plasma) {
+        if points.len() < 2
+            || drawn <= 0.0
+            || style.core.max_element() + style.corona.max_element() <= 1e-4
+        {
+            return;
+        }
+        let path = Polyline::new(points.to_vec());
+        let total = path.length().max(1e-3);
+        let first = self.points.len();
+        self.points.extend(
+            points
+                .iter()
+                .zip(path.lengths())
+                .map(|(point, along)| [point.x, point.y, *along, energy(*along / total)]),
+        );
+        let reach = style.radius * 5.0 + style.half + style.blur + 2.0;
+        let (low, high) = points
+            .iter()
+            .fold((Vec2::MAX, Vec2::MIN), |(low, high), point| {
+                (low.min(*point), high.max(*point))
+            });
+        self.prims.push(Prim {
+            bbox: [low.x - reach, low.y - reach, high.x + reach, high.y + reach],
+            a: [10.0, style.half, total * drawn.min(1.0), style.taper],
+            b: [style.blur, style.radius, reach, 0.0],
+            fill: style.core.extend(0.0).to_array(),
+            stroke: style.corona.extend(0.0).to_array(),
             uv: [first as f32, points.len() as f32, 0.0, 0.0],
             ..Default::default()
         });
@@ -2966,6 +3800,153 @@ mod tests {
         }
         assert_eq!([strengths[0], strengths[1], strengths[4]], [0.0; 3]);
         assert!(strengths[2] > strengths[3] && strengths[3] > 0.0);
+    }
+
+    fn effects_plan() -> StagePlan {
+        serde_json::from_value(serde_json::json!({
+            "elements": [
+                { "kind": "card", "id": "build", "at": [420, 540, 0], "size": [300, 110], "title": "build" },
+                { "kind": "orb", "id": "api", "at": [1400, 540, 0], "radius": 110 },
+                { "kind": "shield", "id": "guard", "around": "api", "radius": 190 },
+                { "kind": "card", "id": "client", "at": [1400, 940, 0], "size": [240, 90], "title": "client" },
+                { "kind": "beam", "id": "link", "from": "client", "to": "api" },
+                { "kind": "packet", "id": "req", "beam": "link" },
+                { "kind": "bolt", "id": "zap", "from": "build", "to": "guard" }
+            ]
+        }))
+        .unwrap()
+    }
+
+    #[test]
+    fn bolt_light_is_local_strobes_with_strokes_and_reaches_rest() {
+        use psychopomp::effects::lightning::{Discharge, LEADER};
+        let plan = effects_plan();
+        let size = vec2(1920.0, 1080.0);
+        let at = |age: f32| {
+            move |property: &str, default: f32| match property {
+                "zap.age" => age,
+                _ => default,
+            }
+        };
+        let strength = |age: f32| {
+            let value = at(age);
+            let scene = Scene::sample(&plan, &value, 2.0, size);
+            scene
+                .lights
+                .iter()
+                .map(|light| light.strength)
+                .fold(0.0, f32::max)
+        };
+        let discharge = Discharge::new(3, super::salt("zap"));
+        assert_eq!(strength(-1.0), 0.0, "quiet before the zap");
+        assert!(
+            strength(LEADER) > strength(LEADER - 0.02),
+            "contact outshines the leader"
+        );
+        assert!(
+            strength(LEADER) > strength(LEADER + 0.04),
+            "a stroke flashes, then dims"
+        );
+        let restrike = discharge.strike_time(1);
+        assert!(
+            strength(restrike) > strength(restrike - 0.005),
+            "a re-strike flashes again"
+        );
+        let last = discharge.strike_time(discharge.strikes - 1);
+        let ripple = last + psychopomp::effects::shield::RIPPLE;
+        assert!(
+            strength(discharge.lifetime()) > 0.0,
+            "the struck shield still flares"
+        );
+        assert_eq!(
+            strength(ripple),
+            0.0,
+            "dark once the channel and ripple cool"
+        );
+        let value = at(LEADER);
+        let scene = Scene::sample(&plan, &value, 2.0, size);
+        for light in &scene.lights {
+            assert!(light.falloff(400.0) < 1e-3, "bolt light stays local");
+        }
+        // The struck shield ripples from its contact; the packet's crossing too.
+        let guard = scene.placements["guard"];
+        assert_eq!(scene.shield_contacts("guard", guard).len(), 1);
+        let crossing = |property: &str, default| match property {
+            "req.age" => 1.1,
+            "req.flight" => 0.8,
+            _ => default,
+        };
+        let packet = Scene::sample(&plan, &crossing, 2.0, size);
+        let contacts = packet.shield_contacts("guard", packet.placements["guard"]);
+        assert_eq!(contacts.len(), 1);
+        assert!(contacts[0].strength < 1.0, "packets ripple softly");
+        assert!(
+            (contacts[0].point.distance(guard.center) - 190.0).abs() < 1.0,
+            "on the bubble"
+        );
+    }
+
+    #[test]
+    #[ignore = "requires a headless GPU; effect frames are pure functions of their clocks"]
+    fn effect_frames_are_deterministic_quiet_at_rest_and_order_free() {
+        let plan = effects_plan();
+        let mut renderer = pollster::block_on(HeadlessRenderer::new(crate::render::RenderSpec {
+            width: 1920,
+            height: 1080,
+            file_name: "effects-proof".into(),
+        }))
+        .unwrap();
+        let gpu = renderer.prepare_stage(&plan).unwrap();
+        let quiet = |property: &str, default| match property {
+            "guard.up" => 0.0,
+            _ => default,
+        };
+        let without: StagePlan = serde_json::from_value(serde_json::json!({
+            "elements": [
+                { "kind": "card", "id": "build", "at": [420, 540, 0], "size": [300, 110], "title": "build" },
+                { "kind": "orb", "id": "api", "at": [1400, 540, 0], "radius": 110 },
+                { "kind": "card", "id": "client", "at": [1400, 940, 0], "size": [240, 90], "title": "client" },
+                { "kind": "beam", "id": "link", "from": "client", "to": "api" },
+                { "kind": "packet", "id": "req", "beam": "link" }
+            ]
+        }))
+        .unwrap();
+        let bare = renderer.prepare_stage(&without).unwrap();
+        let rest = renderer.render_stage(&plan, &gpu, 2.0, quiet).unwrap();
+        assert!(
+            renderer.render_stage(&without, &bare, 2.0, quiet).unwrap() == rest,
+            "an idle bolt and a lowered shield draw nothing"
+        );
+        let draw = |renderer: &mut HeadlessRenderer, values: &[(&str, f32)]| {
+            renderer
+                .render_stage(&plan, &gpu, 2.0, |property, default| {
+                    values
+                        .iter()
+                        .find(|(name, _)| *name == property)
+                        .map_or(quiet(property, default), |(_, value)| *value)
+                })
+                .unwrap()
+        };
+        assert!(
+            draw(&mut renderer, &[("build.dissolve", 0.0)]) == rest,
+            "dissolve starts intact"
+        );
+        assert!(draw(&mut renderer, &[("build.charge", 0.0)]) == rest);
+        let strike = draw(&mut renderer, &[("zap.age", 0.09)]);
+        let burning = draw(&mut renderer, &[("build.dissolve", 0.5)]);
+        let charged = draw(&mut renderer, &[("build.charge", 1.0)]);
+        let scanning = draw(&mut renderer, &[("build.scan", 0.4)]);
+        for frame in [&strike, &burning, &charged, &scanning] {
+            assert!(*frame != rest, "every effect reaches pixels");
+        }
+        // Any order, same pixels.
+        assert!(draw(&mut renderer, &[("build.charge", 1.0)]) == charged);
+        assert!(draw(&mut renderer, &[("zap.age", 0.09)]) == strike);
+        assert!(draw(&mut renderer, &[("build.dissolve", 0.5)]) == burning);
+        assert!(
+            draw(&mut renderer, &[("zap.age", 3.0)]) == rest,
+            "the strike leaves no trace"
+        );
     }
 
     #[test]
