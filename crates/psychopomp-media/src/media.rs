@@ -67,6 +67,15 @@ impl Mode {
     fn offline(self) -> bool {
         matches!(self, Self::Plan | Self::Prune)
     }
+
+    fn label(self) -> &'static str {
+        match self {
+            Self::Apply => "media",
+            Self::Plan => "media plan",
+            Self::Draft => "media draft",
+            Self::Prune => "media prune",
+        }
+    }
 }
 
 /// One resource's place in the delta.
@@ -164,13 +173,8 @@ impl Media {
     pub(crate) fn with(root: &Path, mode: Mode, generator: Box<dyn Generator>) -> Result<Self> {
         let lock = Lock::read(root)?;
         eprintln!(
-            "media{}: {}",
-            match mode {
-                Mode::Apply => "",
-                Mode::Plan => " plan",
-                Mode::Draft => " draft",
-                Mode::Prune => " prune",
-            },
+            "{}: {}",
+            mode.label(),
             root.join(crate::lock::LOCK_FILE).display()
         );
         Ok(Self(Rc::new(RefCell::new(State {
@@ -530,8 +534,8 @@ impl State {
             self.dirty = false;
         }
         eprintln!(
-            "media{}: {} to create, {} to replace, {} up to date, {} orphan(s); {} API call(s)",
-            if self.mode.offline() { " plan" } else { "" },
+            "{}: {} to create, {} to replace, {} up to date, {} orphan(s); {} API call(s)",
+            self.mode.label(),
             report.created.len(),
             report.replaced.len(),
             report.unchanged.len(),
