@@ -812,6 +812,9 @@ impl PreparedPlan {
         exposure: &[(f64, f32)],
     ) -> Result<Vec<u8>> {
         let PreparedRoot::Stage(stage) = &self.root else {
+            if !self.lenses.is_empty() && self.texts.is_empty() && self.tasks.is_empty() {
+                return self.render_lensed_exposure(renderer, exposure);
+            }
             return crate::exposure::accumulate(renderer, exposure, |renderer, time| {
                 self.render_sample(renderer, time)
             });
@@ -867,7 +870,14 @@ impl PreparedPlan {
         self.render_overlays(&mut first, renderer, overlays[0].0, timeline)?;
         crate::exposure::accumulate_region(&overlays, &region, first, |frame, time| {
             region.copy(&base, frame);
-            self.render_overlays_drawing(frame, renderer, time, timeline, |callout| redraw[callout])
+            self.render_overlays_drawing(
+                frame,
+                renderer,
+                time,
+                timeline,
+                |callout| redraw[callout],
+                true,
+            )
         })
     }
 
@@ -973,6 +983,50 @@ impl PreparedPlan {
         })
     }
 
+    /// A CPU exposure with lenses on top: the page beneath the glass renders
+    /// once per distinct state, and each sample refracts its own copy, so a
+    /// lens gliding over still code costs a lens per sample, not a page.
+    fn render_lensed_exposure(
+        &self,
+        renderer: &mut HeadlessRenderer,
+        exposure: &[(f64, f32)],
+    ) -> Result<Vec<u8>> {
+        let timeline = &self.timeline;
+        let mut pages: Vec<(VisualSampleKey, Vec<u8>)> = Vec::new();
+        crate::exposure::accumulate(renderer, exposure, |renderer, time| {
+            let key = self.overlay_key_ignoring(time, |actor| {
+                self.lenses.iter().any(|lens| lens.id() == actor)
+            })?;
+            let index = match pages.iter().position(|(seen, _)| *seen == key) {
+                Some(index) => index,
+                None => {
+                    let mut page = self.render_root(renderer, time, timeline)?;
+                    self.render_overlays_drawing(
+                        &mut page,
+                        renderer,
+                        time,
+                        timeline,
+                        |_| true,
+                        false,
+                    )?;
+                    pages.push((key, page));
+                    pages.len() - 1
+                }
+            };
+            let mut pixels = pages[index].1.clone();
+            self.render_lenses(&mut pixels, renderer.size(), time, timeline);
+            Ok(pixels)
+        })
+    }
+
+    fn render_lenses(&self, pixels: &mut [u8], size: [u32; 2], time: f64, timeline: &Timeline) {
+        for lens in &self.lenses {
+            if let Some(glass) = self.lens_glass(lens, time, timeline, size) {
+                crate::render::composite_lens(pixels, size, &glass);
+            }
+        }
+    }
+
     fn lens_glass(
         &self,
         lens: &lens::PreparedLens,
@@ -1006,10 +1060,21 @@ impl PreparedPlan {
         time: f64,
         timeline: &Timeline,
     ) -> Result<Vec<u8>> {
+        let mut pixels = self.render_root(renderer, time, timeline)?;
+        self.render_overlays(&mut pixels, renderer, time, timeline)?;
+        Ok(pixels)
+    }
+
+    fn render_root(
+        &self,
+        renderer: &mut HeadlessRenderer,
+        time: f64,
+        timeline: &Timeline,
+    ) -> Result<Vec<u8>> {
         let value = |actor: &str, property: &str, default: f32| {
             self.property_value(timeline, actor, property, time, default)
         };
-        let mut pixels = match &self.root {
+        Ok(match &self.root {
             PreparedRoot::Stage(stage) => stage.render(renderer, time, value)?,
             PreparedRoot::Editor { editor, pointer } => {
                 editor.render(renderer, time, pointer.as_deref(), |actor, property, at| {
@@ -1028,9 +1093,7 @@ impl PreparedPlan {
                 value(&title.id, "opacity", 1.0).clamp(0.0, 1.0),
             ),
             PreparedRoot::Blank => renderer.render_title_card("", None, 0.0),
-        };
-        self.render_overlays(&mut pixels, renderer, time, timeline)?;
-        Ok(pixels)
+        })
     }
 
     /// Everything a plan draws over its root, in its fixed layer order.
@@ -1041,10 +1104,11 @@ impl PreparedPlan {
         time: f64,
         timeline: &Timeline,
     ) -> Result<()> {
-        self.render_overlays_drawing(pixels, renderer, time, timeline, |_| true)
+        self.render_overlays_drawing(pixels, renderer, time, timeline, |_| true, true)
     }
 
-    /// `render_overlays`, drawing only the callouts whose index `callouts` accepts.
+    /// `render_overlays`, drawing only the callouts whose index `callouts`
+    /// accepts, and the lenses only when `lenses` is set.
     fn render_overlays_drawing(
         &self,
         pixels: &mut [u8],
@@ -1052,6 +1116,7 @@ impl PreparedPlan {
         time: f64,
         timeline: &Timeline,
         callouts: impl Fn(usize) -> bool,
+        lenses: bool,
     ) -> Result<()> {
         let value = |actor: &str, property: &str, default: f32| {
             self.property_value(timeline, actor, property, time, default)
@@ -1103,10 +1168,8 @@ impl PreparedPlan {
         }
         // Lenses refract everything composed so far; plain text and Tasks
         // stay above the glass.
-        for lens in &self.lenses {
-            if let Some(glass) = self.lens_glass(lens, time, timeline, renderer.size()) {
-                crate::render::composite_lens(pixels, renderer.size(), &glass);
-            }
+        if lenses {
+            self.render_lenses(pixels, renderer.size(), time, timeline);
         }
         for text in &self.texts {
             renderer.composite_centered_text_masked(

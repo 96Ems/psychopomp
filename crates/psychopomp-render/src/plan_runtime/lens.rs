@@ -78,6 +78,10 @@ impl PreparedLens {
         Ok(())
     }
 
+    pub(super) fn id(&self) -> &str {
+        &self.id
+    }
+
     /// Whether any anchor follows the Stage camera.
     pub(super) fn on_stage(&self) -> bool {
         self.plan
@@ -230,6 +234,51 @@ mod tests {
             }
         }
         assert!(base != lensed);
+    }
+
+    #[test]
+    #[ignore = "requires a headless GPU; a lens over a still page reuses the page per sample, exactly"]
+    fn lensed_exposures_match_whole_samples() {
+        use std::path::Path;
+
+        use psychopomp::callout::CalloutAnchorPlan;
+
+        use super::super::{PreparedPlan, new_renderer};
+
+        let mut scene = PlanBuilder::new("lens-exposure", 2_000_000_000);
+        scene
+            .actor(
+                "title",
+                "title-card",
+                serde_json::json!({ "title": "magnify me" }),
+            )
+            .unwrap();
+        let mut lens = LensActor::declare(
+            &mut scene,
+            "loupe",
+            &LensPlan::circle(
+                CalloutAnchorPlan::Point {
+                    id: "here".into(),
+                    at: [860.0, 540.0],
+                    side: None,
+                },
+                220.0,
+            ),
+        )
+        .unwrap();
+        lens.slide(&mut scene, [200.0, 0.0], 500_000_000);
+        let plan = scene.finish().unwrap();
+        let mut renderer = pollster::block_on(new_renderer(&plan.id)).unwrap();
+        let prepared = PreparedPlan::prepare(plan, Path::new("."), &mut renderer).unwrap();
+        for center in [0.25, 0.8, 1.9] {
+            let exposure = crate::exposure::exposure(center, 1.0 / 60.0, 8);
+            let fast = prepared.render_exposure(&mut renderer, &exposure).unwrap();
+            let whole = crate::exposure::accumulate(&mut renderer, &exposure, |renderer, time| {
+                prepared.render_sample(renderer, time)
+            })
+            .unwrap();
+            assert!(fast == whole, "exposure at {center}");
+        }
     }
 
     #[test]
