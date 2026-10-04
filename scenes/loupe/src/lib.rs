@@ -160,8 +160,8 @@ pub fn build_editor() -> Result<ScenePlan> {
     loupe.slide(&mut scene, [0.0, 0.0], 5600 * MS);
     loupe.resize(&mut scene, [300.0, 300.0], 5600 * MS);
     loupe.magnify(&mut scene, 1.6, 5600 * MS);
-    loupe.slide(&mut scene, [0.0, -150.0], 6700 * MS);
-    loupe.focus(&mut scene, [0.0, 150.0], 6700 * MS);
+    loupe.slide(&mut scene, [0.0, -185.0], 6700 * MS);
+    loupe.focus(&mut scene, [0.0, 185.0], 6700 * MS);
     loupe.hide(&mut scene, 8000 * MS);
 
     scene.cue("reading", 0, 9 * SECOND);
@@ -202,7 +202,7 @@ pub fn build_stage() -> Result<ScenePlan> {
     let mut loupe = LensActor::declare(
         &mut scene,
         "loupe",
-        &LensPlan::capsule(status("api"), [300.0, 96.0])
+        &LensPlan::capsule(status("api"), [330.0, 96.0])
             .anchor(status("cache"))
             .magnification(1.8),
     )?;
