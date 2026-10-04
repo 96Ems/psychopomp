@@ -11,11 +11,18 @@ restrained calibration immediately below.
 - **Packet travel:** `smootherstep(t) = 6t⁵ − 15t⁴ + 10t³`; peak speed is 1.875
   times the average, versus cubic in-out's 3. Velocity and acceleration meet the
   hold continuously. Invert it monotonically to compute trail crossing times.
-  Use `StageActor::glide` between resting compositions; use spring retargeting
-  when an interruption must retain momentum.
-- **Camera:** zero-bounce `StageActor::to` springs, usually 1.0–1.8 seconds
-  (opening dolly 2.2). Retain quintic glides for precisely timed resting moves;
-  compare the same framing before choosing the feel.
+  Use `StageActor::glide` (or a `Move::Glide` camera shot) between resting
+  compositions; use spring retargeting when an interruption must retain momentum.
+- **Camera:** zero-bounce springs (`Move::Spring`), usually 1.0–1.8 seconds
+  (opening dolly 2.2–2.6). Retain quintic glides for precisely timed resting
+  moves; compare the same framing before choosing the feel. Write shots with
+  the `CameraRig` (`stage.camera()`): `establish` (start 300–400 px back),
+  `frame` with 140–170 px padding for a group (about 430 for one card held
+  near 2×), `follow` a packet on a 0.6–0.8 s catch, `focus_on` with
+  `aperture` 0.4–1.0, `orbit` 0.3–0.6 rad on a 3+ s glide, `dolly_zoom` about
+  500 px on a 2.4 s glide at an impact (give it near and far depth cues to
+  stretch), a 0.6 s `whip`, `handheld` near 1 only on quiet beats, and a
+  slow glide `push_in` or tight `frame` on the resolution.
 - **Orb contact:** intersect the packet path with the visible shell, invert its
   travel curve for contact age, then send a geodesic wave at 3.6 rad/s. A 25 ms
   attack and 480 ms exponential decay drive local light; a short 120 ms contact

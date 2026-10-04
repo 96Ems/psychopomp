@@ -185,6 +185,26 @@ hot combustion, an expanding refractive pressure wave, cooling smoke, and
 ballistic embers. Its procedural volume and trajectories need no simulation
 history. Wires and arrivals pass beneath the intact orb's occluding shell.
 
+## Stage Camera
+
+The Stage's viewpoint at one Temporal Sample. Its **pose** pans (`camera.x|y`),
+dollies along its view axis (`camera.z`), swings around a **pivot** on that
+axis (`camera.yaw|pitch`, about world depth `camera.pivot`), magnifies
+(`camera.zoom`, a multiple of the focal length), and rolls the delivered image
+(`camera.roll`). At the default pose the projection is the original
+translation-only one, pixel for pixel. Cards, labels, and rings are
+**billboards**: their centers move in 3D but they keep facing the lens, so text
+stays legible from any angle. Orb particles, embers, surface rings, and wires
+are projected point by point, so an orbit shows their true depth. Draw order and
+depth of field follow view depth. A **Follow** blends the authored pan toward
+the pan that centers a packet or element, by `camera.track.<id>` weights the
+renderer resolves at every sample, so a followed packet stays exactly centered.
+**Handheld** sway and a jolt's kick and rumble add on top of the authored and
+followed pose; neither fights a shot. A **Shot** is one `CameraRig` move (frame,
+push in, drift, whip, orbit, dolly zoom, focus pull, follow) written as ordinary
+channels from the pose authored so far; a **Dolly Zoom** trades zoom against
+dolly so its subject holds still while the depth around it stretches.
+
 ## Caption
 
 Short lines of styled CommitMono text in an explainer's terminal voice. Spans carry

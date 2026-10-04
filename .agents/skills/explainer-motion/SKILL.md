@@ -54,7 +54,8 @@ When a beat feels flat or noisy, ask where its energy comes from and where it go
   dropped error falls, a timeout is a ring sweeping closed, data flows along wires.
 - **Camera.** Dolly in to open, drift toward the actor that is speaking, pull
   focus to the plane that matters, pull back to show consequences, push in on the
-  resolution. Shake only on impact.
+  resolution. Shake only on impact. Follow a message only when its journey is
+  the story; orbit to reveal depth, not to decorate.
 - **Rhythm.** Stagger entrances about 120 ms apart; land impacts on the spoken
   word, with a quiet sound. To show a fix, rewind visibly (reassemble, reconnect),
   then replay the same moment resolving differently.

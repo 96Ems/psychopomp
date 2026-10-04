@@ -12,7 +12,8 @@ vibe-coded prototype, tested on macOS (Metal).
 
 - **Stage**: a 2.5D camera over particle orbs, cards, wires, travelling packets,
   labels, and rings, with bloom, depth of field, screen shake, zoom streaks,
-  explosions, and a VHS rewind.
+  explosions, and a VHS rewind. The camera frames, follows packets, racks focus,
+  orbits, dolly-zooms, whips, and sways handheld.
 - **Code**: an editor that animates diffs while every line keeps its identity.
 - **Overlays**: callouts pinned to anything, rolling numbers, captions, sequence
   diagrams, charts, trees, and video cards.
@@ -62,6 +63,7 @@ bun scripts/sheet.ts target/hello.json 0.5,1.5,2.7 --theme neutral --shutter
 | [`psychopomp-intro`](scenes/psychopomp-intro) | This library introducing itself, loudly |
 | [`2password`](scenes/2password) | A narrated product explainer on the Stage |
 | [`pr-walkthrough`](scenes/pr-walkthrough) | Pull requests as Stage films that zoom into their diffs |
+| [`camera`](scenes/camera) | A Stage diagram shot like a film: every camera move |
 | [`callouts`](scenes/callouts), [`rolling-number`](scenes/rolling-number), [`charts`](scenes/charts), [`tree`](scenes/tree) | Component showrooms |
 | [`interactive-showcase`](scenes/interactive-showcase) | A native, steppable presentation (`plan present`) |
 

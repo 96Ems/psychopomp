@@ -10,6 +10,7 @@ they happen; effect Modules own their physical pose and optical response.
 | `psychopomp::effects::combustion` | `Burst::sample(age).ember(direction, seed)` | Compression, ignition, rim-light envelope, gravity/drag embers, cooling |
 | `psychopomp::effects::surface` | `impact(age, angle)`, `wavefront(age)` | Local contact dimple and a damped emissive wave over a sphere |
 | `psychopomp::effects::shake` | `rumble(time, trauma)` | Squared-trauma camera rumble from two octaves of smooth noise: offset and roll |
+| `psychopomp::effects::shake` | `handheld(time, amount)` | A held camera's slow sway: two octaves of half-hertz noise on pan, yaw, and pitch, each axis on its own phase; zero amount is exactly still |
 | `psychopomp::effects::combustion` | `shock_arrival(distance)` | When the burst's pressure front reaches a distance, mirroring `pressure.wgsl` |
 | `psychopomp::effects::spinner` | `sample(age, release, mark, shape)`, `handoff(after)` | The blog's radial spinner: closed-form critically damped motor, speed-driven wake, and a mark route drawn from a top-right handoff |
 | `psychopomp::math::dynamics` | `ballistic(velocity, acceleration, drag, seconds)` | Closed-form reusable particle displacement |
@@ -83,3 +84,12 @@ motion-blurs; roll and punch transform the developed frame in the composite, and
 the punch also covers corners a roll would expose. Plan overlays (headers,
 captions) stay still, like a HUD. Time per-element reactions with
 `combustion::shock_arrival` so they land as the pressure front passes.
+
+Camera shots and impacts add rather than fight. The renderer starts from the
+authored pose (`camera.x|y|z|yaw|pitch|zoom|pivot`), blends in any follow
+(`camera.track.<id>`), then adds handheld sway (`camera.handheld`), the kick,
+and the rumble, all per shutter sample. An authored `camera.roll` turns each
+sample as it is exposed (so it blurs) and crops to cover the corners; the shake
+roll and punch still transform the developed frame. `CameraRig::whip` pairs a
+short minimum-jerk move, which the shutter streaks, with a `post.zoom` swell
+through its middle.
