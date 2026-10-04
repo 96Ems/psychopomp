@@ -1136,6 +1136,224 @@ impl StageActor {
     }
 }
 
+/// How an orb gathers out of a blur while turning into place: it scales up on
+/// a lively spring, sharpens, turns its last angular offset away, and fades in.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct OrbEntrance {
+    pub scale: f32,
+    pub scale_seconds: f32,
+    pub blur: f32,
+    pub blur_seconds: f32,
+    /// The angular offset it turns away, in radians.
+    pub rotation: f32,
+    pub turn_seconds: f32,
+    pub fade_seconds: f32,
+}
+
+impl OrbEntrance {
+    /// The calibrated hero entrance (TECHNIQUES.md): scale 0.58 on a 0.85 s /
+    /// 0.2-bounce spring, blur 11 over 0.7 s, −1.8 rad over 1.25 s cubic-out.
+    pub const HERO: Self = Self {
+        scale: 0.58,
+        scale_seconds: 0.85,
+        blur: 11.0,
+        blur_seconds: 0.7,
+        rotation: -1.8,
+        turn_seconds: 1.25,
+        fade_seconds: 0.6,
+    };
+}
+
+/// A card's VHS-style glitch steps through layouts this far apart (about a
+/// frame and a half at 60 fps).
+pub const GLITCH_STEP_SECONDS: f32 = 0.027;
+
+/// How long `post.rewind`'s tape interference runs.
+pub const REWIND_SECONDS: f32 = 1.4;
+
+/// Explainer beats composed from the primitives above. Each declares the
+/// channels it needs at their starting poses and returns when it settles,
+/// where a later beat would chain from it.
+impl StageActor {
+    /// The orb's entrance: see [`OrbEntrance`]. Call before any other write
+    /// to the orb's scale, blur, rotation, or opacity.
+    pub fn orb_in(&mut self, scene: &mut PlanBuilder, orb: &str, at: u64, entrance: OrbEntrance) {
+        let property = |name: &str| format!("{orb}.{name}");
+        self.channel(scene, &property("scale"), entrance.scale);
+        self.channel(scene, &property("blur"), entrance.blur);
+        self.channel(scene, &property("rotation"), entrance.rotation);
+        self.bounce(
+            scene,
+            &property("scale"),
+            at,
+            1.0,
+            entrance.scale_seconds,
+            0.2,
+        );
+        self.to(scene, &property("blur"), at, 0.0, entrance.blur_seconds);
+        let turn = entrance.turn_seconds;
+        self.ease(scene, &property("rotation"), at, 0.0, turn, Ease::CubicOut);
+        self.fade_in(scene, orb, at, 1.0, entrance.fade_seconds);
+    }
+
+    /// Glitch `card` through three layouts `GLITCH_STEP_SECONDS` apart, then
+    /// still. Returns when it is still.
+    pub fn glitch(&mut self, scene: &mut PlanBuilder, card: &str, at: u64, seeds: [f32; 3]) -> u64 {
+        let step = whole_millis(GLITCH_STEP_SECONDS);
+        let property = format!("{card}.glitch");
+        for (index, seed) in (0..).zip(seeds.into_iter().chain([0.0])) {
+            self.set(scene, &property, at + step * index, seed);
+        }
+        at + step * 3
+    }
+
+    /// Rewind the tape: `post.rewind`'s interference runs its course, with a
+    /// `chroma` hit (0 for none). Returns when the interference has passed.
+    pub fn rewind(&mut self, scene: &mut PlanBuilder, at: u64, chroma: f32) -> u64 {
+        self.clock_for(scene, "post.rewind", at, REWIND_SECONDS);
+        if chroma > 0.0 {
+            self.hit(scene, "post.chroma", at, chroma, 0.0);
+        }
+        at + whole_millis(REWIND_SECONDS)
+    }
+
+    /// Play `orb`'s burst backwards: the clock eases back to 0 over `seconds`
+    /// and the orb rests intact again; its hurt heals half a second in.
+    /// Returns when it is whole.
+    pub fn unburst(&mut self, scene: &mut PlanBuilder, orb: &str, at: u64, seconds: f32) -> u64 {
+        let whole = at + whole_millis(seconds);
+        self.ease(
+            scene,
+            &format!("{orb}.burst"),
+            at,
+            0.0,
+            seconds,
+            Ease::Smootherstep,
+        );
+        self.set(scene, &format!("{orb}.burst"), whole, -1.0);
+        self.to(scene, &format!("{orb}.hurt"), at + 500_000_000, 0.0, 0.6);
+        whole
+    }
+
+    /// Knock `card` away from `source` as the pressure wave of a burst that
+    /// starts at `at` passes it ([`combustion::shock_arrival`]): a shove of
+    /// `push` pixels, weakened in proportion beyond `falloff` pixels from the
+    /// source when given. Returns when the front passes.
+    ///
+    /// [`combustion::shock_arrival`]: crate::effects::combustion::shock_arrival
+    pub fn shock_kick(
+        &mut self,
+        scene: &mut PlanBuilder,
+        source: &str,
+        at: u64,
+        card: &str,
+        push: f32,
+        falloff: Option<f32>,
+    ) -> u64 {
+        let anchor = |id: &str| {
+            self.plan
+                .element(id)
+                .and_then(StageElement::anchor)
+                .map(Vec3::from)
+                .unwrap_or_else(|| panic!("stage element '{id}' has no position"))
+        };
+        let away = (anchor(card) - anchor(source)).truncate();
+        let reach = away.length();
+        let passes = at
+            + crate::author::seconds(f64::from(crate::effects::combustion::shock_arrival(reach)));
+        let mut shove = away.normalize() * push;
+        if let Some(falloff) = falloff {
+            shove *= (falloff / reach).min(1.0);
+        }
+        let [x, y] = [format!("{card}.x"), format!("{card}.y")];
+        self.kick(scene, [&x, &y], passes, shove.into());
+        passes
+    }
+
+    /// `card`'s status spinner, started at `started`, resolves into its mark
+    /// at the motor's next top-right crossing after `done`. Returns when the
+    /// mark has finished drawing, where its sound belongs.
+    pub fn resolve_spinner(
+        &mut self,
+        scene: &mut PlanBuilder,
+        card: &str,
+        started: u64,
+        done: u64,
+    ) -> u64 {
+        use crate::effects::spinner;
+        let waited = done.saturating_sub(started) as f32 / 1e9;
+        let handoff = started + crate::author::seconds(f64::from(spinner::handoff(waited)));
+        self.clock(scene, &format!("{card}.mark"), handoff);
+        handoff + crate::author::seconds(f64::from(spinner::DRAW))
+    }
+
+    /// The blog's tile glow: an inner ring rises to its opacity, the outer
+    /// ring 60 ms later, both on `seconds` springs.
+    pub fn halo(
+        &mut self,
+        scene: &mut PlanBuilder,
+        [(inner, inner_opacity), (outer, outer_opacity)]: [(&str, f32); 2],
+        at: u64,
+        seconds: f32,
+    ) {
+        self.fade_in(scene, inner, at, inner_opacity, seconds);
+        self.fade_in(scene, outer, at + 60_000_000, outer_opacity, seconds);
+    }
+
+    /// Release a [`Self::halo`] in reverse: the outer ring first, the inner
+    /// 80 ms later.
+    pub fn halo_out(
+        &mut self,
+        scene: &mut PlanBuilder,
+        [inner, outer]: [&str; 2],
+        at: u64,
+        seconds: f32,
+    ) {
+        self.fade_out(scene, outer, at, seconds);
+        self.fade_out(scene, inner, at + 80_000_000, seconds);
+    }
+
+    /// A ring as a timer: it appears and its arc sweeps from nothing to
+    /// `sweep` (1 is a full circle) over `seconds`. Returns when it stops.
+    pub fn ring_timer(
+        &mut self,
+        scene: &mut PlanBuilder,
+        ring: &str,
+        at: u64,
+        seconds: f32,
+        sweep: f32,
+    ) -> u64 {
+        self.fade_in(scene, ring, at, 1.0, 0.3);
+        let channel = self.channel(scene, &format!("{ring}.sweep"), 0.0);
+        scene.ease(&channel, at, sweep, seconds, Ease::Smootherstep);
+        at + whole_millis(seconds)
+    }
+
+    /// Unplug `beam`, the reverse of [`Self::connect`]: the wire withdraws
+    /// over `seconds`, and its port resolves away as it finishes. Returns when
+    /// the port is gone.
+    pub fn disconnect(
+        &mut self,
+        scene: &mut PlanBuilder,
+        beam: &str,
+        at: u64,
+        seconds: f32,
+    ) -> u64 {
+        self.ease(scene, &format!("{beam}.draw"), at, 0.0, seconds, DRAW_CURVE);
+        let port = at + whole_millis(seconds) - 100_000_000;
+        let pop = PORT_POP_SECONDS;
+        self.ease(
+            scene,
+            &format!("{beam}.port"),
+            port,
+            0.0,
+            pop,
+            Ease::Smootherstep,
+        );
+        port + whole_millis(pop)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1485,6 +1703,132 @@ mod tests {
         };
         assert_eq!(first("probe.age"), word - 800_000_000 - 340_000_000);
         assert_eq!(first("link.port"), word - 900_000_000);
+    }
+
+    /// Each event of `property` as (at, kind, target) for compact assertions.
+    fn events(plan: &crate::plan::ScenePlan, property: &str) -> Vec<(u64, &'static str, f32)> {
+        use crate::plan::{ScalarPlan, TrackEventPlan};
+        let value = |scalar: &ScalarPlan| match scalar {
+            ScalarPlan::Literal(value) => *value,
+            _ => f32::NAN,
+        };
+        plan.continuous_channels
+            .iter()
+            .find(|c| c.property == property)
+            .unwrap_or_else(|| panic!("missing {property}"))
+            .events
+            .iter()
+            .map(|event| match event {
+                TrackEventPlan::Set { at_nanos, value: v } => (*at_nanos, "set", value(v)),
+                TrackEventPlan::Spring {
+                    at_nanos, target, ..
+                } => (*at_nanos, "spring", value(target)),
+                TrackEventPlan::Ease {
+                    at_nanos, target, ..
+                } => (*at_nanos, "ease", value(target)),
+            })
+            .collect()
+    }
+
+    fn initial(plan: &crate::plan::ScenePlan, property: &str) -> f32 {
+        match plan
+            .continuous_channels
+            .iter()
+            .find(|c| c.property == property)
+            .unwrap()
+            .initial
+        {
+            crate::plan::ScalarPlan::Literal(value) => value,
+            _ => unreachable!(),
+        }
+    }
+
+    #[test]
+    fn beats_declare_their_starting_poses_and_return_when_they_settle() {
+        const S: u64 = 1_000_000_000;
+        let mut scene = PlanBuilder::new("beats", 20 * S);
+        let mut s = StageActor::declare(&mut scene, "stage", &plan()).unwrap();
+        s.orb_in(&mut scene, "service", S, OrbEntrance::HERO);
+        assert_eq!(
+            s.glitch(&mut scene, "client", 2 * S, [7.0, 9.0, 8.0]),
+            2 * S + 81_000_000
+        );
+        assert_eq!(s.rewind(&mut scene, 3 * S, 0.12), 3 * S + 1_400_000_000);
+        assert_eq!(
+            s.unburst(&mut scene, "service", 3 * S, 1.3),
+            4 * S + 300_000_000
+        );
+        let drawn = s.resolve_spinner(&mut scene, "client", 5 * S, 6 * S);
+        let handoff =
+            5 * S + crate::author::seconds(f64::from(crate::effects::spinner::handoff(1.0)));
+        assert!(
+            handoff >= 6 * S,
+            "the mark waits for the next crossing after done"
+        );
+        let draw = crate::author::seconds(f64::from(crate::effects::spinner::DRAW));
+        assert_eq!(drawn, handoff + draw);
+        s.halo(&mut scene, [("timer", 0.35), ("caption", 0.5)], 7 * S, 0.22);
+        assert_eq!(
+            s.ring_timer(&mut scene, "timer", 8 * S, 1.2, 0.67),
+            9 * S + 200_000_000
+        );
+        assert_eq!(
+            s.disconnect(&mut scene, "link", 10 * S, 0.35),
+            10 * S + 550_000_000
+        );
+        let passes = s.shock_kick(&mut scene, "service", 11 * S, "client", 9.0, Some(480.0));
+        assert!(
+            passes > 11 * S + 120_000_000,
+            "the front reaches the card after the collapse"
+        );
+        let plan = scene.finish().unwrap();
+
+        assert_eq!(
+            [
+                initial(&plan, "service.scale"),
+                initial(&plan, "service.blur"),
+                initial(&plan, "service.rotation"),
+                initial(&plan, "service.opacity")
+            ],
+            [0.58, 11.0, -1.8, 0.0]
+        );
+        let glitch = events(&plan, "client.glitch");
+        assert_eq!(
+            glitch
+                .iter()
+                .map(|e| (e.0 - 2 * S, e.2))
+                .collect::<Vec<_>>(),
+            [
+                (0, 7.0),
+                (27_000_000, 9.0),
+                (54_000_000, 8.0),
+                (81_000_000, 0.0)
+            ]
+        );
+        assert_eq!(initial(&plan, "post.rewind"), -1.0);
+        assert_eq!(events(&plan, "post.chroma")[0], (3 * S, "set", 0.12));
+        assert_eq!(
+            events(&plan, "service.burst"),
+            [(3 * S, "ease", 0.0), (4 * S + 300_000_000, "set", -1.0)]
+        );
+        assert_eq!(events(&plan, "client.mark")[0], (handoff, "set", 0.0));
+        assert_eq!(
+            events(&plan, "caption.opacity"),
+            [(7 * S + 60_000_000, "spring", 0.5)]
+        );
+        assert_eq!(initial(&plan, "timer.sweep"), 0.0);
+        assert_eq!(events(&plan, "timer.sweep"), [(8 * S, "ease", 0.67)]);
+        assert_eq!(
+            events(&plan, "link.port"),
+            [(10 * S + 250_000_000, "ease", 0.0)],
+            "the port resolves away as the wire finishes"
+        );
+        let kick = events(&plan, "client.x");
+        assert_eq!(kick[0].0, passes);
+        assert!(
+            kick[0].2 < 0.0,
+            "the client sits left of the service and is pushed left"
+        );
     }
 
     #[test]

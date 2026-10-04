@@ -5,15 +5,14 @@ use anyhow::{Context, Result};
 use psychopomp::{
     author::PlanTime,
     caption::CaptionAlign,
-    math::easing::Ease,
     plan::ScenePlan,
     sfx,
-    stage::{StageElement, StagePlan, StagePost, reply_after},
+    stage::{OrbEntrance, StageElement, StagePlan, StagePost, reply_after},
     tone::Tone,
 };
 
 use crate::{
-    Film, Narration, arrive, begin, chip, footer, header, orb_in, plug, seconds, send, show, status,
+    Film, Narration, arrive, begin, chip, footer, header, plug, seconds, send, show, status,
 };
 
 const MAILBOX: [f32; 3] = [330.0, 510.0, 0.0];
@@ -163,23 +162,14 @@ pub fn film(narration: &Narration) -> Result<ScenePlan> {
     let one = v.at("exactly one session object");
     s.settle_in(sc, "mailbox", seconds(0.5));
     arrive(s, sc, "admission", "mb", seconds(0.66));
-    orb_in(s, sc, "runtime", one - seconds(0.2));
+    s.orb_in(sc, "runtime", one - seconds(0.2), OrbEntrance::HERO);
     show(s, sc, "runtime-name", one + seconds(0.5));
     plug(s, sc, "ad", one + seconds(0.4));
     s.type_in(sc, "name", v.at("named by its team"), 30.0);
 
     // The alarm: a ring sweeps closed, and the mailbox takes its energy.
     let alarm = v.at("an alarm wakes");
-    s.fade_in(sc, "alarm", alarm - seconds(0.2), 1.0, 0.3);
-    s.channel(sc, "alarm.sweep", 0.0);
-    s.ease(
-        sc,
-        "alarm.sweep",
-        alarm - seconds(0.2),
-        1.0,
-        0.7,
-        Ease::Smootherstep,
-    );
+    s.ring_timer(sc, "alarm", alarm - seconds(0.2), 0.7, 1.0);
     s.type_in(sc, "alarm-name", alarm, 40.0);
     s.hit(sc, "mailbox.flash", alarm + seconds(0.5), 0.6, 0.0);
     sfx::MARK.play(sc, "alarm", alarm + seconds(0.4), -18.0);

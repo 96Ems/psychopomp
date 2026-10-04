@@ -14,7 +14,7 @@ use psychopomp::{
     narration::Narration,
     plan::{ReelPlan, ReelSegmentPlan, ReelTransitionStyle, ScenePlan},
     sfx,
-    stage::{DRAW_CURVE, StageActor, StageElement, StagePlan, StagePost, reply_after},
+    stage::{OrbEntrance, StageActor, StageElement, StagePlan, StagePost, reply_after},
     tone::Tone,
 };
 use psychopomp_pr_walkthrough::film::{Pr, chip, footer, header, span};
@@ -270,16 +270,6 @@ fn stage_plan() -> StagePlan {
     }
 }
 
-/// Glitch layouts about a frame and a half apart, then still. Returns when still.
-fn glitch(s: &mut StageActor, sc: &mut PlanBuilder, card: &str, at: u64, seeds: [f32; 3]) -> u64 {
-    let mut step = at;
-    for seed in seeds.into_iter().chain([0.0]) {
-        s.set(sc, &format!("{card}.glitch"), step, seed);
-        step += seconds(0.027);
-    }
-    step - seconds(0.027)
-}
-
 fn film(narration: &Narration) -> Result<ScenePlan> {
     // The problem, a rewind, the layer, a breath, the features, and a tail.
     let reading = narration.reading(
@@ -300,27 +290,10 @@ fn film(narration: &Narration) -> Result<ScenePlan> {
     let sc = &mut scene;
 
     // ── Establish: the vault, the command line, the agent, plugged together ──
-    for (property, initial) in [
-        ("camera.z", -160.0),
-        ("camera.dof", 0.45),
-        ("vault.scale", 0.58),
-        ("vault.blur", 11.0),
-        ("vault.rotation", -1.8),
-    ] {
-        s.channel(sc, property, initial);
-    }
+    s.channel(sc, "camera.z", -160.0);
+    s.channel(sc, "camera.dof", 0.45);
     s.to(sc, "camera.z", 0, 0.0, 2.2);
-    s.bounce(sc, "vault.scale", seconds(0.15), 1.0, 0.85, 0.2);
-    s.to(sc, "vault.blur", seconds(0.15), 0.0, 0.7);
-    s.ease(
-        sc,
-        "vault.rotation",
-        seconds(0.15),
-        0.0,
-        1.25,
-        Ease::CubicOut,
-    );
-    s.fade_in(sc, "vault", seconds(0.15), 1.0, 0.6);
+    s.orb_in(sc, "vault", seconds(0.15), OrbEntrance::HERO);
     s.fade_in(sc, "vault-name", seconds(0.9), 1.0, 0.5);
     let op_ready = s.settle_in(sc, "op", seconds(0.45));
     let vault_contact = s.connect(sc, "vault-link", op_ready + seconds(0.1), 0.5);
@@ -352,16 +325,10 @@ fn film(narration: &Narration) -> Result<ScenePlan> {
             0.25 + 0.15 * index as f32,
             0.0,
         );
-        glitch(
-            s,
-            sc,
-            id,
-            at + seconds(0.06),
-            [5.0 + index as f32, 8.0, 6.0],
-        );
+        s.glitch(sc, id, at + seconds(0.06), [5.0 + index as f32, 8.0, 6.0]);
         sfx::FAILURE.play(
             sc,
-            &format!("prompt-{index}"),
+            format!("prompt-{index}"),
             at,
             -12.0 + 2.0 * index as f32,
         );
@@ -394,8 +361,8 @@ fn film(narration: &Narration) -> Result<ScenePlan> {
         "op", "agent", "prompt-1", "prompt-2", "prompt-3", "prompt-4",
     ];
     stagger(cards, stuck, millis(35), |card, at| {
-        glitch(s, sc, card, at, [7.0, 9.0, 8.0]);
-        glitch(s, sc, card, at + seconds(0.32), [9.0, 6.0, 7.0]);
+        s.glitch(sc, card, at, [7.0, 9.0, 8.0]);
+        s.glitch(sc, card, at + seconds(0.32), [9.0, 6.0, 7.0]);
         s.set(sc, &format!("{card}.damage"), at, 1.0);
         at
     });
@@ -451,8 +418,7 @@ fn film(narration: &Narration) -> Result<ScenePlan> {
 
     // ── Rewind ──
     let switch = problem.end() + seconds(0.25);
-    s.clock_for(sc, "post.rewind", switch, 1.4);
-    s.hit(sc, "post.chroma", switch, 0.12, 0.0);
+    s.rewind(sc, switch, 0.12);
     sfx::LAUNCH.play(sc, "rewind", switch - seconds(0.1), -14.0);
     raw_chip.hide(sc, switch);
     footer_problem.hide(sc, switch);
@@ -474,15 +440,7 @@ fn film(narration: &Narration) -> Result<ScenePlan> {
     // ── The layer: the direct wire unplugs, 2password settles in between ──
     let meet = l("meet");
     let unplug = meet.saturating_sub(seconds(0.3));
-    s.ease(sc, "direct.draw", unplug, 0.0, 0.35, DRAW_CURVE);
-    s.ease(
-        sc,
-        "direct.port",
-        unplug + seconds(0.25),
-        0.0,
-        0.3,
-        Ease::Smootherstep,
-    );
+    s.disconnect(sc, "direct", unplug, 0.35);
     let layer_ready = s.settle_in(sc, "layer", meet + seconds(0.1));
     sfx::BLOOM.play(sc, "meet", meet + seconds(0.1), -12.0);
     let ask_contact = s.connect(sc, "ask", layer_ready, 0.45);
@@ -490,7 +448,7 @@ fn film(narration: &Narration) -> Result<ScenePlan> {
     for (beam, at) in [("ask", ask_contact), ("batch", batch_contact)] {
         s.hit(sc, &format!("{beam}.surge"), at, 0.45, 0.0);
         s.twang(sc, beam, at);
-        sfx::TICK.play(sc, &format!("connect-{beam}"), at, -19.0);
+        sfx::TICK.play(sc, format!("connect-{beam}"), at, -19.0);
     }
     s.to(sc, "layer.glow", l("tiny layer"), 0.55, 0.6);
     s.hit(sc, "layer.flash", l("tiny layer"), 0.45, 0.0);
@@ -621,8 +579,7 @@ fn film(narration: &Narration) -> Result<ScenePlan> {
     let all = f("at all");
     s.hit(sc, "vault.pulse", all + seconds(0.15), 0.85, 0.0);
     s.ease(sc, "vault.rotation", all, 1.6, 2.4, Ease::CubicOut);
-    s.fade_in(sc, "calm", all, 0.35, 0.22);
-    s.fade_in(sc, "calm-outer", all + seconds(0.06), 0.5, 0.22);
+    s.halo(sc, [("calm", 0.35), ("calm-outer", 0.5)], all, 0.22);
     s.hit(sc, "post.bloom", all, 0.3, 0.18);
     s.to(sc, "camera.z", all, -60.0, 2.0);
     for beam in ["ask", "batch", "inject", "paste", "token", "vault-link"] {

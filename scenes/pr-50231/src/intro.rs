@@ -5,7 +5,6 @@ use anyhow::{Context, Result};
 use psychopomp::{
     author::{PlanBuilder, seconds},
     caption::CaptionAlign,
-    effects::spinner,
     narration::Narration,
     plan::ScenePlan,
     rolling::{RollingNumberActor, RollingNumberPlan},
@@ -122,15 +121,9 @@ pub fn build(narration: &Narration) -> Result<ScenePlan> {
         );
         s.to(sc, &format!("{card}.status"), contact, 1.0, 0.3);
         s.clock(sc, &format!("{card}.spinner"), contact);
-        let mark = contact + seconds(f64::from(spinner::handoff(0.25)));
-        s.clock(sc, &format!("{card}.mark"), mark);
-        sfx::TICK.play(sc, &format!("check-{index}"), contact, -24.0);
-        sfx::MARK.play(
-            sc,
-            &format!("mark-{index}"),
-            mark + seconds(f64::from(spinner::DRAW)),
-            -23.0 - index as f32,
-        );
+        let drawn = s.resolve_spinner(sc, &card, contact, contact + seconds(0.25));
+        sfx::TICK.play(sc, format!("check-{index}"), contact, -24.0);
+        sfx::MARK.play(sc, format!("mark-{index}"), drawn, -23.0 - index as f32);
     }
 
     // What it couldn't catch: the checked work cools, the camera leans right.

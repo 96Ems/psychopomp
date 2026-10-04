@@ -698,6 +698,21 @@ their fuller documentation elsewhere.
   lifetime, as for `burst` or `post.rewind`). Use a `Smootherstep` ease for staged
   camera moves with exact timing, springs for responsive camera/panel settling,
   and instant-attack fades for light.
+  Composed beats return when they settle: `orb_in(orb, at, OrbEntrance::HERO)`
+  (the hero entrance: scale, blur, and angular offset gather in while it fades
+  in), `glitch(card, at, seeds)` (three layouts 27 ms apart, then still),
+  `rewind(at, chroma)` (`post.rewind`'s 1.4 s of tape interference with a
+  chromatic hit) and `unburst(orb, at, seconds)` (the burst clock plays back
+  to intact), `shock_kick(source, at, card, push, falloff)` (a card is shoved
+  away as the burst's pressure front passes it; returns when it passes),
+  `resolve_spinner(card, started, done)` (the spinner draws its mark at its
+  next crossing; returns when the mark is drawn, where its sound belongs),
+  `halo([(inner, opacity), (outer, opacity)], at, seconds)` and `halo_out`
+  (two rings 60 ms apart in, 80 ms apart out), `ring_timer(ring, at, seconds,
+  sweep)`, and `disconnect(beam, at, seconds)` (the reverse of `connect`).
+  Build elements with `StageElement::card|orb|beam|packet|label|ring` and their
+  options (`.tone`, `.statuses`, `.mark`, `.points`, `.bend`, `.reversed`,
+  `.labeled`, `.align`, `.thickness`); `StagePost::RESTRAINED` is the films' look.
   Orb `pulse` changes illumination, not geometry or attached beam ports. Card
   `flash` lifts ink and rim, not the entire fill. Connecting does not implicitly
   trigger `land`, `twang`, `surge`, or `flow`; author those only when the story

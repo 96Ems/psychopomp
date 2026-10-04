@@ -7,15 +7,12 @@ use anyhow::{Context, Result};
 use psychopomp::{
     author::{PlanBuilder, millis, seconds, stagger},
     caption::CaptionAlign,
-    effects::{
-        combustion,
-        spinner::{self, Mark},
-    },
+    effects::{combustion, spinner::Mark},
     math::{Vec2, Vec3, easing::Ease, vec2},
     narration::Narration,
     plan::{ReelPlan, ReelSegmentPlan, ReelTransitionStyle, ScenePlan},
     sfx,
-    stage::{Camera, StageActor, StageElement, StagePlan, StagePost, reply_after},
+    stage::{Camera, OrbEntrance, StageActor, StageElement, StagePlan, StagePost, reply_after},
     tone::Tone,
 };
 
@@ -287,17 +284,6 @@ fn stage_plan() -> StagePlan {
     }
 }
 
-/// Three glitch layouts about a frame and a half apart, then still (seed 0).
-/// Returns when the card is still again.
-fn glitch(s: &mut StageActor, sc: &mut PlanBuilder, card: &str, at: u64, seeds: [f32; 3]) -> u64 {
-    let mut step = at;
-    for seed in seeds.into_iter().chain([0.0]) {
-        s.set(sc, &format!("{card}.glitch"), step, seed);
-        step += seconds(0.027);
-    }
-    step - seconds(0.027)
-}
-
 fn stage_film(narration: &Narration) -> Result<ScenePlan> {
     let pr = &PRS[1];
     // Before, a rewind, after, and a tail for the closing camera.
@@ -319,27 +305,10 @@ fn stage_film(narration: &Narration) -> Result<ScenePlan> {
     // Establish the service, then its clients. Rigid panels drift into place;
     // their ink follows. The camera carries the composition without bouncing.
     // Starting poses away from rest; every other channel starts at its default.
-    for (property, initial) in [
-        ("camera.z", -160.0),
-        ("camera.dof", 0.45),
-        ("service.scale", 0.58),
-        ("service.blur", 11.0),
-    ] {
-        s.channel(sc, property, initial);
-    }
+    s.channel(sc, "camera.z", -160.0);
+    s.channel(sc, "camera.dof", 0.45);
     s.to(sc, "camera.z", 0, 0.0, 2.2);
-    s.bounce(sc, "service.scale", seconds(0.15), 1.0, 0.85, 0.2);
-    s.to(sc, "service.blur", seconds(0.15), 0.0, 0.7);
-    s.channel(sc, "service.rotation", -1.8);
-    s.ease(
-        sc,
-        "service.rotation",
-        seconds(0.15),
-        0.0,
-        1.25,
-        Ease::CubicOut,
-    );
-    s.fade_in(sc, "service", seconds(0.15), 1.0, 0.6);
+    s.orb_in(sc, "service", seconds(0.15), OrbEntrance::HERO);
     stagger(
         ["service-name", "service-healthy"],
         seconds(0.9),
@@ -364,7 +333,7 @@ fn stage_film(narration: &Narration) -> Result<ScenePlan> {
             0.0,
             0.45,
         );
-        sfx::TICK.play(sc, &format!("connect-{index}"), contact, -20.0);
+        sfx::TICK.play(sc, format!("connect-{index}"), contact, -20.0);
     }
     header(sc, pr, Some(seconds(0.4)))?;
     let mut before_chip = chip(sc, "chip-before", Tone::Muted, "before")?;
@@ -407,20 +376,8 @@ fn stage_film(narration: &Narration) -> Result<ScenePlan> {
     // card is knocked outward as the pressure front passes it.
     let blow = Vec3::from(SERVICE) - Vec3::from(CLIENT);
     s.jolt(sc, kill_arrival, [blow.x, blow.y], 1.0);
-    for (card, at) in [("client", CLIENT)]
-        .into_iter()
-        .chain(OTHERS.map(|(card, _, _, at)| (card, at)))
-    {
-        let away = Vec3::from(at) - Vec3::from(SERVICE);
-        let reach = away.truncate().length();
-        let push = away.truncate().normalize() * 9.0 * (480.0 / reach).min(1.0);
-        let passes = kill_arrival + seconds(f64::from(combustion::shock_arrival(reach)));
-        s.kick(
-            sc,
-            [&format!("{card}.x"), &format!("{card}.y")],
-            passes,
-            push.into(),
-        );
+    for card in ["client"].into_iter().chain(OTHERS.map(|(card, ..)| card)) {
+        s.shock_kick(sc, "service", kill_arrival, card, 9.0, Some(480.0));
     }
     s.hit(sc, "post.bloom", kill_arrival, 0.4, 0.18);
     s.to(sc, "camera.focus", kill_arrival, 0.0, 0.8);
@@ -457,10 +414,10 @@ fn stage_film(narration: &Narration) -> Result<ScenePlan> {
             Ease::CubicOut,
         );
         s.set(sc, &format!("{card}.damage"), snap, 1.0);
-        glitch(s, sc, card, snap, [7.0, 9.0, 8.0]);
+        s.glitch(sc, card, snap, [7.0, 9.0, 8.0]);
         sfx::GLITCH.play(
             sc,
-            &format!("glitch-{index}"),
+            format!("glitch-{index}"),
             snap,
             -21.0 - index as f32 * 2.0,
         );
@@ -480,7 +437,7 @@ fn stage_film(narration: &Narration) -> Result<ScenePlan> {
         // The slice peaks about 0.38 s in; land it as the hairline completes.
         sfx::SEVER.play(
             sc,
-            &format!("sever-{index}"),
+            format!("sever-{index}"),
             sever.saturating_sub(seconds(0.2)),
             -17.0 - index as f32 * 2.5,
         );
@@ -499,7 +456,7 @@ fn stage_film(narration: &Narration) -> Result<ScenePlan> {
 
     // Rewind: everything returns to the moment before the probe.
     let switch = before.end() + seconds(0.5);
-    s.clock_for(sc, "post.rewind", switch, 1.4);
+    s.rewind(sc, switch, 0.12);
     before_chip.hide(sc, switch);
     footer_before.hide(sc, switch);
     let mut rewind_chip = chip(sc, "chip-rewind", Tone::Accent, "◀◀ rewind")?;
@@ -509,17 +466,7 @@ fn stage_film(narration: &Narration) -> Result<ScenePlan> {
     let mut after_chip = chip(sc, "chip-after", Tone::Success, "after the fix")?;
     after_chip.show(sc, switch + seconds(1.65));
     sfx::LAUNCH.play(sc, "rewind", switch - seconds(0.1), -13.0);
-    s.ease(
-        sc,
-        "service.burst",
-        switch + seconds(0.1),
-        0.0,
-        1.3,
-        Ease::Smootherstep,
-    );
-    s.set(sc, "service.burst", switch + seconds(1.4), -1.0);
-    s.to(sc, "service.hurt", switch + seconds(0.6), 0.0, 0.6);
-    s.hit(sc, "post.chroma", switch, 0.12, 0.0);
+    s.unburst(sc, "service", switch + seconds(0.1), 1.3);
     s.to(sc, "camera.z", switch, 0.0, 1.8);
     s.to(sc, "thought-before.opacity", switch, 0.0, 0.4);
     s.to(
@@ -551,10 +498,10 @@ fn stage_film(narration: &Narration) -> Result<ScenePlan> {
         s.ease(sc, &format!("{card}.cut"), rejoin, 0.0, 0.45, Ease::Linear);
         s.to(sc, &format!("{card}.ghost"), rejoin, 0.0, 0.25);
         let restore = rejoin + seconds(0.55);
-        let still = glitch(s, sc, card, restore, [8.0, 9.0, 7.0]);
+        let still = s.glitch(sc, card, restore, [8.0, 9.0, 7.0]);
         sfx::GLITCH.play(
             sc,
-            &format!("restore-{index}"),
+            format!("restore-{index}"),
             restore,
             -25.0 - index as f32 * 2.0,
         );
@@ -584,15 +531,8 @@ fn stage_film(narration: &Narration) -> Result<ScenePlan> {
     s.type_in(sc, "message", message, 52.0);
     s.to(sc, "client.status", message, 4.0, 0.4);
     // The spinner resolves into the error's mark at its next top-right crossing.
-    let waited = message.saturating_sub(respin) as f32 / 1e9;
-    let handoff = respin + seconds(f64::from(spinner::handoff(waited)));
-    s.clock(sc, "client.mark", handoff);
-    sfx::MARK.play(
-        sc,
-        "mark",
-        handoff + seconds(f64::from(spinner::DRAW)),
-        -19.0,
-    );
+    let drawn = s.resolve_spinner(sc, "client", respin, message);
+    sfx::MARK.play(sc, "mark", drawn, -19.0);
     sfx::RESET.play(sc, "message", message, -12.0);
 
     // Nothing gets killed: the camera finds the orb, whole and breathing.
@@ -601,9 +541,7 @@ fn stage_film(narration: &Narration) -> Result<ScenePlan> {
     s.to(sc, "camera.z", safe - seconds(0.2), 90.0, 1.8);
     s.to(sc, "camera.focus", safe - seconds(0.2), 0.0, 1.0);
     s.hit(sc, "service.pulse", safe + seconds(0.2), 0.75, 0.0);
-    // The blog's tile glow: the inner ring rises first, the outer 60 ms later.
-    s.fade_in(sc, "safe", safe, 0.3, 0.22);
-    s.fade_in(sc, "safe-outer", safe + seconds(0.06), 0.45, 0.22);
+    s.halo(sc, [("safe", 0.3), ("safe-outer", 0.45)], safe, 0.22);
     for (_, link, ..) in OTHERS {
         s.to(sc, &format!("{link}.flow"), safe, 0.45, 0.5);
         s.to(sc, &format!("{link}.flow"), safe + seconds(1.3), 0.0, 0.5);
@@ -629,9 +567,7 @@ fn stage_film(narration: &Narration) -> Result<ScenePlan> {
     s.to(sc, "client.glow", close, 0.65, 0.8);
     after_chip.hide(sc, close);
     footer_after.hide(sc, close);
-    // Release order is reversed: outer first, the inner 80 ms later.
-    s.to(sc, "safe-outer.opacity", close, 0.0, 0.6);
-    s.to(sc, "safe.opacity", close + seconds(0.08), 0.0, 0.6);
+    s.halo_out(sc, ["safe", "safe-outer"], close, 0.6);
 
     scene.finish().context("mismatch-stage")
 }

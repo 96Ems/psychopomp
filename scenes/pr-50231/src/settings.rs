@@ -350,7 +350,7 @@ pub fn build(narration: &Narration) -> Result<ScenePlan> {
         let at = back + seconds(0.12 * index as f64);
         let home = travel(s, sc, field, at, 0.0);
         s.hit(sc, &format!("{field}.flash"), home, 0.55, 0.0);
-        sfx::TICK.play(sc, &format!("{field}-home"), home, -22.0);
+        sfx::TICK.play(sc, format!("{field}-home"), home, -22.0);
     }
     cross(s, sc, back, "theme-back");
     let mut footer_after = footer(

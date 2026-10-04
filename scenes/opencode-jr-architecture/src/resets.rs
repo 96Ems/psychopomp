@@ -6,15 +6,15 @@ use psychopomp::{
     author::PlanTime,
     caption::CaptionAlign,
     effects::combustion,
-    math::{Vec3, easing::Ease},
+    math::Vec3,
     plan::ScenePlan,
     sfx,
-    stage::{StageElement, StagePlan, StagePost},
+    stage::{OrbEntrance, StageElement, StagePlan, StagePost},
     tone::Tone,
 };
 
 use crate::{
-    Film, Narration, arrive, begin, chip, footer, header, hide, orb_in, seconds, send, show, status,
+    Film, Narration, arrive, begin, chip, footer, header, hide, seconds, send, show, status,
 };
 
 const SESSION: [f32; 3] = [640.0, 460.0, 0.0];
@@ -113,7 +113,7 @@ pub fn film(narration: &Narration) -> Result<ScenePlan> {
     header(sc, "5", "surviving resets")?;
     chip(sc, "src/session/alarm-timing.ts")?;
 
-    orb_in(s, sc, "session", seconds(0.2));
+    s.orb_in(sc, "session", seconds(0.2), OrbEntrance::HERO);
     show(s, sc, "session-name", seconds(0.8));
     arrive(s, sc, "slack", "out", seconds(0.6));
     arrive(s, sc, "sqlite", "db", seconds(0.8));
@@ -133,16 +133,8 @@ pub fn film(narration: &Narration) -> Result<ScenePlan> {
     s.hit(sc, "post.bloom", reset, 0.35, 0.18);
     let blow = Vec3::from(SESSION) - Vec3::from(SLACK);
     s.jolt(sc, reset, [blow.x, blow.y], 0.8);
-    for (card, at) in [("slack", SLACK), ("sqlite", SQLITE)] {
-        let away = (Vec3::from(at) - Vec3::from(SESSION)).truncate();
-        let passes = reset + seconds(f64::from(combustion::shock_arrival(away.length())));
-        let push = away.normalize() * 8.0;
-        s.kick(
-            sc,
-            [&format!("{card}.x"), &format!("{card}.y")],
-            passes,
-            push.into(),
-        );
+    for card in ["slack", "sqlite"] {
+        s.shock_kick(sc, "session", reset, card, 8.0, None);
     }
     sfx::IMPACT.play(sc, "reset-impact", reset, -8.0);
     sfx::DEATH.play(sc, "reset-burst", reset + seconds(0.05), -10.0);
@@ -170,18 +162,9 @@ pub fn film(narration: &Narration) -> Result<ScenePlan> {
     // Rewind: the object reassembles, and the pass is time-boxed.
     let boxed = v.at("coordinator");
     let rewind = boxed - seconds(0.4);
-    s.clock_for(sc, "post.rewind", rewind, 1.4);
+    s.rewind(sc, rewind, 0.0);
     sfx::LAUNCH.play(sc, "rewind", rewind - seconds(0.1), -15.0);
-    s.ease(
-        sc,
-        "session.burst",
-        rewind + seconds(0.1),
-        0.0,
-        1.2,
-        Ease::Smootherstep,
-    );
-    s.set(sc, "session.burst", rewind + seconds(1.3), -1.0);
-    s.to(sc, "session.hurt", rewind + seconds(0.6), 0.0, 0.6);
+    s.unburst(sc, "session", rewind + seconds(0.1), 1.2);
     s.to(sc, "out.break", rewind + seconds(0.4), 0.0, 0.9);
     s.to(sc, "db.break", rewind + seconds(0.5), 0.0, 0.9);
     s.twang(sc, "out", rewind + seconds(1.2));
@@ -193,9 +176,7 @@ pub fn film(narration: &Narration) -> Result<ScenePlan> {
     stand_footer.hide(sc, rewind);
     let ring_at = rewind + seconds(1.3);
     s.fade_in(sc, "gate", ring_at, 0.3, 0.4);
-    s.fade_in(sc, "budget", ring_at, 1.0, 0.3);
-    s.channel(sc, "budget.sweep", 0.0);
-    s.ease(sc, "budget.sweep", ring_at, 0.67, 1.4, Ease::Smootherstep);
+    s.ring_timer(sc, "budget", ring_at, 1.4, 0.67);
     s.type_in(sc, "budget-name", ring_at, 44.0);
     s.hit(sc, "session.pulse", ring_at + seconds(1.4), 0.5, 0.0);
     sfx::MARK.play(sc, "budget", ring_at + seconds(1.4), -18.0);
@@ -223,16 +204,7 @@ pub fn film(narration: &Narration) -> Result<ScenePlan> {
 
     // Alarms are backstops.
     let backstop = v.at("backstops");
-    s.fade_in(sc, "alarm", backstop - seconds(0.3), 1.0, 0.3);
-    s.channel(sc, "alarm.sweep", 0.0);
-    s.ease(
-        sc,
-        "alarm.sweep",
-        backstop - seconds(0.3),
-        1.0,
-        0.7,
-        Ease::Smootherstep,
-    );
+    s.ring_timer(sc, "alarm", backstop - seconds(0.3), 0.7, 1.0);
     s.type_in(sc, "alarm-name", backstop, 44.0);
 
     // Never migrated: a version mismatch wipes and recreates the tables.
@@ -244,14 +216,7 @@ pub fn film(narration: &Narration) -> Result<ScenePlan> {
     status(s, sc, "sqlite", migrated, 2);
     s.hit(sc, "sqlite.alarm", migrated, 0.3, 0.0);
     let wiped = v.at("wipes the tables");
-    for (step, seed) in [8.0, 7.0, 9.0, 0.0].into_iter().enumerate() {
-        s.set(
-            sc,
-            "sqlite.glitch",
-            wiped + seconds(step as f64 * 0.027),
-            seed,
-        );
-    }
+    s.glitch(sc, "sqlite", wiped, [8.0, 7.0, 9.0]);
     sfx::GLITCH.play(sc, "wiped", wiped, -18.0);
     status(s, sc, "sqlite", wiped + seconds(0.1), 3);
     s.hit(sc, "sqlite.flash", wiped + seconds(0.3), 0.6, 0.0);

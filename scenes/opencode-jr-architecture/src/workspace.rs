@@ -7,13 +7,12 @@ use psychopomp::{
     math::easing::Ease,
     plan::ScenePlan,
     sfx,
-    stage::{StageElement, StagePlan, StagePost, reply_after},
+    stage::{OrbEntrance, StageElement, StagePlan, StagePost, reply_after},
     tone::Tone,
 };
 
 use crate::{
-    Film, Narration, arrive, begin, chip, footer, header, hide, orb_in, plug, seconds, send, show,
-    status,
+    Film, Narration, arrive, begin, chip, footer, header, hide, plug, seconds, send, show, status,
 };
 
 const SESSION: [f32; 3] = [330.0, 580.0, 0.0];
@@ -126,7 +125,7 @@ pub fn film(narration: &Narration) -> Result<ScenePlan> {
     for wire in ["sb", "tp"] {
         s.channel(sc, &format!("{wire}.opacity"), 1.0);
     }
-    orb_in(s, sc, "session", seconds(0.3));
+    s.orb_in(sc, "session", seconds(0.3), OrbEntrance::HERO);
     show(s, sc, "session-name", seconds(0.9));
     let object = v.at("workspace object");
     arrive(s, sc, "workspace", "ws", object - seconds(0.2));
@@ -157,9 +156,7 @@ pub fn film(narration: &Narration) -> Result<ScenePlan> {
     s.to(sc, "camera.x", hour - seconds(0.2), 90.0, 1.6);
     s.to(sc, "camera.y", hour - seconds(0.2), -60.0, 1.6);
     s.settle_in(sc, "template", hour - seconds(0.3));
-    s.fade_in(sc, "hourly", hour, 1.0, 0.3);
-    s.channel(sc, "hourly.sweep", 0.0);
-    s.ease(sc, "hourly.sweep", hour, 1.0, 1.2, Ease::Smootherstep);
+    s.ring_timer(sc, "hourly", hour, 1.2, 1.0);
     show(s, sc, "hourly-name", hour + seconds(0.2));
     status(s, sc, "template", hour + seconds(0.2), 1);
     s.clock(sc, "template.spinner", hour + seconds(0.2));

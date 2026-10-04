@@ -5,11 +5,11 @@ use psychopomp::{
     author::PlanTime,
     plan::ScenePlan,
     sfx,
-    stage::{StageElement, StagePlan, StagePost, reply_after},
+    stage::{OrbEntrance, StageElement, StagePlan, StagePost, reply_after},
     tone::Tone,
 };
 
-use crate::{Film, Narration, arrive, begin, footer, header, orb_in, plug, seconds, send, show};
+use crate::{Film, Narration, arrive, begin, footer, header, plug, seconds, send, show};
 
 const Y: f32 = 500.0;
 
@@ -83,7 +83,7 @@ pub fn film(narration: &Narration) -> Result<ScenePlan> {
     let at_worker = send(s, sc, "a-out", edge + seconds(0.3), 0.6);
     s.land(sc, "worker", at_worker);
     let object = v.at("one durable object");
-    orb_in(s, sc, "session", object - seconds(0.4));
+    s.orb_in(sc, "session", object - seconds(0.4), OrbEntrance::HERO);
     show(s, sc, "session-name", object + seconds(0.3));
     let contact = plug(s, sc, "b", object - seconds(0.1));
     let at_session = send(s, sc, "b-out", contact + seconds(0.3), 0.6);

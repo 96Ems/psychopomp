@@ -4,7 +4,6 @@ use anyhow::{Context, Result};
 use psychopomp::{
     author::{PlanBuilder, seconds},
     caption::CaptionAlign,
-    effects::spinner,
     math::easing::Ease,
     narration::Narration,
     plan::ScenePlan,
@@ -98,12 +97,9 @@ pub fn build(narration: &Narration) -> Result<ScenePlan> {
         let spin = settle + seconds(0.2);
         s.clock(sc, &format!("{card}.spinner"), spin);
         let target = pass + seconds(0.17 * index as f64);
-        let waited = target.saturating_sub(spin) as f32 / 1e9;
-        let mark = spin + seconds(f64::from(spinner::handoff(waited)));
-        s.clock(sc, &format!("{card}.mark"), mark);
-        let drawn = mark + seconds(f64::from(spinner::DRAW));
+        let drawn = s.resolve_spinner(sc, &card, spin, target);
         s.to(sc, &format!("{card}.status"), drawn, 1.0, 0.3);
-        sfx::MARK.play(sc, &format!("mark-{index}"), drawn, -25.0);
+        sfx::MARK.play(sc, format!("mark-{index}"), drawn, -25.0);
         drawn_at.push(drawn);
     }
     drawn_at.sort_unstable();

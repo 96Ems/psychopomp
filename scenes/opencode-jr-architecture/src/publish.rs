@@ -7,12 +7,12 @@ use psychopomp::{
     author::PlanTime,
     plan::ScenePlan,
     sfx,
-    stage::{StageElement, StagePlan, StagePost},
+    stage::{OrbEntrance, StageElement, StagePlan, StagePost},
     tone::Tone,
 };
 
 use crate::{
-    Film, Narration, arrive, begin, chip, footer, header, orb_in, plug, seconds, send, show, status,
+    Film, Narration, arrive, begin, chip, footer, header, plug, seconds, send, show, status,
 };
 
 const RUNTIME: [f32; 3] = [260.0, 510.0, 0.0];
@@ -141,7 +141,7 @@ pub fn film(narration: &Narration) -> Result<ScenePlan> {
     header(sc, "4", "back to slack")?;
     chip(sc, "src/session/publication.ts")?;
 
-    orb_in(s, sc, "runtime", seconds(0.3));
+    s.orb_in(sc, "runtime", seconds(0.3), OrbEntrance::HERO);
     s.settle_in(sc, "follower", seconds(0.5));
     s.settle_in(sc, "publication", seconds(0.66));
     plug(s, sc, "lg", seconds(0.9));
@@ -213,14 +213,7 @@ pub fn film(narration: &Narration) -> Result<ScenePlan> {
     s.hit(sc, "post.chroma", crash, 0.12, 0.0);
     s.jolt(sc, crash, [0.0, 1.0], 0.5);
     status(s, sc, "publication", crash, 2);
-    for (step, seed) in [7.0, 9.0, 8.0, 0.0].into_iter().enumerate() {
-        s.set(
-            sc,
-            "publication.glitch",
-            crash + seconds(step as f64 * 0.027),
-            seed,
-        );
-    }
+    s.glitch(sc, "publication", crash, [7.0, 9.0, 8.0]);
     sfx::IMPACT.play(sc, "crash", crash, -12.0);
     sfx::GLITCH.play(sc, "crash-glitch", crash, -18.0);
     let adopt = v.at("adopts it");

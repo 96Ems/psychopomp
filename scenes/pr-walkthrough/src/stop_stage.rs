@@ -17,17 +17,14 @@ use psychopomp::{
         EditorPartPlan, EditorRecipePlan, EditorSemanticRangePlan, EditorTargetSelector,
         LineMarkPlan,
     },
-    effects::{
-        combustion,
-        spinner::{self, Mark},
-    },
+    effects::{combustion, spinner::Mark},
     highlight,
-    math::{Vec2, Vec3, easing::Ease, vec2},
+    math::{Vec2, Vec3, vec2},
     narration::Narration,
     plan::{ReelPlan, ReelSegmentPlan, ReelTransitionStyle, ScenePlan},
     rolling::{RollingNumberActor, RollingNumberPlan},
     sfx,
-    stage::{Camera, StageActor, StageElement, StagePlan, StagePost},
+    stage::{Camera, OrbEntrance, StageActor, StageElement, StagePlan, StagePost},
     tone::Tone,
 };
 
@@ -84,15 +81,6 @@ fn client_rect() -> [f32; 4] {
     let size = Vec2::from(CLIENT_SIZE) * scale;
     let corner = center - size * 0.5;
     [corner.x, corner.y, size.x, size.y]
-}
-
-fn glitch(s: &mut StageActor, sc: &mut PlanBuilder, card: &str, at: u64, seeds: [f32; 3]) -> u64 {
-    let mut step = at;
-    for seed in seeds.into_iter().chain([0.0]) {
-        s.set(sc, &format!("{card}.glitch"), step, seed);
-        step += seconds(0.027);
-    }
-    step - seconds(0.027)
 }
 
 fn stage_plan() -> StagePlan {
@@ -217,20 +205,20 @@ fn stage_film(narration: &Narration) -> Result<ScenePlan> {
     // -----------------------------------------------------------------------
     // Opening establish: orb, service.json, and Service.stop client card
     // -----------------------------------------------------------------------
-    for (property, initial) in [
-        ("camera.z", -140.0),
-        ("camera.dof", 0.38),
-        ("old.scale", 0.62),
-        ("old.blur", 10.0),
-    ] {
-        s.channel(sc, property, initial);
-    }
+    s.channel(sc, "camera.z", -140.0);
+    s.channel(sc, "camera.dof", 0.38);
     s.to(sc, "camera.z", 0, 0.0, 2.0);
-    s.bounce(sc, "old.scale", seconds(0.12), 1.0, 0.8, 0.2);
-    s.to(sc, "old.blur", seconds(0.12), 0.0, 0.65);
-    s.channel(sc, "old.rotation", -1.4);
-    s.ease(sc, "old.rotation", seconds(0.12), 0.0, 1.15, Ease::CubicOut);
-    s.fade_in(sc, "old", seconds(0.12), 1.0, 0.55);
+    // A slightly quicker, smaller entrance than the hero's.
+    let entrance = OrbEntrance {
+        scale: 0.62,
+        scale_seconds: 0.8,
+        blur: 10.0,
+        blur_seconds: 0.65,
+        rotation: -1.4,
+        turn_seconds: 1.15,
+        fade_seconds: 0.55,
+    };
+    s.orb_in(sc, "old", seconds(0.12), entrance);
     s.fade_in(sc, "old-name", seconds(0.65), 1.0, 0.45);
     s.fade_in(sc, "old-active", seconds(0.8), 1.0, 0.45);
 
@@ -356,7 +344,7 @@ fn stage_film(narration: &Narration) -> Result<ScenePlan> {
     sfx::FAILURE.play(sc, "clash-hit", clash_hit, -8.0);
     s.hit(sc, "new.alarm", clash_hit, 0.28, 0.0);
     s.set(sc, "new.damage", clash_hit, 1.0);
-    glitch(s, sc, "new", clash_hit, [7.0, 9.0, 8.0]);
+    s.glitch(sc, "new", clash_hit, [7.0, 9.0, 8.0]);
     sfx::GLITCH.play(sc, "clash-glitch", clash_hit, -18.0);
     s.to(sc, "new.status", clash_hit, 1.0, 0.2);
     s.clock(sc, "new.release", clash_hit);
@@ -450,14 +438,16 @@ fn stage_film(narration: &Narration) -> Result<ScenePlan> {
     // Service.stop spinner resolves into check mark
     let client_done = sigkill_hit + seconds(0.45);
     s.to(sc, "client.status", client_done, 4.0, 0.3);
-    let client_waited = client_done.saturating_sub(watch_at) as f32 / 1e9;
-    let client_handoff = watch_at + seconds(f64::from(spinner::handoff(client_waited)));
-    s.clock(sc, "client.mark", client_handoff);
+    s.resolve_spinner(sc, "client", watch_at, client_done);
 
     // Port :49374 opens cleanly and new server takes it
     let port_free = sigkill_hit + seconds(0.55);
-    s.fade_in(sc, "port-ring", port_free, 0.35, 0.25);
-    s.fade_in(sc, "port-ring-outer", port_free + seconds(0.06), 0.5, 0.25);
+    s.halo(
+        sc,
+        [("port-ring", 0.35), ("port-ring-outer", 0.5)],
+        port_free,
+        0.25,
+    );
 
     let new_ready_enter = a("if even that fails");
     s.to(sc, "camera.x", new_ready_enter - seconds(0.15), 55.0, 1.3);
@@ -479,15 +469,8 @@ fn stage_film(narration: &Narration) -> Result<ScenePlan> {
     s.hit(sc, "new.flash", bind_2_hit, 0.35, 0.0);
     s.to(sc, "new.status", bind_2_hit, 3.0, 0.3);
     s.to(sc, "new.glow", bind_2_hit, 0.55, 0.5);
-    let new_waited = bind_2_hit.saturating_sub(new_spin) as f32 / 1e9;
-    let new_handoff = new_spin + seconds(f64::from(spinner::handoff(new_waited)));
-    s.clock(sc, "new.mark", new_handoff);
-    sfx::MARK.play(
-        sc,
-        "new-mark",
-        new_handoff + seconds(f64::from(spinner::DRAW)),
-        -18.0,
-    );
+    let new_drawn = s.resolve_spinner(sc, "new", new_spin, bind_2_hit);
+    sfx::MARK.play(sc, "new-mark", new_drawn, -18.0);
     sfx::BLOOM.play(sc, "clean-restart", bind_2_hit + seconds(0.1), -10.0);
 
     // Roll timer to 10.0 s on "10 seconds"
@@ -516,8 +499,7 @@ fn stage_film(narration: &Narration) -> Result<ScenePlan> {
     after_chip.hide(sc, close);
     footer_after.hide(sc, close);
     timer.hide(sc, close);
-    s.to(sc, "port-ring-outer.opacity", close, 0.0, 0.6);
-    s.to(sc, "port-ring.opacity", close + seconds(0.08), 0.0, 0.6);
+    s.halo_out(sc, ["port-ring", "port-ring-outer"], close, 0.6);
 
     scene.finish().context("stop-stage")
 }

@@ -16,7 +16,7 @@ use psychopomp::{
     narration::Narration,
     plan::{ScenePlan, SpringPlan, destination_channel},
     sfx,
-    stage::{Camera, DRAW_CURVE, StageActor, StageElement, StagePlan, StagePost},
+    stage::{Camera, StageActor, StageElement, StagePlan, StagePost},
     tone::Tone,
 };
 
@@ -224,7 +224,7 @@ fn shuffle(s: &mut StageActor, sc: &mut PlanBuilder, at: u64, into_schema_order:
     }
     SHUFFLE.play(
         sc,
-        &format!("shuffle-{}", if into_schema_order { "in" } else { "back" }),
+        format!("shuffle-{}", if into_schema_order { "in" } else { "back" }),
         at,
         -15.0,
     );
@@ -339,7 +339,7 @@ pub fn build(narration: &Narration) -> Result<(ScenePlan, ScenePlan, [f32; 4])> 
             0.5,
             0.0,
         );
-        sfx::SEND.play(sc, &format!("key-{index}"), at, -21.0);
+        sfx::SEND.play(sc, format!("key-{index}"), at, -21.0);
     }
 
     // Both probes rise from the bottom and match `*` first: silently allowed.
@@ -367,19 +367,12 @@ pub fn build(narration: &Narration) -> Result<(ScenePlan, ScenePlan, [f32; 4])> 
         } else {
             [8.0, 7.0, 9.0]
         };
-        for (step, seed) in seeds.into_iter().chain([0.0]).enumerate() {
-            s.set(
-                sc,
-                "rule-star.glitch",
-                contact + seconds(0.027 * step as f64),
-                seed,
-            );
-        }
+        s.glitch(sc, "rule-star", contact, seeds);
         s.jolt(sc, contact, [-1.0, 0.0], 0.18 + 0.12 * probe as f32);
         s.hit(sc, &format!("probe-{name}.alarm"), contact, 1.0, 0.5);
         s.hit(sc, "post.chroma", contact, 0.06, 0.0);
         s.type_in(sc, &format!("verdict-{name}-before"), contact, 40.0);
-        sfx::FAILURE.play(sc, &format!("miss-{name}"), contact, -13.0);
+        sfx::FAILURE.play(sc, format!("miss-{name}"), contact, -13.0);
     }
     let mut footer_before = footer(
         sc,
@@ -393,10 +386,7 @@ pub fn build(narration: &Narration) -> Result<(ScenePlan, ScenePlan, [f32; 4])> 
 
     // Rewind to before the probes rose.
     let switch = before.end() + seconds(0.3);
-    s.channel(sc, "post.rewind", -1.0);
-    s.set(sc, "post.rewind", switch, 0.0);
-    s.ease(sc, "post.rewind", switch, 1.4, 1.4, Ease::Linear);
-    s.hit(sc, "post.chroma", switch, 0.1, 0.0);
+    s.rewind(sc, switch, 0.1);
     REWIND.play(sc, "rewind", switch.saturating_sub(seconds(0.05)), -13.0);
     before_chip.hide(sc, switch);
     footer_before.hide(sc, switch);
@@ -438,22 +428,7 @@ pub fn build(narration: &Narration) -> Result<(ScenePlan, ScenePlan, [f32; 4])> 
         );
     }
     for wire in ["miss-shell", "miss-edit"] {
-        s.ease(
-            sc,
-            &format!("{wire}.draw"),
-            switch + seconds(0.1),
-            0.0,
-            0.5,
-            DRAW_CURVE,
-        );
-        s.ease(
-            sc,
-            &format!("{wire}.port"),
-            switch + seconds(0.5),
-            0.0,
-            0.3,
-            Ease::Smootherstep,
-        );
+        s.disconnect(sc, wire, switch + seconds(0.1), 0.5);
     }
     s.to(sc, "rule-star.alarm", switch + seconds(0.2), 0.0, 0.5);
 

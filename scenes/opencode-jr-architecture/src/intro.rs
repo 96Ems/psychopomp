@@ -4,11 +4,11 @@ use psychopomp::{
     author::{PlanBuilder, millis, stagger},
     plan::ScenePlan,
     sfx,
-    stage::{StageElement, StagePlan, StagePost, reply_after},
+    stage::{OrbEntrance, StageElement, StagePlan, StagePost, reply_after},
     tone::Tone,
 };
 
-use crate::{Film, arrive, begin, footer, orb_in, plug, seconds, send};
+use crate::{Film, arrive, begin, footer, plug, seconds, send};
 
 const ROWS: [f32; 3] = [330.0, 540.0, 750.0];
 
@@ -106,7 +106,7 @@ pub fn film(narration: &crate::Narration) -> Result<ScenePlan> {
         v.at("its own coding agent"),
         millis(140),
         |index, at| {
-            orb_in(s, sc, &format!("agent-{index}"), at);
+            s.orb_in(sc, &format!("agent-{index}"), at, OrbEntrance::HERO);
             plug(s, sc, &format!("own-{index}"), at + seconds(0.35))
         },
     );

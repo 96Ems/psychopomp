@@ -167,25 +167,6 @@ fn footer(sc: &mut PlanBuilder, id: &str, parts: &[(&str, Tone)], at: u64) -> Re
     Ok(caption)
 }
 
-/// The hero entrance for an orb: it gathers out of a blur while turning
-/// into place. Call before any other channel of the orb is written.
-fn orb_in(s: &mut StageActor, sc: &mut PlanBuilder, id: &str, at: u64) {
-    for (property, initial) in [("scale", 0.58), ("blur", 11.0), ("rotation", -1.8)] {
-        s.channel(sc, &format!("{id}.{property}"), initial);
-    }
-    s.bounce(sc, &format!("{id}.scale"), at, 1.0, 0.85, 0.2);
-    s.to(sc, &format!("{id}.blur"), at, 0.0, 0.7);
-    s.ease(
-        sc,
-        &format!("{id}.rotation"),
-        at,
-        0.0,
-        1.25,
-        psychopomp::math::easing::Ease::CubicOut,
-    );
-    s.fade_in(sc, id, at, 1.0, 0.6);
-}
-
 /// Fade a label in place.
 fn show(s: &mut StageActor, sc: &mut PlanBuilder, id: &str, at: u64) {
     s.fade_in(sc, id, at, 1.0, 0.4);
@@ -217,13 +198,13 @@ fn plug(s: &mut StageActor, sc: &mut PlanBuilder, wire: &str, at: u64) -> u64 {
         0.0,
         0.45,
     );
-    sfx::TICK.play(sc, &format!("plug-{wire}"), contact, -22.0);
+    sfx::TICK.play(sc, format!("plug-{wire}"), contact, -22.0);
     contact
 }
 
 /// Send `packet` with its quiet launch sound; returns its arrival time.
 fn send(s: &mut StageActor, sc: &mut PlanBuilder, packet: &str, at: u64, seconds: f32) -> u64 {
-    sfx::SEND.play(sc, &format!("send-{packet}"), at, -14.0);
+    sfx::SEND.play(sc, format!("send-{packet}"), at, -14.0);
     s.send(sc, packet, at, seconds)
 }
 

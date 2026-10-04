@@ -154,7 +154,7 @@ pub fn film(narration: &Narration) -> Result<(ScenePlan, [f32; 4])> {
     ];
     for (index, (id, at)) in checks.into_iter().enumerate() {
         s.type_in(sc, id, at, 48.0);
-        sfx::TICK.play(sc, &format!("check-{id}"), at, -24.0);
+        sfx::TICK.play(sc, format!("check-{id}"), at, -24.0);
         if index == 0 {
             s.to(sc, "camera.focus", at, 0.0, 0.8);
         }

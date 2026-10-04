@@ -4,16 +4,13 @@ use anyhow::{Context, Result};
 use psychopomp::{
     author::{PlanTime, millis, stagger},
     caption::CaptionAlign,
-    math::easing::Ease,
     plan::ScenePlan,
     sfx,
-    stage::{StageElement, StagePlan, StagePost},
+    stage::{OrbEntrance, StageElement, StagePlan, StagePost},
     tone::Tone,
 };
 
-use crate::{
-    Film, Narration, begin, chip, footer, header, orb_in, plug, seconds, send, show, status,
-};
+use crate::{Film, Narration, begin, chip, footer, header, plug, seconds, send, show, status};
 
 const SESSION: [f32; 3] = [960.0, 470.0, 0.0];
 const APPROVAL: [f32; 3] = [420.0, 300.0, 0.0];
@@ -122,7 +119,7 @@ pub fn film(narration: &Narration) -> Result<ScenePlan> {
     header(sc, "6", "around the core")?;
     chip(sc, "src/session/approval-lifecycle.ts")?;
 
-    orb_in(s, sc, "session", seconds(0.3));
+    s.orb_in(sc, "session", seconds(0.3), OrbEntrance::HERO);
     show(s, sc, "session-name", seconds(0.9));
     // The shared objects take their places, dim, until each one is named.
     let shared = [
@@ -195,16 +192,7 @@ pub fn film(narration: &Narration) -> Result<ScenePlan> {
     }
     s.to(sc, "camera.y", scheduler - seconds(0.3), 80.0, 1.6);
     s.to(sc, "scheduler.dim", scheduler - seconds(0.2), 0.0, 0.5);
-    s.fade_in(sc, "clock", scheduler + seconds(0.3), 1.0, 0.3);
-    s.channel(sc, "clock.sweep", 0.0);
-    s.ease(
-        sc,
-        "clock.sweep",
-        scheduler + seconds(0.3),
-        1.0,
-        1.0,
-        Ease::Smootherstep,
-    );
+    s.ring_timer(sc, "clock", scheduler + seconds(0.3), 1.0, 1.0);
     let fresh = v.at("new session");
     status(s, sc, "scheduler", fresh - seconds(0.6), 1);
     let contact = plug(s, sc, "sf", fresh - seconds(0.9));
@@ -215,7 +203,7 @@ pub fn film(narration: &Narration) -> Result<ScenePlan> {
         (fresh - seconds(0.1)).not_before(contact + seconds(0.2)),
         0.6,
     );
-    orb_in(s, sc, "fresh", fired - seconds(0.1));
+    s.orb_in(sc, "fresh", fired - seconds(0.1), OrbEntrance::HERO);
     s.hit(sc, "fresh.pulse", fired + seconds(0.3), 0.6, 0.0);
     s.type_in(sc, "fresh-name", fired + seconds(0.2), 44.0);
     sfx::BLOOM.play(sc, "fired", fired, -16.0);
