@@ -21,7 +21,7 @@ Lightweight crate (`crates/psychopomp/src`):
 - `crates/psychopomp/src/grid.rs`: finite keyed product catalogs and semantic Grid Snapshots
 - `crates/psychopomp/src/value.rs`: immutable Value Token recipe data for finite teaching diagrams
 - `crates/psychopomp/src/component_prototype.rs`: provisional Typeset, width-text, Collection, Connector, rich-text, header, and Venn payloads
-- `crates/psychopomp/src/author.rs`: typed Scene Plan builder and stable actor/channel handles for lightweight Scene Programs; `sample` and `destination` read a channel's authored value so helpers move from the pose written so far
+- `crates/psychopomp/src/author.rs`: typed Scene Plan builder, stable actor/channel handles, and timing vocabulary (`millis`, `stagger`, `spread`, `PlanTime::not_before`, named `SpringPlan` feels) for lightweight Scene Programs; `sample` and `destination` read a channel's authored value so helpers move from the pose written so far
 - `crates/psychopomp/src/plan.rs`: versioned renderer-independent Scene Plan, Deck, and Reel values and structured validation
 - `crates/psychopomp/src/plan/channels.rs`: exact scalar-event lowering and opt-in snapshot-destination reduction; raw event ordering remains distinct
 - `crates/psychopomp/src/plan/wipe.rs`: Reel wipe values (direction, mid-frame holds, labels) and the closed-form divider position
@@ -31,10 +31,12 @@ Lightweight crate (`crates/psychopomp/src`):
 - `crates/psychopomp/src/timeline/retarget.rs`: shared cancellation-safe numeric schedule for Playback and authored resting entrances
 - `crates/psychopomp/src/motion.rs`: deterministic arbitrary-time analytic spring sampling with position and velocity
 - `crates/psychopomp/src/transcript.rs`: word timing ingestion, word and phrase cue lookup
-- `crates/psychopomp/src/narration.rs`: `scripts/narrate.ts` manifests loaded as narration clips, placed as Script Clips, with panicking phrase lookups
+- `crates/psychopomp/src/narration.rs`: `scripts/narrate.ts` manifests loaded as narration clips, scheduled back to back (`Narration::reading`), placed whole or as split ranges (`place_range`, `split`) as Script Clips, with panicking phrase lookups
+- `crates/psychopomp/src/sfx.rs`: the `assets/` sound-effect catalog with exact lengths, placed whole as Layer Clips (`Sfx::play`)
 - `crates/psychopomp/src/tone.rs`: semantic Tone roles shared by explainer recipes
 - `crates/psychopomp/src/sequence.rs`: Sequence Diagram recipe values and row constructors, slot, header, and row-box geometry, validation, and the `SequenceActor` authoring handle
 - `crates/psychopomp/src/caption.rs`: Caption recipe values and the `CaptionActor` authoring handle (typing, show, hide)
+- `crates/psychopomp/src/chrome.rs`: an explainer film's fixed captions (header, chips, footer) at their shared positions
 - `crates/psychopomp/src/rolling.rs`: Rolling Number recipe values, value tokenization, the closed-form roll compiler, and the `RollingNumberActor` handle (`roll`, show, hide)
 - `crates/psychopomp/src/tree.rs`: Tree recipe values, JSONPath identity, the fold-driven pure layout, and the `TreeActor` handle (`open`, `close`, `highlight`, `set`, `scroll_to`, `reveal`, show, hide)
 - `crates/psychopomp/src/axis.rs`: `AxisPlan` (range, ticks, label, unit), `nice_ticks`, and tabular tick labels shared by Plot and Lanes
@@ -48,16 +50,14 @@ Lightweight crate (`crates/psychopomp/src`):
 - `crates/psychopomp/src/subtitles.rs`: Subtitles recipe values (from a placed narration clip), page chunking and line balancing, and the time-sampled page, word-ink, pill, and backing poses
 - `crates/psychopomp/src/confetti.rs`: Confetti recipe values and the `ConfettiActor` handle (`burst`)
 - `crates/psychopomp/src/video.rs`: Video Card recipe values (footage size, card rect, title), focus-window math, placement helper, and the `VideoActor` handle (`fly_in`, `focus`, `unfocus`, `hide`)
-- `crates/psychopomp/src/stage.rs`: Stage elements, strict channels, perspective camera, orb geometry, the packet clock (`stage::packet`), and the `StageActor` authoring handle (`to`, `ease`, `glide`, `bounce`, `settle_in`, `clock`/`clock_for`, `connect`, `send`, `hit`, `kick`, `jolt`, `twang`, `land`, and `camera` for the `CameraRig`)
-- `crates/psychopomp/src/stage/camera.rs`: the Stage `Camera` pose and projection (pan, dolly, orbit about a pivot, zoom, roll, billboard screen boxes, framing) shared by the renderer, callouts, and Scene Programs, and the `CameraRig` shots (`frame`, `move_to`, `establish`, `push_in`, `pull_back`, `drift`, `whip`, `orbit`, `dolly_zoom`, `roll`, `focus_on`, `aperture`, `follow`, `release`, `handheld`)
-- `crates/psychopomp/src/effects/`: GPU-free special-effect clocks and particle poses (combustion, lightning, dissolve, shield, surface, shake, spinner); shared dynamics stay in `psychopomp::math::dynamics`
-- `crates/psychopomp/src/stage.rs`: Stage elements, strict channels, perspective camera, orb geometry, form shapes and morphs (`form_points`, `morph_point`), the packet clock and relay legs (`stage::packet`), and the `StageActor` authoring handle (`to`, `ease`, `bounce`, `settle_in`, `clock`/`clock_for`, `connect`, `send`, `relay`, `morph`, `hit`, `kick`, `jolt`, `twang`, `land`)
+- `crates/psychopomp/src/stage.rs`: Stage elements and their builder constructors, strict channels and their one table of defaults (`StagePlan::channel_default`), orb geometry, form shapes and morphs (`form_points`, `morph_point`), the packet clock and relay legs (`stage::packet`), `reply_after`, and the `StageActor` authoring handle: primitives (`to`, `spring`, `ease`, `glide`, `bounce`, `set`, `fade_in`/`fade_out`, `clock`/`clock_for`), beats (`settle_in`, `connect`/`connect_contacting`/`disconnect`, `send`/`send_arriving`, `relay`, `morph`, `hit`, `kick`, `jolt`, `twang`, `land`, `orb_in`, `glitch`, `rewind`, `unburst`, `shock_kick`, `resolve_spinner`, `swap_status`, `swap_labels`, `dim`, `halo`, `ring_timer`), effect beats (`zap`, `charge`, `hum`, `dissolve`, `materialize`, `scan`, `raise`, `lower`), and `camera` for the `CameraRig`
+- `crates/psychopomp/src/stage/camera.rs`: the Stage `Camera` pose and projection (`project`, `project_rect`; pan, dolly, orbit about a pivot, zoom, roll, billboard screen boxes, framing) shared by the renderer, callouts, and Scene Programs, and the `CameraRig` shots (`frame`, `move_to`, `establish`, `push_in`, `pull_back`, `drift`, `whip`, `orbit`, `dolly_zoom`, `roll`, `focus_on`, `aperture`, `follow`, `release`, `handheld`)
+- `crates/psychopomp/src/effects/`: GPU-free special-effect clocks and particle poses (combustion, lightning, dissolve, shield, surface, shake, the status spinner, confetti); shared dynamics stay in `psychopomp::math::dynamics`
 - `crates/psychopomp/src/window.rs`: the text surfaces' shared Window channels (`opacity`, `x`, `y`, `scale`, `content`), title-bar height, `settle_in`/`dismiss`, and dot-free sub-channel IDs
 - `crates/psychopomp/src/terminal.rs`: Terminal recipe values, the reveal-driven pure layout with its scroll floor, deterministic `keystrokes`, and the `TerminalActor` handle (`type_command`, `prompt`, `idle`, `print`, `stream`, `spin`, `resolve`, `highlight`, `clear`, `scroll_to`)
 - `crates/psychopomp/src/chat.rs`: Chat Thread recipe values (Slack and bubbles styles), per-style geometry, the composer-anchored pure layout over renderer-measured `ChatMetrics`, typing-dot poses, and the `ChatActor` handle (`typing`, `say`, `stream`, `react`, `highlight`, `stamp`)
 - `crates/psychopomp/src/lower_third.rs`: Lower Third recipe values, bar and text geometry, and the `LowerThirdActor` handle (`show`, `hide`)
 - `crates/psychopomp/src/changed_files.rs`: Changed Files recipe values, GitHub's `diffstat`, fixed row slots, the totals schedule, and the `ChangedFilesActor` handle (`reveal`, `reveal_row`, `focus`, `unfocus`, `highlight`, `scroll_to`)
-- `crates/psychopomp/src/effects/`: GPU-free special-effect clocks and particle poses (combustion, the status spinner, confetti); shared dynamics stay in `psychopomp::math::dynamics`
 - `crates/psychopomp/src/anchor.rs`: the shared Anchor model: `Edge` (re-exported as `CalloutSide`), `AnchorPlan` (point, stage, editor, with offsets), the borrowed `AnchorTarget` every renderer path resolves, weight channel names, validation, `blend`, and `move_to`
 - `crates/psychopomp/src/text.rs`: typed `text` recipe values in the hand-built JSON shape and the `TextActor` handle (`show`, `hide`, `show_during`, `swap`, `move_to`)
 - `crates/psychopomp/src/image.rs`: Image recipe values (bare or framed, title, radius, anchors), the image placement helper, and the `ImageActor` handle (`fly_in`, `hide`, `move_to`)
@@ -729,9 +729,16 @@ plans using them are export-only. Confetti poses come from
 ### Stage
 
 `stage` is an exclusive root recipe. The lightweight crate (`stage.rs`) owns the
-element model, strict channel names, the perspective `Camera`, element outlines, and
+element model, strict channel names and their one table of defaults
+(`StageElement::channel_defaults`, `StagePost::channel_default`; `StageActor`
+declares new channels at them and the renderer falls back to them, so authoring
+and pixels agree), the perspective `Camera`, element outlines, and
 the deterministic orb geometry (Fibonacci points, shatter trajectories), so authoring
-helpers (`StageActor`: `to`, `ease`, `clock`, `hit`, `send`, `type_in`, and the effect beats `zap`, `charge`, `hum`, `dissolve`, `materialize`, `scan`, `raise`, `lower`) and tests need no GPU.
+helpers (`StageActor`: `to`, `ease`, `clock`, `hit`, `send`, `type_in`, the
+composed beats such as `orb_in` and `rewind`, and the effect beats `zap`, `charge`,
+`hum`, `dissolve`, `materialize`, `scan`, `raise`, `lower`) and tests need no GPU.
+Every renderer read of a Stage channel falls back to `StagePlan::channel_default`,
+the same value `StageActor` declares a new channel at.
 `render/stage.rs` is small pieces: `Scene` samples the camera, every element's
 placement, and every beam's path once per sample; `Painter` has one method per
 element kind; `StageFrame` owns primitive helpers and depth-sorted layers. A beam is

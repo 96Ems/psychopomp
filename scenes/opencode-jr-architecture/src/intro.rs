@@ -1,77 +1,68 @@
 //! Slack, three threads, and for each thread its own agent and sandbox.
 use anyhow::{Context, Result};
 use psychopomp::{
-    author::PlanBuilder, caption::CaptionAlign, plan::ScenePlan, stage::StagePlan, tone::Tone,
+    author::{PlanBuilder, millis, stagger},
+    plan::ScenePlan,
+    sfx,
+    stage::{OrbEntrance, StageElement, StagePlan, StagePost, reply_after},
+    tone::Tone,
 };
 
-use crate::{
-    BLOOM, Film, arrive, beam, begin, card, footer, label, orb, orb_in, packet, plug, post,
-    seconds, send, sound,
-};
+use crate::{Film, arrive, begin, footer, plug, seconds, send};
 
 const ROWS: [f32; 3] = [330.0, 540.0, 750.0];
 
 fn stage() -> StagePlan {
-    let mut elements = vec![card(
-        "slack",
-        [300.0, 540.0, 0.0],
-        [240.0, 110.0],
-        "slack",
-        &[("a workspace", Tone::Muted)],
-        Tone::Plain,
-    )];
+    let mut elements = vec![
+        StageElement::card("slack", [300.0, 540.0, 0.0], [240.0, 110.0], "slack")
+            .statuses(&[("a workspace", Tone::Muted)]),
+    ];
     for (index, y) in ROWS.into_iter().enumerate() {
         elements.extend([
-            card(
+            StageElement::card(
                 &format!("thread-{index}"),
                 [700.0, y, 0.0],
                 [250.0, 100.0],
                 "thread",
-                &[("@jr mentioned", Tone::Muted)],
-                Tone::Plain,
-            ),
-            orb(&format!("agent-{index}"), [1140.0, y, 0.0], 62.0, 420),
-            card(
+            )
+            .statuses(&[("@jr mentioned", Tone::Muted)]),
+            StageElement::orb(&format!("agent-{index}"), [1140.0, y, 0.0], 62.0)
+                .points(420)
+                .tone(Tone::Plain),
+            StageElement::card(
                 &format!("sandbox-{index}"),
                 [1580.0, y, 0.0],
                 [250.0, 100.0],
                 "sandbox",
-                &[("a real vm", Tone::Muted)],
-                Tone::Plain,
-            ),
-            beam(
-                &format!("in-{index}"),
-                "slack",
-                &format!("thread-{index}"),
-                Tone::Plain,
-            ),
-            beam(
+            )
+            .statuses(&[("a real vm", Tone::Muted)]),
+            StageElement::beam(&format!("in-{index}"), "slack", &format!("thread-{index}")),
+            StageElement::beam(
                 &format!("own-{index}"),
                 &format!("thread-{index}"),
                 &format!("agent-{index}"),
-                Tone::Plain,
             ),
-            beam(
+            StageElement::beam(
                 &format!("hands-{index}"),
                 &format!("agent-{index}"),
                 &format!("sandbox-{index}"),
-                Tone::Plain,
             ),
         ]);
     }
     elements.extend([
-        label(
+        StageElement::label(
             "agents-name",
             [1140.0, 870.0, 0.0],
             20.0,
-            CaptionAlign::Center,
             &[("one durable agent each", Tone::Muted)],
         ),
-        packet("mention", "in-1", false, "@jr", Tone::Request),
-        packet("wake", "own-1", false, "", Tone::Request),
+        StageElement::packet("mention", "in-1")
+            .labeled("@jr")
+            .tone(Tone::Request),
+        StageElement::packet("wake", "own-1").tone(Tone::Request),
     ]);
     StagePlan {
-        post: post(),
+        post: StagePost::RESTRAINED,
         elements,
     }
 }
@@ -84,7 +75,7 @@ pub fn film(narration: &crate::Narration) -> Result<ScenePlan> {
     } = begin(narration, "intro", 0.9, 2.2, &stage())?;
     let (s, sc) = (&mut actor, &mut scene);
     let title = psychopomp::caption::CaptionPlan::line(
-        [crate::LEFT, crate::HEADER_Y],
+        [psychopomp::chrome::LEFT, psychopomp::chrome::HEADER_Y],
         30.0,
         vec![
             crate::span("opencode jr", Tone::Accent),
@@ -100,23 +91,25 @@ pub fn film(narration: &crate::Narration) -> Result<ScenePlan> {
 
     s.settle_in(sc, "slack", seconds(0.45));
     // One thread per mention: each settles and plugs into slack.
-    let mention = v.at("mention it in");
-    for index in 0..3 {
+    stagger(0..3, v.at("mention it in"), millis(140), |index, at| {
         arrive(
             s,
             sc,
             &format!("thread-{index}"),
             &format!("in-{index}"),
-            mention + seconds(index as f64 * 0.14),
-        );
-    }
+            at,
+        )
+    });
     // Each thread gathers its own agent out of a blur.
-    let agent = v.at("its own coding agent");
-    for index in 0..3 {
-        let at = agent + seconds(index as f64 * 0.14);
-        orb_in(s, sc, &format!("agent-{index}"), at);
-        plug(s, sc, &format!("own-{index}"), at + seconds(0.35));
-    }
+    stagger(
+        0..3,
+        v.at("its own coding agent"),
+        millis(140),
+        |index, at| {
+            s.orb_in(sc, &format!("agent-{index}"), at, OrbEntrance::HERO);
+            plug(s, sc, &format!("own-{index}"), at + seconds(0.35))
+        },
+    );
     let durable = v.at("durable state");
     s.type_in(sc, "agents-name", durable, 40.0);
     let sandbox = v.at("sandboxed computer");
@@ -139,9 +132,9 @@ pub fn film(narration: &crate::Narration) -> Result<ScenePlan> {
     hide_others(s, sc, follow);
     let landed = send(s, sc, "mention", follow + seconds(0.3), 0.8);
     s.land(sc, "thread-1", landed);
-    let woke = send(s, sc, "wake", landed + seconds(0.42), 0.7);
+    let woke = send(s, sc, "wake", reply_after(landed), 0.7);
     s.hit(sc, "agent-1.pulse", woke, 0.75, 0.0);
-    sc.media(sound("wake", BLOOM, woke, -14.0));
+    sfx::BLOOM.play(sc, "wake", woke, -14.0);
     footer(
         sc,
         "footer",
@@ -156,9 +149,6 @@ pub fn film(narration: &crate::Narration) -> Result<ScenePlan> {
 
 /// The other rows step back so the followed message reads alone.
 fn hide_others(s: &mut psychopomp::stage::StageActor, sc: &mut PlanBuilder, at: u64) {
-    for index in [0, 2] {
-        for card in [format!("thread-{index}"), format!("sandbox-{index}")] {
-            s.to(sc, &format!("{card}.dim"), at, 0.55, 0.8);
-        }
-    }
+    let others = [0, 2].map(|index| [format!("thread-{index}"), format!("sandbox-{index}")]);
+    s.dim(sc, others.iter().flatten(), at, 0.55, 0.8);
 }

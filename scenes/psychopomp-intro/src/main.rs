@@ -6,18 +6,16 @@ use std::{fs, path::PathBuf};
 
 use anyhow::{Context, Result};
 use psychopomp::{
-    author::{PlanBuilder, seconds},
+    author::{PlanBuilder, seconds, spread},
     callout::{CalloutActor, CalloutAnchorPlan, CalloutPlan, CalloutSide},
     caption::{CaptionAlign, CaptionSpanPlan},
-    effects::{combustion, spinner::Mark},
-    math::{Vec3, easing::Ease},
+    effects::combustion,
+    math::easing::Ease,
     narration::Narration,
-    plan::{
-        MediaKindPlan, MediaPlan, MediaRolePlan, ReelPlan, ReelSegmentPlan, ReelTransitionStyle,
-        ScenePlan,
-    },
+    plan::{ReelPlan, ReelSegmentPlan, ReelTransitionStyle, ScenePlan},
     rolling::{RollingNumberActor, RollingNumberPlan},
-    stage::{StageActor, StageElement, StagePlan, StagePost, StatusText},
+    sfx,
+    stage::{OrbEntrance, StageActor, StageElement, StagePlan, StagePost},
     tone::Tone,
 };
 
@@ -67,222 +65,111 @@ fn span(text: &str, tone: Tone) -> CaptionSpanPlan {
     CaptionSpanPlan::new(text, tone)
 }
 
-fn label(
-    id: &str,
-    at: [f32; 3],
-    size: f32,
-    align: CaptionAlign,
-    parts: &[(&str, Tone)],
-) -> StageElement {
-    StageElement::Label {
-        id: id.into(),
-        at,
-        size,
-        align,
-        spans: parts.iter().map(|(text, tone)| span(text, *tone)).collect(),
-    }
-}
-
 fn client(id: &str, at: [f32; 3], title: &str) -> StageElement {
-    StageElement::Card {
-        id: id.into(),
-        at,
-        size: CARD,
-        title: title.into(),
-        status: vec![
-            StatusText {
-                text: "connected".into(),
-                tone: Tone::Muted,
-            },
-            StatusText {
-                text: "disconnected".into(),
-                tone: Tone::Error,
-            },
-        ],
-        tone: Tone::Request,
-        mark: Mark::Check,
-    }
-}
-
-fn beam(id: &str, from: &str) -> StageElement {
-    StageElement::Beam {
-        id: id.into(),
-        from: from.into(),
-        to: "orb".into(),
-        bend: 0.0,
-        tone: Tone::Request,
-    }
-}
-
-fn packet(id: &str, beam: &str, label: &str, tone: Tone) -> StageElement {
-    StageElement::Packet {
-        id: id.into(),
-        beam: beam.into(),
-        reverse: false,
-        label: label.into(),
-        tone,
-    }
-}
-
-fn ring(id: &str, radius: f32, tone: Tone) -> StageElement {
-    StageElement::Ring {
-        id: id.into(),
-        at: ORB,
-        radius,
-        thickness: 1.4,
-        tone,
-    }
+    StageElement::card(id, at, CARD, title)
+        .statuses(&[("connected", Tone::Muted), ("disconnected", Tone::Error)])
+        .tone(Tone::Request)
 }
 
 fn stage_plan() -> StagePlan {
     let mut elements = vec![
-        StageElement::Orb {
-            id: "orb".into(),
-            at: ORB,
-            radius: 140.0,
-            points: 900,
-            tone: Tone::Plain,
-        },
+        StageElement::orb("orb", ORB, 140.0)
+            .points(900)
+            .tone(Tone::Plain),
         client("terminal", TERMINAL, "terminal"),
         client("desktop", DESKTOP, "desktop app"),
-        beam("link-l", "terminal"),
-        beam("link-r", "desktop"),
-        label(
+        StageElement::beam("link-l", "terminal", "orb").tone(Tone::Request),
+        StageElement::beam("link-r", "desktop", "orb").tone(Tone::Request),
+        StageElement::label(
             "title",
             [960.0, 760.0, 0.0],
             112.0,
-            CaptionAlign::Center,
             &[("psychopomp", Tone::Accent)],
         ),
-        label(
+        StageElement::label(
             "subtitle",
             [960.0, 845.0, 0.0],
             30.0,
-            CaptionAlign::Center,
             &[("motion graphics in rust", Tone::Plain)],
         ),
-        label(
+        StageElement::label(
             "url",
             [960.0, 905.0, 0.0],
             28.0,
-            CaptionAlign::Center,
             &[
                 ("github.com/kitlangton/", Tone::Muted),
                 ("psychopomp", Tone::Plain),
             ],
         ),
-        label(
+        StageElement::label(
             "shout-frame",
             [960.0, 330.0, 160.0],
             150.0,
-            CaptionAlign::Center,
             &[("ANY FRAME!", Tone::Plain)],
         ),
-        label(
+        StageElement::label(
             "shout-order",
             [960.0, 690.0, 160.0],
             150.0,
-            CaptionAlign::Center,
             &[("ANY ORDER!", Tone::Accent)],
         ),
-        label(
+        StageElement::label(
             "diff-old",
             [690.0, 840.0, 0.0],
             30.0,
-            CaptionAlign::Left,
             &[("- ", Tone::Error), ("yield* server.kill()", Tone::Muted)],
-        ),
-        label(
+        )
+        .align(CaptionAlign::Left),
+        StageElement::label(
             "diff-new",
             [690.0, 888.0, 0.0],
             30.0,
-            CaptionAlign::Left,
             &[
                 ("+ ", Tone::Success),
                 ("yield* rewind(server)", Tone::Plain),
             ],
-        ),
-        ring("ripple-1", 150.0, Tone::Accent),
-        ring("ripple-2", 150.0, Tone::Plain),
-        ring("calm", 152.0, Tone::Success),
-        ring("calm-outer", 158.0, Tone::Success),
+        )
+        .align(CaptionAlign::Left),
+        StageElement::ring("ripple-1", ORB, 150.0)
+            .thickness(1.4)
+            .tone(Tone::Accent),
+        StageElement::ring("ripple-2", ORB, 150.0).thickness(1.4),
+        StageElement::ring("calm", ORB, 152.0)
+            .thickness(1.4)
+            .tone(Tone::Success),
+        StageElement::ring("calm-outer", ORB, 158.0)
+            .thickness(1.4)
+            .tone(Tone::Success),
     ];
     for (id, beam, text) in VOLLEY {
-        elements.push(packet(id, beam, text, Tone::Request));
+        elements.push(
+            StageElement::packet(id, beam)
+                .labeled(text)
+                .tone(Tone::Request),
+        );
     }
     elements.extend([
-        packet("whip-l", "link-l", "", Tone::Accent),
-        packet("whip-r", "link-r", "", Tone::Accent),
-        packet("flood-1", "link-l", "", Tone::Plain),
-        packet("flood-2", "link-r", "", Tone::Plain),
-        packet("flood-3", "link-l", "", Tone::Accent),
-        packet("flood-4", "link-r", "", Tone::Accent),
+        StageElement::packet("whip-l", "link-l").tone(Tone::Accent),
+        StageElement::packet("whip-r", "link-r").tone(Tone::Accent),
+        StageElement::packet("flood-1", "link-l"),
+        StageElement::packet("flood-2", "link-r"),
+        StageElement::packet("flood-3", "link-l").tone(Tone::Accent),
+        StageElement::packet("flood-4", "link-r").tone(Tone::Accent),
     ]);
     StagePlan {
-        post: StagePost {
-            bloom: 0.18,
-            grain: 0.012,
-            vignette: 0.22,
-            backdrop: 0.12,
-        },
+        post: StagePost::RESTRAINED,
         elements,
     }
 }
 
-/// Glitch layouts about a frame and a half apart, then still.
-fn glitch(s: &mut StageActor, sc: &mut PlanBuilder, card: &str, at: u64, seeds: [f32; 3]) {
-    let mut step = at;
-    for seed in seeds.into_iter().chain([0.0]) {
-        s.set(sc, &format!("{card}.glitch"), step, seed);
-        step += seconds(0.027);
-    }
-}
-
-struct Sfx(&'static str, f64);
-const TICK: Sfx = Sfx("visual-effects/task-running.wav", 0.13);
-const IMPACT: Sfx = Sfx("opencode-hot-reload/impact.wav", 0.51);
-const LAUNCH: Sfx = Sfx("opencode-hot-reload/launch.wav", 1.36);
-const DEATH: Sfx = Sfx("visual-effects/task-death.wav", 1.09);
-const GLITCH: Sfx = Sfx("pr-walkthrough/glitch.wav", 0.2);
-const CONFIRM: Sfx = Sfx("opencode-hot-reload/confirm.wav", 0.34);
-const BLOOM: Sfx = Sfx("effect-shows-errors/prismatic-bloom.wav", 0.785);
-const RISER: Sfx = Sfx("psychopomp-intro/riser.wav", 5.66);
-const BOOM: Sfx = Sfx("psychopomp-intro/boom.wav", 2.99);
-const WHOOSH: Sfx = Sfx("psychopomp-intro/whoosh.wav", 0.61);
-const SPARKLE: Sfx = Sfx("psychopomp-intro/sparkle.wav", 1.47);
-
-fn sound(sc: &mut PlanBuilder, id: &str, Sfx(file, length): Sfx, at: u64, gain_db: f32) {
-    let length = seconds(length);
-    sc.media(MediaPlan {
-        id: id.to_owned(),
-        path: PathBuf::from(format!("../../assets/{file}")),
-        kind: MediaKindPlan::Audio,
-        role: MediaRolePlan::Layer,
-        source_start_nanos: 0,
-        source_end_nanos: length,
-        timeline_start_nanos: at,
-        timeline_end_nanos: at + length,
-        gain_db,
-    });
-}
-
 fn film(narration: &Narration) -> Result<ScenePlan> {
-    let hush_clip = narration.clip("hush")?;
-    let toys_clip = narration.clip("toys")?;
-    let fever_clip = narration.clip("fever")?;
-    let lead = seconds(1.3);
     let gap = seconds(0.35);
-    let duration = lead
-        + hush_clip.duration()
-        + gap
-        + toys_clip.duration()
-        + gap
-        + fever_clip.duration()
-        + seconds(2.6);
-    let mut scene = PlanBuilder::new("psychopomp-intro", duration);
-    let hush = hush_clip.place(&mut scene, lead);
-    let toys = toys_clip.place(&mut scene, hush.end() + gap);
-    let fever = fever_clip.place(&mut scene, toys.end() + gap);
+    let reading = narration.reading(
+        seconds(1.3),
+        [("hush", gap), ("toys", gap), ("fever", seconds(2.6))],
+    )?;
+    let mut scene = PlanBuilder::new("psychopomp-intro", reading.duration());
+    let [hush, toys, fever] = reading.place(&mut scene);
     let h = |phrase: &str| hush.at(phrase);
     let t = |phrase: &str| toys.at(phrase);
     let f = |phrase: &str| fever.at(phrase);
@@ -290,12 +177,22 @@ fn film(narration: &Narration) -> Result<ScenePlan> {
     let s = &mut stage;
     let sc = &mut scene;
 
+    // The hush gathers the orb slower and from further away than the hero.
+    let entrance = OrbEntrance {
+        scale: 0.5,
+        scale_seconds: 1.1,
+        blur: 12.0,
+        blur_seconds: 0.9,
+        rotation: -2.0,
+        turn_seconds: 1.6,
+        fade_seconds: 0.8,
+    };
     for (property, initial) in [
         ("camera.z", -180.0),
         ("camera.dof", 0.45),
-        ("orb.scale", 0.5),
-        ("orb.blur", 12.0),
-        ("orb.rotation", -2.0),
+        ("orb.scale", entrance.scale),
+        ("orb.blur", entrance.blur),
+        ("orb.rotation", entrance.rotation),
         ("post.vignette", 0.22),
         ("post.exposure", 1.0),
         ("post.bloom", 0.18),
@@ -308,15 +205,12 @@ fn film(narration: &Narration) -> Result<ScenePlan> {
 
     // ── Hush: a soul wakes up in the dark ──
     s.to(sc, "camera.z", 0, 0.0, 2.6);
-    s.bounce(sc, "orb.scale", seconds(0.2), 1.0, 1.1, 0.2);
-    s.to(sc, "orb.blur", seconds(0.2), 0.0, 0.9);
-    s.ease(sc, "orb.rotation", seconds(0.2), 0.0, 1.6, Ease::CubicOut);
-    s.to(sc, "orb.opacity", seconds(0.2), 1.0, 0.8);
-    sound(sc, "wake", SPARKLE, seconds(0.25), -16.0);
+    s.orb_in(sc, "orb", seconds(0.2), entrance);
+    sfx::SPARKLE.play(sc, "wake", seconds(0.25), -16.0);
     s.hit(sc, "orb.pulse", h("hi"), 0.4, 0.0);
-    s.to(sc, "title.opacity", h("this is"), 1.0, 0.6);
+    s.fade_in(sc, "title", h("this is"), 1.0, 0.6);
     s.bounce(sc, "title.scale", h("this is"), 1.0, 1.0, 0.15);
-    sound(sc, "title", SPARKLE, h("this is"), -14.0);
+    sfx::SPARKLE.play(sc, "title", h("this is"), -14.0);
     s.type_in(sc, "subtitle", h("tiny"), 34.0);
 
     // "Every frame is a pure function of time": a clock that can be anywhere.
@@ -342,6 +236,7 @@ fn film(narration: &Narration) -> Result<ScenePlan> {
         ("shout-frame", h("any frame"), [1.0, 0.3], "31.40"),
         ("shout-order", h("any order"), [-1.0, -0.4], "0.07"),
     ] {
+        s.channel(sc, &format!("{shout}.opacity"), 0.0);
         s.set(sc, &format!("{shout}.opacity"), at, 1.0);
         s.bounce(sc, &format!("{shout}.scale"), at, 1.0, 0.3, 0.3);
         s.jolt(sc, at, direction, 1.0);
@@ -352,11 +247,10 @@ fn film(narration: &Narration) -> Result<ScenePlan> {
         s.ease(sc, "post.flash", at, 0.0, 0.3, Ease::CubicOut);
         s.hit(sc, "orb.pulse", at, 1.0, 0.0);
         clock.roll(sc, at, value)?;
-        sound(sc, &format!("{shout}-impact"), IMPACT, at, -6.0);
-        sound(
+        sfx::IMPACT.play(sc, format!("{shout}-impact"), at, -6.0);
+        sfx::WHOOSH.play(
             sc,
-            &format!("{shout}-whoosh"),
-            WHOOSH,
+            format!("{shout}-whoosh"),
             at.saturating_sub(seconds(0.12)),
             -12.0,
         );
@@ -387,7 +281,7 @@ fn film(narration: &Narration) -> Result<ScenePlan> {
         );
     }
     s.hit(sc, "orb.pulse", nice + seconds(0.1), 0.35, 0.0);
-    sound(sc, "nice", SPARKLE, nice, -15.0);
+    sfx::SPARKLE.play(sc, "nice", nice, -15.0);
 
     // ── Toys: cards, wires, packets ──
     let cards = t("cards");
@@ -398,24 +292,25 @@ fn film(narration: &Narration) -> Result<ScenePlan> {
     s.to(sc, "camera.z", cards, -60.0, 1.8);
     for (card, at) in [("terminal", t("settle")), ("desktop", t("softly"))] {
         s.settle_in(sc, card, at);
-        sound(sc, &format!("settle-{card}"), TICK, at, -18.0);
+        sfx::TICK.play(sc, format!("settle-{card}"), at, -18.0);
     }
     for (link, at) in [
         ("link-l", t("wires draw")),
         ("link-r", t("draw themselves")),
     ] {
         let contact = s.connect(sc, link, at, 0.7);
-        sound(sc, &format!("connect-{link}"), CONFIRM, contact, -18.0);
+        sfx::CONFIRM.play(sc, format!("connect-{link}"), contact, -18.0);
     }
 
     // AND PACKETS FLY DOWN THE WIRES!!
     let packets = t("packets");
     let wires = toys.at_after("wires", "packets");
-    let step = (wires.saturating_sub(packets)) / (VOLLEY.len() as u64 - 1);
     s.to(sc, "camera.quake", packets, 0.7, 0.25);
     s.to(sc, "camera.z", packets, 30.0, 0.6);
-    for (index, (id, beam, _)) in VOLLEY.iter().enumerate() {
-        let launch = packets + step * index as u64;
+    for ((id, beam, _), launch) in VOLLEY
+        .iter()
+        .zip(spread(VOLLEY.len() as u64, packets, wires))
+    {
         let arrival = s.send(sc, id, launch, 0.32);
         let card = if *beam == "link-l" {
             "terminal"
@@ -426,14 +321,13 @@ fn film(narration: &Narration) -> Result<ScenePlan> {
         s.land(sc, "orb", arrival);
         let push = if *beam == "link-l" { 1.0 } else { -1.0 };
         s.jolt(sc, arrival, [push, 0.2], 0.5);
-        sound(
+        sfx::WHOOSH.play(
             sc,
-            &format!("{id}-send"),
-            WHOOSH,
+            format!("{id}-send"),
             launch.saturating_sub(seconds(0.05)),
             -16.0,
         );
-        sound(sc, &format!("{id}-hit"), IMPACT, arrival, -15.0);
+        sfx::IMPACT.play(sc, format!("{id}-hit"), arrival, -15.0);
     }
     s.hit(sc, "post.zoom", wires, 0.12, 0.0);
 
@@ -444,9 +338,7 @@ fn film(narration: &Narration) -> Result<ScenePlan> {
     s.to(sc, "camera.focus", when, 0.0, 1.0);
     s.to(sc, "post.vignette", when, 0.62, 1.6);
     s.to(sc, "orb.hurt", t("misbehaves"), 0.7, 1.2);
-    for card in ["terminal", "desktop"] {
-        s.to(sc, &format!("{card}.dim"), when, 0.5, 1.0);
-    }
+    s.dim(sc, ["terminal", "desktop"], when, 0.5, 1.0);
 
     // YOU BLOW IT UP!!!
     let up = t("up");
@@ -464,33 +356,13 @@ fn film(narration: &Narration) -> Result<ScenePlan> {
     s.hit(sc, "post.bloom", up, 0.6, 0.18);
     s.to(sc, "post.vignette", up, 0.3, 0.6);
     s.to(sc, "camera.z", up, -90.0, 1.1);
-    sound(
-        sc,
-        "blow-boom",
-        BOOM,
-        up.saturating_sub(seconds(0.02)),
-        -7.0,
-    );
-    sound(sc, "blow-death", DEATH, up + seconds(0.04), -11.0);
-    for (index, (card, link, at)) in [
-        ("terminal", "link-l", TERMINAL),
-        ("desktop", "link-r", DESKTOP),
-    ]
-    .into_iter()
-    .enumerate()
+    sfx::BOOM.play(sc, "blow-boom", up.saturating_sub(seconds(0.02)), -7.0);
+    sfx::DEATH.play(sc, "blow-death", up + seconds(0.04), -11.0);
+    for (index, (card, link)) in [("terminal", "link-l"), ("desktop", "link-r")]
+        .into_iter()
+        .enumerate()
     {
-        let away = Vec3::from(at) - Vec3::from(ORB);
-        let push = away.truncate().normalize() * 14.0;
-        let passes = up
-            + seconds(f64::from(combustion::shock_arrival(
-                away.truncate().length(),
-            )));
-        s.kick(
-            sc,
-            [&format!("{card}.x"), &format!("{card}.y")],
-            passes,
-            push.into(),
-        );
+        let passes = s.shock_kick(sc, "orb", up, card, 14.0, None);
         s.to(
             sc,
             &format!("{link}.break"),
@@ -499,32 +371,16 @@ fn film(narration: &Narration) -> Result<ScenePlan> {
             0.8,
         );
         s.set(sc, &format!("{card}.damage"), passes, 1.0);
-        glitch(s, sc, card, passes, [7.0, 9.0, 8.0]);
+        s.glitch(sc, card, passes, [7.0, 9.0, 8.0]);
         s.to(sc, &format!("{card}.status"), passes, 1.0, 0.2);
-        sound(sc, &format!("glitch-{card}"), GLITCH, passes, -18.0);
+        sfx::GLITCH.play(sc, format!("glitch-{card}"), passes, -18.0);
     }
 
     // ...and then you rewind it. Like nothing happened.
     let rewind = t("rewind").saturating_sub(seconds(0.15));
-    s.clock_for(sc, "post.rewind", rewind, 1.4);
-    s.hit(sc, "post.chroma", rewind, 0.15, 0.0);
-    sound(
-        sc,
-        "rewind",
-        LAUNCH,
-        rewind.saturating_sub(seconds(0.1)),
-        -12.0,
-    );
-    s.ease(
-        sc,
-        "orb.burst",
-        rewind + seconds(0.1),
-        0.0,
-        1.3,
-        Ease::Smootherstep,
-    );
-    s.set(sc, "orb.burst", rewind + seconds(1.4), -1.0);
-    s.to(sc, "orb.hurt", rewind + seconds(0.6), 0.0, 0.6);
+    s.rewind(sc, rewind, 0.15);
+    sfx::LAUNCH.play(sc, "rewind", rewind.saturating_sub(seconds(0.1)), -12.0);
+    s.unburst(sc, "orb", rewind + seconds(0.1), 1.3);
     s.to(sc, "camera.z", rewind, -40.0, 1.8);
     s.to(sc, "post.vignette", rewind, 0.22, 1.0);
     for (index, (card, link)) in [("terminal", "link-l"), ("desktop", "link-r")]
@@ -533,25 +389,19 @@ fn film(narration: &Narration) -> Result<ScenePlan> {
     {
         let at = rewind + seconds(0.4 + index as f64 * 0.1);
         s.to(sc, &format!("{link}.break"), at, 0.0, 0.8);
-        glitch(s, sc, card, at + seconds(0.3), [8.0, 9.0, 7.0]);
+        s.glitch(sc, card, at + seconds(0.3), [8.0, 9.0, 7.0]);
         s.set(sc, &format!("{card}.damage"), at + seconds(0.38), 0.0);
         s.to(sc, &format!("{card}.status"), at + seconds(0.38), 0.0, 0.2);
         s.to(sc, &format!("{card}.dim"), at, 0.0, 0.6);
     }
     let nothing = t("nothing happened");
     s.hit(sc, "orb.pulse", nothing, 0.4, 0.0);
-    sound(sc, "nothing", SPARKLE, nothing, -15.0);
+    sfx::SPARKLE.play(sc, "nothing", nothing, -15.0);
 
     // ── Fever: every feature at once, and the floor starts shaking ──
     // The peak lands on the shouted "code", not on "just".
     let code = fever.at_after("code", "just");
-    sound(
-        sc,
-        "riser",
-        RISER,
-        code.saturating_sub(seconds(5.66)),
-        -11.0,
-    );
+    sfx::RISER.play(sc, "riser", code.saturating_sub(seconds(5.66)), -11.0);
     let rolling = f("rolling numbers");
     s.ease(sc, "camera.quake", rolling, 0.45, 2.4, Ease::Linear);
     s.ease(sc, "camera.quake", f("motion blur"), 1.0, 1.6, Ease::Linear);
@@ -637,13 +487,13 @@ fn film(narration: &Narration) -> Result<ScenePlan> {
     let callouts = f("callouts");
     soul.show(sc, callouts);
     pinned.show(sc, callouts + seconds(0.18));
-    sound(sc, "callouts", CONFIRM, callouts, -13.0);
+    sfx::CONFIRM.play(sc, "callouts", callouts, -13.0);
 
     // Code diffs!
     let diffs = f("code diffs");
     s.type_in(sc, "diff-old", diffs, 90.0);
     s.type_in(sc, "diff-new", diffs + seconds(0.22), 90.0);
-    sound(sc, "diffs", TICK, diffs, -12.0);
+    sfx::TICK.play(sc, "diffs", diffs, -12.0);
 
     // Motion blur! A whip pan while two packets tear down the wires.
     let blur = f("motion blur");
@@ -655,13 +505,7 @@ fn film(narration: &Narration) -> Result<ScenePlan> {
         s.land(sc, "orb", arrival);
     }
     s.hit(sc, "post.zoom", blur, 0.22, 0.0);
-    sound(
-        sc,
-        "blur-whoosh",
-        WHOOSH,
-        blur.saturating_sub(seconds(0.05)),
-        -9.0,
-    );
+    sfx::WHOOSH.play(sc, "blur-whoosh", blur.saturating_sub(seconds(0.05)), -9.0);
 
     // Bloom! Light floods out of the orb in two ripples.
     let bloom = f("bloom");
@@ -669,18 +513,19 @@ fn film(narration: &Narration) -> Result<ScenePlan> {
     s.hit(sc, "orb.pulse", bloom, 1.2, 0.0);
     for (ring, delay) in [("ripple-1", 0.0), ("ripple-2", 0.12)] {
         let at = bloom + seconds(delay);
+        s.channel(sc, &format!("{ring}.opacity"), 0.0);
         s.set(sc, &format!("{ring}.opacity"), at, 0.8);
         s.ease(sc, &format!("{ring}.expand"), at, 1.0, 0.9, Ease::CubicOut);
     }
-    sound(sc, "bloom", BLOOM, bloom, -8.0);
+    sfx::BLOOM.play(sc, "bloom", bloom, -8.0);
 
     // SCREEN SHAKE!!
     let shake = f("screen shake");
     s.jolt(sc, shake, [0.7, 1.0], 1.0);
     s.hit(sc, "post.chroma", shake, 0.35, 0.0);
-    sound(sc, "shake", IMPACT, shake, -5.0);
+    sfx::IMPACT.play(sc, "shake", shake, -5.0);
     for (card, seed) in [("terminal", 5.0), ("desktop", 6.0)] {
-        glitch(s, sc, card, shake, [seed, 9.0, 7.0]);
+        s.glitch(sc, card, shake, [seed, 9.0, 7.0]);
     }
 
     // IT'S ALL JUST CODE!!! Flood every wire, then white out.
@@ -714,16 +559,10 @@ fn film(narration: &Narration) -> Result<ScenePlan> {
     );
     s.hit(sc, "post.bloom", code, 1.2, 0.18);
     for (card, seed) in [("terminal", 9.0), ("desktop", 8.0)] {
-        glitch(s, sc, card, code, [seed, 7.0, 9.0]);
+        s.glitch(sc, card, code, [seed, 7.0, 9.0]);
     }
-    sound(
-        sc,
-        "code-boom",
-        BOOM,
-        code.saturating_sub(seconds(0.02)),
-        -6.0,
-    );
-    sound(sc, "code-impact", IMPACT, code, -10.0);
+    sfx::BOOM.play(sc, "code-boom", code.saturating_sub(seconds(0.02)), -6.0);
+    sfx::IMPACT.play(sc, "code-impact", code, -10.0);
 
     // Silence. The whiteout hides the cut; only the orb is left breathing.
     let cut = code + seconds(0.32);
@@ -748,13 +587,12 @@ fn film(narration: &Narration) -> Result<ScenePlan> {
     s.bounce(sc, "title.scale", name, 1.0, 0.9, 0.2);
     s.to(sc, "title.opacity", name, 1.0, 0.5);
     s.hit(sc, "orb.pulse", name, 0.5, 0.0);
-    sound(sc, "name", SPARKLE, name, -12.0);
+    sfx::SPARKLE.play(sc, "name", name, -12.0);
     s.type_in(sc, "url", f("give it"), 42.0);
     let knows = f("knows");
-    s.to(sc, "calm.opacity", knows, 0.35, 0.3);
-    s.to(sc, "calm-outer.opacity", knows + seconds(0.06), 0.5, 0.3);
+    s.halo(sc, [("calm", 0.35), ("calm-outer", 0.5)], knows, 0.3);
     s.hit(sc, "orb.pulse", knows, 0.7, 0.0);
-    sound(sc, "knows", BLOOM, knows, -14.0);
+    sfx::BLOOM.play(sc, "knows", knows, -14.0);
 
     scene.finish().context("psychopomp-intro")
 }

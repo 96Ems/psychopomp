@@ -1017,16 +1017,27 @@ pub(crate) fn stage_anchor(
     let scene = Scene::camera(plan, value, time as f32, size);
     // The authored roll turns each sample as it is exposed.
     let point = scene.camera.rolled(edge.on(scene.place(element)?.outline));
-    let roll = shake::rumble(time as f32, trauma(value)).roll;
+    let roll = shake::rumble(time as f32, trauma(plan, value)).roll;
     // Mirrors `composite` in stage_post.wgsl, which samples the inverse.
-    let zoom = 1.0 + value("camera.punch", 0.0).max(0.0) + roll.abs() * 0.6;
+    let zoom = 1.0 + read(plan, value, "camera.punch").max(0.0) + roll.abs() * 0.6;
     let center = size * 0.5;
     Some(center + Vec2::from_angle(roll).rotate(point - center) * zoom)
 }
 
 /// Camera trauma: a jolt's decaying `shake` plus a scene's sustained `quake`.
-fn trauma(value: &dyn Fn(&str, f32) -> f32) -> f32 {
-    value("camera.shake", 0.0).max(0.0) + value("camera.quake", 0.0).max(0.0)
+fn trauma(plan: &StagePlan, value: &dyn Fn(&str, f32) -> f32) -> f32 {
+    read(plan, value, "camera.shake").max(0.0) + read(plan, value, "camera.quake").max(0.0)
+}
+
+/// A Stage channel's value, or its default from the one Stage channel
+/// defaults table when nothing writes it, so authoring and pixels agree.
+fn read(plan: &StagePlan, value: &dyn Fn(&str, f32) -> f32, property: &str) -> f32 {
+    let default = plan.channel_default(property);
+    debug_assert!(
+        default.is_some(),
+        "the Stage reads '{property}' without a channel default"
+    );
+    value(property, default.unwrap_or(0.0))
 }
 
 /// Bloom, look, pressure wave, rewind, zoom-streak, and flash settings at one sample.
@@ -1038,14 +1049,14 @@ fn post_settings(
     time: f64,
 ) -> [[f32; 4]; 5] {
     let params = [
-        value("post.bloom", plan.post.bloom).max(0.0),
+        read(plan, value, "post.bloom").max(0.0),
         0.95,
         0.25,
-        value("post.exposure", 1.0).max(0.0),
+        read(plan, value, "post.exposure").max(0.0),
     ];
     let grade = [
-        value("post.chroma", 0.0).max(0.0),
-        value("post.vignette", plan.post.vignette).clamp(0.0, 1.0),
+        read(plan, value, "post.chroma").max(0.0),
+        read(plan, value, "post.vignette").clamp(0.0, 1.0),
         plan.post.grain,
         ((time * 60.0).floor() % 997.0) as f32,
     ];
@@ -1056,7 +1067,7 @@ fn post_settings(
             let (StageElement::Orb { id, .. } | StageElement::Form { id, .. }) = element else {
                 return None;
             };
-            let age = scene.v(id, "burst", -1.0);
+            let age = scene.v(id, "burst");
             let place = scene.placements.get(id.as_str())?;
             let center = scene.camera.rolled(place.center);
             (0.0..2.4)
@@ -1066,14 +1077,14 @@ fn post_settings(
         .unwrap_or([0.0, 0.0, -1.0, 0.0]);
     // Roll and the punch-in transform the whole developed frame.
     let rewind = [
-        value("post.rewind", -1.0),
+        read(plan, value, "post.rewind"),
         look.background.dot(Vec3::new(0.2126, 0.7152, 0.0722)),
-        shake::rumble(time as f32, trauma(value)).roll,
-        value("camera.punch", 0.0).max(0.0),
+        shake::rumble(time as f32, trauma(plan, value)).roll,
+        read(plan, value, "camera.punch").max(0.0),
     ];
     let motion = [
-        value("post.zoom", 0.0).clamp(0.0, 0.5),
-        value("post.flash", 0.0).clamp(0.0, 1.0),
+        read(plan, value, "post.zoom").clamp(0.0, 0.5),
+        read(plan, value, "post.flash").clamp(0.0, 1.0),
         0.0,
         0.0,
     ];
@@ -1357,18 +1368,18 @@ impl<'a> Scene<'a> {
     ) -> Self {
         // A held camera sways slowly; a jolt's spring-loaded shove and trauma
         // rumble add on top. All are sampled per shutter sample, so they blur.
-        let sway = shake::handheld(time, value("camera.handheld", 0.0));
+        let sway = shake::handheld(time, read(plan, value, "camera.handheld"));
         let authored = Camera {
             position: vec3(
-                value("camera.x", 0.0),
-                value("camera.y", 0.0),
-                value("camera.z", 0.0),
+                read(plan, value, "camera.x"),
+                read(plan, value, "camera.y"),
+                read(plan, value, "camera.z"),
             ),
-            yaw: value("camera.yaw", 0.0) + sway.yaw,
-            pitch: (value("camera.pitch", 0.0) + sway.pitch).clamp(-1.45, 1.45),
-            roll: value("camera.roll", 0.0),
-            zoom: value("camera.zoom", 1.0).max(0.05),
-            pivot: value("camera.pivot", 0.0),
+            yaw: read(plan, value, "camera.yaw") + sway.yaw,
+            pitch: (read(plan, value, "camera.pitch") + sway.pitch).clamp(-1.45, 1.45),
+            roll: read(plan, value, "camera.roll"),
+            zoom: read(plan, value, "camera.zoom").max(0.05),
+            pivot: read(plan, value, "camera.pivot"),
             size,
         };
         let mut scene = Self {
@@ -1376,8 +1387,8 @@ impl<'a> Scene<'a> {
             value,
             time,
             camera: authored,
-            focus: value("camera.focus", 0.0),
-            dof: value("camera.dof", 0.0).max(0.0),
+            focus: read(plan, value, "camera.focus"),
+            dof: read(plan, value, "camera.dof").max(0.0),
             placements: HashMap::new(),
             links: HashMap::new(),
             routes: HashMap::new(),
@@ -1385,10 +1396,10 @@ impl<'a> Scene<'a> {
             lights: Vec::new(),
         };
         let pan = scene.tracked();
-        let rumble = shake::rumble(time, trauma(value));
+        let rumble = shake::rumble(time, trauma(plan, value));
         scene.camera.position = vec3(
-            pan.x + value("camera.kick-x", 0.0) + rumble.offset.x,
-            pan.y + value("camera.kick-y", 0.0) + rumble.offset.y,
+            pan.x + read(plan, value, "camera.kick-x") + rumble.offset.x,
+            pan.y + read(plan, value, "camera.kick-y") + rumble.offset.y,
             authored.position.z,
         );
         if sway.offset != Vec2::ZERO {
@@ -1408,8 +1419,9 @@ impl<'a> Scene<'a> {
             .plan
             .elements
             .iter()
+            .filter(|element| element.followable())
             .filter_map(|element| {
-                let weight = (self.value)(&format!("{TRACK}{}", element.id()), 0.0);
+                let weight = read(self.plan, self.value, &format!("{TRACK}{}", element.id()));
                 (weight > 0.0).then_some((element, weight))
             })
             .collect::<Vec<_>>();
@@ -1460,8 +1472,7 @@ impl<'a> Scene<'a> {
                     return None;
                 };
                 let link = self.link(beam, from, to, *bend)?.toward(*reverse);
-                let travel =
-                    packet::travel(self.v(id, "age", -1.0), self.v(id, "flight", 0.8).max(0.05));
+                let travel = packet::travel(self.v(id, "age"), self.v(id, "flight").max(0.05));
                 let depth = lerp(link.depth[0], link.depth[1], travel);
                 Some(self.camera.unproject(link.path.at(travel), depth))
             }
@@ -1548,26 +1559,25 @@ impl<'a> Scene<'a> {
         scene
     }
 
-    fn v(&self, id: &str, property: &str, default: f32) -> f32 {
-        (self.value)(&format!("{id}.{property}"), default)
+    /// An element's channel, or its Stage channel default when nothing writes it.
+    fn v(&self, id: &str, property: &str) -> f32 {
+        read(self.plan, self.value, &format!("{id}.{property}"))
     }
 
     /// A channel clamped to 0..1: opacities, progress, and amounts.
-    fn unit(&self, id: &str, property: &str, default: f32) -> f32 {
-        self.v(id, property, default).clamp(0.0, 1.0)
+    fn unit(&self, id: &str, property: &str) -> f32 {
+        self.v(id, property).clamp(0.0, 1.0)
     }
 
     /// An orb's spin: ambient drift plus its authored `rotation` offset.
     fn orb_rotation(&self, id: &str) -> Quat {
         Quat::from_rotation_x(0.42)
-            * Quat::from_rotation_y(
-                self.time * 0.14 * self.v(id, "spin", 1.0) + self.v(id, "rotation", 0.0),
-            )
+            * Quat::from_rotation_y(self.time * 0.14 * self.v(id, "spin") + self.v(id, "rotation"))
     }
 
     /// An orb's world radius before any collapse.
     fn orb_radius(&self, id: &str, radius: f32) -> f32 {
-        radius * self.v(id, "scale", 1.0).max(0.01) * self.breath()
+        radius * self.v(id, "scale").max(0.01) * self.breath()
     }
 
     /// Depth-of-field blur, in pixels, of something at depth `z`.
@@ -1583,26 +1593,23 @@ impl<'a> Scene<'a> {
 
     fn place(&self, element: &StageElement) -> Option<Placement> {
         let id = element.id();
-        let offset = vec3(
-            self.v(id, "x", 0.0),
-            self.v(id, "y", 0.0),
-            self.v(id, "z", 0.0),
-        );
-        let world = Vec3::from(element.anchor()?) + offset;
+        let anchor = Vec3::from(element.anchor()?);
+        let offset = vec3(self.v(id, "x"), self.v(id, "y"), self.v(id, "z"));
+        let world = anchor + offset;
         let (center, perspective) = self.camera.project(world)?;
         let breath = match element {
             StageElement::Orb { .. } | StageElement::Form { .. } => self.breath(),
             _ => 1.0,
         };
-        let scale = perspective * self.v(id, "scale", 1.0).max(0.01) * breath;
+        let scale = perspective * self.v(id, "scale").max(0.01) * breath;
         let outline = match element {
             // A turned figure attaches to its turned corners.
             StageElement::Shape {
                 shape: shape @ (Figure::Rect(_) | Figure::Polygon(_)),
                 ..
-            } if self.v(id, "rotation", 0.0) != 0.0 => Shape::Polygon(Polygon::hull(
+            } if self.v(id, "rotation") != 0.0 => Shape::Polygon(Polygon::hull(
                 center,
-                figure_outline(shape, 0.0, self.v(id, "rotation", 0.0))
+                figure_outline(shape, 0.0, self.v(id, "rotation"))
                     .into_iter()
                     .map(|point| center + point * scale),
             )),
@@ -1621,7 +1628,7 @@ impl<'a> Scene<'a> {
     fn shield_place(&self, element: &StageElement, around: &str) -> Option<Placement> {
         let host = self.placements.get(around)?;
         let (_, perspective) = self.camera.project(host.world)?;
-        let scale = perspective * self.v(element.id(), "scale", 1.0).max(0.01);
+        let scale = perspective * self.v(element.id(), "scale").max(0.01);
         Some(Placement {
             world: host.world,
             depth: host.depth,
@@ -1664,14 +1671,14 @@ impl<'a> Scene<'a> {
     /// A bolt's discharge seed: its latest zap's `seed`, mixed with its ID so
     /// bolts zapped at the same moment still differ.
     fn bolt_seed(&self, id: &str) -> u32 {
-        (self.v(id, "seed", 0.0).max(0.0).round() as u32) ^ salt(id)
+        (self.v(id, "seed").max(0.0).round() as u32) ^ salt(id)
     }
 
     /// A form's points this sample: morphed between its shapes, turned by
     /// its tilt, spin, pitch, and roll, and scaled; and the silhouette.
     fn form(&self, id: &str, geometry: &FormGeometry, place: Placement) -> SampledForm {
         let last = geometry.shapes.len() - 1;
-        let morph = self.v(id, "morph", 0.0).clamp(0.0, last as f32);
+        let morph = self.v(id, "morph").clamp(0.0, last as f32);
         let from = (morph.floor() as usize).min(last.saturating_sub(1));
         let radius = if last == 0 {
             geometry.radii[0]
@@ -1683,12 +1690,10 @@ impl<'a> Scene<'a> {
             )
         };
         let turn = Quat::from_rotation_x(geometry.tilt)
-            * Quat::from_rotation_y(
-                self.time * 0.14 * self.v(id, "spin", 1.0) + self.v(id, "rotation", 0.0),
-            )
-            * Quat::from_rotation_x(self.v(id, "pitch", 0.0))
-            * Quat::from_rotation_z(self.v(id, "roll", 0.0));
-        let grow = self.v(id, "scale", 1.0).max(0.01) * self.breath();
+            * Quat::from_rotation_y(self.time * 0.14 * self.v(id, "spin") + self.v(id, "rotation"))
+            * Quat::from_rotation_x(self.v(id, "pitch"))
+            * Quat::from_rotation_z(self.v(id, "roll"));
+        let grow = self.v(id, "scale").max(0.01) * self.breath();
         let dots = geometry
             .seeds
             .iter()
@@ -1717,7 +1722,7 @@ impl<'a> Scene<'a> {
         } else {
             -1.0
         };
-        let bend = bend + 10.0 * downward * self.v(id, "twang", 0.0);
+        let bend = bend + 10.0 * downward * self.v(id, "twang");
         let curve = connect(
             self.submerged(from, a.outline),
             self.submerged(to, b.outline),
@@ -1976,8 +1981,8 @@ impl Scene<'_> {
                 let path = self.links.get(beam.as_str())?.toward(*reverse).path;
                 let fraction = circle.entry_fraction(&path)?;
                 let since = packet::since_crossing(
-                    self.v(packet_id, "age", -1.0),
-                    self.v(packet_id, "flight", 0.8).max(0.05),
+                    self.v(packet_id, "age"),
+                    self.v(packet_id, "flight").max(0.05),
                     fraction,
                 )?;
                 if since >= 1.4 {
@@ -1988,12 +1993,7 @@ impl Scene<'_> {
                 let direction = self
                     .camera
                     .world_dir(vec3(normal.x, normal.y, -0.34).normalize());
-                Some((
-                    direction,
-                    since,
-                    *tone,
-                    self.unit(packet_id, "opacity", 1.0),
-                ))
+                Some((direction, since, *tone, self.unit(packet_id, "opacity")))
             })
             .chain(
                 self.strikes_on(id)
@@ -2027,7 +2027,7 @@ impl Scene<'_> {
             else {
                 continue;
             };
-            let age = self.v(id, "age", -1.0);
+            let age = self.v(id, "age");
             if end != target || age < 0.0 {
                 continue;
             }
@@ -2035,7 +2035,7 @@ impl Scene<'_> {
                 continue;
             };
             let discharge = Discharge::new(*count, self.bolt_seed(id));
-            let opacity = self.unit(id, "opacity", 1.0);
+            let opacity = self.unit(id, "opacity");
             for k in 0..discharge.strikes {
                 let since = age - discharge.strike_time(k);
                 if (0.0..shield::RIPPLE).contains(&since) {
@@ -2095,8 +2095,8 @@ impl Scene<'_> {
                 continue;
             };
             let since = packet::since_crossing(
-                self.v(packet, "age", -1.0),
-                self.v(packet, "flight", 0.8).max(0.05),
+                self.v(packet, "age"),
+                self.v(packet, "flight").max(0.05),
                 fraction,
             );
             if let Some(age) = since.filter(|age| *age < shield::RIPPLE) {
@@ -2105,7 +2105,7 @@ impl Scene<'_> {
                     point,
                     direction: toward(point),
                     age,
-                    strength: 0.55 * self.unit(packet, "opacity", 1.0),
+                    strength: 0.55 * self.unit(packet, "opacity"),
                 });
             }
         }
@@ -2116,7 +2116,7 @@ impl Scene<'_> {
 
     /// A charged outline lights its own rim where its brightest arcs crawl.
     fn charge_lights(&self, id: &str, tone: Tone, lights: &mut Vec<Light>) {
-        let charge = self.v(id, "charge", 0.0);
+        let charge = self.v(id, "charge");
         if charge <= 0.0 {
             return;
         }
@@ -2126,7 +2126,7 @@ impl Scene<'_> {
         let Some(perimeter) = Perimeter::of(place.outline, place.scale) else {
             return;
         };
-        let opacity = self.unit(id, "opacity", 1.0);
+        let opacity = self.unit(id, "opacity");
         let mut creeps = lightning::crackle(self.time, charge, salt(id));
         creeps.sort_by(|a, b| b.energy.total_cmp(&a.energy));
         for creep in creeps.iter().take(3) {
@@ -2149,7 +2149,7 @@ impl Scene<'_> {
                 id, radius, tone, ..
             } => {
                 self.charge_lights(id, *tone, lights);
-                let age = self.v(id, "burst", -1.0);
+                let age = self.v(id, "burst");
                 let burst = Burst::sample(age);
                 if burst.rim_strength == 0.0 {
                     return;
@@ -2157,7 +2157,7 @@ impl Scene<'_> {
                 let Some(place) = self.placements.get(id.as_str()) else {
                     return;
                 };
-                let strength = burst.rim_strength * self.unit(id, "opacity", 1.0);
+                let strength = burst.rim_strength * self.unit(id, "opacity");
                 lights.push(Light {
                     at: place.center,
                     tone: Tone::Accent,
@@ -2171,12 +2171,12 @@ impl Scene<'_> {
                 let Some(link) = self.links.get(id.as_str()) else {
                     return;
                 };
-                let opacity = self.unit(id, "opacity", 1.0);
-                let draw = self.unit(id, "draw", 1.0);
+                let opacity = self.unit(id, "opacity");
+                let draw = self.unit(id, "draw");
                 // A plain draw-on emits no travelling bead or arrival light.
                 // An explicitly authored surge may still light the receiver.
                 let strength = if draw >= 0.999 {
-                    self.unit(id, "surge", 0.0) * 0.5
+                    self.unit(id, "surge") * 0.5
                 } else {
                     0.0
                 };
@@ -2192,7 +2192,7 @@ impl Scene<'_> {
                 }
             }
             StageElement::Form { id, .. } => {
-                let age = self.v(id, "burst", -1.0);
+                let age = self.v(id, "burst");
                 let burst = Burst::sample(age);
                 if burst.rim_strength == 0.0 {
                     return;
@@ -2206,7 +2206,7 @@ impl Scene<'_> {
                 lights.push(Light {
                     at: place.center,
                     tone: Tone::Accent,
-                    strength: burst.rim_strength * self.unit(id, "opacity", 1.0),
+                    strength: burst.rim_strength * self.unit(id, "opacity"),
                     radius: form.radius * 4.4,
                     pool: false,
                     scale: place.scale,
@@ -2234,11 +2234,11 @@ impl Scene<'_> {
                 let Some(ends) = self.bolt_ends(from, to) else {
                     return;
                 };
-                let opacity = self.unit(id, "opacity", 1.0);
+                let opacity = self.unit(id, "opacity");
                 let seed = self.bolt_seed(id);
                 let discharge = Discharge::new(*strikes, seed);
-                let age = self.v(id, "age", -1.0);
-                let hum = lightning::hum(self.time, self.v(id, "hum", 0.0), seed)
+                let age = self.v(id, "age");
+                let hum = lightning::hum(self.time, self.v(id, "hum"), seed)
                     .map_or(0.0, |(_, energy)| 0.6 * energy);
                 let mut cast = |at: Vec2, strength: f32, radius: f32, pool: bool, scale: f32| {
                     if strength * opacity > 0.01 {
@@ -2294,7 +2294,7 @@ impl Scene<'_> {
                 let Some(place) = self.placements.get(id.as_str()) else {
                     return;
                 };
-                let opacity = self.unit(id, "opacity", 1.0);
+                let opacity = self.unit(id, "opacity");
                 for contact in self.shield_contacts(id, *place) {
                     let strength = 0.9 * shield::flare(contact.age) * contact.strength * opacity;
                     if strength > 0.01 {
@@ -2317,8 +2317,8 @@ impl Scene<'_> {
     /// with its own clock and flight time. A beam is one leg on the packet's
     /// clock; a path's legs start one after another (`packet::leg_start`).
     fn packet_legs(&self, id: &str, wire: &str, reverse: bool) -> Vec<(Link, f32, f32)> {
-        let age = self.v(id, "age", -1.0);
-        let flight = self.v(id, "flight", 0.8).max(0.05);
+        let age = self.v(id, "age");
+        let flight = self.v(id, "flight").max(0.05);
         if let Some(link) = self.links.get(wire) {
             return vec![(link.toward(reverse), age, flight)];
         }
@@ -2358,7 +2358,7 @@ impl Scene<'_> {
         if !(0.0..packet::LIFETIME).contains(&age) {
             return;
         }
-        let opacity = self.unit(id, "opacity", 1.0);
+        let opacity = self.unit(id, "opacity");
         let mut cast = |fraction: f32, strength: f32, radius: f32, pool: bool| {
             if strength * opacity > 0.01 {
                 lights.push(Light {
@@ -2593,13 +2593,13 @@ impl<'a> Painter<'a> {
         place: Placement,
     ) {
         let (scene, look) = (self.scene, self.look);
-        let opacity = scene.unit(id, "opacity", 1.0);
+        let opacity = scene.unit(id, "opacity");
         let scale = place.scale;
         let half = size * 0.5 * scale;
-        let blur = scene.blur_at(place.depth) + scene.v(id, "blur", 0.0).max(0.0) * scale;
+        let blur = scene.blur_at(place.depth) + scene.v(id, "blur").max(0.0) * scale;
         let red = look.tone(Tone::Error);
         // The afterimage: the slot a deleted card leaves, drawn beneath it.
-        let ghost = scene.unit(id, "ghost", 0.0);
+        let ghost = scene.unit(id, "ghost");
         if ghost > 0.001 {
             for (inset, strength) in [(0.0, 0.55), (3.0 * scale, 0.33)] {
                 self.frame.rounded_rect(
@@ -2619,12 +2619,12 @@ impl<'a> Painter<'a> {
             return;
         }
         let first = self.frame.prims.len();
-        let glow = scene.v(id, "glow", 0.0).clamp(0.0, 1.5);
-        let flash = scene.v(id, "flash", 0.0).clamp(0.0, 1.5);
-        let alarm = scene.v(id, "alarm", 0.0).clamp(0.0, 1.5);
-        let dim = scene.unit(id, "dim", 0.0);
+        let glow = scene.v(id, "glow").clamp(0.0, 1.5);
+        let flash = scene.v(id, "flash").clamp(0.0, 1.5);
+        let alarm = scene.v(id, "alarm").clamp(0.0, 1.5);
+        let dim = scene.unit(id, "dim");
         // Deletion: inks cool toward the frame gray, then snap to red at once.
-        let content = scene.unit(id, "content", 1.0);
+        let content = scene.unit(id, "content");
         let pen = CardInk {
             center: place.center + vec2(0.0, 7.0 * (1.0 - content) * scale),
             scale,
@@ -2632,8 +2632,8 @@ impl<'a> Painter<'a> {
             opacity,
             blur: blur + 1.5 * (1.0 - content) * scale,
             edge_blur: blur,
-            cool: scene.unit(id, "cool", 0.0),
-            damage: scene.unit(id, "damage", 0.0),
+            cool: scene.unit(id, "cool"),
+            damage: scene.unit(id, "damage"),
             gray: look.raised.lerp(look.muted, 0.22),
             red,
         };
@@ -2718,7 +2718,7 @@ impl<'a> Painter<'a> {
         place: Placement,
         opacity: f32,
     ) {
-        let age = self.scene.v(id, "dissolve", -1.0);
+        let age = self.scene.v(id, "dissolve");
         if age <= 0.0 {
             return;
         }
@@ -2760,7 +2760,7 @@ impl<'a> Painter<'a> {
         opacity: f32,
         blur: f32,
     ) {
-        let charge = self.scene.v(id, "charge", 0.0);
+        let charge = self.scene.v(id, "charge");
         if charge <= 0.0 || opacity <= 0.001 {
             return;
         }
@@ -2822,7 +2822,7 @@ impl<'a> Painter<'a> {
         opacity: f32,
         blur: f32,
     ) {
-        let scan = self.scene.v(id, "scan", 0.0);
+        let scan = self.scene.v(id, "scan");
         if scan <= 0.0 || scan >= 1.0 || opacity <= 0.001 {
             return;
         }
@@ -2847,12 +2847,19 @@ impl<'a> Painter<'a> {
     /// channel, led by the card's spinner while it waits.
     fn card_status(&mut self, id: &str, status: &[StatusText], mark: Mark, pen: &CardInk) {
         let (scene, look, scale) = (self.scene, self.look, pen.scale);
-        let index = scene
-            .v(id, "status", 0.0)
-            .clamp(0.0, (status.len() - 1) as f32);
-        let low = index.floor() as usize;
-        let high = (low + 1).min(status.len() - 1);
-        let entries = [(low, 1.0 - index.fract()), (high, index.fract())];
+        let last = (status.len() - 1) as f32;
+        let index = scene.v(id, "status").clamp(0.0, last);
+        // A swap cross-fades straight from `status-from` to `status`; otherwise
+        // the fractional `status` cross-fades between neighbouring entries.
+        let from = scene.v(id, "status-from");
+        let (low, high, fraction) = if from >= 0.0 {
+            let entry = |value: f32| value.round().clamp(0.0, last) as usize;
+            (entry(from), entry(index), scene.unit(id, "swap"))
+        } else {
+            let low = index.floor() as usize;
+            (low, (low + 1).min(status.len() - 1), index.fract())
+        };
+        let entries = [(low, 1.0 - fraction), (high, fraction)];
         let tone_of = |entry: usize| match status[entry].tone {
             Tone::Plain => look.muted,
             tone => look.tone(tone),
@@ -2868,9 +2875,9 @@ impl<'a> Painter<'a> {
         });
         // A status spinner leads the line; the pair stays centered.
         let spinner = spinner::sample(
-            scene.v(id, "spinner", -1.0),
-            scene.v(id, "release", -1.0),
-            scene.v(id, "mark", -1.0),
+            scene.v(id, "spinner"),
+            scene.v(id, "release"),
+            scene.v(id, "mark"),
             mark,
         );
         let unit = 18.0 / 16.0 * scale;
@@ -2900,8 +2907,8 @@ impl<'a> Painter<'a> {
         }
         // While the motor waits, a sheen sweeps the status: the blog's
         // ShimmerText, phased by the same clock so it never resets.
-        let shimmer = if scene.v(id, "mark", -1.0) < 0.0 {
-            [scene.v(id, "spinner", -1.0) / 1.6, spinner.opacity]
+        let shimmer = if scene.v(id, "mark") < 0.0 {
+            [scene.v(id, "spinner") / 1.6, spinner.opacity]
         } else {
             [0.0; 2]
         };
@@ -2934,7 +2941,7 @@ impl<'a> Painter<'a> {
     /// A few frames of horizontal band displacement, one layout per integer
     /// `glitch` seed; zero is off. Seeds step, then hold still: no noise loop.
     fn glitch(&mut self, first: usize, id: &str, place: Placement, half: Vec2) {
-        let seed = self.scene.v(id, "glitch", 0.0).round();
+        let seed = self.scene.v(id, "glitch").round();
         if seed < 1.0 {
             return;
         }
@@ -2971,7 +2978,7 @@ impl<'a> Painter<'a> {
     /// Deletion by a red hairline drawn left to right across the card, then
     /// the halves part 3 px in total and fade. `cut` runs 0..1.
     fn cut(&mut self, first: usize, id: &str, place: Placement, half: Vec2, pen: &CardInk) {
-        let cut = self.scene.unit(id, "cut", 0.0);
+        let cut = self.scene.unit(id, "cut");
         if cut <= 0.0 {
             return;
         }
@@ -3011,18 +3018,18 @@ impl<'a> Painter<'a> {
     }
 
     fn orb(&mut self, order: usize, id: &str, radius: f32, tone: Tone, place: Placement) {
-        let age = self.scene.v(id, "burst", -1.0);
+        let age = self.scene.v(id, "burst");
         self.orb_shell(order, id, radius, tone, place, age);
         if age >= combustion::COLLAPSE {
-            let opacity = self.scene.unit(id, "opacity", 1.0);
+            let opacity = self.scene.unit(id, "opacity");
             if opacity > 0.001 {
                 self.burst(order, id, radius, place, age, opacity);
             }
         }
-        if age < 0.0 && self.scene.v(id, "charge", 0.0) > 0.0 {
+        if age < 0.0 && self.scene.v(id, "charge") > 0.0 {
             let scene = self.scene;
-            let blur = scene.blur_at(place.depth) + scene.v(id, "blur", 0.0).max(0.0) * place.scale;
-            let opacity = scene.unit(id, "opacity", 1.0);
+            let blur = scene.blur_at(place.depth) + scene.v(id, "blur").max(0.0) * place.scale;
+            let opacity = scene.unit(id, "opacity");
             self.crackle(id, place.outline, tone, place.scale, opacity, blur);
             self.frame.close(place.depth - 0.1, order);
         }
@@ -3043,13 +3050,13 @@ impl<'a> Painter<'a> {
         tone: Tone,
     ) {
         let scene = self.scene;
-        let opacity = scene.unit(id, "opacity", 1.0);
+        let opacity = scene.unit(id, "opacity");
         if opacity <= 0.001 {
             return;
         }
         let seed = scene.bolt_seed(id);
         let discharge = Discharge::new(strikes, seed);
-        let age = scene.v(id, "age", -1.0);
+        let age = scene.v(id, "age");
         let own = self.look.tone(tone);
         let white = Vec3::ONE.lerp(own, 0.1);
         let scale = ends.scale();
@@ -3168,7 +3175,7 @@ impl<'a> Painter<'a> {
                 }
             }
         }
-        if let Some((roll, energy)) = lightning::hum(scene.time, scene.v(id, "hum", 0.0), seed) {
+        if let Some((roll, energy)) = lightning::hum(scene.time, scene.v(id, "hum"), seed) {
             let energy = energy * opacity;
             let bolt = lightning::bolt(a, b, roll, branching * 0.4);
             let arc = Plasma {
@@ -3235,8 +3242,8 @@ impl<'a> Painter<'a> {
     /// crosses or strikes it.
     fn shield(&mut self, order: usize, id: &str, tone: Tone, place: Placement) {
         let scene = self.scene;
-        let opacity = scene.unit(id, "opacity", 1.0);
-        let up = scene.unit(id, "up", 1.0);
+        let opacity = scene.unit(id, "opacity");
+        let up = scene.unit(id, "up");
         let contacts = scene.shield_contacts(id, place);
         let Shape::Circle(circle) = place.outline else {
             return;
@@ -3277,7 +3284,7 @@ impl<'a> Painter<'a> {
         let (scene, look) = (self.scene, self.look);
         let bursting = age >= 0.0;
         let burst = Burst::sample(age);
-        let opacity = scene.unit(id, "opacity", 1.0) * burst.shell_opacity;
+        let opacity = scene.unit(id, "opacity") * burst.shell_opacity;
         if opacity <= 0.001 {
             return;
         }
@@ -3286,14 +3293,14 @@ impl<'a> Painter<'a> {
         let shatter = if bursting {
             0.0
         } else {
-            scene.unit(id, "shatter", 0.0)
+            scene.unit(id, "shatter")
         };
-        let pulse = scene.v(id, "pulse", 0.0);
-        let hurt = scene.unit(id, "hurt", 0.0);
+        let pulse = scene.v(id, "pulse");
+        let hurt = scene.unit(id, "hurt");
         let world_radius = scene.orb_radius(id, radius) * collapse;
         let own = look.tone(tone);
         let red = look.tone(Tone::Error);
-        let blur = scene.blur_at(place.depth) + scene.v(id, "blur", 0.0).max(0.0) * place.scale;
+        let blur = scene.blur_at(place.depth) + scene.v(id, "blur").max(0.0) * place.scale;
         // A dark, softly feathered body occludes connections behind the shell.
         self.frame.circle(
             place.center,
@@ -3457,23 +3464,23 @@ impl<'a> Painter<'a> {
         let Some(form) = scene.forms.get(id) else {
             return;
         };
-        let age = scene.v(id, "burst", -1.0);
+        let age = scene.v(id, "burst");
         let burst = Burst::sample(age);
-        let opacity = scene.unit(id, "opacity", 1.0) * burst.shell_opacity;
+        let opacity = scene.unit(id, "opacity") * burst.shell_opacity;
         if opacity > 0.001 {
             let look = self.look;
             let collapse = burst.shell_scale;
             let shatter = if age >= 0.0 {
                 0.0
             } else {
-                scene.unit(id, "shatter", 0.0)
+                scene.unit(id, "shatter")
             };
-            let pulse = scene.v(id, "pulse", 0.0);
-            let hurt = scene.unit(id, "hurt", 0.0);
+            let pulse = scene.v(id, "pulse");
+            let hurt = scene.unit(id, "hurt");
             let own = look.tone(tone);
             let red = look.tone(Tone::Error);
             let scale = place.scale * collapse;
-            let blur = scene.blur_at(place.depth) + scene.v(id, "blur", 0.0).max(0.0) * scale;
+            let blur = scene.blur_at(place.depth) + scene.v(id, "blur").max(0.0) * scale;
             self.frame.polygon(
                 form.hull.scaled(collapse).vertices(),
                 0.0,
@@ -3524,7 +3531,7 @@ impl<'a> Painter<'a> {
             );
             self.frame.close(place.depth, order);
         }
-        let opacity = scene.unit(id, "opacity", 1.0);
+        let opacity = scene.unit(id, "opacity");
         if age >= combustion::COLLAPSE && opacity > 0.001 && age < combustion::DURATION {
             let radius_px = form.radius * place.scale;
             let points = form
@@ -3641,15 +3648,15 @@ impl<'a> Painter<'a> {
 
     fn beam(&mut self, order: usize, id: &str, tone: Tone, link: &Link) {
         let (scene, look) = (self.scene, self.look);
-        let opacity = scene.unit(id, "opacity", 1.0);
+        let opacity = scene.unit(id, "opacity");
         if opacity <= 0.001 {
             return;
         }
-        let draw = scene.unit(id, "draw", 1.0);
-        let broken = scene.unit(id, "break", 0.0);
-        let flow = scene.v(id, "flow", 0.0).clamp(0.0, 1.5);
-        let emphasis = scene.unit(id, "emphasis", 0.0);
-        let surge = scene.v(id, "surge", 0.0).clamp(0.0, 1.5);
+        let draw = scene.unit(id, "draw");
+        let broken = scene.unit(id, "break");
+        let flow = scene.v(id, "flow").clamp(0.0, 1.5);
+        let emphasis = scene.unit(id, "emphasis");
+        let surge = scene.v(id, "surge").clamp(0.0, 1.5);
         let own = look.tone(tone);
         let scale = link.scale_at(0.5);
         let blur = scene.blur_at(link.far());
@@ -3691,7 +3698,7 @@ impl<'a> Painter<'a> {
         self.frame.close(link.far() + 1.0, order);
         // Before drawing, light runs once around the source card's frame, from
         // its port back to it.
-        let sweep = scene.v(id, "sweep", 0.0);
+        let sweep = scene.v(id, "sweep");
         if sweep > 0.001
             && sweep < 0.999
             && let Some(frame) = link.source
@@ -3718,7 +3725,7 @@ impl<'a> Painter<'a> {
         let source = if draw > 0.001 {
             1.0
         } else {
-            scene.unit(id, "port", 0.0)
+            scene.unit(id, "port")
         };
         for end in [0, 1] {
             let shown = if end == 0 {
@@ -3751,7 +3758,7 @@ impl<'a> Painter<'a> {
     /// oriented the way it travels.
     fn packet(&mut self, order: usize, id: &str, tone: Tone, age: f32, flight: f32, link: &Link) {
         let scene = self.scene;
-        let opacity = scene.unit(id, "opacity", 1.0);
+        let opacity = scene.unit(id, "opacity");
         if !(0.0..packet::LIFETIME).contains(&age) || opacity <= 0.001 {
             return;
         }
@@ -3898,11 +3905,11 @@ impl<'a> Painter<'a> {
         place: Placement,
     ) {
         let (scene, look) = (self.scene, self.look);
-        let opacity = scene.unit(id, "opacity", 1.0);
+        let opacity = scene.unit(id, "opacity");
         if opacity <= 0.001 {
             return;
         }
-        let typed = scene.unit(id, "typed", 1.0);
+        let typed = scene.unit(id, "typed");
         let blur = scene.blur_at(place.depth);
         let parts = spans
             .iter()
@@ -3958,8 +3965,8 @@ impl<'a> Painter<'a> {
     /// `size` is the radius and thickness.
     fn ring(&mut self, order: usize, id: &str, size: [f32; 2], tone: Tone, place: Placement) {
         let scene = self.scene;
-        let opacity = scene.unit(id, "opacity", 1.0);
-        let expand = scene.unit(id, "expand", 0.0);
+        let opacity = scene.unit(id, "opacity");
+        let expand = scene.unit(id, "expand");
         let alpha = opacity * (1.0 - expand);
         if alpha <= 0.001 {
             return;
@@ -3971,7 +3978,7 @@ impl<'a> Painter<'a> {
                 size[0] * (1.0 + 1.3 * expand) * place.scale,
                 size[1] * place.scale,
             ],
-            scene.unit(id, "sweep", 1.0),
+            scene.unit(id, "sweep"),
             scene.blur_at(place.depth),
             Paint {
                 stroke: rgba(own, alpha),
@@ -4014,16 +4021,16 @@ impl Painter<'_> {
     /// flash lifts the stroke, never the whole fill.
     fn shape(&mut self, order: usize, id: &str, style: FigureStyle, place: Placement) {
         let (scene, look) = (self.scene, self.look);
-        let opacity = scene.unit(id, "opacity", 1.0);
+        let opacity = scene.unit(id, "opacity");
         if opacity <= 0.001 {
             return;
         }
         let scale = place.scale;
-        let blur = scene.blur_at(place.depth) + scene.v(id, "blur", 0.0).max(0.0) * scale;
-        let draw = scene.unit(id, "draw", 1.0);
-        let emphasis = scene.unit(id, "emphasis", 0.0);
-        let flash = scene.v(id, "flash", 0.0).clamp(0.0, 1.5);
-        let outline = figure_outline(style.figure, style.corner, scene.v(id, "rotation", 0.0))
+        let blur = scene.blur_at(place.depth) + scene.v(id, "blur").max(0.0) * scale;
+        let draw = scene.unit(id, "draw");
+        let emphasis = scene.unit(id, "emphasis");
+        let flash = scene.v(id, "flash").clamp(0.0, 1.5);
+        let outline = figure_outline(style.figure, style.corner, scene.v(id, "rotation"))
             .into_iter()
             .map(|point| place.center + point * scale)
             .collect::<Vec<_>>();
@@ -4047,7 +4054,7 @@ impl Painter<'_> {
                 Fill::Material(Material::Surface) => look.surface,
                 Fill::Material(Material::Background) => look.background,
             };
-            let amount = scene.unit(id, "fill", 1.0) * style.fill_opacity * opacity;
+            let amount = scene.unit(id, "fill") * style.fill_opacity * opacity;
             self.frame.polygon(
                 &outline,
                 0.0,
@@ -4157,15 +4164,15 @@ impl Painter<'_> {
         legs: &[Link],
     ) {
         let (scene, look) = (self.scene, self.look);
-        let opacity = scene.unit(id, "opacity", 1.0);
+        let opacity = scene.unit(id, "opacity");
         if opacity <= 0.001 || legs.is_empty() {
             return;
         }
-        let draw = scene.unit(id, "draw", 1.0);
-        let trim = scene.unit(id, "trim", 0.0);
-        let flow = scene.v(id, "flow", 0.0).clamp(0.0, 1.5);
-        let emphasis = scene.unit(id, "emphasis", 0.0);
-        let surge = scene.v(id, "surge", 0.0).clamp(0.0, 1.5);
+        let draw = scene.unit(id, "draw");
+        let trim = scene.unit(id, "trim");
+        let flow = scene.v(id, "flow").clamp(0.0, 1.5);
+        let emphasis = scene.unit(id, "emphasis");
+        let surge = scene.v(id, "surge").clamp(0.0, 1.5);
         let own = look.tone(tone);
         // Matte like a beam; emphasis and surge bring up its tone.
         let color = (look.muted * 0.7)
@@ -4245,7 +4252,7 @@ impl Painter<'_> {
     /// square through the camera. A flash lifts its ink toward white.
     fn icon(&mut self, order: usize, id: &str, size: f32, tone: Tone, place: Placement) {
         let (scene, look) = (self.scene, self.look);
-        let opacity = scene.unit(id, "opacity", 1.0);
+        let opacity = scene.unit(id, "opacity");
         let key = text_key(id, "icon");
         let Some(rect) = self.frame.texts.get(&key).map(|text| text.rect) else {
             return;
@@ -4253,8 +4260,8 @@ impl Painter<'_> {
         if opacity <= 0.001 {
             return;
         }
-        let flash = scene.v(id, "flash", 0.0).clamp(0.0, 1.5);
-        let blur = scene.blur_at(place.depth) + scene.v(id, "blur", 0.0).max(0.0) * place.scale;
+        let flash = scene.v(id, "flash").clamp(0.0, 1.5);
+        let blur = scene.blur_at(place.depth) + scene.v(id, "blur").max(0.0) * place.scale;
         let own = match tone {
             Tone::Plain => look.text,
             tone => look.tone(tone),

@@ -3,12 +3,16 @@
 //! snapshotted, shut down, and restored on demand.
 use anyhow::{Context, Result};
 use psychopomp::{
-    caption::CaptionAlign, math::easing::Ease, plan::ScenePlan, stage::StagePlan, tone::Tone,
+    author::PlanTime,
+    math::easing::Ease,
+    plan::ScenePlan,
+    sfx,
+    stage::{OrbEntrance, StageElement, StagePlan, StagePost, reply_after},
+    tone::Tone,
 };
 
 use crate::{
-    Film, MARK, Narration, RESET, SUCCESS, arrive, beam, begin, card, chip, footer, header, hide,
-    label, orb, orb_in, packet, plug, post, ring, seconds, send, show, sound, status,
+    Film, Narration, arrive, begin, chip, footer, header, hide, plug, seconds, send, show, status,
 };
 
 const SESSION: [f32; 3] = [330.0, 580.0, 0.0];
@@ -18,106 +22,92 @@ const TEMPLATE: [f32; 3] = [1430.0, 270.0, 0.0];
 
 fn stage() -> StagePlan {
     StagePlan {
-        post: post(),
+        post: StagePost::RESTRAINED,
         elements: vec![
-            orb("session", SESSION, 80.0, 500),
-            label(
+            StageElement::orb("session", SESSION, 80.0)
+                .points(500)
+                .tone(Tone::Plain),
+            StageElement::label(
                 "session-name",
                 [SESSION[0], 690.0, 0.0],
                 21.0,
-                CaptionAlign::Center,
                 &[("SessionDO", Tone::Plain)],
             ),
-            label(
+            StageElement::label(
                 "no-wait",
                 [SESSION[0], 440.0, 0.0],
                 19.0,
-                CaptionAlign::Center,
                 &[
                     ("text-only reply", Tone::Plain),
                     (" → no wait", Tone::Muted),
                 ],
             ),
-            card(
-                "workspace",
-                WORKSPACE,
-                [300.0, 110.0],
-                "WorkspaceDO",
-                &[
-                    ("no sandbox yet", Tone::Muted),
-                    ("attached", Tone::Plain),
-                    ("snapshot saved", Tone::Plain),
-                    ("restoring", Tone::Plain),
-                    ("attached", Tone::Success),
-                ],
-                Tone::Plain,
-            ),
-            card(
-                "sandbox",
-                SANDBOX,
-                [400.0, 150.0],
-                "modal sandbox",
-                &[
-                    ("vm · daemon", Tone::Muted),
-                    ("running a command", Tone::Plain),
-                    ("repo mounted", Tone::Success),
-                    ("snapshotted", Tone::Plain),
-                    ("shut down", Tone::Muted),
-                    ("restored from snapshot", Tone::Success),
-                ],
-                Tone::Plain,
-            ),
-            card(
-                "template",
-                TEMPLATE,
-                [340.0, 100.0],
-                "template registry",
+            StageElement::card("workspace", WORKSPACE, [300.0, 110.0], "WorkspaceDO").statuses(&[
+                ("no sandbox yet", Tone::Muted),
+                ("attached", Tone::Plain),
+                ("snapshot saved", Tone::Plain),
+                ("restoring", Tone::Plain),
+                ("attached", Tone::Success),
+            ]),
+            StageElement::card("sandbox", SANDBOX, [400.0, 150.0], "modal sandbox").statuses(&[
+                ("vm · daemon", Tone::Muted),
+                ("running a command", Tone::Plain),
+                ("repo mounted", Tone::Success),
+                ("snapshotted", Tone::Plain),
+                ("shut down", Tone::Muted),
+                ("restored from snapshot", Tone::Success),
+            ]),
+            StageElement::card("template", TEMPLATE, [340.0, 100.0], "template registry").statuses(
                 &[
                     ("opencode repo checkout", Tone::Muted),
                     ("refreshing", Tone::Plain),
                     ("dependencies installed", Tone::Success),
                 ],
-                Tone::Plain,
             ),
-            ring(
-                "hourly",
-                [TEMPLATE[0] - 225.0, TEMPLATE[1], 0.0],
-                18.0,
-                2.0,
-                Tone::Plain,
-            ),
-            label(
+            StageElement::ring("hourly", [TEMPLATE[0] - 225.0, TEMPLATE[1], 0.0], 18.0)
+                .thickness(2.0),
+            StageElement::label(
                 "hourly-name",
                 [TEMPLATE[0] - 225.0, TEMPLATE[1] + 42.0, 0.0],
                 18.0,
-                CaptionAlign::Center,
                 &[("hourly", Tone::Muted)],
             ),
-            ring("idle", SANDBOX, 236.0, 2.0, Tone::Warning),
-            label(
+            StageElement::ring("idle", SANDBOX, 236.0)
+                .thickness(2.0)
+                .tone(Tone::Warning),
+            StageElement::label(
                 "idle-name",
                 [SANDBOX[0], 850.0, 0.0],
                 20.0,
-                CaptionAlign::Center,
                 &[("20 idle minutes", Tone::Warning)],
             ),
-            label(
+            StageElement::label(
                 "daemon",
                 [SANDBOX[0], 690.0, 0.0],
                 19.0,
-                CaptionAlign::Center,
                 &[("process + file server", Tone::Muted)],
             ),
-            beam("ws", "session", "workspace", Tone::Plain),
-            beam("sb", "workspace", "sandbox", Tone::Plain),
-            beam("tp", "template", "sandbox", Tone::Plain),
-            packet("cmd", "ws", false, "shell · file edit", Tone::Request),
-            packet("cmd-2", "sb", false, "", Tone::Request),
-            packet("out-2", "sb", true, "", Tone::Success),
-            packet("out", "ws", true, "output", Tone::Success),
-            packet("mount", "tp", false, "mount", Tone::Success),
-            packet("snapshot", "sb", true, "snapshot", Tone::Plain),
-            packet("restore", "sb", false, "restore", Tone::Plain),
+            StageElement::beam("ws", "session", "workspace"),
+            StageElement::beam("sb", "workspace", "sandbox"),
+            StageElement::beam("tp", "template", "sandbox"),
+            StageElement::packet("cmd", "ws")
+                .labeled("shell · file edit")
+                .tone(Tone::Request),
+            StageElement::packet("cmd-2", "sb").tone(Tone::Request),
+            StageElement::packet("out-2", "sb")
+                .reversed()
+                .tone(Tone::Success),
+            StageElement::packet("out", "ws")
+                .reversed()
+                .labeled("output")
+                .tone(Tone::Success),
+            StageElement::packet("mount", "tp")
+                .labeled("mount")
+                .tone(Tone::Success),
+            StageElement::packet("snapshot", "sb")
+                .reversed()
+                .labeled("snapshot"),
+            StageElement::packet("restore", "sb").labeled("restore"),
         ],
     }
 }
@@ -135,7 +125,7 @@ pub fn film(narration: &Narration) -> Result<ScenePlan> {
     for wire in ["sb", "tp"] {
         s.channel(sc, &format!("{wire}.opacity"), 1.0);
     }
-    orb_in(s, sc, "session", seconds(0.3));
+    s.orb_in(sc, "session", seconds(0.3), OrbEntrance::HERO);
     show(s, sc, "session-name", seconds(0.9));
     let object = v.at("workspace object");
     arrive(s, sc, "workspace", "ws", object - seconds(0.2));
@@ -150,14 +140,14 @@ pub fn film(narration: &Narration) -> Result<ScenePlan> {
     s.to(sc, "camera.x", shell, 40.0, 1.6);
     let at_workspace = send(s, sc, "cmd", shell, 0.75);
     s.land(sc, "workspace", at_workspace);
-    let at_sandbox = send(s, sc, "cmd-2", at_workspace + seconds(0.42), 0.7);
+    let at_sandbox = send(s, sc, "cmd-2", reply_after(at_workspace), 0.7);
     s.land(sc, "sandbox", at_sandbox);
     status(s, sc, "sandbox", at_sandbox, 1);
     s.clock(sc, "sandbox.spinner", at_sandbox);
     let back = send(s, sc, "out-2", at_sandbox + seconds(0.9), 0.7);
     s.set(sc, "sandbox.spinner", back, -1.0);
     status(s, sc, "sandbox", back, 0);
-    let returned = send(s, sc, "out", back + seconds(0.42), 0.75);
+    let returned = send(s, sc, "out", reply_after(back), 0.75);
     s.hit(sc, "session.pulse", returned, 0.6, 0.0);
     s.type_in(sc, "no-wait", v.at("dont wait"), 40.0);
 
@@ -166,27 +156,26 @@ pub fn film(narration: &Narration) -> Result<ScenePlan> {
     s.to(sc, "camera.x", hour - seconds(0.2), 90.0, 1.6);
     s.to(sc, "camera.y", hour - seconds(0.2), -60.0, 1.6);
     s.settle_in(sc, "template", hour - seconds(0.3));
-    s.to(sc, "hourly.opacity", hour, 1.0, 0.3);
-    s.ease(sc, "hourly.sweep", hour, 1.0, 1.2, Ease::Smootherstep);
+    s.ring_timer(sc, "hourly", hour, 1.2, 1.0);
     show(s, sc, "hourly-name", hour + seconds(0.2));
     status(s, sc, "template", hour + seconds(0.2), 1);
     s.clock(sc, "template.spinner", hour + seconds(0.2));
     let refreshed = hour + seconds(1.4);
     s.set(sc, "template.spinner", refreshed, -1.0);
     status(s, sc, "template", refreshed, 2);
-    sc.media(sound("refreshed", MARK, refreshed, -18.0));
+    sfx::MARK.play(sc, "refreshed", refreshed, -18.0);
     let mount = v.at("not a download");
     let contact = plug(s, sc, "tp", mount - seconds(1.3));
     let mounted = send(
         s,
         sc,
         "mount",
-        (mount - seconds(0.2)).max(contact + seconds(0.3)),
+        (mount - seconds(0.2)).not_before(contact + seconds(0.3)),
         0.7,
     );
     s.land(sc, "sandbox", mounted);
     status(s, sc, "sandbox", mounted, 2);
-    sc.media(sound("mounted", SUCCESS, mounted, -14.0));
+    sfx::SUCCESS.play(sc, "mounted", mounted, -14.0);
     let mut mount_footer = footer(
         sc,
         "footer-mount",
@@ -204,7 +193,8 @@ pub fn film(narration: &Narration) -> Result<ScenePlan> {
     s.to(sc, "camera.y", idle - seconds(0.6), 30.0, 1.6);
     s.to(sc, "tp.opacity", idle - seconds(0.6), 0.25, 0.6);
     s.to(sc, "template.dim", idle - seconds(0.6), 0.6, 0.8);
-    s.to(sc, "idle.opacity", idle - seconds(0.5), 0.7, 0.3);
+    s.fade_in(sc, "idle", idle - seconds(0.5), 0.7, 0.3);
+    s.channel(sc, "idle.sweep", 0.0);
     s.ease(
         sc,
         "idle.sweep",
@@ -214,7 +204,7 @@ pub fn film(narration: &Narration) -> Result<ScenePlan> {
         Ease::Smootherstep,
     );
     s.type_in(sc, "idle-name", idle - seconds(0.3), 40.0);
-    let snapshotted = v.at("snapshotted").max(idle + seconds(1.0));
+    let snapshotted = v.at("snapshotted").not_before(idle + seconds(1.0));
     hide(s, sc, "idle", snapshotted);
     hide(s, sc, "idle-name", snapshotted + seconds(0.2));
     status(s, sc, "sandbox", snapshotted, 3);
@@ -227,10 +217,10 @@ pub fn film(narration: &Narration) -> Result<ScenePlan> {
     s.to(sc, "sandbox.dim", down, 0.7, 0.6);
     s.to(sc, "sb.flow", down, 0.0, 0.3);
     s.to(sc, "sb.opacity", down, 0.3, 0.6);
-    sc.media(sound("down", RESET, down, -16.0));
+    sfx::RESET.play(sc, "down", down, -16.0);
 
     // Restored from that snapshot when it is needed again.
-    let restored = v.at("restored").max(down + seconds(0.8));
+    let restored = v.at("restored").not_before(down + seconds(0.8));
     status(s, sc, "workspace", restored - seconds(0.4), 3);
     let reached = send(s, sc, "restore", restored - seconds(0.2), 0.7);
     s.to(sc, "sb.opacity", restored - seconds(0.4), 1.0, 0.4);
@@ -239,7 +229,7 @@ pub fn film(narration: &Narration) -> Result<ScenePlan> {
     s.twang(sc, "sb", reached);
     status(s, sc, "sandbox", reached, 5);
     status(s, sc, "workspace", reached, 4);
-    sc.media(sound("restored", SUCCESS, reached, -13.0));
+    sfx::SUCCESS.play(sc, "restored", reached, -13.0);
     footer(
         sc,
         "footer-restore",

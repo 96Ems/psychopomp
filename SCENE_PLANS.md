@@ -16,7 +16,7 @@ machinery:
 | You are explaining | Start from | Library pieces |
 | --- | --- | --- |
 | A pull request: broken behavior, the fix, the diff | `scenes/config-migration` (smallest) or `scenes/pr-walkthrough` | `psychopomp_pr_walkthrough::film`, `narration`, `editor::diff`, `sequence` rows |
-| A system, as a 3D film of cards, orbs, and packets | `scenes/opencode-jr-architecture`, `scenes/pr-walkthrough/src/flagship.rs` | `stage::StageActor` (`settle_in`, `send`, `hit`, `jolt`), `caption` |
+| A system, as a 3D film of cards, orbs, and packets | `scenes/opencode-jr-architecture`, `scenes/pr-walkthrough/src/flagship.rs` | `stage::StageActor` (`settle_in`, `send`, `hit`, `jolt`, `orb_in`, `rewind`), `StageElement` constructors, `sfx`, `chrome` |
 | Lightning, charge, a forcefield, a burn-away, a scan | `scenes/effects-showroom` | `stage::StageActor` (`zap`, `charge`, `hum`, `raise`, `dissolve`, `materialize`, `scan`) |
 | A diagram of shapes, icons, arrows, and particle forms | `scenes/stage-forms` | `stage` `form`/`shape`/`path`/`icon`, `StageActor` (`connect`, `relay`, `morph`) |
 | Code changing step by step, presented live | `scenes/effect-succeed-slides`, `scenes/interactive-showcase` | `editor` recipes, `PresentationStepPlan` |
@@ -38,10 +38,14 @@ machinery:
 | A single titled idea | `scenes/agent-demo` | `PlanBuilder` channels and cues |
 
 1. Write the narration script and voice it with `bun scripts/narrate.ts` (`--draft`
-   for a local voice). Place clips with `Narration::load(dir)?.clip(id)?.place(..)`
-   and time everything from `spoken.at("phrase")`, so re-voicing re-times the film.
+   for a local voice). Schedule the clips with `Narration::reading(lead, [(id,
+   gap_after), ..])`: its `duration()` sizes the `PlanBuilder` and `place(&mut
+   scene)` returns one `Spoken` per clip. Time everything from
+   `spoken.at("phrase")`, so re-voicing re-times the film. A clip can be split
+   across segments with `clip.split(seconds, earlier, later)` and `place_range`.
 2. Declare actors with `PlanBuilder`; write motion through typed handles. Time
-   literals use `author::SECOND` and `author::seconds(f64)`.
+   literals use `author::SECOND`, `author::seconds(f64)`, and
+   `author::millis(u64)`; see [Author with timing helpers](#author-with-timing-helpers).
 3. Emit with `ScenePlan::write_or_print`, `DeckPlan::write_with_slides`, or
    `ReelPlan::dipped(..)`, then `plan validate` and `plan inspect`.
 4. Review exact frames before encoding: `bun scripts/sheet.ts <plan> 0:10:0.5
@@ -230,6 +234,11 @@ choose meaningful hold times; validation checks timing, not visual settling.
 scene.presentation_step("initial", "Start with a value", 0, 0);
 scene.presentation_step("reveal", "Reveal the type", 1_000_000_000, 2_500_000_000);
 ```
+
+A deck of evenly spaced steps is `scene.steps("step", titles, 3 * SECOND, 2 *
+SECOND)`: step `i` enters at `i × 3 s` and holds 2 s later (the first is a still
+at zero); it returns the entry times. `scene.cue_steps(3 * SECOND)` adds a Cue
+per step so `--cue step-2` renders one.
 
 Build the Effect Institute `effect-succeed` adaptation:
 
@@ -433,8 +442,11 @@ reusable for any code explainer:
   builds participants; `SequenceActor::row_channel`/`participant_channel` address
   their channels.
 - `ReelPlan::dipped(id, plans, transition_nanos)` joins segments with dips.
-- `psychopomp_pr_walkthrough::film` is the PR-film template itself (`header`,
-  `chip`, `footer`, `behavior`, `code`); `scenes/config-migration` reuses it.
+- `psychopomp::chrome` places a film's fixed captions: `header(scene, label,
+  title)` top left, `chip(scene, id, dot, text)` top right, and `footer(scene,
+  id, spans)` bottom left; each returns its Caption to type in, show, or hide.
+- `psychopomp_pr_walkthrough::film` is the PR-film template itself (`header`
+  for a `Pr`, `behavior`, `code`); `scenes/config-migration` reuses it.
 
 ```sh
 # 1. Voice the script (Fish Audio via 1Password; --draft uses macOS `say`).
@@ -477,8 +489,8 @@ review the new clock before rendering; replacing just the audio desynchronizes i
 
 A reel is `{ "version": 1, "id", "segments": [{ "transitionNanos", "transitionStyle": "crossfade" | "dip" | "zoom" | "wipe", "transitionFocus"?, "transitionWipe"?, "plan" }] }`.
 A `zoom` needs `transitionFocus: [x, y, width, height]` in the outgoing frame; compute
-it with `stage::Camera::project` (or `CameraRig::screen_box`) so it matches the
-card the camera flies into.
+it with `stage::Camera::project_rect(card_at, card_size)` at the closing camera
+(or `CameraRig::screen_box`) so it matches the card the camera flies into.
 Relative media paths resolve against the reel file. Prefer `dip` between frames
 that are both dense with text; a crossfade between two editors turns both unreadable.
 
@@ -934,9 +946,13 @@ their fuller documentation elsewhere.
    age for VHS rewind interference (-1 inactive). `camera.quake` is sustained
    trauma (0..2) added to a jolt's `shake`; `post.zoom` is a radial streak toward
    the frame center (0..0.5); `post.flash` washes the frame toward white (0..1). Cards also take the deletion
-   channels `cool|damage|glitch|cut|ghost` and the status-spinner clocks
+   channels `cool|damage|glitch|cut|ghost`, the status-spinner clocks
    `spinner|release|mark` (seconds; -1 inactive), with `mark: "check" | "cross"`,
-   plus `charge|dissolve|scan` (orbs take `charge`).
+   and `status-from|swap`: while `status-from` names an entry (-1 is unset), the
+   status line cross-fades straight from it to `status` by `swap` (0..1), so
+   `StageActor::swap_status(card, at, [from, to], seconds)` never passes the
+   entries between them as the fractional `status` channel does; plus
+   `charge|dissolve|scan` (orbs take `charge`).
    A packet is one clock: `age` (seconds since
   dispatch, -1 before) and `flight`; the renderer derives its gather, flight, trail,
   landing ring, and light from them. Beams choose their own ports and curve; leave
@@ -949,13 +965,37 @@ their fuller documentation elsewhere.
   camera kicks along the blow, a squared-trauma noise rumble with slight roll
   decays, and the frame punches in about 2%),
   `twang`, and `land`. `glide` is the minimum-jerk (smootherstep) move of
-  exact duration between resting compositions. `bounce` and `to` spring any channel (undeclared
-  channels start at 0; declare other starting poses with `channel`), `ease` follows
+  exact duration between resting compositions. `bounce` and `to` spring any channel (an undeclared
+  channel starts at its resting value, the same Stage channel default the
+  renderer reads when nothing writes it: opacity, scale, `content`, `draw`,
+  `fill`, `typed`, ring `sweep`, `spin`, shield `up`, and `camera.zoom` rest at
+  1, the `burst`/`age`/`dissolve`/spinner clocks and `post.rewind` at -1,
+  `flight` at 0.8, `post.bloom`/`post.vignette`
+  at the plan's `post`, everything else at 0; declare other starting poses with
+  `channel`, and fade something in from hidden with `fade_in`), `ease` follows
   any curve, and `clock` starts an elapsed-seconds channel that runs to the scene's
   end for effect rigs such as the card spinner (`clock_for` stops it after a fixed
   lifetime, as for `burst` or `post.rewind`). Use a `Smootherstep` ease for staged
   camera moves with exact timing, springs for responsive camera/panel settling,
   and instant-attack fades for light.
+  Composed beats return when they settle: `orb_in(orb, at, OrbEntrance::HERO)`
+  (the hero entrance: scale, blur, and angular offset gather in while it fades
+  in), `glitch(card, at, seeds)` (three layouts 27 ms apart, then still),
+  `rewind(at, chroma)` (`post.rewind`'s 1.4 s of tape interference with a
+  chromatic hit) and `unburst(orb, at, seconds)` (the burst clock plays back
+  to intact), `shock_kick(source, at, card, push, falloff)` (a card is shoved
+  away as the burst's pressure front passes it; returns when it passes),
+  `resolve_spinner(card, started, done)` (the spinner draws its mark at its
+  next crossing; returns when the mark is drawn, where its sound belongs),
+  `swap_status(card, at, [from, to], seconds)`, `swap_labels([from, to], at,
+  gap)` (one label out, the other in `gap` later), `dim(cards, at, amount,
+  seconds)`, `halo([(inner, opacity),
+  (outer, opacity)], at, seconds)` and `halo_out`
+  (two rings 60 ms apart in, 80 ms apart out), `ring_timer(ring, at, seconds,
+  sweep)`, and `disconnect(beam, at, seconds)` (the reverse of `connect`).
+  Build elements with `StageElement::card|orb|beam|packet|label|ring` and their
+  options (`.tone`, `.statuses`, `.mark`, `.points`, `.bend`, `.reversed`,
+  `.labeled`, `.align`, `.thickness`); `StagePost::RESTRAINED` is the films' look.
   Orb `pulse` changes illumination, not geometry or attached beam ports. Card
   `flash` lifts ink and rim, not the entire fill. Connecting does not implicitly
   trigger `land`, `twang`, `surge`, or `flow`; author those only when the story
@@ -1205,6 +1245,48 @@ let plan = scene.finish()?;
 ```
 
 Renderer Recipe payloads remain adapter-owned. The lightweight core validates stable IDs, channel references, event ordering, finite values, cue ranges, exact media ranges, and Scene Plan versioning without knowing what a Task, editor, Video Card, or title card looks like.
+
+### Author With Timing Helpers
+
+Authoring helpers emit ordinary events; none changes the plan format.
+
+```rust
+use psychopomp::author::{PlanTime, millis, seconds, spread, stagger};
+use psychopomp::stage::reply_after;
+
+// Narration: a lead, then each clip and the gap after it.
+let reading = narration.reading(seconds(1.6), [("before", seconds(2.4)), ("after", seconds(2.4))])?;
+let mut scene = PlanBuilder::new("film", reading.duration());
+let [before, after] = reading.place(&mut scene);
+
+// Rows ripple 120 ms apart; `stagger` returns the latest end.
+let settled = stagger(["api", "db", "cache"], before.at("three services"), millis(120), |card, at| {
+    s.settle_in(sc, card, at)
+});
+// Six packets spread evenly between two words, both included.
+for (packet, launch) in VOLLEY.iter().zip(spread(6, before.at("packets"), before.at("wires"))) { .. }
+
+// A beat keyed to a word that must still wait for its cause.
+let lookup = s.send(sc, "lookup", after.at("just once").not_before(reply_after(find)), 0.55);
+// Time a beat by where it lands rather than where it starts.
+s.send_arriving(sc, "kill", before.at("sigterm"), 0.55);   // the packet arrives on the word
+s.connect_contacting(sc, "link", before.at("plugs in"), 0.4); // port pop + draw end on the word
+s.spring(sc, "camera.x", at, -110.0, SpringPlan::CAMERA);
+```
+
+- Sound effects come from `psychopomp::sfx` (`TICK`, `SEND`, `FAILURE`,
+  `LAUNCH`, `IMPACT`, `DEATH`, `GLITCH`, `MARK`, `BLOOM`, `SEVER`, `RESET`,
+  `SUCCESS`, `CONFIRM`, `RISER`, `BOOM`, `WHOOSH`, `SPARKLE`) with exact lengths:
+  `sfx::IMPACT.play(sc, "kill-impact", arrival, -5.0)`. Their paths assume the
+  plan is written beside its Scene Program in `scenes/<name>/`; a scene's own
+  files use `Sfx::new(path, length_nanos)`.
+- `reply_after(arrival)`: a reply's gather may only begin once its request has
+  landed: 340 ms of gather plus an 80 ms reaction (`REACT_SECONDS`).
+- Named spring feels on `SpringPlan`, for `StageActor::spring` and
+  `PlanBuilder::spring_with`: `PANEL` (0.6 s, bounce 0.12, a rigid panel
+  settling), `CONTENT` (0.36 s, ink following its panel), `SNAP` (0.3 s, a
+  status or fade), `CAMERA` (1.6 s critically damped move), and `LIVELY`
+  (0.85 s, bounce 0.2, a hero landing).
 
 Scene Plan v2 scalar values may reference a component of a stable Semantic Target. The target's selector remains recipe-owned; for the hero, the editor recipe resolves logical code range IDs through `cosmic-text` before compiling highlight and pointer channels into the shared Timeline.
 

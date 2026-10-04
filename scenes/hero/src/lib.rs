@@ -3,8 +3,8 @@ use psychopomp::{
     author::{PlanBuilder, SECOND, seconds},
     code::{StyledSpan, SyntaxStyle},
     editor::{
-        EDITOR_RECIPE, EditorInlineRevealPlan, EditorLinePlan, EditorPartPlan, EditorRecipePlan,
-        EditorSemanticRangePlan, EditorTargetSelector, POINTER_RECIPE, PointerRecipePlan,
+        EDITOR_RECIPE, EditorInlineRevealPlan, EditorRecipePlan, EditorTargetSelector,
+        POINTER_RECIPE, PointerRecipePlan, line, part, semantic_line, semantic_range,
     },
     plan::{ScenePlan, TargetComponentPlan},
 };
@@ -144,14 +144,14 @@ fn editor_recipe() -> EditorRecipePlan {
             semantic_line(
                 "class-open",
                 vec![
-                    part("keyword", span("class", Keyword)),
-                    part("service", span(" UserService ", Type)),
-                    part("extends", span("extends", Keyword)),
-                    part("context-space", span(" ", Plain)),
-                    part("context-tag", span("Context.Tag", Plain)),
-                    part("context-open", span("(", Plain)),
-                    part("tag-name", span("\"UserService\"", StringStyle)),
-                    part("suffix", span(")<", Plain)),
+                    part("keyword", vec![span("class", Keyword)]),
+                    part("service", vec![span(" UserService ", Type)]),
+                    part("extends", vec![span("extends", Keyword)]),
+                    part("context-space", vec![span(" ", Plain)]),
+                    part("context-tag", vec![span("Context.Tag", Plain)]),
+                    part("context-open", vec![span("(", Plain)]),
+                    part("tag-name", vec![span("\"UserService\"", StringStyle)]),
+                    part("suffix", vec![span(")<", Plain)]),
                 ],
                 vec![semantic_range("context-tag", "context-tag", "context-tag")],
             ),
@@ -167,24 +167,24 @@ fn editor_recipe() -> EditorRecipePlan {
             semantic_line(
                 "find-signature",
                 vec![
-                    part("indent", span("    ", Plain)),
-                    part("readonly", span("readonly", Keyword)),
-                    part("signature", span(" find: (id: ", Plain)),
-                    part("string-type", span("string", Type)),
-                    part("suffix", span(") =>", Plain)),
+                    part("indent", vec![span("    ", Plain)]),
+                    part("readonly", vec![span("readonly", Keyword)]),
+                    part("signature", vec![span(" find: (id: ", Plain)]),
+                    part("string-type", vec![span("string", Type)]),
+                    part("suffix", vec![span(") =>", Plain)]),
                 ],
                 vec![semantic_range("string-type", "string-type", "string-type")],
             ),
             semantic_line(
                 FOCUS_LINE_ID,
                 vec![
-                    part("indent", span("      ", Plain)),
-                    part("effect-type", span("Effect.Effect", Accent)),
-                    part("open", span("<", Plain)),
-                    part("success-type", span("User", Type)),
-                    part("error-separator", span(", ", Plain)),
-                    part("not-found-type", span("NotFound", Accent)),
-                    part("close", span(">", Plain)),
+                    part("indent", vec![span("      ", Plain)]),
+                    part("effect-type", vec![span("Effect.Effect", Accent)]),
+                    part("open", vec![span("<", Plain)]),
+                    part("success-type", vec![span("User", Type)]),
+                    part("error-separator", vec![span(", ", Plain)]),
+                    part("not-found-type", vec![span("NotFound", Accent)]),
+                    part("close", vec![span(">", Plain)]),
                 ],
                 vec![
                     semantic_range("effect-type", "effect-type", "effect-type"),
@@ -226,47 +226,6 @@ fn editor_recipe() -> EditorRecipePlan {
             reversed: false,
         }),
         additional_inline_reveals: Vec::new(),
-    }
-}
-
-fn line(id: &str, spans: Vec<StyledSpan>) -> EditorLinePlan {
-    EditorLinePlan {
-        id: id.to_owned(),
-        parts: spans
-            .into_iter()
-            .enumerate()
-            .map(|(index, span)| part(&format!("span-{index}"), span))
-            .collect(),
-        semantic_ranges: Vec::new(),
-        mark: None,
-    }
-}
-
-fn semantic_line(
-    id: &str,
-    parts: Vec<EditorPartPlan>,
-    semantic_ranges: Vec<EditorSemanticRangePlan>,
-) -> EditorLinePlan {
-    EditorLinePlan {
-        id: id.to_owned(),
-        parts,
-        semantic_ranges,
-        mark: None,
-    }
-}
-
-fn part(id: &str, span: StyledSpan) -> EditorPartPlan {
-    EditorPartPlan {
-        id: id.to_owned(),
-        spans: vec![span],
-    }
-}
-
-fn semantic_range(id: &str, first: &str, last: &str) -> EditorSemanticRangePlan {
-    EditorSemanticRangePlan {
-        id: id.to_owned(),
-        first_part_id: first.to_owned(),
-        last_part_id: last.to_owned(),
     }
 }
 

@@ -5,7 +5,7 @@ use anyhow::Result;
 use psychopomp::{
     author::PlanBuilder,
     code::StyledSpan,
-    editor::{EDITOR_RECIPE, EditorLinePlan, EditorPartPlan, EditorRecipePlan, LineMarkPlan},
+    editor::{EDITOR_RECIPE, EditorLinePlan, EditorRecipePlan, LineMarkPlan, part},
     highlight,
 };
 
@@ -82,10 +82,7 @@ fn editor_line(id: String, line: &Line) -> EditorLinePlan {
     };
     EditorLinePlan {
         id,
-        parts: vec![EditorPartPlan {
-            id: "code".to_owned(),
-            spans,
-        }],
+        parts: vec![part("code", spans)],
         semantic_ranges: Vec::new(),
         mark: line.fresh.then_some(LineMarkPlan::Added),
     }

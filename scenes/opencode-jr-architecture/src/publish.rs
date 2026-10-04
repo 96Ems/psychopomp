@@ -3,11 +3,16 @@
 //! indicator, and a write-ahead intent plus Slack metadata keep a crash from
 //! posting twice.
 use anyhow::{Context, Result};
-use psychopomp::{caption::CaptionAlign, plan::ScenePlan, stage::StagePlan, tone::Tone};
+use psychopomp::{
+    author::PlanTime,
+    plan::ScenePlan,
+    sfx,
+    stage::{OrbEntrance, StageElement, StagePlan, StagePost},
+    tone::Tone,
+};
 
 use crate::{
-    Film, GLITCH, IMPACT, MARK, Narration, SUCCESS, arrive, beam, begin, card, chip, footer,
-    header, label, orb, orb_in, packet, plug, post, seconds, send, show, sound, status,
+    Film, Narration, arrive, begin, chip, footer, header, plug, seconds, send, show, status,
 };
 
 const RUNTIME: [f32; 3] = [260.0, 510.0, 0.0];
@@ -18,66 +23,40 @@ const THREAD_X: f32 = 1570.0;
 
 fn stage() -> StagePlan {
     let slack = |id: &str, y: f32, h: f32, title: &str, statuses: &[(&str, Tone)]| {
-        card(
-            id,
-            [THREAD_X, y, 0.0],
-            [360.0, h],
-            title,
-            statuses,
-            Tone::Plain,
-        )
+        StageElement::card(id, [THREAD_X, y, 0.0], [360.0, h], title).statuses(statuses)
     };
     StagePlan {
-        post: post(),
+        post: StagePost::RESTRAINED,
         elements: vec![
-            orb("runtime", RUNTIME, 80.0, 500),
-            label(
+            StageElement::orb("runtime", RUNTIME, 80.0)
+                .points(500)
+                .tone(Tone::Plain),
+            StageElement::label(
                 "log-name",
                 [RUNTIME[0], 625.0, 0.0],
                 20.0,
-                CaptionAlign::Center,
                 &[("durable event log", Tone::Muted)],
             ),
-            card(
-                "follower",
-                FOLLOWER,
-                [260.0, 100.0],
-                "follower",
-                &[
-                    ("reading the log", Tone::Muted),
-                    ("folding a turn", Tone::Plain),
-                ],
-                Tone::Plain,
-            ),
-            card(
-                "publication",
-                PUBLICATION,
-                [290.0, 100.0],
-                "publication",
+            StageElement::card("follower", FOLLOWER, [260.0, 100.0], "follower").statuses(&[
+                ("reading the log", Tone::Muted),
+                ("folding a turn", Tone::Plain),
+            ]),
+            StageElement::card("publication", PUBLICATION, [290.0, 100.0], "publication").statuses(
                 &[
                     ("reconciling", Tone::Muted),
                     ("intent flushed", Tone::Plain),
                     ("reset", Tone::Error),
                     ("adopted, not reposted", Tone::Success),
                 ],
-                Tone::Plain,
             ),
-            card(
-                "sqlite",
-                SQLITE,
-                [290.0, 90.0],
-                "sqlite",
-                &[
-                    ("handles · cursor", Tone::Muted),
-                    ("write-ahead intent", Tone::Accent),
-                ],
-                Tone::Plain,
-            ),
-            label(
+            StageElement::card("sqlite", SQLITE, [290.0, 90.0], "sqlite").statuses(&[
+                ("handles · cursor", Tone::Muted),
+                ("write-ahead intent", Tone::Accent),
+            ]),
+            StageElement::label(
                 "thread-name",
                 [THREAD_X, 260.0, 0.0],
                 20.0,
-                CaptionAlign::Center,
                 &[("slack thread", Tone::Muted)],
             ),
             slack(
@@ -110,31 +89,44 @@ fn stage() -> StagePlan {
                     ("posted once", Tone::Success),
                 ],
             ),
-            label(
+            StageElement::label(
                 "metadata",
                 [THREAD_X, 768.0, 0.0],
                 19.0,
-                CaptionAlign::Center,
                 &[
                     ("metadata: ", Tone::Muted),
                     ("its durable id", Tone::Accent),
                 ],
             ),
-            beam("lg", "runtime", "follower", Tone::Plain),
-            beam("fp", "follower", "publication", Tone::Plain),
-            beam("pi", "publication", "indicator", Tone::Plain),
-            beam("pa", "publication", "answer", Tone::Request),
-            beam("pf", "publication", "footer", Tone::Plain),
-            beam("pw", "publication", "sqlite", Tone::Plain),
-            packet("events", "lg", false, "events", Tone::Request),
-            packet("turn", "fp", false, "turn", Tone::Request),
-            packet("indicate", "pi", false, "", Tone::Plain),
-            packet("edit-1", "pa", false, "post", Tone::Request),
-            packet("edit-2", "pa", false, "edit", Tone::Request),
-            packet("edit-3", "pa", false, "edit", Tone::Request),
-            packet("intent", "pw", false, "intent", Tone::Accent),
-            packet("post-footer", "pf", false, "post", Tone::Request),
-            packet("probe", "pf", false, "find by metadata", Tone::Plain),
+            StageElement::beam("lg", "runtime", "follower"),
+            StageElement::beam("fp", "follower", "publication"),
+            StageElement::beam("pi", "publication", "indicator"),
+            StageElement::beam("pa", "publication", "answer").tone(Tone::Request),
+            StageElement::beam("pf", "publication", "footer"),
+            StageElement::beam("pw", "publication", "sqlite"),
+            StageElement::packet("events", "lg")
+                .labeled("events")
+                .tone(Tone::Request),
+            StageElement::packet("turn", "fp")
+                .labeled("turn")
+                .tone(Tone::Request),
+            StageElement::packet("indicate", "pi"),
+            StageElement::packet("edit-1", "pa")
+                .labeled("post")
+                .tone(Tone::Request),
+            StageElement::packet("edit-2", "pa")
+                .labeled("edit")
+                .tone(Tone::Request),
+            StageElement::packet("edit-3", "pa")
+                .labeled("edit")
+                .tone(Tone::Request),
+            StageElement::packet("intent", "pw")
+                .labeled("intent")
+                .tone(Tone::Accent),
+            StageElement::packet("post-footer", "pf")
+                .labeled("post")
+                .tone(Tone::Request),
+            StageElement::packet("probe", "pf").labeled("find by metadata"),
         ],
     }
 }
@@ -149,7 +141,7 @@ pub fn film(narration: &Narration) -> Result<ScenePlan> {
     header(sc, "4", "back to slack")?;
     chip(sc, "src/session/publication.ts")?;
 
-    orb_in(s, sc, "runtime", seconds(0.3));
+    s.orb_in(sc, "runtime", seconds(0.3), OrbEntrance::HERO);
     s.settle_in(sc, "follower", seconds(0.5));
     s.settle_in(sc, "publication", seconds(0.66));
     plug(s, sc, "lg", seconds(0.9));
@@ -163,7 +155,7 @@ pub fn film(narration: &Narration) -> Result<ScenePlan> {
     s.land(sc, "follower", read);
     let fold = v.at("folds it into");
     status(s, sc, "follower", fold, 1);
-    let folded = send(s, sc, "turn", fold.max(read + seconds(0.4)), 0.7);
+    let folded = send(s, sc, "turn", fold.not_before(read + seconds(0.4)), 0.7);
     s.land(sc, "publication", folded);
     // The working indicator goes up first and stays above the answers.
     arrive(s, sc, "indicator", "pi", folded);
@@ -182,7 +174,7 @@ pub fn film(narration: &Narration) -> Result<ScenePlan> {
     }
     s.land(sc, "answer", at);
     status(s, sc, "answer", at, 3);
-    let edited = v.at("edited in").max(at + seconds(0.3));
+    let edited = v.at("edited in").not_before(at + seconds(0.3));
     status(s, sc, "answer", edited, 4);
     s.hit(sc, "indicator.flash", v.at("working indicator"), 0.5, 0.0);
     let footer_at = v.at("footer only");
@@ -198,42 +190,40 @@ pub fn film(narration: &Narration) -> Result<ScenePlan> {
         s,
         sc,
         "intent",
-        (posting + seconds(0.2)).max(contact + seconds(0.2)),
+        (posting + seconds(0.2)).not_before(contact + seconds(0.2)),
         0.6,
     );
     s.land(sc, "sqlite", flushed);
     status(s, sc, "sqlite", flushed, 1);
     status(s, sc, "publication", flushed, 1);
-    sc.media(sound("flushed", MARK, flushed, -17.0));
+    sfx::MARK.play(sc, "flushed", flushed, -17.0);
     plug(s, sc, "pf", flushed);
     let posted = send(s, sc, "post-footer", flushed + seconds(0.75), 0.6);
     s.land(sc, "footer", posted);
     s.to(sc, "footer.dim", posted, 0.0, 0.4);
-    s.type_in(sc, "metadata", v.at("slack metadata").max(posted), 40.0);
+    s.type_in(
+        sc,
+        "metadata",
+        v.at("slack metadata").not_before(posted),
+        40.0,
+    );
 
     // A crash rolls the handle back; the post is found by its metadata.
     let crash = v.at("after a crash");
     s.hit(sc, "post.chroma", crash, 0.12, 0.0);
     s.jolt(sc, crash, [0.0, 1.0], 0.5);
     status(s, sc, "publication", crash, 2);
-    for (step, seed) in [7.0, 9.0, 8.0, 0.0].into_iter().enumerate() {
-        s.set(
-            sc,
-            "publication.glitch",
-            crash + seconds(step as f64 * 0.027),
-            seed,
-        );
-    }
-    sc.media(sound("crash", IMPACT, crash, -12.0));
-    sc.media(sound("crash-glitch", GLITCH, crash, -18.0));
+    s.glitch(sc, "publication", crash, [7.0, 9.0, 8.0]);
+    sfx::IMPACT.play(sc, "crash", crash, -12.0);
+    sfx::GLITCH.play(sc, "crash-glitch", crash, -18.0);
     let adopt = v.at("adopts it");
     let found = send(s, sc, "probe", crash + seconds(0.6), 0.8);
     s.hit(sc, "footer.flash", found, 0.6, 0.0);
     status(s, sc, "footer", found, 1);
-    status(s, sc, "publication", adopt.max(found), 3);
-    s.clock(sc, "indicator.mark", adopt.max(found));
-    status(s, sc, "indicator", adopt.max(found), 1);
-    sc.media(sound("adopted", SUCCESS, adopt.max(found), -13.0));
+    status(s, sc, "publication", adopt.not_before(found), 3);
+    s.clock(sc, "indicator.mark", adopt.not_before(found));
+    status(s, sc, "indicator", adopt.not_before(found), 1);
+    sfx::SUCCESS.play(sc, "adopted", adopt.not_before(found), -13.0);
     footer(
         sc,
         "footer-adopt",
@@ -242,7 +232,7 @@ pub fn film(narration: &Narration) -> Result<ScenePlan> {
             ("adopt", Tone::Accent),
             (" the post instead of reposting", Tone::Plain),
         ],
-        adopt.max(found),
+        adopt.not_before(found),
     )?;
     scene.finish().context("publish")
 }

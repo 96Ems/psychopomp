@@ -5,15 +5,13 @@
 //! value rolls; then everything folds and scrolls back.
 use anyhow::Result;
 use psychopomp::{
-    author::{PlanBuilder, SECOND},
+    author::{PlanBuilder, SECOND, millis},
     caption::{CaptionActor, CaptionPlan, CaptionSpanPlan},
     plan::ScenePlan,
     tone::Tone,
     tree::{TreeActor, TreePlan},
 };
 use serde_json::{Value, json};
-
-const MS: u64 = 1_000_000;
 
 pub fn build_plan() -> Result<ScenePlan> {
     let mut scene = PlanBuilder::new("tree", 12 * SECOND);
@@ -33,7 +31,7 @@ pub fn build_plan() -> Result<ScenePlan> {
             ],
         ),
     )?;
-    caption.show(&mut scene, 150 * MS);
+    caption.show(&mut scene, millis(150));
 
     let mut tree = TreeActor::declare(
         &mut scene,
@@ -42,33 +40,37 @@ pub fn build_plan() -> Result<ScenePlan> {
             .max_rows(22)
             .expanded(["$"]),
     )?;
-    tree.show(&mut scene, 250 * MS);
+    tree.show(&mut scene, millis(250));
 
-    tree.open(&mut scene, "$.actors", 1200 * MS)?;
-    tree.open(&mut scene, "$.actors[0]", 2100 * MS)?;
-    tree.open(&mut scene, "$.continuousChannels", 3300 * MS)?;
-    tree.open(&mut scene, "$.continuousChannels[0]", 4200 * MS)?;
-    tree.open(&mut scene, "$.continuousChannels[0].events", 5100 * MS)?;
+    tree.open(&mut scene, "$.actors", millis(1200))?;
+    tree.open(&mut scene, "$.actors[0]", millis(2100))?;
+    tree.open(&mut scene, "$.continuousChannels", millis(3300))?;
+    tree.open(&mut scene, "$.continuousChannels[0]", millis(4200))?;
+    tree.open(&mut scene, "$.continuousChannels[0].events", millis(5100))?;
     // The first spring no longer fits: scroll just enough to show its channel.
-    tree.open(&mut scene, "$.continuousChannels[0].events[0]", 5900 * MS)?;
-    tree.reveal(&mut scene, "$.continuousChannels[0]", 5900 * MS)?;
+    tree.open(
+        &mut scene,
+        "$.continuousChannels[0].events[0]",
+        millis(5900),
+    )?;
+    tree.reveal(&mut scene, "$.continuousChannels[0]", millis(5900))?;
     tree.highlight(
         &mut scene,
         "$.continuousChannels[0].property",
-        6900 * MS,
+        millis(6900),
         2.0,
     )?;
     tree.set(
         &mut scene,
         "$.continuousChannels[0].initial",
         json!(1.0),
-        7500 * MS,
+        millis(7500),
     )?;
     // Folding the channel lets the whole plan fit again: scroll back with it.
-    tree.close(&mut scene, "$.continuousChannels[0]", 9300 * MS)?;
-    tree.reveal(&mut scene, "$", 9300 * MS)?;
-    tree.close(&mut scene, "$.actors", 9900 * MS)?;
-    tree.close(&mut scene, "$.continuousChannels", 10700 * MS)?;
+    tree.close(&mut scene, "$.continuousChannels[0]", millis(9300))?;
+    tree.reveal(&mut scene, "$", millis(9300))?;
+    tree.close(&mut scene, "$.actors", millis(9900))?;
+    tree.close(&mut scene, "$.continuousChannels", millis(10700))?;
 
     scene.cue("tree", 0, 12 * SECOND);
     Ok(scene.finish()?)

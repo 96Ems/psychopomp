@@ -1,9 +1,8 @@
-use std::path::PathBuf;
-
 use anyhow::Result;
 use psychopomp::{
     author::PlanBuilder,
-    plan::{MediaKindPlan, MediaPlan, MediaRolePlan, ScenePlan},
+    plan::ScenePlan,
+    sfx::{self, Sfx},
     video::{self, VideoActor, VideoPlan},
 };
 use serde_json::json;
@@ -15,8 +14,7 @@ const RECORDING_DURATION: u64 = 19_216_667_000;
 #[derive(Clone, Copy)]
 struct AudioBeat {
     id: &'static str,
-    path: &'static str,
-    duration: u64,
+    sfx: Sfx,
     gain_db: f32,
 }
 
@@ -32,8 +30,7 @@ struct Beat {
 
 const SAVE: AudioBeat = AudioBeat {
     id: "save",
-    path: "../../assets/opencode-hot-reload/save.wav",
-    duration: 160_000_000,
+    sfx: sfx::SEND,
     gain_db: -2.0,
 };
 
@@ -110,8 +107,7 @@ const BEATS: [Beat; 9] = [
         end: DURATION,
         sound: AudioBeat {
             id: "confirm",
-            path: "../../assets/opencode-hot-reload/confirm.wav",
-            duration: 340_000_000,
+            sfx: sfx::CONFIRM,
             gain_db: 4.0,
         },
     },
@@ -185,38 +181,16 @@ pub fn build_plan() -> Result<ScenePlan> {
     }
 
     for (index, beat) in BEATS.into_iter().enumerate() {
-        scene.media(audio(
-            &format!("{}-{index}", beat.sound.id),
-            beat.sound.path,
-            beat.sound.duration,
+        let sound = beat.sound;
+        sound.sfx.play(
+            &mut scene,
+            format!("{}-{index}", sound.id),
             beat.start,
-            MediaRolePlan::Layer,
-            beat.sound.gain_db,
-        ));
+            sound.gain_db,
+        );
     }
 
     Ok(scene.finish()?)
-}
-
-fn audio(
-    id: &str,
-    path: &str,
-    duration: u64,
-    timeline_start: u64,
-    role: MediaRolePlan,
-    gain_db: f32,
-) -> MediaPlan {
-    MediaPlan {
-        id: id.to_owned(),
-        path: PathBuf::from(path),
-        kind: MediaKindPlan::Audio,
-        role,
-        source_start_nanos: 0,
-        source_end_nanos: duration,
-        timeline_start_nanos: timeline_start,
-        timeline_end_nanos: timeline_start + duration,
-        gain_db,
-    }
 }
 
 #[cfg(test)]

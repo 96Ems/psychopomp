@@ -176,6 +176,16 @@ impl Camera {
         Some((self.size * 0.5 + lateral * scale, scale))
     }
 
+    /// The screen rectangle `[x, y, width, height]` of a world rectangle of
+    /// `size` centered at `center` facing the camera, such as a card a reel's
+    /// zoom flies into (`transitionFocus`); `None` behind the camera.
+    pub fn project_rect(&self, center: Vec3, size: Vec2) -> Option<[f32; 4]> {
+        let (center, scale) = self.project(center)?;
+        let size = size * scale;
+        let corner = center - size * 0.5;
+        Some([corner.x, corner.y, size.x, size.y])
+    }
+
     /// Distance from the lens along the view axis.
     pub fn distance(&self, point: Vec3) -> f32 {
         self.view(point).1
