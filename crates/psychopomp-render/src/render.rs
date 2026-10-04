@@ -23,6 +23,7 @@ mod grid;
 mod header;
 mod lanes;
 mod line_marks;
+mod lower_third;
 mod plot;
 mod rich_text;
 mod rolling;
@@ -49,6 +50,7 @@ pub use grid::{
     GridFrame, GridItemFrame, GridLabelStyle, GridLinePalette, GridTextClip, GridTextDisclosure,
 };
 pub(crate) use header::{HeaderGlyphs, header_words};
+pub(crate) use lower_third::LowerThirdGlyphs;
 pub(crate) use rich_text::{RichTextGlyphs, RichTextSource, parse as parse_rich_text};
 pub(crate) use stage::{StageGpu, stage_anchor};
 pub use task::{BubblePose, ContentPose, TaskContentFrame, TaskVisualFrame};

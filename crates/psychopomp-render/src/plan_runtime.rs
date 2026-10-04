@@ -36,6 +36,7 @@ mod generated;
 mod grid;
 mod header;
 mod lanes;
+mod lower_third;
 mod plot;
 mod preflight;
 mod presentation;
@@ -456,6 +457,7 @@ struct PreparedPlan {
     terminals: Vec<terminal::PreparedTerminal>,
     chats: Vec<chat::PreparedChat>,
     changed_files: Vec<changed_files::PreparedChangedFiles>,
+    lower_thirds: Vec<lower_third::PreparedLowerThird>,
 }
 
 // A prepared scene exposes a read-only view of its compiled data. There is no
@@ -530,6 +532,7 @@ impl PreparedPlan {
             terminals,
             chats,
             changed_files,
+            lower_thirds,
         } = input;
         let components = component_prototype::PreparedComponents::prepare_inputs(
             &mut plan, components, renderer,
@@ -619,6 +622,7 @@ impl PreparedPlan {
             terminals,
             chats,
             changed_files,
+            lower_thirds,
         })
     }
 }
@@ -1081,6 +1085,9 @@ impl PreparedPlan {
         }
         for number in &self.rolling {
             number.render(pixels, renderer, time, value);
+        }
+        for third in &self.lower_thirds {
+            third.render(pixels, renderer, value);
         }
         for (index, callout) in self.callouts.iter().enumerate() {
             if !callouts(index) {

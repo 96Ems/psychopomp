@@ -12,6 +12,7 @@ pub mod effects;
 pub mod grid;
 pub mod highlight;
 pub mod lanes;
+pub mod lower_third;
 pub mod math;
 pub mod motion;
 pub mod narration;

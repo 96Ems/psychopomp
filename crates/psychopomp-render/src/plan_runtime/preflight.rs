@@ -11,6 +11,7 @@ use super::{
     grid::PreparedGrid,
     header,
     lanes::PreparedLanes,
+    lower_third::PreparedLowerThird,
     plot::PreparedPlot,
     rolling::RollingNumberInput,
     sequence::PreparedSequence,
@@ -33,6 +34,7 @@ use psychopomp::{
     editor::{EDITOR_RECIPE, EditorTargetSelector, POINTER_RECIPE, PointerRecipePlan},
     grid::GRID_RECIPE,
     lanes::LANES_RECIPE,
+    lower_third::LOWER_THIRD_RECIPE,
     plan::{ActorPlan, ContinuousChannelPlan, MediaKindPlan, ScenePlan, StateChannelPlan},
     plot::PLOT_RECIPE,
     rolling::ROLLING_NUMBER_RECIPE,
@@ -70,6 +72,7 @@ pub(super) struct Plan {
     pub terminals: Vec<PreparedTerminal>,
     pub chats: Vec<ChatInput>,
     pub changed_files: Vec<ChangedFilesInput>,
+    pub lower_thirds: Vec<PreparedLowerThird>,
 }
 pub(super) enum RootPlan {
     Blank,
@@ -364,6 +367,7 @@ impl Plan {
         let mut terminals = Vec::new();
         let mut chats = Vec::new();
         let mut changed_files = Vec::new();
+        let mut lower_thirds = Vec::new();
         for actor in &plan.actors {
             match actor.recipe.as_str() {
                 "title-card" => put_root(&mut root, RootPlan::Title(Title::new(actor, &plan)?))?,
@@ -447,6 +451,9 @@ impl Plan {
                     &plan.continuous_channels,
                     plan.duration_nanos,
                 )?),
+                LOWER_THIRD_RECIPE => {
+                    lower_thirds.push(PreparedLowerThird::new(actor, &plan.continuous_channels)?)
+                }
                 recipe => bail!("unsupported actor recipe '{recipe}'"),
             }
         }
@@ -529,6 +536,7 @@ impl Plan {
             terminals,
             chats,
             changed_files,
+            lower_thirds,
         };
         match &result.root {
             RootPlan::Editor { editor, .. } => editor.compile_channels(&mut result.plan)?,
