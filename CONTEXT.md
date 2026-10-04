@@ -245,6 +245,39 @@ Sample, so the callout follows its target with no lag; moving to another
 anchor springs weight channels that blend the two resolved positions. Labels
 slide back inside the frame rather than leave it, and the leader follows.
 
+## Text Surface
+
+A natively drawn stand-in for a familiar interface (a terminal, a chat app, a
+pull request's file list) inside a floating **Window**: a themed panel whose
+body settles in like a Stage card while its content follows about 65 ms later.
+Unlike a Video Card, a text surface follows the Presentation Theme and re-times
+with the scene; it depicts a session rather than recording one.
+
+## Terminal
+
+A text surface of CommitMono rows: commands typed after a prompt at a natural,
+deterministic keystroke cadence, output printed or streamed line by line, and
+task lines led by a spinner that resolves into a check or a cross. Every line has
+a stable ID and opens its own row, so once the window is full a new line slides
+every older one up by exactly its room; `clear` lifts everything through a
+scroll floor. A line is never re-laid out or replaced.
+
+## Chat Thread
+
+A conversation in a Slack-like or iMessage-like window. Messages have stable IDs
+and authors with avatars; a run by one author shows its name once. A typing
+indicator holds the next message's slot with dots on their own clock and grows
+into the message when it is said, so the slot keeps its identity. The thread is
+anchored to its composer: a new message pushes every older one up by exactly the
+room it opens. Reactions pop in beneath a message and open their own row.
+
+## Changed Files
+
+The opener of a pull-request film: file paths with added, modified, deleted, or
+renamed badges, `+N −M` counts, and GitHub's five-block **Diffstat**. Rows hold
+fixed slots, so revealing one never moves another; focus lights one row while the
+rest recede. The header's totals are Rolling Numbers that roll as rows land.
+
 ## Tone
 
 A semantic color role shared by explainer recipes: plain, request, success,
