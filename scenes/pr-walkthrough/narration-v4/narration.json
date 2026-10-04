@@ -1,0 +1,64 @@
+{
+  "clips": [
+    {
+      "id": "mismatch-before",
+      "file": "mismatch-before.mp3",
+      "words": "mismatch-before.words.json",
+      "durationNanos": 21919000000,
+      "textHash": "1b26923e9d1f1444",
+      "engine": "elevenlabs",
+      "model": "eleven_v4",
+      "requestId": "0FLGxRxpwFiokUmvIg7m"
+    },
+    {
+      "id": "mismatch-after",
+      "file": "mismatch-after.mp3",
+      "words": "mismatch-after.words.json",
+      "durationNanos": 12399000000,
+      "textHash": "144800780fe44024",
+      "engine": "elevenlabs",
+      "model": "eleven_v4",
+      "requestId": "pOA9VhSb8WYjvN5QPnEh"
+    },
+    {
+      "id": "mismatch-code",
+      "file": "mismatch-code.mp3",
+      "words": "mismatch-code.words.json",
+      "durationNanos": 9919000000,
+      "textHash": "9c6ea699c646b4a5",
+      "engine": "elevenlabs",
+      "model": "eleven_v4",
+      "requestId": "IV0WbKkuQMahMYJNVfF6"
+    },
+    {
+      "id": "stop-before",
+      "file": "stop-before.mp3",
+      "words": "stop-before.words.json",
+      "durationNanos": 19038999999,
+      "textHash": "890f8b980ff9f351",
+      "engine": "elevenlabs",
+      "model": "eleven_v4",
+      "requestId": "fmYlK5jLetxD4ql3xI7L"
+    },
+    {
+      "id": "stop-after",
+      "file": "stop-after.mp3",
+      "words": "stop-after.words.json",
+      "durationNanos": 13759000000,
+      "textHash": "571798547a841bd3",
+      "engine": "elevenlabs",
+      "model": "eleven_v4",
+      "requestId": "eonXHjEi17xjVR7biSJg"
+    },
+    {
+      "id": "stop-code",
+      "file": "stop-code.mp3",
+      "words": "stop-code.words.json",
+      "durationNanos": 4798999999,
+      "textHash": "5dfb92b51fdb1a58",
+      "engine": "elevenlabs",
+      "model": "eleven_v4",
+      "requestId": "UBqX0VEgYZLQfRgl0PnO"
+    }
+  ]
+}

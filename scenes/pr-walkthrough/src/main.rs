@@ -25,7 +25,11 @@ fn main() -> anyhow::Result<()> {
             _ => anyhow::bail!("unknown argument: {arg}"),
         }
     }
-    let files = ["pr-walkthrough.reel.json", "pr-50825.reel.json"];
+    let files = if only.as_deref() == Some("pr-50042") {
+        &["pr-50042.reel.json"][..]
+    } else {
+        &["pr-walkthrough.reel.json", "pr-50825.reel.json"][..]
+    };
     let count = files
         .iter()
         .filter(|file| only.as_deref().is_none_or(|name| file.starts_with(name)))
@@ -35,12 +39,14 @@ fn main() -> anyhow::Result<()> {
         output.is_none() || count == 1,
         "--output requires selecting one reel"
     );
-    for file in files {
+    for &file in files {
         if only.as_deref().is_some_and(|name| !file.starts_with(name)) {
             continue;
         }
         let mut reel = if file == "pr-50825.reel.json" {
             psychopomp_pr_walkthrough::build_flagship(&narration)?
+        } else if file == "pr-50042.reel.json" {
+            psychopomp_pr_walkthrough::build_stop_reel(&narration)?
         } else {
             psychopomp_pr_walkthrough::build_reel(&narration)?
         };

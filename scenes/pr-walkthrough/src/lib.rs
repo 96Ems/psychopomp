@@ -6,8 +6,10 @@
 //! narration, so re-voicing the script re-times the film.
 pub mod film;
 mod flagship;
+mod stop_stage;
 
 pub use flagship::build_flagship;
+pub use stop_stage::build_stop_reel;
 
 use std::path::Path;
 

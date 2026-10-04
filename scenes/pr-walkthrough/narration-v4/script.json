@@ -15,6 +15,18 @@
     {
       "id": "mismatch-code",
       "text": "[clear, engaged explanation] In the code, the client checks the version requirement first. [measured, precise delivery] If the version is fine but the protocol isn't, it fails with that message, instead of falling through to stop."
+    },
+    {
+      "id": "stop-before",
+      "text": "[warm, conversational voice] To restart, the client sends sig term and waits for the server to exit. [measured, concerned voice] But if the old process was still running after the grace period, and its registration file had disappeared or changed, the client gave up without escalating. [dry, deliberate emphasis] The old process could still hold the port, and the restart that followed would collide with it."
+    },
+    {
+      "id": "stop-after",
+      "text": "[confident, clear voice] Now it only trusts the process it signaled. [firm, decisive delivery] If that process is still alive after the grace period, it gets sig kill. [calm, grounded emphasis] And if even that fails, stop reports a clear error after about ten seconds, instead of pretending it worked."
+    },
+    {
+      "id": "stop-code",
+      "text": "[concise, satisfied delivery] The fix deletes two lines in each client: the early return that trusted the file."
     }
   ]
 }

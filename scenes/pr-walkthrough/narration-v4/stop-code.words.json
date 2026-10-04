@@ -1,0 +1,79 @@
+{
+ "wordTimings": [
+  {
+   "word": "The",
+   "start": 0,
+   "end": 0.16
+  },
+  {
+   "word": "fix",
+   "start": 0.16,
+   "end": 0.34
+  },
+  {
+   "word": "deletes",
+   "start": 0.34,
+   "end": 0.82
+  },
+  {
+   "word": "two",
+   "start": 0.82,
+   "end": 1.02
+  },
+  {
+   "word": "lines",
+   "start": 1.02,
+   "end": 1.36
+  },
+  {
+   "word": "in",
+   "start": 1.36,
+   "end": 1.58
+  },
+  {
+   "word": "each",
+   "start": 1.58,
+   "end": 1.78
+  },
+  {
+   "word": "client,",
+   "start": 1.78,
+   "end": 2.2
+  },
+  {
+   "word": "the",
+   "start": 2.36,
+   "end": 2.76
+  },
+  {
+   "word": "early",
+   "start": 2.76,
+   "end": 3.02
+  },
+  {
+   "word": "return",
+   "start": 3.02,
+   "end": 3.32
+  },
+  {
+   "word": "that",
+   "start": 3.32,
+   "end": 3.68
+  },
+  {
+   "word": "trusted",
+   "start": 3.68,
+   "end": 3.98
+  },
+  {
+   "word": "the",
+   "start": 3.98,
+   "end": 4.18
+  },
+  {
+   "word": "file.",
+   "start": 4.18,
+   "end": 4.42
+  }
+ ]
+}

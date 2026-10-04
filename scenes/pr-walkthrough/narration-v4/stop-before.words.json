@@ -1,0 +1,284 @@
+{
+ "wordTimings": [
+  {
+   "word": "To",
+   "start": 0,
+   "end": 0.12
+  },
+  {
+   "word": "restart,",
+   "start": 0.12,
+   "end": 0.52
+  },
+  {
+   "word": "the",
+   "start": 0.74,
+   "end": 0.96
+  },
+  {
+   "word": "client",
+   "start": 0.96,
+   "end": 1.24
+  },
+  {
+   "word": "sends",
+   "start": 1.24,
+   "end": 1.52
+  },
+  {
+   "word": "SIGTERM",
+   "start": 1.52,
+   "end": 2.22
+  },
+  {
+   "word": "and",
+   "start": 2.22,
+   "end": 2.5
+  },
+  {
+   "word": "waits",
+   "start": 2.5,
+   "end": 2.84
+  },
+  {
+   "word": "for",
+   "start": 2.84,
+   "end": 3
+  },
+  {
+   "word": "the",
+   "start": 3,
+   "end": 3.1
+  },
+  {
+   "word": "server",
+   "start": 3.1,
+   "end": 3.38
+  },
+  {
+   "word": "to",
+   "start": 3.38,
+   "end": 3.54
+  },
+  {
+   "word": "exit.",
+   "start": 3.54,
+   "end": 3.82
+  },
+  {
+   "word": "But",
+   "start": 4.16,
+   "end": 4.6
+  },
+  {
+   "word": "if",
+   "start": 4.6,
+   "end": 4.72
+  },
+  {
+   "word": "the",
+   "start": 4.72,
+   "end": 4.84
+  },
+  {
+   "word": "old",
+   "start": 4.84,
+   "end": 5.06
+  },
+  {
+   "word": "process",
+   "start": 5.06,
+   "end": 5.44
+  },
+  {
+   "word": "was",
+   "start": 5.44,
+   "end": 5.78
+  },
+  {
+   "word": "still",
+   "start": 5.78,
+   "end": 6.06
+  },
+  {
+   "word": "running",
+   "start": 6.06,
+   "end": 6.42
+  },
+  {
+   "word": "after",
+   "start": 6.42,
+   "end": 6.86
+  },
+  {
+   "word": "the",
+   "start": 6.86,
+   "end": 7.1
+  },
+  {
+   "word": "grace",
+   "start": 7.1,
+   "end": 7.3
+  },
+  {
+   "word": "period,",
+   "start": 7.3,
+   "end": 7.62
+  },
+  {
+   "word": "and",
+   "start": 7.86,
+   "end": 8.16
+  },
+  {
+   "word": "its",
+   "start": 8.16,
+   "end": 8.28
+  },
+  {
+   "word": "registration",
+   "start": 8.28,
+   "end": 8.68
+  },
+  {
+   "word": "file",
+   "start": 8.68,
+   "end": 9.16
+  },
+  {
+   "word": "had",
+   "start": 9.16,
+   "end": 9.44
+  },
+  {
+   "word": "disappeared",
+   "start": 9.44,
+   "end": 9.9
+  },
+  {
+   "word": "or",
+   "start": 9.9,
+   "end": 10.3
+  },
+  {
+   "word": "changed,",
+   "start": 10.3,
+   "end": 10.7
+  },
+  {
+   "word": "the",
+   "start": 10.98,
+   "end": 11.26
+  },
+  {
+   "word": "client",
+   "start": 11.26,
+   "end": 11.54
+  },
+  {
+   "word": "gave",
+   "start": 11.54,
+   "end": 11.76
+  },
+  {
+   "word": "up",
+   "start": 11.76,
+   "end": 12.08
+  },
+  {
+   "word": "without",
+   "start": 12.08,
+   "end": 12.4
+  },
+  {
+   "word": "escalating.",
+   "start": 12.4,
+   "end": 13.14
+  },
+  {
+   "word": "The",
+   "start": 13.26,
+   "end": 13.72
+  },
+  {
+   "word": "old",
+   "start": 13.72,
+   "end": 13.96
+  },
+  {
+   "word": "process",
+   "start": 13.96,
+   "end": 14.38
+  },
+  {
+   "word": "could",
+   "start": 14.38,
+   "end": 14.76
+  },
+  {
+   "word": "still",
+   "start": 14.76,
+   "end": 15.16
+  },
+  {
+   "word": "hold",
+   "start": 15.16,
+   "end": 15.52
+  },
+  {
+   "word": "the",
+   "start": 15.52,
+   "end": 15.68
+  },
+  {
+   "word": "port,",
+   "start": 15.68,
+   "end": 15.96
+  },
+  {
+   "word": "and",
+   "start": 16.16,
+   "end": 16.5
+  },
+  {
+   "word": "the",
+   "start": 16.5,
+   "end": 16.58
+  },
+  {
+   "word": "restart",
+   "start": 16.58,
+   "end": 16.92
+  },
+  {
+   "word": "that",
+   "start": 16.92,
+   "end": 17.14
+  },
+  {
+   "word": "followed",
+   "start": 17.14,
+   "end": 17.56
+  },
+  {
+   "word": "would",
+   "start": 17.56,
+   "end": 17.94
+  },
+  {
+   "word": "collide",
+   "start": 17.94,
+   "end": 18.28
+  },
+  {
+   "word": "with",
+   "start": 18.28,
+   "end": 18.56
+  },
+  {
+   "word": "it.",
+   "start": 18.56,
+   "end": 18.74
+  }
+ ]
+}
