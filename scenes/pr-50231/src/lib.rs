@@ -18,12 +18,10 @@ use anyhow::Result;
 use psychopomp::{
     author::{PlanBuilder, seconds},
     caption::{CaptionActor, CaptionAlign, CaptionPlan, CaptionSpanPlan},
-    effects::spinner::Mark,
     narration::Narration,
     plan::{
         MediaKindPlan, MediaPlan, MediaRolePlan, ReelPlan, ReelSegmentPlan, ReelTransitionStyle,
     },
-    stage::{StageElement, StagePost, StatusText},
     tone::Tone,
 };
 
@@ -102,76 +100,6 @@ fn chip(scene: &mut PlanBuilder, id: &str, dot: Tone, text: &str) -> Result<Capt
 
 fn footer(scene: &mut PlanBuilder, id: &str, spans: Vec<CaptionSpanPlan>) -> Result<CaptionActor> {
     CaptionActor::declare(scene, id, &CaptionPlan::line([LEFT, FOOTER_Y], 28.0, spans))
-}
-
-/// The look shared by every Stage segment: restrained bloom, a quiet frame.
-const POST: StagePost = StagePost {
-    bloom: 0.18,
-    grain: 0.012,
-    vignette: 0.22,
-    backdrop: 0.12,
-};
-
-fn status(text: &str, tone: Tone) -> StatusText {
-    StatusText {
-        text: text.to_owned(),
-        tone,
-    }
-}
-
-fn card(
-    id: &str,
-    at: [f32; 3],
-    size: [f32; 2],
-    title: &str,
-    status: Vec<StatusText>,
-    tone: Tone,
-) -> StageElement {
-    StageElement::Card {
-        id: id.into(),
-        at,
-        size,
-        title: title.into(),
-        status,
-        tone,
-        mark: Mark::Check,
-    }
-}
-
-fn beam(id: &str, from: &str, to: &str, tone: Tone) -> StageElement {
-    StageElement::Beam {
-        id: id.into(),
-        from: from.into(),
-        to: to.into(),
-        bend: 0.0,
-        tone,
-    }
-}
-
-fn packet(id: &str, beam: &str, tone: Tone) -> StageElement {
-    StageElement::Packet {
-        id: id.into(),
-        beam: beam.into(),
-        reverse: false,
-        label: String::new(),
-        tone,
-    }
-}
-
-fn label(
-    id: &str,
-    at: [f32; 3],
-    size: f32,
-    align: CaptionAlign,
-    parts: &[(&str, Tone)],
-) -> StageElement {
-    StageElement::Label {
-        id: id.into(),
-        at,
-        size,
-        align,
-        spans: parts.iter().map(|(text, tone)| span(text, *tone)).collect(),
-    }
 }
 
 /// A sound file and its length in seconds. Paths resolve against the reel file.

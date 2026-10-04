@@ -4,12 +4,15 @@
 //! posting twice.
 use anyhow::{Context, Result};
 use psychopomp::{
-    author::PlanTime, caption::CaptionAlign, plan::ScenePlan, stage::StagePlan, tone::Tone,
+    author::PlanTime,
+    plan::ScenePlan,
+    stage::{StageElement, StagePlan, StagePost},
+    tone::Tone,
 };
 
 use crate::{
-    Film, GLITCH, IMPACT, MARK, Narration, SUCCESS, arrive, beam, begin, card, chip, footer,
-    header, label, orb, orb_in, packet, plug, post, seconds, send, show, sound, status,
+    Film, GLITCH, IMPACT, MARK, Narration, SUCCESS, arrive, begin, chip, footer, header, orb_in,
+    plug, seconds, send, show, sound, status,
 };
 
 const RUNTIME: [f32; 3] = [260.0, 510.0, 0.0];
@@ -20,66 +23,40 @@ const THREAD_X: f32 = 1570.0;
 
 fn stage() -> StagePlan {
     let slack = |id: &str, y: f32, h: f32, title: &str, statuses: &[(&str, Tone)]| {
-        card(
-            id,
-            [THREAD_X, y, 0.0],
-            [360.0, h],
-            title,
-            statuses,
-            Tone::Plain,
-        )
+        StageElement::card(id, [THREAD_X, y, 0.0], [360.0, h], title).statuses(statuses)
     };
     StagePlan {
-        post: post(),
+        post: StagePost::RESTRAINED,
         elements: vec![
-            orb("runtime", RUNTIME, 80.0, 500),
-            label(
+            StageElement::orb("runtime", RUNTIME, 80.0)
+                .points(500)
+                .tone(Tone::Plain),
+            StageElement::label(
                 "log-name",
                 [RUNTIME[0], 625.0, 0.0],
                 20.0,
-                CaptionAlign::Center,
                 &[("durable event log", Tone::Muted)],
             ),
-            card(
-                "follower",
-                FOLLOWER,
-                [260.0, 100.0],
-                "follower",
-                &[
-                    ("reading the log", Tone::Muted),
-                    ("folding a turn", Tone::Plain),
-                ],
-                Tone::Plain,
-            ),
-            card(
-                "publication",
-                PUBLICATION,
-                [290.0, 100.0],
-                "publication",
+            StageElement::card("follower", FOLLOWER, [260.0, 100.0], "follower").statuses(&[
+                ("reading the log", Tone::Muted),
+                ("folding a turn", Tone::Plain),
+            ]),
+            StageElement::card("publication", PUBLICATION, [290.0, 100.0], "publication").statuses(
                 &[
                     ("reconciling", Tone::Muted),
                     ("intent flushed", Tone::Plain),
                     ("reset", Tone::Error),
                     ("adopted, not reposted", Tone::Success),
                 ],
-                Tone::Plain,
             ),
-            card(
-                "sqlite",
-                SQLITE,
-                [290.0, 90.0],
-                "sqlite",
-                &[
-                    ("handles · cursor", Tone::Muted),
-                    ("write-ahead intent", Tone::Accent),
-                ],
-                Tone::Plain,
-            ),
-            label(
+            StageElement::card("sqlite", SQLITE, [290.0, 90.0], "sqlite").statuses(&[
+                ("handles · cursor", Tone::Muted),
+                ("write-ahead intent", Tone::Accent),
+            ]),
+            StageElement::label(
                 "thread-name",
                 [THREAD_X, 260.0, 0.0],
                 20.0,
-                CaptionAlign::Center,
                 &[("slack thread", Tone::Muted)],
             ),
             slack(
@@ -112,31 +89,44 @@ fn stage() -> StagePlan {
                     ("posted once", Tone::Success),
                 ],
             ),
-            label(
+            StageElement::label(
                 "metadata",
                 [THREAD_X, 768.0, 0.0],
                 19.0,
-                CaptionAlign::Center,
                 &[
                     ("metadata: ", Tone::Muted),
                     ("its durable id", Tone::Accent),
                 ],
             ),
-            beam("lg", "runtime", "follower", Tone::Plain),
-            beam("fp", "follower", "publication", Tone::Plain),
-            beam("pi", "publication", "indicator", Tone::Plain),
-            beam("pa", "publication", "answer", Tone::Request),
-            beam("pf", "publication", "footer", Tone::Plain),
-            beam("pw", "publication", "sqlite", Tone::Plain),
-            packet("events", "lg", false, "events", Tone::Request),
-            packet("turn", "fp", false, "turn", Tone::Request),
-            packet("indicate", "pi", false, "", Tone::Plain),
-            packet("edit-1", "pa", false, "post", Tone::Request),
-            packet("edit-2", "pa", false, "edit", Tone::Request),
-            packet("edit-3", "pa", false, "edit", Tone::Request),
-            packet("intent", "pw", false, "intent", Tone::Accent),
-            packet("post-footer", "pf", false, "post", Tone::Request),
-            packet("probe", "pf", false, "find by metadata", Tone::Plain),
+            StageElement::beam("lg", "runtime", "follower"),
+            StageElement::beam("fp", "follower", "publication"),
+            StageElement::beam("pi", "publication", "indicator"),
+            StageElement::beam("pa", "publication", "answer").tone(Tone::Request),
+            StageElement::beam("pf", "publication", "footer"),
+            StageElement::beam("pw", "publication", "sqlite"),
+            StageElement::packet("events", "lg")
+                .labeled("events")
+                .tone(Tone::Request),
+            StageElement::packet("turn", "fp")
+                .labeled("turn")
+                .tone(Tone::Request),
+            StageElement::packet("indicate", "pi"),
+            StageElement::packet("edit-1", "pa")
+                .labeled("post")
+                .tone(Tone::Request),
+            StageElement::packet("edit-2", "pa")
+                .labeled("edit")
+                .tone(Tone::Request),
+            StageElement::packet("edit-3", "pa")
+                .labeled("edit")
+                .tone(Tone::Request),
+            StageElement::packet("intent", "pw")
+                .labeled("intent")
+                .tone(Tone::Accent),
+            StageElement::packet("post-footer", "pf")
+                .labeled("post")
+                .tone(Tone::Request),
+            StageElement::packet("probe", "pf").labeled("find by metadata"),
         ],
     }
 }

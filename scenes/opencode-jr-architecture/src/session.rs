@@ -7,13 +7,13 @@ use psychopomp::{
     caption::CaptionAlign,
     math::easing::Ease,
     plan::ScenePlan,
-    stage::{StagePlan, reply_after},
+    stage::{StageElement, StagePlan, StagePost, reply_after},
     tone::Tone,
 };
 
 use crate::{
-    BLOOM, Film, MARK, Narration, arrive, beam, begin, card, chip, footer, header, label, orb,
-    orb_in, packet, plug, post, ring, seconds, send, show, sound, status,
+    BLOOM, Film, MARK, Narration, arrive, begin, chip, footer, header, orb_in, plug, seconds, send,
+    show, sound, status,
 };
 
 const MAILBOX: [f32; 3] = [330.0, 510.0, 0.0];
@@ -24,98 +24,73 @@ const OUTCOMES_X: f32 = 720.0;
 
 fn stage() -> StagePlan {
     let outcome = |id: &str, y: f32, cause: &str, result: (&str, Tone)| {
-        label(
+        StageElement::label(
             id,
             [OUTCOMES_X, y, 0.0],
             20.0,
-            CaptionAlign::Left,
             &[(cause, Tone::Muted), (" → ", Tone::Muted), result],
         )
+        .align(CaptionAlign::Left)
     };
     StagePlan {
-        post: post(),
+        post: StagePost::RESTRAINED,
         elements: vec![
-            label(
+            StageElement::label(
                 "name",
                 [960.0, 255.0, 0.0],
                 26.0,
-                CaptionAlign::Center,
                 &[
                     ("SessionDO", Tone::Plain),
                     ("   team : channel : thread", Tone::Muted),
                 ],
             ),
-            card(
-                "mailbox",
-                MAILBOX,
-                [280.0, 110.0],
-                "mailbox",
-                &[
-                    ("3 pending", Tone::Plain),
-                    ("2 pending", Tone::Plain),
-                    ("1 pending", Tone::Plain),
-                    ("empty", Tone::Muted),
-                ],
-                Tone::Plain,
-            ),
-            ring(
-                "alarm",
-                [MAILBOX[0] - 110.0, 385.0, 0.0],
-                16.0,
-                2.0,
-                Tone::Warning,
-            ),
-            label(
+            StageElement::card("mailbox", MAILBOX, [280.0, 110.0], "mailbox").statuses(&[
+                ("3 pending", Tone::Plain),
+                ("2 pending", Tone::Plain),
+                ("1 pending", Tone::Plain),
+                ("empty", Tone::Muted),
+            ]),
+            StageElement::ring("alarm", [MAILBOX[0] - 110.0, 385.0, 0.0], 16.0)
+                .thickness(2.0)
+                .tone(Tone::Warning),
+            StageElement::label(
                 "alarm-name",
                 [MAILBOX[0] - 82.0, 385.0, 0.0],
                 20.0,
-                CaptionAlign::Left,
                 &[("alarm", Tone::Warning), (" · drains it", Tone::Muted)],
-            ),
-            card(
-                "admission",
-                ADMISSION,
-                [300.0, 110.0],
-                "admission",
-                &[
-                    ("deciding", Tone::Muted),
-                    ("wake", Tone::Request),
-                    ("steer", Tone::Request),
-                    ("classifier…", Tone::Plain),
-                    ("quiet context", Tone::Muted),
-                    ("prompting", Tone::Request),
-                ],
-                Tone::Plain,
-            ),
-            orb("runtime", RUNTIME, 105.0, 700),
-            label(
+            )
+            .align(CaptionAlign::Left),
+            StageElement::card("admission", ADMISSION, [300.0, 110.0], "admission").statuses(&[
+                ("deciding", Tone::Muted),
+                ("wake", Tone::Request),
+                ("steer", Tone::Request),
+                ("classifier…", Tone::Plain),
+                ("quiet context", Tone::Muted),
+                ("prompting", Tone::Request),
+            ]),
+            StageElement::orb("runtime", RUNTIME, 105.0)
+                .points(700)
+                .tone(Tone::Plain),
+            StageElement::label(
                 "runtime-name",
                 [RUNTIME[0], 652.0, 0.0],
                 23.0,
-                CaptionAlign::Center,
                 &[("opencode runtime", Tone::Plain)],
             ),
-            label(
+            StageElement::label(
                 "runtime-embedded",
                 [RUNTIME[0], 684.0, 0.0],
                 19.0,
-                CaptionAlign::Center,
                 &[
                     ("embedded", Tone::Accent),
                     (" · no network hop", Tone::Muted),
                 ],
             ),
-            card(
-                "sqlite",
-                SQLITE,
-                [300.0, 96.0],
-                "sqlite",
-                &[("slack + opencode state", Tone::Muted)],
-                Tone::Plain,
-            ),
-            beam("mb", "mailbox", "admission", Tone::Plain),
-            beam("ad", "admission", "runtime", Tone::Request),
-            beam("db", "runtime", "sqlite", Tone::Plain),
+            StageElement::card("sqlite", SQLITE, [300.0, 96.0], "sqlite")
+                .statuses(&[("slack + opencode state", Tone::Muted)]),
+            StageElement::beam("mb", "mailbox", "admission"),
+            StageElement::beam("ad", "admission", "runtime").tone(Tone::Request),
+            StageElement::beam("db", "runtime", "sqlite"),
             outcome("o-wake", 640.0, "a mention", ("wake", Tone::Request)),
             outcome(
                 "o-steer",
@@ -135,29 +110,41 @@ fn stage() -> StagePlan {
                 "not for jr",
                 ("quiet context", Tone::Plain),
             ),
-            label(
+            StageElement::label(
                 "msg-id",
                 [MAILBOX[0], 605.0, 0.0],
                 20.0,
-                CaptionAlign::Center,
                 &[("msg_… ", Tone::Accent), ("saved at enqueue", Tone::Muted)],
             ),
-            label(
+            StageElement::label(
                 "once",
                 [(ADMISSION[0] + RUNTIME[0]) * 0.5, 425.0, 0.0],
                 20.0,
-                CaptionAlign::Center,
                 &[("same id", Tone::Plain), (" → accepted once", Tone::Muted)],
             ),
-            packet("m-wake", "mb", false, "@jr", Tone::Request),
-            packet("p-wake", "ad", false, "wake", Tone::Request),
-            packet("m-steer", "mb", false, "reply", Tone::Request),
-            packet("p-steer", "ad", false, "steer", Tone::Request),
-            packet("m-context", "mb", false, "chatter", Tone::Plain),
-            packet("p-context", "ad", false, "context", Tone::Muted),
-            packet("state", "db", false, "", Tone::Plain),
-            packet("prompt", "ad", false, "prompt · msg_…", Tone::Request),
-            packet("retry", "ad", false, "retry · msg_…", Tone::Warning),
+            StageElement::packet("m-wake", "mb")
+                .labeled("@jr")
+                .tone(Tone::Request),
+            StageElement::packet("p-wake", "ad")
+                .labeled("wake")
+                .tone(Tone::Request),
+            StageElement::packet("m-steer", "mb")
+                .labeled("reply")
+                .tone(Tone::Request),
+            StageElement::packet("p-steer", "ad")
+                .labeled("steer")
+                .tone(Tone::Request),
+            StageElement::packet("m-context", "mb").labeled("chatter"),
+            StageElement::packet("p-context", "ad")
+                .labeled("context")
+                .tone(Tone::Muted),
+            StageElement::packet("state", "db"),
+            StageElement::packet("prompt", "ad")
+                .labeled("prompt · msg_…")
+                .tone(Tone::Request),
+            StageElement::packet("retry", "ad")
+                .labeled("retry · msg_…")
+                .tone(Tone::Warning),
         ],
     }
 }

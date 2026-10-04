@@ -9,11 +9,11 @@ use psychopomp::{
     narration::Narration,
     plan::ScenePlan,
     rolling::{RollingNumberActor, RollingNumberPlan},
-    stage::{StageActor, StagePlan},
+    stage::{StageActor, StageElement, StagePlan, StagePost},
     tone::Tone,
 };
 
-use crate::{MARK, POST, RESOLUTION, card, label, sound, span, status};
+use crate::{MARK, RESOLUTION, sound, span};
 
 const CHECKS: [&str; 8] = [
     "typecheck",
@@ -27,43 +27,39 @@ const CHECKS: [&str; 8] = [
 ];
 fn stage_plan() -> StagePlan {
     let mut elements = vec![
-        label(
+        StageElement::label(
             "title",
             [960.0, 740.0, 0.0],
             46.0,
-            CaptionAlign::Center,
             &[
                 ("#50231", Tone::Accent),
                 (" · chore: upgrade Effect to rc.117", Tone::Plain),
             ],
         ),
-        label(
+        StageElement::label(
             "tagline",
             [960.0, 822.0, 0.0],
             32.0,
-            CaptionAlign::Center,
             &[("nothing you depend on changes.", Tone::Plain)],
         ),
     ];
     for (index, name) in CHECKS.iter().enumerate() {
-        elements.push(card(
-            &format!("check-{index}"),
-            [
-                345.0 + (index % 4) as f32 * 420.0,
-                460.0 + (index / 4) as f32 * 112.0,
-                0.0,
-            ],
-            [380.0, 88.0],
-            name,
-            vec![
-                status("running", Tone::Muted),
-                status("passed", Tone::Success),
-            ],
-            Tone::Plain,
-        ));
+        elements.push(
+            StageElement::card(
+                &format!("check-{index}"),
+                [
+                    345.0 + (index % 4) as f32 * 420.0,
+                    460.0 + (index / 4) as f32 * 112.0,
+                    0.0,
+                ],
+                [380.0, 88.0],
+                name,
+            )
+            .statuses(&[("running", Tone::Muted), ("passed", Tone::Success)]),
+        );
     }
     StagePlan {
-        post: POST,
+        post: StagePost::RESTRAINED,
         elements,
     }
 }

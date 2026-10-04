@@ -10,13 +10,11 @@ use psychopomp::{
     math::easing::Ease,
     narration::Narration,
     plan::ScenePlan,
-    stage::{DRAW_CURVE, StageActor, StageElement, StagePlan},
+    stage::{DRAW_CURVE, StageActor, StageElement, StagePlan, StagePost},
     tone::Tone,
 };
 
-use crate::{
-    DROP, FAILURE, GLITCH, POST, SEND, TICK, beam, card, chip, footer, header, label, sound, span,
-};
+use crate::{DROP, FAILURE, GLITCH, SEND, TICK, chip, footer, header, sound, span};
 
 const SAVED_X: f32 = 380.0;
 const APP_X: f32 = 1540.0;
@@ -35,17 +33,11 @@ const ACROSS: f32 = APP_X - SAVED_X;
 const FALL: Ease = Ease::CubicBezier([0.55, 0.0, 1.0, 0.45]);
 
 fn code(id: &str, y: f32, parts: &[(&str, Tone)]) -> StageElement {
-    label(id, [CODE_X, y, -2.0], 24.0, CaptionAlign::Left, parts)
+    StageElement::label(id, [CODE_X, y, -2.0], 24.0, parts).align(CaptionAlign::Left)
 }
 
 fn ring(id: &str, y: f32) -> StageElement {
-    StageElement::Ring {
-        id: id.into(),
-        at: [GATE_X, y, 0.0],
-        radius: 5.0,
-        thickness: 2.0,
-        tone: Tone::Plain,
-    }
+    StageElement::ring(id, [GATE_X, y, 0.0], 5.0).thickness(2.0)
 }
 
 fn stage_plan() -> StagePlan {
@@ -57,24 +49,17 @@ fn stage_plan() -> StagePlan {
         ]
     };
     let elements = vec![
-        card(
-            "parser",
-            [960.0, 330.0, 0.0],
-            [900.0, 200.0],
-            " ",
-            Vec::new(),
-            Tone::Plain,
-        ),
-        label(
+        StageElement::card("parser", [960.0, 330.0, 0.0], [900.0, 200.0], " "),
+        StageElement::label(
             "parser-tab",
             [516.0, 208.0, 0.0],
             18.0,
-            CaptionAlign::Left,
             &[
                 ("read schema", Tone::Plain),
                 (" · condensed from persistence/schema.ts", Tone::Muted),
             ],
-        ),
+        )
+        .align(CaptionAlign::Left),
         code(
             "code-read",
             305.0,
@@ -110,52 +95,40 @@ fn stage_plan() -> StagePlan {
                 ("])", Tone::Muted),
             ],
         ),
-        label(
+        StageElement::label(
             "col-saved",
             [SAVED_X, 528.0, 0.0],
             20.0,
-            CaptionAlign::Center,
             &[("saved settings", Tone::Muted)],
         ),
-        label(
+        StageElement::label(
             "col-app",
             [APP_X, 528.0, 0.0],
             20.0,
-            CaptionAlign::Center,
             &[("app state", Tone::Muted)],
         ),
         ring("gate-mid", 645.0),
         ring("gate-end", 780.0),
-        beam("gate-top", "parser", "gate-mid", Tone::Plain),
-        beam("gate-bottom", "gate-mid", "gate-end", Tone::Plain),
+        StageElement::beam("gate-top", "parser", "gate-mid"),
+        StageElement::beam("gate-bottom", "gate-mid", "gate-end"),
         // The empty slot the stripped field leaves; only its red ghost draws.
-        card(
-            "flag-slot",
-            [SAVED_X, FLAG_Y, 0.0],
-            FIELD_SIZE,
-            " ",
-            Vec::new(),
-            Tone::Plain,
-        ),
-        card(
+        StageElement::card("flag-slot", [SAVED_X, FLAG_Y, 0.0], FIELD_SIZE, " "),
+        StageElement::card(
             "theme",
             [SAVED_X, THEME_Y, FIELD_Z],
             FIELD_SIZE,
             "\"theme\": \"dark\"",
-            Vec::new(),
-            Tone::Plain,
         ),
-        card(
+        StageElement::card(
             "flag",
             [SAVED_X, FLAG_Y, FIELD_Z],
             FIELD_SIZE,
             "\"experimentalFlag\": true",
-            Vec::new(),
-            Tone::Accent,
-        ),
+        )
+        .tone(Tone::Accent),
     ];
     StagePlan {
-        post: POST,
+        post: StagePost::RESTRAINED,
         elements,
     }
 }

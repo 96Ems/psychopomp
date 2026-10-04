@@ -9,7 +9,7 @@ use psychopomp::{
     author::{PlanBuilder, seconds, spread},
     callout::{CalloutActor, CalloutAnchorPlan, CalloutPlan, CalloutSide},
     caption::{CaptionAlign, CaptionSpanPlan},
-    effects::{combustion, spinner::Mark},
+    effects::combustion,
     math::{Vec3, easing::Ease},
     narration::Narration,
     plan::{
@@ -17,7 +17,7 @@ use psychopomp::{
         ScenePlan,
     },
     rolling::{RollingNumberActor, RollingNumberPlan},
-    stage::{StageActor, StageElement, StagePlan, StagePost, StatusText},
+    stage::{StageActor, StageElement, StagePlan, StagePost},
     tone::Tone,
 };
 
@@ -67,164 +67,99 @@ fn span(text: &str, tone: Tone) -> CaptionSpanPlan {
     CaptionSpanPlan::new(text, tone)
 }
 
-fn label(
-    id: &str,
-    at: [f32; 3],
-    size: f32,
-    align: CaptionAlign,
-    parts: &[(&str, Tone)],
-) -> StageElement {
-    StageElement::Label {
-        id: id.into(),
-        at,
-        size,
-        align,
-        spans: parts.iter().map(|(text, tone)| span(text, *tone)).collect(),
-    }
-}
-
 fn client(id: &str, at: [f32; 3], title: &str) -> StageElement {
-    StageElement::Card {
-        id: id.into(),
-        at,
-        size: CARD,
-        title: title.into(),
-        status: vec![
-            StatusText {
-                text: "connected".into(),
-                tone: Tone::Muted,
-            },
-            StatusText {
-                text: "disconnected".into(),
-                tone: Tone::Error,
-            },
-        ],
-        tone: Tone::Request,
-        mark: Mark::Check,
-    }
-}
-
-fn beam(id: &str, from: &str) -> StageElement {
-    StageElement::Beam {
-        id: id.into(),
-        from: from.into(),
-        to: "orb".into(),
-        bend: 0.0,
-        tone: Tone::Request,
-    }
-}
-
-fn packet(id: &str, beam: &str, label: &str, tone: Tone) -> StageElement {
-    StageElement::Packet {
-        id: id.into(),
-        beam: beam.into(),
-        reverse: false,
-        label: label.into(),
-        tone,
-    }
-}
-
-fn ring(id: &str, radius: f32, tone: Tone) -> StageElement {
-    StageElement::Ring {
-        id: id.into(),
-        at: ORB,
-        radius,
-        thickness: 1.4,
-        tone,
-    }
+    StageElement::card(id, at, CARD, title)
+        .statuses(&[("connected", Tone::Muted), ("disconnected", Tone::Error)])
+        .tone(Tone::Request)
 }
 
 fn stage_plan() -> StagePlan {
     let mut elements = vec![
-        StageElement::Orb {
-            id: "orb".into(),
-            at: ORB,
-            radius: 140.0,
-            points: 900,
-            tone: Tone::Plain,
-        },
+        StageElement::orb("orb", ORB, 140.0)
+            .points(900)
+            .tone(Tone::Plain),
         client("terminal", TERMINAL, "terminal"),
         client("desktop", DESKTOP, "desktop app"),
-        beam("link-l", "terminal"),
-        beam("link-r", "desktop"),
-        label(
+        StageElement::beam("link-l", "terminal", "orb").tone(Tone::Request),
+        StageElement::beam("link-r", "desktop", "orb").tone(Tone::Request),
+        StageElement::label(
             "title",
             [960.0, 760.0, 0.0],
             112.0,
-            CaptionAlign::Center,
             &[("psychopomp", Tone::Accent)],
         ),
-        label(
+        StageElement::label(
             "subtitle",
             [960.0, 845.0, 0.0],
             30.0,
-            CaptionAlign::Center,
             &[("motion graphics in rust", Tone::Plain)],
         ),
-        label(
+        StageElement::label(
             "url",
             [960.0, 905.0, 0.0],
             28.0,
-            CaptionAlign::Center,
             &[
                 ("github.com/kitlangton/", Tone::Muted),
                 ("psychopomp", Tone::Plain),
             ],
         ),
-        label(
+        StageElement::label(
             "shout-frame",
             [960.0, 330.0, 160.0],
             150.0,
-            CaptionAlign::Center,
             &[("ANY FRAME!", Tone::Plain)],
         ),
-        label(
+        StageElement::label(
             "shout-order",
             [960.0, 690.0, 160.0],
             150.0,
-            CaptionAlign::Center,
             &[("ANY ORDER!", Tone::Accent)],
         ),
-        label(
+        StageElement::label(
             "diff-old",
             [690.0, 840.0, 0.0],
             30.0,
-            CaptionAlign::Left,
             &[("- ", Tone::Error), ("yield* server.kill()", Tone::Muted)],
-        ),
-        label(
+        )
+        .align(CaptionAlign::Left),
+        StageElement::label(
             "diff-new",
             [690.0, 888.0, 0.0],
             30.0,
-            CaptionAlign::Left,
             &[
                 ("+ ", Tone::Success),
                 ("yield* rewind(server)", Tone::Plain),
             ],
-        ),
-        ring("ripple-1", 150.0, Tone::Accent),
-        ring("ripple-2", 150.0, Tone::Plain),
-        ring("calm", 152.0, Tone::Success),
-        ring("calm-outer", 158.0, Tone::Success),
+        )
+        .align(CaptionAlign::Left),
+        StageElement::ring("ripple-1", ORB, 150.0)
+            .thickness(1.4)
+            .tone(Tone::Accent),
+        StageElement::ring("ripple-2", ORB, 150.0).thickness(1.4),
+        StageElement::ring("calm", ORB, 152.0)
+            .thickness(1.4)
+            .tone(Tone::Success),
+        StageElement::ring("calm-outer", ORB, 158.0)
+            .thickness(1.4)
+            .tone(Tone::Success),
     ];
     for (id, beam, text) in VOLLEY {
-        elements.push(packet(id, beam, text, Tone::Request));
+        elements.push(
+            StageElement::packet(id, beam)
+                .labeled(text)
+                .tone(Tone::Request),
+        );
     }
     elements.extend([
-        packet("whip-l", "link-l", "", Tone::Accent),
-        packet("whip-r", "link-r", "", Tone::Accent),
-        packet("flood-1", "link-l", "", Tone::Plain),
-        packet("flood-2", "link-r", "", Tone::Plain),
-        packet("flood-3", "link-l", "", Tone::Accent),
-        packet("flood-4", "link-r", "", Tone::Accent),
+        StageElement::packet("whip-l", "link-l").tone(Tone::Accent),
+        StageElement::packet("whip-r", "link-r").tone(Tone::Accent),
+        StageElement::packet("flood-1", "link-l"),
+        StageElement::packet("flood-2", "link-r"),
+        StageElement::packet("flood-3", "link-l").tone(Tone::Accent),
+        StageElement::packet("flood-4", "link-r").tone(Tone::Accent),
     ]);
     StagePlan {
-        post: StagePost {
-            bloom: 0.18,
-            grain: 0.012,
-            vignette: 0.22,
-            backdrop: 0.12,
-        },
+        post: StagePost::RESTRAINED,
         elements,
     }
 }

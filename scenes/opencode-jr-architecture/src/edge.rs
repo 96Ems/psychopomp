@@ -6,13 +6,13 @@ use psychopomp::{
     caption::CaptionAlign,
     math::{Vec2, Vec3, vec2},
     plan::ScenePlan,
-    stage::{Camera, StagePlan, reply_after},
+    stage::{Camera, StageElement, StagePlan, StagePost, reply_after},
     tone::Tone,
 };
 
 use crate::{
-    CONFIRM, Film, Narration, SUCCESS, arrive, beam, begin, card, chip, footer, header, label,
-    packet, post, seconds, send, sound, status,
+    CONFIRM, Film, Narration, SUCCESS, arrive, begin, chip, footer, header, seconds, send, sound,
+    status,
 };
 
 const SLACK: [f32; 3] = [330.0, 440.0, 0.0];
@@ -25,57 +25,33 @@ const CHECKS_X: f32 = 830.0;
 
 fn stage() -> StagePlan {
     let check = |id: &str, y: f32, mark: (&str, Tone), text: &str| {
-        label(
-            id,
-            [CHECKS_X, y, 0.0],
-            21.0,
-            CaptionAlign::Left,
-            &[mark, (text, Tone::Muted)],
-        )
+        StageElement::label(id, [CHECKS_X, y, 0.0], 21.0, &[mark, (text, Tone::Muted)])
+            .align(CaptionAlign::Left)
     };
     StagePlan {
-        post: post(),
+        post: StagePost::RESTRAINED,
         elements: vec![
-            card(
-                "slack",
-                SLACK,
-                [280.0, 120.0],
-                "slack",
-                &[
-                    ("events api", Tone::Muted),
-                    ("waiting for 200", Tone::Plain),
-                    ("200 · done", Tone::Success),
-                    ("retrying", Tone::Warning),
-                ],
-                Tone::Plain,
-            ),
-            card(
-                "worker",
-                WORKER,
-                WORKER_SIZE,
-                "worker",
-                &[
+            StageElement::card("slack", SLACK, [280.0, 120.0], "slack").statuses(&[
+                ("events api", Tone::Muted),
+                ("waiting for 200", Tone::Plain),
+                ("200 · done", Tone::Success),
+                ("retrying", Tone::Warning),
+            ]),
+            StageElement::card("worker", WORKER, WORKER_SIZE, "worker")
+                .statuses(&[
                     ("POST /slack/events", Tone::Muted),
                     ("checking", Tone::Plain),
                     ("enqueueing", Tone::Plain),
                     ("200 sent", Tone::Success),
-                ],
-                Tone::Request,
-            ),
-            card(
-                "session",
-                SESSION,
-                [320.0, 124.0],
-                "SessionDO",
-                &[
-                    ("mailbox · empty", Tone::Muted),
-                    ("mailbox · 1 event", Tone::Plain),
-                    ("same ts · deduped", Tone::Warning),
-                ],
-                Tone::Plain,
-            ),
-            beam("in", "slack", "worker", Tone::Request),
-            beam("enq", "worker", "session", Tone::Plain),
+                ])
+                .tone(Tone::Request),
+            StageElement::card("session", SESSION, [320.0, 124.0], "SessionDO").statuses(&[
+                ("mailbox · empty", Tone::Muted),
+                ("mailbox · 1 event", Tone::Plain),
+                ("same ts · deduped", Tone::Warning),
+            ]),
+            StageElement::beam("in", "slack", "worker").tone(Tone::Request),
+            StageElement::beam("enq", "worker", "session"),
             check(
                 "signature",
                 570.0,
@@ -96,27 +72,42 @@ fn stage() -> StagePlan {
                 "top-level chatter ignored",
             ),
             check("actor", 730.0, ("✓ ", Tone::Success), "actor checked"),
-            label(
+            StageElement::label(
                 "sqlite",
                 [SESSION[0], 545.0, 0.0],
                 20.0,
-                CaptionAlign::Center,
                 &[("written to sqlite", Tone::Success)],
             ),
-            label(
+            StageElement::label(
                 "dedupe",
                 [SESSION[0], 585.0, 0.0],
                 20.0,
-                CaptionAlign::Center,
                 &[("keyed by message ts", Tone::Muted)],
             ),
-            packet("event", "in", false, "event", Tone::Request),
-            packet("enqueue", "enq", false, "enqueue", Tone::Request),
-            packet("commit", "enq", true, "committed", Tone::Success),
-            packet("ok", "in", true, "200", Tone::Success),
-            packet("again", "in", false, "same event", Tone::Warning),
-            packet("enqueue-2", "enq", false, "enqueue", Tone::Warning),
-            packet("ok-2", "in", true, "200", Tone::Success),
+            StageElement::packet("event", "in")
+                .labeled("event")
+                .tone(Tone::Request),
+            StageElement::packet("enqueue", "enq")
+                .labeled("enqueue")
+                .tone(Tone::Request),
+            StageElement::packet("commit", "enq")
+                .reversed()
+                .labeled("committed")
+                .tone(Tone::Success),
+            StageElement::packet("ok", "in")
+                .reversed()
+                .labeled("200")
+                .tone(Tone::Success),
+            StageElement::packet("again", "in")
+                .labeled("same event")
+                .tone(Tone::Warning),
+            StageElement::packet("enqueue-2", "enq")
+                .labeled("enqueue")
+                .tone(Tone::Warning),
+            StageElement::packet("ok-2", "in")
+                .reversed()
+                .labeled("200")
+                .tone(Tone::Success),
         ],
     }
 }

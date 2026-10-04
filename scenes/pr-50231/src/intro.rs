@@ -9,11 +9,11 @@ use psychopomp::{
     narration::Narration,
     plan::ScenePlan,
     rolling::{RollingNumberActor, RollingNumberPlan},
-    stage::{StageActor, StagePlan},
+    stage::{StageActor, StageElement, StagePlan, StagePost},
     tone::Tone,
 };
 
-use crate::{MARK, POST, TICK, beam, card, footer, header, sound, span, status};
+use crate::{MARK, TICK, footer, header, sound, span};
 
 const COMPILER: [f32; 3] = [300.0, 716.0, 0.0];
 const RENAMES: [&str; 4] = [
@@ -25,45 +25,44 @@ const RENAMES: [&str; 4] = [
 const UNCAUGHT: [&str; 3] = ["saved settings", "tool schemas", "permission order"];
 
 fn stage_plan() -> StagePlan {
-    let mut elements = vec![card(
-        "compiler",
-        COMPILER,
-        [260.0, 110.0],
-        "compiler",
-        vec![status("typecheck", Tone::Muted)],
-        Tone::Request,
-    )];
+    let mut elements = vec![
+        StageElement::card("compiler", COMPILER, [260.0, 110.0], "compiler")
+            .statuses(&[("typecheck", Tone::Muted)])
+            .tone(Tone::Request),
+    ];
     for (index, title) in RENAMES.iter().enumerate() {
-        elements.push(card(
-            &format!("rename-{index}"),
-            [820.0, 560.0 + index as f32 * 104.0, 0.0],
-            [620.0, 88.0],
-            title,
-            vec![
-                status("renamed", Tone::Muted),
-                status("caught", Tone::Success),
-            ],
-            Tone::Plain,
-        ));
-        elements.push(beam(
-            &format!("check-{index}"),
-            "compiler",
-            &format!("rename-{index}"),
-            Tone::Request,
-        ));
+        elements.push(
+            StageElement::card(
+                &format!("rename-{index}"),
+                [820.0, 560.0 + index as f32 * 104.0, 0.0],
+                [620.0, 88.0],
+                title,
+            )
+            .statuses(&[("renamed", Tone::Muted), ("caught", Tone::Success)]),
+        );
+        elements.push(
+            StageElement::beam(
+                &format!("check-{index}"),
+                "compiler",
+                &format!("rename-{index}"),
+            )
+            .tone(Tone::Request),
+        );
     }
     for (index, title) in UNCAUGHT.iter().enumerate() {
-        elements.push(card(
-            &format!("uncaught-{index}"),
-            [1530.0, 612.0 + index as f32 * 104.0, 0.0],
-            [400.0, 88.0],
-            title,
-            vec![status("runtime behavior", Tone::Warning)],
-            Tone::Warning,
-        ));
+        elements.push(
+            StageElement::card(
+                &format!("uncaught-{index}"),
+                [1530.0, 612.0 + index as f32 * 104.0, 0.0],
+                [400.0, 88.0],
+                title,
+            )
+            .statuses(&[("runtime behavior", Tone::Warning)])
+            .tone(Tone::Warning),
+        );
     }
     StagePlan {
-        post: POST,
+        post: StagePost::RESTRAINED,
         elements,
     }
 }

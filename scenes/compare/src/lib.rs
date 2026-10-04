@@ -6,7 +6,7 @@ use anyhow::Result;
 use psychopomp::{
     author::{PlanBuilder, seconds},
     plan::{ReelPlan, ReelSegmentPlan, ReelWipePlan, ScenePlan, WipeDirection},
-    stage::{StageActor, StageElement, StagePlan, StagePost, StatusText},
+    stage::{StageActor, StageElement, StagePlan, StagePost},
     tone::Tone,
 };
 use serde_json::json;
@@ -24,33 +24,15 @@ const HOLD: f64 = 2.6;
 
 /// The same topology with every region reporting `latency` in `tone`.
 fn regions(id: &str, latency: [&str; 4], tone: Tone, duration: u64) -> Result<ScenePlan> {
-    let mut elements = vec![StageElement::Orb {
-        id: "gateway".into(),
-        at: [960.0, 330.0, 0.0],
-        radius: 74.0,
-        points: 720,
-        tone: Tone::Accent,
-    }];
+    let mut elements = vec![StageElement::orb("gateway", [960.0, 330.0, 0.0], 74.0)];
     for (index, (key, title)) in REGIONS.into_iter().enumerate() {
-        elements.push(StageElement::Card {
-            id: key.into(),
-            at: [360.0 + index as f32 * 400.0, 700.0, 0.0],
-            size: [300.0, 132.0],
-            title: title.into(),
-            status: vec![StatusText {
-                text: format!("p99 {}", latency[index]),
-                tone,
-            }],
-            tone,
-            mark: Default::default(),
-        });
-        elements.push(StageElement::Beam {
-            id: format!("to-{key}"),
-            from: "gateway".into(),
-            to: key.into(),
-            bend: 0.0,
-            tone,
-        });
+        let at = [360.0 + index as f32 * 400.0, 700.0, 0.0];
+        elements.push(
+            StageElement::card(key, at, [300.0, 132.0], title)
+                .statuses(&[(&format!("p99 {}", latency[index]), tone)])
+                .tone(tone),
+        );
+        elements.push(StageElement::beam(&format!("to-{key}"), "gateway", key).tone(tone));
     }
     let mut scene = PlanBuilder::new(id, duration);
     StageActor::declare(

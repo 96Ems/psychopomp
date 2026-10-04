@@ -3,62 +3,63 @@
 use anyhow::{Context, Result};
 use psychopomp::{
     author::PlanTime,
-    caption::CaptionAlign,
     plan::ScenePlan,
-    stage::{StagePlan, reply_after},
+    stage::{StageElement, StagePlan, StagePost, reply_after},
     tone::Tone,
 };
 
 use crate::{
-    BLOOM, Film, Narration, arrive, beam, begin, card, footer, header, label, orb, orb_in, packet,
-    plug, post, seconds, send, show, sound,
+    BLOOM, Film, Narration, arrive, begin, footer, header, orb_in, plug, seconds, send, show, sound,
 };
 
 const Y: f32 = 500.0;
 
 fn stage() -> StagePlan {
     let node = |id: &str, x: f32, title: &str, status: &str| {
-        card(
-            id,
-            [x, Y, 0.0],
-            [250.0, 100.0],
-            title,
-            &[(status, Tone::Muted)],
-            Tone::Plain,
-        )
+        StageElement::card(id, [x, Y, 0.0], [250.0, 100.0], title)
+            .statuses(&[(status, Tone::Muted)])
     };
     StagePlan {
-        post: post(),
+        post: StagePost::RESTRAINED,
         elements: vec![
             node("slack", 240.0, "slack", "a thread"),
             node("worker", 600.0, "worker", "the edge"),
-            orb("session", [960.0, Y, 0.0], 88.0, 600),
-            label(
+            StageElement::orb("session", [960.0, Y, 0.0], 88.0)
+                .points(600)
+                .tone(Tone::Plain),
+            StageElement::label(
                 "session-name",
                 [960.0, Y + 125.0, 0.0],
                 21.0,
-                CaptionAlign::Center,
                 &[("one object per thread", Tone::Plain)],
             ),
             node("workspace", 1320.0, "WorkspaceDO", "its hands"),
             node("sandbox", 1680.0, "sandbox", "a real vm"),
-            beam("a", "slack", "worker", Tone::Request),
-            beam("b", "worker", "session", Tone::Request),
-            beam("c", "session", "workspace", Tone::Plain),
-            beam("d", "workspace", "sandbox", Tone::Plain),
-            packet("a-out", "a", false, "", Tone::Request),
-            packet("b-out", "b", false, "", Tone::Request),
-            packet("c-out", "c", false, "", Tone::Request),
-            packet("d-out", "d", false, "", Tone::Request),
-            packet("d-back", "d", true, "", Tone::Success),
-            packet("c-back", "c", true, "", Tone::Success),
-            packet("answer", "b", true, "", Tone::Success),
-            packet("a-back", "a", true, "answer", Tone::Success),
-            label(
+            StageElement::beam("a", "slack", "worker").tone(Tone::Request),
+            StageElement::beam("b", "worker", "session").tone(Tone::Request),
+            StageElement::beam("c", "session", "workspace"),
+            StageElement::beam("d", "workspace", "sandbox"),
+            StageElement::packet("a-out", "a").tone(Tone::Request),
+            StageElement::packet("b-out", "b").tone(Tone::Request),
+            StageElement::packet("c-out", "c").tone(Tone::Request),
+            StageElement::packet("d-out", "d").tone(Tone::Request),
+            StageElement::packet("d-back", "d")
+                .reversed()
+                .tone(Tone::Success),
+            StageElement::packet("c-back", "c")
+                .reversed()
+                .tone(Tone::Success),
+            StageElement::packet("answer", "b")
+                .reversed()
+                .tone(Tone::Success),
+            StageElement::packet("a-back", "a")
+                .reversed()
+                .labeled("answer")
+                .tone(Tone::Success),
+            StageElement::label(
                 "next",
                 [960.0, 780.0, 0.0],
                 24.0,
-                CaptionAlign::Center,
                 &[
                     ("next: ", Tone::Muted),
                     ("where it's heading", Tone::Accent),

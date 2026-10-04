@@ -5,17 +5,13 @@
 use anyhow::{Context, Result};
 use psychopomp::{
     author::{PlanBuilder, seconds},
-    caption::CaptionAlign,
     narration::Narration,
     plan::ScenePlan,
-    stage::{StageActor, StagePlan},
+    stage::{StageActor, StageElement, StagePlan, StagePost},
     tone::Tone,
 };
 
-use crate::{
-    FAILURE, MARK, POST, SEND, TICK, beam, card, chip, footer, header, label, packet, sound, span,
-    status,
-};
+use crate::{FAILURE, MARK, SEND, TICK, chip, footer, header, sound, span};
 
 const ROWS: [f32; 3] = [340.0, 500.0, 660.0];
 const SOURCE_X: f32 = 560.0;
@@ -68,74 +64,61 @@ const LANES: [Lane; 3] = [
 
 fn stage_plan() -> StagePlan {
     let mut elements = vec![
-        label(
+        StageElement::label(
             "col-source",
             [SOURCE_X, 262.0, 0.0],
             20.0,
-            CaptionAlign::Center,
             &[("effect rc.117 emits", Tone::Muted)],
         ),
-        label(
+        StageElement::label(
             "col-result",
             [RESULT_X, 262.0, 0.0],
             20.0,
-            CaptionAlign::Center,
             &[("read by", Tone::Muted)],
         ),
     ];
     for (index, lane) in LANES.iter().enumerate() {
         let y = ROWS[index];
         elements.extend([
-            card(
+            StageElement::card(
                 &format!("source-{index}"),
                 [SOURCE_X, y, 0.0],
                 [760.0, 100.0],
                 lane.shape,
-                vec![status(lane.origin, Tone::Muted)],
-                Tone::Plain,
-            ),
-            card(
+            )
+            .statuses(&[(lane.origin, Tone::Muted)]),
+            StageElement::card(
                 &format!("result-{index}"),
                 [RESULT_X, y, 0.0],
                 [520.0, 100.0],
                 lane.consumer,
-                vec![
-                    status("·", Tone::Muted),
-                    status(lane.broken.0, lane.broken.1),
-                    status(lane.fixed, Tone::Success),
-                ],
-                Tone::Plain,
-            ),
-            beam(
+            )
+            .statuses(&[
+                ("·", Tone::Muted),
+                (lane.broken.0, lane.broken.1),
+                (lane.fixed, Tone::Success),
+            ]),
+            StageElement::beam(
                 &format!("lane-{index}"),
                 &format!("source-{index}"),
                 &format!("result-{index}"),
-                Tone::Plain,
             ),
-            packet(
-                &format!("broken-{index}"),
-                &format!("lane-{index}"),
-                Tone::Request,
-            ),
-            packet(
-                &format!("fixed-{index}"),
-                &format!("lane-{index}"),
-                Tone::Success,
-            ),
-            label(
+            StageElement::packet(&format!("broken-{index}"), &format!("lane-{index}"))
+                .tone(Tone::Request),
+            StageElement::packet(&format!("fixed-{index}"), &format!("lane-{index}"))
+                .tone(Tone::Success),
+            StageElement::label(
                 &format!("repair-{index}"),
                 [FIX_X, y - 32.0, -2.0],
                 17.0,
-                CaptionAlign::Center,
                 &[(lane.repair, Tone::Accent)],
             ),
         ]);
     }
-    elements.push(label(
+    elements.push(StageElement::label(
         "literals",
         [RESULT_X, 580.0, 0.0],
         17.0,
-        CaptionAlign::Center,
         &[
             (
                 "Schema.Literals([\"NaN\", \"Infinity\", \"-Infinity\"])",
@@ -145,23 +128,23 @@ fn stage_plan() -> StagePlan {
         ],
     ));
     for (index, (name, [x, y])) in PROVIDERS.iter().enumerate() {
-        elements.push(card(
+        elements.push(StageElement::card(
             &format!("provider-{index}"),
             [*x, *y, 0.0],
             [280.0, 64.0],
             name,
-            Vec::new(),
-            Tone::Plain,
         ));
-        elements.push(beam(
-            &format!("receive-{index}"),
-            "result-2",
-            &format!("provider-{index}"),
-            Tone::Success,
-        ));
+        elements.push(
+            StageElement::beam(
+                &format!("receive-{index}"),
+                "result-2",
+                &format!("provider-{index}"),
+            )
+            .tone(Tone::Success),
+        );
     }
     StagePlan {
-        post: POST,
+        post: StagePost::RESTRAINED,
         elements,
     }
 }

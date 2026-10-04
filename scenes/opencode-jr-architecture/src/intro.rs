@@ -2,80 +2,66 @@
 use anyhow::{Context, Result};
 use psychopomp::{
     author::{PlanBuilder, millis, stagger},
-    caption::CaptionAlign,
     plan::ScenePlan,
-    stage::{StagePlan, reply_after},
+    stage::{StageElement, StagePlan, StagePost, reply_after},
     tone::Tone,
 };
 
-use crate::{
-    BLOOM, Film, arrive, beam, begin, card, footer, label, orb, orb_in, packet, plug, post,
-    seconds, send, sound,
-};
+use crate::{BLOOM, Film, arrive, begin, footer, orb_in, plug, seconds, send, sound};
 
 const ROWS: [f32; 3] = [330.0, 540.0, 750.0];
 
 fn stage() -> StagePlan {
-    let mut elements = vec![card(
-        "slack",
-        [300.0, 540.0, 0.0],
-        [240.0, 110.0],
-        "slack",
-        &[("a workspace", Tone::Muted)],
-        Tone::Plain,
-    )];
+    let mut elements = vec![
+        StageElement::card("slack", [300.0, 540.0, 0.0], [240.0, 110.0], "slack")
+            .statuses(&[("a workspace", Tone::Muted)]),
+    ];
     for (index, y) in ROWS.into_iter().enumerate() {
         elements.extend([
-            card(
+            StageElement::card(
                 &format!("thread-{index}"),
                 [700.0, y, 0.0],
                 [250.0, 100.0],
                 "thread",
-                &[("@jr mentioned", Tone::Muted)],
-                Tone::Plain,
-            ),
-            orb(&format!("agent-{index}"), [1140.0, y, 0.0], 62.0, 420),
-            card(
+            )
+            .statuses(&[("@jr mentioned", Tone::Muted)]),
+            StageElement::orb(&format!("agent-{index}"), [1140.0, y, 0.0], 62.0)
+                .points(420)
+                .tone(Tone::Plain),
+            StageElement::card(
                 &format!("sandbox-{index}"),
                 [1580.0, y, 0.0],
                 [250.0, 100.0],
                 "sandbox",
-                &[("a real vm", Tone::Muted)],
-                Tone::Plain,
-            ),
-            beam(
-                &format!("in-{index}"),
-                "slack",
-                &format!("thread-{index}"),
-                Tone::Plain,
-            ),
-            beam(
+            )
+            .statuses(&[("a real vm", Tone::Muted)]),
+            StageElement::beam(&format!("in-{index}"), "slack", &format!("thread-{index}")),
+            StageElement::beam(
                 &format!("own-{index}"),
                 &format!("thread-{index}"),
                 &format!("agent-{index}"),
-                Tone::Plain,
             ),
-            beam(
+            StageElement::beam(
                 &format!("hands-{index}"),
                 &format!("agent-{index}"),
                 &format!("sandbox-{index}"),
-                Tone::Plain,
             ),
         ]);
     }
     elements.extend([
-        label(
+        StageElement::label(
             "agents-name",
             [1140.0, 870.0, 0.0],
             20.0,
-            CaptionAlign::Center,
             &[("one durable agent each", Tone::Muted)],
         ),
-        packet("mention", "in-1", false, "@jr", Tone::Request),
-        packet("wake", "own-1", false, "", Tone::Request),
+        StageElement::packet("mention", "in-1")
+            .labeled("@jr")
+            .tone(Tone::Request),
+        StageElement::packet("wake", "own-1").tone(Tone::Request),
     ]);
     StagePlan {
-        post: post(),
+        post: StagePost::RESTRAINED,
         elements,
     }
 }

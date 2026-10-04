@@ -4,16 +4,15 @@
 use anyhow::{Context, Result};
 use psychopomp::{
     author::PlanTime,
-    caption::CaptionAlign,
     math::easing::Ease,
     plan::ScenePlan,
-    stage::{StagePlan, reply_after},
+    stage::{StageElement, StagePlan, StagePost, reply_after},
     tone::Tone,
 };
 
 use crate::{
-    Film, MARK, Narration, RESET, SUCCESS, arrive, beam, begin, card, chip, footer, header, hide,
-    label, orb, orb_in, packet, plug, post, ring, seconds, send, show, sound, status,
+    Film, MARK, Narration, RESET, SUCCESS, arrive, begin, chip, footer, header, hide, orb_in, plug,
+    seconds, send, show, sound, status,
 };
 
 const SESSION: [f32; 3] = [330.0, 580.0, 0.0];
@@ -23,106 +22,92 @@ const TEMPLATE: [f32; 3] = [1430.0, 270.0, 0.0];
 
 fn stage() -> StagePlan {
     StagePlan {
-        post: post(),
+        post: StagePost::RESTRAINED,
         elements: vec![
-            orb("session", SESSION, 80.0, 500),
-            label(
+            StageElement::orb("session", SESSION, 80.0)
+                .points(500)
+                .tone(Tone::Plain),
+            StageElement::label(
                 "session-name",
                 [SESSION[0], 690.0, 0.0],
                 21.0,
-                CaptionAlign::Center,
                 &[("SessionDO", Tone::Plain)],
             ),
-            label(
+            StageElement::label(
                 "no-wait",
                 [SESSION[0], 440.0, 0.0],
                 19.0,
-                CaptionAlign::Center,
                 &[
                     ("text-only reply", Tone::Plain),
                     (" → no wait", Tone::Muted),
                 ],
             ),
-            card(
-                "workspace",
-                WORKSPACE,
-                [300.0, 110.0],
-                "WorkspaceDO",
-                &[
-                    ("no sandbox yet", Tone::Muted),
-                    ("attached", Tone::Plain),
-                    ("snapshot saved", Tone::Plain),
-                    ("restoring", Tone::Plain),
-                    ("attached", Tone::Success),
-                ],
-                Tone::Plain,
-            ),
-            card(
-                "sandbox",
-                SANDBOX,
-                [400.0, 150.0],
-                "modal sandbox",
-                &[
-                    ("vm · daemon", Tone::Muted),
-                    ("running a command", Tone::Plain),
-                    ("repo mounted", Tone::Success),
-                    ("snapshotted", Tone::Plain),
-                    ("shut down", Tone::Muted),
-                    ("restored from snapshot", Tone::Success),
-                ],
-                Tone::Plain,
-            ),
-            card(
-                "template",
-                TEMPLATE,
-                [340.0, 100.0],
-                "template registry",
+            StageElement::card("workspace", WORKSPACE, [300.0, 110.0], "WorkspaceDO").statuses(&[
+                ("no sandbox yet", Tone::Muted),
+                ("attached", Tone::Plain),
+                ("snapshot saved", Tone::Plain),
+                ("restoring", Tone::Plain),
+                ("attached", Tone::Success),
+            ]),
+            StageElement::card("sandbox", SANDBOX, [400.0, 150.0], "modal sandbox").statuses(&[
+                ("vm · daemon", Tone::Muted),
+                ("running a command", Tone::Plain),
+                ("repo mounted", Tone::Success),
+                ("snapshotted", Tone::Plain),
+                ("shut down", Tone::Muted),
+                ("restored from snapshot", Tone::Success),
+            ]),
+            StageElement::card("template", TEMPLATE, [340.0, 100.0], "template registry").statuses(
                 &[
                     ("opencode repo checkout", Tone::Muted),
                     ("refreshing", Tone::Plain),
                     ("dependencies installed", Tone::Success),
                 ],
-                Tone::Plain,
             ),
-            ring(
-                "hourly",
-                [TEMPLATE[0] - 225.0, TEMPLATE[1], 0.0],
-                18.0,
-                2.0,
-                Tone::Plain,
-            ),
-            label(
+            StageElement::ring("hourly", [TEMPLATE[0] - 225.0, TEMPLATE[1], 0.0], 18.0)
+                .thickness(2.0),
+            StageElement::label(
                 "hourly-name",
                 [TEMPLATE[0] - 225.0, TEMPLATE[1] + 42.0, 0.0],
                 18.0,
-                CaptionAlign::Center,
                 &[("hourly", Tone::Muted)],
             ),
-            ring("idle", SANDBOX, 236.0, 2.0, Tone::Warning),
-            label(
+            StageElement::ring("idle", SANDBOX, 236.0)
+                .thickness(2.0)
+                .tone(Tone::Warning),
+            StageElement::label(
                 "idle-name",
                 [SANDBOX[0], 850.0, 0.0],
                 20.0,
-                CaptionAlign::Center,
                 &[("20 idle minutes", Tone::Warning)],
             ),
-            label(
+            StageElement::label(
                 "daemon",
                 [SANDBOX[0], 690.0, 0.0],
                 19.0,
-                CaptionAlign::Center,
                 &[("process + file server", Tone::Muted)],
             ),
-            beam("ws", "session", "workspace", Tone::Plain),
-            beam("sb", "workspace", "sandbox", Tone::Plain),
-            beam("tp", "template", "sandbox", Tone::Plain),
-            packet("cmd", "ws", false, "shell · file edit", Tone::Request),
-            packet("cmd-2", "sb", false, "", Tone::Request),
-            packet("out-2", "sb", true, "", Tone::Success),
-            packet("out", "ws", true, "output", Tone::Success),
-            packet("mount", "tp", false, "mount", Tone::Success),
-            packet("snapshot", "sb", true, "snapshot", Tone::Plain),
-            packet("restore", "sb", false, "restore", Tone::Plain),
+            StageElement::beam("ws", "session", "workspace"),
+            StageElement::beam("sb", "workspace", "sandbox"),
+            StageElement::beam("tp", "template", "sandbox"),
+            StageElement::packet("cmd", "ws")
+                .labeled("shell · file edit")
+                .tone(Tone::Request),
+            StageElement::packet("cmd-2", "sb").tone(Tone::Request),
+            StageElement::packet("out-2", "sb")
+                .reversed()
+                .tone(Tone::Success),
+            StageElement::packet("out", "ws")
+                .reversed()
+                .labeled("output")
+                .tone(Tone::Success),
+            StageElement::packet("mount", "tp")
+                .labeled("mount")
+                .tone(Tone::Success),
+            StageElement::packet("snapshot", "sb")
+                .reversed()
+                .labeled("snapshot"),
+            StageElement::packet("restore", "sb").labeled("restore"),
         ],
     }
 }

@@ -9,15 +9,14 @@ use std::{fs, path::PathBuf};
 use anyhow::{Context, Result};
 use psychopomp::{
     author::{PlanBuilder, PlanTime, millis, seconds, stagger},
-    caption::{CaptionAlign, CaptionSpanPlan},
-    effects::spinner::Mark,
+    caption::CaptionAlign,
     math::easing::Ease,
     narration::Narration,
     plan::{
         MediaKindPlan, MediaPlan, MediaRolePlan, ReelPlan, ReelSegmentPlan, ReelTransitionStyle,
         ScenePlan,
     },
-    stage::{DRAW_CURVE, StageActor, StageElement, StagePlan, StagePost, StatusText, reply_after},
+    stage::{DRAW_CURVE, StageActor, StageElement, StagePlan, StagePost, reply_after},
     tone::Tone,
 };
 use psychopomp_pr_walkthrough::film::{Pr, chip, footer, header, span};
@@ -100,307 +99,175 @@ fn main() -> Result<()> {
     Ok(())
 }
 
-fn status(text: &str, tone: Tone) -> StatusText {
-    StatusText {
-        text: text.to_owned(),
-        tone,
-    }
-}
-
-fn card(
-    id: &str,
-    at: [f32; 3],
-    size: [f32; 2],
-    title: &str,
-    status: Vec<StatusText>,
-    tone: Tone,
-) -> StageElement {
-    StageElement::Card {
-        id: id.into(),
-        at,
-        size,
-        title: title.into(),
-        status,
-        tone,
-        mark: Mark::Check,
-    }
-}
-
-fn beam(id: &str, from: &str, to: &str, tone: Tone) -> StageElement {
-    StageElement::Beam {
-        id: id.into(),
-        from: from.into(),
-        to: to.into(),
-        bend: 0.0,
-        tone,
-    }
-}
-
-fn packet(id: &str, beam: &str, reverse: bool, label: &str, tone: Tone) -> StageElement {
-    StageElement::Packet {
-        id: id.into(),
-        beam: beam.into(),
-        reverse,
-        label: label.into(),
-        tone,
-    }
-}
-
-fn label(
-    id: &str,
-    at: [f32; 3],
-    size: f32,
-    align: CaptionAlign,
-    parts: &[(&str, Tone)],
-) -> StageElement {
-    StageElement::Label {
-        id: id.into(),
-        at,
-        size,
-        align,
-        spans: parts
-            .iter()
-            .map(|(text, tone)| CaptionSpanPlan::new(*text, *tone))
-            .collect(),
-    }
-}
-
-fn ring(id: &str, radius: f32) -> StageElement {
-    StageElement::Ring {
-        id: id.into(),
-        at: VAULT,
-        radius,
-        thickness: 1.3,
-        tone: Tone::Success,
-    }
-}
-
 fn stage_plan() -> StagePlan {
     let mut elements = vec![
-        StageElement::Orb {
-            id: "vault".into(),
-            at: VAULT,
-            radius: 118.0,
-            points: 900,
-            tone: Tone::Plain,
-        },
-        label(
+        StageElement::orb("vault", VAULT, 118.0)
+            .points(900)
+            .tone(Tone::Plain),
+        StageElement::label(
             "vault-name",
             [VAULT[0], 704.0, 0.0],
             24.0,
-            CaptionAlign::Center,
             &[("1Password", Tone::Plain)],
         ),
-        card(
-            "agent",
-            AGENT,
-            CARD,
-            "coding agent",
-            vec![
-                status("needs one API key", Tone::Plain),
-                status("waiting for approval…", Tone::Warning),
-                status("stuck", Tone::Error),
-                status("secret in the chat!", Tone::Error),
-                status("asking 2password", Tone::Plain),
-                status("references only ✓", Tone::Success),
-            ],
-            Tone::Request,
-        ),
-        card(
-            "op",
-            OP,
-            [330.0, 124.0],
-            "op · 1Password CLI",
-            vec![
-                status("ready", Tone::Muted),
-                status("approval required", Tone::Warning),
-                status("locked", Tone::Error),
-                status("ready", Tone::Muted),
-                status("approved once ✓", Tone::Success),
-            ],
-            Tone::Plain,
-        ),
-        card(
-            "layer",
-            LAYER,
-            CARD,
-            "2password",
-            vec![
-                status("a layer on top of op", Tone::Muted),
-                status("batching every lookup", Tone::Plain),
-                status("references only", Tone::Success),
-                status("injecting secrets", Tone::Plain),
-                status("verified ✓", Tone::Success),
-                status("no prompts", Tone::Success),
-            ],
-            Tone::Accent,
-        ),
-        card(
-            "process",
-            PROCESS,
-            SMALL,
-            "bun dev",
-            vec![
-                status("starting", Tone::Muted),
-                status("running with secrets ✓", Tone::Success),
-            ],
-            Tone::Plain,
-        ),
-        card(
-            "clipboard",
-            CLIPBOARD,
-            SMALL,
-            "clipboard",
-            vec![status("a new API key", Tone::Muted)],
-            Tone::Plain,
-        ),
-        card(
-            "keychain",
-            KEYCHAIN,
-            SMALL,
-            "macOS Keychain",
-            vec![status("service-account token", Tone::Muted)],
-            Tone::Plain,
-        ),
-        beam("direct", "agent", "op", Tone::Request),
-        beam("vault-link", "op", "vault", Tone::Plain),
-        beam("ask", "agent", "layer", Tone::Request),
-        beam("batch", "layer", "op", Tone::Accent),
-        beam("inject", "layer", "process", Tone::Success),
-        beam("paste", "clipboard", "layer", Tone::Plain),
-        beam("token", "keychain", "layer", Tone::Plain),
+        StageElement::card("agent", AGENT, CARD, "coding agent")
+            .statuses(&[
+                ("needs one API key", Tone::Plain),
+                ("waiting for approval…", Tone::Warning),
+                ("stuck", Tone::Error),
+                ("secret in the chat!", Tone::Error),
+                ("asking 2password", Tone::Plain),
+                ("references only ✓", Tone::Success),
+            ])
+            .tone(Tone::Request),
+        StageElement::card("op", OP, [330.0, 124.0], "op · 1Password CLI").statuses(&[
+            ("ready", Tone::Muted),
+            ("approval required", Tone::Warning),
+            ("locked", Tone::Error),
+            ("ready", Tone::Muted),
+            ("approved once ✓", Tone::Success),
+        ]),
+        StageElement::card("layer", LAYER, CARD, "2password")
+            .statuses(&[
+                ("a layer on top of op", Tone::Muted),
+                ("batching every lookup", Tone::Plain),
+                ("references only", Tone::Success),
+                ("injecting secrets", Tone::Plain),
+                ("verified ✓", Tone::Success),
+                ("no prompts", Tone::Success),
+            ])
+            .tone(Tone::Accent),
+        StageElement::card("process", PROCESS, SMALL, "bun dev").statuses(&[
+            ("starting", Tone::Muted),
+            ("running with secrets ✓", Tone::Success),
+        ]),
+        StageElement::card("clipboard", CLIPBOARD, SMALL, "clipboard")
+            .statuses(&[("a new API key", Tone::Muted)]),
+        StageElement::card("keychain", KEYCHAIN, SMALL, "macOS Keychain")
+            .statuses(&[("service-account token", Tone::Muted)]),
+        StageElement::beam("direct", "agent", "op").tone(Tone::Request),
+        StageElement::beam("vault-link", "op", "vault"),
+        StageElement::beam("ask", "agent", "layer").tone(Tone::Request),
+        StageElement::beam("batch", "layer", "op").tone(Tone::Accent),
+        StageElement::beam("inject", "layer", "process").tone(Tone::Success),
+        StageElement::beam("paste", "clipboard", "layer"),
+        StageElement::beam("token", "keychain", "layer"),
     ];
     for (id, at, text, tone) in PROMPTS {
-        elements.push(card(
-            id,
-            at,
-            PROMPT,
-            "1Password",
-            vec![status(text, tone)],
-            tone,
-        ));
+        elements.push(
+            StageElement::card(id, at, PROMPT, "1Password")
+                .statuses(&[(text, tone)])
+                .tone(tone),
+        );
     }
-    elements.push(card(
-        "prompt-ok",
-        [1210.0, 320.0, -80.0],
-        PROMPT,
-        "1Password",
-        vec![status("approved once ✓", Tone::Success)],
-        Tone::Success,
-    ));
+    elements.push(
+        StageElement::card("prompt-ok", [1210.0, 320.0, -80.0], PROMPT, "1Password")
+            .statuses(&[("approved once ✓", Tone::Success)])
+            .tone(Tone::Success),
+    );
     elements.extend([
-        packet(
-            "ask-1",
-            "direct",
-            false,
-            "op item get \"OpenAI API Key\"",
-            Tone::Request,
-        ),
-        packet(
-            "ask-2",
-            "direct",
-            false,
-            "op item get \"OpenAI API Key\"",
-            Tone::Request,
-        ),
-        packet(
-            "ask-3",
-            "direct",
-            false,
-            "op item get --reveal",
-            Tone::Request,
-        ),
-        packet("leak", "direct", true, "sk-proj-7Hq2Zx9mK4pL", Tone::Error),
-        packet(
-            "find",
-            "ask",
-            false,
-            "find openai stripe github",
-            Tone::Request,
-        ),
-        packet("lookup", "batch", false, "one batched lookup", Tone::Accent),
-        packet("fetch", "vault-link", false, "", Tone::Plain),
-        packet("refs-in", "batch", true, "op:// references", Tone::Success),
-        packet("refs", "ask", true, "op:// references", Tone::Success),
-        packet("secrets", "inject", false, "OPENAI_API_KEY", Tone::Success),
-        packet("new-key", "paste", false, "new key", Tone::Plain),
-        packet(
-            "store",
-            "batch",
-            false,
-            "create, then read back",
-            Tone::Accent,
-        ),
-        packet("verified", "batch", true, "verified ✓", Tone::Success),
-        packet("unlock", "token", false, "token", Tone::Plain),
-        label(
+        StageElement::packet("ask-1", "direct")
+            .labeled("op item get \"OpenAI API Key\"")
+            .tone(Tone::Request),
+        StageElement::packet("ask-2", "direct")
+            .labeled("op item get \"OpenAI API Key\"")
+            .tone(Tone::Request),
+        StageElement::packet("ask-3", "direct")
+            .labeled("op item get --reveal")
+            .tone(Tone::Request),
+        StageElement::packet("leak", "direct")
+            .reversed()
+            .labeled("sk-proj-7Hq2Zx9mK4pL")
+            .tone(Tone::Error),
+        StageElement::packet("find", "ask")
+            .labeled("find openai stripe github")
+            .tone(Tone::Request),
+        StageElement::packet("lookup", "batch")
+            .labeled("one batched lookup")
+            .tone(Tone::Accent),
+        StageElement::packet("fetch", "vault-link"),
+        StageElement::packet("refs-in", "batch")
+            .reversed()
+            .labeled("op:// references")
+            .tone(Tone::Success),
+        StageElement::packet("refs", "ask")
+            .reversed()
+            .labeled("op:// references")
+            .tone(Tone::Success),
+        StageElement::packet("secrets", "inject")
+            .labeled("OPENAI_API_KEY")
+            .tone(Tone::Success),
+        StageElement::packet("new-key", "paste").labeled("new key"),
+        StageElement::packet("store", "batch")
+            .labeled("create, then read back")
+            .tone(Tone::Accent),
+        StageElement::packet("verified", "batch")
+            .reversed()
+            .labeled("verified ✓")
+            .tone(Tone::Success),
+        StageElement::packet("unlock", "token").labeled("token"),
+        StageElement::label(
             "leak-line",
             [CHAT_X, 440.0, 0.0],
             22.0,
-            CaptionAlign::Left,
             &[
                 ("chat ▸ ", Tone::Muted),
                 ("sk-proj-7Hq2Zx9mK4pLw3eR8vN…", Tone::Error),
             ],
-        ),
-        label(
+        )
+        .align(CaptionAlign::Left),
+        StageElement::label(
             "refs-line",
             [CHAT_X, 440.0, 0.0],
             22.0,
-            CaptionAlign::Left,
             &[
                 ("chat ▸ ", Tone::Muted),
                 ("op://Personal/OpenAI API Key/credential", Tone::Success),
             ],
-        ),
-        label(
+        )
+        .align(CaptionAlign::Left),
+        StageElement::label(
             "zero",
             [OP[0], 330.0, -80.0],
             44.0,
-            CaptionAlign::Center,
             &[("prompts: ", Tone::Muted), ("0", Tone::Success)],
         ),
-        label(
+        StageElement::label(
             "title",
             [960.0, -470.0, 0.0],
             120.0,
-            CaptionAlign::Center,
             &[("2password", Tone::Accent)],
         ),
-        label(
+        StageElement::label(
             "subtitle",
             [960.0, -360.0, 0.0],
             34.0,
-            CaptionAlign::Center,
             &[("1Password for coding agents", Tone::Plain)],
         ),
-        label(
+        StageElement::label(
             "install",
             [960.0, -262.0, 0.0],
             30.0,
-            CaptionAlign::Center,
             &[("$ ", Tone::Muted), ("bun add -g 2password", Tone::Plain)],
         ),
-        label(
+        StageElement::label(
             "skill",
             [960.0, -212.0, 0.0],
             30.0,
-            CaptionAlign::Center,
             &[
                 ("$ ", Tone::Muted),
                 ("bunx skills add kitlangton/2password", Tone::Plain),
             ],
         ),
-        ring("calm", 132.0),
-        ring("calm-outer", 138.0),
+        StageElement::ring("calm", VAULT, 132.0)
+            .thickness(1.3)
+            .tone(Tone::Success),
+        StageElement::ring("calm-outer", VAULT, 138.0)
+            .thickness(1.3)
+            .tone(Tone::Success),
     ]);
     StagePlan {
-        post: StagePost {
-            bloom: 0.18,
-            grain: 0.012,
-            vignette: 0.22,
-            backdrop: 0.12,
-        },
+        post: StagePost::RESTRAINED,
         elements,
     }
 }

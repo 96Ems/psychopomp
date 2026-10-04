@@ -7,7 +7,7 @@ use std::path::PathBuf;
 use anyhow::{Context, Result};
 use psychopomp::{
     author::{PlanBuilder, millis, seconds, stagger},
-    caption::{CaptionAlign, CaptionSpanPlan},
+    caption::CaptionAlign,
     effects::{
         combustion,
         spinner::{self, Mark},
@@ -18,7 +18,7 @@ use psychopomp::{
         MediaKindPlan, MediaPlan, MediaRolePlan, ReelPlan, ReelSegmentPlan, ReelTransitionStyle,
         ScenePlan,
     },
-    stage::{Camera, StageActor, StageElement, StagePlan, StagePost, StatusText, reply_after},
+    stage::{Camera, StageActor, StageElement, StagePlan, StagePost, reply_after},
     tone::Tone,
 };
 
@@ -179,83 +179,6 @@ fn client_rect() -> [f32; 4] {
     [corner.x, corner.y, size.x, size.y]
 }
 
-fn status(text: &str, tone: Tone) -> StatusText {
-    StatusText {
-        text: text.to_owned(),
-        tone,
-    }
-}
-
-fn spans(parts: &[(&str, Tone)]) -> Vec<CaptionSpanPlan> {
-    parts.iter().map(|(text, tone)| span(text, *tone)).collect()
-}
-
-fn card(
-    id: &str,
-    at: [f32; 3],
-    size: [f32; 2],
-    title: &str,
-    status: Vec<StatusText>,
-    tone: Tone,
-    mark: Mark,
-) -> StageElement {
-    StageElement::Card {
-        id: id.into(),
-        at,
-        size,
-        title: title.into(),
-        status,
-        tone,
-        mark,
-    }
-}
-
-fn beam(id: &str, from: &str, to: &str, tone: Tone) -> StageElement {
-    StageElement::Beam {
-        id: id.into(),
-        from: from.into(),
-        to: to.into(),
-        bend: 0.0,
-        tone,
-    }
-}
-
-fn packet(id: &str, reverse: bool, label: &str, tone: Tone) -> StageElement {
-    StageElement::Packet {
-        id: id.into(),
-        beam: "link".into(),
-        reverse,
-        label: label.into(),
-        tone,
-    }
-}
-
-fn label(
-    id: &str,
-    at: [f32; 3],
-    size: f32,
-    align: CaptionAlign,
-    parts: &[(&str, Tone)],
-) -> StageElement {
-    StageElement::Label {
-        id: id.into(),
-        at,
-        size,
-        align,
-        spans: spans(parts),
-    }
-}
-
-fn ring(id: &str, radius: f32, thickness: f32, tone: Tone) -> StageElement {
-    StageElement::Ring {
-        id: id.into(),
-        at: SERVICE,
-        radius,
-        thickness,
-        tone,
-    }
-}
-
 /// The other clients: card, beam, title, position.
 const OTHERS: [(&str, &str, &str, [f32; 3]); 3] = [
     ("tui-1", "b1", "TUI", [1490.0, 260.0, 80.0]),
@@ -264,120 +187,105 @@ const OTHERS: [(&str, &str, &str, [f32; 3]); 3] = [
 ];
 
 fn stage_plan() -> StagePlan {
-    let connected = || {
-        vec![
-            status("connected", Tone::Muted),
-            status("disconnected", Tone::Error),
-        ]
-    };
     let mut elements = vec![
-        StageElement::Orb {
-            id: "service".into(),
-            at: SERVICE,
-            radius: 150.0,
-            points: 900,
-            tone: Tone::Plain,
-        },
-        label(
+        StageElement::orb("service", SERVICE, 150.0)
+            .points(900)
+            .tone(Tone::Plain),
+        StageElement::label(
             "service-name",
             [SERVICE[0], 659.0, 0.0],
             24.0,
-            CaptionAlign::Center,
             &[("opencode service", Tone::Plain)],
         ),
-        label(
+        StageElement::label(
             "service-healthy",
             [SERVICE[0], 691.0, 0.0],
             19.0,
-            CaptionAlign::Center,
             &[("●", Tone::Success), (" healthy", Tone::Muted)],
         ),
-        label(
+        StageElement::label(
             "service-stopped",
             [SERVICE[0], 691.0, 0.0],
             19.0,
-            CaptionAlign::Center,
             &[("●", Tone::Error), (" stopped", Tone::Muted)],
         ),
-        card(
-            "client",
-            CLIENT,
-            CLIENT_SIZE,
-            "client",
-            vec![
-                status("connected", Tone::Muted),
-                status("reconnecting", Tone::Plain),
-                status("replacing the server", Tone::Error),
+        StageElement::card("client", CLIENT, CLIENT_SIZE, "client")
+            .statuses(&[
+                ("connected", Tone::Muted),
+                ("reconnecting", Tone::Plain),
+                ("replacing the server", Tone::Error),
                 // Reconnecting again after the rewind: statuses cross-fade
+
                 // through their neighbours, so the fix never passes "replacing".
-                status("reconnecting", Tone::Plain),
-                status("stopped with an error", Tone::Warning),
-            ],
-            Tone::Request,
-            Mark::Cross,
-        ),
-        beam("link", "client", "service", Tone::Request),
+                ("reconnecting", Tone::Plain),
+                ("stopped with an error", Tone::Warning),
+            ])
+            .tone(Tone::Request)
+            .mark(Mark::Cross),
+        StageElement::beam("link", "client", "service").tone(Tone::Request),
     ];
     for (id, link, title, at) in OTHERS {
-        elements.push(card(
-            id,
-            at,
-            [290.0, 110.0],
-            title,
-            connected(),
-            Tone::Plain,
-            Mark::Check,
-        ));
-        elements.push(beam(link, id, "service", Tone::Plain));
+        elements.push(
+            StageElement::card(id, at, [290.0, 110.0], title)
+                .statuses(&[("connected", Tone::Muted), ("disconnected", Tone::Error)]),
+        );
+        elements.push(StageElement::beam(link, id, "service"));
     }
     elements.extend([
-        packet("probe", false, "GET /api/info", Tone::Request),
-        packet("reply", true, "404", Tone::Request),
-        packet("kill", false, "SIGTERM", Tone::Error),
-        packet("probe-2", false, "GET /api/info", Tone::Request),
-        packet("reply-2", true, "404", Tone::Request),
-        label(
+        StageElement::packet("probe", "link")
+            .labeled("GET /api/info")
+            .tone(Tone::Request),
+        StageElement::packet("reply", "link")
+            .reversed()
+            .labeled("404")
+            .tone(Tone::Request),
+        StageElement::packet("kill", "link")
+            .labeled("SIGTERM")
+            .tone(Tone::Error),
+        StageElement::packet("probe-2", "link")
+            .labeled("GET /api/info")
+            .tone(Tone::Request),
+        StageElement::packet("reply-2", "link")
+            .reversed()
+            .labeled("404")
+            .tone(Tone::Request),
+        StageElement::label(
             "thought-before",
             [NOTE_X, 560.0, CLIENT[2]],
             21.0,
-            CaptionAlign::Left,
             &[
                 ("404", Tone::Plain),
                 (" → outdated → ", Tone::Muted),
                 ("replace it", Tone::Error),
             ],
-        ),
-        label(
+        )
+        .align(CaptionAlign::Left),
+        StageElement::label(
             "thought-after",
             [NOTE_X, 560.0, CLIENT[2]],
             21.0,
-            CaptionAlign::Left,
             &[
                 ("version ok", Tone::Plain),
                 (" → ", Tone::Muted),
                 ("protocol mismatch", Tone::Warning),
             ],
-        ),
-        label(
+        )
+        .align(CaptionAlign::Left),
+        StageElement::label(
             "message",
             [NOTE_X, 604.0, CLIENT[2]],
             19.0,
-            CaptionAlign::Left,
             &[
                 ("error: ", Tone::Warning),
                 ("update this client, or restart explicitly", Tone::Muted),
             ],
-        ),
-        ring("safe", 160.0, 1.3, Tone::Plain),
-        ring("safe-outer", 166.0, 1.3, Tone::Plain),
+        )
+        .align(CaptionAlign::Left),
+        StageElement::ring("safe", SERVICE, 160.0).thickness(1.3),
+        StageElement::ring("safe-outer", SERVICE, 166.0).thickness(1.3),
     ]);
     StagePlan {
-        post: StagePost {
-            bloom: 0.18,
-            grain: 0.012,
-            vignette: 0.22,
-            backdrop: 0.12,
-        },
+        post: StagePost::RESTRAINED,
         elements,
     }
 }

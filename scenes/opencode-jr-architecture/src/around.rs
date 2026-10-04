@@ -6,13 +6,13 @@ use psychopomp::{
     caption::CaptionAlign,
     math::easing::Ease,
     plan::ScenePlan,
-    stage::StagePlan,
+    stage::{StageElement, StagePlan, StagePost},
     tone::Tone,
 };
 
 use crate::{
-    BLOOM, CONFIRM, Film, MARK, Narration, SUCCESS, beam, begin, card, chip, footer, header, label,
-    orb, orb_in, packet, plug, post, ring, seconds, send, show, sound, status,
+    BLOOM, CONFIRM, Film, MARK, Narration, SUCCESS, begin, chip, footer, header, orb_in, plug,
+    seconds, send, show, sound, status,
 };
 
 const SESSION: [f32; 3] = [960.0, 470.0, 0.0];
@@ -25,122 +25,89 @@ const DASHBOARD: [f32; 3] = [1650.0, 485.0, 0.0];
 
 fn stage() -> StagePlan {
     StagePlan {
-        post: post(),
+        post: StagePost::RESTRAINED,
         elements: vec![
-            orb("session", SESSION, 104.0, 700),
-            label(
+            StageElement::orb("session", SESSION, 104.0)
+                .points(700)
+                .tone(Tone::Plain),
+            StageElement::label(
                 "session-name",
                 [SESSION[0], 610.0, 0.0],
                 21.0,
-                CaptionAlign::Center,
                 &[("SessionDO", Tone::Plain)],
             ),
-            card(
-                "approval",
-                APPROVAL,
-                [340.0, 120.0],
-                "approval card",
-                &[
-                    ("pending", Tone::Warning),
-                    ("executing", Tone::Plain),
-                    ("completed", Tone::Success),
-                ],
-                Tone::Plain,
-            ),
-            label(
+            StageElement::card("approval", APPROVAL, [340.0, 120.0], "approval card").statuses(&[
+                ("pending", Tone::Warning),
+                ("executing", Tone::Plain),
+                ("completed", Tone::Success),
+            ]),
+            StageElement::label(
                 "args",
                 [APPROVAL[0], 400.0, 0.0],
                 19.0,
-                CaptionAlign::Center,
                 &[("full arguments recorded", Tone::Muted)],
             ),
-            label(
+            StageElement::label(
                 "claim",
                 [APPROVAL[0], 435.0, 0.0],
                 19.0,
-                CaptionAlign::Center,
                 &[
                     ("pending → executing", Tone::Plain),
                     (" · flushed first", Tone::Muted),
                 ],
             ),
-            label(
+            StageElement::label(
                 "already",
                 [APPROVAL[0], 470.0, 0.0],
                 19.0,
-                CaptionAlign::Center,
                 &[("second click", Tone::Plain), (" → already", Tone::Muted)],
             ),
-            card(
-                "scheduler",
-                SCHEDULER,
-                [320.0, 110.0],
-                "SchedulerDO",
-                &[
-                    ("one per team", Tone::Muted),
-                    ("firing", Tone::Plain),
-                    ("fired once · late", Tone::Warning),
-                ],
-                Tone::Plain,
-            ),
-            ring(
-                "clock",
-                [SCHEDULER[0] - 205.0, SCHEDULER[1], 0.0],
-                18.0,
-                2.0,
-                Tone::Plain,
-            ),
-            label(
+            StageElement::card("scheduler", SCHEDULER, [320.0, 110.0], "SchedulerDO").statuses(&[
+                ("one per team", Tone::Muted),
+                ("firing", Tone::Plain),
+                ("fired once · late", Tone::Warning),
+            ]),
+            StageElement::ring("clock", [SCHEDULER[0] - 205.0, SCHEDULER[1], 0.0], 18.0)
+                .thickness(2.0),
+            StageElement::label(
                 "burst",
                 [SCHEDULER[0], 815.0, 0.0],
                 19.0,
-                CaptionAlign::Center,
                 &[
                     ("missed ticks: one late run, ", Tone::Muted),
                     ("never a burst", Tone::Plain),
                 ],
             ),
-            orb("fresh", FRESH, 46.0, 260),
-            label(
+            StageElement::orb("fresh", FRESH, 46.0)
+                .points(260)
+                .tone(Tone::Plain),
+            StageElement::label(
                 "fresh-name",
                 [FRESH[0] + 70.0, FRESH[1], 0.0],
                 19.0,
-                CaptionAlign::Left,
                 &[("an ordinary new session", Tone::Muted)],
-            ),
-            card(
-                "settings",
-                SETTINGS,
-                [280.0, 100.0],
-                "SettingsDO",
-                &[("configuration", Tone::Muted)],
-                Tone::Plain,
-            ),
-            card(
-                "connectors",
-                CONNECTORS,
-                [280.0, 100.0],
-                "ConnectorsDO",
-                &[("connections", Tone::Muted)],
-                Tone::Plain,
-            ),
-            card(
-                "dashboard",
-                DASHBOARD,
-                [260.0, 100.0],
-                "web dashboard",
-                &[("operators", Tone::Muted)],
-                Tone::Plain,
-            ),
-            beam("ap", "session", "approval", Tone::Request),
-            beam("sf", "scheduler", "fresh", Tone::Plain),
-            beam("ds", "dashboard", "settings", Tone::Plain),
-            beam("dc", "dashboard", "connectors", Tone::Plain),
-            beam("ss", "settings", "session", Tone::Plain),
-            beam("cs", "connectors", "session", Tone::Plain),
-            packet("call", "ap", false, "github comment", Tone::Request),
-            packet("result", "ap", true, "result", Tone::Success),
-            packet("fire", "sf", false, "fire", Tone::Plain),
+            )
+            .align(CaptionAlign::Left),
+            StageElement::card("settings", SETTINGS, [280.0, 100.0], "SettingsDO")
+                .statuses(&[("configuration", Tone::Muted)]),
+            StageElement::card("connectors", CONNECTORS, [280.0, 100.0], "ConnectorsDO")
+                .statuses(&[("connections", Tone::Muted)]),
+            StageElement::card("dashboard", DASHBOARD, [260.0, 100.0], "web dashboard")
+                .statuses(&[("operators", Tone::Muted)]),
+            StageElement::beam("ap", "session", "approval").tone(Tone::Request),
+            StageElement::beam("sf", "scheduler", "fresh"),
+            StageElement::beam("ds", "dashboard", "settings"),
+            StageElement::beam("dc", "dashboard", "connectors"),
+            StageElement::beam("ss", "settings", "session"),
+            StageElement::beam("cs", "connectors", "session"),
+            StageElement::packet("call", "ap")
+                .labeled("github comment")
+                .tone(Tone::Request),
+            StageElement::packet("result", "ap")
+                .reversed()
+                .labeled("result")
+                .tone(Tone::Success),
+            StageElement::packet("fire", "sf").labeled("fire"),
         ],
     }
 }

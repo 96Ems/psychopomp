@@ -7,7 +7,6 @@
 use anyhow::{Context, Result};
 use psychopomp::{
     author::{PlanBuilder, seconds},
-    caption::CaptionAlign,
     editor::{
         EditorInlineRevealPlan, EditorPartPlan, EditorRecipePlan, EditorSemanticRangePlan,
         LineMarkPlan,
@@ -16,14 +15,14 @@ use psychopomp::{
     math::{Vec2, Vec3, easing::Ease, vec2},
     narration::Narration,
     plan::{ScenePlan, SpringPlan, destination_channel},
-    stage::{Camera, DRAW_CURVE, StageActor, StagePlan},
+    stage::{Camera, DRAW_CURVE, StageActor, StageElement, StagePlan, StagePost},
     tone::Tone,
 };
 
 use crate::{
-    FAILURE, MARK, POST, RESOLUTION, REWIND, SEND, SHUFFLE, ZOOM, beam, card, chip,
+    FAILURE, MARK, RESOLUTION, REWIND, SEND, SHUFFLE, ZOOM, chip,
     diff::{Diff, fresh, keep},
-    footer, header, label, packet, sound, span, status,
+    footer, header, sound, span,
 };
 
 const SLOTS: [f32; 3] = [420.0, 530.0, 640.0];
@@ -58,79 +57,64 @@ const SWAP: f32 = SLOTS[2] - SLOTS[0];
 
 fn stage_plan() -> StagePlan {
     let mut elements = vec![
-        label(
+        StageElement::label(
             "config-head",
             [CONFIG_X, 350.0, 0.0],
             20.0,
-            CaptionAlign::Center,
             &[("agent config · as written", Tone::Muted)],
         ),
-        label(
+        StageElement::label(
             "rules-head",
             [RULES_X, 350.0, 0.0],
             20.0,
-            CaptionAlign::Center,
             &[("rules · ", Tone::Muted), ("last match wins", Tone::Plain)],
         ),
-        label(
+        StageElement::label(
             "scan",
             [RULES_X, 724.0, 0.0],
             18.0,
-            CaptionAlign::Center,
             &[
                 ("↑ ", Tone::Accent),
                 ("checked from the bottom", Tone::Muted),
             ],
         ),
-        card(
-            "fix",
-            FIX,
-            FIX_SIZE,
-            "inInputOrder",
-            Vec::new(),
-            Tone::Accent,
-        ),
+        StageElement::card("fix", FIX, FIX_SIZE, "inInputOrder").tone(Tone::Accent),
     ];
     for (index, ((id, title, action, tone), config)) in RULES.iter().zip(CONFIG).enumerate() {
         elements.extend([
-            card(
+            StageElement::card(
                 &format!("config-{index}"),
                 [CONFIG_X, SLOTS[index], 0.0],
                 [330.0, 78.0],
                 config,
-                Vec::new(),
-                Tone::Plain,
             ),
-            card(
+            StageElement::card(
                 &format!("rule-{id}"),
                 [RULES_X, SLOTS[index], 0.0],
                 RULE_SIZE,
                 title,
-                vec![status(action, *tone)],
-                *tone,
-            ),
-            beam(
+            )
+            .statuses(&[(action, *tone)])
+            .tone(*tone),
+            StageElement::beam(
                 &format!("wire-{index}"),
                 &format!("config-{index}"),
                 &format!("rule-{id}"),
-                Tone::Plain,
             ),
-            packet(
-                &format!("key-{index}"),
-                &format!("wire-{index}"),
-                Tone::Request,
-            ),
+            StageElement::packet(&format!("key-{index}"), &format!("wire-{index}"))
+                .tone(Tone::Request),
         ]);
     }
     for (name, x) in PROBES {
-        elements.push(card(
-            &format!("probe-{name}"),
-            [x, PROBE_Y, -4.0],
-            [150.0, 56.0],
-            name,
-            Vec::new(),
-            Tone::Request,
-        ));
+        elements.push(
+            StageElement::card(
+                &format!("probe-{name}"),
+                [x, PROBE_Y, -4.0],
+                [150.0, 56.0],
+                name,
+            )
+            .tone(Tone::Request),
+        );
     }
     for (id, probe, rule, tone) in [
         ("miss-shell", "shell", "star", Tone::Error),
@@ -138,12 +122,9 @@ fn stage_plan() -> StagePlan {
         ("match-shell", "shell", "shell", Tone::Warning),
         ("match-edit", "edit", "edit", Tone::Error),
     ] {
-        elements.push(beam(
-            id,
-            &format!("probe-{probe}"),
-            &format!("rule-{rule}"),
-            tone,
-        ));
+        elements.push(
+            StageElement::beam(id, &format!("probe-{probe}"), &format!("rule-{rule}")).tone(tone),
+        );
     }
     // Verdicts sit under each probe's resting place.
     for (id, x, y, action, tone, sign) in [
@@ -185,16 +166,15 @@ fn stage_plan() -> StagePlan {
         } else {
             Tone::Error
         };
-        elements.push(label(
+        elements.push(StageElement::label(
             id,
             [x, y, 0.0],
             22.0,
-            CaptionAlign::Center,
             &[("→ ", Tone::Muted), (action, tone), (sign, mark)],
         ));
     }
     StagePlan {
-        post: POST,
+        post: StagePost::RESTRAINED,
         elements,
     }
 }

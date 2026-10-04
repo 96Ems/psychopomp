@@ -60,12 +60,32 @@ impl Default for StagePost {
     }
 }
 
+impl StagePost {
+    /// The explainer films' look: restrained bloom on a quiet, nearly flat
+    /// frame, so only what is alive glows.
+    pub const RESTRAINED: Self = Self {
+        bloom: 0.18,
+        grain: 0.012,
+        vignette: 0.22,
+        backdrop: 0.12,
+    };
+}
+
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct StatusText {
     pub text: String,
     #[serde(default, skip_serializing_if = "Tone::is_default")]
     pub tone: Tone,
+}
+
+impl StatusText {
+    pub fn new(text: impl Into<String>, tone: Tone) -> Self {
+        Self {
+            text: text.into(),
+            tone,
+        }
+    }
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
@@ -160,6 +180,167 @@ fn is_center(align: &CaptionAlign) -> bool {
 }
 fn center() -> CaptionAlign {
     CaptionAlign::Center
+}
+
+/// Constructors with each kind's serialized defaults, and builder-style
+/// options: `StageElement::card("client", at, size, "client").tone(Tone::Request)`.
+/// An option on a kind that lacks it is a programming error and panics.
+impl StageElement {
+    /// A card with a title, no statuses, the plain tone, and a check mark.
+    pub fn card(id: &str, at: [f32; 3], size: [f32; 2], title: &str) -> Self {
+        Self::Card {
+            id: id.into(),
+            at,
+            size,
+            title: title.into(),
+            status: Vec::new(),
+            tone: Tone::default(),
+            mark: Mark::default(),
+        }
+    }
+
+    /// An orb of 720 points in the accent tone.
+    pub fn orb(id: &str, at: [f32; 3], radius: f32) -> Self {
+        Self::Orb {
+            id: id.into(),
+            at,
+            radius,
+            points: default_points(),
+            tone: accent(),
+        }
+    }
+
+    /// A straight, plain beam from one positioned element to another.
+    pub fn beam(id: &str, from: &str, to: &str) -> Self {
+        Self::Beam {
+            id: id.into(),
+            from: from.into(),
+            to: to.into(),
+            bend: 0.0,
+            tone: Tone::default(),
+        }
+    }
+
+    /// An unlabeled, plain packet that travels `beam` from its `from` end.
+    pub fn packet(id: &str, beam: &str) -> Self {
+        Self::Packet {
+            id: id.into(),
+            beam: beam.into(),
+            reverse: false,
+            label: String::new(),
+            tone: Tone::default(),
+        }
+    }
+
+    /// Centered text of `(text, tone)` spans.
+    pub fn label(id: &str, at: [f32; 3], size: f32, spans: &[(&str, Tone)]) -> Self {
+        Self::Label {
+            id: id.into(),
+            at,
+            size,
+            align: center(),
+            spans: spans
+                .iter()
+                .map(|&(text, tone)| CaptionSpanPlan::new(text, tone))
+                .collect(),
+        }
+    }
+
+    /// A plain 3 px ring.
+    pub fn ring(id: &str, at: [f32; 3], radius: f32) -> Self {
+        Self::Ring {
+            id: id.into(),
+            at,
+            radius,
+            thickness: default_thickness(),
+            tone: Tone::default(),
+        }
+    }
+
+    pub fn tone(mut self, tone: Tone) -> Self {
+        match &mut self {
+            Self::Card { tone: own, .. }
+            | Self::Orb { tone: own, .. }
+            | Self::Beam { tone: own, .. }
+            | Self::Packet { tone: own, .. }
+            | Self::Ring { tone: own, .. } => *own = tone,
+            other => panic!("stage element '{}' has no tone", other.id()),
+        }
+        self
+    }
+
+    /// A card's status lines, cross-faded by its `status` channel.
+    pub fn statuses(mut self, statuses: &[(&str, Tone)]) -> Self {
+        let Self::Card { status, .. } = &mut self else {
+            panic!("only cards have statuses, not '{}'", self.id());
+        };
+        *status = statuses
+            .iter()
+            .map(|&(text, tone)| StatusText::new(text, tone))
+            .collect();
+        self
+    }
+
+    /// What a card's status spinner resolves into.
+    pub fn mark(mut self, mark: Mark) -> Self {
+        let Self::Card { mark: own, .. } = &mut self else {
+            panic!("only cards have marks, not '{}'", self.id());
+        };
+        *own = mark;
+        self
+    }
+
+    pub fn points(mut self, points: u32) -> Self {
+        let Self::Orb { points: own, .. } = &mut self else {
+            panic!("only orbs have points, not '{}'", self.id());
+        };
+        *own = points;
+        self
+    }
+
+    /// A beam's sideways bow, in pixels.
+    pub fn bend(mut self, bend: f32) -> Self {
+        let Self::Beam { bend: own, .. } = &mut self else {
+            panic!("only beams bend, not '{}'", self.id());
+        };
+        *own = bend;
+        self
+    }
+
+    /// The packet travels from its beam's `to` end back to its `from`.
+    pub fn reversed(mut self) -> Self {
+        let Self::Packet { reverse, .. } = &mut self else {
+            panic!("only packets reverse, not '{}'", self.id());
+        };
+        *reverse = true;
+        self
+    }
+
+    /// The text a packet carries.
+    pub fn labeled(mut self, text: &str) -> Self {
+        let Self::Packet { label, .. } = &mut self else {
+            panic!("only packets carry labels, not '{}'", self.id());
+        };
+        *label = text.into();
+        self
+    }
+
+    pub fn align(mut self, align: CaptionAlign) -> Self {
+        let Self::Label { align: own, .. } = &mut self else {
+            panic!("only labels align, not '{}'", self.id());
+        };
+        *own = align;
+        self
+    }
+
+    /// A ring's stroke, in pixels.
+    pub fn thickness(mut self, thickness: f32) -> Self {
+        let Self::Ring { thickness: own, .. } = &mut self else {
+            panic!("only rings have a thickness, not '{}'", self.id());
+        };
+        *own = thickness;
+        self
+    }
 }
 
 impl StageElement {
@@ -995,6 +1176,48 @@ mod tests {
                 && !plan.accepts("missing.opacity")
                 && !plan.accepts("camera.roll")
         );
+    }
+
+    #[test]
+    fn constructors_carry_the_serialized_defaults() {
+        let built = vec![
+            StageElement::orb("service", [960.0, 460.0, 0.0], 150.0),
+            StageElement::card("client", [420.0, 300.0, -40.0], [300.0, 120.0], "client")
+                .statuses(&[("reconnecting", Tone::Plain), ("disconnected", Tone::Error)]),
+            StageElement::beam("link", "client", "service").bend(60.0),
+            StageElement::packet("probe", "link")
+                .labeled("GET /api/info")
+                .tone(Tone::Request),
+            StageElement::label(
+                "caption",
+                [960.0, 700.0, 0.0],
+                28.0,
+                &[("healthy", Tone::Success)],
+            ),
+            StageElement::ring("timer", [960.0, 460.0, 0.0], 190.0),
+        ];
+        assert_eq!(built, plan().elements);
+        let options = StageElement::card("c", [0.0; 3], [100.0, 50.0], "c")
+            .mark(Mark::Cross)
+            .tone(Tone::Accent);
+        assert!(matches!(
+            options,
+            StageElement::Card {
+                mark: Mark::Cross,
+                tone: Tone::Accent,
+                ..
+            }
+        ));
+        assert!(matches!(
+            StageElement::packet("p", "link").reversed(),
+            StageElement::Packet { reverse: true, .. }
+        ));
+    }
+
+    #[test]
+    #[should_panic(expected = "only orbs have points")]
+    fn an_option_on_the_wrong_kind_panics() {
+        let _ = StageElement::ring("timer", [0.0; 3], 10.0).points(9);
     }
 
     /// One element of every kind, so each kind's table is checked.

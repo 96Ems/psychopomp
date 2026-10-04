@@ -29,7 +29,7 @@ use psychopomp::{
         ScenePlan,
     },
     rolling::{RollingNumberActor, RollingNumberPlan},
-    stage::{Camera, StageActor, StageElement, StagePlan, StagePost, StatusText},
+    stage::{Camera, StageActor, StageElement, StagePlan, StagePost},
     tone::Tone,
 };
 
@@ -115,73 +115,6 @@ fn client_rect() -> [f32; 4] {
     [corner.x, corner.y, size.x, size.y]
 }
 
-fn status(text: &str, tone: Tone) -> StatusText {
-    StatusText {
-        text: text.to_owned(),
-        tone,
-    }
-}
-
-fn spans(parts: &[(&str, Tone)]) -> Vec<CaptionSpanPlan> {
-    parts.iter().map(|(text, tone)| span(text, *tone)).collect()
-}
-
-fn card(
-    id: &str,
-    at: [f32; 3],
-    size: [f32; 2],
-    title: &str,
-    status: Vec<StatusText>,
-    tone: Tone,
-    mark: Mark,
-) -> StageElement {
-    StageElement::Card {
-        id: id.into(),
-        at,
-        size,
-        title: title.into(),
-        status,
-        tone,
-        mark,
-    }
-}
-
-fn beam(id: &str, from: &str, to: &str, bend: f32, tone: Tone) -> StageElement {
-    StageElement::Beam {
-        id: id.into(),
-        from: from.into(),
-        to: to.into(),
-        bend,
-        tone,
-    }
-}
-
-fn packet(id: &str, beam: &str, reverse: bool, label: &str, tone: Tone) -> StageElement {
-    StageElement::Packet {
-        id: id.into(),
-        beam: beam.into(),
-        reverse,
-        label: label.into(),
-        tone,
-    }
-}
-
-fn label(
-    id: &str,
-    at: [f32; 3],
-    size: f32,
-    align: CaptionAlign,
-    parts: &[(&str, Tone)],
-) -> StageElement {
-    StageElement::Label {
-        id: id.into(),
-        at,
-        size,
-        align,
-        spans: spans(parts),
-    }
-}
-
 fn glitch(s: &mut StageActor, sc: &mut PlanBuilder, card: &str, at: u64, seeds: [f32; 3]) -> u64 {
     let mut step = at;
     for seed in seeds.into_iter().chain([0.0]) {
@@ -193,122 +126,103 @@ fn glitch(s: &mut StageActor, sc: &mut PlanBuilder, card: &str, at: u64, seeds: 
 
 fn stage_plan() -> StagePlan {
     let elements = vec![
-        StageElement::Orb {
-            id: "old".into(),
-            at: OLD_SERVICE,
-            radius: 126.0,
-            points: 850,
-            tone: Tone::Plain,
-        },
-        StageElement::Ring {
-            id: "port-ring".into(),
-            at: OLD_SERVICE,
-            radius: 138.0,
-            thickness: 1.5,
-            tone: Tone::Success,
-        },
-        StageElement::Ring {
-            id: "port-ring-outer".into(),
-            at: OLD_SERVICE,
-            radius: 146.0,
-            thickness: 1.3,
-            tone: Tone::Success,
-        },
-        label(
+        StageElement::orb("old", OLD_SERVICE, 126.0)
+            .points(850)
+            .tone(Tone::Plain),
+        StageElement::ring("port-ring", OLD_SERVICE, 138.0)
+            .thickness(1.5)
+            .tone(Tone::Success),
+        StageElement::ring("port-ring-outer", OLD_SERVICE, 146.0)
+            .thickness(1.3)
+            .tone(Tone::Success),
+        StageElement::label(
             "old-name",
             [OLD_SERVICE[0], 700.0, 0.0],
             23.0,
-            CaptionAlign::Center,
             &[("old server · pid 4127", Tone::Plain)],
         ),
-        label(
+        StageElement::label(
             "old-active",
             [OLD_SERVICE[0], 732.0, 0.0],
             19.0,
-            CaptionAlign::Center,
             &[("●", Tone::Success), (" holds :49374", Tone::Muted)],
         ),
-        label(
+        StageElement::label(
             "old-lingering",
             [OLD_SERVICE[0], 732.0, 0.0],
             19.0,
-            CaptionAlign::Center,
             &[
                 ("●", Tone::Warning),
                 (" lingering · still holds :49374", Tone::Error),
             ],
         ),
-        label(
+        StageElement::label(
             "old-exited",
             [OLD_SERVICE[0], 732.0, 0.0],
             19.0,
-            CaptionAlign::Center,
             &[
                 ("●", Tone::Success),
                 (" pid 4127 exited · :49374 free", Tone::Muted),
             ],
         ),
-        card(
-            "file",
-            REG_FILE,
-            REG_SIZE,
-            "service.json",
-            vec![
-                status("owner: pid 4127", Tone::Muted),
-                status("unregistered", Tone::Warning),
-            ],
-            Tone::Plain,
-            Mark::Cross,
-        ),
-        card(
-            "client",
-            CLIENT,
-            CLIENT_SIZE,
-            "Service.stop",
-            vec![
-                status("stopping pid 4127", Tone::Plain),
-                status("file gone → return early", Tone::Warning),
-                status("watching pid 4127", Tone::Plain),
-                status("escalating → SIGKILL", Tone::Error),
-                status("stopped cleanly", Tone::Success),
-            ],
-            Tone::Request,
-            Mark::Check,
-        ),
-        card(
-            "new",
-            NEW_SERVICE,
-            NEW_SIZE,
-            "new server",
-            vec![
-                status("starting", Tone::Plain),
-                status("EADDRINUSE :49374", Tone::Error),
-                status("starting", Tone::Plain),
-                status("listening :49374", Tone::Success),
-            ],
-            Tone::Accent,
-            Mark::Check,
-        ),
-        beam("stop-link", "client", "old", 0.0, Tone::Error),
-        beam("reg-link", "old", "file", 0.0, Tone::Plain),
-        beam("check-link", "client", "file", -32.0, Tone::Request),
-        beam("bind-link", "new", "old", 0.0, Tone::Accent),
-        packet("sigterm", "stop-link", false, "SIGTERM", Tone::Error),
-        packet("sigkill", "stop-link", false, "SIGKILL", Tone::Error),
-        packet("unreg", "reg-link", false, "unlink", Tone::Warning),
-        packet("check", "check-link", false, "read file", Tone::Request),
-        packet("gone", "check-link", true, "missing", Tone::Warning),
-        packet("bind-1", "bind-link", false, "bind :49374", Tone::Request),
-        packet("clash", "bind-link", true, "EADDRINUSE", Tone::Error),
-        packet("bind-2", "bind-link", false, "bind :49374", Tone::Success),
+        StageElement::card("file", REG_FILE, REG_SIZE, "service.json")
+            .statuses(&[
+                ("owner: pid 4127", Tone::Muted),
+                ("unregistered", Tone::Warning),
+            ])
+            .mark(Mark::Cross),
+        StageElement::card("client", CLIENT, CLIENT_SIZE, "Service.stop")
+            .statuses(&[
+                ("stopping pid 4127", Tone::Plain),
+                ("file gone → return early", Tone::Warning),
+                ("watching pid 4127", Tone::Plain),
+                ("escalating → SIGKILL", Tone::Error),
+                ("stopped cleanly", Tone::Success),
+            ])
+            .tone(Tone::Request),
+        StageElement::card("new", NEW_SERVICE, NEW_SIZE, "new server")
+            .statuses(&[
+                ("starting", Tone::Plain),
+                ("EADDRINUSE :49374", Tone::Error),
+                ("starting", Tone::Plain),
+                ("listening :49374", Tone::Success),
+            ])
+            .tone(Tone::Accent),
+        StageElement::beam("stop-link", "client", "old").tone(Tone::Error),
+        StageElement::beam("reg-link", "old", "file"),
+        StageElement::beam("check-link", "client", "file")
+            .bend(-32.0)
+            .tone(Tone::Request),
+        StageElement::beam("bind-link", "new", "old").tone(Tone::Accent),
+        StageElement::packet("sigterm", "stop-link")
+            .labeled("SIGTERM")
+            .tone(Tone::Error),
+        StageElement::packet("sigkill", "stop-link")
+            .labeled("SIGKILL")
+            .tone(Tone::Error),
+        StageElement::packet("unreg", "reg-link")
+            .labeled("unlink")
+            .tone(Tone::Warning),
+        StageElement::packet("check", "check-link")
+            .labeled("read file")
+            .tone(Tone::Request),
+        StageElement::packet("gone", "check-link")
+            .reversed()
+            .labeled("missing")
+            .tone(Tone::Warning),
+        StageElement::packet("bind-1", "bind-link")
+            .labeled("bind :49374")
+            .tone(Tone::Request),
+        StageElement::packet("clash", "bind-link")
+            .reversed()
+            .labeled("EADDRINUSE")
+            .tone(Tone::Error),
+        StageElement::packet("bind-2", "bind-link")
+            .labeled("bind :49374")
+            .tone(Tone::Success),
     ];
     StagePlan {
-        post: StagePost {
-            bloom: 0.18,
-            grain: 0.012,
-            vignette: 0.22,
-            backdrop: 0.12,
-        },
+        post: StagePost::RESTRAINED,
         elements,
     }
 }

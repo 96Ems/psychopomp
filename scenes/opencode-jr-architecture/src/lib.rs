@@ -21,13 +21,12 @@ use anyhow::Result;
 use psychopomp::{
     author::{PlanBuilder, seconds},
     caption::{CaptionActor, CaptionAlign, CaptionPlan, CaptionSpanPlan},
-    effects::spinner::Mark,
     narration::{Narration, Spoken},
     plan::{
         MediaKindPlan, MediaPlan, MediaRolePlan, ReelPlan, ReelSegmentPlan, ReelTransitionStyle,
         ScenePlan,
     },
-    stage::{StageActor, StageElement, StagePlan, StagePost, StatusText},
+    stage::{StageActor, StagePlan},
     tone::Tone,
 };
 
@@ -168,100 +167,6 @@ fn footer(sc: &mut PlanBuilder, id: &str, parts: &[(&str, Tone)], at: u64) -> Re
     )?;
     caption.type_in(sc, at, 42.0, 0.8);
     Ok(caption)
-}
-
-fn post() -> StagePost {
-    StagePost {
-        bloom: 0.18,
-        grain: 0.012,
-        vignette: 0.22,
-        backdrop: 0.12,
-    }
-}
-
-fn card(
-    id: &str,
-    at: [f32; 3],
-    size: [f32; 2],
-    title: &str,
-    status: &[(&str, Tone)],
-    tone: Tone,
-) -> StageElement {
-    StageElement::Card {
-        id: id.into(),
-        at,
-        size,
-        title: title.into(),
-        status: status
-            .iter()
-            .map(|(text, tone)| StatusText {
-                text: (*text).to_owned(),
-                tone: *tone,
-            })
-            .collect(),
-        tone,
-        mark: Mark::Check,
-    }
-}
-
-fn orb(id: &str, at: [f32; 3], radius: f32, points: u32) -> StageElement {
-    StageElement::Orb {
-        id: id.into(),
-        at,
-        radius,
-        points,
-        tone: Tone::Plain,
-    }
-}
-
-fn beam(id: &str, from: &str, to: &str, tone: Tone) -> StageElement {
-    bent(id, from, to, 0.0, tone)
-}
-
-fn bent(id: &str, from: &str, to: &str, bend: f32, tone: Tone) -> StageElement {
-    StageElement::Beam {
-        id: id.into(),
-        from: from.into(),
-        to: to.into(),
-        bend,
-        tone,
-    }
-}
-
-fn packet(id: &str, beam: &str, reverse: bool, label: &str, tone: Tone) -> StageElement {
-    StageElement::Packet {
-        id: id.into(),
-        beam: beam.into(),
-        reverse,
-        label: label.into(),
-        tone,
-    }
-}
-
-fn label(
-    id: &str,
-    at: [f32; 3],
-    size: f32,
-    align: CaptionAlign,
-    parts: &[(&str, Tone)],
-) -> StageElement {
-    StageElement::Label {
-        id: id.into(),
-        at,
-        size,
-        align,
-        spans: spans(parts),
-    }
-}
-
-fn ring(id: &str, at: [f32; 3], radius: f32, thickness: f32, tone: Tone) -> StageElement {
-    StageElement::Ring {
-        id: id.into(),
-        at,
-        radius,
-        thickness,
-        tone,
-    }
 }
 
 /// The hero entrance for an orb: it gathers out of a blur while turning
