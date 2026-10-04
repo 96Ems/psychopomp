@@ -394,6 +394,7 @@ impl CalloutPlan {
 }
 
 /// Authoring handle for one callout. Channels are declared on first use.
+#[derive(Clone, Debug)]
 pub struct CalloutActor {
     actor: ActorHandle,
     anchors: Vec<String>,
@@ -415,6 +416,10 @@ impl CalloutActor {
             actor,
             anchors: plan.anchors.iter().map(|a| a.id().to_owned()).collect(),
         })
+    }
+
+    pub fn actor(&self) -> &ActorHandle {
+        &self.actor
     }
 
     pub fn id(&self) -> &str {

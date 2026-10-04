@@ -4,8 +4,8 @@
 use psychopomp::{
     author::{PlanBuilder, SECOND},
     plan::ScenePlan,
-    score::{Beat, stage},
-    stage::{StageActor, StagePlan},
+    score::{Beat, Stage},
+    stage::StagePlan,
 };
 
 fn build_plan() -> anyhow::Result<ScenePlan> {
@@ -18,13 +18,14 @@ fn build_plan() -> anyhow::Result<ScenePlan> {
         ]
     }))?;
     let mut scene = PlanBuilder::new("hello", 4 * SECOND);
-    let mut stage = StageActor::declare(&mut scene, "stage", &plan)?;
-    stage.score(&mut scene).at(
+    let stage = Stage::declare(&mut scene, "stage", &plan)?;
+    scene.at(
         0,
-        stage::settle_in("client")
-            .then(stage::connect("link", 0.6))
-            .then_after(SECOND / 2, stage::send("hello", 0.8))
-            .then(stage::land("server").also(stage::jolt([1.0, 0.0], 0.6))),
+        stage
+            .settle_in("client")
+            .then(stage.connect("link", 0.6))
+            .then_after(SECOND / 2, stage.send("hello", 0.8))
+            .then(stage.land("server").also(stage.jolt([1.0, 0.0], 0.6))),
     );
     Ok(scene.finish()?)
 }
@@ -40,6 +41,8 @@ fn main() -> anyhow::Result<()> {
 
 #[cfg(test)]
 mod tests {
+    use psychopomp::stage::StageActor;
+
     use super::*;
 
     fn original_plan() -> anyhow::Result<ScenePlan> {

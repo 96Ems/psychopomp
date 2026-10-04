@@ -128,6 +128,7 @@ impl CaptionPlan {
 
 /// Authoring handle for one caption actor. Channels are declared once, with the
 /// recipe's defaults as initial values.
+#[derive(Clone, Debug)]
 pub struct CaptionActor {
     actor: ActorHandle,
     chars: usize,
@@ -145,6 +146,18 @@ impl CaptionActor {
             actor,
             chars: plan.char_count(),
         })
+    }
+
+    pub fn actor(&self) -> &ActorHandle {
+        &self.actor
+    }
+
+    pub fn id(&self) -> &str {
+        self.actor.id()
+    }
+
+    pub fn char_count(&self) -> usize {
+        self.chars
     }
 
     pub fn channel(
@@ -176,9 +189,19 @@ impl CaptionActor {
         chars_per_second: f32,
         caret_hold_seconds: f32,
     ) -> u64 {
-        let opacity = self.channel(scene, "opacity", 0.0);
-        let typed = self.channel(scene, "typed", 0.0);
-        let caret = self.channel(scene, "caret", 0.0);
+        self.type_in_at(scene, at_nanos, chars_per_second, caret_hold_seconds)
+    }
+
+    pub(crate) fn type_in_at(
+        &self,
+        scene: &mut PlanBuilder,
+        at_nanos: u64,
+        chars_per_second: f32,
+        caret_hold_seconds: f32,
+    ) -> u64 {
+        let opacity = scene.channel(&self.actor, "opacity", 0.0);
+        let typed = scene.channel(&self.actor, "typed", 0.0);
+        let caret = scene.channel(&self.actor, "caret", 0.0);
         scene.set(&opacity, at_nanos, 1.0);
         scene.set(&caret, at_nanos, 1.0);
         let done = type_steps(scene, &typed, at_nanos, self.chars, chars_per_second);
@@ -197,9 +220,10 @@ pub(crate) fn show(scene: &mut PlanBuilder, actor: &ActorHandle, at_nanos: u64) 
     scene.spring(&y, at_nanos, 0.0, 0.45, 0.0);
 }
 
-/// Fade out in place.
+/// Fade out in place. If `opacity` was not already declared by `show` or
+/// `type_in`, it starts at the recipe's visible resting value (`1.0`).
 pub(crate) fn hide(scene: &mut PlanBuilder, actor: &ActorHandle, at_nanos: u64) {
-    let opacity = scene.channel(actor, "opacity", 0.0);
+    let opacity = scene.channel(actor, "opacity", 1.0);
     scene.spring(&opacity, at_nanos, 0.0, 0.3, 0.0);
 }
 

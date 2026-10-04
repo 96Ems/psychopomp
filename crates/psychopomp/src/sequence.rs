@@ -413,6 +413,7 @@ fn single_line(what: &str, text: &str, max_chars: usize) -> Result<()> {
 
 /// Authoring handle that declares each sequence channel once, with the recipe's
 /// default as its initial value, and writes eased reveals by row identity.
+#[derive(Clone, Debug)]
 pub struct SequenceActor {
     actor: ActorHandle,
 }
@@ -429,6 +430,14 @@ impl SequenceActor {
         plan.validate()?;
         let actor = scene.actor(id, SEQUENCE_RECIPE, plan)?;
         Ok(Self { actor })
+    }
+
+    pub fn actor(&self) -> &ActorHandle {
+        &self.actor
+    }
+
+    pub fn id(&self) -> &str {
+        self.actor.id()
     }
 
     /// The channel for `property`, declared on first use with `initial`.

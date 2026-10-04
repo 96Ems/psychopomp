@@ -1,37 +1,46 @@
-//! Composable choreography (`Score`, `Beat`, `Span`, and `CueTime`).
+//! Composable choreography (`Beat`, `Span`, `CueTime`, and value Actor handles).
 //!
-//! ## Denotation
+//! ## Core Principle
 //!
-//! A [`Beat`] is a pure schedule transformer:
+//! **The [`PlanBuilder`] is the only mutable thing; actor handles are values.**
+//!
+//! A [`Beat`] is a pure schedule transformer over `&mut PlanBuilder`:
 //!
 //! ```text
-//! ⟦Beat⟧ : Time (start_nanos: u64) -> (Span, Writes)
+//! ⟦Beat⟧ : Time (start_nanos: u64) -> (Span, Writes into PlanBuilder)
 //! ```
 //!
-//! Given a start time in nanoseconds on the plan clock, playing a [`Beat`]
-//! emits channel/media/cue writes into its context (such as a [`PlanBuilder`]
-//! or [`StageScore`]) and returns the choreographic [`Span`] `[start, end]`
-//! occupied by its primary action.
-//!
-//! Crucially, a beat's choreographic [`Span`] is distinct from the physical
-//! settling tail of its springs:
-//! - Impulses (`to`, `spring`, `ease`, `set`, `hit`, `land`, `jolt`, `sound`)
-//!   have zero choreographic duration (`end == start`) so subsequent beats can
-//!   fire immediately or after an explicit [`hold`] / [`Beat::after`].
-//! - Phased actions (`settle_in`, `connect`, `send`, `type_in`) advance `end`
-//!   to their semantic completion moment (when a panel is ready to wire, when a
-//!   beam makes contact, when a packet lands, or when typing finishes).
-//!
-//! Every combinator compiles directly to ordinary [`PlanBuilder`] events—no
-//! runtime scene graph, callbacks, or Scene Plan schema changes.
+//! Actor handles ([`Stage`], [`Caption`], [`Callout`], [`RollingNumber`],
+//! [`Tree`], [`Plot`], [`Lanes`], [`Sequence`], [`Video`]) are immutable
+//! `Clone` values whose methods take `&self` and return `impl Beat`. Because
+//! every actor's beats play against the same `&mut PlanBuilder`, any number of
+//! actors and sounds compose inside one `all![...]` or `.then(...)` expression
+//! without per-actor contexts or escape hatches.
 
 use std::path::PathBuf;
 
+use anyhow::Result;
+use serde_json::Value;
+
 use crate::{
-    author::{PlanBuilder, whole_millis},
+    author::{ActorHandle, ContinuousHandle, PlanBuilder, whole_millis},
+    callout::{CalloutActor, CalloutPlan},
+    caption::{self, CaptionActor, CaptionPlan},
+    lanes::{LanesActor, LanesPlan},
     math::easing::Ease,
     plan::{MediaKindPlan, MediaPlan, MediaRolePlan, ScenePlan, SpringPlan, TrackEventPlan},
-    stage::{StageActor, packet},
+    plot::{PlotActor, PlotPlan},
+    rolling::{RollingNumberActor, RollingNumberPlan},
+    sequence::{SequenceActor, SequencePlan},
+    stage::{PORT_POP_SECONDS, StageActor, StageElement, StagePlan, StagePost, StatusText, packet},
+    tone::Tone,
+    tree::{TreeActor, TreeModel, TreePlan},
+    video::{VideoActor, VideoPlan},
+};
+use crate::{
+    caption::{CaptionAlign, CaptionSpanPlan},
+    effects::spinner::Mark,
+    narration::{Narration, NarrationClip, Spoken},
 };
 
 /// One millisecond on the plan clock, in nanoseconds.
@@ -141,18 +150,18 @@ impl CueTime for Span {
     }
 }
 
-/// A composable unit of choreography over a mutable authoring context `Ctx`.
-pub trait Beat<Ctx>: Sized {
-    /// Emit this beat's writes into `ctx` starting at `at` nanoseconds, and
+/// A composable unit of choreography that emits writes into a [`PlanBuilder`].
+pub trait Beat: Sized {
+    /// Emit this beat's writes into `scene` starting at `at` nanoseconds, and
     /// return its occupied choreographic [`Span`].
-    fn play(self, ctx: &mut Ctx, at: u64) -> Span;
+    fn play(self, scene: &mut PlanBuilder, at: u64) -> Span;
 
     /// Sequential composition: play `self` at `at`, then play `next` at
     /// `self.end`.
     ///
     /// Obeys associativity (`a.then(b).then(c) == a.then(b.then(c))`) and
     /// identity (`empty().then(a) == a == a.then(empty())`).
-    fn then<B>(self, next: B) -> Then<Self, B> {
+    fn then<B: Beat>(self, next: B) -> Then<Self, B> {
         Then {
             first: self,
             second: next,
@@ -162,11 +171,8 @@ pub trait Beat<Ctx>: Sized {
     /// Play `self`, wait `gap` nanoseconds after `self.end`, then play `next`.
     ///
     /// Equivalent to `self.then(next.after(gap))` and `self.then(hold(gap)).then(next)`.
-    fn then_after<B>(self, gap: u64, next: B) -> Then<Self, After<B>> {
-        self.then(After {
-            delay: gap,
-            beat: next,
-        })
+    fn then_after<B: Beat>(self, gap: u64, next: B) -> Then<Self, After<B>> {
+        self.then(next.after(gap))
     }
 
     /// Parallel composition: start both `self` and `other` at `at`; complete
@@ -174,7 +180,7 @@ pub trait Beat<Ctx>: Sized {
     ///
     /// Obeys associativity, identity (`empty()`), and delay distributivity
     /// (`a.also(b).after(d) == a.after(d).also(b.after(d))`).
-    fn also<B>(self, other: B) -> Also<Self, B> {
+    fn also<B: Beat>(self, other: B) -> Also<Self, B> {
         Also {
             left: self,
             right: other,
@@ -183,7 +189,7 @@ pub trait Beat<Ctx>: Sized {
 
     /// Accompany `self` with a subordinate beat `subordinate` that starts at
     /// `self.start`, while keeping `self`'s choreographic [`Span`].
-    fn with<B>(self, subordinate: B) -> With<Self, B> {
+    fn with<B: Beat>(self, subordinate: B) -> With<Self, B> {
         With {
             primary: self,
             subordinate,
@@ -192,7 +198,7 @@ pub trait Beat<Ctx>: Sized {
 
     /// Trigger a subordinate `reaction` when `self` finishes (`self.end`),
     /// while preserving `self`'s [`Span`].
-    fn on_end<B>(self, reaction: B) -> OnEnd<Self, B> {
+    fn on_end<B: Beat>(self, reaction: B) -> OnEnd<Self, B> {
         OnEnd {
             primary: self,
             reaction,
@@ -217,12 +223,12 @@ pub trait Beat<Ctx>: Sized {
     }
 }
 
-impl<Ctx, F> Beat<Ctx> for F
+impl<F> Beat for F
 where
-    F: FnOnce(&mut Ctx, u64) -> Span,
+    F: FnOnce(&mut PlanBuilder, u64) -> Span,
 {
-    fn play(self, ctx: &mut Ctx, at: u64) -> Span {
-        self(ctx, at)
+    fn play(self, scene: &mut PlanBuilder, at: u64) -> Span {
+        self(scene, at)
     }
 }
 
@@ -235,25 +241,9 @@ pub const fn empty() -> Empty {
     Empty
 }
 
-impl<Ctx> Beat<Ctx> for Empty {
-    fn play(self, _ctx: &mut Ctx, at: u64) -> Span {
+impl Beat for Empty {
+    fn play(self, _scene: &mut PlanBuilder, at: u64) -> Span {
         Span::impulse(at)
-    }
-}
-
-impl Empty {
-    pub const fn then<B>(self, next: B) -> Then<Self, B> {
-        Then {
-            first: self,
-            second: next,
-        }
-    }
-
-    pub const fn also<B>(self, other: B) -> Also<Self, B> {
-        Also {
-            left: self,
-            right: other,
-        }
     }
 }
 
@@ -269,25 +259,9 @@ pub const fn hold(duration_nanos: u64) -> Hold {
     Hold { duration_nanos }
 }
 
-impl<Ctx> Beat<Ctx> for Hold {
-    fn play(self, _ctx: &mut Ctx, at: u64) -> Span {
+impl Beat for Hold {
+    fn play(self, _scene: &mut PlanBuilder, at: u64) -> Span {
         Span::new(at, at + self.duration_nanos)
-    }
-}
-
-impl Hold {
-    pub const fn then<B>(self, next: B) -> Then<Self, B> {
-        Then {
-            first: self,
-            second: next,
-        }
-    }
-
-    pub const fn also<B>(self, other: B) -> Also<Self, B> {
-        Also {
-            left: self,
-            right: other,
-        }
     }
 }
 
@@ -297,13 +271,13 @@ pub struct Impulse<F> {
 }
 
 /// Construct an impulse beat that writes at `at` and advances the cursor by `0 ns`.
-pub fn impulse<Ctx, F: FnOnce(&mut Ctx, u64)>(f: F) -> Impulse<F> {
+pub fn impulse<F: FnOnce(&mut PlanBuilder, u64)>(f: F) -> Impulse<F> {
     Impulse { f }
 }
 
-impl<Ctx, F: FnOnce(&mut Ctx, u64)> Beat<Ctx> for Impulse<F> {
-    fn play(self, ctx: &mut Ctx, at: u64) -> Span {
-        (self.f)(ctx, at);
+impl<F: FnOnce(&mut PlanBuilder, u64)> Beat for Impulse<F> {
+    fn play(self, scene: &mut PlanBuilder, at: u64) -> Span {
+        (self.f)(scene, at);
         Span::impulse(at)
     }
 }
@@ -314,13 +288,13 @@ pub struct Action<F> {
 }
 
 /// Construct a beat from an action that starts at `at` and returns its `end` timestamp.
-pub fn action<Ctx, F: FnOnce(&mut Ctx, u64) -> u64>(f: F) -> Action<F> {
+pub fn action<F: FnOnce(&mut PlanBuilder, u64) -> u64>(f: F) -> Action<F> {
     Action { f }
 }
 
-impl<Ctx, F: FnOnce(&mut Ctx, u64) -> u64> Beat<Ctx> for Action<F> {
-    fn play(self, ctx: &mut Ctx, at: u64) -> Span {
-        let end = (self.f)(ctx, at);
+impl<F: FnOnce(&mut PlanBuilder, u64) -> u64> Beat for Action<F> {
+    fn play(self, scene: &mut PlanBuilder, at: u64) -> Span {
+        let end = (self.f)(scene, at);
         Span::new(at, end)
     }
 }
@@ -332,59 +306,11 @@ pub struct Then<A, B> {
     pub second: B,
 }
 
-impl<Ctx, A: Beat<Ctx>, B: Beat<Ctx>> Beat<Ctx> for Then<A, B> {
-    fn play(self, ctx: &mut Ctx, at: u64) -> Span {
-        let first_span = self.first.play(ctx, at);
-        let second_span = self.second.play(ctx, first_span.end);
+impl<A: Beat, B: Beat> Beat for Then<A, B> {
+    fn play(self, scene: &mut PlanBuilder, at: u64) -> Span {
+        let first_span = self.first.play(scene, at);
+        let second_span = self.second.play(scene, first_span.end);
         Span::new(at, second_span.end)
-    }
-}
-
-impl<A, B> Then<A, B> {
-    pub const fn then<C>(self, next: C) -> Then<Self, C> {
-        Then {
-            first: self,
-            second: next,
-        }
-    }
-
-    pub const fn then_after<C>(self, gap: u64, next: C) -> Then<Self, After<C>> {
-        Then {
-            first: self,
-            second: After {
-                delay: gap,
-                beat: next,
-            },
-        }
-    }
-
-    pub const fn also<C>(self, other: C) -> Also<Self, C> {
-        Also {
-            left: self,
-            right: other,
-        }
-    }
-
-    pub const fn with<C>(self, subordinate: C) -> With<Self, C> {
-        With {
-            primary: self,
-            subordinate,
-        }
-    }
-
-    pub const fn on_end<C>(self, reaction: C) -> OnEnd<Self, C> {
-        OnEnd {
-            primary: self,
-            reaction,
-        }
-    }
-
-    pub const fn after(self, delay: u64) -> After<Self> {
-        After { delay, beat: self }
-    }
-
-    pub const fn early(self, lead: u64) -> Early<Self> {
-        Early { lead, beat: self }
     }
 }
 
@@ -395,10 +321,10 @@ pub struct Also<A, B> {
     pub right: B,
 }
 
-impl<Ctx, A: Beat<Ctx>, B: Beat<Ctx>> Beat<Ctx> for Also<A, B> {
-    fn play(self, ctx: &mut Ctx, at: u64) -> Span {
-        let left_span = self.left.play(ctx, at);
-        let right_span = self.right.play(ctx, at);
+impl<A: Beat, B: Beat> Beat for Also<A, B> {
+    fn play(self, scene: &mut PlanBuilder, at: u64) -> Span {
+        let left_span = self.left.play(scene, at);
+        let right_span = self.right.play(scene, at);
         Span::new(at, left_span.end.max(right_span.end))
     }
 }
@@ -410,10 +336,10 @@ pub struct With<A, B> {
     pub subordinate: B,
 }
 
-impl<Ctx, A: Beat<Ctx>, B: Beat<Ctx>> Beat<Ctx> for With<A, B> {
-    fn play(self, ctx: &mut Ctx, at: u64) -> Span {
-        let span = self.primary.play(ctx, at);
-        let _ = self.subordinate.play(ctx, at);
+impl<A: Beat, B: Beat> Beat for With<A, B> {
+    fn play(self, scene: &mut PlanBuilder, at: u64) -> Span {
+        let span = self.primary.play(scene, at);
+        let _ = self.subordinate.play(scene, at);
         span
     }
 }
@@ -425,10 +351,10 @@ pub struct OnEnd<A, B> {
     pub reaction: B,
 }
 
-impl<Ctx, A: Beat<Ctx>, B: Beat<Ctx>> Beat<Ctx> for OnEnd<A, B> {
-    fn play(self, ctx: &mut Ctx, at: u64) -> Span {
-        let span = self.primary.play(ctx, at);
-        let _ = self.reaction.play(ctx, span.end);
+impl<A: Beat, B: Beat> Beat for OnEnd<A, B> {
+    fn play(self, scene: &mut PlanBuilder, at: u64) -> Span {
+        let span = self.primary.play(scene, at);
+        let _ = self.reaction.play(scene, span.end);
         span
     }
 }
@@ -440,9 +366,9 @@ pub struct After<B> {
     pub beat: B,
 }
 
-impl<Ctx, B: Beat<Ctx>> Beat<Ctx> for After<B> {
-    fn play(self, ctx: &mut Ctx, at: u64) -> Span {
-        let inner = self.beat.play(ctx, at + self.delay);
+impl<B: Beat> Beat for After<B> {
+    fn play(self, scene: &mut PlanBuilder, at: u64) -> Span {
+        let inner = self.beat.play(scene, at + self.delay);
         Span::new(at, inner.end)
     }
 }
@@ -454,10 +380,10 @@ pub struct Early<B> {
     pub beat: B,
 }
 
-impl<Ctx, B: Beat<Ctx>> Beat<Ctx> for Early<B> {
-    fn play(self, ctx: &mut Ctx, at: u64) -> Span {
+impl<B: Beat> Beat for Early<B> {
+    fn play(self, scene: &mut PlanBuilder, at: u64) -> Span {
         let shifted = at.saturating_sub(self.lead);
-        self.beat.play(ctx, shifted)
+        self.beat.play(scene, shifted)
     }
 }
 
@@ -471,11 +397,11 @@ pub fn seq<I>(beats: I) -> Seq<I> {
     Seq { beats }
 }
 
-impl<Ctx, B: Beat<Ctx>, I: IntoIterator<Item = B>> Beat<Ctx> for Seq<I> {
-    fn play(self, ctx: &mut Ctx, at: u64) -> Span {
+impl<B: Beat, I: IntoIterator<Item = B>> Beat for Seq<I> {
+    fn play(self, scene: &mut PlanBuilder, at: u64) -> Span {
         let mut cursor = at;
         for beat in self.beats {
-            cursor = beat.play(ctx, cursor).end;
+            cursor = beat.play(scene, cursor).end;
         }
         Span::new(at, cursor)
     }
@@ -491,11 +417,11 @@ pub fn all<I>(beats: I) -> All<I> {
     All { beats }
 }
 
-impl<Ctx, B: Beat<Ctx>, I: IntoIterator<Item = B>> Beat<Ctx> for All<I> {
-    fn play(self, ctx: &mut Ctx, at: u64) -> Span {
+impl<B: Beat, I: IntoIterator<Item = B>> Beat for All<I> {
+    fn play(self, scene: &mut PlanBuilder, at: u64) -> Span {
         let mut end = at;
         for beat in self.beats {
-            end = end.max(beat.play(ctx, at).end);
+            end = end.max(beat.play(scene, at).end);
         }
         Span::new(at, end)
     }
@@ -524,24 +450,33 @@ where
     }
 }
 
-impl<Ctx, T, I, B, F> Beat<Ctx> for Stagger<I, F>
+impl<T, I, B, F> Beat for Stagger<I, F>
 where
     I: IntoIterator<Item = T>,
-    B: Beat<Ctx>,
+    B: Beat,
     F: FnMut(T) -> B,
 {
-    fn play(mut self, ctx: &mut Ctx, at: u64) -> Span {
+    fn play(mut self, scene: &mut PlanBuilder, at: u64) -> Span {
         let mut latest_end = at;
         for (index, item) in self.items.into_iter().enumerate() {
             let item_start = at + self.gap * index as u64;
-            let span = (self.make_beat)(item).play(ctx, item_start);
+            let span = (self.make_beat)(item).play(scene, item_start);
             latest_end = latest_end.max(span.end);
         }
         Span::new(at, latest_end)
     }
 }
 
-///Indexed variant of [`stagger`] when the beat depends on its `0..` index.
+/// Run one beat per item in parallel at the same cue time (`stagger(0, items, make_beat)`).
+pub fn each<T, I, B, F>(items: I, make_beat: F) -> Stagger<I, F>
+where
+    I: IntoIterator<Item = T>,
+    F: FnMut(T) -> B,
+{
+    stagger(0, items, make_beat)
+}
+
+/// Indexed variant of [`stagger`] when the beat depends on its `0..` index.
 pub struct StaggerIndexed<I, F> {
     gap: u64,
     items: I,
@@ -561,17 +496,17 @@ where
     }
 }
 
-impl<Ctx, T, I, B, F> Beat<Ctx> for StaggerIndexed<I, F>
+impl<T, I, B, F> Beat for StaggerIndexed<I, F>
 where
     I: IntoIterator<Item = T>,
-    B: Beat<Ctx>,
+    B: Beat,
     F: FnMut(usize, T) -> B,
 {
-    fn play(mut self, ctx: &mut Ctx, at: u64) -> Span {
+    fn play(mut self, scene: &mut PlanBuilder, at: u64) -> Span {
         let mut latest_end = at;
         for (index, item) in self.items.into_iter().enumerate() {
             let item_start = at + self.gap * index as u64;
-            let span = (self.make_beat)(index, item).play(ctx, item_start);
+            let span = (self.make_beat)(index, item).play(scene, item_start);
             latest_end = latest_end.max(span.end);
         }
         Span::new(at, latest_end)
@@ -608,329 +543,1165 @@ macro_rules! all {
 
 pub use {all as parallel, chain};
 
-/// A score runner bound to a mutable authoring context `Ctx`.
-pub struct Score<'a, Ctx> {
-    ctx: &'a mut Ctx,
+/// Schedule a layer audio clip at the cue time (impulse).
+pub fn sound(
+    id: impl Into<String>,
+    path: impl Into<PathBuf>,
+    duration_nanos: u64,
+    gain_db: f32,
+) -> impl Beat {
+    let id = id.into();
+    let path = path.into();
+    impulse(move |scene: &mut PlanBuilder, at| {
+        scene.media(MediaPlan {
+            id,
+            path,
+            kind: MediaKindPlan::Audio,
+            role: MediaRolePlan::Layer,
+            source_start_nanos: 0,
+            source_end_nanos: duration_nanos,
+            timeline_start_nanos: at,
+            timeline_end_nanos: at + duration_nanos,
+            gain_db,
+        });
+    })
 }
 
-impl<'a, Ctx> Score<'a, Ctx> {
-    pub fn new(ctx: &'a mut Ctx) -> Self {
-        Self { ctx }
-    }
-
-    pub fn context(&mut self) -> &mut Ctx {
-        self.ctx
-    }
-
-    /// Play `beat` anchored at `time` on the plan clock and return its [`Span`].
-    pub fn at(&mut self, time: impl CueTime, beat: impl Beat<Ctx>) -> Span {
-        beat.play(self.ctx, time.cue_nanos())
-    }
+/// A score runner bound to `&mut PlanBuilder`.
+pub struct Score<'a> {
+    scene: &'a mut PlanBuilder,
 }
 
-/// Combined authoring context for a [`StageActor`] and its [`PlanBuilder`].
-pub struct StageCtx<'a> {
-    pub stage: &'a mut StageActor,
-    pub scene: &'a mut PlanBuilder,
-}
-
-/// A [`Score`] specialized for [`StageActor`] + [`PlanBuilder`] choreography.
-pub struct StageScore<'a> {
-    ctx: StageCtx<'a>,
-}
-
-impl<'a> StageScore<'a> {
-    pub fn new(stage: &'a mut StageActor, scene: &'a mut PlanBuilder) -> Self {
-        Self {
-            ctx: StageCtx { stage, scene },
-        }
-    }
-
-    pub fn stage(&mut self) -> &mut StageActor {
-        self.ctx.stage
+impl<'a> Score<'a> {
+    pub fn new(scene: &'a mut PlanBuilder) -> Self {
+        Self { scene }
     }
 
     pub fn scene(&mut self) -> &mut PlanBuilder {
-        self.ctx.scene
+        self.scene
     }
 
-    /// Play `beat` at `time` on the Stage score and return its [`Span`].
-    pub fn at(&mut self, time: impl CueTime, beat: impl Beat<StageCtx<'a>>) -> Span {
-        beat.play(&mut self.ctx, time.cue_nanos())
+    /// Play `beat` anchored at `time` on the plan clock and return its [`Span`].
+    pub fn at(&mut self, time: impl CueTime, beat: impl Beat) -> Span {
+        beat.play(self.scene, time.cue_nanos())
     }
 
     /// Play `beat` at `time` and record a named [`crate::plan::CuePlan`] for its span.
-    pub fn cue(
-        &mut self,
-        id: impl Into<String>,
-        time: impl CueTime,
-        beat: impl Beat<StageCtx<'a>>,
-    ) -> Span {
+    pub fn cue(&mut self, id: impl Into<String>, time: impl CueTime, beat: impl Beat) -> Span {
         let span = self.at(time, beat);
-        self.ctx.scene.cue(id, span.start, span.end);
+        self.scene.cue(id, span.start, span.end);
         span
-    }
-}
-
-impl StageActor {
-    /// Open a composable [`StageScore`] over this stage and `scene`.
-    pub fn score<'a>(&'a mut self, scene: &'a mut PlanBuilder) -> StageScore<'a> {
-        StageScore::new(self, scene)
     }
 }
 
 impl PlanBuilder {
     /// Open a composable [`Score`] over this plan builder.
-    pub fn score(&mut self) -> Score<'_, Self> {
+    pub fn score(&mut self) -> Score<'_> {
         Score::new(self)
+    }
+
+    /// Play `beat` anchored at `time` on this plan builder and return its [`Span`].
+    pub fn at(&mut self, time: impl CueTime, beat: impl Beat) -> Span {
+        beat.play(self, time.cue_nanos())
+    }
+
+    /// Play `beat` at `time` and record a named [`crate::plan::CuePlan`] for its span.
+    pub fn play_cue(&mut self, id: impl Into<String>, time: impl CueTime, beat: impl Beat) -> Span {
+        let span = self.at(time, beat);
+        self.cue(id, span.start, span.end);
+        span
     }
 }
 
-/// Composable [`Beat`] constructors for [`StageActor`] and [`StageScore`].
-pub mod stage {
-    use super::*;
+/// Narration clips scheduled back to back with gaps; see [`Narration::reading`].
+pub struct Reading<'a, const N: usize> {
+    clips: [(&'a NarrationClip, u64); N],
+    duration: u64,
+}
+
+impl<'a, const N: usize> Reading<'a, N> {
+    pub fn duration(&self) -> u64 {
+        self.duration
+    }
+
+    pub fn place(&self, scene: &mut PlanBuilder) -> [Spoken<'a>; N] {
+        self.clips.map(|(clip, start)| clip.place(scene, start))
+    }
+}
+
+impl Narration {
+    pub fn reading<const N: usize>(
+        &self,
+        lead: u64,
+        clips: [(&str, u64); N],
+    ) -> Result<Reading<'_, N>> {
+        let mut at = lead;
+        let mut placed = Vec::with_capacity(N);
+        for (id, gap) in clips {
+            let clip = self.clip(id)?;
+            placed.push((clip, at));
+            at += clip.duration() + gap;
+        }
+        Ok(Reading {
+            clips: placed.try_into().unwrap_or_else(|_| unreachable!()),
+            duration: at,
+        })
+    }
+}
+
+impl StagePost {
+    pub const RESTRAINED: Self = Self {
+        bloom: 0.18,
+        grain: 0.012,
+        vignette: 0.22,
+        backdrop: 0.12,
+    };
+}
+
+impl StatusText {
+    pub fn new(text: impl Into<String>, tone: Tone) -> Self {
+        Self {
+            text: text.into(),
+            tone,
+        }
+    }
+}
+
+impl StageElement {
+    pub fn card(id: &str, at: [f32; 3], size: [f32; 2], title: &str) -> Self {
+        Self::Card {
+            id: id.into(),
+            at,
+            size,
+            title: title.into(),
+            status: Vec::new(),
+            tone: Tone::default(),
+            mark: Mark::default(),
+        }
+    }
+
+    pub fn orb(id: &str, at: [f32; 3], radius: f32) -> Self {
+        Self::Orb {
+            id: id.into(),
+            at,
+            radius,
+            points: 720,
+            tone: Tone::Accent,
+        }
+    }
+
+    pub fn beam(id: &str, from: &str, to: &str) -> Self {
+        Self::Beam {
+            id: id.into(),
+            from: from.into(),
+            to: to.into(),
+            bend: 0.0,
+            tone: Tone::default(),
+        }
+    }
+
+    pub fn packet(id: &str, beam: &str) -> Self {
+        Self::Packet {
+            id: id.into(),
+            beam: beam.into(),
+            reverse: false,
+            label: String::new(),
+            tone: Tone::default(),
+        }
+    }
+
+    pub fn label(id: &str, at: [f32; 3], size: f32, spans: &[(&str, Tone)]) -> Self {
+        Self::Label {
+            id: id.into(),
+            at,
+            size,
+            align: CaptionAlign::Center,
+            spans: spans
+                .iter()
+                .map(|&(text, tone)| CaptionSpanPlan::new(text, tone))
+                .collect(),
+        }
+    }
+
+    pub fn ring(id: &str, at: [f32; 3], radius: f32) -> Self {
+        Self::Ring {
+            id: id.into(),
+            at,
+            radius,
+            thickness: 3.0,
+            tone: Tone::default(),
+        }
+    }
+
+    pub fn tone(mut self, tone: Tone) -> Self {
+        match &mut self {
+            Self::Card { tone: own, .. }
+            | Self::Orb { tone: own, .. }
+            | Self::Beam { tone: own, .. }
+            | Self::Packet { tone: own, .. }
+            | Self::Ring { tone: own, .. } => *own = tone,
+            other => panic!("stage element '{}' has no tone", other.id()),
+        }
+        self
+    }
+
+    pub fn statuses(mut self, statuses: &[(&str, Tone)]) -> Self {
+        let Self::Card { status, .. } = &mut self else {
+            panic!("only cards have statuses, not '{}'", self.id());
+        };
+        *status = statuses
+            .iter()
+            .map(|&(text, tone)| StatusText::new(text, tone))
+            .collect();
+        self
+    }
+
+    pub fn mark(mut self, mark: Mark) -> Self {
+        let Self::Card { mark: own, .. } = &mut self else {
+            panic!("only cards have marks, not '{}'", self.id());
+        };
+        *own = mark;
+        self
+    }
+
+    pub fn points(mut self, points: u32) -> Self {
+        let Self::Orb { points: own, .. } = &mut self else {
+            panic!("only orbs have points, not '{}'", self.id());
+        };
+        *own = points;
+        self
+    }
+
+    pub fn bend(mut self, bend: f32) -> Self {
+        let Self::Beam { bend: own, .. } = &mut self else {
+            panic!("only beams bend, not '{}'", self.id());
+        };
+        *own = bend;
+        self
+    }
+
+    pub fn reversed(mut self) -> Self {
+        let Self::Packet { reverse, .. } = &mut self else {
+            panic!("only packets reverse, not '{}'", self.id());
+        };
+        *reverse = true;
+        self
+    }
+
+    pub fn labeled(mut self, text: &str) -> Self {
+        let Self::Packet { label, .. } = &mut self else {
+            panic!("only packets carry labels, not '{}'", self.id());
+        };
+        *label = text.into();
+        self
+    }
+
+    pub fn align(mut self, align: CaptionAlign) -> Self {
+        let Self::Label { align: own, .. } = &mut self else {
+            panic!("only labels align, not '{}'", self.id());
+        };
+        *own = align;
+        self
+    }
+
+    pub fn thickness(mut self, thickness: f32) -> Self {
+        let Self::Ring { thickness: own, .. } = &mut self else {
+            panic!("only rings have a thickness, not '{}'", self.id());
+        };
+        *own = thickness;
+        self
+    }
+}
+
+// ===========================================================================
+// Value Actor Handles (methods take `&self` and return `impl Beat + '_`)
+// ===========================================================================
+
+/// Value handle for a Stage actor whose choreography methods return [`Beat`]s.
+#[derive(Clone, Debug)]
+pub struct Stage {
+    inner: StageActor,
+}
+
+impl From<StageActor> for Stage {
+    fn from(inner: StageActor) -> Self {
+        Self { inner }
+    }
+}
+
+impl StageActor {
+    /// Return a value [`Stage`] handle whose methods produce composable [`Beat`]s.
+    pub fn beats(&self) -> Stage {
+        Stage {
+            inner: self.clone(),
+        }
+    }
+}
+
+impl Stage {
+    pub fn declare(
+        scene: &mut PlanBuilder,
+        id: impl Into<String>,
+        plan: &StagePlan,
+    ) -> Result<Self> {
+        Ok(Self {
+            inner: StageActor::declare(scene, id, plan)?,
+        })
+    }
+
+    pub fn actor(&self) -> &ActorHandle {
+        self.inner.actor()
+    }
+
+    pub fn id(&self) -> &str {
+        self.inner.id()
+    }
+
+    pub fn plan(&self) -> &StagePlan {
+        self.inner.plan()
+    }
 
     /// Declare `property` with `initial` value if not already declared (impulse).
-    pub fn channel<'a>(property: impl Into<String>, initial: f32) -> impl Beat<StageCtx<'a>> {
+    pub fn channel(&self, property: impl Into<String>, initial: f32) -> impl Beat + '_ {
         let property = property.into();
-        impulse(move |ctx: &mut StageCtx<'a>, _at| {
-            ctx.stage.channel(ctx.scene, &property, initial);
+        impulse(move |scene, _at| {
+            scene.channel(self.inner.actor(), &property, initial);
         })
     }
 
     /// Declare multiple `(property, initial)` channels in order (impulse).
-    pub fn channels<'a, I, S>(pairs: I) -> impl Beat<StageCtx<'a>>
+    pub fn channels<'a, I, S>(&'a self, pairs: I) -> impl Beat + 'a
     where
-        I: IntoIterator<Item = (S, f32)>,
+        I: IntoIterator<Item = (S, f32)> + 'a,
         S: AsRef<str>,
     {
-        impulse(move |ctx: &mut StageCtx<'a>, _at| {
+        impulse(move |scene, _at| {
             for (property, initial) in pairs {
-                ctx.stage.channel(ctx.scene, property.as_ref(), initial);
+                scene.channel(self.inner.actor(), property.as_ref(), initial);
             }
         })
     }
 
     /// Jump `property` to `value` at the cue time (impulse).
-    pub fn set<'a>(property: impl Into<String>, value: f32) -> impl Beat<StageCtx<'a>> {
+    pub fn set(&self, property: impl Into<String>, value: f32) -> impl Beat + '_ {
         let property = property.into();
-        impulse(move |ctx: &mut StageCtx<'a>, at| {
-            ctx.stage.set(ctx.scene, &property, at, value);
+        impulse(move |scene, at| {
+            self.inner.clone().set(scene, &property, at, value);
         })
     }
 
     /// Critically-damped spring on `property` to `target` over `seconds` (impulse).
-    pub fn to<'a>(
-        property: impl Into<String>,
-        target: f32,
-        seconds: f32,
-    ) -> impl Beat<StageCtx<'a>> {
+    pub fn to(&self, property: impl Into<String>, target: f32, seconds: f32) -> impl Beat + '_ {
         let property = property.into();
-        impulse(move |ctx: &mut StageCtx<'a>, at| {
-            ctx.stage.to(ctx.scene, &property, at, target, seconds);
+        impulse(move |scene, at| {
+            self.inner.clone().to(scene, &property, at, target, seconds);
         })
     }
 
     /// Spring `property` to `target` with `seconds` and `bounce` (impulse).
-    pub fn bounce<'a>(
+    pub fn bounce(
+        &self,
         property: impl Into<String>,
         target: f32,
         seconds: f32,
         bounce: f32,
-    ) -> impl Beat<StageCtx<'a>> {
+    ) -> impl Beat + '_ {
         let property = property.into();
-        impulse(move |ctx: &mut StageCtx<'a>, at| {
-            ctx.stage
-                .bounce(ctx.scene, &property, at, target, seconds, bounce);
+        impulse(move |scene, at| {
+            self.inner
+                .clone()
+                .bounce(scene, &property, at, target, seconds, bounce);
         })
     }
 
     /// Spring `property` to `target` with a named [`SpringPlan`] feel (impulse).
-    pub fn spring<'a>(
+    pub fn spring(
+        &self,
         property: impl Into<String>,
         target: f32,
         feel: SpringPlan,
-    ) -> impl Beat<StageCtx<'a>> {
+    ) -> impl Beat + '_ {
         let property = property.into();
-        impulse(move |ctx: &mut StageCtx<'a>, at| {
-            let ch = ctx.stage.channel(ctx.scene, &property, 0.0);
-            ctx.scene.spring_with(&ch, at, target, feel);
+        impulse(move |scene, at| {
+            let ch = scene.channel(self.inner.actor(), &property, 0.0);
+            scene.spring_with(&ch, at, target, feel);
         })
     }
 
     /// Ease `property` to `target` over `seconds` along `curve` (impulse).
-    pub fn ease<'a>(
+    pub fn ease(
+        &self,
         property: impl Into<String>,
         target: f32,
         seconds: f32,
         curve: Ease,
-    ) -> impl Beat<StageCtx<'a>> {
+    ) -> impl Beat + '_ {
         let property = property.into();
-        impulse(move |ctx: &mut StageCtx<'a>, at| {
-            ctx.stage
-                .ease(ctx.scene, &property, at, target, seconds, curve);
+        impulse(move |scene, at| {
+            self.inner
+                .clone()
+                .ease(scene, &property, at, target, seconds, curve);
         })
     }
 
     /// Start an elapsed-seconds clock on `property` running to the end of the scene (impulse).
-    pub fn clock<'a>(property: impl Into<String>) -> impl Beat<StageCtx<'a>> {
+    pub fn clock(&self, property: impl Into<String>) -> impl Beat + '_ {
         let property = property.into();
-        impulse(move |ctx: &mut StageCtx<'a>, at| {
-            ctx.stage.clock(ctx.scene, &property, at);
+        impulse(move |scene, at| {
+            self.inner.clone().clock(scene, &property, at);
         })
     }
 
     /// Start a fixed-lifetime elapsed-seconds clock on `property` for `seconds` (impulse).
-    pub fn clock_for<'a>(property: impl Into<String>, seconds: f32) -> impl Beat<StageCtx<'a>> {
+    pub fn clock_for(&self, property: impl Into<String>, seconds: f32) -> impl Beat + '_ {
         let property = property.into();
-        impulse(move |ctx: &mut StageCtx<'a>, at| {
-            ctx.stage.clock_for(ctx.scene, &property, at, seconds);
+        impulse(move |scene, at| {
+            self.inner.clone().clock_for(scene, &property, at, seconds);
         })
     }
 
     /// Instant-attack flash to `peak` followed by a cubic-out decay to `rest` (impulse).
-    pub fn hit<'a>(property: impl Into<String>, peak: f32, rest: f32) -> impl Beat<StageCtx<'a>> {
+    pub fn hit(&self, property: impl Into<String>, peak: f32, rest: f32) -> impl Beat + '_ {
         let property = property.into();
-        impulse(move |ctx: &mut StageCtx<'a>, at| {
-            ctx.stage.hit(ctx.scene, &property, at, peak, rest);
+        impulse(move |scene, at| {
+            self.inner.clone().hit(scene, &property, at, peak, rest);
         })
     }
 
     /// Two-frame shove on `[x, y]` that springs back past rest (impulse).
-    pub fn kick<'a>(channels: [&'a str; 2], offset: [f32; 2]) -> impl Beat<StageCtx<'a>> {
-        impulse(move |ctx: &mut StageCtx<'a>, at| {
-            ctx.stage.kick(ctx.scene, channels, at, offset);
+    pub fn kick<'a>(&'a self, channels: [&'a str; 2], offset: [f32; 2]) -> impl Beat + 'a {
+        impulse(move |scene, at| {
+            self.inner.clone().kick(scene, channels, at, offset);
         })
     }
 
     /// Camera impact jolt along `direction` with `strength` (impulse).
-    pub fn jolt<'a>(direction: [f32; 2], strength: f32) -> impl Beat<StageCtx<'a>> {
-        impulse(move |ctx: &mut StageCtx<'a>, at| {
-            ctx.stage.jolt(ctx.scene, at, direction, strength);
+    pub fn jolt(&self, direction: [f32; 2], strength: f32) -> impl Beat + '_ {
+        impulse(move |scene, at| {
+            self.inner.clone().jolt(scene, at, direction, strength);
         })
     }
 
     /// Settle `card` into place; spans the `500 ms` until the panel is ready to wire.
-    pub fn settle_in<'a>(card: impl Into<String>) -> impl Beat<StageCtx<'a>> {
+    pub fn settle_in(&self, card: impl Into<String>) -> impl Beat + '_ {
         let card = card.into();
-        action(move |ctx: &mut StageCtx<'a>, at| ctx.stage.settle_in(ctx.scene, &card, at))
+        action(move |scene, at| self.inner.clone().settle_in(scene, &card, at))
     }
 
     /// Type `label` in at `chars_per_second`; spans until the last character appears.
-    pub fn type_in<'a>(label: impl Into<String>, chars_per_second: f32) -> impl Beat<StageCtx<'a>> {
+    pub fn type_in(&self, label: impl Into<String>, chars_per_second: f32) -> impl Beat + '_ {
         let label = label.into();
-        action(move |ctx: &mut StageCtx<'a>, at| {
-            ctx.stage.type_in(ctx.scene, &label, at, chars_per_second)
+        action(move |scene, at| {
+            self.inner
+                .clone()
+                .type_in(scene, &label, at, chars_per_second)
         })
     }
 
     /// Draw `beam` over `seconds` (after the port pop); spans until contact at the far end.
-    pub fn connect<'a>(beam: impl Into<String>, seconds: f32) -> impl Beat<StageCtx<'a>> {
+    pub fn connect(&self, beam: impl Into<String>, seconds: f32) -> impl Beat + '_ {
         let beam = beam.into();
-        action(move |ctx: &mut StageCtx<'a>, at| ctx.stage.connect(ctx.scene, &beam, at, seconds))
+        action(move |scene, at| self.inner.clone().connect(scene, &beam, at, seconds))
     }
 
     /// Back-timed connection that reaches its far port at the cue time `at`.
-    pub fn connect_contacting<'a>(
-        beam: impl Into<String>,
-        seconds: f32,
-    ) -> impl Beat<StageCtx<'a>> {
+    pub fn connect_contacting(&self, beam: impl Into<String>, seconds: f32) -> impl Beat + '_ {
         let beam = beam.into();
-        let lead = whole_millis(crate::stage::PORT_POP_SECONDS) + whole_millis(seconds);
-        action(move |ctx: &mut StageCtx<'a>, at| {
-            ctx.stage
-                .connect(ctx.scene, &beam, at.saturating_sub(lead), seconds)
+        let lead = whole_millis(PORT_POP_SECONDS) + whole_millis(seconds);
+        action(move |scene, at| {
+            self.inner
+                .clone()
+                .connect(scene, &beam, at.saturating_sub(lead), seconds)
         })
     }
 
     /// Launch `packet` at the cue time and fly for `seconds`; spans `[at, arrival]`.
-    pub fn send<'a>(packet: impl Into<String>, seconds: f32) -> impl Beat<StageCtx<'a>> {
+    pub fn send(&self, packet: impl Into<String>, seconds: f32) -> impl Beat + '_ {
         let packet = packet.into();
-        action(move |ctx: &mut StageCtx<'a>, at| ctx.stage.send(ctx.scene, &packet, at, seconds))
+        action(move |scene, at| self.inner.clone().send(scene, &packet, at, seconds))
     }
 
     /// Back-timed packet launch that *arrives* at the cue time `at` after flying
     /// for `seconds` (launching `seconds` earlier and gathering before that).
-    ///
-    /// Its span is `[at - flight, at]`, so chaining `.then(stage::land(...))`
-    /// triggers the landing at `at`!
-    pub fn send_arriving<'a>(
-        packet_id: impl Into<String>,
-        seconds: f32,
-    ) -> impl Beat<StageCtx<'a>> {
+    pub fn send_arriving(&self, packet_id: impl Into<String>, seconds: f32) -> impl Beat + '_ {
         let packet_id = packet_id.into();
         let flight = whole_millis(seconds);
-        move |ctx: &mut StageCtx<'a>, arrival: u64| {
+        move |scene: &mut PlanBuilder, arrival: u64| {
             let launch = arrival.saturating_sub(flight);
-            let landed = ctx.stage.send(ctx.scene, &packet_id, launch, seconds);
+            let landed = self.inner.clone().send(scene, &packet_id, launch, seconds);
             let _ = packet::GATHER;
             Span::new(launch, landed)
         }
     }
 
     /// Pluck `beam` like a struck cable (impulse).
-    pub fn twang<'a>(beam: impl Into<String>) -> impl Beat<StageCtx<'a>> {
+    pub fn twang(&self, beam: impl Into<String>) -> impl Beat + '_ {
         let beam = beam.into();
-        impulse(move |ctx: &mut StageCtx<'a>, at| {
-            ctx.stage.twang(ctx.scene, &beam, at);
+        impulse(move |scene, at| {
+            self.inner.clone().twang(scene, &beam, at);
         })
     }
 
     /// Flash a card's ink or pulse an orb on arrival (impulse).
-    pub fn land<'a>(element: impl Into<String>) -> impl Beat<StageCtx<'a>> {
+    pub fn land(&self, element: impl Into<String>) -> impl Beat + '_ {
         let element = element.into();
-        impulse(move |ctx: &mut StageCtx<'a>, at| {
-            ctx.stage.land(ctx.scene, &element, at);
+        impulse(move |scene, at| {
+            self.inner.clone().land(scene, &element, at);
         })
     }
 
     /// Three-frame horizontal glitch burst on `card` (`27 ms` steps, then 0).
     /// Spans until the card returns to rest (`3 * 27 ms = 81 ms`).
-    pub fn glitch<'a>(card: impl Into<String>, seeds: [f32; 3]) -> impl Beat<StageCtx<'a>> {
+    pub fn glitch(&self, card: impl Into<String>, seeds: [f32; 3]) -> impl Beat + '_ {
         let card = card.into();
         let step_nanos = crate::author::seconds(0.027);
-        action(move |ctx: &mut StageCtx<'a>, at| {
+        action(move |scene, at| {
             let prop = format!("{card}.glitch");
+            let mut stage = self.inner.clone();
             let mut step = at;
             for seed in seeds.into_iter().chain([0.0]) {
-                ctx.stage.set(ctx.scene, &prop, step, seed);
+                stage.set(scene, &prop, step, seed);
                 step += step_nanos;
             }
             step - step_nanos
         })
     }
+}
 
-    /// Schedule a layer audio clip at the cue time (impulse).
-    pub fn sound<'a>(
+/// Value handle for a Caption actor whose choreography methods return [`Beat`]s.
+#[derive(Clone, Debug)]
+pub struct Caption {
+    inner: CaptionActor,
+}
+
+impl From<CaptionActor> for Caption {
+    fn from(inner: CaptionActor) -> Self {
+        Self { inner }
+    }
+}
+
+impl CaptionActor {
+    /// Return a value [`Caption`] handle whose methods produce composable [`Beat`]s.
+    pub fn beats(&self) -> Caption {
+        Caption {
+            inner: self.clone(),
+        }
+    }
+}
+
+impl Caption {
+    pub fn declare(
+        scene: &mut PlanBuilder,
         id: impl Into<String>,
-        path: impl Into<PathBuf>,
-        duration_nanos: u64,
-        gain_db: f32,
-    ) -> impl Beat<StageCtx<'a>> {
-        let id = id.into();
-        let path = path.into();
-        impulse(move |ctx: &mut StageCtx<'a>, at| {
-            ctx.scene.media(MediaPlan {
-                id,
-                path,
-                kind: MediaKindPlan::Audio,
-                role: MediaRolePlan::Layer,
-                source_start_nanos: 0,
-                source_end_nanos: duration_nanos,
-                timeline_start_nanos: at,
-                timeline_end_nanos: at + duration_nanos,
-                gain_db,
-            });
+        plan: &CaptionPlan,
+    ) -> Result<Self> {
+        Ok(Self {
+            inner: CaptionActor::declare(scene, id, plan)?,
         })
     }
 
-    /// Escape hatch: run any `&mut PlanBuilder` operation (such as an overlay
-    /// actor's `.show` / `.hide` / `.type_in`) at the cue time as an impulse.
-    pub fn on_scene<'a>(f: impl FnOnce(&mut PlanBuilder, u64) + 'a) -> impl Beat<StageCtx<'a>> {
-        impulse(move |ctx: &mut StageCtx<'a>, at| {
-            f(ctx.scene, at);
+    pub fn actor(&self) -> &ActorHandle {
+        self.inner.actor()
+    }
+
+    pub fn id(&self) -> &str {
+        self.inner.id()
+    }
+
+    /// Fade and rise in (impulse).
+    pub fn show(&self) -> impl Beat + '_ {
+        impulse(move |scene, at| {
+            caption::show(scene, self.inner.actor(), at);
         })
     }
+
+    /// Fade out in place (impulse).
+    pub fn hide(&self) -> impl Beat + '_ {
+        impulse(move |scene, at| {
+            caption::hide(scene, self.inner.actor(), at);
+        })
+    }
+
+    /// Type the caption in at `chars_per_second`, holding the caret for
+    /// `caret_hold_seconds` afterward. Spans until typing finishes.
+    pub fn type_in(&self, chars_per_second: f32, caret_hold_seconds: f32) -> impl Beat + '_ {
+        action(move |scene, at| {
+            self.inner
+                .type_in_at(scene, at, chars_per_second, caret_hold_seconds)
+        })
+    }
+}
+
+/// Value handle for a Callout actor whose choreography methods return [`Beat`]s.
+#[derive(Clone, Debug)]
+pub struct Callout {
+    inner: CalloutActor,
+}
+
+impl From<CalloutActor> for Callout {
+    fn from(inner: CalloutActor) -> Self {
+        Self { inner }
+    }
+}
+
+impl CalloutActor {
+    /// Return a value [`Callout`] handle whose methods produce composable [`Beat`]s.
+    pub fn beats(&self) -> Callout {
+        Callout {
+            inner: self.clone(),
+        }
+    }
+}
+
+impl Callout {
+    pub fn declare(
+        scene: &mut PlanBuilder,
+        id: impl Into<String>,
+        plan: &CalloutPlan,
+    ) -> Result<Self> {
+        Ok(Self {
+            inner: CalloutActor::declare(scene, id, plan)?,
+        })
+    }
+
+    pub fn actor(&self) -> &ActorHandle {
+        self.inner.actor()
+    }
+
+    pub fn id(&self) -> &str {
+        self.inner.id()
+    }
+
+    /// Draw the leader out from the anchor mark and reveal the label; spans
+    /// until the leader reaches the label (`420 ms`).
+    pub fn show(&self) -> impl Beat + '_ {
+        action(move |scene, at| self.inner.clone().show(scene, at))
+    }
+
+    /// Fade the label and retract the leader (impulse).
+    pub fn hide(&self) -> impl Beat + '_ {
+        impulse(move |scene, at| {
+            self.inner.clone().hide(scene, at);
+        })
+    }
+
+    /// Glide the callout to `anchor` on a critically damped spring (impulse).
+    pub fn move_to(&self, anchor: impl Into<String>) -> impl Beat + '_ {
+        let anchor = anchor.into();
+        impulse(move |scene, at| {
+            self.inner
+                .clone()
+                .move_to(scene, &anchor, at)
+                .unwrap_or_else(|err| panic!("callout '{}': {err:#}", self.inner.id()));
+        })
+    }
+
+    /// Flare the anchor ring and leader, then decay (impulse).
+    pub fn emphasize(&self) -> impl Beat + '_ {
+        impulse(move |scene, at| {
+            self.inner.clone().emphasize(scene, at);
+        })
+    }
+}
+
+/// Value handle for a Rolling Number actor whose choreography methods return [`Beat`]s.
+#[derive(Clone, Debug)]
+pub struct RollingNumber {
+    inner: RollingNumberActor,
+}
+
+impl From<RollingNumberActor> for RollingNumber {
+    fn from(inner: RollingNumberActor) -> Self {
+        Self { inner }
+    }
+}
+
+impl RollingNumberActor {
+    /// Return a value [`RollingNumber`] handle whose methods produce composable [`Beat`]s.
+    pub fn beats(&self) -> RollingNumber {
+        RollingNumber {
+            inner: self.clone(),
+        }
+    }
+}
+
+impl RollingNumber {
+    pub fn declare(
+        scene: &mut PlanBuilder,
+        id: impl Into<String>,
+        plan: RollingNumberPlan,
+    ) -> Result<Self> {
+        Ok(Self {
+            inner: RollingNumberActor::declare(scene, id, plan)?,
+        })
+    }
+
+    pub fn actor(&self) -> &ActorHandle {
+        self.inner.actor()
+    }
+
+    pub fn id(&self) -> &str {
+        self.inner.id()
+    }
+
+    /// Fade and rise in (impulse).
+    pub fn show(&self) -> impl Beat + '_ {
+        impulse(move |scene, at| {
+            caption::show(scene, self.inner.actor(), at);
+        })
+    }
+
+    /// Fade out in place (impulse).
+    pub fn hide(&self) -> impl Beat + '_ {
+        impulse(move |scene, at| {
+            caption::hide(scene, self.inner.actor(), at);
+        })
+    }
+
+    /// Roll to `value` at the cue time; spans the roll's `duration_nanos`.
+    pub fn roll(&self, value: impl Into<String>) -> impl Beat + '_ {
+        let value = value.into();
+        action(move |scene, at| {
+            self.inner
+                .roll_at(scene, at, value)
+                .unwrap_or_else(|err| panic!("rolling number '{}': {err:#}", self.inner.id()))
+        })
+    }
+}
+
+/// Value handle for a Tree actor whose choreography methods return [`Beat`]s.
+#[derive(Clone, Debug)]
+pub struct Tree {
+    inner: TreeActor,
+}
+
+impl From<TreeActor> for Tree {
+    fn from(inner: TreeActor) -> Self {
+        Self { inner }
+    }
+}
+
+impl TreeActor {
+    /// Return a value [`Tree`] handle whose methods produce composable [`Beat`]s.
+    pub fn beats(&self) -> Tree {
+        Tree {
+            inner: self.clone(),
+        }
+    }
+}
+
+impl Tree {
+    pub fn declare(scene: &mut PlanBuilder, id: impl Into<String>, plan: TreePlan) -> Result<Self> {
+        Ok(Self {
+            inner: TreeActor::declare(scene, id, plan)?,
+        })
+    }
+
+    pub fn actor(&self) -> &ActorHandle {
+        self.inner.actor()
+    }
+
+    pub fn id(&self) -> &str {
+        self.inner.id()
+    }
+
+    pub fn model(&self) -> &TreeModel {
+        self.inner.model()
+    }
+
+    pub fn show(&self) -> impl Beat + '_ {
+        impulse(move |scene, at| {
+            caption::show(scene, self.inner.actor(), at);
+        })
+    }
+
+    pub fn hide(&self) -> impl Beat + '_ {
+        impulse(move |scene, at| {
+            caption::hide(scene, self.inner.actor(), at);
+        })
+    }
+
+    pub fn open(&self, path: impl Into<String>) -> impl Beat + '_ {
+        let path = path.into();
+        impulse(move |scene, at| {
+            self.inner
+                .fold_at(scene, &path, at, true)
+                .unwrap_or_else(|err| panic!("tree '{}': {err:#}", self.inner.id()));
+        })
+    }
+
+    pub fn close(&self, path: impl Into<String>) -> impl Beat + '_ {
+        let path = path.into();
+        impulse(move |scene, at| {
+            self.inner
+                .fold_at(scene, &path, at, false)
+                .unwrap_or_else(|err| panic!("tree '{}': {err:#}", self.inner.id()));
+        })
+    }
+
+    pub fn reveal(&self, path: impl Into<String>) -> impl Beat + '_ {
+        let path = path.into();
+        impulse(move |scene, at| {
+            self.inner
+                .reveal_at(scene, &path, at)
+                .unwrap_or_else(|err| panic!("tree '{}': {err:#}", self.inner.id()));
+        })
+    }
+
+    pub fn scroll_to(&self, row: f32) -> impl Beat + '_ {
+        impulse(move |scene, at| {
+            self.inner.scroll_to_at(scene, row, at);
+        })
+    }
+
+    pub fn highlight(&self, path: impl Into<String>, seconds: f32) -> impl Beat + '_ {
+        let path = path.into();
+        impulse(move |scene, at| {
+            self.inner
+                .highlight_at(scene, &path, at, seconds)
+                .unwrap_or_else(|err| panic!("tree '{}': {err:#}", self.inner.id()));
+        })
+    }
+
+    pub fn set(&self, path: impl Into<String>, value: impl Into<Value>) -> impl Beat + '_ {
+        let path = path.into();
+        let value = value.into();
+        impulse(move |scene, at| {
+            self.inner
+                .set_at(scene, &path, value, at)
+                .unwrap_or_else(|err| panic!("tree '{}': {err:#}", self.inner.id()));
+        })
+    }
+}
+
+/// Value handle for a Plot actor whose choreography methods return [`Beat`]s.
+#[derive(Clone, Debug)]
+pub struct Plot {
+    inner: PlotActor,
+}
+
+impl From<PlotActor> for Plot {
+    fn from(inner: PlotActor) -> Self {
+        Self { inner }
+    }
+}
+
+impl PlotActor {
+    /// Return a value [`Plot`] handle whose methods produce composable [`Beat`]s.
+    pub fn beats(&self) -> Plot {
+        Plot {
+            inner: self.clone(),
+        }
+    }
+}
+
+impl Plot {
+    pub fn declare(
+        scene: &mut PlanBuilder,
+        id: impl Into<String>,
+        plan: &PlotPlan,
+    ) -> Result<Self> {
+        Ok(Self {
+            inner: PlotActor::declare(scene, id, plan)?,
+        })
+    }
+
+    pub fn actor(&self) -> &ActorHandle {
+        self.inner.actor()
+    }
+
+    pub fn id(&self) -> &str {
+        self.inner.id()
+    }
+
+    pub fn show(&self, axes_seconds: f32) -> impl Beat + '_ {
+        impulse(move |scene, at| {
+            self.inner.clone().show(scene, at, axes_seconds);
+        })
+    }
+
+    pub fn hide(&self) -> impl Beat + '_ {
+        impulse(move |scene, at| {
+            self.inner.clone().hide(scene, at);
+        })
+    }
+
+    pub fn draw(&self, series: impl Into<String>, seconds: f32) -> impl Beat + '_ {
+        let series = series.into();
+        action(move |scene, at| self.inner.clone().draw(scene, &series, at, seconds))
+    }
+
+    pub fn fade(&self, series: impl Into<String>, opacity: f32) -> impl Beat + '_ {
+        let series = series.into();
+        impulse(move |scene, at| {
+            self.inner.clone().fade(scene, &series, at, opacity);
+        })
+    }
+
+    pub fn ride(&self, series: impl Into<String>, range: [f32; 2], seconds: f32) -> impl Beat + '_ {
+        let series = series.into();
+        action(move |scene, at| self.inner.clone().ride(scene, &series, range, at, seconds))
+    }
+
+    pub fn stop_ride(&self, series: impl Into<String>) -> impl Beat + '_ {
+        let series = series.into();
+        impulse(move |scene, at| {
+            self.inner.clone().stop_ride(scene, &series, at);
+        })
+    }
+
+    pub fn velocity(&self, series: impl Into<String>, shown: f32) -> impl Beat + '_ {
+        let series = series.into();
+        impulse(move |scene, at| {
+            self.inner.clone().velocity(scene, &series, at, shown);
+        })
+    }
+
+    pub fn mark(&self, mark_id: impl Into<String>) -> impl Beat + '_ {
+        let mark_id = mark_id.into();
+        impulse(move |scene, at| {
+            self.inner.clone().mark(scene, &mark_id, at);
+        })
+    }
+}
+
+/// Value handle for a Lanes actor whose choreography methods return [`Beat`]s.
+#[derive(Clone, Debug)]
+pub struct Lanes {
+    inner: LanesActor,
+}
+
+impl From<LanesActor> for Lanes {
+    fn from(inner: LanesActor) -> Self {
+        Self { inner }
+    }
+}
+
+impl LanesActor {
+    /// Return a value [`Lanes`] handle whose methods produce composable [`Beat`]s.
+    pub fn beats(&self) -> Lanes {
+        Lanes {
+            inner: self.clone(),
+        }
+    }
+}
+
+impl Lanes {
+    pub fn declare(
+        scene: &mut PlanBuilder,
+        id: impl Into<String>,
+        plan: &LanesPlan,
+    ) -> Result<Self> {
+        Ok(Self {
+            inner: LanesActor::declare(scene, id, plan)?,
+        })
+    }
+
+    pub fn actor(&self) -> &ActorHandle {
+        self.inner.actor()
+    }
+
+    pub fn id(&self) -> &str {
+        self.inner.id()
+    }
+
+    pub fn show(&self, seconds: f32) -> impl Beat + '_ {
+        impulse(move |scene, at| {
+            self.inner.clone().show(scene, at, seconds);
+        })
+    }
+
+    pub fn hide(&self) -> impl Beat + '_ {
+        impulse(move |scene, at| {
+            self.inner.clone().hide(scene, at);
+        })
+    }
+
+    pub fn scrub(&self, range: [f32; 2], seconds: f32) -> impl Beat + '_ {
+        action(move |scene, at| self.inner.clone().scrub(scene, range, at, seconds))
+    }
+
+    pub fn emphasize(&self, lane: impl Into<String>, emphasis: f32) -> impl Beat + '_ {
+        let lane = lane.into();
+        impulse(move |scene, at| {
+            self.inner.clone().emphasize(scene, &lane, at, emphasis);
+        })
+    }
+}
+
+/// Value handle for a Sequence Diagram actor whose choreography methods return [`Beat`]s.
+#[derive(Clone, Debug)]
+pub struct Sequence {
+    inner: SequenceActor,
+}
+
+impl From<SequenceActor> for Sequence {
+    fn from(inner: SequenceActor) -> Self {
+        Self { inner }
+    }
+}
+
+impl SequenceActor {
+    /// Return a value [`Sequence`] handle whose methods produce composable [`Beat`]s.
+    pub fn beats(&self) -> Sequence {
+        Sequence {
+            inner: self.clone(),
+        }
+    }
+}
+
+impl Sequence {
+    pub fn declare(
+        scene: &mut PlanBuilder,
+        id: impl Into<String>,
+        plan: &SequencePlan,
+    ) -> Result<Self> {
+        Ok(Self {
+            inner: SequenceActor::declare(scene, id, plan)?,
+        })
+    }
+
+    pub fn actor(&self) -> &ActorHandle {
+        self.inner.actor()
+    }
+
+    pub fn id(&self) -> &str {
+        self.inner.id()
+    }
+
+    pub fn animate(
+        &self,
+        property: impl Into<String>,
+        initial: f32,
+        target: f32,
+        seconds: f32,
+    ) -> impl Beat + '_ {
+        let property = property.into();
+        impulse(move |scene, at| {
+            self.inner
+                .clone()
+                .animate(scene, &property, initial, at, target, seconds);
+        })
+    }
+
+    pub fn reveal(&self, row: impl Into<String>) -> impl Beat + '_ {
+        let row = row.into();
+        impulse(move |scene, at| {
+            self.inner.clone().reveal(scene, &row, at);
+        })
+    }
+
+    pub fn fade(&self, row: impl Into<String>, opacity: f32) -> impl Beat + '_ {
+        let row = row.into();
+        impulse(move |scene, at| {
+            self.inner.clone().fade(scene, &row, at, opacity);
+        })
+    }
+
+    pub fn strike(&self, row: impl Into<String>) -> impl Beat + '_ {
+        let row = row.into();
+        impulse(move |scene, at| {
+            self.inner.clone().strike(scene, &row, at);
+        })
+    }
+
+    pub fn participant(
+        &self,
+        participant: impl Into<String>,
+        property: impl Into<String>,
+        initial: f32,
+        target: f32,
+    ) -> impl Beat + '_ {
+        let participant = participant.into();
+        let property = property.into();
+        impulse(move |scene, at| {
+            self.inner
+                .clone()
+                .participant(scene, &participant, &property, initial, at, target);
+        })
+    }
+}
+
+/// Value handle for a Video Card actor whose choreography methods return [`Beat`]s.
+#[derive(Clone, Debug)]
+pub struct Video {
+    inner: VideoActor,
+}
+
+impl From<VideoActor> for Video {
+    fn from(inner: VideoActor) -> Self {
+        Self { inner }
+    }
+}
+
+impl VideoActor {
+    /// Return a value [`Video`] handle whose methods produce composable [`Beat`]s.
+    pub fn beats(&self) -> Video {
+        Video {
+            inner: self.clone(),
+        }
+    }
+}
+
+impl Video {
+    pub fn declare(
+        scene: &mut PlanBuilder,
+        id: impl Into<String>,
+        plan: VideoPlan,
+        media: MediaPlan,
+    ) -> Result<Self> {
+        Ok(Self {
+            inner: VideoActor::declare(scene, id, plan, media)?,
+        })
+    }
+
+    pub fn actor(&self) -> &ActorHandle {
+        self.inner.actor()
+    }
+
+    pub fn id(&self) -> &str {
+        self.inner.id()
+    }
+
+    pub fn plan(&self) -> &VideoPlan {
+        self.inner.plan()
+    }
+
+    pub fn fly_in(&self) -> impl Beat + '_ {
+        impulse(move |scene, at| {
+            self.inner.clone().fly_in(scene, at);
+        })
+    }
+
+    pub fn focus(&self, region: [f32; 4], seconds: f32) -> impl Beat + '_ {
+        impulse(move |scene, at| {
+            self.inner.clone().focus(scene, at, region, seconds);
+        })
+    }
+
+    pub fn unfocus(&self, seconds: f32) -> impl Beat + '_ {
+        impulse(move |scene, at| {
+            self.inner.clone().unfocus(scene, at, seconds);
+        })
+    }
+
+    pub fn hide(&self) -> impl Beat + '_ {
+        impulse(move |scene, at| {
+            self.inner.clone().hide(scene, at);
+        })
+    }
+}
+
+/// Low-level channel [`Beat`] helpers for custom properties on any actor.
+pub fn spring_channel(
+    channel: &ContinuousHandle,
+    target: f32,
+    visual_duration: f32,
+    bounce: f32,
+) -> impl Beat + '_ {
+    impulse(move |scene, at| {
+        scene.spring(channel, at, target, visual_duration, bounce);
+    })
 }
 
 /// A suspicious same-timestamp multi-write on a continuous channel.
@@ -988,76 +1759,73 @@ mod tests {
     use super::*;
     use crate::{
         author::SECOND,
+        callout::{CalloutAnchorPlan, CalloutSide},
         plan::compile_channels,
         timeline::{PropertyId, Timeline},
     };
 
-    /// Helper context for testing pure beat laws against `PlanBuilder`.
-    struct TestEnv {
-        scene: PlanBuilder,
-        x: crate::author::ContinuousHandle,
-        y: crate::author::ContinuousHandle,
-        z: crate::author::ContinuousHandle,
-    }
-
-    impl TestEnv {
-        fn new() -> Self {
-            let mut scene = PlanBuilder::new("law-test", 20 * SECOND);
-            let actor = scene
-                .actor("a", "title-card", json!({"title": "T"}))
-                .unwrap();
-            let x = scene.continuous(&actor, "x", 0.0);
-            let y = scene.continuous(&actor, "y", 0.0);
-            let z = scene.continuous(&actor, "z", 0.0);
-            Self { scene, x, y, z }
-        }
-
-        fn run(beat: impl Beat<Self>, at: u64) -> (Span, serde_json::Value, Timeline) {
-            let mut env = Self::new();
-            let span = beat.play(&mut env, at);
-            let plan = env.scene.finish().unwrap();
-            let timeline = compile_channels(
-                plan.continuous_channels
-                    .iter()
-                    .map(|c| (c, PropertyId::new(&c.id))),
-                plan.duration_nanos,
-                |s| match s {
-                    crate::plan::ScalarPlan::Literal(v) => Ok(*v),
-                    _ => unreachable!(),
-                },
-            )
+    fn run_test_beat(beat: impl Beat, at: u64) -> (Span, serde_json::Value, Timeline) {
+        let mut scene = PlanBuilder::new("law-test", 20 * SECOND);
+        let actor = scene
+            .actor("a", "title-card", json!({"title": "T"}))
             .unwrap();
-            let json = serde_json::to_value(&plan).unwrap();
-            (span, json, timeline)
-        }
+        scene.continuous(&actor, "x", 0.0);
+        scene.continuous(&actor, "y", 0.0);
+        scene.continuous(&actor, "z", 0.0);
+        let span = scene.at(at, beat);
+        let plan = scene.finish().unwrap();
+        let timeline = compile_channels(
+            plan.continuous_channels
+                .iter()
+                .map(|c| (c, PropertyId::new(&c.id))),
+            plan.duration_nanos,
+            |s| match s {
+                crate::plan::ScalarPlan::Literal(v) => Ok(*v),
+                _ => unreachable!(),
+            },
+        )
+        .unwrap();
+        let json = serde_json::to_value(&plan).unwrap();
+        (span, json, timeline)
     }
 
-    fn spring_x(target: f32, dur: u64) -> impl Beat<TestEnv> + Clone {
-        move |env: &mut TestEnv, at: u64| {
-            env.scene.spring(&env.x, at, target, 0.4, 0.1);
+    fn handle(prop: &str) -> ContinuousHandle {
+        let mut dummy = PlanBuilder::new("d", SECOND);
+        let a = dummy
+            .actor("a", "title-card", json!({"title": "T"}))
+            .unwrap();
+        dummy.continuous(&a, prop, 0.0)
+    }
+
+    fn spring_x(target: f32, dur: u64) -> impl Beat + Clone {
+        let x = handle("x");
+        move |scene: &mut PlanBuilder, at: u64| {
+            scene.spring(&x, at, target, 0.4, 0.1);
             Span::new(at, at + dur)
         }
     }
 
-    fn spring_y(target: f32, dur: u64) -> impl Beat<TestEnv> + Clone {
-        move |env: &mut TestEnv, at: u64| {
-            env.scene.spring(&env.y, at, target, 0.5, 0.0);
+    fn spring_y(target: f32, dur: u64) -> impl Beat + Clone {
+        let y = handle("y");
+        move |scene: &mut PlanBuilder, at: u64| {
+            scene.spring(&y, at, target, 0.5, 0.0);
             Span::new(at, at + dur)
         }
     }
 
-    fn ease_z(target: f32, seconds: f32) -> impl Beat<TestEnv> + Clone {
+    fn ease_z(target: f32, seconds: f32) -> impl Beat + Clone {
+        let z = handle("z");
         let dur = whole_millis(seconds);
-        move |env: &mut TestEnv, at: u64| {
-            env.scene
-                .ease(&env.z, at, target, seconds, Ease::Smootherstep);
+        move |scene: &mut PlanBuilder, at: u64| {
+            scene.ease(&z, at, target, seconds, Ease::Smootherstep);
             Span::new(at, at + dur)
         }
     }
 
-    fn impulse_x(target: f32) -> impl Beat<TestEnv> + Clone {
-        move |env: &mut TestEnv, at: u64| {
-            env.scene.spring(&env.x, at, target, 0.35, 0.0);
+    fn impulse_x(target: f32) -> impl Beat + Clone {
+        let x = handle("x");
+        move |scene: &mut PlanBuilder, at: u64| {
+            scene.spring(&x, at, target, 0.35, 0.0);
             Span::impulse(at)
         }
     }
@@ -1069,14 +1837,14 @@ mod tests {
         let c = ease_z(1.0, 0.6);
 
         let (span_l, plan_l, _) =
-            TestEnv::run(a.clone().then(b.clone()).then(c.clone()), millis(100));
-        let (span_r, plan_r, _) = TestEnv::run(a.clone().then(b.then(c)), millis(100));
+            run_test_beat(a.clone().then(b.clone()).then(c.clone()), millis(100));
+        let (span_r, plan_r, _) = run_test_beat(a.clone().then(b.then(c)), millis(100));
         assert_eq!(span_l, span_r);
         assert_eq!(plan_l, plan_r);
 
-        let (span_id_l, plan_id_l, _) = TestEnv::run(empty().then(a.clone()), millis(200));
-        let (span_id_r, plan_id_r, _) = TestEnv::run(a.clone().then(empty()), millis(200));
-        let (span_base, plan_base, _) = TestEnv::run(a, millis(200));
+        let (span_id_l, plan_id_l, _) = run_test_beat(empty().then(a.clone()), millis(200));
+        let (span_id_r, plan_id_r, _) = run_test_beat(a.clone().then(empty()), millis(200));
+        let (span_base, plan_base, _) = run_test_beat(a, millis(200));
         assert_eq!(span_id_l, span_base);
         assert_eq!(span_id_r, span_base);
         assert_eq!(plan_id_l, plan_base);
@@ -1089,11 +1857,10 @@ mod tests {
         let d1 = 100_000_000;
         let d2 = 200_000_000;
 
-        // hold(d1).then(hold(d2)).then(a) == hold(d1 + d2).then(a) == a.after(d1 + d2)
-        let (s1, p1, _) = TestEnv::run(hold(d1).then(hold(d2)).then(a.clone()), 0);
-        let (s2, p2, _) = TestEnv::run(hold(d1 + d2).then(a.clone()), 0);
-        let (s3, p3, _) = TestEnv::run(a.clone().after(d1).after(d2), 0);
-        let (s4, p4, _) = TestEnv::run(a.after(d1 + d2), 0);
+        let (s1, p1, _) = run_test_beat(hold(d1).then(hold(d2)).then(a.clone()), 0);
+        let (s2, p2, _) = run_test_beat(hold(d1 + d2).then(a.clone()), 0);
+        let (s3, p3, _) = run_test_beat(a.clone().after(d1).after(d2), 0);
+        let (s4, p4, _) = run_test_beat(a.after(d1 + d2), 0);
 
         assert_eq!(s1, s2);
         assert_eq!(s2, s3);
@@ -1109,9 +1876,8 @@ mod tests {
         let b = spring_y(-8.0, millis(600));
         let d = millis(350);
 
-        // (a.then(b)).after(d) == a.after(d).then(b)
-        let (s1, p1, _) = TestEnv::run(a.clone().then(b.clone()).after(d), millis(50));
-        let (s2, p2, _) = TestEnv::run(a.after(d).then(b), millis(50));
+        let (s1, p1, _) = run_test_beat(a.clone().then(b.clone()).after(d), millis(50));
+        let (s2, p2, _) = run_test_beat(a.after(d).then(b), millis(50));
         assert_eq!(s1, s2);
         assert_eq!(p1, p2);
     }
@@ -1123,15 +1889,13 @@ mod tests {
         let c = ease_z(0.5, 0.4);
         let d = millis(180);
 
-        // Associativity
-        let (s_l, p_l, _) = TestEnv::run(a.clone().also(b.clone()).also(c.clone()), millis(50));
-        let (s_r, p_r, _) = TestEnv::run(a.clone().also(b.clone().also(c)), millis(50));
+        let (s_l, p_l, _) = run_test_beat(a.clone().also(b.clone()).also(c.clone()), millis(50));
+        let (s_r, p_r, _) = run_test_beat(a.clone().also(b.clone().also(c)), millis(50));
         assert_eq!(s_l, s_r);
         assert_eq!(p_l, p_r);
 
-        // Delay distributivity: (a.also(b)).after(d) == a.after(d).also(b.after(d))
-        let (sd_1, pd_1, _) = TestEnv::run(a.clone().also(b.clone()).after(d), millis(100));
-        let (sd_2, pd_2, _) = TestEnv::run(a.after(d).also(b.after(d)), millis(100));
+        let (sd_1, pd_1, _) = run_test_beat(a.clone().also(b.clone()).after(d), millis(100));
+        let (sd_2, pd_2, _) = run_test_beat(a.after(d).also(b.after(d)), millis(100));
         assert_eq!(sd_1, sd_2);
         assert_eq!(pd_1, pd_2);
     }
@@ -1141,20 +1905,17 @@ mod tests {
         let p = impulse_x(42.0);
         let a = spring_y(100.0, millis(500));
 
-        // Impulse at head of sequence is identical to parallel: p.then(a) == p.also(a)
-        let (s_seq, plan_seq, _) = TestEnv::run(p.clone().then(a.clone()), millis(120));
-        let (s_par, plan_par, _) = TestEnv::run(p.clone().also(a.clone()), millis(120));
+        let (s_seq, plan_seq, _) = run_test_beat(p.clone().then(a.clone()), millis(120));
+        let (s_par, plan_par, _) = run_test_beat(p.clone().also(a.clone()), millis(120));
         assert_eq!(s_seq, s_par);
         assert_eq!(plan_seq, plan_par);
 
-        // `a.with(b)` preserves `a`'s span even when `b` is longer
         let long_bg = ease_z(1.0, 2.0);
-        let (s_with, _, _) = TestEnv::run(a.clone().with(long_bg), millis(100));
+        let (s_with, _, _) = run_test_beat(a.clone().with(long_bg), millis(100));
         assert_eq!(s_with, Span::new(millis(100), millis(600)));
 
-        // `a.on_end(p)` runs impulse `p` at `a.end` and preserves `a`'s span
-        let (s_end, plan_end, _) = TestEnv::run(a.clone().on_end(p.clone()), millis(100));
-        let (s_then, plan_then, _) = TestEnv::run(a.then(p), millis(100));
+        let (s_end, plan_end, _) = run_test_beat(a.clone().on_end(p.clone()), millis(100));
+        let (s_then, plan_then, _) = run_test_beat(a.then(p), millis(100));
         assert_eq!(s_end, s_then);
         assert_eq!(plan_end, plan_then);
     }
@@ -1165,8 +1926,8 @@ mod tests {
         let targets = [10.0_f32, 30.0, 60.0, 90.0];
 
         let (s_stag, p_stag, _) =
-            TestEnv::run(stagger(gap, targets, |t| spring_x(t, millis(200))), SECOND);
-        let (s_manual, p_manual, _) = TestEnv::run(
+            run_test_beat(stagger(gap, targets, |t| spring_x(t, millis(200))), SECOND);
+        let (s_manual, p_manual, _) = run_test_beat(
             all![
                 spring_x(10.0, millis(200)).after(0),
                 spring_x(30.0, millis(200)).after(gap),
@@ -1181,16 +1942,13 @@ mod tests {
 
     #[test]
     fn law_7_retargeted_parallel_springs_commute_across_distinct_timestamps() {
-        // Three writes to the SAME channel `x` at distinct offsets (0ms, 180ms, 420ms).
-        // Regardless of parallel branch order, the compiled Timeline must sample
-        // bit-identically (position and velocity) at every timestamp.
         let w0 = impulse_x(100.0);
         let w1 = impulse_x(-40.0).after(millis(180));
         let w2 = impulse_x(25.0).after(millis(420));
 
         let (_, _, tl_forward) =
-            TestEnv::run(all![w0.clone(), w1.clone(), w2.clone()], millis(100));
-        let (_, _, tl_reverse) = TestEnv::run(all![w2, w0, w1], millis(100));
+            run_test_beat(all![w0.clone(), w1.clone(), w2.clone()], millis(100));
+        let (_, _, tl_reverse) = run_test_beat(all![w2, w0, w1], millis(100));
 
         let prop = PropertyId::new("a.x");
         for step in 0..=200 {
@@ -1203,12 +1961,101 @@ mod tests {
                 "mismatch at t={t:.2}s"
             );
         }
-        // Verify velocity is genuinely carried across the retarget at t = 0.28s (100ms + 180ms)
         let at_retarget = tl_forward.sample_at(&prop, 0.28).unwrap();
         assert!(at_retarget.velocity.abs() > 10.0);
     }
 
-    /// Random beat AST for property-testing algebraic rewrites.
+    #[test]
+    fn cross_actor_beat_composes_stage_caption_rolling_number_callout_and_sound() {
+        let stage_plan: StagePlan = serde_json::from_value(json!({
+            "elements": [
+                { "kind": "card", "id": "client", "at": [560, 540, 0], "size": [300, 110], "title": "client" },
+                { "kind": "orb", "id": "server", "at": [1360, 540, 0], "radius": 140 },
+                { "kind": "beam", "id": "link", "from": "client", "to": "server" },
+                { "kind": "packet", "id": "hello", "beam": "link", "label": "GET /hello" }
+            ]
+        }))
+        .unwrap();
+
+        let mut scene = PlanBuilder::new("cross-actor", 6 * SECOND);
+        let stage = Stage::declare(&mut scene, "stage", &stage_plan).unwrap();
+        let version = RollingNumber::declare(
+            &mut scene,
+            "version",
+            RollingNumberPlan::new([960.0, 160.0], 56.0, "rc.112")
+                .aligned(CaptionAlign::Center)
+                .tone(Tone::Accent),
+        )
+        .unwrap();
+        let note = Callout::declare(
+            &mut scene,
+            "note",
+            &CalloutPlan::new(
+                CalloutAnchorPlan::Stage {
+                    id: "client".into(),
+                    element: "client".into(),
+                    edge: CalloutSide::Top,
+                    side: None,
+                },
+                vec![CaptionSpanPlan::new("upgraded", Tone::Success)],
+            )
+            .anchor(CalloutAnchorPlan::Stage {
+                id: "server".into(),
+                element: "server".into(),
+                edge: CalloutSide::Top,
+                side: Some(CalloutSide::TopLeft),
+            }),
+        )
+        .unwrap();
+        let footer = Caption::declare(
+            &mut scene,
+            "footer",
+            &CaptionPlan::line(
+                [140.0, 1004.0],
+                28.0,
+                vec![CaptionSpanPlan::new(
+                    "all actors share one score",
+                    Tone::Plain,
+                )],
+            ),
+        )
+        .unwrap();
+
+        // One single beat tree orchestrating Stage, RollingNumber, Callout, Caption, and SFX:
+        let span = scene.at(
+            0,
+            stage
+                .settle_in("client")
+                .with(version.show())
+                .with(note.show())
+                .then(stage.connect("link", 0.6))
+                .then(stage.send("hello", 0.8).with(sound(
+                    "send",
+                    "sfx/send.wav",
+                    millis(150),
+                    -10.0,
+                )))
+                .then(all![
+                    stage.land("server"),
+                    stage.jolt([1.0, 0.0], 0.6),
+                    version.roll("rc.117"),
+                    note.move_to("server").then(note.emphasize()),
+                    footer.type_in(50.0, 0.6),
+                ]),
+        );
+
+        assert!(span.end > 2 * SECOND);
+        let plan = scene.finish().unwrap();
+        assert_eq!(plan.actors.len(), 4);
+        assert_eq!(plan.media.len(), 1);
+        assert_eq!(plan.media[0].timeline_start_nanos, millis(1400));
+        let rolled: RollingNumberPlan =
+            serde_json::from_value(plan.actors[1].data.clone()).unwrap();
+        assert_eq!(rolled.rolls.len(), 1);
+        assert_eq!(rolled.rolls[0].value, "rc.117");
+        assert_eq!(rolled.rolls[0].at_nanos, millis(2200));
+    }
+
     #[derive(Clone, Debug)]
     enum Expr {
         Empty,
@@ -1254,9 +2101,6 @@ mod tests {
             }
         }
 
-        /// Apply algebraic equivalences (associativity, identity, hold-delay isomorphism,
-        /// delay distribution over Par, delay shift into Seq) to produce a structurally
-        /// different but denotationally equivalent AST.
         fn rewrite(&self) -> Self {
             match self {
                 Self::Empty | Self::Hold(_) | Self::Leaf { .. } => self.clone(),
@@ -1302,27 +2146,28 @@ mod tests {
         }
     }
 
-    impl Beat<TestEnv> for &Expr {
-        fn play(self, env: &mut TestEnv, at: u64) -> Span {
+    impl Beat for &Expr {
+        fn play(self, scene: &mut PlanBuilder, at: u64) -> Span {
             match self {
-                Expr::Empty => empty().play(env, at),
-                Expr::Hold(d) => hold(*d).play(env, at),
+                Expr::Empty => empty().play(scene, at),
+                Expr::Hold(d) => hold(*d).play(scene, at),
                 Expr::Leaf {
                     channel,
                     target,
                     span,
                 } => {
-                    let handle = match channel {
-                        0 => &env.x,
-                        1 => &env.y,
-                        _ => &env.z,
+                    let prop = match channel {
+                        0 => "x",
+                        1 => "y",
+                        _ => "z",
                     };
-                    env.scene.spring(handle, at, *target, 0.35, 0.0);
+                    let ch = handle(prop);
+                    scene.spring(&ch, at, *target, 0.35, 0.0);
                     Span::new(at, at + *span)
                 }
-                Expr::After(d, inner) => inner.as_ref().after(*d).play(env, at),
-                Expr::Seq(a, b) => a.as_ref().then(b.as_ref()).play(env, at),
-                Expr::Par(a, b) => a.as_ref().also(b.as_ref()).play(env, at),
+                Expr::After(d, inner) => inner.as_ref().after(*d).play(scene, at),
+                Expr::Seq(a, b) => a.as_ref().then(b.as_ref()).play(scene, at),
+                Expr::Par(a, b) => a.as_ref().also(b.as_ref()).play(scene, at),
             }
         }
     }
@@ -1336,8 +2181,8 @@ mod tests {
             let rewritten = tree.rewrite();
             let start = (case as u64 % 5) * millis(50);
 
-            let (span_1, plan_1, tl_1) = TestEnv::run(&tree, start);
-            let (span_2, plan_2, tl_2) = TestEnv::run(&rewritten, start);
+            let (span_1, plan_1, tl_1) = run_test_beat(&tree, start);
+            let (span_2, plan_2, tl_2) = run_test_beat(&rewritten, start);
 
             assert_eq!(span_1, span_2, "span mismatch on random tree #{case}");
             assert_eq!(
@@ -1360,18 +2205,18 @@ mod tests {
 
     #[test]
     fn conflict_detector_allows_set_then_spring_and_flags_competing_parallel_springs() {
-        let mut env = TestEnv::new();
-        // Valid idiom: set then spring at same timestamp (like `settle_in` or `hit`)
-        env.scene.set(&env.x, SECOND, 16.0);
-        env.scene.spring(&env.x, SECOND, 0.0, 0.55, 0.16);
-        let clean = env.scene.finish().unwrap();
+        let mut scene = PlanBuilder::new("clean", 2 * SECOND);
+        let a = scene
+            .actor("a", "title-card", json!({"title": "T"}))
+            .unwrap();
+        let x = scene.continuous(&a, "x", 0.0);
+        scene.set(&x, SECOND, 16.0);
+        scene.spring(&x, SECOND, 0.0, 0.55, 0.16);
+        let clean = scene.finish().unwrap();
         assert!(find_write_conflicts(&clean).is_empty());
 
-        // Invalid collision: two parallel springs on `y` at the same timestamp
-        let mut env2 = TestEnv::new();
-        let collision = spring_y(10.0, 0).also(spring_y(20.0, 0));
-        collision.play(&mut env2, SECOND);
-        let dirty = env2.scene.finish().unwrap();
+        let (_, dirty_json, _) = run_test_beat(spring_y(10.0, 0).also(spring_y(20.0, 0)), SECOND);
+        let dirty: ScenePlan = serde_json::from_value(dirty_json).unwrap();
         assert_eq!(
             find_write_conflicts(&dirty),
             vec![WriteConflict {

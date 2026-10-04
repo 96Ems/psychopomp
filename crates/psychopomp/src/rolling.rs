@@ -985,10 +985,11 @@ fn collapse_positions(
 }
 
 /// Authoring handle for one Rolling Number actor. Changes may be added after
-/// declaration, as narration phrases are found.
+/// declaration, as narration phrases are found; the current schedule is stored
+/// inside the [`PlanBuilder`].
+#[derive(Clone, Debug)]
 pub struct RollingNumberActor {
     actor: ActorHandle,
-    plan: RollingNumberPlan,
 }
 
 impl RollingNumberActor {
@@ -999,7 +1000,15 @@ impl RollingNumberActor {
     ) -> Result<Self> {
         plan.validate()?;
         let actor = scene.actor(id, ROLLING_NUMBER_RECIPE, &plan)?;
-        Ok(Self { actor, plan })
+        Ok(Self { actor })
+    }
+
+    pub fn actor(&self) -> &ActorHandle {
+        &self.actor
+    }
+
+    pub fn id(&self) -> &str {
+        self.actor.id()
     }
 
     /// Roll to `value` at `at_nanos`, after every earlier change.
@@ -1009,11 +1018,21 @@ impl RollingNumberActor {
         at_nanos: u64,
         value: impl Into<String>,
     ) -> Result<()> {
-        let next = self.plan.clone().roll(at_nanos, value);
+        self.roll_at(scene, at_nanos, value).map(|_| ())
+    }
+
+    pub(crate) fn roll_at(
+        &self,
+        scene: &mut PlanBuilder,
+        at_nanos: u64,
+        value: impl Into<String>,
+    ) -> Result<u64> {
+        let current: RollingNumberPlan = scene.actor_data(&self.actor)?;
+        let duration = current.duration_nanos;
+        let next = current.roll(at_nanos, value);
         next.validate()?;
         scene.replace_actor_data(&self.actor, &next)?;
-        self.plan = next;
-        Ok(())
+        Ok(at_nanos + duration)
     }
 
     pub fn channel(

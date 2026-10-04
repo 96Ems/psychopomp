@@ -126,6 +126,46 @@ impl PlanBuilder {
         Ok(())
     }
 
+    /// Deserialize a declared actor's current recipe data from the builder.
+    pub fn actor_data<T: serde::de::DeserializeOwned>(
+        &self,
+        actor: &ActorHandle,
+    ) -> Result<T, serde_json::Error> {
+        let data = self
+            .plan
+            .actors
+            .iter()
+            .find(|candidate| candidate.id == actor.id)
+            .expect("actor handle belongs to this plan builder")
+            .data
+            .clone();
+        serde_json::from_value(data)
+    }
+
+    /// Latest literal target written to `actor.property` (or its initial value
+    /// if no events have been written yet). Returns `None` if the channel has
+    /// not been declared.
+    pub fn latest_literal(&self, actor: &ActorHandle, property: &str) -> Option<f32> {
+        let id = format!("{}.{}", actor.id, property);
+        let channel = self
+            .plan
+            .continuous_channels
+            .iter()
+            .find(|candidate| candidate.id == id)?;
+        let scalar = match channel.events.last() {
+            Some(
+                TrackEventPlan::Set { value: s, .. }
+                | TrackEventPlan::Spring { target: s, .. }
+                | TrackEventPlan::Ease { target: s, .. },
+            ) => s,
+            None => &channel.initial,
+        };
+        match scalar {
+            ScalarPlan::Literal(value) => Some(*value),
+            ScalarPlan::Target(_) => None,
+        }
+    }
+
     /// The `actor.property` channel: the existing one, or a new one starting at
     /// `initial`. An already declared channel keeps its initial value.
     pub fn channel(
