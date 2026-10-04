@@ -3,7 +3,8 @@
 //! in linear light, refracts it through the glass (sharp cubic sampling in the
 //! flat middle, color split and softening at the rim), then lights the glass:
 //! a fresnel sheen, a crisp specular line where the rim faces the light, a
-//! fainter one opposite, and a soft drop shadow with darker contact.
+//! fainter one opposite, and a soft drop shadow with darker contact. Frosted,
+//! dimmed glass (a pane) mixes in a heavily softened page.
 //! Pixels outside `Glass::bounds` are never touched.
 use psychopomp::{
     lens::{Glass, MAX_BEND},
@@ -144,8 +145,7 @@ impl Composite<'_> {
         let normal = glass.outline.normal(point);
         let local = point - glass.outline.center;
         let bend = self.bends.at(t);
-        let source =
-            |spread: f32| glass.focus + (local - normal * bend * spread) / glass.magnification;
+        let source = |spread: f32| glass.source_bent(point, bend, spread);
         let sample = |spread: f32| self.page.cubic(source(spread), self.sharpness);
         let mut color = if bend * glass.dispersion > 0.02 {
             let spread = glass.dispersion;

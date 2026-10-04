@@ -259,15 +259,17 @@ impl LensPlan {
         let corner = self
             .corner
             .map_or(f32::INFINITY, |corner| corner * condense);
-        let bevel = self
+        let bevel = (self
             .bevel
             .unwrap_or(BEVEL_FRACTION * size.min_element() * 0.5)
-            * condense;
+            * condense)
+            .min(half.min_element())
+            .max(1.0);
         let center = center + vec2(value("x", 0.0), value("y", 0.0));
         let magnification = lerp(1.0, value("magnification", self.magnification), presence);
         Some(Glass {
             outline: RoundedBox::new(center, half, corner),
-            bevel: bevel.min(half.min_element()).max(1.0),
+            bevel,
             depth: self.refraction * bevel * presence,
             focus: center + vec2(value("focus-x", 0.0), value("focus-y", 0.0)),
             magnification: magnification.clamp(0.25, 8.0),
@@ -346,9 +348,13 @@ impl Glass {
     /// then scaled about the focus. `spread` scales the bend per color (1 for
     /// green, `1 ± dispersion` for red and blue), so only the rim splits color.
     pub fn source(&self, point: Vec2, spread: f32) -> Vec2 {
+        self.source_bent(point, self.bend(self.rim(point)), spread)
+    }
+
+    /// `source`, with the rim's bend at `point` already known (as from a table).
+    pub fn source_bent(&self, point: Vec2, bend: f32, spread: f32) -> Vec2 {
         let inward = -self.outline.normal(point);
-        let bent = point - self.outline.center + inward * self.bend(self.rim(point)) * spread;
-        self.focus + bent / self.magnification
+        self.focus + (point - self.outline.center + inward * bend * spread) / self.magnification
     }
 
     /// The canvas pixels the glass changes: the outline and its shadow.
