@@ -20,6 +20,10 @@ const FPS: u32 = 60;
 const TEMPORAL_SAMPLES: u32 = 8;
 const ENTRANCE_TEMPORAL_SAMPLES: u32 = 16;
 const SHUTTER_ANGLE: f32 = 180.0;
+/// How long a frame's shutter stays open.
+pub(crate) const SHUTTER_SECONDS: f64 = SHUTTER_ANGLE as f64 / 360.0 / FPS as f64;
+/// The fewest samples a reel frame takes while its segments mix or move.
+pub(crate) const TRANSITION_TEMPORAL_SAMPLES: u32 = 16;
 
 /// Samples per frame for Scene Plans: more in the first second, where
 /// entrances move fastest.
