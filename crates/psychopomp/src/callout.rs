@@ -148,12 +148,14 @@ impl CalloutSide {
     }
 
     /// This edge of `shape`: a box's side midpoint or corner, the circle's
-    /// surface in this direction, or the point itself.
+    /// or polygon's outline in this direction, or the point itself.
     pub fn on(self, shape: Shape) -> Vec2 {
         match shape {
             Shape::Box(bounds) => bounds.center() + Vec2::from(self.signs()) * bounds.extents(),
             Shape::Circle(circle) => circle.center + self.unit() * circle.radius,
             Shape::Point(point) => point,
+            Shape::Polygon(_) if self.is_center() => shape.center(),
+            Shape::Polygon(polygon) => polygon.along(self.unit()),
         }
     }
 }
