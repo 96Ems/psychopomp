@@ -132,7 +132,7 @@ mod tests {
         let bounds = |pixels: &[u8]| {
             let mut min = [1920, 1080];
             let mut max = [0, 0];
-            for (i, pixel) in pixels.chunks_exact(4).enumerate() {
+            for (i, pixel) in pixels.as_chunks::<4>().0.iter().enumerate() {
                 if pixel[0] > 120
                     && f32::from(pixel[0]) > f32::from(pixel[1]) * 1.3
                     && pixel[2] < 140

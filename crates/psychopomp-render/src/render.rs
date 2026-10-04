@@ -513,7 +513,7 @@ impl HeadlessRenderer {
         opacity: f32,
     ) -> Vec<u8> {
         let mut pixels = vec![0_u8; self.spec.width as usize * self.spec.height as usize * 4];
-        for pixel in pixels.chunks_exact_mut(4) {
+        for pixel in pixels.as_chunks_mut::<4>().0 {
             let [r, g, b] = self.theme.background([1, 2, 4]);
             pixel.copy_from_slice(&[r, g, b, 255]);
         }
@@ -752,7 +752,12 @@ impl HeadlessRenderer {
                 // The same WGSL recipe draws dynamic overlays, without sending
                 // unchanged chrome through the expensive optical card compositor.
                 let overlay = self.render_shapes_pass(frame, false)?;
-                for (pixel, source) in pixels.chunks_exact_mut(4).zip(overlay.chunks_exact(4)) {
+                for (pixel, source) in pixels
+                    .as_chunks_mut::<4>()
+                    .0
+                    .iter_mut()
+                    .zip(overlay.as_chunks::<4>().0)
+                {
                     if source[3] > 0 {
                         blend_pixel(pixel, [source[0], source[1], source[2], source[3]], 1.);
                     }
@@ -1330,7 +1335,7 @@ fn rasterize_svg(svg: &str, width: u32, height: u32) -> Result<TextSprite> {
     );
     resvg::render(&tree, transform, &mut pixmap.as_mut());
     let mut pixels = pixmap.data().to_vec();
-    for pixel in pixels.chunks_exact_mut(4) {
+    for pixel in pixels.as_chunks_mut::<4>().0 {
         let alpha = u32::from(pixel[3]);
         if alpha > 0 {
             for channel in &mut pixel[..3] {
@@ -2291,7 +2296,7 @@ mod tests {
         );
         let alpha = |y: usize| pixels[(y * 16 + 5) * 4 + 3];
         assert_eq!([alpha(3), alpha(4), alpha(5), alpha(6)], [0, 64, 191, 255]);
-        for pixel in pixels.chunks_exact(4).filter(|p| p[3] != 0) {
+        for pixel in pixels.as_chunks::<4>().0.iter().filter(|p| p[3] != 0) {
             assert_eq!(&pixel[..3], &[255; 3]);
         }
 
@@ -2343,8 +2348,10 @@ mod tests {
             (draw([10., 3.99], 12., 0.5), draw([10., 4.], 12., 0.5)),
         ] {
             assert!(
-                a.chunks_exact(4)
-                    .zip(b.chunks_exact(4))
+                a.as_chunks::<4>()
+                    .0
+                    .iter()
+                    .zip(b.as_chunks::<4>().0)
                     .map(|(a, b)| a[3].abs_diff(b[3]))
                     .max()
                     .unwrap()
@@ -2374,9 +2381,16 @@ mod tests {
             pixels
         };
         let centroid = |pixels: &[u8]| {
-            let total = pixels.chunks_exact(4).map(|p| f64::from(p[3])).sum::<f64>();
+            let total = pixels
+                .as_chunks::<4>()
+                .0
+                .iter()
+                .map(|p| f64::from(p[3]))
+                .sum::<f64>();
             pixels
-                .chunks_exact(4)
+                .as_chunks::<4>()
+                .0
+                .iter()
                 .enumerate()
                 .map(|(index, p)| (index % 32) as f64 * f64::from(p[3]))
                 .sum::<f64>()
@@ -2409,8 +2423,10 @@ mod tests {
         for (from, to) in [(0., 0.001), (0.49, 0.51), (3.49, 3.51), (5.99, 6.01)] {
             assert!(
                 draw(from)
-                    .chunks_exact(4)
-                    .zip(draw(to).chunks_exact(4))
+                    .as_chunks::<4>()
+                    .0
+                    .iter()
+                    .zip(draw(to).as_chunks::<4>().0)
                     .all(|(a, b)| a[3].abs_diff(b[3]) <= 3),
                 "blur {from} -> {to}"
             );
@@ -2436,11 +2452,18 @@ mod tests {
                 },
             );
             let alpha = pixels
-                .chunks_exact(4)
+                .as_chunks::<4>()
+                .0
+                .iter()
                 .map(|pixel| u32::from(pixel[3]))
                 .sum::<u32>();
             assert!(alpha.abs_diff(255) <= 1, "{origin:?}: alpha={alpha}");
-            for pixel in pixels.chunks_exact(4).filter(|pixel| pixel[3] > 0) {
+            for pixel in pixels
+                .as_chunks::<4>()
+                .0
+                .iter()
+                .filter(|pixel| pixel[3] > 0)
+            {
                 assert_eq!(&pixel[..3], &[255, 32, 0]);
             }
         }
@@ -2510,9 +2533,16 @@ mod tests {
             pixels
         };
         let centroid = |pixels: &[u8]| {
-            let total = pixels.chunks_exact(4).map(|p| f64::from(p[3])).sum::<f64>();
+            let total = pixels
+                .as_chunks::<4>()
+                .0
+                .iter()
+                .map(|p| f64::from(p[3]))
+                .sum::<f64>();
             pixels
-                .chunks_exact(4)
+                .as_chunks::<4>()
+                .0
+                .iter()
                 .enumerate()
                 .map(|(i, p)| (i % 40) as f64 * f64::from(p[3]))
                 .sum::<f64>()
