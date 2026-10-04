@@ -366,20 +366,8 @@ fn stage_film(narration: &Narration) -> Result<ScenePlan> {
     s.hit(sc, "post.bloom", kill_arrival, 0.4, 0.18);
     s.to(sc, "camera.focus", kill_arrival, 0.0, 0.8);
     // One status at a time: "healthy" is gone before "stopped" rises.
-    s.to(
-        sc,
-        "service-healthy.opacity",
-        kill_arrival + seconds(0.15),
-        0.0,
-        0.15,
-    );
-    s.fade_in(
-        sc,
-        "service-stopped",
-        kill_arrival + seconds(0.4),
-        1.0,
-        0.25,
-    );
+    let labels = ["service-healthy", "service-stopped"];
+    s.swap_labels(sc, labels, kill_arrival + seconds(0.15), millis(250));
     s.to(sc, "link.break", kill_arrival + seconds(0.15), 1.0, 0.9);
     let cut = b("cut off every other client");
     for (index, (card, link, ..)) in OTHERS.iter().enumerate() {
@@ -453,20 +441,8 @@ fn stage_film(narration: &Narration) -> Result<ScenePlan> {
     s.unburst(sc, "service", switch + seconds(0.1), 1.3);
     s.to(sc, "camera.z", switch, 0.0, 1.8);
     s.to(sc, "thought-before.opacity", switch, 0.0, 0.4);
-    s.to(
-        sc,
-        "service-stopped.opacity",
-        switch + seconds(0.9),
-        0.0,
-        0.15,
-    );
-    s.to(
-        sc,
-        "service-healthy.opacity",
-        switch + seconds(1.15),
-        1.0,
-        0.25,
-    );
+    let labels = ["service-stopped", "service-healthy"];
+    s.swap_labels(sc, labels, switch + seconds(0.9), millis(250));
     let respin = switch + seconds(0.6);
     // Straight back to reconnecting, never passing "replacing the server".
     s.swap_status(sc, "client", respin, [2, 1], 0.3);

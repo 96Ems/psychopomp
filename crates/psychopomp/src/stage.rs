@@ -1362,6 +1362,42 @@ impl StageActor {
         at + whole_millis(seconds)
     }
 
+    /// Step `cards` back to `amount` of dimness on `seconds` springs, so the
+    /// focal action reads alone; an `amount` of 0 brings them forward again.
+    pub fn dim<S: AsRef<str>>(
+        &mut self,
+        scene: &mut PlanBuilder,
+        cards: impl IntoIterator<Item = S>,
+        at: u64,
+        amount: f32,
+        seconds: f32,
+    ) {
+        for card in cards {
+            self.to(
+                scene,
+                &format!("{}.dim", card.as_ref()),
+                at,
+                amount,
+                seconds,
+            );
+        }
+    }
+
+    /// Swap two labels that share a spot, one at a time: `from` fades out
+    /// quickly at `at`, and `to` fades in `gap` later, once `from` is mostly
+    /// gone, so two readable words never overlap. Returns when `to` starts.
+    pub fn swap_labels(
+        &mut self,
+        scene: &mut PlanBuilder,
+        [from, to]: [&str; 2],
+        at: u64,
+        gap: u64,
+    ) -> u64 {
+        self.fade_out(scene, from, at, 0.15);
+        self.fade_in(scene, to, at + gap, 1.0, 0.25);
+        at + gap
+    }
+
     /// Cross-fade `card`'s status line straight from entry `from` to entry
     /// `to` over `seconds`, without passing the entries between them (as the
     /// fractional `status` channel would). Returns when the swap completes;
@@ -1891,6 +1927,29 @@ mod tests {
             kick[0].2 < 0.0,
             "the client sits left of the service and is pushed left"
         );
+    }
+
+    #[test]
+    fn labels_swap_one_at_a_time_and_cards_step_back_together() {
+        const S: u64 = 1_000_000_000;
+        let mut scene = PlanBuilder::new("labels", 4 * S);
+        let mut s = StageActor::declare(&mut scene, "stage", &plan()).unwrap();
+        let shown = s.swap_labels(&mut scene, ["caption", "timer"], S, 250_000_000);
+        assert_eq!(shown, S + 250_000_000);
+        s.dim(&mut scene, ["client"], 2 * S, 0.5, 0.8);
+        let plan = scene.finish().unwrap();
+        assert_eq!(
+            initial(&plan, "caption.opacity"),
+            1.0,
+            "the outgoing label was showing"
+        );
+        assert_eq!(
+            initial(&plan, "timer.opacity"),
+            0.0,
+            "the incoming label starts hidden"
+        );
+        assert_eq!(events(&plan, "timer.opacity"), [(shown, "spring", 1.0)]);
+        assert_eq!(events(&plan, "client.dim"), [(2 * S, "spring", 0.5)]);
     }
 
     #[test]

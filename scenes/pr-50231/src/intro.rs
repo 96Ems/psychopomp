@@ -130,13 +130,10 @@ pub fn build(narration: &Narration) -> Result<ScenePlan> {
     let hard = w("the hard part");
     s.to(sc, "camera.x", hard, 50.0, 1.6);
     s.to(sc, "camera.z", hard, 30.0, 1.6);
-    for name in ["compiler"]
+    let checked = ["compiler".to_owned()]
         .into_iter()
-        .map(str::to_owned)
-        .chain((0..RENAMES.len()).map(|index| format!("rename-{index}")))
-    {
-        s.to(sc, &format!("{name}.dim"), hard + seconds(0.2), 0.5, 0.8);
-    }
+        .chain((0..RENAMES.len()).map(|index| format!("rename-{index}")));
+    s.dim(sc, checked, hard + seconds(0.2), 0.5, 0.8);
     let everything = w("everything");
     for index in 0..UNCAUGHT.len() {
         s.settle_in(

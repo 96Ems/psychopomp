@@ -720,7 +720,9 @@ their fuller documentation elsewhere.
   away as the burst's pressure front passes it; returns when it passes),
   `resolve_spinner(card, started, done)` (the spinner draws its mark at its
   next crossing; returns when the mark is drawn, where its sound belongs),
-  `swap_status(card, at, [from, to], seconds)`, `halo([(inner, opacity),
+  `swap_status(card, at, [from, to], seconds)`, `swap_labels([from, to], at,
+  gap)` (one label out, the other in `gap` later), `dim(cards, at, amount,
+  seconds)`, `halo([(inner, opacity),
   (outer, opacity)], at, seconds)` and `halo_out`
   (two rings 60 ms apart in, 80 ms apart out), `ring_timer(ring, at, seconds,
   sweep)`, and `disconnect(beam, at, seconds)` (the reverse of `connect`).

@@ -9,7 +9,7 @@ use std::path::Path;
 
 use anyhow::{Context, Result};
 use psychopomp::{
-    author::{PlanBuilder, seconds},
+    author::{PlanBuilder, millis, seconds},
     callout::{CalloutActor, CalloutAnchorPlan, CalloutPlan, CalloutSide},
     caption::{CaptionAlign, CaptionSpanPlan},
     code::{StyledSpan, SyntaxStyle},
@@ -296,8 +296,7 @@ fn stage_film(narration: &Narration) -> Result<ScenePlan> {
 
     // "still running": the orb lingers on :49374 instead of exiting
     let running = b("still running");
-    s.to(sc, "old-active.opacity", running, 0.0, 0.15);
-    s.fade_in(sc, "old-lingering", running + seconds(0.22), 1.0, 0.25);
+    s.swap_labels(sc, ["old-active", "old-lingering"], running, millis(220));
 
     // "registration file had disappeared": old server unlinks service.json
     let reg_file = b("registration file");
@@ -419,14 +418,8 @@ fn stage_film(narration: &Narration) -> Result<ScenePlan> {
         0.42,
         0.35,
     );
-    s.to(
-        sc,
-        "old-lingering.opacity",
-        sigkill_hit + seconds(0.12),
-        0.0,
-        0.15,
-    );
-    s.fade_in(sc, "old-exited", sigkill_hit + seconds(0.38), 1.0, 0.25);
+    let labels = ["old-lingering", "old-exited"];
+    s.swap_labels(sc, labels, sigkill_hit + seconds(0.12), millis(260));
     target_note.hide(sc, sigkill_hit + seconds(0.1));
 
     // Service.stop spinner resolves into check mark

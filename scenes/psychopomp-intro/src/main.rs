@@ -338,9 +338,7 @@ fn film(narration: &Narration) -> Result<ScenePlan> {
     s.to(sc, "camera.focus", when, 0.0, 1.0);
     s.to(sc, "post.vignette", when, 0.62, 1.6);
     s.to(sc, "orb.hurt", t("misbehaves"), 0.7, 1.2);
-    for card in ["terminal", "desktop"] {
-        s.to(sc, &format!("{card}.dim"), when, 0.5, 1.0);
-    }
+    s.dim(sc, ["terminal", "desktop"], when, 0.5, 1.0);
 
     // YOU BLOW IT UP!!!
     let up = t("up");

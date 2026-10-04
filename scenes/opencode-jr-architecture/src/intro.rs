@@ -149,9 +149,6 @@ pub fn film(narration: &crate::Narration) -> Result<ScenePlan> {
 
 /// The other rows step back so the followed message reads alone.
 fn hide_others(s: &mut psychopomp::stage::StageActor, sc: &mut PlanBuilder, at: u64) {
-    for index in [0, 2] {
-        for card in [format!("thread-{index}"), format!("sandbox-{index}")] {
-            s.to(sc, &format!("{card}.dim"), at, 0.55, 0.8);
-        }
-    }
+    let others = [0, 2].map(|index| [format!("thread-{index}"), format!("sandbox-{index}")]);
+    s.dim(sc, others.iter().flatten(), at, 0.55, 0.8);
 }
