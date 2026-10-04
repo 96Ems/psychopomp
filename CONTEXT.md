@@ -285,6 +285,40 @@ added in a step, or removed in a step. Added lines carry an added Line Mark;
 removed lines turn red just before their step. A pure insertion or removal first
 holds blank rows so moving code never crosses entering or leaving code.
 
+A Stepped Diff line may name ranges of its text and carry Inlay Hints; its
+declared editor then pins Semantic Targets to those ranges like any editor.
+
+## Diagnostic
+
+A severity-toned wave (error, warning, info) under one Semantic Target, with a
+gutter icon beside its line. The wave draws on along the range's length, keeps
+its shape as the range moves, and follows line motion and Inline Reveals because
+the editor measures its target at every Temporal Sample. Clearing it relaxes the
+wave flat as it fades. It depicts a compiler's report; it does not type-check.
+
+## Hover Card
+
+An IDE tooltip pinned to a Semantic Target: highlighted code lines (a type
+signature) and toned prose (a diagnostic message) in sections divided by rules,
+with a small pointer aimed at the range. It pops in by fading up and rising into
+place, sits above or below its range as authored, and slides to stay inside the
+editor rather than flip sides, so a moving range moves it continuously.
+
+## Inlay Hint
+
+Ghost text, such as an inferred `: Effect<User, NotFound, Database>`, that opens
+room inline after a range. It is an Inline Reveal of its own inline part (part ID
+`inlay:<id>`) drawn dim on a faint chip, so the line keeps its identity, every
+other part keeps its own, and code after it moves aside rather than being replaced.
+
+## Cursor
+
+A text caret and its selection over Semantic Targets. The caret sits at a fraction
+(`head`) of a weighted target and the selection spans `tail` to `head`; moving
+between targets springs anchor weights like a Callout's. Its blink is a pure
+function of a `blink` clock that restarts whenever the caret moves, so the caret
+holds solid while it moves and for a moment after, then blinks.
+
 ## Asset
 
 Immutable source material identified independently from any use on the timeline. Audio, video, and image assets retain their original files while edits refer to them non-destructively.

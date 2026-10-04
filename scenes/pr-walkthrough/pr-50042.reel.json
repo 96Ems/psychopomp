@@ -4342,7 +4342,7 @@
                   "mark": "added",
                   "parts": [
                     {
-                      "id": "indent",
+                      "id": "code",
                       "spans": [
                         {
                           "style": "plain",

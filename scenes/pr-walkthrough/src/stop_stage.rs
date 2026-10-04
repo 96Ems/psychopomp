@@ -12,16 +12,11 @@ use psychopomp::{
     author::{PlanBuilder, seconds},
     callout::{CalloutActor, CalloutAnchorPlan, CalloutPlan, CalloutSide},
     caption::{CaptionAlign, CaptionSpanPlan},
-    code::{StyledSpan, SyntaxStyle},
-    editor::{
-        EditorPartPlan, EditorRecipePlan, EditorSemanticRangePlan, EditorTargetSelector,
-        LineMarkPlan,
-    },
+    editor::{LineMarkPlan, diff::keep},
     effects::{
         combustion,
         spinner::{self, Mark},
     },
-    highlight,
     math::{Vec2, Vec3, easing::Ease, vec2},
     narration::Narration,
     plan::{
@@ -35,7 +30,7 @@ use psychopomp::{
 
 use crate::{
     PRS, diffs,
-    film::{chip, code, footer, header, span},
+    film::{chip, code_with, footer, header, span},
 };
 
 const CLIENT: [f32; 3] = [390.0, 540.0, -40.0];
@@ -672,86 +667,41 @@ fn stage_film(narration: &Narration) -> Result<ScenePlan> {
 /// pinned to the `signal(info.pid, "SIGKILL")` line as the early return leaves.
 fn stop_code(narration: &Narration) -> Result<ScenePlan> {
     let pr = &PRS[3];
-    let clip = narration.clip("stop-code")?;
-    let lead = seconds(0.9);
-    let mut plan = code(pr, narration, diffs(3), false)?;
-    let editor = plan
-        .actors
-        .iter_mut()
-        .find(|actor| actor.id == "editor")
-        .context("stop-code editor")?;
-    let mut recipe: EditorRecipePlan = serde_json::from_value(editor.data.clone())?;
-    if let Some(line) = recipe.lines.iter_mut().find(|line| line.id == "line-8") {
-        line.parts = vec![
-            EditorPartPlan {
-                id: "indent".into(),
-                spans: vec![StyledSpan::new("  ", SyntaxStyle::Plain)],
-            },
-            EditorPartPlan {
-                id: "sigkill".into(),
-                spans: highlight::typescript("yield* signal(info.pid, \"SIGKILL\")"),
-            },
-        ];
-        line.semantic_ranges.push(EditorSemanticRangePlan {
-            id: "sigkill".into(),
-            first_part_id: "sigkill".into(),
-            last_part_id: "sigkill".into(),
-        });
-        line.mark = Some(LineMarkPlan::Added);
-    }
-    recipe.compile()?;
-    editor.data = serde_json::to_value(recipe)?;
-
-    // Rebuild with an Editor Callout pinned to `sigkill`
-    let duration = plan.duration_nanos;
-    let mut scene = PlanBuilder::new("stop-code-callout", duration);
-    let spoken = clip.place(&mut scene, lead);
-    let dummy_editor = scene.actor(
-        "editor",
-        psychopomp::editor::EDITOR_RECIPE,
-        &serde_json::from_value::<EditorRecipePlan>(editor.data.clone())?,
-    )?;
-    scene.semantic_target(
-        "sigkill",
-        &dummy_editor,
-        EditorTargetSelector {
-            line_id: "line-8".into(),
-            range_id: "sigkill".into(),
+    let (mut diff, steps, note) = diffs(3);
+    // The kill that the change makes reachable: a range to pin to, marked.
+    diff.lines[8] = keep("  yield* signal(info.pid, \"SIGKILL\")")
+        .range("sigkill", "yield* signal(info.pid, \"SIGKILL\")")
+        .marked(LineMarkPlan::Added);
+    code_with(
+        pr,
+        narration,
+        (diff, steps, note),
+        false,
+        |scene, editor, spoken| {
+            editor.target(scene, "sigkill", 8, "sigkill")?;
+            let mut callout = CalloutActor::declare(
+                scene,
+                "sigkill-note",
+                &CalloutPlan::new(
+                    CalloutAnchorPlan::Editor {
+                        id: "sigkill".into(),
+                        target: "sigkill".into(),
+                        edge: CalloutSide::Right,
+                        side: None,
+                    },
+                    vec![
+                        span("always reached ", Tone::Success),
+                        span("when pid is still alive", Tone::Plain),
+                    ],
+                )
+                .side(CalloutSide::Right)
+                .reach(72.0)
+                .tone(Tone::Success)
+                .chip(),
+            )?;
+            callout.show(scene, spoken.at("early return"));
+            callout.emphasize(scene, spoken.at("trusted the file"));
+            Ok(())
         },
-    )?;
-    let mut callout = CalloutActor::declare(
-        &mut scene,
-        "sigkill-note",
-        &CalloutPlan::new(
-            CalloutAnchorPlan::Editor {
-                id: "sigkill".into(),
-                target: "sigkill".into(),
-                edge: CalloutSide::Right,
-                side: None,
-            },
-            vec![
-                span("always reached ", Tone::Success),
-                span("when pid is still alive", Tone::Plain),
-            ],
-        )
-        .side(CalloutSide::Right)
-        .reach(72.0)
-        .tone(Tone::Success)
-        .chip(),
-    )?;
-    callout.show(&mut scene, spoken.at("early return"));
-    callout.emphasize(&mut scene, spoken.at("trusted the file"));
-    let extra = scene.finish()?;
-    plan.semantic_targets.extend(extra.semantic_targets);
-    if let Some(actor) = extra.actors.into_iter().find(|a| a.id == "sigkill-note") {
-        plan.actors.push(actor);
-    }
-    plan.continuous_channels.extend(
-        extra
-            .continuous_channels
-            .into_iter()
-            .filter(|c| c.actor_id == "sigkill-note"),
-    );
-    plan.validate()?;
-    Ok(plan)
+    )
 }

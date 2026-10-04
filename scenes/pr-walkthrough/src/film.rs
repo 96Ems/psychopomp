@@ -7,8 +7,8 @@ use anyhow::{Context, Result};
 use psychopomp::{
     author::{PlanBuilder, seconds},
     caption::{CaptionActor, CaptionAlign, CaptionPlan, CaptionSpanPlan},
-    editor::diff::Diff,
-    narration::Narration,
+    editor::diff::{Diff, DiffEditor},
+    narration::{Narration, Spoken},
     plan::ScenePlan,
     sequence::{SequenceActor, SequencePlan},
     tone::Tone,
@@ -188,8 +188,20 @@ pub fn behavior(pr: &Pr, narration: &Narration, flow: Flow) -> Result<ScenePlan>
 pub fn code(
     pr: &Pr,
     narration: &Narration,
+    change: (Diff, Vec<&'static str>, &'static str),
+    entrance: bool,
+) -> Result<ScenePlan> {
+    code_with(pr, narration, change, entrance, |_, _, _| Ok(()))
+}
+
+/// [`code`], then `annotate` pins callouts, diagnostics, or hovers to the
+/// diff's ranges, timed by the same narration, before the plan is finished.
+pub fn code_with(
+    pr: &Pr,
+    narration: &Narration,
     (diff, steps, note): (Diff, Vec<&'static str>, &'static str),
     entrance: bool,
+    annotate: impl FnOnce(&mut PlanBuilder, &DiffEditor, &Spoken<'_>) -> Result<()>,
 ) -> Result<ScenePlan> {
     let clip = narration.clip(&format!("{}-code", pr.slug))?;
     let lead = seconds(0.9);
@@ -203,9 +215,10 @@ pub fn code(
         .iter()
         .map(|phrase| spoken.at(phrase))
         .collect::<Vec<_>>();
-    diff.declare(&mut scene, &times, seconds(0.9), entrance)?;
+    let editor = diff.declare(&mut scene, &times, seconds(0.9), entrance)?;
     let mut caption = footer(&mut scene, "footer", vec![span(note, Tone::Muted)])?;
     caption.show(&mut scene, seconds(0.6));
+    annotate(&mut scene, &editor, &spoken)?;
     scene.finish().with_context(|| format!("{}-code", pr.slug))
 }
 
