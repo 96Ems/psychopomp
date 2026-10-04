@@ -10,21 +10,21 @@ vibe-coded prototype, tested on macOS (Metal).
 
 ## What it draws
 
-  explosions, and a VHS rewind. The camera frames, follows packets, racks focus,
-  orbits, dolly-zooms, whips, and sways handheld.
 - **Stage**: a 2.5D camera over particle orbs and forms (cubes, slabs, dot
   matrices, tori that tumble and morph), cards, shapes, icons, arrowed paths,
   travelling packets, labels, and rings, with bloom, depth of field, screen
-  shake, zoom streaks, explosions, and a VHS rewind.
+  shake, zoom streaks, explosions, and a VHS rewind. The camera frames, follows
+  packets, racks focus, orbits, dolly-zooms, whips, and sways handheld.
 - **Code**: an editor that animates diffs while every line keeps its identity.
 - **Overlays**: callouts pinned to anything, rolling numbers, captions, sequence
+  diagrams, charts, trees, video cards, checklists, meters, benchmark bars,
+  word-timed subtitles, and confetti.
 - **Text surfaces**: a terminal, a Slack or iMessage thread, and a pull request's
   changed files, drawn natively so they follow the theme and re-time with the
   scene, plus lower thirds that introduce who or what is on screen.
-  diagrams, charts, trees, video cards, checklists, meters, benchmark bars,
-  word-timed subtitles, and confetti.
-- **Narration**: optional ElevenLabs or Fish Audio voice-over. Each beat waits
-  for the word that triggers it, so re-voicing re-times the film.
+- **Narration and sound**: optional ElevenLabs or Fish Audio voice-over and
+  generated sound effects, declared in the Scene Program and generated once.
+  Each beat waits for the word that triggers it, so re-voicing re-times the film.
 
 ## Example
 
@@ -71,6 +71,7 @@ bun scripts/sheet.ts target/hello.json 0.5,1.5,2.7 --theme neutral --shutter
 | [`2password`](scenes/2password) | A narrated product explainer on the Stage |
 | [`pr-walkthrough`](scenes/pr-walkthrough) | Pull requests as Stage films that zoom into their diffs |
 | [`camera`](scenes/camera) | A Stage diagram shot like a film: every camera move |
+| [`generated-media`](scenes/generated-media) | Speech, a chant, sound effects, and a derived voice, generated once and timed to their words |
 | [`callouts`](scenes/callouts), [`rolling-number`](scenes/rolling-number), [`charts`](scenes/charts), [`tree`](scenes/tree), [`diagnostics`](scenes/diagnostics), [`text-surfaces`](scenes/text-surfaces), [`viz-components`](scenes/viz-components) | Component showrooms |
 | [`effects-showroom`](scenes/effects-showroom) | Lightning, charge, shields, dissolve, and scans on the Stage |
 | [`interactive-showcase`](scenes/interactive-showcase) | A native, steppable presentation (`plan present`) |
@@ -91,6 +92,8 @@ npx skills add kitlangton/psychopomp
 ## How it fits together
 
 ```text
+crates/psychopomp-media   declared speech and sound, reconciled against media.lock.json
+   ↓ exact durations and words
 scenes/*              Rust Scene Programs: meaning, timing, choreography
    ↓ Scene Plan (JSON)
 crates/psychopomp     plans, validation, timelines, springs; no GPU

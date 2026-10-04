@@ -2,6 +2,7 @@
 members = [
   "crates/psychopomp",
   "crates/psychopomp-render",
+  "crates/psychopomp-media",
   "scenes/agent-demo",
   "scenes/hero",
   "scenes/effect-succeed-slides",
@@ -31,6 +32,7 @@ members = [
   "scenes/text-surfaces",
   "scenes/viz-components",
   "scenes/anchors",
+  "scenes/generated-media",
 ]
 default-members = ["crates/psychopomp-render"]
 resolver = "3"

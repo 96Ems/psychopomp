@@ -1,0 +1,90 @@
+{
+  "version": 1,
+  "resources": {
+    "chant": {
+      "key": "b64249cfccd486d1",
+      "file": "media/b64249cfccd486d1.mp3",
+      "durationNanos": 3156916666,
+      "spec": {
+        "align": "whisper:mlx-community/whisper-large-v3-mlx",
+        "backend": "fish",
+        "format": "wav_44100",
+        "kind": "speech",
+        "lines": [{"text": "[chanting, louder each time] Balls! Balls! BALLS!", "voice": "ebda56b7ebe44911bc1d1eabe41d53e3"}],
+        "model": "s2.1-pro-free",
+        "post": "loudnorm=I=-16:TP=-1.5:LRA=11|mp3=48000:mono:160k",
+        "route": "speech",
+        "settings": {"speed": 1.0}
+      },
+      "words": [
+        ["Balls,", 0.0, 0.86],
+        ["balls,", 0.86, 1.66],
+        ["balls.", 1.94, 2.28]
+      ]
+    },
+    "hush": {
+      "key": "7440a1a8c695bd2f",
+      "file": "media/7440a1a8c695bd2f.mp3",
+      "durationNanos": 3439000000,
+      "spec": {
+        "align": "provider",
+        "backend": "elevenlabs",
+        "format": "mp3_44100_192",
+        "kind": "speech",
+        "lines": [{"text": "[extremely soft ASMR whisper] Oh... so I hear you like... balls.", "voice": "8olojUk4IXpvKgaOCHXj"}],
+        "model": "eleven_v4",
+        "post": "loudnorm=I=-16:TP=-1.5:LRA=11|mp3=48000:mono:160k",
+        "route": "speech",
+        "settings": {"similarity": 0.65, "stability": 0.2}
+      },
+      "requests": [
+        "PBk9XEe44WerkuJIV9el"
+      ],
+      "credits": 8,
+      "words": [
+        ["Oh...", 0.24, 0.8],
+        ["so", 1.04, 1.2],
+        ["I", 1.28, 1.36],
+        ["hear", 1.44, 1.6],
+        ["you", 1.68, 1.76],
+        ["like...", 1.84, 2.4],
+        ["balls.", 2.64, 3.439]
+      ]
+    },
+    "hush.pitch(-6)": {
+      "key": "fa4456d61362ecad",
+      "file": "media/fa4456d61362ecad.mp3",
+      "durationNanos": 3435833333,
+      "spec": {
+        "effect": {"pitch": {"semitones": -6.0}},
+        "kind": "derive",
+        "post": "ffmpeg-effect/1",
+        "source": "7440a1a8c695bd2f"
+      },
+      "words": [
+        ["Oh...", 0.24, 0.8],
+        ["so", 1.04, 1.2],
+        ["I", 1.28, 1.36],
+        ["hear", 1.44, 1.6],
+        ["you", 1.68, 1.76],
+        ["like...", 1.84, 2.4],
+        ["balls.", 2.64, 3.435833]
+      ]
+    },
+    "pop": {
+      "key": "bfa25c33f32c71bb",
+      "file": "media/bfa25c33f32c71bb.wav",
+      "durationNanos": 480000000,
+      "spec": {
+        "backend": "elevenlabs",
+        "durationNanos": 500000000,
+        "format": "mp3_44100_192",
+        "kind": "sound",
+        "model": "eleven_text_to_sound_v2",
+        "post": "trim-onset=0.02:-0.003|peak=0.5|fade-out=0.06|wav=48000:mono:s16",
+        "prompt": "A single soft glassy pop, tiny and dry. No voice, no music."
+      },
+      "credits": 6
+    }
+  }
+}

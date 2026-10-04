@@ -30,8 +30,8 @@ Lightweight crate (`crates/psychopomp/src`):
 - `crates/psychopomp/src/timeline.rs`: explicit-time continuous Property Track compilation
 - `crates/psychopomp/src/timeline/retarget.rs`: shared cancellation-safe numeric schedule for Playback and authored resting entrances
 - `crates/psychopomp/src/motion.rs`: deterministic arbitrary-time analytic spring sampling with position and velocity
-- `crates/psychopomp/src/transcript.rs`: word timing ingestion, word and phrase cue lookup
-- `crates/psychopomp/src/narration.rs`: `scripts/narrate.ts` manifests loaded as narration clips, scheduled back to back (`Narration::reading`), placed whole or as split ranges (`place_range`, `split`) as Script Clips, with panicking phrase lookups
+- `crates/psychopomp/src/transcript.rs`: word timing ingestion, word and phrase cue lookup, every occurrence of a phrase
+- `crates/psychopomp/src/narration.rs`: narration clips (from `scripts/narrate.ts` manifests or any timed audio), scheduled back to back (`Narration::reading`, `Reading::new`), placed whole or as split ranges (`place_range`, `split`) as Script Clips, with panicking phrase lookups
 - `crates/psychopomp/src/sfx.rs`: the `assets/` sound-effect catalog with exact lengths, placed whole as Layer Clips (`Sfx::play`)
 - `crates/psychopomp/src/tone.rs`: semantic Tone roles shared by explainer recipes
 - `crates/psychopomp/src/sequence.rs`: Sequence Diagram recipe values and row constructors, slot, header, and row-box geometry, validation, and the `SequenceActor` authoring handle
@@ -62,6 +62,17 @@ Lightweight crate (`crates/psychopomp/src`):
 - `crates/psychopomp/src/text.rs`: typed `text` recipe values in the hand-built JSON shape and the `TextActor` handle (`show`, `hide`, `show_during`, `swap`, `move_to`)
 - `crates/psychopomp/src/image.rs`: Image recipe values (bare or framed, title, radius, anchors), the image placement helper, and the `ImageActor` handle (`fly_in`, `hide`, `move_to`)
 - `crates/psychopomp/src/math.rs` and `math/`: shared motion and geometry math (glam vectors, lerp/remap/smoothstep, easing, closed-form dynamics such as the settling spring, arc-length curves, shape ports and connectors, deterministic hash)
+
+Media crate (`crates/psychopomp-media/src`), Generated Resources for Scene Programs:
+
+- `crates/psychopomp-media/src/media.rs`: `Media`, the reconciler (declare, resolve against the lock, generate, `finish`), `Mode`, `Report`, and the `Audio` resource handle (`place`, `play`, `derive`)
+- `crates/psychopomp-media/src/spec.rs`: `Voice`, `Line`, `Sound`, `Effect`, and the canonical `Spec` whose SHA-256 is the Resource Key; effect retiming
+- `crates/psychopomp-media/src/lock.rs`: the Media Lock schema, atomic writes, and its one-word-per-line formatter
+- `crates/psychopomp-media/src/words.rs`: words from provider character alignment (directions filtered), from Whisper, and estimated from text
+- `crates/psychopomp-media/src/studio.rs`: the `Generator` seam and `Studio`, the real one (providers, loudness, Whisper, `say`), plus credentials from the environment or `.env`
+- `crates/psychopomp-media/src/eleven.rs` and `fish.rs`: ElevenLabs Text to Speech/Dialogue/Sound Effects and Fish Audio requests
+- `crates/psychopomp-media/src/ffmpeg.rs`: loudness, sound-effect finishing, silence, effects, and exact durations
+- `crates/psychopomp-media/src/adopt.rs` and `main.rs`: adopting `scripts/narrate.ts` narration into a lock; the `adopt` and `show` commands
 
 Renderer crate (`crates/psychopomp-render/src`), plan runtime:
 
@@ -159,6 +170,7 @@ Scene Programs (`scenes/`), each emitting a Scene Plan, Deck, or Reel:
 - `scenes/diagnostics/`: IDE annotation showroom: an Effect program's error wave, inferred-type Inlay Hint, Hover Card, caret selection, and a Stepped Diff fix that the error rides down with before it clears
 - `scenes/video/`: Video Card showroom: a screen recording flies in, zooms into the prompt, and back out
 - `scenes/compare/`: wipe showroom: a held before/after wipe between two Stage frames, then a plain wipe
+- `scenes/generated-media/`: Generated Resource showroom: an ElevenLabs line, a Fish Audio chant whose every "balls" spawns an orb and a generated pop, and a pitched-down derivation, all in `media.lock.json`
 - `scenes/camera/`: camera showroom: establish, frame, follow a packet, rack focus, orbit an orb, dolly zoom on an impact, whip, handheld drift, and a push-in, all `CameraRig` shots
 - `scenes/effects-showroom/`: Stage effects reel: a charged build zaps a deploy, a shield blocks an attack and passes a request, a stale config burns away and its replacement materializes and is scanned, a live link hums
 - `scenes/stage-forms/`: Stage diagram vocabulary showroom: shapes, icons, and arrowed paths; a packet relaying through a stop; a dot-matrix plane morphing into a tumbling cube and a sphere over a slab; a cube that bursts
@@ -168,7 +180,7 @@ Scene Programs (`scenes/`), each emitting a Scene Plan, Deck, or Reel:
 
 ## Scene Programs And Rendering Compile Separately
 
-The workspace has one demonstrated package seam. `crates/psychopomp` is a lightweight library containing authoring values, versioned Scene Plans, validation, exact composition time, continuous Property Tracks, discrete State Tracks, and stable code identity. `crates/psychopomp-render` contains `wgpu`, `cosmic-text`, video decoding, FFmpeg encoding, built-in renderer recipes, and the CLI.
+The workspace has two demonstrated package seams. `crates/psychopomp` is a lightweight library containing authoring values, versioned Scene Plans, validation, exact composition time, continuous Property Tracks, discrete State Tracks, and stable code identity. `crates/psychopomp-render` contains `wgpu`, `cosmic-text`, video decoding, FFmpeg encoding, built-in renderer recipes, and the CLI. `crates/psychopomp-media` generates audio for the Scene Programs that declare it; it carries the HTTP and TLS dependencies that neither the lightweight crate nor the renderer needs.
 
 ```text
 Rust Scene Program -> Scene Plan -> persistent psychopomp-render process
@@ -259,13 +271,83 @@ partially overwritten bytes as a cache hit.
 Transcript parsing does not understand code, actors, or rendering. It only connects semantic words to the shared media clock.
 
 `Transcript::phrase` and `phrase_after` match consecutive normalized words (case,
-punctuation, and number words versus digits are ignored). `scripts/narrate.ts`
-produces clips, loudness-normalized MP3s, Whisper word timings, and a manifest of
-exact durations; its `--draft` mode uses macOS `say` so a scene can be timed before
-the final voice exists. `psychopomp::narration` loads that manifest and places each
-clip as a Script Clip whose phrase lookups return plan-clock times. The
-`pr-walkthrough` Scene Program keys every reveal to a
-phrase and fails with the clip and phrase when narration no longer says it.
+punctuation, and number words versus digits are ignored); `phrases` finds every
+occurrence, so a chant can cue one beat per word. `psychopomp::narration` places
+a clip as a Script Clip whose phrase lookups return plan-clock times. Clips come
+from two producers. `scripts/narrate.ts` writes loudness-normalized MP3s, Whisper
+word timings, and a manifest of exact durations (`--draft` uses macOS `say`);
+`Narration::load` reads it. `psychopomp-media` produces the same clips from
+declarations in the Scene Program itself (see below). The `pr-walkthrough` Scene
+Program keys every reveal to a phrase and fails with the clip and phrase when
+narration no longer says it.
+
+## Generated Media Is Reconciled
+
+`crates/psychopomp-media` treats generated audio the way infrastructure-as-code
+tools treat cloud resources: the Scene Program declares desired state, a lock
+records actual state, and each run acts on the delta. The declaration is the
+whole interface:
+
+```rust
+let media = Media::open(env!("CARGO_MANIFEST_DIR"))?;
+let kit = Voice::eleven(KIT).v4().stability(0.2);
+let hush = media.say("hush", &kit, "[soft ASMR whisper] Oh... I hear you like... balls.")?;
+let pop = media.sfx("pop", "a single soft glassy pop", seconds(0.5))?;
+let demon = hush.derive(Effect::pitch(-6.0))?;
+media.finish()?;
+let said = hush.place(&mut scene, SECOND); // a Script Clip; `said.at_every("balls")`
+```
+
+Each declaration lowers to a canonical `Spec`, serialized with sorted keys and
+absent options omitted, so builder order and later optional fields never rekey
+existing resources. The Resource Key is the first 64 bits of its SHA-256. The
+spec includes post-processing and alignment as versioned strings: changing the
+loudness pass or the Whisper model changes them and so regenerates honestly.
+Keys identify recipes, not bytes; providers are not deterministic, so a key
+match, not a content hash of the audio, decides reuse.
+
+Declarations resolve eagerly, one at a time, like Alchemy rather than a
+Terraform plan/apply: the call returns an `Audio` with the real duration and
+words, so the choreography after it uses real timings in the same run. The
+reconciler checks the lock entry for the id (`=` when its key matches and the
+file exists), then any entry with the same key (renamed or duplicated ids
+reuse audio), and otherwise generates (`+` or `~`, naming the changed spec
+fields). Each generation checkpoints the lock, so a later failure keeps
+paid work. `finish` runs after the last declaration: ids the lock holds but nothing
+declared are orphans (`-`), deleted only in prune mode along with unreferenced
+store files. Files outside the store (adopted narration) are never deleted.
+
+Offline modes still run the whole Scene Program. A plan cannot pause on
+"known after apply" values, so missing speech gets estimated words (each spoken
+word of the text, 0.4 s apart) and missing sound its declared length; every
+phrase lookup still resolves, the delta and its estimated characters and sound
+seconds are complete, and `finish` fails before the scene writes its plan.
+Draft mode substitutes macOS `say` for speech and silence for sound effects;
+the lock then holds the draft's key, which a draft run accepts and an apply run
+replaces.
+
+`Generator` is the one seam: `Studio` produces real audio and the tests' fake
+records jobs without HTTP, ffmpeg, or Whisper. ElevenLabs and Fish Audio are
+two concrete branches inside `Studio`, not plugins. ElevenLabs Text to Speech
+with timestamps returns character alignment; bracketed directions and lone
+pauses are filtered and words keep the script's spelling, so lookups need no
+speech-recognition alternatives. Fish Audio and `say` return audio only, and
+Whisper times them as `narrate.ts` does. Speech is loudness-normalized like
+`narrate.ts`; sound effects are trimmed to their onset, peak-matched, and
+faded like the intro's stems; derived resources run one ffmpeg filter and
+retime their source's words. HTTP is blocking `ureq`; a Scene Program is a
+short batch process, and generation is sequential so request stitching can
+pass a predecessor's request IDs.
+
+Word times computed by the reconciler are rounded to whole microseconds before
+they reach the lock, because serde_json's default float parser is exact only
+for short decimals; Whisper's values already are, and adoption carries them
+through the lock bit for bit. The lock and the `media/` store are the state
+seam for a later remote backend (for example R2: the lock written with
+conditional puts, objects keyed `<key>.<ext>`, the local directory a cache);
+nothing remote exists yet. `scripts/narrate.ts` remains for scenes that still
+use manifests; `psychopomp-media adopt` moves such a scene into a lock without
+regenerating it.
 
 ## Rendering Is One Concrete Adapter
 
@@ -1074,4 +1156,4 @@ Scene Programs may serialize generated Scene Plans as JSON for the process proto
 
 ## Explicit Non-Abstractions
 
-The prototype does not have a generic scene graph, renderer trait, plugin interface, render graph, dynamically loaded Rust library, or recursive slot AST. The two-crate workspace exists only to keep lightweight Scene Programs independent from the heavyweight persistent renderer. Further package seams require another demonstrated compilation or deployment need.
+The prototype does not have a generic scene graph, renderer trait, plugin interface, render graph, dynamically loaded Rust library, or recursive slot AST. The core crates exist only to keep lightweight Scene Programs independent from the heavyweight persistent renderer and from the HTTP stack that generating media needs. Further package seams require another demonstrated compilation or deployment need. `psychopomp-media` has one `Generator` seam, justified by its test fake and by the offline modes that must never reach a provider; its two providers are match arms, not implementations of a provider trait.

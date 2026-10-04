@@ -510,6 +510,42 @@ An ordered set of words with source start and end times. Looking up a word occur
 
 A compiled relationship between a clip's immutable source range and its scheduled timeline range. Media placement time uses integer nanoseconds so edit boundaries remain exact across repeated edits.
 
+## Generated Resource
+
+Audio a Scene Program declares rather than supplies: a spoken line, a
+dialogue, a sound effect, or a resource derived from another by an effect
+such as a pitch shift. It has an author-chosen id that names its role in the
+scene, and a Resource Key that names its content. Once reconciled it is an
+Asset with an exact duration and, for speech, a Transcript, so choreography is
+timed to what was actually generated.
+
+## Resource Key
+
+The hash of everything that affects a Generated Resource's audio: backend,
+model, voice, the exact text with its direction tags, settings, seed, the
+lines it is stitched after, output format, post-processing, and how its words
+were timed. Equal keys mean interchangeable audio; a derived resource's key
+includes its source's, so regenerating a source regenerates what derives from
+it. A key identifies a recipe, not the bytes: providers are not deterministic.
+
+## Media Lock
+
+The recorded state of a scene's Generated Resources (`media.lock.json`): for
+each id, the key it was generated for, its file, exact duration, words, and
+provenance such as request IDs and billed credits. Files live in a
+content-addressed store beside it. Narration made before the lock existed can
+be adopted into it, keyed by the recipe that made it, without regenerating.
+
+## Reconcile
+
+Comparing declared Generated Resources with the Media Lock and acting on the
+delta: `=` up to date (the lock holds this key and its file), `+` create (no
+entry for the id), `~` replace (the entry was made for another key), and `-`
+orphan (an entry nothing declares). A run generates what is missing; a plan
+reports the delta and its cost and calls nothing; a draft stands in free local
+audio; a prune deletes orphans. Only declarations, never elapsed time or
+file dates, decide what is generated.
+
 ## Property Track
 
 The compiled trajectory of one scalar actor property. A later spring on the same track begins from the earlier trajectory's sampled position and velocity.

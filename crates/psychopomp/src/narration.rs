@@ -1,8 +1,14 @@
-//! Narration clips produced by `scripts/narrate.ts`: exact durations plus word
-//! timings, so choreography is keyed to what is said rather than to seconds.
-//! A placed clip is a Script Clip at `narration/<file>`; its phrase lookups
+//! Narration clips: exact durations plus word timings, so choreography is
+//! keyed to what is said rather than to seconds. `Narration::load` reads the
+//! manifests `scripts/narrate.ts` writes (clips at `narration/<file>`);
+//! `psychopomp-media` builds clips from Generated Resources with
+//! [`NarrationClip::new`]. A placed clip is a Script Clip whose phrase lookups
 //! panic with the clip and phrase when the narration no longer says them.
-use std::{collections::HashMap, fs, path::Path};
+use std::{
+    collections::HashMap,
+    fs,
+    path::{Path, PathBuf},
+};
 
 use anyhow::{Context, Result};
 use serde::Deserialize;
@@ -34,9 +40,10 @@ pub struct Narration {
 }
 
 /// One voiced clip and its word timings.
+#[derive(Clone, Debug)]
 pub struct NarrationClip {
     id: String,
-    file: String,
+    path: PathBuf,
     duration: u64,
     transcript: Transcript,
 }
@@ -59,7 +66,7 @@ impl Narration {
                     clip.id.clone(),
                     NarrationClip {
                         id: clip.id,
-                        file: clip.file,
+                        path: format!("narration/{}", clip.file).into(),
                         duration: clip.duration_nanos,
                         transcript,
                     },
@@ -75,35 +82,46 @@ impl Narration {
             .with_context(|| format!("narration has no clip '{id}'"))
     }
 
-    /// Clips read one after another: `lead` of silence, then each clip
-    /// followed by its gap (the last gap is the tail). The reading knows the
-    /// scene's duration before the scene exists; place it once the scene does.
+    /// The clips named `clips` read one after another; see [`Reading::new`].
     pub fn reading<const N: usize>(
         &self,
         lead: u64,
         clips: [(&str, u64); N],
     ) -> Result<Reading<'_, N>> {
-        let mut at = lead;
-        let mut placed = Vec::with_capacity(N);
+        let mut resolved = Vec::with_capacity(N);
         for (id, gap) in clips {
-            let clip = self.clip(id)?;
-            placed.push((clip, at));
-            at += clip.duration + gap;
+            resolved.push((self.clip(id)?, gap));
         }
-        Ok(Reading {
-            clips: placed.try_into().unwrap_or_else(|_| unreachable!()),
-            duration: at,
-        })
+        Ok(Reading::new(
+            lead,
+            resolved.try_into().unwrap_or_else(|_| unreachable!()),
+        ))
     }
 }
 
-/// Narration clips scheduled back to back with gaps; see [`Narration::reading`].
+/// Narration clips scheduled back to back with gaps; see [`Reading::new`].
 pub struct Reading<'a, const N: usize> {
     clips: [(&'a NarrationClip, u64); N],
     duration: u64,
 }
 
 impl<'a, const N: usize> Reading<'a, N> {
+    /// Clips read one after another: `lead` of silence, then each clip
+    /// followed by its gap (the last gap is the tail). The reading knows the
+    /// scene's duration before the scene exists; place it once the scene does.
+    pub fn new(lead: u64, clips: [(&'a NarrationClip, u64); N]) -> Self {
+        let mut at = lead;
+        let clips = clips.map(|(clip, gap)| {
+            let start = at;
+            at += clip.duration + gap;
+            (clip, start)
+        });
+        Self {
+            clips,
+            duration: at,
+        }
+    }
+
     /// From time zero through the last clip's gap: the scene's duration.
     pub fn duration(&self) -> u64 {
         self.duration
@@ -116,8 +134,36 @@ impl<'a, const N: usize> Reading<'a, N> {
 }
 
 impl NarrationClip {
+    /// A clip of the audio at `path` (relative to the plan file), lasting
+    /// `duration` nanoseconds, whose words are `transcript`.
+    pub fn new(
+        id: impl Into<String>,
+        path: impl Into<PathBuf>,
+        duration: u64,
+        transcript: Transcript,
+    ) -> Self {
+        Self {
+            id: id.into(),
+            path: path.into(),
+            duration,
+            transcript,
+        }
+    }
+
+    pub fn id(&self) -> &str {
+        &self.id
+    }
+
+    pub fn path(&self) -> &Path {
+        &self.path
+    }
+
     pub fn duration(&self) -> u64 {
         self.duration
+    }
+
+    pub fn transcript(&self) -> &Transcript {
+        &self.transcript
     }
 
     /// Place this clip in a plan, starting at `start` on the plan clock.
@@ -139,7 +185,7 @@ impl NarrationClip {
     ) -> Spoken<'_> {
         scene.media(MediaPlan {
             id: format!("narration-{}{suffix}", self.id),
-            path: format!("narration/{}", self.file).into(),
+            path: self.path.clone(),
             kind: MediaKindPlan::Audio,
             role: MediaRolePlan::Script,
             source_start_nanos: from,
@@ -231,6 +277,18 @@ impl Spoken<'_> {
             })
     }
 
+    /// When every occurrence of `phrase` starts, in order: one beat per word
+    /// of a chant. Panics like [`at`](Self::at) when it is never said.
+    pub fn at_every(&self, phrase: &str) -> Vec<u64> {
+        self.clip
+            .transcript
+            .phrases(phrase)
+            .unwrap_or_else(|error| panic!("clip '{}': {error:#}", self.clip.id))
+            .iter()
+            .map(|cue| self.plan_time(cue.start().as_nanos()))
+            .collect()
+    }
+
     /// `phrase`, searching only after `earlier` is said.
     pub fn at_after(&self, phrase: &str, earlier: &str) -> u64 {
         let from = self.source_cue(earlier, 0.0);
@@ -270,7 +328,7 @@ mod tests {
             id.into(),
             NarrationClip {
                 id: id.into(),
-                file: format!("{id}.mp3"),
+                path: format!("narration/{id}.mp3").into(),
                 duration: seconds * SECOND,
                 transcript: Transcript::new(words).unwrap(),
             },

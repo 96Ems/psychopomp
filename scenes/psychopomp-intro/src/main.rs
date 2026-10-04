@@ -11,13 +11,21 @@ use psychopomp::{
     caption::{CaptionAlign, CaptionSpanPlan},
     effects::combustion,
     math::easing::Ease,
-    narration::Narration,
+    narration::Reading,
     plan::{ReelPlan, ReelSegmentPlan, ReelTransitionStyle, ScenePlan},
     rolling::{RollingNumberActor, RollingNumberPlan},
     sfx,
     stage::{OrbEntrance, StageActor, StageElement, StagePlan, StagePost},
     tone::Tone,
 };
+use psychopomp_media::{Audio, Media, Voice};
+
+/// Kit's ElevenLabs Professional Voice Clone.
+const KIT: &str = "8olojUk4IXpvKgaOCHXj";
+
+const HUSH: &str = "[soft, sweet, almost whispering] Hi. [tender, gentle, smiling] This is Psychopomp. A tiny motion graphics library, in Rust. [warm, sugary, calm] Every frame is a pure function of time. [sudden, explosive SHOUTING] ANY FRAME! ANY ORDER!! [instantly sweet again, cooing softly] ...isn't that nice?";
+const TOYS: &str = "[gentle, loving, sing-song] Cards settle in, so softly. [delighted, sweet] Wires draw themselves on. [SHOUTING, manic, wild] AND PACKETS FLY DOWN THE WIRES!! [whispering, conspiratorial, slow] And when a server misbehaves... [screaming at the top of his lungs, completely unhinged] YOU BLOW IT UP!!! [calm, sweet, matter-of-fact] And then you rewind it. Like nothing happened.";
+const FEVER: &str = "[excited, building, getting faster and louder] Rolling numbers! Callouts! Code diffs! [yelling, frantic, voice cracking] Motion blur! Bloom! SCREEN SHAKE!! [screaming, completely losing it, fever pitch] IT'S ALL JUST CODE!!! [long exhale, suddenly tender and sweet] Psychopomp. [warm, gentle, sparkling] Give it to your agent. [soft whisper, sweet] It knows what to do.";
 
 const ORB: [f32; 3] = [960.0, 500.0, 0.0];
 const TERMINAL: [f32; 3] = [360.0, 500.0, -40.0];
@@ -38,7 +46,18 @@ const VOLLEY: [(&str, &str, &str); 6] = [
 
 fn main() -> Result<()> {
     let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    let narration = Narration::load(&root.join("narration"))?;
+    let media = Media::open(&root)?;
+    // Each line is one Text to Dialogue take timed by Whisper: the recipe the
+    // adopted narration was made with, so it stays up to date.
+    let kit = Voice::eleven(KIT)
+        .v4()
+        .stability(0.2)
+        .similarity(0.65)
+        .whisper();
+    let hush = media.dialogue("hush", [(&kit, HUSH)])?;
+    let toys = media.dialogue("toys", [(&kit, TOYS)])?;
+    let fever = media.dialogue("fever", [(&kit, FEVER)])?;
+    media.finish()?;
     let reel = ReelPlan {
         version: ReelPlan::VERSION,
         id: "psychopomp-intro".to_owned(),
@@ -47,7 +66,7 @@ fn main() -> Result<()> {
             transition_style: ReelTransitionStyle::Dip,
             transition_focus: None,
             transition_wipe: None,
-            plan: film(&narration)?,
+            plan: film(&hush, &toys, &fever)?,
         }],
     };
     reel.validate()?;
@@ -162,12 +181,16 @@ fn stage_plan() -> StagePlan {
     }
 }
 
-fn film(narration: &Narration) -> Result<ScenePlan> {
+fn film(hush_clip: &Audio, toys_clip: &Audio, fever_clip: &Audio) -> Result<ScenePlan> {
     let gap = seconds(0.35);
-    let reading = narration.reading(
+    let reading = Reading::new(
         seconds(1.3),
-        [("hush", gap), ("toys", gap), ("fever", seconds(2.6))],
-    )?;
+        [
+            (hush_clip.clip(), gap),
+            (toys_clip.clip(), gap),
+            (fever_clip.clip(), seconds(2.6)),
+        ],
+    );
     let mut scene = PlanBuilder::new("psychopomp-intro", reading.duration());
     let [hush, toys, fever] = reading.place(&mut scene);
     let h = |phrase: &str| hush.at(phrase);
