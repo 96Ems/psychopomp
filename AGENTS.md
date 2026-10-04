@@ -12,7 +12,7 @@ FFmpeg encoding.
 - `SCENE_PLANS.md`: authoring, presenting, rendering, and every recipe's channels.
 - `EFFECTS.md` and `PRIOR_ART.md`: effect implementations and motion references.
 - `docs/history/` and `perf/`: past experiments, as evidence rather than policy.
-- `.opencode/skills/psychopomp` and `.opencode/skills/explainer-motion`: the reel
+- `.agents/skills/psychopomp` and `.agents/skills/explainer-motion`: the reel
   workflow and motion rules. Load them before authoring a film.
 
 Keep these accurate when a change alters a term, boundary, or finding.

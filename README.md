@@ -67,11 +67,15 @@ bun scripts/sheet.ts target/hello.json 0.5,1.5,2.7 --theme neutral --shutter
 
 ## Use it with a coding agent
 
-[`.opencode/skills`](.opencode/skills) holds two skills: `psychopomp` (the reel
-workflow: facts, script, narration, choreography, review, render) and
-`explainer-motion` (how to make diagrams move like physical things). OpenCode
-loads them inside this repository; copy them to your agent's skills directory to
-use them elsewhere.
+The repo ships two skills in [`.agents/skills`](.agents/skills): `psychopomp` (the
+reel workflow: facts, script, narration, choreography, review, render) and
+`explainer-motion` (how to make diagrams move like physical things). Agents that
+read `.agents/skills` pick them up inside this repository. To install them
+elsewhere:
+
+```sh
+npx skills add kitlangton/psychopomp
+```
 
 ## How it fits together
 
