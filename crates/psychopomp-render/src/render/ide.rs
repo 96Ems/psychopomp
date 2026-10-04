@@ -743,8 +743,10 @@ mod gpu_tests {
             "the card sits above"
         );
         for (index, (a, b)) in pixels
-            .chunks_exact(4)
-            .zip(background.chunks_exact(4))
+            .as_chunks::<4>()
+            .0
+            .iter()
+            .zip(background.as_chunks::<4>().0)
             .enumerate()
         {
             if a != b {
