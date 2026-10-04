@@ -40,10 +40,11 @@ Lightweight crate (`crates/psychopomp/src`):
 - `crates/psychopomp/src/plot.rs`: Plot recipe values (frame, axes, sampled series with optional exact slopes, marks), interpolation, strict channel matching, and the `PlotActor` handle (`show`, `draw`, `fade`, `ride`, `velocity`, `mark`)
 - `crates/psychopomp/src/lanes.rs`: Lanes recipe values (time axis, lanes with keys and sparklines, cues), `LanesPlan::from_scene_plan`, and the `LanesActor` handle (`show`, `scrub`, `emphasize`)
 - `crates/psychopomp/src/callout.rs`: Callout recipe values, anchor edges, leader shape and frame-avoiding layout, and the `CalloutActor` handle (`show`, `hide`, `move_to`, `emphasize`)
+- `crates/psychopomp/src/lens.rs`: Lens recipe values, the sampled `Glass` (outline, rim bend, source mapping, bounds), and the `LensActor` handle (`show`, `hide`, `move_to`, `slide`, `magnify`, `resize`, `focus`)
 - `crates/psychopomp/src/video.rs`: Video Card recipe values (footage size, card rect, title), focus-window math, placement helper, and the `VideoActor` handle (`fly_in`, `focus`, `unfocus`, `hide`)
 - `crates/psychopomp/src/stage.rs`: Stage elements, strict channels, perspective camera, orb geometry, the packet clock (`stage::packet`), and the `StageActor` authoring handle (`to`, `ease`, `bounce`, `settle_in`, `clock`/`clock_for`, `connect`, `send`, `hit`, `kick`, `jolt`, `twang`, `land`)
 - `crates/psychopomp/src/effects/`: GPU-free special-effect clocks and particle poses; shared dynamics stay in `psychopomp::math::dynamics`
-- `crates/psychopomp/src/math.rs` and `math/`: shared motion and geometry math (glam vectors, lerp/remap/smoothstep, easing, closed-form dynamics such as the settling spring, arc-length curves, shape ports and connectors, deterministic hash)
+- `crates/psychopomp/src/math.rs` and `math/`: shared motion and geometry math (glam vectors, lerp/remap/smoothstep, easing, closed-form dynamics such as the settling spring, arc-length curves, shape ports and connectors, rounded-box distance fields, thin-surface glass optics, deterministic hash)
 
 Renderer crate (`crates/psychopomp-render/src`), plan runtime:
 
@@ -74,6 +75,7 @@ Renderer crate (`crates/psychopomp-render/src`), plan runtime:
 - `crates/psychopomp-render/src/plan_runtime/tree.rs`: Tree per-path channel preflight
 - `crates/psychopomp-render/src/plan_runtime/plot.rs` and `lanes.rs`: Plot and Lanes strict-channel preflight
 - `crates/psychopomp-render/src/plan_runtime/callout.rs`: anchor validation and per-sample resolution from the prepared root (`render::stage_anchor`, `PreparedEditor::anchor`)
+- `crates/psychopomp-render/src/plan_runtime/lens.rs`: Lens preflight, anchor validation, and per-sample glass from blended anchors
 - `crates/psychopomp-render/src/plan_runtime/video.rs`: Video Card preflight, frame caches, and source-time mapping
 - `crates/psychopomp-render/src/plan_runtime/stage.rs`: Stage root preflight and preparation
 
@@ -98,6 +100,7 @@ Renderer crate, pixels and delivery:
 - `crates/psychopomp-render/src/render/tree.rs`: Tree rows, chevrons, guides, highlight bars, and rolling values
 - `crates/psychopomp-render/src/render/plot.rs`, `lanes.rs`, and `chart.rs`: Plot and Lanes pixels over the shared chart ink (snapped labels, axis rulers, dashes, dots, diamonds, readout tabs)
 - `crates/psychopomp-render/src/render/callout.rs`: callout mark, leader, and label pixels
+- `crates/psychopomp-render/src/render/lens.rs`: Lens pixels: linear-light refraction of the composed frame, rim softening, specular light, and contact shadow
 - `crates/psychopomp-render/src/render/video.rs`: projected Video Card pixels with a focus window
 - `crates/psychopomp-render/src/render/wipe.rs`: Reel wipe pixels: antialiased split, divider line and shadow, riding labels
 - `crates/psychopomp-render/src/render/stage.rs`, `stage.wgsl`, `stage_post.wgsl`: Stage primitives, HDR bloom, and composite; `PSYCHOPOMP_SHADER_DIR` loads the WGSL live
@@ -128,6 +131,7 @@ Scene Programs (`scenes/`), each emitting a Scene Plan, Deck, or Reel:
 - `scenes/callouts/`: Callout showroom reel: callouts pinned to Stage cards through a dolly, a jolt, and a glide between anchors, then to a code range that moves as lines are inserted and the panel zooms
 - `scenes/video/`: Video Card showroom: a screen recording flies in, zooms into the prompt, and back out
 - `scenes/compare/`: wipe showroom: a held before/after wipe between two Stage frames, then a plain wipe
+- `scenes/loupe/`: Lens showroom reel: a loupe reads code ranges (glide, capsule scan, floating focus), then follows a Stage card's changing status through a dolly
 
 ## Scene Programs And Rendering Compile Separately
 
@@ -540,6 +544,45 @@ moving callouts ink (`HeadlessRenderer::callout_bounds`, `exposure::accumulate_r
 still callouts outside them draw once, and every other pixel takes the same
 weighted average through a per-value table, so the exposure is bit-identical.
 Sequence Diagram anchors are not implemented.
+
+### Lenses
+
+A `lens` overlay is thick glass over the composed frame. The lightweight
+`lens.rs` owns the payload and the sampled `Glass`: a `math::shapes::RoundedBox`
+outline (circle, capsule, or rounded box), a superellipse rim whose surface
+slope (`math::optics::superellipse_slope`) refracts a vertical ray by Snell's law
+(`math::optics::refraction_offset`) toward the center over a page `depth` below,
+and an even magnification about a focus point on the flat top. `Glass::source`
+maps a canvas point to the page point it shows; the bend is zero on the flat
+top, so the middle is undistorted and only the rim splits color. Presence
+condenses the glass: size, rim depth, and magnification grow together. None of
+this needs a GPU, and the optics are tested directly.
+
+The lens is a pass over the composed frame, not a root feature, so one
+implementation serves every root. `render_overlays` applies each visible lens
+after callouts and before plain text and Tasks: `render/lens.rs` copies the
+page under the source bounds into linear light (plus a two-pixel softened copy
+from running box sums), then shades each pixel inside `Glass::bounds` in row
+bands on scoped threads. The flat top samples with a Keys cubic that sharpens
+from Catmull-Rom toward `a = -0.75` as magnification rises, clamped to the four
+nearest texels so enlarged strokes neither ring nor halo; the rim softens where
+it compresses the page so moving text does not crawl. Light is additive in
+linear light: a fresnel sheen of a sky brighter above, a crisp specular line
+with a soft glow where the rim faces the upper-left light, a fainter line and
+inner glow opposite, and an edge hairline; a drop shadow and contact darkening
+fall outside the outline. Pixels outside the bounds are untouched, so plans
+without a lens keep identical pixels.
+
+Each temporal sample refracts its own frame. On CPU roots the lens is part of
+`render_sample`; over a Stage it refracts the developed exposure (a motion-
+blurred base, like every overlay there) at each overlay sample. A Stage lens's
+resolved anchor joins the overlay key, so a lens riding a card through a dolly
+re-composites per shutter sample even while its own channels rest, and any
+visible lens takes the whole-sample composite rather than the callout-region
+shortcut, because it reads pixels beyond its own ink. Anchors resolve through
+`callout::resolve` (and `LensAnchorPlan` is the callout anchor type), so moving
+to a shared anchor Module is a rename. Stage grain is developed before overlays,
+so a lens enlarges it with the page.
 
 ### Stage
 

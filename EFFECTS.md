@@ -13,6 +13,8 @@ they happen; effect Modules own their physical pose and optical response.
 | `psychopomp::effects::combustion` | `shock_arrival(distance)` | When the burst's pressure front reaches a distance, mirroring `pressure.wgsl` |
 | `psychopomp::effects::spinner` | `sample(age, release, mark, shape)`, `handoff(after)` | The blog's radial spinner: closed-form critically damped motor, speed-driven wake, and a mark route drawn from a top-right handoff |
 | `psychopomp::math::dynamics` | `ballistic(velocity, acceleration, drag, seconds)` | Closed-form reusable particle displacement |
+| `psychopomp::math::optics` | `refraction_offset(slope, ior)`, `superellipse_slope(t, power)` | Snell's sideways bend under a tilted glass surface; the slope of a rounded rim from vertical to flat |
+| `psychopomp::lens` | `Glass::source(point, spread)`, `bend(t)`, `bounds()` | A loupe's page mapping: even magnification on the flat top, inward rim refraction, per-color spread |
 | `render/effects/noise.wgsl` | `fx_hash2(p)`, `fx_noise3(p)`, `fx_fbm3(p)` | Deterministic 3D noise; caller-owned coordinate transforms |
 | `render/effects/combustion.wgsl` | `combustion_volume(pixel, radius, age)` | Domain-warped fire/smoke, emission and absorption; requires noise |
 | `render/effects/pressure.wgsl` | `pressure_wave(delta, scale, age)` | Inward pinch and outward refraction; returns displacement and ring intensity |
@@ -22,6 +24,17 @@ The WGSL Modules have no bindings, texture ownership, entry points, or Stage
 identifiers. Concatenate dependencies before the consuming shader. The Stage is
 one Adapter: it supplies projected coordinates, draws particles, and applies the
 pressure displacement to its HDR scene and bloom textures.
+
+The Lens is the first optic over any root rather than the Stage: a CPU pass
+over the composed frame, in linear light, in `render/lens.rs`. Its rim follows
+a superellipse of power 3, so the flat top meets it without a crease and the
+bend concentrates near the edge (reaching 1.118 page depths at a vertical face
+in crown glass). Restraint is the tuning rule: the middle is a pure even
+enlargement (Keys cubic, sharpening with magnification and clamped against
+halos), dispersion is 4% of the rim bend and vanishes on the flat top, and
+light is a hairline, not a glow. On dark pages the glass reads through its
+specular line, sheen, and what crosses the rim; tune against moving text, since
+the rim's compression is what crawls if it is under-softened.
 
 Surface responses start at physical contact. The Stage finds a packet path's
 first intersection with the visible orb (`Circle::entry_fraction`), derives the
