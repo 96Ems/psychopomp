@@ -15,14 +15,15 @@ use psychopomp::{
     math::{Vec2, Vec3, easing::Ease, vec2},
     narration::Narration,
     plan::{ScenePlan, SpringPlan, destination_channel},
+    sfx,
     stage::{Camera, DRAW_CURVE, StageActor, StageElement, StagePlan, StagePost},
     tone::Tone,
 };
 
 use crate::{
-    FAILURE, MARK, RESOLUTION, REWIND, SEND, SHUFFLE, ZOOM, chip,
+    RESOLUTION, REWIND, SHUFFLE, ZOOM, chip,
     diff::{Diff, fresh, keep},
-    footer, header, sound, span,
+    footer, header, span,
 };
 
 const SLOTS: [f32; 3] = [420.0, 530.0, 640.0];
@@ -221,12 +222,12 @@ fn shuffle(s: &mut StageActor, sc: &mut PlanBuilder, at: u64, into_schema_order:
             );
         }
     }
-    sc.media(sound(
+    SHUFFLE.play(
+        sc,
         &format!("shuffle-{}", if into_schema_order { "in" } else { "back" }),
-        SHUFFLE,
         at,
         -15.0,
-    ));
+    );
     let landed = at + seconds(1.0);
     for index in 0..RULES.len() {
         s.twang(sc, &format!("wire-{index}"), landed);
@@ -338,7 +339,7 @@ pub fn build(narration: &Narration) -> Result<(ScenePlan, ScenePlan, [f32; 4])> 
             0.5,
             0.0,
         );
-        sc.media(sound(&format!("key-{index}"), SEND, at, -21.0));
+        sfx::SEND.play(sc, &format!("key-{index}"), at, -21.0);
     }
 
     // Both probes rise from the bottom and match `*` first: silently allowed.
@@ -378,7 +379,7 @@ pub fn build(narration: &Narration) -> Result<(ScenePlan, ScenePlan, [f32; 4])> 
         s.hit(sc, &format!("probe-{name}.alarm"), contact, 1.0, 0.5);
         s.hit(sc, "post.chroma", contact, 0.06, 0.0);
         s.type_in(sc, &format!("verdict-{name}-before"), contact, 40.0);
-        sc.media(sound(&format!("miss-{name}"), FAILURE, contact, -13.0));
+        sfx::FAILURE.play(sc, &format!("miss-{name}"), contact, -13.0);
     }
     let mut footer_before = footer(
         sc,
@@ -396,12 +397,7 @@ pub fn build(narration: &Narration) -> Result<(ScenePlan, ScenePlan, [f32; 4])> 
     s.set(sc, "post.rewind", switch, 0.0);
     s.ease(sc, "post.rewind", switch, 1.4, 1.4, Ease::Linear);
     s.hit(sc, "post.chroma", switch, 0.1, 0.0);
-    sc.media(sound(
-        "rewind",
-        REWIND,
-        switch.saturating_sub(seconds(0.05)),
-        -13.0,
-    ));
+    REWIND.play(sc, "rewind", switch.saturating_sub(seconds(0.05)), -13.0);
     before_chip.hide(sc, switch);
     footer_before.hide(sc, switch);
     let mut rewind_chip = chip(sc, "chip-rewind", Tone::Accent, "◀◀ rewind")?;
@@ -489,7 +485,7 @@ pub fn build(narration: &Narration) -> Result<(ScenePlan, ScenePlan, [f32; 4])> 
     s.hit(sc, "rule-shell.glow", contact, 0.6, 0.15);
     s.hit(sc, "probe-shell.flash", contact, 0.5, 0.0);
     s.type_in(sc, "verdict-shell-after", contact, 40.0);
-    sc.media(sound("match-shell", MARK, contact, -17.0));
+    sfx::MARK.play(sc, "match-shell", contact, -17.0);
 
     // Edit: the bottom card is `edit deny` again.
     let edits = a("edits are");
@@ -500,7 +496,7 @@ pub fn build(narration: &Narration) -> Result<(ScenePlan, ScenePlan, [f32; 4])> 
     s.hit(sc, "rule-edit.glow", contact, 0.6, 0.15);
     s.hit(sc, "probe-edit.flash", contact, 0.5, 0.0);
     s.type_in(sc, "verdict-edit-after", contact, 40.0);
-    sc.media(sound("match-edit", RESOLUTION, contact, -16.0));
+    RESOLUTION.play(sc, "match-edit", contact, -16.0);
 
     // Settle on the fix; the reel's zoom flies into its code.
     for (axis, value) in ["camera.x", "camera.y", "camera.z"]

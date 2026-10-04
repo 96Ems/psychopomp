@@ -4,13 +4,12 @@ use anyhow::{Context, Result};
 use psychopomp::{
     author::PlanTime,
     plan::ScenePlan,
+    sfx,
     stage::{StageElement, StagePlan, StagePost, reply_after},
     tone::Tone,
 };
 
-use crate::{
-    BLOOM, Film, Narration, arrive, begin, footer, header, orb_in, plug, seconds, send, show, sound,
-};
+use crate::{Film, Narration, arrive, begin, footer, header, orb_in, plug, seconds, send, show};
 
 const Y: f32 = 500.0;
 
@@ -102,7 +101,7 @@ pub fn film(narration: &Narration) -> Result<ScenePlan> {
         at = send(s, sc, packet, reply_after(at), 0.5);
     }
     s.hit(sc, "slack.flash", at, 0.7, 0.0);
-    sc.media(sound("answered", BLOOM, at, -13.0));
+    sfx::BLOOM.play(sc, "answered", at, -13.0);
     footer(
         sc,
         "footer",

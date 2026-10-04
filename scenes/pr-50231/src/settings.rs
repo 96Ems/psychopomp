@@ -10,11 +10,12 @@ use psychopomp::{
     math::easing::Ease,
     narration::Narration,
     plan::ScenePlan,
+    sfx,
     stage::{DRAW_CURVE, StageActor, StageElement, StagePlan, StagePost},
     tone::Tone,
 };
 
-use crate::{DROP, FAILURE, GLITCH, SEND, TICK, chip, footer, header, sound, span};
+use crate::{DROP, chip, footer, header, span};
 
 const SAVED_X: f32 = 380.0;
 const APP_X: f32 = 1540.0;
@@ -143,7 +144,7 @@ fn travel(s: &mut StageActor, sc: &mut PlanBuilder, field: &str, at: u64, to: f3
 fn cross(s: &mut StageActor, sc: &mut PlanBuilder, at: u64, id: &str) {
     let crossing = at + seconds(0.5);
     s.hit(sc, "gate-top.surge", crossing, 0.35, 0.0);
-    sc.media(sound(id, TICK, crossing, -26.0));
+    sfx::TICK.play(sc, id, crossing, -26.0);
 }
 
 pub fn build(narration: &Narration) -> Result<ScenePlan> {
@@ -209,7 +210,7 @@ pub fn build(narration: &Narration) -> Result<ScenePlan> {
         0.12,
         Ease::Smootherstep,
     );
-    sc.media(sound("preserve-red", GLITCH, drops, -24.0));
+    sfx::GLITCH.play(sc, "preserve-red", drops, -24.0);
     let gone = drops + seconds(0.5);
     s.ease(sc, "code-preserve-red.y", gone, 22.0, 0.45, FALL);
     s.ease(
@@ -227,7 +228,7 @@ pub fn build(narration: &Narration) -> Result<ScenePlan> {
     let theme_in = travel(s, sc, "theme", read, ACROSS);
     cross(s, sc, read, "theme-cross");
     s.hit(sc, "theme.flash", theme_in, 0.45, 0.0);
-    sc.media(sound("theme-send", SEND, read, -18.0));
+    sfx::SEND.play(sc, "theme-send", read, -18.0);
     let launch = w("unknown setting").saturating_sub(seconds(0.25));
     s.ease(
         sc,
@@ -251,7 +252,7 @@ pub fn build(narration: &Narration) -> Result<ScenePlan> {
         );
     }
     s.jolt(sc, strike, [1.0, 0.0], 0.22);
-    sc.media(sound("strike", FAILURE, strike, -14.0));
+    sfx::FAILURE.play(sc, "strike", strike, -14.0);
     let vanish = w("vanish");
     s.ease(sc, "flag.y", vanish, 320.0, 0.75, FALL);
     s.ease(
@@ -262,7 +263,7 @@ pub fn build(narration: &Narration) -> Result<ScenePlan> {
         0.6,
         Ease::Smootherstep,
     );
-    sc.media(sound("drop", DROP, vanish, -15.0));
+    DROP.play(sc, "drop", vanish, -15.0);
 
     // The next save writes back only what survived.
     let save = w("on the next save");
@@ -271,7 +272,7 @@ pub fn build(narration: &Narration) -> Result<ScenePlan> {
     s.hit(sc, "theme.flash", save + seconds(1.0), 0.4, 0.0);
     let empty = save + seconds(0.75);
     s.to(sc, "flag-slot.ghost", empty, 0.7, 0.3);
-    sc.media(sound("empty-slot", GLITCH, empty, -22.0));
+    sfx::GLITCH.play(sc, "empty-slot", empty, -22.0);
     let mut footer_before = footer(
         sc,
         "footer-before",
@@ -307,7 +308,7 @@ pub fn build(narration: &Narration) -> Result<ScenePlan> {
     }
     s.ease(sc, "flag.opacity", switch, 1.0, 0.3, Ease::Smootherstep);
     s.hit(sc, "flag.flash", switch + seconds(0.75), 0.35, 0.0);
-    sc.media(sound("flag-return", TICK, switch + seconds(0.75), -24.0));
+    sfx::TICK.play(sc, "flag-return", switch + seconds(0.75), -24.0);
     s.to(sc, "camera.y", switch + seconds(0.1), -200.0, 1.2);
     s.to(sc, "camera.z", switch + seconds(0.1), 260.0, 1.2);
     s.type_in(sc, "code-legacy", w("legacy shape"), 72.0);
@@ -326,7 +327,7 @@ pub fn build(narration: &Narration) -> Result<ScenePlan> {
     s.ease(sc, "gate-bottom.draw", gap, 0.0, 0.45, DRAW_CURVE);
     s.to(sc, "gate-end.opacity", gap + seconds(0.3), 0.0, 0.3);
     s.hit(sc, "gate-mid.scale", gap + seconds(0.45), 1.6, 1.0);
-    sc.media(sound("gate-open", TICK, gap + seconds(0.45), -22.0));
+    sfx::TICK.play(sc, "gate-open", gap + seconds(0.45), -22.0);
 
     // The known fields, plus a catch-all record: both cross.
     let known = w("the known fields");
@@ -341,7 +342,7 @@ pub fn build(narration: &Narration) -> Result<ScenePlan> {
     s.hit(sc, "gate-mid.scale", rest + seconds(0.5), 1.8, 1.0);
     s.hit(sc, "flag.glow", flag_in, 0.8, 0.0);
     s.hit(sc, "flag.flash", flag_in, 0.5, 0.0);
-    sc.media(sound("flag-pass", SEND, rest, -18.0));
+    sfx::SEND.play(sc, "flag-pass", rest, -18.0);
 
     // Saved again: both come home to exactly their slots.
     let back = w("come back").saturating_sub(seconds(0.3));
@@ -349,7 +350,7 @@ pub fn build(narration: &Narration) -> Result<ScenePlan> {
         let at = back + seconds(0.12 * index as f64);
         let home = travel(s, sc, field, at, 0.0);
         s.hit(sc, &format!("{field}.flash"), home, 0.55, 0.0);
-        sc.media(sound(&format!("{field}-home"), TICK, home, -22.0));
+        sfx::TICK.play(sc, &format!("{field}-home"), home, -22.0);
     }
     cross(s, sc, back, "theme-back");
     let mut footer_after = footer(

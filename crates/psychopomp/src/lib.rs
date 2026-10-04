@@ -18,6 +18,7 @@ pub mod playback;
 pub mod plot;
 pub mod rolling;
 pub mod sequence;
+pub mod sfx;
 pub mod stage;
 pub mod state;
 pub mod task;

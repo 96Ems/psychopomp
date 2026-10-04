@@ -31,6 +31,7 @@ Lightweight crate (`crates/psychopomp/src`):
 - `crates/psychopomp/src/motion.rs`: deterministic arbitrary-time analytic spring sampling with position and velocity
 - `crates/psychopomp/src/transcript.rs`: word timing ingestion, word and phrase cue lookup
 - `crates/psychopomp/src/narration.rs`: `scripts/narrate.ts` manifests loaded as narration clips, scheduled back to back (`Narration::reading`), placed whole or as split ranges (`place_range`, `split`) as Script Clips, with panicking phrase lookups
+- `crates/psychopomp/src/sfx.rs`: the `assets/` sound-effect catalog with exact lengths, placed whole as Layer Clips (`Sfx::play`)
 - `crates/psychopomp/src/tone.rs`: semantic Tone roles shared by explainer recipes
 - `crates/psychopomp/src/sequence.rs`: Sequence Diagram recipe values and row constructors, slot geometry, validation, and the `SequenceActor` authoring handle
 - `crates/psychopomp/src/caption.rs`: Caption recipe values and the `CaptionActor` authoring handle (typing, show, hide)

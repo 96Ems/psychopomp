@@ -7,11 +7,12 @@ use psychopomp::{
     author::{PlanBuilder, seconds},
     narration::Narration,
     plan::ScenePlan,
+    sfx,
     stage::{StageActor, StageElement, StagePlan, StagePost},
     tone::Tone,
 };
 
-use crate::{FAILURE, MARK, SEND, TICK, chip, footer, header, sound, span};
+use crate::{chip, footer, header, span};
 
 const ROWS: [f32; 3] = [340.0, 500.0, 660.0];
 const SOURCE_X: f32 = 560.0;
@@ -194,7 +195,7 @@ pub fn build(narration: &Narration) -> Result<ScenePlan> {
             0.0,
             0.45,
         );
-        sc.media(sound(&format!("lane-{index}"), TICK, contact, -26.0));
+        sfx::TICK.play(sc, &format!("lane-{index}"), contact, -26.0);
     }
 
     // Each shape arrives and its reader rejects it.
@@ -209,18 +210,13 @@ pub fn build(narration: &Narration) -> Result<ScenePlan> {
         let result = format!("result-{index}");
         let arrival = s.send(sc, &format!("broken-{index}"), at, 0.6);
         s.to(sc, &format!("{result}.status"), arrival, 1.0, 0.3);
-        sc.media(sound(&format!("broken-send-{index}"), SEND, at, -20.0));
+        sfx::SEND.play(sc, &format!("broken-send-{index}"), at, -20.0);
         if red {
             s.hit(sc, &format!("{result}.alarm"), arrival, 0.9, 0.45);
-            sc.media(sound(
-                &format!("broken-land-{index}"),
-                FAILURE,
-                arrival,
-                -16.0,
-            ));
+            sfx::FAILURE.play(sc, &format!("broken-land-{index}"), arrival, -16.0);
         } else {
             s.hit(sc, &format!("{result}.flash"), arrival, 0.4, 0.0);
-            sc.media(sound(&format!("broken-land-{index}"), TICK, arrival, -20.0));
+            sfx::TICK.play(sc, &format!("broken-land-{index}"), arrival, -20.0);
         }
     }
     let mut footer_before = footer(
@@ -264,13 +260,13 @@ pub fn build(narration: &Narration) -> Result<ScenePlan> {
         s.to(sc, &format!("{result}.status"), arrival, 2.0, 0.3);
         s.hit(sc, &format!("{result}.flash"), arrival, 0.55, 0.0);
         s.hit(sc, &format!("{result}.glow"), arrival, 0.5, 0.0);
-        sc.media(sound(
+        sfx::SEND.play(
+            sc,
             &format!("fixed-send-{index}"),
-            SEND,
             land.saturating_sub(seconds(0.55)),
             -20.0,
-        ));
-        sc.media(sound(&format!("fixed-land-{index}"), MARK, arrival, -20.0));
+        );
+        sfx::MARK.play(sc, &format!("fixed-land-{index}"), arrival, -20.0);
     }
     s.type_in(sc, "literals", a("keep strings"), 70.0);
 
@@ -287,7 +283,7 @@ pub fn build(narration: &Narration) -> Result<ScenePlan> {
             0.0,
             0.45,
         );
-        sc.media(sound(&format!("receive-{index}"), TICK, contact, -24.0));
+        sfx::TICK.play(sc, &format!("receive-{index}"), contact, -24.0);
     }
     let mut footer_after = footer(
         sc,

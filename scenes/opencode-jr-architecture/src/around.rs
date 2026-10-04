@@ -6,13 +6,13 @@ use psychopomp::{
     caption::CaptionAlign,
     math::easing::Ease,
     plan::ScenePlan,
+    sfx,
     stage::{StageElement, StagePlan, StagePost},
     tone::Tone,
 };
 
 use crate::{
-    BLOOM, CONFIRM, Film, MARK, Narration, SUCCESS, begin, chip, footer, header, orb_in, plug,
-    seconds, send, show, sound, status,
+    Film, Narration, begin, chip, footer, header, orb_in, plug, seconds, send, show, status,
 };
 
 const SESSION: [f32; 3] = [960.0, 470.0, 0.0];
@@ -154,11 +154,11 @@ pub fn film(narration: &Narration) -> Result<ScenePlan> {
     // Approve: the claim commits first, so a second click finds it taken.
     let click = v.at("clicks approve");
     s.hit(sc, "approval.flash", click, 0.8, 0.0);
-    sc.media(sound("click", CONFIRM, click, -12.0));
+    sfx::CONFIRM.play(sc, "click", click, -12.0);
     let claim = v.at("commits first");
     status(s, sc, "approval", claim, 1);
     s.type_in(sc, "claim", claim, 44.0);
-    sc.media(sound("claim", MARK, claim, -18.0));
+    sfx::MARK.play(sc, "claim", claim, -18.0);
     let mut claim_footer = footer(
         sc,
         "footer-claim",
@@ -171,7 +171,7 @@ pub fn film(narration: &Narration) -> Result<ScenePlan> {
     )?;
     let double = v.at("double click");
     s.hit(sc, "approval.flash", double, 0.35, 0.0);
-    sc.media(sound("click-again", CONFIRM, double, -18.0));
+    sfx::CONFIRM.play(sc, "click-again", double, -18.0);
     s.type_in(sc, "already", double + seconds(0.2), 44.0);
     let wakes = v.at("wakes the model");
     let returned = send(s, sc, "result", wakes - seconds(0.2), 0.8);
@@ -179,7 +179,7 @@ pub fn film(narration: &Narration) -> Result<ScenePlan> {
     status(s, sc, "approval", returned - seconds(0.8), 2);
     s.to(sc, "session.opacity", returned, 1.0, 0.4);
     s.hit(sc, "session.pulse", returned, 0.75, 0.0);
-    sc.media(sound("woke", SUCCESS, returned, -13.0));
+    sfx::SUCCESS.play(sc, "woke", returned, -13.0);
 
     // The scheduler fires an ordinary new session; catch-up fires once.
     let scheduler = v.at("scheduler object");
@@ -218,7 +218,7 @@ pub fn film(narration: &Narration) -> Result<ScenePlan> {
     orb_in(s, sc, "fresh", fired - seconds(0.1));
     s.hit(sc, "fresh.pulse", fired + seconds(0.3), 0.6, 0.0);
     s.type_in(sc, "fresh-name", fired + seconds(0.2), 44.0);
-    sc.media(sound("fired", BLOOM, fired, -16.0));
+    sfx::BLOOM.play(sc, "fired", fired, -16.0);
     let once = v.at("fires once");
     status(s, sc, "scheduler", once, 2);
     s.type_in(

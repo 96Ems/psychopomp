@@ -5,7 +5,7 @@
 //! glides from `service.json` to the lingering server orb, a RollingNumber
 //! grace-period timer (`0.0 s` → `5.0 s` → `10.0 s`), and a Zoom transition
 //! into the Stepped Diff with an Editor Callout pinned to `SIGKILL`.
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use anyhow::{Context, Result};
 use psychopomp::{
@@ -24,11 +24,9 @@ use psychopomp::{
     highlight,
     math::{Vec2, Vec3, easing::Ease, vec2},
     narration::Narration,
-    plan::{
-        MediaKindPlan, MediaPlan, MediaRolePlan, ReelPlan, ReelSegmentPlan, ReelTransitionStyle,
-        ScenePlan,
-    },
+    plan::{ReelPlan, ReelSegmentPlan, ReelTransitionStyle, ScenePlan},
     rolling::{RollingNumberActor, RollingNumberPlan},
+    sfx,
     stage::{Camera, StageActor, StageElement, StagePlan, StagePost},
     tone::Tone,
 };
@@ -46,33 +44,6 @@ const REG_SIZE: [f32; 2] = [270.0, 96.0];
 const NEW_SERVICE: [f32; 3] = [1530.0, 540.0, -40.0];
 const NEW_SIZE: [f32; 2] = [320.0, 122.0];
 const CLOSING_CAMERA: [f32; 3] = [-130.0, 15.0, 60.0];
-
-struct Sfx(&'static str, f64);
-
-const TASK_RUNNING: Sfx = Sfx("visual-effects/task-running.wav", 0.13);
-const SAVE: Sfx = Sfx("opencode-hot-reload/save.wav", 0.15);
-const TASK_FAILURE: Sfx = Sfx("visual-effects/task-failure.wav", 0.47);
-const LAUNCH: Sfx = Sfx("opencode-hot-reload/launch.wav", 1.36);
-const IMPACT: Sfx = Sfx("opencode-hot-reload/impact.wav", 0.51);
-const TASK_DEATH: Sfx = Sfx("visual-effects/task-death.wav", 1.09);
-const GLITCH: Sfx = Sfx("pr-walkthrough/glitch.wav", 0.2);
-const MARK: Sfx = Sfx("pr-walkthrough/mark.wav", 0.3);
-const PRISMATIC_BLOOM: Sfx = Sfx("effect-shows-errors/prismatic-bloom.wav", 0.785);
-
-fn sound(id: &str, Sfx(file, length): Sfx, at: u64, gain_db: f32) -> MediaPlan {
-    let length = seconds(length);
-    MediaPlan {
-        id: id.to_owned(),
-        path: PathBuf::from(format!("../../assets/{file}")),
-        kind: MediaKindPlan::Audio,
-        role: MediaRolePlan::Layer,
-        source_start_nanos: 0,
-        source_end_nanos: length,
-        timeline_start_nanos: at,
-        timeline_end_nanos: at + length,
-        gain_db,
-    }
-}
 
 pub fn build_stop_reel(narration_dir: &Path) -> Result<ReelPlan> {
     let narration = Narration::load(narration_dir)?;
@@ -268,7 +239,7 @@ fn stage_film(narration: &Narration) -> Result<ScenePlan> {
 
     let client_land = s.settle_in(sc, "client", seconds(0.45));
     let client_conn = s.connect(sc, "stop-link", client_land + seconds(0.12), 0.5);
-    sc.media(sound("connect-0", TASK_RUNNING, client_conn, -20.0));
+    sfx::TICK.play(sc, "connect-0", client_conn, -20.0);
 
     header(sc, pr, Some(seconds(0.3)))?;
     let mut before_chip = chip(sc, "chip-before", Tone::Muted, "before")?;
@@ -328,8 +299,8 @@ fn stage_film(narration: &Narration) -> Result<ScenePlan> {
 
     let sigterm_at = before.at_any(&["sigterm", "sig term"]);
     let sigterm_hit = s.send(sc, "sigterm", sigterm_at, 0.58);
-    sc.media(sound("sigterm-send", SAVE, sigterm_at, -9.0));
-    sc.media(sound("sigterm-hit", IMPACT, sigterm_hit, -11.0));
+    sfx::SEND.play(sc, "sigterm-send", sigterm_at, -9.0);
+    sfx::IMPACT.play(sc, "sigterm-hit", sigterm_hit, -11.0);
 
     let blow = Vec3::from(OLD_SERVICE) - Vec3::from(CLIENT);
     s.jolt(sc, sigterm_hit, [blow.x * 0.45, blow.y * 0.45], 0.55);
@@ -378,15 +349,15 @@ fn stage_film(narration: &Narration) -> Result<ScenePlan> {
     let collide = b("collide with it");
     let bind_1_send = collide.saturating_sub(seconds(0.85));
     let bind_1_hit = s.send(sc, "bind-1", bind_1_send, 0.42);
-    sc.media(sound("bind-1", SAVE, bind_1_send, -10.0));
+    sfx::SEND.play(sc, "bind-1", bind_1_send, -10.0);
     s.hit(sc, "old.pulse", bind_1_hit, 0.65, 0.0);
 
     let clash_hit = s.send(sc, "clash", bind_1_hit + seconds(0.36), 0.42);
-    sc.media(sound("clash-hit", TASK_FAILURE, clash_hit, -8.0));
+    sfx::FAILURE.play(sc, "clash-hit", clash_hit, -8.0);
     s.hit(sc, "new.alarm", clash_hit, 0.28, 0.0);
     s.set(sc, "new.damage", clash_hit, 1.0);
     glitch(s, sc, "new", clash_hit, [7.0, 9.0, 8.0]);
-    sc.media(sound("clash-glitch", GLITCH, clash_hit, -18.0));
+    sfx::GLITCH.play(sc, "clash-glitch", clash_hit, -18.0);
     s.to(sc, "new.status", clash_hit, 1.0, 0.2);
     s.clock(sc, "new.release", clash_hit);
     s.to(sc, "bind-link.break", clash_hit + seconds(0.08), 1.0, 0.55);
@@ -413,7 +384,7 @@ fn stage_film(narration: &Narration) -> Result<ScenePlan> {
     rewind_chip.hide(sc, switch + seconds(1.4));
     let mut after_chip = chip(sc, "chip-after", Tone::Success, "after the fix")?;
     after_chip.show(sc, switch + seconds(1.55));
-    sc.media(sound("rewind", LAUNCH, switch - seconds(0.08), -13.0));
+    sfx::LAUNCH.play(sc, "rewind", switch - seconds(0.08), -13.0);
 
     s.hit(sc, "post.chroma", switch, 0.12, 0.0);
     s.to(sc, "camera.x", switch, -35.0, 1.4);
@@ -448,19 +419,9 @@ fn stage_film(narration: &Narration) -> Result<ScenePlan> {
     let sigkill_send = sigkill_at.saturating_sub(seconds(0.35));
     s.to(sc, "client.status", sigkill_send, 3.0, 0.25);
     let sigkill_hit = s.send(sc, "sigkill", sigkill_send, 0.52);
-    sc.media(sound(
-        "sigkill-launch",
-        LAUNCH,
-        sigkill_send - seconds(0.3),
-        -15.0,
-    ));
-    sc.media(sound("sigkill-impact", IMPACT, sigkill_hit, -5.0));
-    sc.media(sound(
-        "sigkill-shatter",
-        TASK_DEATH,
-        sigkill_hit + seconds(0.05),
-        -7.0,
-    ));
+    sfx::LAUNCH.play(sc, "sigkill-launch", sigkill_send - seconds(0.3), -15.0);
+    sfx::IMPACT.play(sc, "sigkill-impact", sigkill_hit, -5.0);
+    sfx::DEATH.play(sc, "sigkill-shatter", sigkill_hit + seconds(0.05), -7.0);
 
     // The lingering orb compresses and combusts on SIGKILL
     s.clock_for(sc, "old.burst", sigkill_hit, combustion::DURATION);
@@ -514,25 +475,20 @@ fn stage_film(narration: &Narration) -> Result<ScenePlan> {
 
     let bind_2_send = a("clear error");
     let bind_2_hit = s.send(sc, "bind-2", bind_2_send, 0.48);
-    sc.media(sound("bind-2", SAVE, bind_2_send, -9.0));
+    sfx::SEND.play(sc, "bind-2", bind_2_send, -9.0);
     s.hit(sc, "new.flash", bind_2_hit, 0.35, 0.0);
     s.to(sc, "new.status", bind_2_hit, 3.0, 0.3);
     s.to(sc, "new.glow", bind_2_hit, 0.55, 0.5);
     let new_waited = bind_2_hit.saturating_sub(new_spin) as f32 / 1e9;
     let new_handoff = new_spin + seconds(f64::from(spinner::handoff(new_waited)));
     s.clock(sc, "new.mark", new_handoff);
-    sc.media(sound(
+    sfx::MARK.play(
+        sc,
         "new-mark",
-        MARK,
         new_handoff + seconds(f64::from(spinner::DRAW)),
         -18.0,
-    ));
-    sc.media(sound(
-        "clean-restart",
-        PRISMATIC_BLOOM,
-        bind_2_hit + seconds(0.1),
-        -10.0,
-    ));
+    );
+    sfx::BLOOM.play(sc, "clean-restart", bind_2_hit + seconds(0.1), -10.0);
 
     // Roll timer to 10.0 s on "10 seconds"
     timer.roll(sc, after.at_any(&["10 seconds", "ten seconds"]), "10.0")?;

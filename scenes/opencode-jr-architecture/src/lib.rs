@@ -15,17 +15,15 @@ mod resets;
 mod session;
 mod workspace;
 
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use anyhow::Result;
 use psychopomp::{
     author::{PlanBuilder, seconds},
     caption::{CaptionActor, CaptionAlign, CaptionPlan, CaptionSpanPlan},
     narration::{Narration, Spoken},
-    plan::{
-        MediaKindPlan, MediaPlan, MediaRolePlan, ReelPlan, ReelSegmentPlan, ReelTransitionStyle,
-        ScenePlan,
-    },
+    plan::{ReelPlan, ReelSegmentPlan, ReelTransitionStyle, ScenePlan},
+    sfx,
     stage::{StageActor, StagePlan},
     tone::Tone,
 };
@@ -219,44 +217,14 @@ fn plug(s: &mut StageActor, sc: &mut PlanBuilder, wire: &str, at: u64) -> u64 {
         0.0,
         0.45,
     );
-    sc.media(sound(&format!("plug-{wire}"), TICK, contact, -22.0));
+    sfx::TICK.play(sc, &format!("plug-{wire}"), contact, -22.0);
     contact
 }
 
 /// Send `packet` with its quiet launch sound; returns its arrival time.
 fn send(s: &mut StageActor, sc: &mut PlanBuilder, packet: &str, at: u64, seconds: f32) -> u64 {
-    sc.media(sound(&format!("send-{packet}"), SEND, at, -14.0));
+    sfx::SEND.play(sc, &format!("send-{packet}"), at, -14.0);
     s.send(sc, packet, at, seconds)
-}
-
-/// Sound assets under `assets/` and their lengths in seconds.
-struct Sfx(&'static str, f64);
-
-const TICK: Sfx = Sfx("visual-effects/task-running.wav", 0.13);
-const SEND: Sfx = Sfx("opencode-hot-reload/save.wav", 0.15);
-const SUCCESS: Sfx = Sfx("visual-effects/task-success.wav", 0.41);
-const LAUNCH: Sfx = Sfx("opencode-hot-reload/launch.wav", 1.36);
-const IMPACT: Sfx = Sfx("opencode-hot-reload/impact.wav", 0.51);
-const DEATH: Sfx = Sfx("visual-effects/task-death.wav", 1.09);
-const GLITCH: Sfx = Sfx("pr-walkthrough/glitch.wav", 0.2);
-const MARK: Sfx = Sfx("pr-walkthrough/mark.wav", 0.3);
-const RESET: Sfx = Sfx("visual-effects/task-reset.wav", 0.33);
-const BLOOM: Sfx = Sfx("effect-shows-errors/prismatic-bloom.wav", 0.785);
-const CONFIRM: Sfx = Sfx("opencode-hot-reload/confirm.wav", 0.33);
-
-fn sound(id: &str, Sfx(file, length): Sfx, at: u64, gain_db: f32) -> MediaPlan {
-    let length = seconds(length);
-    MediaPlan {
-        id: id.to_owned(),
-        path: PathBuf::from(format!("../../assets/{file}")),
-        kind: MediaKindPlan::Audio,
-        role: MediaRolePlan::Layer,
-        source_start_nanos: 0,
-        source_end_nanos: length,
-        timeline_start_nanos: at,
-        timeline_end_nanos: at + length,
-        gain_db,
-    }
 }
 
 #[cfg(test)]

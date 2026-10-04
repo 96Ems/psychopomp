@@ -7,13 +7,13 @@ use psychopomp::{
     caption::CaptionAlign,
     math::easing::Ease,
     plan::ScenePlan,
+    sfx,
     stage::{StageElement, StagePlan, StagePost, reply_after},
     tone::Tone,
 };
 
 use crate::{
-    BLOOM, Film, MARK, Narration, arrive, begin, chip, footer, header, orb_in, plug, seconds, send,
-    show, sound, status,
+    Film, Narration, arrive, begin, chip, footer, header, orb_in, plug, seconds, send, show, status,
 };
 
 const MAILBOX: [f32; 3] = [330.0, 510.0, 0.0];
@@ -182,7 +182,7 @@ pub fn film(narration: &Narration) -> Result<ScenePlan> {
     );
     s.type_in(sc, "alarm-name", alarm, 40.0);
     s.hit(sc, "mailbox.flash", alarm + seconds(0.5), 0.6, 0.0);
-    sc.media(sound("alarm", MARK, alarm + seconds(0.4), -18.0));
+    sfx::MARK.play(sc, "alarm", alarm + seconds(0.4), -18.0);
     let decides = v.at("admission decides");
     s.hit(sc, "admission.flash", decides, 0.5, 0.0);
     let mut decides_footer = footer(
@@ -268,7 +268,7 @@ pub fn film(narration: &Narration) -> Result<ScenePlan> {
     );
     s.hit(sc, "runtime.pulse", retried, 0.2, 0.0);
     s.type_in(sc, "once", retried, 40.0);
-    sc.media(sound("once", BLOOM, retried, -15.0));
+    sfx::BLOOM.play(sc, "once", retried, -15.0);
     footer(
         sc,
         "footer-once",

@@ -812,6 +812,12 @@ s.connect_contacting(sc, "link", before.at("plugs in"), 0.4); // port pop + draw
 s.spring(sc, "camera.x", at, -110.0, SpringPlan::CAMERA);
 ```
 
+- Sound effects come from `psychopomp::sfx` (`TICK`, `SEND`, `FAILURE`,
+  `LAUNCH`, `IMPACT`, `DEATH`, `GLITCH`, `MARK`, `BLOOM`, `SEVER`, `RESET`,
+  `SUCCESS`, `CONFIRM`, `RISER`, `BOOM`, `WHOOSH`, `SPARKLE`) with exact lengths:
+  `sfx::IMPACT.play(sc, "kill-impact", arrival, -5.0)`. Their paths assume the
+  plan is written beside its Scene Program in `scenes/<name>/`; a scene's own
+  files use `Sfx::new(path, length_nanos)`.
 - `reply_after(arrival)`: a reply's gather may only begin once its request has
   landed: 340 ms of gather plus an 80 ms reaction (`REACT_SECONDS`).
 - Named spring feels on `SpringPlan`, for `StageActor::spring` and

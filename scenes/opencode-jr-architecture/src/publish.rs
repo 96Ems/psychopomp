@@ -6,13 +6,13 @@ use anyhow::{Context, Result};
 use psychopomp::{
     author::PlanTime,
     plan::ScenePlan,
+    sfx,
     stage::{StageElement, StagePlan, StagePost},
     tone::Tone,
 };
 
 use crate::{
-    Film, GLITCH, IMPACT, MARK, Narration, SUCCESS, arrive, begin, chip, footer, header, orb_in,
-    plug, seconds, send, show, sound, status,
+    Film, Narration, arrive, begin, chip, footer, header, orb_in, plug, seconds, send, show, status,
 };
 
 const RUNTIME: [f32; 3] = [260.0, 510.0, 0.0];
@@ -196,7 +196,7 @@ pub fn film(narration: &Narration) -> Result<ScenePlan> {
     s.land(sc, "sqlite", flushed);
     status(s, sc, "sqlite", flushed, 1);
     status(s, sc, "publication", flushed, 1);
-    sc.media(sound("flushed", MARK, flushed, -17.0));
+    sfx::MARK.play(sc, "flushed", flushed, -17.0);
     plug(s, sc, "pf", flushed);
     let posted = send(s, sc, "post-footer", flushed + seconds(0.75), 0.6);
     s.land(sc, "footer", posted);
@@ -221,8 +221,8 @@ pub fn film(narration: &Narration) -> Result<ScenePlan> {
             seed,
         );
     }
-    sc.media(sound("crash", IMPACT, crash, -12.0));
-    sc.media(sound("crash-glitch", GLITCH, crash, -18.0));
+    sfx::IMPACT.play(sc, "crash", crash, -12.0);
+    sfx::GLITCH.play(sc, "crash-glitch", crash, -18.0);
     let adopt = v.at("adopts it");
     let found = send(s, sc, "probe", crash + seconds(0.6), 0.8);
     s.hit(sc, "footer.flash", found, 0.6, 0.0);
@@ -230,7 +230,7 @@ pub fn film(narration: &Narration) -> Result<ScenePlan> {
     status(s, sc, "publication", adopt.not_before(found), 3);
     s.clock(sc, "indicator.mark", adopt.not_before(found));
     status(s, sc, "indicator", adopt.not_before(found), 1);
-    sc.media(sound("adopted", SUCCESS, adopt.not_before(found), -13.0));
+    sfx::SUCCESS.play(sc, "adopted", adopt.not_before(found), -13.0);
     footer(
         sc,
         "footer-adopt",

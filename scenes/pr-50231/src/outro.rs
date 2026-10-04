@@ -9,11 +9,12 @@ use psychopomp::{
     narration::Narration,
     plan::ScenePlan,
     rolling::{RollingNumberActor, RollingNumberPlan},
+    sfx,
     stage::{StageActor, StageElement, StagePlan, StagePost},
     tone::Tone,
 };
 
-use crate::{MARK, RESOLUTION, sound, span};
+use crate::{RESOLUTION, span};
 
 const CHECKS: [&str; 8] = [
     "typecheck",
@@ -102,7 +103,7 @@ pub fn build(narration: &Narration) -> Result<ScenePlan> {
         s.clock(sc, &format!("{card}.mark"), mark);
         let drawn = mark + seconds(f64::from(spinner::DRAW));
         s.to(sc, &format!("{card}.status"), drawn, 1.0, 0.3);
-        sc.media(sound(&format!("mark-{index}"), MARK, drawn, -25.0));
+        sfx::MARK.play(sc, &format!("mark-{index}"), drawn, -25.0);
         drawn_at.push(drawn);
     }
     drawn_at.sort_unstable();
@@ -125,7 +126,7 @@ pub fn build(narration: &Narration) -> Result<ScenePlan> {
     s.type_in(sc, "title", title + seconds(0.2), 60.0);
     let nothing = w("nothing you depend");
     let done = s.type_in(sc, "tagline", nothing, 40.0);
-    sc.media(sound("resolve", RESOLUTION, done, -20.0));
+    RESOLUTION.play(sc, "resolve", done, -20.0);
 
     // Fade out together.
     let out = reading.duration() - seconds(0.75);

@@ -12,10 +12,8 @@ use psychopomp::{
     caption::CaptionAlign,
     math::easing::Ease,
     narration::Narration,
-    plan::{
-        MediaKindPlan, MediaPlan, MediaRolePlan, ReelPlan, ReelSegmentPlan, ReelTransitionStyle,
-        ScenePlan,
-    },
+    plan::{ReelPlan, ReelSegmentPlan, ReelTransitionStyle, ScenePlan},
+    sfx,
     stage::{DRAW_CURVE, StageActor, StageElement, StagePlan, StagePost, reply_after},
     tone::Tone,
 };
@@ -282,34 +280,6 @@ fn glitch(s: &mut StageActor, sc: &mut PlanBuilder, card: &str, at: u64, seeds: 
     step - seconds(0.027)
 }
 
-struct Sfx(&'static str, f64);
-const TICK: Sfx = Sfx("visual-effects/task-running.wav", 0.13);
-const SEND: Sfx = Sfx("opencode-hot-reload/save.wav", 0.15);
-const ALARM: Sfx = Sfx("visual-effects/task-failure.wav", 0.47);
-const LAUNCH: Sfx = Sfx("opencode-hot-reload/launch.wav", 1.36);
-const IMPACT: Sfx = Sfx("opencode-hot-reload/impact.wav", 0.51);
-const DEATH: Sfx = Sfx("visual-effects/task-death.wav", 1.09);
-const GLITCH: Sfx = Sfx("pr-walkthrough/glitch.wav", 0.2);
-const MARK: Sfx = Sfx("pr-walkthrough/mark.wav", 0.3);
-const SUCCESS: Sfx = Sfx("visual-effects/task-success.wav", 0.42);
-const CONFIRM: Sfx = Sfx("opencode-hot-reload/confirm.wav", 0.34);
-const BLOOM: Sfx = Sfx("effect-shows-errors/prismatic-bloom.wav", 0.785);
-
-fn sound(sc: &mut PlanBuilder, id: &str, Sfx(file, length): Sfx, at: u64, gain_db: f32) {
-    let length = seconds(length);
-    sc.media(MediaPlan {
-        id: id.to_owned(),
-        path: PathBuf::from(format!("../../assets/{file}")),
-        kind: MediaKindPlan::Audio,
-        role: MediaRolePlan::Layer,
-        source_start_nanos: 0,
-        source_end_nanos: length,
-        timeline_start_nanos: at,
-        timeline_end_nanos: at + length,
-        gain_db,
-    });
-}
-
 fn film(narration: &Narration) -> Result<ScenePlan> {
     // The problem, a rewind, the layer, a breath, the features, and a tail.
     let reading = narration.reading(
@@ -354,10 +324,10 @@ fn film(narration: &Narration) -> Result<ScenePlan> {
     s.fade_in(sc, "vault-name", seconds(0.9), 1.0, 0.5);
     let op_ready = s.settle_in(sc, "op", seconds(0.45));
     let vault_contact = s.connect(sc, "vault-link", op_ready + seconds(0.1), 0.5);
-    sound(sc, "connect-vault", TICK, vault_contact, -20.0);
+    sfx::TICK.play(sc, "connect-vault", vault_contact, -20.0);
     let agent_ready = s.settle_in(sc, "agent", seconds(0.7));
     let direct_contact = s.connect(sc, "direct", agent_ready + seconds(0.15), 0.75);
-    sound(sc, "connect-direct", TICK, direct_contact, -20.0);
+    sfx::TICK.play(sc, "connect-direct", direct_contact, -20.0);
     header(sc, &PR, Some(seconds(0.4)))?;
     let mut raw_chip = chip(sc, "chip-raw", Tone::Error, "raw op")?;
     raw_chip.show(sc, seconds(0.7));
@@ -366,7 +336,7 @@ fn film(narration: &Narration) -> Result<ScenePlan> {
     s.to(sc, "agent.glow", p("needs"), 0.4, 0.5);
     s.to(sc, "direct.emphasis", p("asks"), 1.0, 0.5);
     let ask_1 = s.send(sc, "ask-1", p("asks"), 0.8);
-    sound(sc, "ask-1", SEND, p("asks"), -10.0);
+    sfx::SEND.play(sc, "ask-1", p("asks"), -10.0);
     s.land(sc, "op", ask_1);
     s.to(sc, "camera.x", p("asks"), 70.0, 1.6);
     s.to(sc, "camera.focus", p("asks"), -60.0, 1.2);
@@ -389,10 +359,9 @@ fn film(narration: &Narration) -> Result<ScenePlan> {
             at + seconds(0.06),
             [5.0 + index as f32, 8.0, 6.0],
         );
-        sound(
+        sfx::FAILURE.play(
             sc,
             &format!("prompt-{index}"),
-            ALARM,
             at,
             -12.0 + 2.0 * index as f32,
         );
@@ -415,7 +384,7 @@ fn film(narration: &Narration) -> Result<ScenePlan> {
     s.to(sc, "vault.hurt", unlock, 0.55, 0.4);
     s.to(sc, "vault-link.break", unlock + seconds(0.1), 1.0, 0.9);
     s.hit(sc, "op.alarm", unlock, 0.5, 0.15);
-    sound(sc, "unlock", GLITCH, unlock, -14.0);
+    sfx::GLITCH.play(sc, "unlock", unlock, -14.0);
     s.clock(sc, "op.spinner", p("sign in"));
 
     // STUCK: everything glitches at once and the frame takes the blow.
@@ -433,8 +402,8 @@ fn film(narration: &Narration) -> Result<ScenePlan> {
     s.jolt(sc, stuck, [-0.4, 1.0], 1.0);
     s.hit(sc, "post.chroma", stuck, 0.2, 0.0);
     s.hit(sc, "post.bloom", stuck, 0.35, 0.18);
-    sound(sc, "stuck-impact", IMPACT, stuck, -7.0);
-    sound(sc, "stuck-glitch", GLITCH, stuck + seconds(0.05), -10.0);
+    sfx::IMPACT.play(sc, "stuck-impact", stuck, -7.0);
+    sfx::GLITCH.play(sc, "stuck-glitch", stuck + seconds(0.05), -10.0);
 
     // "When it finally works": the dialogs give way, one by one, into silence.
     let finally = p("finally");
@@ -457,7 +426,7 @@ fn film(narration: &Narration) -> Result<ScenePlan> {
     s.to(sc, "camera.x", p("prints"), LEAK_CAMERA[0], 1.1);
     s.to(sc, "camera.z", p("prints"), LEAK_CAMERA[2], 1.1);
     let leak = s.send(sc, "leak", p("prints"), 0.6);
-    sound(sc, "leak-send", LAUNCH, p("prints") - seconds(0.35), -16.0);
+    sfx::LAUNCH.play(sc, "leak-send", p("prints") - seconds(0.35), -16.0);
     s.hit(sc, "agent.alarm", leak, 0.6, 0.2);
     s.to(sc, "agent.status", leak, 3.0, 0.2);
     s.set(sc, "agent.spinner", leak, -1.0);
@@ -467,8 +436,8 @@ fn film(narration: &Narration) -> Result<ScenePlan> {
     s.hit(sc, "post.chroma", chat, 0.28, 0.0);
     s.hit(sc, "post.bloom", chat, 0.4, 0.18);
     s.hit(sc, "agent.alarm", chat, 0.9, 0.3);
-    sound(sc, "chat-impact", IMPACT, chat, -5.0);
-    sound(sc, "chat-death", DEATH, chat + seconds(0.05), -9.0);
+    sfx::IMPACT.play(sc, "chat-impact", chat, -5.0);
+    sfx::DEATH.play(sc, "chat-death", chat + seconds(0.05), -9.0);
     let mut footer_problem = footer(
         sc,
         "footer-problem",
@@ -484,7 +453,7 @@ fn film(narration: &Narration) -> Result<ScenePlan> {
     let switch = problem.end() + seconds(0.25);
     s.clock_for(sc, "post.rewind", switch, 1.4);
     s.hit(sc, "post.chroma", switch, 0.12, 0.0);
-    sound(sc, "rewind", LAUNCH, switch - seconds(0.1), -14.0);
+    sfx::LAUNCH.play(sc, "rewind", switch - seconds(0.1), -14.0);
     raw_chip.hide(sc, switch);
     footer_problem.hide(sc, switch);
     let mut rewind_chip = chip(sc, "chip-rewind", Tone::Accent, "◀◀ rewind")?;
@@ -515,13 +484,13 @@ fn film(narration: &Narration) -> Result<ScenePlan> {
         Ease::Smootherstep,
     );
     let layer_ready = s.settle_in(sc, "layer", meet + seconds(0.1));
-    sound(sc, "meet", BLOOM, meet + seconds(0.1), -12.0);
+    sfx::BLOOM.play(sc, "meet", meet + seconds(0.1), -12.0);
     let ask_contact = s.connect(sc, "ask", layer_ready, 0.45);
     let batch_contact = s.connect(sc, "batch", layer_ready + seconds(0.15), 0.45);
     for (beam, at) in [("ask", ask_contact), ("batch", batch_contact)] {
         s.hit(sc, &format!("{beam}.surge"), at, 0.45, 0.0);
         s.twang(sc, beam, at);
-        sound(sc, &format!("connect-{beam}"), TICK, at, -19.0);
+        sfx::TICK.play(sc, &format!("connect-{beam}"), at, -19.0);
     }
     s.to(sc, "layer.glow", l("tiny layer"), 0.55, 0.6);
     s.hit(sc, "layer.flash", l("tiny layer"), 0.45, 0.0);
@@ -532,7 +501,7 @@ fn film(narration: &Narration) -> Result<ScenePlan> {
     let everything = l("everything");
     s.to(sc, "agent.status", everything, 4.0, 0.3);
     let find = s.send(sc, "find", everything - seconds(0.2), 0.6);
-    sound(sc, "find", SEND, everything - seconds(0.2), -11.0);
+    sfx::SEND.play(sc, "find", everything - seconds(0.2), -11.0);
     s.land(sc, "layer", find);
     s.to(sc, "layer.status", find, 1.0, 0.3);
     let lookup = s.send(
@@ -543,7 +512,7 @@ fn film(narration: &Narration) -> Result<ScenePlan> {
             .not_before(reply_after(find)),
         0.55,
     );
-    sound(sc, "lookup", SEND, lookup - seconds(0.55), -11.0);
+    sfx::SEND.play(sc, "lookup", lookup - seconds(0.55), -11.0);
     s.land(sc, "op", lookup);
     let fetch = s.send(sc, "fetch", reply_after(lookup), 0.45);
     s.land(sc, "vault", fetch);
@@ -553,7 +522,7 @@ fn film(narration: &Narration) -> Result<ScenePlan> {
     s.settle_in(sc, "prompt-ok", approval);
     s.hit(sc, "prompt-ok.flash", approval + seconds(0.2), 0.6, 0.0);
     s.to(sc, "op.status", approval, 4.0, 0.3);
-    sound(sc, "approval", SUCCESS, approval, -8.0);
+    sfx::SUCCESS.play(sc, "approval", approval, -8.0);
     s.to(sc, "camera.x", approval, 60.0, 1.6);
 
     // References come back; the secret itself never does.
@@ -572,7 +541,7 @@ fn film(narration: &Narration) -> Result<ScenePlan> {
     s.to(sc, "agent.status", refs, 5.0, 0.3);
     s.to(sc, "layer.status", refs, 2.0, 0.3);
     s.type_in(sc, "refs-line", refs, 60.0);
-    sound(sc, "refs", MARK, refs, -14.0);
+    sfx::MARK.play(sc, "refs", refs, -14.0);
     s.to(sc, "camera.x", refs - seconds(0.4), -40.0, 1.6);
     let mut footer_layer = footer(
         sc,
@@ -591,7 +560,7 @@ fn film(narration: &Narration) -> Result<ScenePlan> {
     s.to(sc, "camera.z", f("runs"), -130.0, 1.8);
     let process_ready = s.settle_in(sc, "process", f("runs"));
     let inject_contact = s.connect(sc, "inject", process_ready, 0.4);
-    sound(sc, "connect-inject", TICK, inject_contact, -19.0);
+    sfx::TICK.play(sc, "connect-inject", inject_contact, -19.0);
     let secrets = s.send(
         sc,
         "secrets",
@@ -601,11 +570,11 @@ fn film(narration: &Narration) -> Result<ScenePlan> {
     s.land(sc, "process", secrets);
     s.to(sc, "process.status", secrets, 1.0, 0.3);
     s.to(sc, "layer.status", secrets, 3.0, 0.3);
-    sound(sc, "secrets", CONFIRM, secrets, -12.0);
+    sfx::CONFIRM.play(sc, "secrets", secrets, -12.0);
 
     let clipboard_ready = s.settle_in(sc, "clipboard", f("saves"));
     let paste_contact = s.connect(sc, "paste", clipboard_ready, 0.4);
-    sound(sc, "connect-paste", TICK, paste_contact, -19.0);
+    sfx::TICK.play(sc, "connect-paste", paste_contact, -19.0);
     let new_key = s.send(
         sc,
         "new-key",
@@ -628,7 +597,7 @@ fn film(narration: &Narration) -> Result<ScenePlan> {
     );
     s.land(sc, "layer", verified);
     s.to(sc, "layer.status", verified, 4.0, 0.3);
-    sound(sc, "verified", SUCCESS, verified, -11.0);
+    sfx::SUCCESS.play(sc, "verified", verified, -11.0);
     let mut footer_features = footer(
         sc,
         "footer-features",
@@ -641,7 +610,7 @@ fn film(narration: &Narration) -> Result<ScenePlan> {
 
     let keychain_ready = s.settle_in(sc, "keychain", f("service account"));
     let token_contact = s.connect(sc, "token", keychain_ready, 0.4);
-    sound(sc, "connect-token", TICK, token_contact, -19.0);
+    sfx::TICK.play(sc, "connect-token", token_contact, -19.0);
     let unlock = s.send(sc, "unlock", token_contact + seconds(0.34), 0.45);
     s.land(sc, "layer", unlock);
 
@@ -663,7 +632,7 @@ fn film(narration: &Narration) -> Result<ScenePlan> {
     for card in ["agent", "op", "process", "clipboard", "keychain"] {
         s.hit(sc, &format!("{card}.flash"), all + seconds(0.1), 0.35, 0.0);
     }
-    sound(sc, "all", BLOOM, all + seconds(0.1), -8.0);
+    sfx::BLOOM.play(sc, "all", all + seconds(0.1), -8.0);
 
     // ── Let your agent fly: the camera rises to the install lines ──
     let rise = all + seconds(1.6);
@@ -696,11 +665,11 @@ fn film(narration: &Narration) -> Result<ScenePlan> {
     s.bounce(sc, "title.scale", title, 1.0, 0.8, 0.2);
     s.fade_in(sc, "title", title, 1.0, 0.4);
     s.fade_in(sc, "subtitle", title + seconds(0.3), 1.0, 0.5);
-    sound(sc, "title", CONFIRM, title, -12.0);
+    sfx::CONFIRM.play(sc, "title", title, -12.0);
     s.type_in(sc, "install", f("install"), 40.0);
     s.type_in(sc, "skill", f("skill").saturating_sub(seconds(0.2)), 48.0);
     s.hit(sc, "post.bloom", f("fly"), 0.25, 0.18);
-    sound(sc, "fly", BLOOM, f("fly"), -10.0);
+    sfx::BLOOM.play(sc, "fly", f("fly"), -10.0);
     for beam in ["ask", "batch", "inject", "paste", "token", "vault-link"] {
         s.to(sc, &format!("{beam}.flow"), f("fly"), 0.0, 1.2);
     }

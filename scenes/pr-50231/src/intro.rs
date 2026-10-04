@@ -9,11 +9,12 @@ use psychopomp::{
     narration::Narration,
     plan::ScenePlan,
     rolling::{RollingNumberActor, RollingNumberPlan},
+    sfx,
     stage::{StageActor, StageElement, StagePlan, StagePost},
     tone::Tone,
 };
 
-use crate::{MARK, TICK, footer, header, sound, span};
+use crate::{footer, header, span};
 
 const COMPILER: [f32; 3] = [300.0, 716.0, 0.0];
 const RENAMES: [&str; 4] = [
@@ -95,7 +96,7 @@ pub fn build(narration: &Narration) -> Result<ScenePlan> {
     version.show(sc, seconds(0.3));
     let roll = w("five release candidates");
     version.roll(sc, roll, "rc.117")?;
-    sc.media(sound("roll", TICK, roll + seconds(0.75), -20.0));
+    sfx::TICK.play(sc, "roll", roll + seconds(0.75), -20.0);
 
     // The compiler plugs into every renamed call and checks it off.
     let compiler = w("the compiler");
@@ -123,13 +124,13 @@ pub fn build(narration: &Narration) -> Result<ScenePlan> {
         s.clock(sc, &format!("{card}.spinner"), contact);
         let mark = contact + seconds(f64::from(spinner::handoff(0.25)));
         s.clock(sc, &format!("{card}.mark"), mark);
-        sc.media(sound(&format!("check-{index}"), TICK, contact, -24.0));
-        sc.media(sound(
+        sfx::TICK.play(sc, &format!("check-{index}"), contact, -24.0);
+        sfx::MARK.play(
+            sc,
             &format!("mark-{index}"),
-            MARK,
             mark + seconds(f64::from(spinner::DRAW)),
             -23.0 - index as f32,
-        ));
+        );
     }
 
     // What it couldn't catch: the checked work cools, the camera leans right.

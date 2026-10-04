@@ -3,11 +3,12 @@ use anyhow::{Context, Result};
 use psychopomp::{
     author::{PlanBuilder, millis, stagger},
     plan::ScenePlan,
+    sfx,
     stage::{StageElement, StagePlan, StagePost, reply_after},
     tone::Tone,
 };
 
-use crate::{BLOOM, Film, arrive, begin, footer, orb_in, plug, seconds, send, sound};
+use crate::{Film, arrive, begin, footer, orb_in, plug, seconds, send};
 
 const ROWS: [f32; 3] = [330.0, 540.0, 750.0];
 
@@ -133,7 +134,7 @@ pub fn film(narration: &crate::Narration) -> Result<ScenePlan> {
     s.land(sc, "thread-1", landed);
     let woke = send(s, sc, "wake", reply_after(landed), 0.7);
     s.hit(sc, "agent-1.pulse", woke, 0.75, 0.0);
-    sc.media(sound("wake", BLOOM, woke, -14.0));
+    sfx::BLOOM.play(sc, "wake", woke, -14.0);
     footer(
         sc,
         "footer",

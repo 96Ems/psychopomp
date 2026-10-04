@@ -6,14 +6,12 @@ use psychopomp::{
     caption::CaptionAlign,
     math::{Vec2, Vec3, vec2},
     plan::ScenePlan,
+    sfx,
     stage::{Camera, StageElement, StagePlan, StagePost, reply_after},
     tone::Tone,
 };
 
-use crate::{
-    CONFIRM, Film, Narration, SUCCESS, arrive, begin, chip, footer, header, seconds, send, sound,
-    status,
-};
+use crate::{Film, Narration, arrive, begin, chip, footer, header, seconds, send, status};
 
 const SLACK: [f32; 3] = [330.0, 440.0, 0.0];
 const WORKER: [f32; 3] = [960.0, 440.0, 0.0];
@@ -156,7 +154,7 @@ pub fn film(narration: &Narration) -> Result<(ScenePlan, [f32; 4])> {
     ];
     for (index, (id, at)) in checks.into_iter().enumerate() {
         s.type_in(sc, id, at, 48.0);
-        sc.media(sound(&format!("check-{id}"), crate::TICK, at, -24.0));
+        sfx::TICK.play(sc, &format!("check-{id}"), at, -24.0);
         if index == 0 {
             s.to(sc, "camera.focus", at, 0.0, 0.8);
         }
@@ -181,7 +179,7 @@ pub fn film(narration: &Narration) -> Result<(ScenePlan, [f32; 4])> {
     s.hit(sc, "slack.flash", receipt, 0.6, 0.0);
     s.clock(sc, "slack.mark", receipt);
     status(s, sc, "slack", receipt, 2);
-    sc.media(sound("receipt", SUCCESS, receipt, -12.0));
+    sfx::SUCCESS.play(sc, "receipt", receipt, -12.0);
     let mut receipt_footer = footer(
         sc,
         "footer-receipt",
@@ -213,7 +211,7 @@ pub fn film(narration: &Narration) -> Result<(ScenePlan, [f32; 4])> {
     let duplicate = send(s, sc, "enqueue-2", reply_after(again), 0.75);
     status(s, sc, "session", duplicate, 2);
     s.hit(sc, "session.flash", duplicate, 0.4, 0.0);
-    sc.media(sound("dedupe", CONFIRM, duplicate, -16.0));
+    sfx::CONFIRM.play(sc, "dedupe", duplicate, -16.0);
     let dedupe = v.at("by message timestamp").not_before(duplicate);
     s.type_in(sc, "dedupe", dedupe, 40.0);
     let answered = send(s, sc, "ok-2", duplicate + seconds(0.5), 0.75);

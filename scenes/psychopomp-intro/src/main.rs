@@ -12,11 +12,9 @@ use psychopomp::{
     effects::combustion,
     math::{Vec3, easing::Ease},
     narration::Narration,
-    plan::{
-        MediaKindPlan, MediaPlan, MediaRolePlan, ReelPlan, ReelSegmentPlan, ReelTransitionStyle,
-        ScenePlan,
-    },
+    plan::{ReelPlan, ReelSegmentPlan, ReelTransitionStyle, ScenePlan},
     rolling::{RollingNumberActor, RollingNumberPlan},
+    sfx,
     stage::{StageActor, StageElement, StagePlan, StagePost},
     tone::Tone,
 };
@@ -173,34 +171,6 @@ fn glitch(s: &mut StageActor, sc: &mut PlanBuilder, card: &str, at: u64, seeds: 
     }
 }
 
-struct Sfx(&'static str, f64);
-const TICK: Sfx = Sfx("visual-effects/task-running.wav", 0.13);
-const IMPACT: Sfx = Sfx("opencode-hot-reload/impact.wav", 0.51);
-const LAUNCH: Sfx = Sfx("opencode-hot-reload/launch.wav", 1.36);
-const DEATH: Sfx = Sfx("visual-effects/task-death.wav", 1.09);
-const GLITCH: Sfx = Sfx("pr-walkthrough/glitch.wav", 0.2);
-const CONFIRM: Sfx = Sfx("opencode-hot-reload/confirm.wav", 0.34);
-const BLOOM: Sfx = Sfx("effect-shows-errors/prismatic-bloom.wav", 0.785);
-const RISER: Sfx = Sfx("psychopomp-intro/riser.wav", 5.66);
-const BOOM: Sfx = Sfx("psychopomp-intro/boom.wav", 2.99);
-const WHOOSH: Sfx = Sfx("psychopomp-intro/whoosh.wav", 0.61);
-const SPARKLE: Sfx = Sfx("psychopomp-intro/sparkle.wav", 1.47);
-
-fn sound(sc: &mut PlanBuilder, id: &str, Sfx(file, length): Sfx, at: u64, gain_db: f32) {
-    let length = seconds(length);
-    sc.media(MediaPlan {
-        id: id.to_owned(),
-        path: PathBuf::from(format!("../../assets/{file}")),
-        kind: MediaKindPlan::Audio,
-        role: MediaRolePlan::Layer,
-        source_start_nanos: 0,
-        source_end_nanos: length,
-        timeline_start_nanos: at,
-        timeline_end_nanos: at + length,
-        gain_db,
-    });
-}
-
 fn film(narration: &Narration) -> Result<ScenePlan> {
     let gap = seconds(0.35);
     let reading = narration.reading(
@@ -238,11 +208,11 @@ fn film(narration: &Narration) -> Result<ScenePlan> {
     s.to(sc, "orb.blur", seconds(0.2), 0.0, 0.9);
     s.ease(sc, "orb.rotation", seconds(0.2), 0.0, 1.6, Ease::CubicOut);
     s.fade_in(sc, "orb", seconds(0.2), 1.0, 0.8);
-    sound(sc, "wake", SPARKLE, seconds(0.25), -16.0);
+    sfx::SPARKLE.play(sc, "wake", seconds(0.25), -16.0);
     s.hit(sc, "orb.pulse", h("hi"), 0.4, 0.0);
     s.fade_in(sc, "title", h("this is"), 1.0, 0.6);
     s.bounce(sc, "title.scale", h("this is"), 1.0, 1.0, 0.15);
-    sound(sc, "title", SPARKLE, h("this is"), -14.0);
+    sfx::SPARKLE.play(sc, "title", h("this is"), -14.0);
     s.type_in(sc, "subtitle", h("tiny"), 34.0);
 
     // "Every frame is a pure function of time": a clock that can be anywhere.
@@ -279,11 +249,10 @@ fn film(narration: &Narration) -> Result<ScenePlan> {
         s.ease(sc, "post.flash", at, 0.0, 0.3, Ease::CubicOut);
         s.hit(sc, "orb.pulse", at, 1.0, 0.0);
         clock.roll(sc, at, value)?;
-        sound(sc, &format!("{shout}-impact"), IMPACT, at, -6.0);
-        sound(
+        sfx::IMPACT.play(sc, &format!("{shout}-impact"), at, -6.0);
+        sfx::WHOOSH.play(
             sc,
             &format!("{shout}-whoosh"),
-            WHOOSH,
             at.saturating_sub(seconds(0.12)),
             -12.0,
         );
@@ -314,7 +283,7 @@ fn film(narration: &Narration) -> Result<ScenePlan> {
         );
     }
     s.hit(sc, "orb.pulse", nice + seconds(0.1), 0.35, 0.0);
-    sound(sc, "nice", SPARKLE, nice, -15.0);
+    sfx::SPARKLE.play(sc, "nice", nice, -15.0);
 
     // ── Toys: cards, wires, packets ──
     let cards = t("cards");
@@ -325,14 +294,14 @@ fn film(narration: &Narration) -> Result<ScenePlan> {
     s.to(sc, "camera.z", cards, -60.0, 1.8);
     for (card, at) in [("terminal", t("settle")), ("desktop", t("softly"))] {
         s.settle_in(sc, card, at);
-        sound(sc, &format!("settle-{card}"), TICK, at, -18.0);
+        sfx::TICK.play(sc, &format!("settle-{card}"), at, -18.0);
     }
     for (link, at) in [
         ("link-l", t("wires draw")),
         ("link-r", t("draw themselves")),
     ] {
         let contact = s.connect(sc, link, at, 0.7);
-        sound(sc, &format!("connect-{link}"), CONFIRM, contact, -18.0);
+        sfx::CONFIRM.play(sc, &format!("connect-{link}"), contact, -18.0);
     }
 
     // AND PACKETS FLY DOWN THE WIRES!!
@@ -354,14 +323,13 @@ fn film(narration: &Narration) -> Result<ScenePlan> {
         s.land(sc, "orb", arrival);
         let push = if *beam == "link-l" { 1.0 } else { -1.0 };
         s.jolt(sc, arrival, [push, 0.2], 0.5);
-        sound(
+        sfx::WHOOSH.play(
             sc,
             &format!("{id}-send"),
-            WHOOSH,
             launch.saturating_sub(seconds(0.05)),
             -16.0,
         );
-        sound(sc, &format!("{id}-hit"), IMPACT, arrival, -15.0);
+        sfx::IMPACT.play(sc, &format!("{id}-hit"), arrival, -15.0);
     }
     s.hit(sc, "post.zoom", wires, 0.12, 0.0);
 
@@ -392,14 +360,8 @@ fn film(narration: &Narration) -> Result<ScenePlan> {
     s.hit(sc, "post.bloom", up, 0.6, 0.18);
     s.to(sc, "post.vignette", up, 0.3, 0.6);
     s.to(sc, "camera.z", up, -90.0, 1.1);
-    sound(
-        sc,
-        "blow-boom",
-        BOOM,
-        up.saturating_sub(seconds(0.02)),
-        -7.0,
-    );
-    sound(sc, "blow-death", DEATH, up + seconds(0.04), -11.0);
+    sfx::BOOM.play(sc, "blow-boom", up.saturating_sub(seconds(0.02)), -7.0);
+    sfx::DEATH.play(sc, "blow-death", up + seconds(0.04), -11.0);
     for (index, (card, link, at)) in [
         ("terminal", "link-l", TERMINAL),
         ("desktop", "link-r", DESKTOP),
@@ -429,20 +391,14 @@ fn film(narration: &Narration) -> Result<ScenePlan> {
         s.set(sc, &format!("{card}.damage"), passes, 1.0);
         glitch(s, sc, card, passes, [7.0, 9.0, 8.0]);
         s.to(sc, &format!("{card}.status"), passes, 1.0, 0.2);
-        sound(sc, &format!("glitch-{card}"), GLITCH, passes, -18.0);
+        sfx::GLITCH.play(sc, &format!("glitch-{card}"), passes, -18.0);
     }
 
     // ...and then you rewind it. Like nothing happened.
     let rewind = t("rewind").saturating_sub(seconds(0.15));
     s.clock_for(sc, "post.rewind", rewind, 1.4);
     s.hit(sc, "post.chroma", rewind, 0.15, 0.0);
-    sound(
-        sc,
-        "rewind",
-        LAUNCH,
-        rewind.saturating_sub(seconds(0.1)),
-        -12.0,
-    );
+    sfx::LAUNCH.play(sc, "rewind", rewind.saturating_sub(seconds(0.1)), -12.0);
     s.ease(
         sc,
         "orb.burst",
@@ -468,18 +424,12 @@ fn film(narration: &Narration) -> Result<ScenePlan> {
     }
     let nothing = t("nothing happened");
     s.hit(sc, "orb.pulse", nothing, 0.4, 0.0);
-    sound(sc, "nothing", SPARKLE, nothing, -15.0);
+    sfx::SPARKLE.play(sc, "nothing", nothing, -15.0);
 
     // ── Fever: every feature at once, and the floor starts shaking ──
     // The peak lands on the shouted "code", not on "just".
     let code = fever.at_after("code", "just");
-    sound(
-        sc,
-        "riser",
-        RISER,
-        code.saturating_sub(seconds(5.66)),
-        -11.0,
-    );
+    sfx::RISER.play(sc, "riser", code.saturating_sub(seconds(5.66)), -11.0);
     let rolling = f("rolling numbers");
     s.ease(sc, "camera.quake", rolling, 0.45, 2.4, Ease::Linear);
     s.ease(sc, "camera.quake", f("motion blur"), 1.0, 1.6, Ease::Linear);
@@ -565,13 +515,13 @@ fn film(narration: &Narration) -> Result<ScenePlan> {
     let callouts = f("callouts");
     soul.show(sc, callouts);
     pinned.show(sc, callouts + seconds(0.18));
-    sound(sc, "callouts", CONFIRM, callouts, -13.0);
+    sfx::CONFIRM.play(sc, "callouts", callouts, -13.0);
 
     // Code diffs!
     let diffs = f("code diffs");
     s.type_in(sc, "diff-old", diffs, 90.0);
     s.type_in(sc, "diff-new", diffs + seconds(0.22), 90.0);
-    sound(sc, "diffs", TICK, diffs, -12.0);
+    sfx::TICK.play(sc, "diffs", diffs, -12.0);
 
     // Motion blur! A whip pan while two packets tear down the wires.
     let blur = f("motion blur");
@@ -583,13 +533,7 @@ fn film(narration: &Narration) -> Result<ScenePlan> {
         s.land(sc, "orb", arrival);
     }
     s.hit(sc, "post.zoom", blur, 0.22, 0.0);
-    sound(
-        sc,
-        "blur-whoosh",
-        WHOOSH,
-        blur.saturating_sub(seconds(0.05)),
-        -9.0,
-    );
+    sfx::WHOOSH.play(sc, "blur-whoosh", blur.saturating_sub(seconds(0.05)), -9.0);
 
     // Bloom! Light floods out of the orb in two ripples.
     let bloom = f("bloom");
@@ -601,13 +545,13 @@ fn film(narration: &Narration) -> Result<ScenePlan> {
         s.set(sc, &format!("{ring}.opacity"), at, 0.8);
         s.ease(sc, &format!("{ring}.expand"), at, 1.0, 0.9, Ease::CubicOut);
     }
-    sound(sc, "bloom", BLOOM, bloom, -8.0);
+    sfx::BLOOM.play(sc, "bloom", bloom, -8.0);
 
     // SCREEN SHAKE!!
     let shake = f("screen shake");
     s.jolt(sc, shake, [0.7, 1.0], 1.0);
     s.hit(sc, "post.chroma", shake, 0.35, 0.0);
-    sound(sc, "shake", IMPACT, shake, -5.0);
+    sfx::IMPACT.play(sc, "shake", shake, -5.0);
     for (card, seed) in [("terminal", 5.0), ("desktop", 6.0)] {
         glitch(s, sc, card, shake, [seed, 9.0, 7.0]);
     }
@@ -645,14 +589,8 @@ fn film(narration: &Narration) -> Result<ScenePlan> {
     for (card, seed) in [("terminal", 9.0), ("desktop", 8.0)] {
         glitch(s, sc, card, code, [seed, 7.0, 9.0]);
     }
-    sound(
-        sc,
-        "code-boom",
-        BOOM,
-        code.saturating_sub(seconds(0.02)),
-        -6.0,
-    );
-    sound(sc, "code-impact", IMPACT, code, -10.0);
+    sfx::BOOM.play(sc, "code-boom", code.saturating_sub(seconds(0.02)), -6.0);
+    sfx::IMPACT.play(sc, "code-impact", code, -10.0);
 
     // Silence. The whiteout hides the cut; only the orb is left breathing.
     let cut = code + seconds(0.32);
@@ -677,13 +615,13 @@ fn film(narration: &Narration) -> Result<ScenePlan> {
     s.bounce(sc, "title.scale", name, 1.0, 0.9, 0.2);
     s.to(sc, "title.opacity", name, 1.0, 0.5);
     s.hit(sc, "orb.pulse", name, 0.5, 0.0);
-    sound(sc, "name", SPARKLE, name, -12.0);
+    sfx::SPARKLE.play(sc, "name", name, -12.0);
     s.type_in(sc, "url", f("give it"), 42.0);
     let knows = f("knows");
     s.fade_in(sc, "calm", knows, 0.35, 0.3);
     s.fade_in(sc, "calm-outer", knows + seconds(0.06), 0.5, 0.3);
     s.hit(sc, "orb.pulse", knows, 0.7, 0.0);
-    sound(sc, "knows", BLOOM, knows, -14.0);
+    sfx::BLOOM.play(sc, "knows", knows, -14.0);
 
     scene.finish().context("psychopomp-intro")
 }

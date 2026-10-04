@@ -2,7 +2,6 @@
 //! around it. In the broken story a reconnecting client's SIGTERM shatters the
 //! orb and snaps every connection; the fix replays the same moment and nothing
 //! breaks. The camera then flies into the client card, which opens into the code.
-use std::path::PathBuf;
 
 use anyhow::{Context, Result};
 use psychopomp::{
@@ -14,10 +13,8 @@ use psychopomp::{
     },
     math::{Vec2, Vec3, easing::Ease, vec2},
     narration::Narration,
-    plan::{
-        MediaKindPlan, MediaPlan, MediaRolePlan, ReelPlan, ReelSegmentPlan, ReelTransitionStyle,
-        ScenePlan,
-    },
+    plan::{ReelPlan, ReelSegmentPlan, ReelTransitionStyle, ScenePlan},
+    sfx,
     stage::{Camera, StageActor, StageElement, StagePlan, StagePost, reply_after},
     tone::Tone,
 };
@@ -301,36 +298,6 @@ fn glitch(s: &mut StageActor, sc: &mut PlanBuilder, card: &str, at: u64, seeds: 
     step - seconds(0.027)
 }
 
-/// Sound assets under `assets/` and their lengths in seconds.
-const TASK_RUNNING: Sfx = Sfx("visual-effects/task-running.wav", 0.13);
-const SAVE: Sfx = Sfx("opencode-hot-reload/save.wav", 0.15);
-const TASK_FAILURE: Sfx = Sfx("visual-effects/task-failure.wav", 0.47);
-const LAUNCH: Sfx = Sfx("opencode-hot-reload/launch.wav", 1.36);
-const IMPACT: Sfx = Sfx("opencode-hot-reload/impact.wav", 0.51);
-const TASK_DEATH: Sfx = Sfx("visual-effects/task-death.wav", 1.09);
-const GLITCH: Sfx = Sfx("pr-walkthrough/glitch.wav", 0.2);
-const SEVER: Sfx = Sfx("pr-walkthrough/sever.wav", 0.576);
-const MARK: Sfx = Sfx("pr-walkthrough/mark.wav", 0.3);
-const TASK_RESET: Sfx = Sfx("visual-effects/task-reset.wav", 0.33);
-const PRISMATIC_BLOOM: Sfx = Sfx("effect-shows-errors/prismatic-bloom.wav", 0.785);
-
-struct Sfx(&'static str, f64);
-
-fn sound(id: &str, Sfx(file, length): Sfx, at: u64, gain_db: f32) -> MediaPlan {
-    let length = seconds(length);
-    MediaPlan {
-        id: id.to_owned(),
-        path: PathBuf::from(format!("../../assets/{file}")),
-        kind: MediaKindPlan::Audio,
-        role: MediaRolePlan::Layer,
-        source_start_nanos: 0,
-        source_end_nanos: length,
-        timeline_start_nanos: at,
-        timeline_end_nanos: at + length,
-        gain_db,
-    }
-}
-
 fn stage_film(narration: &Narration) -> Result<ScenePlan> {
     let pr = &PRS[1];
     // Before, a rewind, after, and a tail for the closing camera.
@@ -397,12 +364,7 @@ fn stage_film(narration: &Narration) -> Result<ScenePlan> {
             0.0,
             0.45,
         );
-        sc.media(sound(
-            &format!("connect-{index}"),
-            TASK_RUNNING,
-            contact,
-            -20.0,
-        ));
+        sfx::TICK.play(sc, &format!("connect-{index}"), contact, -20.0);
     }
     header(sc, pr, Some(seconds(0.4)))?;
     let mut before_chip = chip(sc, "chip-before", Tone::Muted, "before")?;
@@ -418,13 +380,13 @@ fn stage_film(narration: &Narration) -> Result<ScenePlan> {
     s.to(sc, "camera.x", reconnect, -110.0, 1.6);
     s.to(sc, "camera.focus", reconnect, -60.0, 1.2);
     s.send(sc, "probe", b("health endpoint"), 0.95);
-    sc.media(sound("probe-send", SAVE, b("health endpoint"), -8.0));
+    sfx::SEND.play(sc, "probe-send", b("health endpoint"), -8.0);
 
     // The server answers 404; the old rule reads that as "outdated".
     let reply_arrival = s.send(sc, "reply", b("returns a 404"), 0.8);
     // The socket takes the red; the whole frame stays steady and legible.
     s.hit(sc, "client.alarm", reply_arrival, 0.18, 0.0);
-    sc.media(sound("reply-land", TASK_FAILURE, reply_arrival, -9.0));
+    sfx::FAILURE.play(sc, "reply-land", reply_arrival, -9.0);
     let outdated = b("assumed the server was outdated");
     s.type_in(sc, "thought-before", outdated, 42.0);
     s.to(sc, "client.status", outdated + seconds(1.0), 2.0, 0.4);
@@ -434,14 +396,9 @@ fn stage_film(narration: &Narration) -> Result<ScenePlan> {
     // SIGTERM: the orb bursts, the shockwave spreads, every connection snaps.
     let kill_send = before.at_any(&["sig term", "sigterm"]);
     let kill_arrival = s.send(sc, "kill", kill_send, 0.55);
-    sc.media(sound("kill-send", LAUNCH, kill_send - seconds(0.35), -15.0));
-    sc.media(sound("kill-impact", IMPACT, kill_arrival, -5.0));
-    sc.media(sound(
-        "shatter",
-        TASK_DEATH,
-        kill_arrival + seconds(0.05),
-        -7.0,
-    ));
+    sfx::LAUNCH.play(sc, "kill-send", kill_send - seconds(0.35), -15.0);
+    sfx::IMPACT.play(sc, "kill-impact", kill_arrival, -5.0);
+    sfx::DEATH.play(sc, "shatter", kill_arrival + seconds(0.05), -7.0);
     // The burst clock owns collapse, fire, smoke, and embers (combustion.rs).
     s.clock_for(sc, "service.burst", kill_arrival, combustion::DURATION);
     s.to(sc, "service.hurt", kill_arrival, 1.0, 0.2);
@@ -501,12 +458,12 @@ fn stage_film(narration: &Narration) -> Result<ScenePlan> {
         );
         s.set(sc, &format!("{card}.damage"), snap, 1.0);
         glitch(s, sc, card, snap, [7.0, 9.0, 8.0]);
-        sc.media(sound(
+        sfx::GLITCH.play(
+            sc,
             &format!("glitch-{index}"),
-            GLITCH,
             snap,
             -21.0 - index as f32 * 2.0,
-        ));
+        );
         s.to(sc, &format!("{card}.status"), snap, 1.0, 0.18);
         s.to(sc, &format!("{card}.dim"), at + seconds(0.6), 0.45, 0.8);
         // On "cut off", a red hairline severs each client, whose halves
@@ -521,12 +478,12 @@ fn stage_film(narration: &Narration) -> Result<ScenePlan> {
             0.3,
         );
         // The slice peaks about 0.38 s in; land it as the hairline completes.
-        sc.media(sound(
+        sfx::SEVER.play(
+            sc,
             &format!("sever-{index}"),
-            SEVER,
             sever.saturating_sub(seconds(0.2)),
             -17.0 - index as f32 * 2.5,
-        ));
+        );
     }
     s.to(sc, "camera.x", cut - seconds(0.4), 0.0, 1.6);
     s.to(sc, "camera.z", cut - seconds(0.4), -100.0, 1.8);
@@ -551,7 +508,7 @@ fn stage_film(narration: &Narration) -> Result<ScenePlan> {
     rewind_chip.hide(sc, switch + seconds(1.5));
     let mut after_chip = chip(sc, "chip-after", Tone::Success, "after the fix")?;
     after_chip.show(sc, switch + seconds(1.65));
-    sc.media(sound("rewind", LAUNCH, switch - seconds(0.1), -13.0));
+    sfx::LAUNCH.play(sc, "rewind", switch - seconds(0.1), -13.0);
     s.ease(
         sc,
         "service.burst",
@@ -595,12 +552,12 @@ fn stage_film(narration: &Narration) -> Result<ScenePlan> {
         s.to(sc, &format!("{card}.ghost"), rejoin, 0.0, 0.25);
         let restore = rejoin + seconds(0.55);
         let still = glitch(s, sc, card, restore, [8.0, 9.0, 7.0]);
-        sc.media(sound(
+        sfx::GLITCH.play(
+            sc,
             &format!("restore-{index}"),
-            GLITCH,
             restore,
             -25.0 - index as f32 * 2.0,
-        ));
+        );
         s.set(sc, &format!("{card}.damage"), still, 0.0);
         s.set(sc, &format!("{card}.cool"), still, 0.0);
         s.to(sc, &format!("{card}.status"), still, 0.0, 0.18);
@@ -619,7 +576,7 @@ fn stage_film(narration: &Narration) -> Result<ScenePlan> {
     s.to(sc, "camera.x", now - seconds(0.4), -110.0, 1.2);
     s.to(sc, "camera.focus", now - seconds(0.4), -60.0, 1.0);
     let probe_2 = s.send(sc, "probe-2", now - seconds(0.1), 0.75);
-    sc.media(sound("probe-send-2", SAVE, now - seconds(0.1), -8.0));
+    sfx::SEND.play(sc, "probe-send-2", now - seconds(0.1), -8.0);
     let reply_2 = s.send(sc, "reply-2", reply_after(probe_2), 0.7);
     s.hit(sc, "client.flash", reply_2, 0.3, 0.0);
     s.type_in(sc, "thought-after", a("health protocols"), 44.0);
@@ -630,13 +587,13 @@ fn stage_film(narration: &Narration) -> Result<ScenePlan> {
     let waited = message.saturating_sub(respin) as f32 / 1e9;
     let handoff = respin + seconds(f64::from(spinner::handoff(waited)));
     s.clock(sc, "client.mark", handoff);
-    sc.media(sound(
+    sfx::MARK.play(
+        sc,
         "mark",
-        MARK,
         handoff + seconds(f64::from(spinner::DRAW)),
         -19.0,
-    ));
-    sc.media(sound("message", TASK_RESET, message, -12.0));
+    );
+    sfx::RESET.play(sc, "message", message, -12.0);
 
     // Nothing gets killed: the camera finds the orb, whole and breathing.
     let safe = a("nothing gets killed");
@@ -651,7 +608,7 @@ fn stage_film(narration: &Narration) -> Result<ScenePlan> {
         s.to(sc, &format!("{link}.flow"), safe, 0.45, 0.5);
         s.to(sc, &format!("{link}.flow"), safe + seconds(1.3), 0.0, 0.5);
     }
-    sc.media(sound("safe", PRISMATIC_BLOOM, safe + seconds(0.15), -9.0));
+    sfx::BLOOM.play(sc, "safe", safe + seconds(0.15), -9.0);
     let mut footer_after = footer(
         sc,
         "footer-after",

@@ -8,13 +8,13 @@ use psychopomp::{
     effects::combustion,
     math::{Vec3, easing::Ease},
     plan::ScenePlan,
+    sfx,
     stage::{StageElement, StagePlan, StagePost},
     tone::Tone,
 };
 
 use crate::{
-    DEATH, Film, GLITCH, IMPACT, LAUNCH, MARK, Narration, RESET, arrive, begin, chip, footer,
-    header, hide, orb_in, seconds, send, show, sound, status,
+    Film, Narration, arrive, begin, chip, footer, header, hide, orb_in, seconds, send, show, status,
 };
 
 const SESSION: [f32; 3] = [640.0, 460.0, 0.0];
@@ -144,15 +144,15 @@ pub fn film(narration: &Narration) -> Result<ScenePlan> {
             push.into(),
         );
     }
-    sc.media(sound("reset-impact", IMPACT, reset, -8.0));
-    sc.media(sound("reset-burst", DEATH, reset + seconds(0.05), -10.0));
+    sfx::IMPACT.play(sc, "reset-impact", reset, -8.0);
+    sfx::DEATH.play(sc, "reset-burst", reset + seconds(0.05), -10.0);
     s.to(sc, "out.flow", reset, 0.0, 0.2);
     s.to(sc, "out.break", reset + seconds(0.15), 1.0, 0.8);
     s.to(sc, "db.break", reset + seconds(0.2), 1.0, 0.8);
     let roll = v.at("roll back").not_before(reset + seconds(0.3));
     hide(s, sc, "unflushed", roll);
     s.type_in(sc, "rolled-back", roll + seconds(0.15), 40.0);
-    sc.media(sound("rolled-back", GLITCH, roll, -18.0));
+    sfx::GLITCH.play(sc, "rolled-back", roll, -18.0);
     let stand = v.at("still stand");
     s.hit(sc, "slack.flash", stand, 0.6, 0.0);
     s.to(sc, "slack.glow", stand, 0.4, 0.5);
@@ -171,7 +171,7 @@ pub fn film(narration: &Narration) -> Result<ScenePlan> {
     let boxed = v.at("coordinator");
     let rewind = boxed - seconds(0.4);
     s.clock_for(sc, "post.rewind", rewind, 1.4);
-    sc.media(sound("rewind", LAUNCH, rewind - seconds(0.1), -15.0));
+    sfx::LAUNCH.play(sc, "rewind", rewind - seconds(0.1), -15.0);
     s.ease(
         sc,
         "session.burst",
@@ -198,7 +198,7 @@ pub fn film(narration: &Narration) -> Result<ScenePlan> {
     s.ease(sc, "budget.sweep", ring_at, 0.67, 1.4, Ease::Smootherstep);
     s.type_in(sc, "budget-name", ring_at, 44.0);
     s.hit(sc, "session.pulse", ring_at + seconds(1.4), 0.5, 0.0);
-    sc.media(sound("budget", MARK, ring_at + seconds(1.4), -18.0));
+    sfx::MARK.play(sc, "budget", ring_at + seconds(1.4), -18.0);
 
     // Flush, then the side effect.
     let flush = v.at("before the side effect");
@@ -252,10 +252,10 @@ pub fn film(narration: &Narration) -> Result<ScenePlan> {
             seed,
         );
     }
-    sc.media(sound("wiped", GLITCH, wiped, -18.0));
+    sfx::GLITCH.play(sc, "wiped", wiped, -18.0);
     status(s, sc, "sqlite", wiped + seconds(0.1), 3);
     s.hit(sc, "sqlite.flash", wiped + seconds(0.3), 0.6, 0.0);
-    sc.media(sound("recreated", RESET, wiped + seconds(0.3), -16.0));
+    sfx::RESET.play(sc, "recreated", wiped + seconds(0.3), -16.0);
     footer(
         sc,
         "footer-schema",

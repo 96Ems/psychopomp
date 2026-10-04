@@ -6,13 +6,14 @@ use psychopomp::{
     author::PlanTime,
     math::easing::Ease,
     plan::ScenePlan,
+    sfx,
     stage::{StageElement, StagePlan, StagePost, reply_after},
     tone::Tone,
 };
 
 use crate::{
-    Film, MARK, Narration, RESET, SUCCESS, arrive, begin, chip, footer, header, hide, orb_in, plug,
-    seconds, send, show, sound, status,
+    Film, Narration, arrive, begin, chip, footer, header, hide, orb_in, plug, seconds, send, show,
+    status,
 };
 
 const SESSION: [f32; 3] = [330.0, 580.0, 0.0];
@@ -165,7 +166,7 @@ pub fn film(narration: &Narration) -> Result<ScenePlan> {
     let refreshed = hour + seconds(1.4);
     s.set(sc, "template.spinner", refreshed, -1.0);
     status(s, sc, "template", refreshed, 2);
-    sc.media(sound("refreshed", MARK, refreshed, -18.0));
+    sfx::MARK.play(sc, "refreshed", refreshed, -18.0);
     let mount = v.at("not a download");
     let contact = plug(s, sc, "tp", mount - seconds(1.3));
     let mounted = send(
@@ -177,7 +178,7 @@ pub fn film(narration: &Narration) -> Result<ScenePlan> {
     );
     s.land(sc, "sandbox", mounted);
     status(s, sc, "sandbox", mounted, 2);
-    sc.media(sound("mounted", SUCCESS, mounted, -14.0));
+    sfx::SUCCESS.play(sc, "mounted", mounted, -14.0);
     let mut mount_footer = footer(
         sc,
         "footer-mount",
@@ -219,7 +220,7 @@ pub fn film(narration: &Narration) -> Result<ScenePlan> {
     s.to(sc, "sandbox.dim", down, 0.7, 0.6);
     s.to(sc, "sb.flow", down, 0.0, 0.3);
     s.to(sc, "sb.opacity", down, 0.3, 0.6);
-    sc.media(sound("down", RESET, down, -16.0));
+    sfx::RESET.play(sc, "down", down, -16.0);
 
     // Restored from that snapshot when it is needed again.
     let restored = v.at("restored").not_before(down + seconds(0.8));
@@ -231,7 +232,7 @@ pub fn film(narration: &Narration) -> Result<ScenePlan> {
     s.twang(sc, "sb", reached);
     status(s, sc, "sandbox", reached, 5);
     status(s, sc, "workspace", reached, 4);
-    sc.media(sound("restored", SUCCESS, reached, -13.0));
+    sfx::SUCCESS.play(sc, "restored", reached, -13.0);
     footer(
         sc,
         "footer-restore",

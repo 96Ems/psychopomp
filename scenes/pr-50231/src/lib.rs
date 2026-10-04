@@ -12,16 +12,15 @@ mod permissions;
 mod settings;
 mod tools;
 
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use anyhow::Result;
 use psychopomp::{
-    author::{PlanBuilder, seconds},
+    author::PlanBuilder,
     caption::{CaptionActor, CaptionAlign, CaptionPlan, CaptionSpanPlan},
     narration::Narration,
-    plan::{
-        MediaKindPlan, MediaPlan, MediaRolePlan, ReelPlan, ReelSegmentPlan, ReelTransitionStyle,
-    },
+    plan::{ReelPlan, ReelSegmentPlan, ReelTransitionStyle},
+    sfx::Sfx,
     tone::Tone,
 };
 
@@ -102,35 +101,12 @@ fn footer(scene: &mut PlanBuilder, id: &str, spans: Vec<CaptionSpanPlan>) -> Res
     CaptionActor::declare(scene, id, &CaptionPlan::line([LEFT, FOOTER_Y], 28.0, spans))
 }
 
-/// A sound file and its length in seconds. Paths resolve against the reel file.
-#[derive(Clone, Copy)]
-struct Sfx(&'static str, f64);
-
-const TICK: Sfx = Sfx("../../assets/visual-effects/task-running.wav", 0.13);
-const SEND: Sfx = Sfx("../../assets/opencode-hot-reload/save.wav", 0.15);
-const FAILURE: Sfx = Sfx("../../assets/visual-effects/task-failure.wav", 0.47);
-const MARK: Sfx = Sfx("../../assets/pr-walkthrough/mark.wav", 0.3);
-const GLITCH: Sfx = Sfx("../../assets/pr-walkthrough/glitch.wav", 0.2);
-// Eleven Sound Effects v2 stems from `sfx/generate.ts`.
-const REWIND: Sfx = Sfx("sfx/rewind.wav", 1.084);
-const SHUFFLE: Sfx = Sfx("sfx/shuffle.wav", 0.868);
-const DROP: Sfx = Sfx("sfx/drop.wav", 0.878);
-const RESOLUTION: Sfx = Sfx("sfx/resolution.wav", 0.878);
-
-fn sound(id: &str, Sfx(file, length): Sfx, at: u64, gain_db: f32) -> MediaPlan {
-    let length = seconds(length);
-    MediaPlan {
-        id: id.to_owned(),
-        path: PathBuf::from(file),
-        kind: MediaKindPlan::Audio,
-        role: MediaRolePlan::Layer,
-        source_start_nanos: 0,
-        source_end_nanos: length,
-        timeline_start_nanos: at,
-        timeline_end_nanos: at + length,
-        gain_db,
-    }
-}
+// Eleven Sound Effects v2 stems from `sfx/generate.ts`, with their exact
+// lengths (48 kHz sample counts). Paths resolve against the reel file.
+const REWIND: Sfx = Sfx::new("sfx/rewind.wav", 1_085_833_333);
+const SHUFFLE: Sfx = Sfx::new("sfx/shuffle.wav", 870_375_000);
+const DROP: Sfx = Sfx::new("sfx/drop.wav", 880_000_000);
+const RESOLUTION: Sfx = Sfx::new("sfx/resolution.wav", 880_000_000);
 
 #[cfg(test)]
 mod tests {
