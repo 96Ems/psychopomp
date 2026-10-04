@@ -2,16 +2,17 @@
 //! says in which step it appears and, optionally, in which step it is removed.
 //! Lines keep identity across steps, so unchanged code only moves; removed lines
 //! turn red before they go, and added lines arrive green.
-use anyhow::Result;
+use anyhow::{Context, Result};
 
 use super::{
-    EDITOR_RECIPE, EditorLinePlan, EditorPartPlan, EditorRecipePlan, EditorSnapshotPlan,
-    LineMarkPlan,
+    EDITOR_RECIPE, EditorInlineRevealPlan, EditorLinePlan, EditorPartPlan, EditorRecipePlan,
+    EditorSnapshotPlan, EditorTargetSelector, LineMarkPlan,
 };
 use crate::{
-    author::PlanBuilder,
+    author::{ActorHandle, PlanBuilder, SemanticTargetHandle},
     code::{StyledSpan, SyntaxStyle},
     highlight,
+    ide::{InlayHint, ghost},
 };
 
 /// The widest line that fits the editor card at 28 px CommitMono.
@@ -26,6 +27,11 @@ pub struct Line {
     pub text: &'static str,
     pub from: usize,
     pub until: Option<usize>,
+    /// Semantic ranges: an ID and the text it selects (its first occurrence).
+    ranges: Vec<(&'static str, &'static str)>,
+    /// Inlay Hints: an ID, the range it follows, and its ghost text.
+    inlays: Vec<(&'static str, &'static str, &'static str)>,
+    mark: Option<LineMarkPlan>,
 }
 
 /// Present from the start and never removed.
@@ -34,6 +40,9 @@ pub const fn keep(text: &'static str) -> Line {
         text,
         from: 0,
         until: None,
+        ranges: Vec::new(),
+        inlays: Vec::new(),
+        mark: None,
     }
 }
 
@@ -43,6 +52,9 @@ pub const fn add(step: usize, text: &'static str) -> Line {
         text,
         from: step,
         until: None,
+        ranges: Vec::new(),
+        inlays: Vec::new(),
+        mark: None,
     }
 }
 
@@ -52,6 +64,184 @@ pub const fn remove(step: usize, text: &'static str) -> Line {
         text,
         from: 0,
         until: Some(step),
+        ranges: Vec::new(),
+        inlays: Vec::new(),
+        mark: None,
+    }
+}
+
+impl Line {
+    /// Name the first occurrence of `text` in this line as semantic range
+    /// `id`, so callouts, diagnostics, hovers, and cursors can pin to it
+    /// through [`DiffEditor::target`]. The line's highlighting is unchanged.
+    pub fn range(mut self, id: &'static str, text: &'static str) -> Self {
+        self.ranges.push((id, text));
+        self
+    }
+
+    /// An Inlay Hint of ghost `text` after range `after`, revealed by
+    /// [`DiffEditor::inlay`].
+    pub fn inlay(mut self, id: &'static str, after: &'static str, text: &'static str) -> Self {
+        self.inlays.push((id, after, text));
+        self
+    }
+
+    /// Show `mark` on this line, whatever its steps imply (for example, a
+    /// kept line that the change makes reachable).
+    pub fn marked(mut self, mark: LineMarkPlan) -> Self {
+        self.mark = Some(mark);
+        self
+    }
+
+    fn plan(&self, id: String) -> Result<(EditorLinePlan, Vec<EditorInlineRevealPlan>)> {
+        let mark = self.mark.or(if self.until.is_some() {
+            Some(LineMarkPlan::Removed)
+        } else if self.from > 0 {
+            Some(LineMarkPlan::Added)
+        } else {
+            None
+        });
+        let mut line = editor_line(id, self.text, mark);
+        if self.ranges.is_empty() && self.inlays.is_empty() {
+            return Ok((line, Vec::new()));
+        }
+        let mut bounds = Vec::new();
+        for &(range, needle) in &self.ranges {
+            let start = self
+                .text
+                .find(needle)
+                .filter(|_| !needle.is_empty())
+                .with_context(|| format!("line '{}' does not contain '{needle}'", self.text))?;
+            bounds.push((start, start + needle.len(), range));
+        }
+        bounds.sort_by_key(|&(start, ..)| start);
+        if let Some(pair) = bounds.windows(2).find(|pair| pair[1].0 < pair[0].1) {
+            anyhow::bail!("ranges '{}' and '{}' overlap", pair[0].2, pair[1].2);
+        }
+        let spans = line.parts.remove(0).spans;
+        let mut cuts = bounds
+            .iter()
+            .flat_map(|&(start, end, _)| [start, end])
+            .collect::<Vec<_>>();
+        cuts.dedup();
+        let mut gap = 0;
+        let mut cursor = 0;
+        for (piece, (start, end)) in split_spans(&spans, &cuts).into_iter().zip(
+            std::iter::once(0)
+                .chain(cuts.iter().copied())
+                .zip(cuts.iter().copied().chain(std::iter::once(self.text.len()))),
+        ) {
+            debug_assert_eq!(cursor, start);
+            cursor = end;
+            if piece.is_empty() {
+                continue;
+            }
+            let id = match bounds
+                .iter()
+                .find(|&&(from, to, _)| (from, to) == (start, end))
+            {
+                Some(&(.., range)) => range.to_owned(),
+                None => {
+                    gap += 1;
+                    if gap == 1 {
+                        "code".to_owned()
+                    } else {
+                        format!("code-{gap}")
+                    }
+                }
+            };
+            if bounds.iter().any(|&(.., range)| range == id) {
+                line.semantic_ranges.push(super::EditorSemanticRangePlan {
+                    id: id.clone(),
+                    first_part_id: id.clone(),
+                    last_part_id: id.clone(),
+                });
+            }
+            line.parts.push(EditorPartPlan { id, spans: piece });
+        }
+        let reveals = self
+            .inlays
+            .iter()
+            .map(|&(inlay, after, text)| {
+                crate::ide::insert_inlay(&mut line, inlay, after, ghost(text))
+            })
+            .collect::<Result<Vec<_>>>()?;
+        Ok((line, reveals))
+    }
+}
+
+/// Split highlighted `spans` at the byte offsets `cuts` (ascending), keeping
+/// each span's style, into `cuts.len() + 1` pieces.
+fn split_spans(spans: &[StyledSpan], cuts: &[usize]) -> Vec<Vec<StyledSpan>> {
+    let mut pieces = vec![Vec::new()];
+    let mut cuts = cuts.iter().copied().peekable();
+    let mut offset = 0;
+    for span in spans {
+        let mut text = span.text.as_str();
+        while let Some(&cut) = cuts.peek() {
+            if cut > offset + text.len() {
+                break;
+            }
+            let (head, tail) = text.split_at(cut - offset);
+            if !head.is_empty() {
+                pieces
+                    .last_mut()
+                    .expect("one piece")
+                    .push(StyledSpan::new(head, span.style));
+            }
+            pieces.push(Vec::new());
+            offset = cut;
+            text = tail;
+            cuts.next();
+        }
+        if !text.is_empty() {
+            pieces
+                .last_mut()
+                .expect("one piece")
+                .push(StyledSpan::new(text, span.style));
+        }
+        offset += text.len();
+    }
+    pieces
+}
+
+/// The declared editor of a Stepped Diff: pin targets to its lines' ranges and
+/// reveal its Inlay Hints.
+pub struct DiffEditor {
+    actor: ActorHandle,
+}
+
+impl DiffEditor {
+    pub fn actor(&self) -> &ActorHandle {
+        &self.actor
+    }
+
+    /// The stable ID of `lines[index]`.
+    pub fn line_id(&self, index: usize) -> String {
+        id(index)
+    }
+
+    /// Declare Semantic Target `id` on range `range` of `lines[index]`.
+    pub fn target(
+        &self,
+        scene: &mut PlanBuilder,
+        id: impl Into<String>,
+        index: usize,
+        range: &str,
+    ) -> Result<SemanticTargetHandle> {
+        Ok(scene.semantic_target(
+            id,
+            &self.actor,
+            EditorTargetSelector {
+                line_id: self.line_id(index),
+                range_id: range.to_owned(),
+            },
+        )?)
+    }
+
+    /// The reveal handle of Inlay Hint `id`.
+    pub fn inlay(&self, scene: &mut PlanBuilder, id: &str) -> InlayHint {
+        InlayHint::on(scene, &self.actor, id)
     }
 }
 
@@ -79,14 +269,15 @@ impl Diff {
     }
 
     /// Declare the `editor` actor. `step_times[k]` is when step `k + 1` happens; removed
-    /// lines turn red `warning` nanoseconds before their step.
+    /// lines turn red `warning` nanoseconds before their step. The returned
+    /// handle pins Semantic Targets to the lines' ranges.
     pub fn declare(
         &self,
         scene: &mut PlanBuilder,
         step_times: &[u64],
         warning: u64,
         entrance: bool,
-    ) -> Result<()> {
+    ) -> Result<DiffEditor> {
         let steps = self.steps();
         anyhow::ensure!(
             step_times.len() == steps,
@@ -115,22 +306,16 @@ impl Diff {
             .enumerate()
             .flat_map(|(step, &at)| step_snapshots(&self.rows(step), &self.rows(step + 1), at))
             .collect::<Vec<_>>();
-        let lines = self
-            .lines
-            .iter()
-            .enumerate()
-            .map(|(index, line)| {
-                let mark = if line.until.is_some() {
-                    Some(LineMarkPlan::Removed)
-                } else if line.from > 0 {
-                    Some(LineMarkPlan::Added)
-                } else {
-                    None
-                };
-                editor_line(id(index), line.text, mark)
-            })
-            .chain(gap_lines(&snapshots))
-            .collect::<Vec<_>>();
+        let mut reveals = Vec::new();
+        let mut lines = Vec::new();
+        for (index, line) in self.lines.iter().enumerate() {
+            let (line, inlays) = line
+                .plan(id(index))
+                .with_context(|| format!("{} line {index}", self.file_name))?;
+            lines.push(line);
+            reveals.extend(inlays);
+        }
+        lines.extend(gap_lines(&snapshots));
         let initial = self.rows(0);
         let final_ids = self.rows(steps);
         let recipe = EditorRecipePlan {
@@ -144,7 +329,7 @@ impl Diff {
             entering_offset_x: 0.0,
             focus_height: 44.0,
             inline_reveal: None,
-            additional_inline_reveals: Vec::new(),
+            additional_inline_reveals: reveals,
         };
         let editor = scene.actor("editor", EDITOR_RECIPE, &recipe)?;
         // Removed lines start unmarked and turn red just before they leave.
@@ -162,7 +347,7 @@ impl Diff {
             scene.spring(&y, 0, 0.0, 0.7, 0.0);
             scene.spring(&opacity, 0, 1.0, 0.5, 0.0);
         }
-        Ok(())
+        Ok(DiffEditor { actor: editor })
     }
 }
 
@@ -298,6 +483,91 @@ mod tests {
         assert_eq!(inserted[0].line_ids, rows("gap-0 gap-1 a b"));
         assert_eq!(inserted[1].at_nanos, 5 + ROOM);
         assert_eq!(gap_lines(&inserted).count(), 2);
+    }
+
+    #[test]
+    fn ranges_split_a_highlighted_line_without_changing_its_spans() {
+        let text = "  yield* signal(info.pid, \"SIGKILL\")";
+        let diff = Diff {
+            file_name: "a.ts",
+            lines: vec![
+                keep("const a = 1"),
+                keep(text)
+                    .range("call", "signal(info.pid, \"SIGKILL\")")
+                    .range("kw", "yield")
+                    .marked(LineMarkPlan::Added),
+                remove(1, "return").range("ret", "return"),
+            ],
+        };
+        let mut scene = PlanBuilder::new("diff", 2_000_000_000);
+        let editor = diff
+            .declare(&mut scene, &[1_000_000_000], 0, false)
+            .unwrap();
+        editor.target(&mut scene, "sigkill", 1, "call").unwrap();
+        let plan = scene.finish().unwrap();
+        let recipe: EditorRecipePlan = serde_json::from_value(plan.actors[0].data.clone()).unwrap();
+        recipe.compile().unwrap();
+        let unchanged = serde_json::to_value(&recipe.lines[0]).unwrap();
+        assert_eq!(
+            unchanged["parts"][0]["id"], "code",
+            "rangeless lines are untouched"
+        );
+        let line = &recipe.lines[1];
+        assert_eq!(
+            line.parts
+                .iter()
+                .map(|part| part.id.as_str())
+                .collect::<Vec<_>>(),
+            ["code", "kw", "code-2", "call"]
+        );
+        let flat = |spans: &[StyledSpan]| serde_json::to_value(spans).unwrap();
+        let joined = line
+            .parts
+            .iter()
+            .flat_map(|part| part.spans.iter().cloned())
+            .collect::<Vec<_>>();
+        assert_eq!(flat(&joined), flat(&highlight::typescript(text)));
+        assert_eq!(line.mark, Some(LineMarkPlan::Added));
+        assert_eq!(recipe.lines[2].mark, Some(LineMarkPlan::Removed));
+        assert_eq!(plan.semantic_targets[0].selector["lineId"], "line-1");
+        assert_eq!(plan.semantic_targets[0].selector["rangeId"], "call");
+
+        let missing = Diff {
+            file_name: "a.ts",
+            lines: vec![keep("const a = 1").range("b", "b =")],
+        };
+        let mut scene = PlanBuilder::new("diff", 2_000_000_000);
+        assert!(missing.declare(&mut scene, &[], 0, false).is_err());
+    }
+
+    #[test]
+    fn diff_inlays_reveal_inside_their_line() {
+        let diff = Diff {
+            file_name: "a.ts",
+            lines: vec![
+                keep("const program = run()")
+                    .range("name", "program")
+                    .inlay("type", "name", ": Effect<number>"),
+            ],
+        };
+        let mut scene = PlanBuilder::new("diff", 2_000_000_000);
+        let editor = diff.declare(&mut scene, &[], 0, false).unwrap();
+        editor
+            .inlay(&mut scene, "type")
+            .show(&mut scene, 500_000_000);
+        let plan = scene.finish().unwrap();
+        let recipe: EditorRecipePlan = serde_json::from_value(plan.actors[0].data.clone()).unwrap();
+        assert_eq!(
+            recipe.lines[0]
+                .parts
+                .iter()
+                .map(|part| part.id.as_str())
+                .collect::<Vec<_>>(),
+            ["code", "name", "inlay:type", "code-2"]
+        );
+        assert_eq!(recipe.additional_inline_reveals[0].channel(), "inlay.type");
+        assert_eq!(plan.continuous_channels[0].id, "editor.inlay.type");
+        recipe.compile().unwrap();
     }
 
     #[test]
