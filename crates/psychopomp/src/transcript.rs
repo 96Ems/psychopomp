@@ -50,6 +50,11 @@ impl Transcript {
         Ok(Self { words })
     }
 
+    /// Every word with its source times, in spoken order.
+    pub fn words(&self) -> &[WordTiming] {
+        &self.words
+    }
+
     pub fn word(&self, word: &str) -> Result<Cue> {
         self.word_occurrence(word, 0)
     }

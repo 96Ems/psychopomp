@@ -109,6 +109,15 @@ impl Spoken<'_> {
         self.start + self.clip.duration
     }
 
+    /// Every spoken word with its start and end on the plan clock, as
+    /// subtitles show them.
+    pub fn words(&self) -> impl Iterator<Item = (&str, u64, u64)> + '_ {
+        self.clip.transcript.words().iter().map(|timing| {
+            let at = |seconds: f64| self.start + (seconds * 1e9).round() as u64;
+            (timing.word.as_str(), at(timing.start), at(timing.end))
+        })
+    }
+
     /// When `phrase` starts being spoken. Panics with the clip and phrase if the
     /// narration no longer says it: the choreography must be updated with the words.
     pub fn at(&self, phrase: &str) -> u64 {
