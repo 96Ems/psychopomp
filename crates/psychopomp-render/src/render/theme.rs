@@ -207,7 +207,7 @@ impl Theme {
         if self == Self::Original {
             return;
         }
-        for p in sprite.pixels.chunks_exact_mut(4) {
+        for p in sprite.pixels.as_chunks_mut::<4>().0 {
             if p[3] > 0 {
                 let rgb = self.ink([p[0], p[1], p[2]]);
                 p[..3].copy_from_slice(&rgb);
