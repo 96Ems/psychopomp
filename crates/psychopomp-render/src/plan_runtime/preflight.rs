@@ -9,6 +9,7 @@ use super::{
     grid::PreparedGrid,
     header,
     lanes::PreparedLanes,
+    lens::PreparedLens,
     plot::PreparedPlot,
     rolling::RollingNumberInput,
     sequence::PreparedSequence,
@@ -28,6 +29,7 @@ use psychopomp::{
     editor::{EDITOR_RECIPE, EditorTargetSelector, POINTER_RECIPE, PointerRecipePlan},
     grid::GRID_RECIPE,
     lanes::LANES_RECIPE,
+    lens::LENS_RECIPE,
     plan::{ActorPlan, ContinuousChannelPlan, MediaKindPlan, ScenePlan, StateChannelPlan},
     plot::PLOT_RECIPE,
     rolling::ROLLING_NUMBER_RECIPE,
@@ -61,6 +63,7 @@ pub(super) struct Plan {
     pub lanes: Vec<PreparedLanes>,
     pub videos: Vec<VideoInput>,
     pub callouts: Vec<PreparedCallout>,
+    pub lenses: Vec<PreparedLens>,
 }
 pub(super) enum RootPlan {
     Blank,
@@ -352,6 +355,7 @@ impl Plan {
         let mut lanes = Vec::new();
         let mut videos = Vec::new();
         let mut callouts = Vec::new();
+        let mut lenses = Vec::new();
         for actor in &plan.actors {
             match actor.recipe.as_str() {
                 "title-card" => put_root(&mut root, RootPlan::Title(Title::new(actor, &plan)?))?,
@@ -426,6 +430,7 @@ impl Plan {
                 CALLOUT_RECIPE => {
                     callouts.push(PreparedCallout::new(actor, &plan.continuous_channels)?)
                 }
+                LENS_RECIPE => lenses.push(PreparedLens::new(actor, &plan.continuous_channels)?),
                 recipe => bail!("unsupported actor recipe '{recipe}'"),
             }
         }
@@ -473,6 +478,9 @@ impl Plan {
         for callout in &callouts {
             callout.validate_anchors(&root, &plan.semantic_targets)?;
         }
+        for lens in &lenses {
+            lens.validate_anchors(&root, &plan.semantic_targets)?;
+        }
         for media in &plan.media {
             if matches!(media.kind, MediaKindPlan::Audio)
                 || (matches!(media.kind, MediaKindPlan::Video)
@@ -505,6 +513,7 @@ impl Plan {
             lanes,
             videos,
             callouts,
+            lenses,
         };
         match &result.root {
             RootPlan::Editor { editor, .. } => editor.compile_channels(&mut result.plan)?,

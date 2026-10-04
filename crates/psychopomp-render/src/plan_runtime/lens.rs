@@ -1,0 +1,190 @@
+//! Prepared lenses: decoded and validated once with strict channel names.
+//! Like callouts, a lens resolves its anchors against the prepared root at
+//! every sample, so the glass stays on its card or code range through camera
+//! moves, line motion, and every shutter sample.
+use anyhow::{Result, bail};
+use psychopomp::{
+    lens::{Glass, LensAnchorPlan, LensPlan},
+    math::Vec2,
+    plan::{ActorPlan, ContinuousChannelPlan, SemanticTargetPlan},
+    stage::StageElement,
+};
+
+use super::preflight::{RootPlan, decode, strict_channels};
+
+pub(super) struct PreparedLens {
+    id: String,
+    plan: LensPlan,
+}
+
+impl PreparedLens {
+    pub(super) fn new(actor: &ActorPlan, channels: &[ContinuousChannelPlan]) -> Result<Self> {
+        let plan = decode(actor, "lens", LensPlan::validate)?;
+        strict_channels(&actor.id, channels, "lens", |property| {
+            plan.accepts(property)
+        })?;
+        Ok(Self {
+            id: actor.id.clone(),
+            plan,
+        })
+    }
+
+    /// Every anchor must name something the plan's root can place.
+    pub(super) fn validate_anchors(
+        &self,
+        root: &RootPlan,
+        targets: &[SemanticTargetPlan],
+    ) -> Result<()> {
+        for anchor in &self.plan.anchors {
+            match (anchor, root) {
+                (LensAnchorPlan::Point { .. }, _) => {}
+                (LensAnchorPlan::Stage { element, .. }, RootPlan::Stage { recipe, .. }) => {
+                    if recipe
+                        .element(element)
+                        .and_then(StageElement::anchor)
+                        .is_none()
+                    {
+                        bail!(
+                            "lens '{}' anchor '{}' needs a positioned stage element; '{element}' is not one",
+                            self.id,
+                            anchor.id()
+                        );
+                    }
+                }
+                (LensAnchorPlan::Editor { target, .. }, RootPlan::Editor { editor, .. }) => {
+                    if !targets
+                        .iter()
+                        .any(|t| &t.id == target && t.actor_id == editor.actor_id())
+                    {
+                        bail!(
+                            "lens '{}' anchor '{}' references unknown editor semantic target '{target}'",
+                            self.id,
+                            anchor.id()
+                        );
+                    }
+                }
+                (LensAnchorPlan::Stage { .. }, _) => bail!(
+                    "lens '{}' anchor '{}' needs a stage root",
+                    self.id,
+                    anchor.id()
+                ),
+                (LensAnchorPlan::Editor { .. }, _) => bail!(
+                    "lens '{}' anchor '{}' needs an editor root",
+                    self.id,
+                    anchor.id()
+                ),
+            }
+        }
+        Ok(())
+    }
+
+    /// Whether any anchor follows the Stage camera.
+    pub(super) fn on_stage(&self) -> bool {
+        self.plan
+            .anchors
+            .iter()
+            .any(|anchor| matches!(anchor, LensAnchorPlan::Stage { .. }))
+    }
+
+    /// The glass at one sample: anchors resolved and blended by their weights.
+    /// `None` while absent or when no weighted anchor can be placed.
+    pub(super) fn glass(
+        &self,
+        value: impl Fn(&str, &str, f32) -> f32,
+        resolve: impl Fn(&LensAnchorPlan) -> Option<Vec2>,
+    ) -> Option<Glass> {
+        if value(&self.id, "presence", 1.0) <= 1e-3 {
+            return None;
+        }
+        let mut center = Vec2::ZERO;
+        let mut total = 0.0;
+        for (index, anchor) in self.plan.anchors.iter().enumerate() {
+            let weight = value(
+                &self.id,
+                &LensPlan::weight_property(anchor.id()),
+                if index == 0 { 1.0 } else { 0.0 },
+            );
+            if weight.abs() < 1e-6 {
+                continue;
+            }
+            let Some(point) = resolve(anchor) else {
+                continue;
+            };
+            center += point * weight;
+            total += weight;
+        }
+        if total.abs() <= 1e-6 {
+            return None;
+        }
+        self.plan.glass(center / total, |property, default| {
+            value(&self.id, property, default)
+        })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use psychopomp::{
+        author::PlanBuilder,
+        callout::CalloutSide,
+        lens::{LensActor, LensAnchorPlan, LensPlan},
+        stage::StageActor,
+    };
+
+    use super::super::validate_renderer_plan;
+
+    fn plan(anchor: LensAnchorPlan, extra: Option<&str>) -> psychopomp::plan::ScenePlan {
+        let recipe = serde_json::from_value(serde_json::json!({
+            "elements": [
+                { "kind": "card", "id": "api", "at": [960, 540, 0], "size": [300, 110], "title": "api" },
+                { "kind": "card", "id": "client", "at": [420, 540, 0], "size": [300, 110], "title": "client" },
+                { "kind": "beam", "id": "link", "from": "client", "to": "api" }
+            ]
+        }))
+        .unwrap();
+        let mut scene = PlanBuilder::new("lens-preflight", 2_000_000_000);
+        StageActor::declare(&mut scene, "stage", &recipe).unwrap();
+        let mut lens =
+            LensActor::declare(&mut scene, "loupe", &LensPlan::circle(anchor, 240.0)).unwrap();
+        lens.show(&mut scene, 0);
+        if let Some(property) = extra {
+            let channel = lens.channel(&mut scene, property, 0.0);
+            scene.set(&channel, 100_000_000, 1.0);
+        }
+        scene.finish().unwrap()
+    }
+
+    fn stage(element: &str) -> LensAnchorPlan {
+        LensAnchorPlan::Stage {
+            id: "pin".into(),
+            element: element.into(),
+            edge: CalloutSide::Center,
+            side: None,
+        }
+    }
+
+    #[test]
+    fn lens_preflight_checks_anchors_against_the_root_and_channels_strictly() {
+        validate_renderer_plan(&plan(stage("api"), Some("anchor.pin"))).unwrap();
+        validate_renderer_plan(&plan(stage("api"), Some("focus-y"))).unwrap();
+        for (anchor, extra, expected) in [
+            (stage("api"), Some("anchor.nowhere"), "unknown property"),
+            (stage("api"), Some("radius"), "unknown property"),
+            (stage("link"), None, "positioned stage element"),
+            (stage("ghost"), None, "positioned stage element"),
+            (
+                LensAnchorPlan::Editor {
+                    id: "pin".into(),
+                    target: "range".into(),
+                    edge: CalloutSide::Center,
+                    side: None,
+                },
+                None,
+                "needs an editor root",
+            ),
+        ] {
+            let error = validate_renderer_plan(&plan(anchor, extra)).unwrap_err();
+            assert!(format!("{error:#}").contains(expected), "{error:#}");
+        }
+    }
+}

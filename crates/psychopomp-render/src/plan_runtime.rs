@@ -34,6 +34,7 @@ mod generated;
 mod grid;
 mod header;
 mod lanes;
+mod lens;
 mod plot;
 mod preflight;
 mod presentation;
@@ -448,6 +449,7 @@ struct PreparedPlan {
     plots: Vec<plot::PreparedPlot>,
     lanes: Vec<lanes::PreparedLanes>,
     callouts: Vec<callout::PreparedCallout>,
+    lenses: Vec<lens::PreparedLens>,
     headers: Vec<header::PreparedHeader>,
     videos: Vec<video::PreparedVideo>,
 }
@@ -467,7 +469,7 @@ struct VisualSampleKey {
     states: Vec<Value>,
     video_frames: Vec<u64>,
     ambient_time: Option<u64>,
-    /// Stage-pinned callout anchors, which move with the camera.
+    /// Stage-pinned callout and lens anchors, which move with the camera.
     anchors: Vec<[u32; 2]>,
 }
 
@@ -521,6 +523,7 @@ impl PreparedPlan {
             lanes,
             videos,
             callouts,
+            lenses,
         } = input;
         let components = component_prototype::PreparedComponents::prepare_inputs(
             &mut plan, components, renderer,
@@ -597,6 +600,7 @@ impl PreparedPlan {
             plots,
             lanes,
             callouts,
+            lenses,
             headers,
             videos,
         })
@@ -867,8 +871,17 @@ impl PreparedPlan {
         })
     }
 
-    /// Whether `samples` differ in nothing but their callouts.
+    /// Whether `samples` differ in nothing but their callouts. A visible lens
+    /// refracts the frame around it, so its samples always compose whole.
     fn only_callouts_differ(&self, samples: &[(f64, f32)], stage: &str) -> Result<bool> {
+        let size = [WIDTH, HEIGHT];
+        if self.lenses.iter().any(|lens| {
+            samples
+                .iter()
+                .any(|&(time, _)| self.lens_glass(lens, time, &self.timeline, size).is_some())
+        }) {
+            return Ok(false);
+        }
         let mut keys = samples.iter().map(|&(time, _)| {
             self.overlay_key_ignoring(time, |actor| {
                 actor == stage || self.callouts.iter().any(|callout| callout.id() == actor)
@@ -896,6 +909,13 @@ impl PreparedPlan {
             .filter_map(|callout| self.callout_pose(callout, time, &self.timeline, size))
             .map(|pose| pose.anchor.to_array().map(f32::to_bits))
             .collect();
+        key.anchors.extend(
+            self.lenses
+                .iter()
+                .filter(|lens| lens.on_stage())
+                .filter_map(|lens| self.lens_glass(lens, time, &self.timeline, size))
+                .map(|glass| glass.outline.center.to_array().map(f32::to_bits)),
+        );
         Ok(key)
     }
 
@@ -942,6 +962,28 @@ impl PreparedPlan {
             self.property_value(timeline, actor, property, time, default)
         };
         callout.pose(value, |anchor| {
+            callout::resolve(
+                &self.root,
+                anchor,
+                size,
+                value,
+                |actor, property| self.raw_motion_value(timeline, actor, property, time),
+                time,
+            )
+        })
+    }
+
+    fn lens_glass(
+        &self,
+        lens: &lens::PreparedLens,
+        time: f64,
+        timeline: &Timeline,
+        size: [u32; 2],
+    ) -> Option<psychopomp::lens::Glass> {
+        let value = |actor: &str, property: &str, default: f32| {
+            self.property_value(timeline, actor, property, time, default)
+        };
+        lens.glass(value, |anchor| {
             callout::resolve(
                 &self.root,
                 anchor,
@@ -1057,6 +1099,13 @@ impl PreparedPlan {
             }
             if let Some(pose) = self.callout_pose(callout, time, timeline, renderer.size()) {
                 callout.render(pixels, renderer, pose);
+            }
+        }
+        // Lenses refract everything composed so far; plain text and Tasks
+        // stay above the glass.
+        for lens in &self.lenses {
+            if let Some(glass) = self.lens_glass(lens, time, timeline, renderer.size()) {
+                crate::render::composite_lens(pixels, renderer.size(), &glass);
             }
         }
         for text in &self.texts {

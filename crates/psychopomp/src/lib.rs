@@ -10,6 +10,7 @@ pub mod effects;
 pub mod grid;
 pub mod highlight;
 pub mod lanes;
+pub mod lens;
 pub mod math;
 pub mod motion;
 pub mod narration;
