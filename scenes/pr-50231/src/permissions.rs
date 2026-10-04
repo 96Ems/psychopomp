@@ -202,10 +202,7 @@ fn stage_plan() -> StagePlan {
 
 /// `inInputOrder`'s card on screen once the closing camera settles.
 fn fix_rect() -> [f32; 4] {
-    let camera = Camera {
-        position: Vec3::from(CLOSING_CAMERA),
-        size: vec2(1920.0, 1080.0),
-    };
+    let camera = Camera::at(Vec3::from(CLOSING_CAMERA), vec2(1920.0, 1080.0));
     let (center, scale) = camera
         .project(Vec3::from(FIX))
         .expect("the fix card is in front of the camera");
@@ -631,10 +628,7 @@ mod tests {
     #[test]
     fn cards_fit_every_camera_composition() {
         for position in [[0.0, 0.0, -80.0], [0.0, 0.0, 0.0], super::CLOSING_CAMERA] {
-            let camera = Camera {
-                position: Vec3::from(position),
-                size: vec2(1920.0, 1080.0),
-            };
+            let camera = Camera::at(Vec3::from(position), vec2(1920.0, 1080.0));
             for element in super::stage_plan().elements {
                 if let StageElement::Card { id, at, size, .. } = element {
                     let (center, scale) = camera.project(Vec3::from(at)).unwrap();

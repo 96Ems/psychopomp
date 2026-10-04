@@ -350,6 +350,58 @@ impl PlanBuilder {
         });
     }
 
+    /// The motion state of `actor.property` at `at_nanos` under the events
+    /// written so far, or `None` when the channel is undeclared or refers to
+    /// Semantic Targets. Helpers read the pose they move from this way; an
+    /// event written later cannot change a value already read.
+    pub fn sample(
+        &self,
+        actor: &ActorHandle,
+        property: &str,
+        at_nanos: u64,
+    ) -> Option<crate::motion::MotionState> {
+        let id = format!("{}.{}", actor.id, property);
+        let channel = self
+            .plan
+            .continuous_channels
+            .iter()
+            .find(|channel| channel.id == id)?;
+        let key = crate::timeline::PropertyId::new(&id);
+        let timeline = crate::plan::compile_channels(
+            [(channel, key.clone())],
+            self.plan.duration_nanos,
+            |scalar| match scalar {
+                ScalarPlan::Literal(value) => Ok(*value),
+                ScalarPlan::Target(_) => anyhow::bail!("a semantic scalar has no authored value"),
+            },
+        )
+        .ok()?;
+        timeline.sample_at(&key, at_nanos as f64 / 1e9)
+    }
+
+    /// Where `actor.property` is headed at `at_nanos`: the target of its
+    /// latest event at or before then (equal times in written order), else
+    /// its initial value. `None` when undeclared or semantic.
+    pub fn destination(&self, actor: &ActorHandle, property: &str, at_nanos: u64) -> Option<f32> {
+        let id = format!("{}.{}", actor.id, property);
+        let channel = self
+            .plan
+            .continuous_channels
+            .iter()
+            .find(|channel| channel.id == id)?;
+        let latest = channel
+            .events
+            .iter()
+            .enumerate()
+            .filter(|(_, event)| event.at_nanos() <= at_nanos)
+            .max_by_key(|(index, event)| (event.at_nanos(), *index))
+            .map_or(&channel.initial, |(_, event)| event.scalar());
+        match latest {
+            ScalarPlan::Literal(value) => Some(*value),
+            ScalarPlan::Target(_) => None,
+        }
+    }
+
     pub fn finish(self) -> Result<ScenePlan, crate::plan::PlanValidationError> {
         self.plan.validate()?;
         Ok(self.plan)
@@ -399,6 +451,30 @@ mod tests {
             plan.continuous_channels[0].events[0].at_nanos(),
             2_000_000_000
         );
+    }
+
+    #[test]
+    fn authored_values_and_destinations_read_the_events_written_so_far() {
+        let mut scene = PlanBuilder::new("reads", 4_000_000_000);
+        let actor = scene.actor("a", "title-card", json!({})).unwrap();
+        assert_eq!(scene.sample(&actor, "x", 0), None, "undeclared");
+        let x = scene.channel(&actor, "x", 10.0);
+        scene.spring(&x, 1_000_000_000, 50.0, 0.8, 0.0);
+        scene.set(&x, 3_000_000_000, -5.0);
+        assert_eq!(
+            scene.sample(&actor, "x", 500_000_000).unwrap().position,
+            10.0
+        );
+        let moving = scene.sample(&actor, "x", 1_300_000_000).unwrap();
+        assert!(moving.position > 10.0 && moving.position < 50.0 && moving.velocity > 0.0);
+        assert_eq!(
+            scene.sample(&actor, "x", 3_500_000_000).unwrap().position,
+            -5.0
+        );
+        // Where it is headed, not where it is.
+        assert_eq!(scene.destination(&actor, "x", 500_000_000), Some(10.0));
+        assert_eq!(scene.destination(&actor, "x", 1_300_000_000), Some(50.0));
+        assert_eq!(scene.destination(&actor, "x", 3_000_000_000), Some(-5.0));
     }
 
     #[test]

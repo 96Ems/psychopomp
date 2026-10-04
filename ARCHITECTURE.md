@@ -20,7 +20,7 @@ Lightweight crate (`crates/psychopomp/src`):
 - `crates/psychopomp/src/grid.rs`: finite keyed product catalogs and semantic Grid Snapshots
 - `crates/psychopomp/src/value.rs`: immutable Value Token recipe data for finite teaching diagrams
 - `crates/psychopomp/src/component_prototype.rs`: provisional Typeset, width-text, Collection, Connector, rich-text, header, and Venn payloads
-- `crates/psychopomp/src/author.rs`: typed Scene Plan builder and stable actor/channel handles for lightweight Scene Programs
+- `crates/psychopomp/src/author.rs`: typed Scene Plan builder and stable actor/channel handles for lightweight Scene Programs; `sample` and `destination` read a channel's authored value so helpers move from the pose written so far
 - `crates/psychopomp/src/plan.rs`: versioned renderer-independent Scene Plan, Deck, and Reel values and structured validation
 - `crates/psychopomp/src/plan/channels.rs`: exact scalar-event lowering and opt-in snapshot-destination reduction; raw event ordering remains distinct
 - `crates/psychopomp/src/plan/wipe.rs`: Reel wipe values (direction, mid-frame holds, labels) and the closed-form divider position
@@ -41,7 +41,8 @@ Lightweight crate (`crates/psychopomp/src`):
 - `crates/psychopomp/src/lanes.rs`: Lanes recipe values (time axis, lanes with keys and sparklines, cues), `LanesPlan::from_scene_plan`, and the `LanesActor` handle (`show`, `scrub`, `emphasize`)
 - `crates/psychopomp/src/callout.rs`: Callout recipe values, anchor edges, leader shape and frame-avoiding layout, and the `CalloutActor` handle (`show`, `hide`, `move_to`, `emphasize`)
 - `crates/psychopomp/src/video.rs`: Video Card recipe values (footage size, card rect, title), focus-window math, placement helper, and the `VideoActor` handle (`fly_in`, `focus`, `unfocus`, `hide`)
-- `crates/psychopomp/src/stage.rs`: Stage elements, strict channels, perspective camera, orb geometry, the packet clock (`stage::packet`), and the `StageActor` authoring handle (`to`, `ease`, `bounce`, `settle_in`, `clock`/`clock_for`, `connect`, `send`, `hit`, `kick`, `jolt`, `twang`, `land`)
+- `crates/psychopomp/src/stage.rs`: Stage elements, strict channels, perspective camera, orb geometry, the packet clock (`stage::packet`), and the `StageActor` authoring handle (`to`, `ease`, `glide`, `bounce`, `settle_in`, `clock`/`clock_for`, `connect`, `send`, `hit`, `kick`, `jolt`, `twang`, `land`, and `camera` for the `CameraRig`)
+- `crates/psychopomp/src/stage/camera.rs`: the Stage `Camera` pose and projection (pan, dolly, orbit about a pivot, zoom, roll, billboard screen boxes, framing) shared by the renderer, callouts, and Scene Programs, and the `CameraRig` shots (`frame`, `move_to`, `establish`, `push_in`, `pull_back`, `drift`, `whip`, `orbit`, `dolly_zoom`, `roll`, `focus_on`, `aperture`, `follow`, `release`, `handheld`)
 - `crates/psychopomp/src/effects/`: GPU-free special-effect clocks and particle poses; shared dynamics stay in `psychopomp::math::dynamics`
 - `crates/psychopomp/src/math.rs` and `math/`: shared motion and geometry math (glam vectors, lerp/remap/smoothstep, easing, closed-form dynamics such as the settling spring, arc-length curves, shape ports and connectors, deterministic hash)
 
@@ -128,6 +129,7 @@ Scene Programs (`scenes/`), each emitting a Scene Plan, Deck, or Reel:
 - `scenes/callouts/`: Callout showroom reel: callouts pinned to Stage cards through a dolly, a jolt, and a glide between anchors, then to a code range that moves as lines are inserted and the panel zooms
 - `scenes/video/`: Video Card showroom: a screen recording flies in, zooms into the prompt, and back out
 - `scenes/compare/`: wipe showroom: a held before/after wipe between two Stage frames, then a plain wipe
+- `scenes/camera/`: camera showroom: establish, frame, follow a packet, rack focus, orbit an orb, dolly zoom on an impact, whip, handheld drift, and a push-in, all `CameraRig` shots
 
 ## Scene Programs And Rendering Compile Separately
 
@@ -601,6 +603,49 @@ reflections stay local. `settle_in` uses small, damped scale/position springs wi
 a separate delayed content spring; `ease(.., Ease::Smootherstep)` suits deliberate
 camera compositions, and `clock` starts an effect rig's elapsed-seconds channel. Packet travel uses the same acceleration-continuous quintic,
 with its inverse in shared math providing trail crossing times.
+
+#### The Stage camera
+
+`stage/camera.rs` owns one `Camera` value used by everything that projects: the
+renderer's `Scene`, `render::stage_anchor` for callouts, and Scene Programs that
+compute Reel zoom rectangles or framing. The pose is a rig: pan, a dolly along
+the view axis, yaw and pitch about a pivot on that axis at world depth
+`camera.pivot`, a focal-length `zoom`, and an image `roll`. When yaw and pitch
+are zero, `Camera::project` and `Camera::depth` take the original arithmetic
+path, so existing plans render bit for bit; a test keeps the old projection as
+an oracle. Cards, labels, and rings stay screen-aligned billboards at their
+projected centers: the Stage's primitives are screen-space signed distances with
+analytic edges, bloom, and light pools, and a foreshortened card would cost
+legibility and a homography in every primitive kind. Orb points, embers, surface
+rings, and beam endpoints project individually, so they show true parallax. A
+`Placement` carries `Camera::depth` (world z when unturned) for draw order and
+depth of field; orb dots sort by it, and their facing and contact directions are
+taken in the camera's frame. The roll is applied as each shutter sample is
+added into the exposure (`accumulate` in `stage_post.wgsl`), magnified just
+enough to cover the corners, so a rolling camera motion-blurs; a zero roll keeps
+the exact `textureLoad` path. The develop pass's shake roll and punch compose
+after it, and `stage_anchor` applies both in the same order.
+
+Following is resolved by the renderer, not baked into channels: a packet's
+position exists only on screen (its beam is a connector between projected
+outlines), so `Scene::tracked` blends the authored pan toward
+`Camera::aim(point)` for each `camera.track.<id>` weight, where a packet's point
+is its head unprojected at the depth interpolated between the beam's ends. Three
+passes settle the parallax when the ends differ in depth. Weights are ordinary
+channels, so catching and releasing a follow carry velocity, and handheld sway
+(`effects::shake::handheld`), kick, and rumble add afterward. Callouts pinned to
+Stage elements see the same followed camera.
+
+`CameraRig` writes shots as ordinary `camera.*` channels. It reads the pose a
+shot starts from with `PlanBuilder::sample` (the channels as written so far) and
+skips any channel whose authored destination already matches, so unchanged
+channels keep their trajectories. `Camera::framed` fits element footprints
+(billboard boxes from the plan's geometry and each element's own x/y/z/scale
+channels) inside a padded frame: Newton steps on the pan with a numeric
+Jacobian center the bounds, and bisection on the dolly finds the closest fit.
+A dolly zoom writes `z` and `zoom` on one curve; because both are affine in the
+same progress and zoom is proportional to the subject's distance at both ends,
+the subject's scale is exactly constant throughout.
 
 Orb `rotation` is an angular offset, independent of ambient `spin`; `blur` is a
 separate defocus pose. `burst` is an opt-in age in seconds (-1 means intact): a

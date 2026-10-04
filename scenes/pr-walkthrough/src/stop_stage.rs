@@ -103,10 +103,7 @@ pub fn build_stop_reel(narration_dir: &Path) -> Result<ReelPlan> {
 }
 
 fn client_rect() -> [f32; 4] {
-    let camera = Camera {
-        position: Vec3::from(CLOSING_CAMERA),
-        size: vec2(1920.0, 1080.0),
-    };
+    let camera = Camera::at(Vec3::from(CLOSING_CAMERA), vec2(1920.0, 1080.0));
     let (center, scale) = camera
         .project(Vec3::from(CLIENT))
         .expect("client is in front of the camera");

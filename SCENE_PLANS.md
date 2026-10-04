@@ -458,7 +458,8 @@ review the new clock before rendering; replacing just the audio desynchronizes i
 
 A reel is `{ "version": 1, "id", "segments": [{ "transitionNanos", "transitionStyle": "crossfade" | "dip" | "zoom" | "wipe", "transitionFocus"?, "transitionWipe"?, "plan" }] }`.
 A `zoom` needs `transitionFocus: [x, y, width, height]` in the outgoing frame; compute
-it with `stage::Camera::project` so it matches the card the camera flies into.
+it with `stage::Camera::project` (or `CameraRig::screen_box`) so it matches the
+card the camera flies into.
 Relative media paths resolve against the reel file. Prefer `dip` between frames
 that are both dense with text; a crossfade between two editors turns both unreadable.
 
@@ -665,6 +666,7 @@ their fuller documentation elsewhere.
   (`at`, `radius`, `thickness`), plus `post` (`bloom`, `grain`, `vignette`,
   `backdrop`). Channels are `<element>.<property>` (for example `service.shatter`,
   `link.draw`, `probe.age`, `client.blur|content`) and `camera.x|y|z|focus|dof|shake|quake|kick-x|kick-y|punch`,
+   `camera.yaw|pitch|roll|zoom|pivot|handheld`, `camera.track.<id>`,
    `post.bloom|chroma|exposure|vignette|rewind|zoom|flash`. `post.rewind` is a 1.4-second local
    age for VHS rewind interference (-1 inactive). `camera.quake` is sustained
    trauma (0..2) added to a jolt's `shake`; `post.zoom` is a radial streak toward
@@ -682,7 +684,8 @@ their fuller documentation elsewhere.
   `kick` (a two-frame shove that springs back past rest), `jolt` (an impact: the
   camera kicks along the blow, a squared-trauma noise rumble with slight roll
   decays, and the frame punches in about 2%),
-  `twang`, and `land`. `bounce` and `to` spring any channel (undeclared
+  `twang`, and `land`. `glide` is the minimum-jerk (smootherstep) move of
+  exact duration between resting compositions. `bounce` and `to` spring any channel (undeclared
   channels start at 0; declare other starting poses with `channel`), `ease` follows
   any curve, and `clock` starts an elapsed-seconds channel that runs to the scene's
   end for effect rigs such as the card spinner (`clock_for` stops it after a fixed
@@ -699,6 +702,46 @@ their fuller documentation elsewhere.
   shell, before reaching the submerged endpoint. The flagship now uses critical
   `to` springs for camera moves; a `Smootherstep` ease remains available for
   minimum-jerk timing.
+- The Stage camera (see "Stage Camera" in `CONTEXT.md`). `camera.x|y` pan and
+  `camera.z` dollies along the view axis (0, pixel exact at depth 0).
+  `camera.yaw|pitch` (radians, 0) swing it around the pivot at world depth
+  `camera.pivot` (0): positive yaw moves the camera right, positive pitch raises
+  it to look down. `camera.zoom` (1) multiplies the focal length. `camera.roll`
+  (radians, 0) turns the image clockwise and crops just enough to cover the
+  corners; it motion-blurs. `camera.handheld` (0, off; about 1 for a gentle
+  operator) sways pan and angle. `camera.track.<id>` (0) weights follow a packet
+  or positioned element, resolved at every sample. `camera.focus` is measured
+  in world z as the unturned camera sees it. Cards, labels, and rings face the
+  lens (billboards); orb particles and wires show true parallax. Undeclared
+  camera channels take these defaults (`stage::CAMERA_CHANNELS`); declare
+  `camera.zoom` at 1 before springing it with `StageActor::to`. Write shots
+  with the `CameraRig` from `StageActor::camera`; each reads the pose written so
+  far, moves by a `Move` (`Spring(seconds)` critically damped, `Glide(seconds)`
+  minimum jerk, `Ease(seconds, curve)`, `Cut`), writes only channels whose
+  destination changes, and returns when it settles:
+  ```rust
+  let camera = stage.camera();
+  camera.establish(sc, 0, 380.0, 2.6);                      // dolly in to open
+  camera.frame(sc, &["client", "api"], 150.0, at, Move::Spring(1.6))?;
+  camera.follow(sc, "request", at, Move::Spring(0.7))?;     // a packet in flight
+  camera.release(sc, landed, Move::Spring(1.0))?;           // hold where it landed
+  camera.aperture(sc, at, 1.0, Move::Spring(1.0));
+  camera.focus_on(sc, "archive", at, Move::Spring(1.3))?;   // rack focus
+  camera.orbit(sc, "core", at, [0.48, -0.16], Move::Glide(3.4))?;
+  camera.dolly_zoom(sc, "core", hit, 560.0, Move::Glide(2.4))?; // vertigo
+  camera.roll(sc, hit, 0.04, Move::Glide(1.6));             // Dutch angle
+  camera.whip(sc, &["queue", "drain"], 170.0, at, 0.6)?;    // with a post.zoom streak
+  camera.handheld(sc, at, 1.0, 1.0);
+  camera.drift(sc, "drain", at, 4.2)?;                      // a slow lean
+  camera.push_in(sc, at, 120.0, Move::Glide(3.6));
+  ```
+  `framing` returns the fitted pose without writing it, `pose` reads the
+  authored pose at a time, and `screen_box` gives an element's rectangle under a
+  pose (for a Reel zoom's `transitionFocus`). Shots, jolts, quakes, follows, and
+  handheld sway add without fighting: kick, rumble, and sway apply on top of
+  the authored and followed pose. The showroom is `cargo run -p psychopomp-camera`
+  (writes `target/camera.json`); render it with
+  `cargo run --release -- plan render target/camera.json output/camera.mp4 --theme neutral`.
 - Orb `rotation` is an angular offset in radians; animate it for a spin entrance
   rather than changing the ambient `spin` multiplier. `blur` adds defocus in world
   pixels. `burst` defaults to -1 (intact): set 0 on impact and ease linearly to
