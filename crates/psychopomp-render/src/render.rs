@@ -24,6 +24,7 @@ mod header;
 mod ide;
 mod image;
 mod lanes;
+mod lens;
 mod line_marks;
 mod lower_third;
 mod plot;
@@ -35,6 +36,7 @@ mod task;
 mod terminal;
 mod text;
 mod theme;
+mod transition;
 mod tree;
 mod ui;
 mod value;
@@ -57,6 +59,7 @@ pub use ide::{
     CaretFrame, DiagnosticFrame, EditorAnnotations, HoverFrame, InlayFrame, SelectionFrame,
 };
 pub(crate) use image::{DecodedImage, ImagePose, decode_image};
+pub(crate) use lens::composite_lens;
 pub(crate) use lower_third::LowerThirdGlyphs;
 pub(crate) use rich_text::{RichTextGlyphs, RichTextSource, parse as parse_rich_text};
 #[cfg(test)]

@@ -19,6 +19,7 @@ pub mod highlight;
 pub mod ide;
 pub mod image;
 pub mod lanes;
+pub mod lens;
 pub mod lower_third;
 pub mod math;
 pub mod meter;

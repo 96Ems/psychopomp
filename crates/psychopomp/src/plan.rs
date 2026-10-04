@@ -13,8 +13,10 @@ use crate::math::{
 };
 
 mod channels;
+pub mod transition;
 mod wipe;
 pub use channels::{SpringPlan, compile_channels, destination_channel, effective_snapshots};
+pub use transition::TransitionPhase;
 pub use wipe::{ReelWipePlan, WipeDirection, WipeHoldPlan, WipePhase};
 
 pub const SCENE_PLAN_VERSION: u32 = 2;
@@ -72,8 +74,8 @@ impl DeckPlan {
 }
 
 /// One encoded video that plays independently authored Scene Plans in order on a
-/// single clock. Each segment keeps its own actors and local time; a transition
-/// crossfades from the previous segment, so at most two segments overlap.
+/// single clock. Each segment keeps its own actors and local time and enters
+/// through its own transition, so at most two segments overlap.
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct ReelPlan {
@@ -102,21 +104,135 @@ pub struct ReelSegmentPlan {
 }
 
 impl ReelSegmentPlan {
-    /// A segment that enters through `wipe` over `transition_nanos`.
-    pub fn wiped(plan: ScenePlan, transition_nanos: u64, wipe: ReelWipePlan) -> Self {
+    /// A segment that enters through `style` over `transition_nanos`.
+    pub fn new(plan: ScenePlan, transition_nanos: u64, style: ReelTransitionStyle) -> Self {
         Self {
             transition_nanos,
-            transition_style: ReelTransitionStyle::Wipe,
+            transition_style: style,
             transition_focus: None,
-            transition_wipe: Some(wipe),
+            transition_wipe: None,
             plan,
         }
     }
+
+    /// Start from `focus` (x, y, width, height) in the outgoing frame: the card
+    /// a zoom flies into, the rectangle a match carries, or the point an iris
+    /// or ink opens from.
+    pub fn focused(mut self, focus: [f32; 4]) -> Self {
+        self.transition_focus = Some(focus);
+        self
+    }
+
+    /// A hard cut: the segment starts as its predecessor ends.
+    pub fn cut(plan: ScenePlan) -> Self {
+        Self::new(plan, 0, ReelTransitionStyle::Crossfade)
+    }
+
+    /// A J-cut: the segment starts, and is heard, `lead_nanos` before the
+    /// picture cuts to it at its predecessor's end. Its own picture is hidden
+    /// for that lead, so open on sound rather than motion.
+    pub fn j_cut(plan: ScenePlan, lead_nanos: u64) -> Self {
+        Self::new(plan, lead_nanos, ReelTransitionStyle::JCut)
+    }
+
+    /// An L-cut: the picture cuts to this segment while its predecessor is
+    /// still heard for `tail_nanos`, whose last picture is never shown.
+    pub fn l_cut(plan: ScenePlan, tail_nanos: u64) -> Self {
+        Self::new(plan, tail_nanos, ReelTransitionStyle::LCut)
+    }
+
+    /// The incoming segment fades in over the outgoing one.
+    pub fn crossfaded(plan: ScenePlan, transition_nanos: u64) -> Self {
+        Self::new(plan, transition_nanos, ReelTransitionStyle::Crossfade)
+    }
+
+    /// Fade to the empty background, then fade in, so dense frames never mix.
+    pub fn dipped(plan: ScenePlan, transition_nanos: u64) -> Self {
+        Self::new(plan, transition_nanos, ReelTransitionStyle::Dip)
+    }
+
+    /// Fly into `focus` in the outgoing frame while this segment grows out of it.
+    pub fn zoomed(plan: ScenePlan, transition_nanos: u64, focus: [f32; 4]) -> Self {
+        Self::new(plan, transition_nanos, ReelTransitionStyle::Zoom).focused(focus)
+    }
+
+    /// A segment that enters through `wipe` over `transition_nanos`.
+    pub fn wiped(plan: ScenePlan, transition_nanos: u64, wipe: ReelWipePlan) -> Self {
+        Self {
+            transition_wipe: Some(wipe),
+            ..Self::new(plan, transition_nanos, ReelTransitionStyle::Wipe)
+        }
+    }
+
+    /// Both frames travel together toward `direction`, like a camera pan.
+    pub fn pushed(plan: ScenePlan, transition_nanos: u64, direction: WipeDirection) -> Self {
+        Self::new(plan, transition_nanos, ReelTransitionStyle::Push(direction))
+    }
+
+    /// This frame slides in over the outgoing one toward `direction` and settles.
+    pub fn slid(plan: ScenePlan, transition_nanos: u64, direction: WipeDirection) -> Self {
+        Self::new(
+            plan,
+            transition_nanos,
+            ReelTransitionStyle::Slide(direction),
+        )
+    }
+
+    /// A whip pan toward `direction`: the cut hides in a streak of motion blur.
+    pub fn whipped(plan: ScenePlan, transition_nanos: u64, direction: WipeDirection) -> Self {
+        Self::new(plan, transition_nanos, ReelTransitionStyle::Whip(direction))
+    }
+
+    /// A circle opens from the frame's center, ringed with light if `ring`.
+    /// Add [`ReelSegmentPlan::focused`] to open from a rectangle's center.
+    pub fn irised(plan: ScenePlan, transition_nanos: u64, ring: bool) -> Self {
+        Self::new(plan, transition_nanos, ReelTransitionStyle::Iris { ring })
+    }
+
+    /// A shared-element zoom: `from` in the outgoing frame flies onto `to` in
+    /// this one, so the element visibly becomes its counterpart.
+    pub fn matched(plan: ScenePlan, transition_nanos: u64, from: [f32; 4], to: [f32; 4]) -> Self {
+        Self::new(plan, transition_nanos, ReelTransitionStyle::Match(to)).focused(from)
+    }
+
+    /// The frame turns over toward `direction` like a card with this segment
+    /// on its back.
+    pub fn flipped(plan: ScenePlan, transition_nanos: u64, direction: WipeDirection) -> Self {
+        Self::new(plan, transition_nanos, ReelTransitionStyle::Flip(direction))
+    }
+
+    /// The two frames are faces of a cube that turns toward `direction`.
+    pub fn cubed(plan: ScenePlan, transition_nanos: u64, direction: WipeDirection) -> Self {
+        Self::new(plan, transition_nanos, ReelTransitionStyle::Cube(direction))
+    }
+
+    /// This frame spreads in like ink with a soft organic edge. Add
+    /// [`ReelSegmentPlan::focused`] to spread from a rectangle.
+    pub fn inked(plan: ScenePlan, transition_nanos: u64) -> Self {
+        Self::new(plan, transition_nanos, ReelTransitionStyle::Ink)
+    }
+
+    /// A few frames of split color and torn blocks around a hard cut.
+    pub fn glitched(plan: ScenePlan, transition_nanos: u64) -> Self {
+        Self::new(plan, transition_nanos, ReelTransitionStyle::Glitch)
+    }
+
+    /// A white-out flash that hides the cut, then decays.
+    pub fn flashed(plan: ScenePlan, transition_nanos: u64) -> Self {
+        Self::new(plan, transition_nanos, ReelTransitionStyle::Flash)
+    }
+
+    /// A warm light leak drifts across and hides the cut.
+    pub fn leaked(plan: ScenePlan, transition_nanos: u64) -> Self {
+        Self::new(plan, transition_nanos, ReelTransitionStyle::LightLeak)
+    }
 }
 
-/// How a segment replaces its predecessor during `transition_nanos`.
-#[derive(Clone, Copy, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
-#[serde(rename_all = "kebab-case")]
+/// How a segment replaces its predecessor during `transition_nanos`. Simple
+/// styles serialize as names (`"dip"`); styles with settings as one-key
+/// objects (`{ "push": "left" }`, `{ "match": [x, y, w, h] }`).
+#[derive(Clone, Copy, Debug, Default, Deserialize, PartialEq, Serialize)]
+#[serde(rename_all = "kebab-case", rename_all_fields = "camelCase")]
 pub enum ReelTransitionStyle {
     /// Both segments are visible while the incoming one fades in over the other.
     #[default]
@@ -130,6 +246,41 @@ pub enum ReelTransitionStyle {
     /// A divider sweeps across with the incoming segment behind it, optionally
     /// resting mid-frame so both are visible side by side.
     Wipe,
+    /// The outgoing picture holds until the transition ends, then cuts: the
+    /// incoming segment is heard first.
+    JCut,
+    /// The picture cuts at once while the outgoing segment is still heard.
+    LCut,
+    /// Both frames travel together toward the direction, like a camera pan.
+    Push(WipeDirection),
+    /// The incoming frame slides in over the outgoing one, which drifts back
+    /// and dims, and settles like a critically damped spring.
+    Slide(WipeDirection),
+    /// A whip pan: a push that leans in, tears across in a streak of
+    /// directional motion blur, and catches.
+    Whip(WipeDirection),
+    /// A circle opens from the `transition_focus` center, or the frame's, with
+    /// a soft edge and an optional ring of light.
+    Iris {
+        #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+        ring: bool,
+    },
+    /// A shared-element zoom: `transition_focus` in the outgoing frame flies
+    /// onto this rectangle (x, y, width, height) of the incoming frame.
+    Match([f32; 4]),
+    /// The frame turns over like a card, the incoming segment on its back.
+    Flip(WipeDirection),
+    /// The frames are two faces of a cube turning toward the direction.
+    Cube(WipeDirection),
+    /// The incoming frame spreads in like ink, with a soft organic edge, from
+    /// `transition_focus` if set.
+    Ink,
+    /// Split color and torn, displaced blocks for a few frames around a hard cut.
+    Glitch,
+    /// A white-out flash hides the cut, then decays.
+    Flash,
+    /// A warm light leak drifts across the frame and hides the cut.
+    LightLeak,
 }
 
 /// Screen transform of one layer during a zoom: `output = source * scale + offset`.
@@ -188,6 +339,9 @@ pub struct ReelLayer {
     pub zoom: Option<ZoomPhase>,
     /// Set on the incoming layer of a wipe: it shows only behind the divider.
     pub wipe: Option<WipePhase>,
+    /// Set on the incoming layer of a composited transition (push, iris,
+    /// flip, ...): the renderer combines it with the outgoing frame below.
+    pub transition: Option<TransitionPhase>,
 }
 
 /// One layer's part in a zoom transition.
@@ -200,6 +354,18 @@ pub struct ZoomPhase {
 
 impl ReelPlan {
     pub const VERSION: u32 = 1;
+
+    /// A validated reel of `segments`, each entering through its own
+    /// transition; the first should be a [`ReelSegmentPlan::cut`].
+    pub fn new(id: impl Into<String>, segments: Vec<ReelSegmentPlan>) -> anyhow::Result<Self> {
+        let reel = Self {
+            version: Self::VERSION,
+            id: id.into(),
+            segments,
+        };
+        reel.validate()?;
+        Ok(reel)
+    }
 
     /// A validated reel that plays `plans` in order, each dipping through the
     /// empty background from the previous one over `transition_nanos`.
@@ -261,6 +427,8 @@ impl ReelPlan {
                     );
                 }
             }
+            validate_transition(segment)
+                .map_err(|error| anyhow::anyhow!("reel segment '{}': {error}", segment.plan.id))?;
             match (&segment.transition_wipe, segment.transition_style) {
                 (Some(wipe), ReelTransitionStyle::Wipe) => {
                     wipe.validate(segment.transition_nanos).map_err(|error| {
@@ -315,7 +483,9 @@ impl ReelPlan {
 
     /// The segments visible at `seconds`, in draw order. Outside transitions this
     /// is one fully weighted segment. A crossfade mixes the incoming segment over
-    /// the outgoing one; a dip shows one segment faded toward the background.
+    /// the outgoing one; a dip shows one segment faded toward the background; a
+    /// composited transition (push, iris, flip, ...) shows both at full weight
+    /// with its phase on the incoming layer.
     pub fn layers_at(&self, seconds: f64) -> Vec<ReelLayer> {
         let spans = self.spans();
         let at = seconds.max(0.0);
@@ -344,6 +514,7 @@ impl ReelPlan {
             weight: smoothstep(weight as f32),
             zoom: None,
             wipe: None,
+            transition: None,
         };
         if progress >= 1.0 || current == 0 {
             return vec![layer(current, 1.0)];
@@ -400,8 +571,52 @@ impl ReelPlan {
                     },
                 ]
             }
+            ReelTransitionStyle::JCut => vec![layer(current - 1, 1.0)],
+            ReelTransitionStyle::LCut if progress <= 0.0 => vec![layer(current - 1, 1.0)],
+            ReelTransitionStyle::LCut => vec![layer(current, 1.0)],
+            // The rest are composited by the renderer from both frames; the
+            // first instant is still the outgoing frame alone.
+            _ if progress <= 0.0 => vec![layer(current - 1, 1.0)],
+            style => vec![
+                layer(current - 1, 1.0),
+                ReelLayer {
+                    transition: Some(TransitionPhase {
+                        style,
+                        progress: progress as f32,
+                        seconds: (span.transition_nanos as f64 / 1e9) as f32,
+                        focus: span.transition_focus,
+                    }),
+                    ..layer(current, 1.0)
+                },
+            ],
         }
     }
+}
+
+/// The settings a segment's transition style needs, and only those.
+fn validate_transition(segment: &ReelSegmentPlan) -> anyhow::Result<()> {
+    use ReelTransitionStyle::*;
+    let rect_is_valid =
+        |[x, y, w, h]: [f32; 4]| [x, y, w, h].iter().all(|v| v.is_finite()) && w >= 8.0 && h >= 8.0;
+    let style = segment.transition_style;
+    match (style, segment.transition_focus) {
+        (Crossfade | Dip | Zoom | Wipe, _) => {}
+        (Match(_), None) => {
+            anyhow::bail!("a match needs a transitionFocus rectangle to carry")
+        }
+        (Match(_) | Iris { .. } | Ink, Some(focus)) if !rect_is_valid(focus) => {
+            anyhow::bail!("transitionFocus must be a finite rectangle at least 8 pixels on a side")
+        }
+        (Match(_) | Iris { .. } | Ink, _) => {}
+        (_, Some(_)) => anyhow::bail!("a {style:?} transition takes no transitionFocus"),
+        (_, None) => {}
+    }
+    if let Match(target) = style
+        && !rect_is_valid(target)
+    {
+        anyhow::bail!("a match target must be a finite rectangle at least 8 pixels on a side");
+    }
+    Ok(())
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -1684,6 +1899,7 @@ mod reel_tests {
                 weight: 1.0,
                 zoom: None,
                 wipe: None,
+                transition: None,
             }]
         };
         assert_eq!(reel.layers_at(1.0), only(0, 1.0));
@@ -1820,6 +2036,209 @@ mod reel_tests {
         let mut versioned = reel(&[("a", SECOND, 0)]);
         versioned.version = 2;
         assert!(versioned.validate().is_err());
+    }
+
+    fn every_style() -> Vec<ReelSegmentPlan> {
+        use super::{ReelWipePlan, WipeDirection::*};
+        let plan = |id: &str| ScenePlan::new(id, 4 * SECOND);
+        let card = [300.0, 400.0, 340.0, 124.0];
+        vec![
+            ReelSegmentPlan::cut(plan("cut")),
+            ReelSegmentPlan::crossfaded(plan("crossfade"), SECOND),
+            ReelSegmentPlan::dipped(plan("dip"), SECOND),
+            ReelSegmentPlan::zoomed(plan("zoom"), SECOND, card),
+            ReelSegmentPlan::wiped(plan("wipe"), SECOND, ReelWipePlan::new(Up)),
+            ReelSegmentPlan::j_cut(plan("j-cut"), SECOND),
+            ReelSegmentPlan::l_cut(plan("l-cut"), SECOND),
+            ReelSegmentPlan::pushed(plan("push"), SECOND, Left),
+            ReelSegmentPlan::slid(plan("slide"), SECOND, Down),
+            ReelSegmentPlan::whipped(plan("whip"), SECOND, Right),
+            ReelSegmentPlan::irised(plan("iris"), SECOND, true).focused(card),
+            ReelSegmentPlan::matched(plan("match"), SECOND, card, [560.0, 200.0, 800.0, 292.0]),
+            ReelSegmentPlan::flipped(plan("flip"), SECOND, Left),
+            ReelSegmentPlan::cubed(plan("cube"), SECOND, Up),
+            ReelSegmentPlan::inked(plan("ink"), SECOND),
+            ReelSegmentPlan::glitched(plan("glitch"), SECOND),
+            ReelSegmentPlan::flashed(plan("flash"), SECOND),
+            ReelSegmentPlan::leaked(plan("leak"), SECOND),
+        ]
+    }
+
+    #[test]
+    fn constructors_build_a_valid_reel_of_every_transition() {
+        let reel = ReelPlan::new("every", every_style()).unwrap();
+        // Each 4 s segment overlaps its predecessor by its 1 s transition.
+        assert_eq!(reel.duration_nanos(), 4 * SECOND + 17 * 3 * SECOND);
+        for (index, span) in reel.spans().into_iter().enumerate().skip(1) {
+            let start = span.start_nanos as f64 / 1e9;
+            for step in 0..=40 {
+                let at = start + f64::from(step) / 40.0;
+                let layers = reel.layers_at(at);
+                assert!(!layers.is_empty() && layers.len() <= 2, "{index} at {at}");
+                // Outgoing first; only the incoming layer carries a phase.
+                assert!(
+                    layers
+                        .windows(2)
+                        .all(|pair| pair[0].segment + 1 == pair[1].segment)
+                );
+                assert!(layers[0].transition.is_none());
+                if let [_, incoming] = layers.as_slice()
+                    && let Some(phase) = incoming.transition
+                {
+                    assert_eq!(phase.style, span.transition_style);
+                    assert!(phase.progress > 0.0 && phase.progress < 1.0);
+                    assert_eq!(phase.seconds, 1.0);
+                }
+            }
+            // Every transition starts on the outgoing frame and ends on the incoming.
+            assert_eq!(reel.layers_at(start)[0].segment, index - 1);
+            let after = reel.layers_at(start + 1.0);
+            assert_eq!((after.len(), after[0].segment), (1, index));
+        }
+    }
+
+    #[test]
+    fn composited_transitions_carry_their_progress_and_focus() {
+        let segments = every_style();
+        let iris = &segments[10];
+        let reel = ReelPlan::new("iris", vec![segments[0].clone(), iris.clone()]).unwrap();
+        let layers = reel.layers_at(3.25);
+        let phase = layers[1].transition.unwrap();
+        assert_eq!(phase.style, ReelTransitionStyle::Iris { ring: true });
+        assert!((phase.progress - 0.25).abs() < 1e-6);
+        assert_eq!(phase.focus, iris.transition_focus);
+        assert!(layers.iter().all(|layer| layer.weight == 1.0));
+        assert_eq!(layers[1].local_seconds, 0.25);
+    }
+
+    #[test]
+    fn j_and_l_cuts_overlap_sound_but_cut_the_picture() {
+        let segments = every_style();
+        let j = ReelPlan::new("j", vec![segments[0].clone(), segments[5].clone()]).unwrap();
+        // The incoming segment starts at 3 s but is not seen until 4 s.
+        assert_eq!(j.spans()[1].start_nanos, 3 * SECOND);
+        assert_eq!(j.layers_at(3.9)[0].segment, 0);
+        assert_eq!(j.layers_at(3.9).len(), 1);
+        let cut = j.layers_at(4.0);
+        assert_eq!((cut[0].segment, cut[0].local_seconds), (1, 1.0));
+        let l = ReelPlan::new("l", vec![segments[0].clone(), segments[6].clone()]).unwrap();
+        assert_eq!(l.layers_at(3.0)[0].segment, 0, "the first instant");
+        let early = l.layers_at(3.1);
+        assert_eq!((early.len(), early[0].segment), (1, 1));
+    }
+
+    #[test]
+    fn transition_settings_are_strict() {
+        let segments = every_style();
+        let with =
+            |segment: ReelSegmentPlan| ReelPlan::new("strict", vec![segments[0].clone(), segment]);
+        let plan = || ScenePlan::new("next", 4 * SECOND);
+        let push = ReelSegmentPlan::pushed(plan(), SECOND, super::WipeDirection::Left);
+        assert!(
+            with(push.focused([0.0, 0.0, 100.0, 100.0])).is_err(),
+            "a push has no focus"
+        );
+        let mut matched = segments[11].clone();
+        matched.transition_focus = None;
+        assert!(with(matched).is_err(), "a match needs its source rectangle");
+        let tiny = ReelSegmentPlan::matched(plan(), SECOND, [0.0; 4], [0.0, 0.0, 100.0, 100.0]);
+        assert!(with(tiny).is_err());
+        let nowhere = ReelSegmentPlan::matched(
+            plan(),
+            SECOND,
+            [0.0, 0.0, 100.0, 100.0],
+            [f32::NAN, 0.0, 100.0, 100.0],
+        );
+        assert!(with(nowhere).is_err());
+        let bad_iris = ReelSegmentPlan::irised(plan(), SECOND, false).focused([0.0, 0.0, 2.0, 2.0]);
+        assert!(with(bad_iris).is_err());
+        assert!(with(ReelSegmentPlan::irised(plan(), SECOND, false)).is_ok());
+        assert!(
+            with(ReelSegmentPlan::inked(plan(), 5 * SECOND)).is_err(),
+            "too long"
+        );
+    }
+
+    #[test]
+    fn transition_styles_serialize_as_names_or_one_key_objects() {
+        let reel = ReelPlan::new("every", every_style()).unwrap();
+        let json = serde_json::to_value(&reel).unwrap();
+        let styles = json["segments"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|segment| segment["transitionStyle"].to_string())
+            .collect::<Vec<_>>();
+        assert_eq!(
+            styles,
+            [
+                r#""crossfade""#,
+                r#""crossfade""#,
+                r#""dip""#,
+                r#""zoom""#,
+                r#""wipe""#,
+                r#""j-cut""#,
+                r#""l-cut""#,
+                r#"{"push":"left"}"#,
+                r#"{"slide":"down"}"#,
+                r#"{"whip":"right"}"#,
+                r#"{"iris":{"ring":true}}"#,
+                r#"{"match":[560.0,200.0,800.0,292.0]}"#,
+                r#"{"flip":"left"}"#,
+                r#"{"cube":"up"}"#,
+                r#""ink""#,
+                r#""glitch""#,
+                r#""flash""#,
+                r#""light-leak""#,
+            ]
+        );
+        let decoded: ReelPlan = serde_json::from_value(json).unwrap();
+        assert_eq!(decoded.spans(), reel.spans());
+        let plain: ReelTransitionStyle = serde_json::from_str(r#"{"iris":{}}"#).unwrap();
+        assert_eq!(plain, ReelTransitionStyle::Iris { ring: false });
+        assert!(serde_json::from_str::<ReelTransitionStyle>(r#"{"push":"sideways"}"#).is_err());
+    }
+
+    #[test]
+    fn earlier_reel_json_still_reads_the_same() {
+        // A segment written before composited transitions existed.
+        let json = r#"{ "version": 1, "id": "old", "segments": [
+            { "transitionNanos": 0, "transitionStyle": "dip",
+              "plan": { "version": 2, "id": "a", "durationNanos": 4000000000 } },
+            { "transitionNanos": 1000000000, "transitionStyle": "zoom",
+              "transitionFocus": [240, 360, 480, 270],
+              "plan": { "version": 2, "id": "b", "durationNanos": 4000000000 } },
+            { "transitionNanos": 1000000000, "transitionStyle": "wipe",
+              "transitionWipe": { "direction": "left" },
+              "plan": { "version": 2, "id": "c", "durationNanos": 4000000000 } },
+            { "transitionNanos": 500000000,
+              "plan": { "version": 2, "id": "d", "durationNanos": 4000000000 } }
+        ] }"#;
+        let reel: ReelPlan = serde_json::from_str(json).unwrap();
+        reel.validate().unwrap();
+        let styles = reel
+            .segments
+            .iter()
+            .map(|segment| segment.transition_style)
+            .collect::<Vec<_>>();
+        assert_eq!(
+            styles,
+            [
+                Dip,
+                ReelTransitionStyle::Zoom,
+                ReelTransitionStyle::Wipe,
+                Crossfade
+            ]
+        );
+        for at in [3.5, 6.5, 9.75] {
+            assert!(
+                reel.layers_at(at)
+                    .iter()
+                    .all(|layer| layer.transition.is_none())
+            );
+        }
+        let rewritten = serde_json::to_value(&reel).unwrap();
+        assert_eq!(rewritten["segments"][1]["transitionStyle"], "zoom");
     }
 
     #[test]

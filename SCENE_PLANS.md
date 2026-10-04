@@ -24,8 +24,10 @@ machinery:
 | A payload, config, or emitted plan as structured data | `scenes/tree` | `tree::TreeActor` (`open`, `reveal`, `highlight`, `set`) |
 | Pointing at a card or code range while it moves | `scenes/callouts` | `callout::CalloutActor` (`show`, `move_to`, `emphasize`) |
 | Labels, counters, or images riding a card or code range | `scenes/anchors` | `anchor::AnchorPlan` on captions, Rolling Numbers, `text::TextActor`, `image::ImageActor` (`move_to`) |
+| Magnifying a code range or a card's status | `scenes/loupe` | `lens::LensActor` (`show`, `move_to`, `slide`, `resize`, `focus`) |
 | Real product behavior from a screen recording | `scenes/video`, `scenes/opencode-session-tool` | `video::VideoActor` (`fly_in`, `focus`, `unfocus`) |
 | Before and after, side by side | `scenes/compare` | `ReelSegmentPlan::wiped` with `ReelWipePlan` holds and labels |
+| Changing scenes: pushes, irises, matched zooms, flips, cuts | `scenes/transitions` | `ReelPlan::new` with `ReelSegmentPlan::pushed`, `matched`, `irised`, `flipped`, ... |
 | A version or count changing | `scenes/rolling-number` | `rolling::RollingNumberActor::roll` |
 | A CLI session, an agent run, or a build in a terminal | `scenes/text-surfaces` | `terminal::TerminalActor` (`type_command`, `print`, `stream`, `spin`, `resolve`, `clear`) |
 | A Slack thread or text conversation reacting | `scenes/text-surfaces` | `chat::ChatActor` (`typing`, `say`, `stream`, `react`, `highlight`) |
@@ -51,7 +53,8 @@ machinery:
    literals use `author::SECOND`, `author::seconds(f64)`, and
    `author::millis(u64)`; see [Author with timing helpers](#author-with-timing-helpers).
 3. Emit with `ScenePlan::write_or_print`, `DeckPlan::write_with_slides`, or
-   `ReelPlan::dipped(..)`, then `plan validate` and `plan inspect`.
+   `ReelPlan::new(id, segments)` / `ReelPlan::dipped(..)`, then `plan validate`
+   and `plan inspect`.
 4. Review exact frames before encoding: `bun scripts/sheet.ts <plan> 0:10:0.5
    [--crop x,y,w,h] [--shutter]`, `plan frame <plan> <t> out.png --shutter`, and for
    code steps `plan steps`.
@@ -566,7 +569,10 @@ and original scene assets. The explicit `sig term`/`sigterm` cue alternatives
 handle ASR word segmentation without changing recorded timings. Rebuild and
 review the new clock before rendering; replacing just the audio desynchronizes it.
 
-A reel is `{ "version": 1, "id", "segments": [{ "transitionNanos", "transitionStyle": "crossfade" | "dip" | "zoom" | "wipe", "transitionFocus"?, "transitionWipe"?, "plan" }] }`.
+A reel is `{ "version": 1, "id", "segments": [{ "transitionNanos", "transitionStyle", "transitionFocus"?, "transitionWipe"?, "plan" }] }`.
+`transitionStyle` is a name (`"crossfade"`, `"dip"`, `"zoom"`, `"wipe"`, `"j-cut"`,
+`"l-cut"`, `"ink"`, `"glitch"`, `"flash"`, `"light-leak"`) or, for styles with a
+setting, a one-key object; see [Transitions](#transitions).
 A `zoom` needs `transitionFocus: [x, y, width, height]` in the outgoing frame; compute
 it with `stage::Camera::project_rect(card_at, card_size)` at the closing camera
 (or `CameraRig::screen_box`) so it matches the card the camera flies into.
@@ -593,6 +599,62 @@ ReelSegmentPlan::wiped(after, seconds(4.4), ReelWipePlan::new(WipeDirection::Lef
 
 The showroom is `cargo run -p psychopomp-compare` (writes `target/compare.json`):
 a held before/after between two Stage frames, then a plain downward wipe.
+
+### Transitions
+
+Every transition has a `ReelSegmentPlan` constructor; `ReelPlan::new(id,
+segments)` builds and validates the reel. Each constructor takes the incoming
+plan and the overlap in nanoseconds; at most two segments are ever visible.
+
+| Constructor | `transitionStyle` | What happens |
+| --- | --- | --- |
+| `cut(plan)` | `"crossfade"`, 0 ns | A hard cut |
+| `j_cut(plan, lead)` / `l_cut(plan, tail)` | `"j-cut"` / `"l-cut"` | The incoming sound leads the picture cut, or the outgoing sound trails it |
+| `crossfaded` / `dipped` | `"crossfade"` / `"dip"` | Mix, or fade through the background |
+| `zoomed(plan, ns, focus)` | `"zoom"` | Fly into `focus` while the segment grows out of it |
+| `wiped(plan, ns, wipe)` | `"wipe"` | A divider sweeps across, optionally resting with labels |
+| `pushed(plan, ns, direction)` | `{ "push": "left" }` | Both frames travel together, motion-blurred |
+| `slid(plan, ns, direction)` | `{ "slide": "up" }` | The segment slides over the dimming outgoing frame and settles |
+| `whipped(plan, ns, direction)` | `{ "whip": "right" }` | A whip pan: lean in, tear across in a streak, catch |
+| `irised(plan, ns, ring)` | `{ "iris": { "ring": true } }` | A soft circle opens from the focus center or the frame's |
+| `matched(plan, ns, from, to)` | `{ "match": [x, y, w, h] }` | `from` (the focus) in the outgoing frame flies onto `to` in this one |
+| `flipped(plan, ns, direction)` | `{ "flip": "left" }` | The frame turns over like a card, this segment on its back |
+| `cubed(plan, ns, direction)` | `{ "cube": "up" }` | The frames are faces of a turning cube |
+| `inked(plan, ns)` | `"ink"` | The segment spreads in like ink, from the focus if set |
+| `glitched` / `flashed` / `leaked` | `"glitch"` / `"flash"` / `"light-leak"` | Corruption, a white-out, or a warm light leak hides a cut |
+
+Directions are `"left"`, `"right"`, `"up"`, and `"down"`: the way the motion
+travels. `.focused(rect)` sets `transitionFocus` for an iris or ink origin;
+`zoom` and `match` require it, and other new styles reject it. Rectangles are
+`[x, y, width, height]` in canvas pixels; a Stage card under the default camera
+is `[x - w / 2, y - h / 2, w, h]` from its `at` and `size`, and under a moved
+camera use `stage::Camera::project`. A match moves one camera for both frames, so the
+element lands exactly on its counterpart; give its target frame the element
+already at rest at time zero.
+
+```rust
+ReelPlan::new("film", vec![
+    ReelSegmentPlan::cut(overview),
+    ReelSegmentPlan::matched(detail, seconds(1.3), api_card, api_card_large),
+    ReelSegmentPlan::pushed(code, seconds(0.75), WipeDirection::Left),
+    ReelSegmentPlan::irised(title, seconds(1.1), true).focused(orb_rect),
+])?
+```
+
+Push, slide, and whip suit frames that sit side by side in one space; a match
+or zoom suits a detail opening into its own scene; a flip suits a before and
+after of the same thing; ink, flashes, and leaks suit section breaks; a glitch
+suits failure. Keep glitches and flashes short (0.4 to 0.7 seconds).
+
+The showroom is `cargo run -p psychopomp-transitions` (writes
+`target/transitions.json`), every transition between Stage, code, and title
+frames, each naming itself in a chip:
+
+```sh
+cargo run -p psychopomp-transitions
+bun scripts/sheet.ts target/transitions.json 4.35:5.55:0.15 --shutter --theme neutral
+cargo run --release -- plan render target/transitions.json output/transitions.mp4 --theme neutral
+```
 
 `scenes/pr-walkthrough` also emits `pr-50825.reel.json`, a Stage film of #50825
 that zooms from the client card into its code:
@@ -626,6 +688,8 @@ their fuller documentation elsewhere.
   and optional [`anchors`](#pin-overlays-to-anchors).
   Channels: `opacity`, `x`, `y`, `typed`, `caret`, `anchor.<id>`. `CaptionActor::type_in` writes
   one exact step per character; `show` and `hide` fade; `move_to` glides between anchors.
+  and `glass` (the chip is a frosted liquid-glass pane that refracts the scene
+  behind it and condenses in with `opacity`; `CaptionPlan::glass()`).
 - `rolling-number`: `origin` (aligned edge x, center y), `align`, `size`, `bold`,
   `tone`, static `prefix`/`suffix` spans (`{ text, tone }`), the initial `value`,
   and `rolls` of `{ atNanos, value }` in increasing time. Optional
@@ -1009,6 +1073,35 @@ their fuller documentation elsewhere.
   `cargo run --release -- plan render target/viz-components/reel.json output/viz-components.mp4 --theme opencode`.
   Callout anchors are the shared [Anchor](#pin-overlays-to-anchors) targets
   plus a per-anchor label `side`; `CalloutSide` is `psychopomp::anchor::Edge`.
+- `lens`: a loupe of thick glass that magnifies and refracts the frame beneath
+  it. `anchors` (one to eight, callout anchors without a `side`; the first is
+  where it starts), `size` (`[width, height]` at full presence), optional
+  `corner` (omitted: fully round, so a square is a circle and a wide lens a
+  capsule at every size), `magnification` (1.6; 0.5..4), optional `bevel` (rim
+  width in px; 28% of the shorter half side), `refraction` (page depth in rim
+  widths, 0.6: how hard the rim bends), `dispersion` (0.04), `frost` (0), and
+  `shadow` (0.5). Channels: `presence` (0 absent, 1 full; it condenses rather
+  than fades), `x` and `y` (offsets from the blended anchor), `width`,
+  `height`, `magnification`, `focus-x` and `focus-y` (the point shown at the
+  center, from the center), `frost`, and `anchor.<id>` weights. A lens draws
+  after callouts and before plain text and Tasks, refracting the root and every
+  overlay beneath it at each temporal sample, over any root.
+  `LensActor` writes `show` (a springy condense), `hide`, `move_to(anchor)`
+  (weights on one critically damped profile, so a redirected glide keeps its
+  velocity), `slide([dx, dy])`, `magnify`, `resize([w, h])` (a round loupe
+  stretches into a capsule), and `focus([dx, dy])`, which with an opposite
+  `slide` floats the glass beside what it reads.
+  let mut loupe = LensActor::declare(&mut scene, "loupe",
+      &LensPlan::circle(CalloutAnchorPlan::Editor { id: "call".into(),
+          target: "call".into(), edge: CalloutSide::Center, side: None }, 250.0)
+          .anchor(schedule).magnification(1.7))?;
+  loupe.show(&mut scene, at);
+  loupe.move_to(&mut scene, "schedule", later)?;
+  loupe.resize(&mut scene, [560.0, 96.0], later + SECOND);  // read along the line
+  loupe.slide(&mut scene, [150.0, 0.0], later + 2 * SECOND);
+  The showroom is `cargo run -p psychopomp-loupe` (writes the reel
+  `target/loupe.json` and its segments under `target/loupe/`); render it with
+  `cargo run --release -- plan render target/loupe.json output/loupe.mp4 --theme neutral`.
 - Editor Line Marks: `"mark": "added" | "removed"` on a line, with presence
   channel `mark.<line-id>`; `panel-x`, `panel-y`, and `panel-opacity` move and fade the card (the Stepped Diff
   enters on `panel-y`).

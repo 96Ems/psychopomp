@@ -33,6 +33,8 @@ members = [
   "scenes/viz-components",
   "scenes/anchors",
   "scenes/generated-media",
+  "scenes/loupe",
+  "scenes/transitions",
 ]
 default-members = ["crates/psychopomp-render"]
 resolver = "3"

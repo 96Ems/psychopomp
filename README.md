@@ -72,8 +72,9 @@ bun scripts/sheet.ts target/hello.json 0.5,1.5,2.7 --theme neutral --shutter
 | [`pr-walkthrough`](scenes/pr-walkthrough) | Pull requests as Stage films that zoom into their diffs |
 | [`camera`](scenes/camera) | A Stage diagram shot like a film: every camera move |
 | [`generated-media`](scenes/generated-media) | Speech, a chant, sound effects, and a derived voice, generated once and timed to their words |
-| [`callouts`](scenes/callouts), [`rolling-number`](scenes/rolling-number), [`charts`](scenes/charts), [`tree`](scenes/tree), [`diagnostics`](scenes/diagnostics), [`text-surfaces`](scenes/text-surfaces), [`viz-components`](scenes/viz-components) | Component showrooms |
+| [`callouts`](scenes/callouts), [`rolling-number`](scenes/rolling-number), [`charts`](scenes/charts), [`tree`](scenes/tree), [`diagnostics`](scenes/diagnostics), [`text-surfaces`](scenes/text-surfaces), [`viz-components`](scenes/viz-components), [`transitions`](scenes/transitions) | Component showrooms |
 | [`effects-showroom`](scenes/effects-showroom) | Lightning, charge, shields, dissolve, and scans on the Stage |
+| [`loupe`](scenes/loupe) | A glass loupe reading code and a Stage card's status |
 | [`interactive-showcase`](scenes/interactive-showcase) | A native, steppable presentation (`plan present`) |
 | [`stage-forms`](scenes/stage-forms) | Stage diagram vocabulary: particle forms that morph and tumble, shapes, icons, arrows, a relaying packet |
 
