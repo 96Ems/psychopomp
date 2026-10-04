@@ -108,9 +108,6 @@
                       "tone": "error"
                     },
                     {
-                      "text": "reconnecting"
-                    },
-                    {
                       "text": "stopped with an error",
                       "tone": "warning"
                     }
@@ -1843,22 +1840,14 @@
                 "velocityThreshold": 0.001
               },
               {
-                "operation": "spring",
+                "operation": "set",
                 "atNanos": 29529520833,
-                "target": 3.0,
-                "responseSeconds": 0.36,
-                "dampingRatio": 1.0,
-                "positionThreshold": 0.001,
-                "velocityThreshold": 0.001
+                "value": 1.0
               },
               {
-                "operation": "spring",
+                "operation": "set",
                 "atNanos": 39849520833,
-                "target": 4.0,
-                "responseSeconds": 0.48000002,
-                "dampingRatio": 1.0,
-                "positionThreshold": 0.001,
-                "velocityThreshold": 0.001
+                "value": 3.0
               }
             ]
           },
@@ -3646,6 +3635,66 @@
                 "dampingRatio": 1.0,
                 "positionThreshold": 0.001,
                 "velocityThreshold": 0.001
+              }
+            ]
+          },
+          {
+            "id": "stage.client.status-from",
+            "actorId": "stage",
+            "property": "client.status-from",
+            "initial": -1.0,
+            "events": [
+              {
+                "operation": "set",
+                "atNanos": 29529520833,
+                "value": 2.0
+              },
+              {
+                "operation": "set",
+                "atNanos": 29829520833,
+                "value": -1.0
+              },
+              {
+                "operation": "set",
+                "atNanos": 39849520833,
+                "value": 1.0
+              },
+              {
+                "operation": "set",
+                "atNanos": 40249520833,
+                "value": -1.0
+              }
+            ]
+          },
+          {
+            "id": "stage.client.swap",
+            "actorId": "stage",
+            "property": "client.swap",
+            "initial": 1.0,
+            "events": [
+              {
+                "operation": "set",
+                "atNanos": 29529520833,
+                "value": 0.0
+              },
+              {
+                "operation": "ease",
+                "atNanos": 29529520833,
+                "target": 1.0,
+                "durationNanos": 300000000,
+                "curve": "smootherstep"
+              },
+              {
+                "operation": "set",
+                "atNanos": 39849520833,
+                "value": 0.0
+              },
+              {
+                "operation": "ease",
+                "atNanos": 39849520833,
+                "target": 1.0,
+                "durationNanos": 400000000,
+                "curve": "smootherstep"
               }
             ]
           },

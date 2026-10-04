@@ -186,12 +186,9 @@ fn fix_rect() -> [f32; 4] {
         position: Vec3::from(CLOSING_CAMERA),
         size: vec2(1920.0, 1080.0),
     };
-    let (center, scale) = camera
-        .project(Vec3::from(FIX))
-        .expect("the fix card is in front of the camera");
-    let size = Vec2::from(FIX_SIZE) * scale;
-    let corner = center - size * 0.5;
-    [corner.x, corner.y, size.x, size.y]
+    camera
+        .project_rect(Vec3::from(FIX), Vec2::from(FIX_SIZE))
+        .expect("the fix card is in front of the camera")
 }
 
 /// Swap `*` and `edit`: into rc.117's schema order, or back to the written

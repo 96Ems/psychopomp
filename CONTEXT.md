@@ -180,6 +180,11 @@ is a pure function of time, so any frame renders identically in any order.
 An orb pulse is an illumination response, independent of its scale and attached
 ports. A card's content can settle after its body; its `content` channel controls
 the ink's presence, small vertical offset, and sharpening together.
+A card's **Status Swap** cross-fades its status line straight from one entry
+to another; a fractional `status` instead passes through every entry between.
+Every Stage channel has one **Channel Default**, its resting value, which both
+authoring and rendering read when nothing writes it: an element is visible and
+whole at rest.
 An orb's **Burst** is a reversible destruction clock: gravitational collapse,
 hot combustion, an expanding refractive pressure wave, cooling smoke, and
 ballistic embers. Its procedural volume and trajectories need no simulation

@@ -92,7 +92,9 @@ impl StatusText {
 #[serde(tag = "kind", rename_all = "kebab-case", deny_unknown_fields)]
 pub enum StageElement {
     /// A floating panel with a title and an optional status line. `status`
-    /// entries cross-fade by the fractional `status` channel.
+    /// entries cross-fade by the fractional `status` channel, or straight
+    /// from entry `status-from` to `status` by the `swap` channel while
+    /// `status-from` is set (-1 is unset).
     #[serde(rename_all = "camelCase")]
     Card {
         id: String,
@@ -389,9 +391,28 @@ impl StageElement {
     pub fn properties(&self) -> &'static [&'static str] {
         match self {
             Self::Card { .. } => &[
-                "opacity", "x", "y", "z", "scale", "blur", "glow", "flash", "alarm", "dim",
-                "status", "content", "cool", "damage", "glitch", "cut", "ghost", "spinner",
-                "release", "mark",
+                "opacity",
+                "x",
+                "y",
+                "z",
+                "scale",
+                "blur",
+                "glow",
+                "flash",
+                "alarm",
+                "dim",
+                "status",
+                "content",
+                "cool",
+                "damage",
+                "glitch",
+                "cut",
+                "ghost",
+                "spinner",
+                "release",
+                "mark",
+                "status-from",
+                "swap",
             ],
             Self::Orb { .. } => &[
                 "opacity", "x", "y", "z", "scale", "blur", "rotation", "burst", "shatter", "pulse",
@@ -433,6 +454,8 @@ impl StageElement {
                 ("spinner", -1.0),
                 ("release", -1.0),
                 ("mark", -1.0),
+                ("status-from", -1.0),
+                ("swap", 1.0),
             ],
             Self::Orb { .. } => &[
                 ("opacity", 1.0),
@@ -689,6 +712,16 @@ impl Camera {
             center + (point.truncate() - center - self.position.truncate()) * scale,
             scale,
         ))
+    }
+
+    /// The screen rectangle `[x, y, width, height]` of a world rectangle of
+    /// `size` centered at `center` facing the camera, such as a card a reel's
+    /// zoom flies into (`transitionFocus`); `None` behind the camera.
+    pub fn project_rect(&self, center: Vec3, size: Vec2) -> Option<[f32; 4]> {
+        let (center, scale) = self.project(center)?;
+        let size = size * scale;
+        let corner = center - size * 0.5;
+        Some([corner.x, corner.y, size.x, size.y])
     }
 }
 
@@ -1329,6 +1362,35 @@ impl StageActor {
         at + whole_millis(seconds)
     }
 
+    /// Cross-fade `card`'s status line straight from entry `from` to entry
+    /// `to` over `seconds`, without passing the entries between them (as the
+    /// fractional `status` channel would). Returns when the swap completes;
+    /// afterwards `status` rests at `to` as usual.
+    pub fn swap_status(
+        &mut self,
+        scene: &mut PlanBuilder,
+        card: &str,
+        at: u64,
+        [from, to]: [usize; 2],
+        seconds: f32,
+    ) -> u64 {
+        let done = at + whole_millis(seconds);
+        let property = |name: &str| format!("{card}.{name}");
+        self.set(scene, &property("status-from"), at, from as f32);
+        self.set(scene, &property("status"), at, to as f32);
+        self.set(scene, &property("swap"), at, 0.0);
+        self.ease(
+            scene,
+            &property("swap"),
+            at,
+            1.0,
+            seconds,
+            Ease::Smootherstep,
+        );
+        self.set(scene, &property("status-from"), done, -1.0);
+        done
+    }
+
     /// Unplug `beam`, the reverse of [`Self::connect`]: the wire withdraws
     /// over `seconds`, and its port resolves away as it finishes. Returns when
     /// the port is gone.
@@ -1828,6 +1890,55 @@ mod tests {
         assert!(
             kick[0].2 < 0.0,
             "the client sits left of the service and is pushed left"
+        );
+    }
+
+    #[test]
+    fn a_status_swap_skips_the_entries_between_and_then_rests() {
+        const S: u64 = 1_000_000_000;
+        let mut scene = PlanBuilder::new("swap", 4 * S);
+        let mut s = StageActor::declare(&mut scene, "stage", &plan()).unwrap();
+        assert_eq!(
+            s.swap_status(&mut scene, "client", S, [1, 0], 0.4),
+            S + 400_000_000
+        );
+        let plan = scene.finish().unwrap();
+        assert_eq!(
+            initial(&plan, "client.status-from"),
+            -1.0,
+            "old plans never swap"
+        );
+        assert_eq!(initial(&plan, "client.swap"), 1.0);
+        assert_eq!(
+            events(&plan, "client.status-from"),
+            [(S, "set", 1.0), (S + 400_000_000, "set", -1.0)]
+        );
+        assert_eq!(events(&plan, "client.status"), [(S, "set", 0.0)]);
+        assert_eq!(
+            events(&plan, "client.swap"),
+            [(S, "set", 0.0), (S, "ease", 1.0)]
+        );
+    }
+
+    #[test]
+    fn a_projected_rect_matches_the_projected_center_and_scale() {
+        use crate::math::vec2;
+        let camera = Camera {
+            position: vec3(-110.0, 0.0, 60.0),
+            size: vec2(1920.0, 1080.0),
+        };
+        let at = vec3(430.0, 420.0, -60.0);
+        let [x, y, w, h] = camera.project_rect(at, vec2(340.0, 124.0)).unwrap();
+        let (center, scale) = camera.project(at).unwrap();
+        assert!((x + w * 0.5 - center.x).abs() < 1e-3 && (y + h * 0.5 - center.y).abs() < 1e-3);
+        assert!(
+            (w - 340.0 * scale).abs() < 1e-3 && scale > 1.0,
+            "the dolly magnifies it"
+        );
+        assert!(
+            camera
+                .project_rect(vec3(0.0, 0.0, -2000.0), vec2(1.0, 1.0))
+                .is_none()
         );
     }
 

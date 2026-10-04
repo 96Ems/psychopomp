@@ -165,12 +165,9 @@ fn client_rect() -> [f32; 4] {
         position: Vec3::from(CLOSING_CAMERA),
         size: vec2(1920.0, 1080.0),
     };
-    let (center, scale) = camera
-        .project(Vec3::from(CLIENT))
-        .expect("client is in front of the camera");
-    let size = Vec2::from(CLIENT_SIZE) * scale;
-    let corner = center - size * 0.5;
-    [corner.x, corner.y, size.x, size.y]
+    camera
+        .project_rect(Vec3::from(CLIENT), Vec2::from(CLIENT_SIZE))
+        .expect("client is in front of the camera")
 }
 
 /// The other clients: card, beam, title, position.
@@ -208,10 +205,6 @@ fn stage_plan() -> StagePlan {
                 ("connected", Tone::Muted),
                 ("reconnecting", Tone::Plain),
                 ("replacing the server", Tone::Error),
-                // Reconnecting again after the rewind: statuses cross-fade
-
-                // through their neighbours, so the fix never passes "replacing".
-                ("reconnecting", Tone::Plain),
                 ("stopped with an error", Tone::Warning),
             ])
             .tone(Tone::Request)
@@ -484,7 +477,8 @@ fn stage_film(narration: &Narration) -> Result<ScenePlan> {
         0.25,
     );
     let respin = switch + seconds(0.6);
-    s.to(sc, "client.status", respin, 3.0, 0.3);
+    // Straight back to reconnecting, never passing "replacing the server".
+    s.swap_status(sc, "client", respin, [2, 1], 0.3);
     for clock in ["spinner", "release"] {
         s.set(sc, &format!("client.{clock}"), switch, -1.0);
     }
@@ -529,7 +523,7 @@ fn stage_film(narration: &Narration) -> Result<ScenePlan> {
     s.type_in(sc, "thought-after", a("health protocols"), 44.0);
     let message = a("clear message");
     s.type_in(sc, "message", message, 52.0);
-    s.to(sc, "client.status", message, 4.0, 0.4);
+    s.swap_status(sc, "client", message, [1, 3], 0.4);
     // The spinner resolves into the error's mark at its next top-right crossing.
     let drawn = s.resolve_spinner(sc, "client", respin, message);
     sfx::MARK.play(sc, "mark", drawn, -19.0);

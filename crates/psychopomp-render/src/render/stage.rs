@@ -1619,10 +1619,19 @@ impl<'a> Painter<'a> {
     /// channel, led by the card's spinner while it waits.
     fn card_status(&mut self, id: &str, status: &[StatusText], mark: Mark, pen: &CardInk) {
         let (scene, look, scale) = (self.scene, self.look, pen.scale);
-        let index = scene.v(id, "status").clamp(0.0, (status.len() - 1) as f32);
-        let low = index.floor() as usize;
-        let high = (low + 1).min(status.len() - 1);
-        let entries = [(low, 1.0 - index.fract()), (high, index.fract())];
+        let last = (status.len() - 1) as f32;
+        let index = scene.v(id, "status").clamp(0.0, last);
+        // A swap cross-fades straight from `status-from` to `status`; otherwise
+        // the fractional `status` cross-fades between neighbouring entries.
+        let from = scene.v(id, "status-from");
+        let (low, high, fraction) = if from >= 0.0 {
+            let entry = |value: f32| value.round().clamp(0.0, last) as usize;
+            (entry(from), entry(index), scene.unit(id, "swap"))
+        } else {
+            let low = index.floor() as usize;
+            (low, (low + 1).min(status.len() - 1), index.fract())
+        };
+        let entries = [(low, 1.0 - fraction), (high, fraction)];
         let tone_of = |entry: usize| match status[entry].tone {
             Tone::Plain => look.muted,
             tone => look.tone(tone),

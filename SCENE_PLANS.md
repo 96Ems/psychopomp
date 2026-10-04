@@ -462,7 +462,8 @@ review the new clock before rendering; replacing just the audio desynchronizes i
 
 A reel is `{ "version": 1, "id", "segments": [{ "transitionNanos", "transitionStyle": "crossfade" | "dip" | "zoom" | "wipe", "transitionFocus"?, "transitionWipe"?, "plan" }] }`.
 A `zoom` needs `transitionFocus: [x, y, width, height]` in the outgoing frame; compute
-it with `stage::Camera::project` so it matches the card the camera flies into.
+it with `stage::Camera::project_rect(card_at, card_size)` at the closing camera so
+it matches the card the camera flies into.
 Relative media paths resolve against the reel file. Prefer `dip` between frames
 that are both dense with text; a crossfade between two editors turns both unreadable.
 
@@ -673,8 +674,12 @@ their fuller documentation elsewhere.
    age for VHS rewind interference (-1 inactive). `camera.quake` is sustained
    trauma (0..2) added to a jolt's `shake`; `post.zoom` is a radial streak toward
    the frame center (0..0.5); `post.flash` washes the frame toward white (0..1). Cards also take the deletion
-   channels `cool|damage|glitch|cut|ghost` and the status-spinner clocks
-   `spinner|release|mark` (seconds; -1 inactive), with `mark: "check" | "cross"`.
+   channels `cool|damage|glitch|cut|ghost`, the status-spinner clocks
+   `spinner|release|mark` (seconds; -1 inactive), with `mark: "check" | "cross"`,
+   and `status-from|swap`: while `status-from` names an entry (-1 is unset), the
+   status line cross-fades straight from it to `status` by `swap` (0..1), so
+   `StageActor::swap_status(card, at, [from, to], seconds)` never passes the
+   entries between them as the fractional `status` channel does.
    A packet is one clock: `age` (seconds since
   dispatch, -1 before) and `flight`; the renderer derives its gather, flight, trail,
   landing ring, and light from them. Beams choose their own ports and curve; leave
@@ -707,7 +712,8 @@ their fuller documentation elsewhere.
   away as the burst's pressure front passes it; returns when it passes),
   `resolve_spinner(card, started, done)` (the spinner draws its mark at its
   next crossing; returns when the mark is drawn, where its sound belongs),
-  `halo([(inner, opacity), (outer, opacity)], at, seconds)` and `halo_out`
+  `swap_status(card, at, [from, to], seconds)`, `halo([(inner, opacity),
+  (outer, opacity)], at, seconds)` and `halo_out`
   (two rings 60 ms apart in, 80 ms apart out), `ring_timer(ring, at, seconds,
   sweep)`, and `disconnect(beam, at, seconds)` (the reverse of `connect`).
   Build elements with `StageElement::card|orb|beam|packet|label|ring` and their

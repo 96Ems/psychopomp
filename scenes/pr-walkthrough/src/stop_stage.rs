@@ -75,12 +75,9 @@ fn client_rect() -> [f32; 4] {
         position: Vec3::from(CLOSING_CAMERA),
         size: vec2(1920.0, 1080.0),
     };
-    let (center, scale) = camera
-        .project(Vec3::from(CLIENT))
-        .expect("client is in front of the camera");
-    let size = Vec2::from(CLIENT_SIZE) * scale;
-    let corner = center - size * 0.5;
-    [corner.x, corner.y, size.x, size.y]
+    camera
+        .project_rect(Vec3::from(CLIENT), Vec2::from(CLIENT_SIZE))
+        .expect("client is in front of the camera")
 }
 
 fn stage_plan() -> StagePlan {
