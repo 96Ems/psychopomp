@@ -101,10 +101,13 @@ mod tests {
     fn stage_preflight_accepts_element_channels_and_rejects_typos() {
         validate_renderer_plan(&plan(None)).unwrap();
         validate_renderer_plan(&plan(Some("service.shatter"))).unwrap();
+        validate_renderer_plan(&plan(Some("camera.roll"))).unwrap();
+        validate_renderer_plan(&plan(Some("camera.track.probe"))).unwrap();
         for typo in [
             "service.shater",
             "client.travel",
-            "camera.roll",
+            "camera.spin",
+            "camera.track.link",
             "ghost.opacity",
         ] {
             let error = validate_renderer_plan(&plan(Some(typo))).unwrap_err();

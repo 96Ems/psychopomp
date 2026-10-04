@@ -863,10 +863,7 @@ mod tests {
             ([0.0, 0.0, -60.0], all),
         ];
         for (position, framed) in cameras {
-            let camera = Camera {
-                position: Vec3::from(position),
-                size: vec2(1920.0, 1080.0),
-            };
+            let camera = Camera::at(Vec3::from(position), vec2(1920.0, 1080.0));
             for element in super::stage_plan().elements {
                 if let StageElement::Card { id, at, size, .. } = element
                     && framed(&id)
@@ -885,10 +882,10 @@ mod tests {
 
     #[test]
     fn the_title_frame_shows_only_the_title() {
-        let camera = Camera {
-            position: Vec3::new(0.0, super::TITLE_CAMERA_Y, 0.0),
-            size: vec2(1920.0, 1080.0),
-        };
+        let camera = Camera::at(
+            Vec3::new(0.0, super::TITLE_CAMERA_Y, 0.0),
+            vec2(1920.0, 1080.0),
+        );
         let (title, _) = camera.project(Vec3::new(960.0, -470.0, 0.0)).unwrap();
         assert!((200.0..700.0).contains(&title.y), "title at {title:?}");
         let (keychain, scale) = camera.project(Vec3::from(super::KEYCHAIN)).unwrap();

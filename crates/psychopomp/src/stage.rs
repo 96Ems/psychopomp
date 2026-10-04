@@ -230,7 +230,9 @@ impl StageElement {
 /// trauma a scene ramps itself (up to 2 for overdrive). They add.
 /// `post.zoom` streaks the developed frame toward its center (a radial blur);
 /// `post.flash` washes it toward white (0..1), for impacts that blind.
-pub const STAGE_PROPERTIES: [&str; 17] = [
+/// The camera's orientation, zoom, pivot, and handheld sway are described in
+/// [`Camera`] and [`CameraRig`]; `camera.track.<id>` weights also count.
+pub const STAGE_PROPERTIES: [&str; 23] = [
     "camera.x",
     "camera.y",
     "camera.z",
@@ -241,6 +243,12 @@ pub const STAGE_PROPERTIES: [&str; 17] = [
     "camera.kick-x",
     "camera.kick-y",
     "camera.punch",
+    "camera.yaw",
+    "camera.pitch",
+    "camera.roll",
+    "camera.zoom",
+    "camera.pivot",
+    "camera.handheld",
     "post.bloom",
     "post.chroma",
     "post.exposure",
@@ -259,6 +267,12 @@ impl StagePlan {
     pub fn accepts(&self, property: &str) -> bool {
         if STAGE_PROPERTIES.contains(&property) {
             return true;
+        }
+        // The camera follows packets and positioned elements.
+        if let Some(id) = property.strip_prefix(TRACK) {
+            return self.element(id).is_some_and(|element| {
+                element.anchor().is_some() || matches!(element, StageElement::Packet { .. })
+            });
         }
         property.split_once('.').is_some_and(|(id, rest)| {
             self.element(id)
@@ -373,30 +387,8 @@ fn line(id: &str, text: &str, max: usize) -> Result<()> {
     Ok(())
 }
 
-/// A sampled camera: where it looks and how far it has moved toward the scene.
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub struct Camera {
-    /// Pan in x/y; z dollies toward the scene, making the z = 0 plane larger.
-    pub position: Vec3,
-    /// The frame size in pixels.
-    pub size: Vec2,
-}
-
-impl Camera {
-    /// Screen position and scale of a world point, or `None` behind the camera.
-    pub fn project(&self, point: Vec3) -> Option<(Vec2, f32)> {
-        let depth = FOCAL + point.z - self.position.z;
-        if depth <= 1.0 {
-            return None;
-        }
-        let scale = FOCAL / depth;
-        let center = self.size * 0.5;
-        Some((
-            center + (point.truncate() - center - self.position.truncate()) * scale,
-            scale,
-        ))
-    }
-}
+mod camera;
+pub use camera::{CAMERA_CHANNELS, Camera, CameraRig, Footprint, Move, TRACK, camera_default};
 
 /// One point of an orb's shell and the seeds that shape its shatter.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -561,6 +553,34 @@ impl StageActor {
     ) {
         let channel = self.channel(scene, property, 0.0);
         scene.ease(&channel, at_nanos, target, seconds, curve);
+    }
+
+    /// Glide `property` to `target` in exactly `seconds` on the minimum-jerk
+    /// curve (smootherstep): velocity and acceleration meet the resting holds
+    /// at both ends. Use it between resting compositions; use [`Self::to`]
+    /// when an interruption must keep its momentum.
+    pub fn glide(
+        &mut self,
+        scene: &mut PlanBuilder,
+        property: &str,
+        at_nanos: u64,
+        target: f32,
+        seconds: f32,
+    ) {
+        self.ease(
+            scene,
+            property,
+            at_nanos,
+            target,
+            seconds,
+            Ease::Smootherstep,
+        );
+    }
+
+    /// The camera rig: framing, dollies, orbits, follows, and focus pulls,
+    /// written as this stage's `camera.*` channels.
+    pub fn camera(&self) -> CameraRig {
+        CameraRig::new(self.actor.clone(), self.plan.clone())
     }
 
     /// Jump `property` to `value` at `at_nanos`.
@@ -789,8 +809,11 @@ mod tests {
         assert!(
             !plan.accepts("probe.travel")
                 && !plan.accepts("missing.opacity")
-                && !plan.accepts("camera.roll")
+                && !plan.accepts("camera.spin")
+                && !plan.accepts("camera.track.link")
+                && !plan.accepts("camera.track.nowhere")
         );
+        assert!(plan.accepts("camera.roll") && plan.accepts("camera.track.probe"));
     }
 
     #[test]
@@ -815,10 +838,7 @@ mod tests {
     #[test]
     fn the_default_camera_is_pixel_exact_at_depth_zero() {
         use crate::math::vec2;
-        let camera = Camera {
-            position: Vec3::ZERO,
-            size: vec2(1920.0, 1080.0),
-        };
+        let camera = Camera::new(vec2(1920.0, 1080.0));
         assert_eq!(
             camera.project(vec3(300.0, 200.0, 0.0)),
             Some((vec2(300.0, 200.0), 1.0))
@@ -828,10 +848,7 @@ mod tests {
             scale < 1.0 && far.x > 300.0,
             "farther points shrink toward the center"
         );
-        let dolly = Camera {
-            position: vec3(0.0, 0.0, 700.0),
-            ..camera
-        };
+        let dolly = Camera::at(vec3(0.0, 0.0, 700.0), camera.size);
         assert!(dolly.project(vec3(300.0, 200.0, 0.0)).unwrap().1 > 1.0);
         assert!(camera.project(vec3(0.0, 0.0, -FOCAL)).is_none());
     }

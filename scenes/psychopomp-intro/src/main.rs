@@ -769,10 +769,7 @@ mod tests {
     #[test]
     fn clients_and_title_fit_the_working_cameras() {
         for z in [-180.0, -90.0, -60.0, -40.0, 0.0, 30.0] {
-            let camera = Camera {
-                position: Vec3::new(0.0, 0.0, z),
-                size: vec2(1920.0, 1080.0),
-            };
+            let camera = Camera::at(Vec3::new(0.0, 0.0, z), vec2(1920.0, 1080.0));
             for at in [super::TERMINAL, super::DESKTOP] {
                 let (center, scale) = camera.project(Vec3::from(at)).unwrap();
                 let half = vec2(super::CARD[0], super::CARD[1]) * (0.5 * scale);

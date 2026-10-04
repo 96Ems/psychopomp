@@ -24,7 +24,8 @@ use psychopomp::{
         smoothstep, stops, vec2, vec3,
     },
     stage::{
-        Camera, OrbPoint, StageElement, StagePlan, StatusText, orb_points, packet, shatter_offset,
+        Camera, OrbPoint, StageElement, StagePlan, StatusText, TRACK, orb_points, packet,
+        shatter_offset,
     },
     tone::Tone,
 };
@@ -676,20 +677,23 @@ impl HeadlessRenderer {
             if time == central {
                 post = post_settings(plan, &scene, &value, look, time);
             }
-            self.draw_sample(gpu, &prims, &points, look.background, weight, index == 0);
+            let exposure = [weight, scene.camera.roll, scene.camera.cover()];
+            self.draw_sample(gpu, &prims, &points, look.background, exposure, index == 0);
         }
         self.develop(gpu, post)
     }
 
     /// Draw one sample's primitives into the HDR target and add it, weighted,
-    /// into the exposure (cleared by the first sample).
+    /// into the exposure (cleared by the first sample). `exposure` is the
+    /// weight, then the camera roll and its covering magnification, which turn
+    /// this sample's image as it is added so a rolling camera blurs too.
     fn draw_sample(
         &mut self,
         gpu: &StageGpu,
         prims: &[Prim],
         points: &[[f32; 4]],
         clear: Vec3,
-        weight: f32,
+        [weight, roll, cover]: [f32; 3],
         first: bool,
     ) {
         self.queue
@@ -703,7 +707,7 @@ impl HeadlessRenderer {
             0,
             bytemuck::bytes_of(&PostUniform {
                 texel: [0.0; 4],
-                params: [weight, 0.0, 0.0, 0.0],
+                params: [weight, roll, cover, 0.0],
                 look: [0.0; 4],
                 shock: [0.0; 4],
                 rewind: [0.0; 4],
@@ -829,9 +833,10 @@ fn fullscreen(
 }
 
 /// Where `edge` of a positioned element lands on the delivered frame at
-/// `time`: its outline as beams see it, then the develop pass's roll and
-/// punch-in about the frame center, so an overlay pinned there moves with the
-/// element through camera moves, jolts, and settles. The develop pass uses its
+/// `time`: its outline as beams see it, the camera's authored roll, then the
+/// develop pass's shake roll and punch-in about the frame center, so an
+/// overlay pinned there moves with the element through camera moves, jolts,
+/// and settles. The develop pass uses its
 /// exposure's central sample; an overlay uses its own sample, which differs by
 /// far less than a pixel within one shutter.
 pub(crate) fn stage_anchor(
@@ -843,9 +848,9 @@ pub(crate) fn stage_anchor(
     edge: CalloutSide,
 ) -> Option<Vec2> {
     let element = plan.element(element)?;
-    let point = edge.on(Scene::camera(plan, value, time as f32, size)
-        .place(element)?
-        .outline);
+    let scene = Scene::camera(plan, value, time as f32, size);
+    // The authored roll turns each sample as it is exposed.
+    let point = scene.camera.rolled(edge.on(scene.place(element)?.outline));
     let roll = shake::rumble(time as f32, trauma(value)).roll;
     // Mirrors `composite` in stage_post.wgsl, which samples the inverse.
     let zoom = 1.0 + value("camera.punch", 0.0).max(0.0) + roll.abs() * 0.6;
@@ -887,9 +892,10 @@ fn post_settings(
             };
             let age = scene.v(id, "burst", -1.0);
             let place = scene.placements.get(id.as_str())?;
+            let center = scene.camera.rolled(place.center);
             (0.0..2.4)
                 .contains(&age)
-                .then_some([place.center.x, place.center.y, age, place.scale])
+                .then_some([center.x, center.y, age, place.scale])
         })
         .unwrap_or([0.0, 0.0, -1.0, 0.0]);
     // Roll and the punch-in transform the whole developed frame.
@@ -945,6 +951,9 @@ fn linear3(rgb: [u8; 3]) -> Vec3 {
 #[derive(Clone, Copy)]
 struct Placement {
     world: Vec3,
+    /// Depth for draw order and depth of field (`Camera::depth`): its world z
+    /// unless the camera is turned.
+    depth: f32,
     /// Projected center on screen.
     center: Vec2,
     /// Perspective times the element's own scale (and an orb's breath).
@@ -958,7 +967,7 @@ struct Link {
     path: Polyline,
     /// Full visible body boundaries, not an orb's submerged wire endpoints.
     label_ports: [Port; 2],
-    /// World depth and on-screen scale at the `from` and `to` ends.
+    /// Depth (`Camera::depth`) and on-screen scale at the `from` and `to` ends.
     depth: [f32; 2],
     scale: [f32; 2],
     /// Ends that plug into a card side and show a socket there.
@@ -1071,24 +1080,113 @@ impl<'a> Scene<'a> {
         time: f32,
         size: Vec2,
     ) -> Self {
-        // A jolt's spring-loaded shove plus its trauma rumble, sampled per
-        // shutter sample so the shake itself motion-blurs.
-        let rumble = shake::rumble(time, trauma(value));
-        let position = vec3(
-            value("camera.x", 0.0) + value("camera.kick-x", 0.0) + rumble.offset.x,
-            value("camera.y", 0.0) + value("camera.kick-y", 0.0) + rumble.offset.y,
-            value("camera.z", 0.0),
-        );
-        Self {
+        // A held camera sways slowly; a jolt's spring-loaded shove and trauma
+        // rumble add on top. All are sampled per shutter sample, so they blur.
+        let sway = shake::handheld(time, value("camera.handheld", 0.0));
+        let authored = Camera {
+            position: vec3(
+                value("camera.x", 0.0),
+                value("camera.y", 0.0),
+                value("camera.z", 0.0),
+            ),
+            yaw: value("camera.yaw", 0.0) + sway.yaw,
+            pitch: (value("camera.pitch", 0.0) + sway.pitch).clamp(-1.45, 1.45),
+            roll: value("camera.roll", 0.0),
+            zoom: value("camera.zoom", 1.0).max(0.05),
+            pivot: value("camera.pivot", 0.0),
+            size,
+        };
+        let mut scene = Self {
             plan,
             value,
             time,
-            camera: Camera { position, size },
+            camera: authored,
             focus: value("camera.focus", 0.0),
             dof: value("camera.dof", 0.0).max(0.0),
             placements: HashMap::new(),
             links: HashMap::new(),
             lights: Vec::new(),
+        };
+        let pan = scene.tracked();
+        let rumble = shake::rumble(time, trauma(value));
+        scene.camera.position = vec3(
+            pan.x + value("camera.kick-x", 0.0) + rumble.offset.x,
+            pan.y + value("camera.kick-y", 0.0) + rumble.offset.y,
+            authored.position.z,
+        );
+        if sway.offset != Vec2::ZERO {
+            scene.camera.position += sway.offset.extend(0.0);
+        }
+        scene
+    }
+
+    /// The authored pan, blended toward the pans that center each followed
+    /// element or packet by its `camera.track.<id>` weight. Weights summing
+    /// past 1 share the frame. A packet is found where this very sample draws
+    /// it, so following is exact: a few passes settle the parallax between
+    /// ends at different depths.
+    fn tracked(&self) -> Vec2 {
+        let base = self.camera.position.truncate();
+        let tracks = self
+            .plan
+            .elements
+            .iter()
+            .filter_map(|element| {
+                let weight = (self.value)(&format!("{TRACK}{}", element.id()), 0.0);
+                (weight > 0.0).then_some((element, weight))
+            })
+            .collect::<Vec<_>>();
+        if tracks.is_empty() {
+            return base;
+        }
+        let total = tracks.iter().map(|(_, weight)| weight).sum::<f32>();
+        let share = total.max(1.0);
+        let mut pan = base;
+        for _ in 0..3 {
+            let mut probe = Scene {
+                camera: Camera {
+                    position: pan.extend(self.camera.position.z),
+                    ..self.camera
+                },
+                placements: HashMap::new(),
+                links: HashMap::new(),
+                lights: Vec::new(),
+                ..*self
+            };
+            probe.placements = self
+                .plan
+                .elements
+                .iter()
+                .filter_map(|element| Some((element.id(), probe.place(element)?)))
+                .collect();
+            let aims = tracks.iter().map(|(element, weight)| {
+                let aim = probe
+                    .followed(element)
+                    .map_or(pan, |point| probe.camera.aim(point));
+                aim * (weight / share)
+            });
+            pan = base * (1.0 - total / share) + aims.sum::<Vec2>();
+        }
+        pan
+    }
+
+    /// The world point the camera follows for `element`: a packet's head
+    /// where it is drawn along its beam, or a positioned element's center.
+    fn followed(&self, element: &StageElement) -> Option<Vec3> {
+        match element {
+            StageElement::Packet {
+                id, beam, reverse, ..
+            } => {
+                let StageElement::Beam { from, to, bend, .. } = self.plan.element(beam)? else {
+                    return None;
+                };
+                let link = self.link(beam, from, to, *bend)?.toward(*reverse);
+                let travel =
+                    packet::travel(self.v(id, "age", -1.0), self.v(id, "flight", 0.8).max(0.05));
+                let depth = lerp(link.depth[0], link.depth[1], travel);
+                Some(self.camera.unproject(link.path.at(travel), depth))
+            }
+            element => self.placements.get(element.id()).map(|place| place.world),
         }
     }
 
@@ -1171,6 +1269,7 @@ impl<'a> Scene<'a> {
         let scale = perspective * self.v(id, "scale", 1.0).max(0.01) * breath;
         Some(Placement {
             world,
+            depth: self.camera.depth(world),
             center,
             scale,
             outline: element.outline(center, scale),
@@ -1206,7 +1305,7 @@ impl<'a> Scene<'a> {
         Some(Link {
             path: curve.flatten(BEAM_SAMPLES),
             label_ports: [a.outline.port_toward(end.point), end],
-            depth: [a.world.z, b.world.z],
+            depth: [a.depth, b.depth],
             scale: [a.scale, b.scale],
             socket: [card(from), card(to)],
             source: match a.outline {
@@ -1254,7 +1353,10 @@ impl Scene<'_> {
                     return None;
                 }
                 let normal = (path.at(fraction) - place.center).normalize_or(Vec2::X);
-                let direction = vec3(normal.x, normal.y, -0.34).normalize();
+                // Toward the lens from the screen-space contact, in the world.
+                let direction = self
+                    .camera
+                    .world_dir(vec3(normal.x, normal.y, -0.34).normalize());
                 Some((
                     direction,
                     since,
@@ -1505,7 +1607,7 @@ impl<'a> Painter<'a> {
         let opacity = scene.unit(id, "opacity", 1.0);
         let scale = place.scale;
         let half = size * 0.5 * scale;
-        let blur = scene.blur_at(place.world.z) + scene.v(id, "blur", 0.0).max(0.0) * scale;
+        let blur = scene.blur_at(place.depth) + scene.v(id, "blur", 0.0).max(0.0) * scale;
         let red = look.tone(Tone::Error);
         // The afterimage: the slot a deleted card leaves, drawn beneath it.
         let ghost = scene.unit(id, "ghost", 0.0);
@@ -1524,7 +1626,7 @@ impl<'a> Painter<'a> {
             }
         }
         if opacity <= 0.001 {
-            self.frame.close(place.world.z, order);
+            self.frame.close(place.depth, order);
             return;
         }
         let first = self.frame.prims.len();
@@ -1610,7 +1712,7 @@ impl<'a> Painter<'a> {
         }
         self.glitch(first, id, place, half);
         self.cut(first, id, place, half, &pen);
-        self.frame.close(place.world.z, order);
+        self.frame.close(place.depth, order);
     }
 
     /// The status line: statuses cross-fade by the fractional `status`
@@ -1819,7 +1921,7 @@ impl<'a> Painter<'a> {
         let world_radius = scene.orb_radius(id, radius) * collapse;
         let own = look.tone(tone);
         let red = look.tone(Tone::Error);
-        let blur = scene.blur_at(place.world.z) + scene.v(id, "blur", 0.0).max(0.0) * place.scale;
+        let blur = scene.blur_at(place.depth) + scene.v(id, "blur", 0.0).max(0.0) * place.scale;
         // A dark, softly feathered body occludes connections behind the shell.
         self.frame.circle(
             place.center,
@@ -1869,18 +1971,20 @@ impl<'a> Painter<'a> {
                     world_radius,
                     shatter,
                 ) + unit * (displacement * world_radius / 150.0);
+                let world = place.world + offset;
                 (
-                    place.world + offset,
-                    (1.0 - unit.z) * 0.5,
+                    world,
+                    (1.0 - scene.camera.view_dir(unit).z) * 0.5,
                     point.seed.z,
                     emission,
+                    scene.camera.depth(world),
                 )
             })
             .collect::<Vec<_>>();
-        dots.sort_by(|a, b| b.0.z.total_cmp(&a.0.z));
+        dots.sort_by(|a, b| b.4.total_cmp(&a.4));
         let fade = (1.0 - shatter).powf(0.7);
         let lights = scene.lights_on(place.outline).collect::<Vec<_>>();
-        for (point, near, seed, emission) in dots {
+        for (point, near, seed, emission, _) in dots {
             let Some((center, scale)) = scene.camera.project(point) else {
                 continue;
             };
@@ -1925,7 +2029,9 @@ impl<'a> Painter<'a> {
                     scene
                         .camera
                         .project(place.world + unit * world_radius)
-                        .map(|(point, _)| (point, smoothstep(-unit.z / 0.20)))
+                        .map(|(point, _)| {
+                            (point, smoothstep(-scene.camera.view_dir(unit).z / 0.20))
+                        })
                 })
                 .collect::<Vec<_>>();
             let ink = look.tone(tone).lerp(Vec3::ONE, 0.4);
@@ -1940,7 +2046,7 @@ impl<'a> Painter<'a> {
                 },
             );
         }
-        self.frame.close(place.world.z, order);
+        self.frame.close(place.depth, order);
     }
 
     /// One deterministic impact clock owns collapse, combustion, smoke, and
@@ -2010,7 +2116,7 @@ impl<'a> Painter<'a> {
                 },
             );
         }
-        self.frame.close(place.world.z, order);
+        self.frame.close(place.depth, order);
     }
 
     fn beam(&mut self, order: usize, id: &str, tone: Tone, link: &Link) {
@@ -2278,7 +2384,7 @@ impl<'a> Painter<'a> {
             return;
         }
         let typed = scene.unit(id, "typed", 1.0);
-        let blur = scene.blur_at(place.world.z);
+        let blur = scene.blur_at(place.depth);
         let parts = spans
             .iter()
             .enumerate()
@@ -2327,7 +2433,7 @@ impl<'a> Painter<'a> {
             remaining -= shown;
             x += width;
         }
-        self.frame.close(place.world.z - 0.5, order);
+        self.frame.close(place.depth - 0.5, order);
     }
 
     /// `size` is the radius and thickness.
@@ -2347,14 +2453,14 @@ impl<'a> Painter<'a> {
                 size[1] * place.scale,
             ],
             scene.unit(id, "sweep", 1.0),
-            scene.blur_at(place.world.z),
+            scene.blur_at(place.depth),
             Paint {
                 stroke: rgba(own, alpha),
                 glow: glow4(own * (0.035 * alpha), 5.0 * place.scale),
                 ..Default::default()
             },
         );
-        self.frame.close(place.world.z, order);
+        self.frame.close(place.depth, order);
     }
 }
 
@@ -2903,6 +3009,138 @@ mod tests {
     }
 
     #[test]
+    fn stage_anchors_turn_with_the_authored_roll() {
+        let plan: StagePlan = serde_json::from_value(serde_json::json!({
+            "elements": [
+                { "kind": "card", "id": "api", "at": [1160, 540, 0], "size": [300, 100], "title": "api" }
+            ]
+        }))
+        .unwrap();
+        let size = vec2(1920.0, 1080.0);
+        let rolled = super::stage_anchor(
+            &plan,
+            &|property, default| {
+                if property == "camera.roll" {
+                    0.1
+                } else {
+                    default
+                }
+            },
+            1.0,
+            size,
+            "api",
+            super::CalloutSide::Center,
+        )
+        .unwrap();
+        let camera = psychopomp::stage::Camera {
+            roll: 0.1,
+            ..psychopomp::stage::Camera::new(size)
+        };
+        assert_eq!(rolled, camera.rolled(vec2(1160.0, 540.0)));
+        assert!(rolled.y > 560.0, "a clockwise roll lowers the right side");
+    }
+
+    /// A card-to-card wire with a packet in flight; ends at different depths
+    /// so following has parallax to resolve.
+    fn followed_plan() -> StagePlan {
+        serde_json::from_value(serde_json::json!({
+            "elements": [
+                { "kind": "card", "id": "client", "at": [420, 560, 0], "size": [300, 110], "title": "client" },
+                { "kind": "card", "id": "api", "at": [1700, 420, 260], "size": [300, 110], "title": "api" },
+                { "kind": "beam", "id": "link", "from": "client", "to": "api", "bend": 40 },
+                { "kind": "packet", "id": "request", "beam": "link" }
+            ]
+        }))
+        .unwrap()
+    }
+
+    #[test]
+    fn a_followed_packet_stays_centered_where_it_is_drawn() {
+        let plan = followed_plan();
+        let size = vec2(1920.0, 1080.0);
+        for (yaw, age) in [(0.0, 0.2), (0.0, 0.7), (0.0, 1.1), (0.3, 0.9), (0.0, 3.0)] {
+            let value = |property: &str, default| match property {
+                "camera.track.request" => 1.0,
+                "camera.yaw" => yaw,
+                "camera.z" => 120.0,
+                "request.age" => age,
+                "request.flight" => 1.2,
+                _ => default,
+            };
+            let scene = Scene::sample(&plan, &value, 1.0, size);
+            let link = &scene.links["link"];
+            let head = link.path.at(psychopomp::stage::packet::travel(age, 1.2));
+            assert!(
+                head.distance(size * 0.5) < 0.5,
+                "yaw {yaw}, age {age}: the packet is drawn at {head}"
+            );
+        }
+    }
+
+    #[test]
+    fn catching_a_followed_packet_is_continuous() {
+        let plan = followed_plan();
+        let size = vec2(1920.0, 1080.0);
+        // The weight eases in while the packet flies; sample at 240 Hz.
+        let pan = |time: f32| {
+            let value = |property: &str, default| match property {
+                "camera.track.request" => psychopomp::math::smoothstep(time / 0.6),
+                "camera.x" => -200.0,
+                "request.age" => time,
+                "request.flight" => 1.2,
+                _ => default,
+            };
+            Scene::camera(&plan, &value, time, size)
+                .camera
+                .position
+                .truncate()
+        };
+        assert_eq!(pan(0.0), vec2(-200.0, 0.0), "no weight, no follow");
+        let mut previous = pan(0.0);
+        for step in 1..480 {
+            let next = pan(step as f32 / 240.0);
+            assert!(
+                next.distance(previous) < 12.0,
+                "the camera jumped {} px at step {step}",
+                next.distance(previous)
+            );
+            previous = next;
+        }
+    }
+
+    #[test]
+    fn a_turned_camera_sorts_and_focuses_by_view_depth() {
+        let plan: StagePlan = serde_json::from_value(serde_json::json!({
+            "elements": [
+                { "kind": "card", "id": "left", "at": [560, 540, 400], "size": [200, 100], "title": "left" },
+                { "kind": "card", "id": "right", "at": [1360, 540, 0], "size": [200, 100], "title": "right" }
+            ]
+        }))
+        .unwrap();
+        let size = vec2(1920.0, 1080.0);
+        let depth = |yaw: f32| {
+            let value = |property: &str, default| {
+                if property == "camera.yaw" {
+                    yaw
+                } else {
+                    default
+                }
+            };
+            let scene = Scene::sample(&plan, &value, 1.0, size);
+            (
+                scene.placements["left"].depth,
+                scene.placements["right"].depth,
+            )
+        };
+        assert_eq!(depth(0.0), (400.0, 0.0), "unturned depth is world z");
+        let (left, right) = depth(-1.2);
+        assert!(
+            left < right,
+            "swung far left, the deep left card is nearer: {left} {right}"
+        );
+    }
+
+    #[test]
     fn an_orb_pulse_does_not_displace_attached_ports() {
         let plan: StagePlan = serde_json::from_value(serde_json::json!({
             "elements": [
@@ -3072,6 +3310,24 @@ mod tests {
             post(&mut renderer, "camera.quake", 2.0) != intact,
             "a quake moves the camera"
         );
+        for (channel, rest, moved) in [
+            ("camera.yaw", 0.0, 0.3),
+            ("camera.pitch", 0.0, -0.2),
+            ("camera.roll", 0.0, 0.05),
+            ("camera.zoom", 1.0, 1.3),
+            ("camera.handheld", 0.0, 1.0),
+        ] {
+            assert!(
+                post(&mut renderer, channel, rest) == intact,
+                "{channel} at rest is the identity"
+            );
+            let turned = post(&mut renderer, channel, moved);
+            assert!(turned != intact, "{channel} reaches pixels");
+            assert!(
+                post(&mut renderer, channel, moved) == turned,
+                "{channel} is deterministic"
+            );
+        }
         assert!(
             rewind(&mut renderer, 0.0) == intact,
             "rewind starts without a cut"

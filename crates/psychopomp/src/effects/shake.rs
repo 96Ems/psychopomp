@@ -36,9 +36,57 @@ pub fn rumble(time: f32, trauma: f32) -> Rumble {
     }
 }
 
+/// Peak handheld drift of the pan, in world pixels, at amount 1.
+pub const HANDHELD_OFFSET: f32 = 7.0;
+/// Peak handheld yaw in radians (about a third of a degree) at amount 1;
+/// pitch sways at 70% of it.
+pub const HANDHELD_TURN: f32 = 0.006;
+
+/// A held camera's breathing: a slow pan and a slight turn about the pivot,
+/// so depth layers parallax. Not an impact; it never jolts.
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct Sway {
+    pub offset: Vec2,
+    pub yaw: f32,
+    pub pitch: f32,
+}
+
+/// The handheld sway at scene time `time` for an amplitude (0 is a locked-off
+/// camera, 1 a gentle operator). Two octaves of smooth noise around half a
+/// hertz, each axis on its own phase so they never rest together.
+pub fn handheld(time: f32, amount: f32) -> Sway {
+    if amount <= 0.0 {
+        return Sway::default();
+    }
+    let t = time * 0.55;
+    let octave = |salt: u32, phase: f32| {
+        smooth_noise(t + phase, salt) * 0.75 + smooth_noise(t * 2.3 + phase, salt + 5) * 0.25
+    };
+    Sway {
+        offset: vec2(octave(21, 0.0), octave(22, 0.31)) * (HANDHELD_OFFSET * amount),
+        yaw: octave(23, 0.57) * HANDHELD_TURN * amount,
+        pitch: octave(24, 0.83) * HANDHELD_TURN * 0.7 * amount,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_handheld_camera_is_off_by_default_and_sways_smoothly() {
+        assert_eq!(handheld(2.7, 0.0), Sway::default());
+        let mut previous = handheld(0.0, 1.0);
+        for i in 1..4000 {
+            let sway = handheld(i as f32 / 240.0, 1.0);
+            assert!(sway.offset.length() <= HANDHELD_OFFSET * 1.5);
+            assert!(sway.yaw.abs() <= HANDHELD_TURN && sway.pitch.abs() <= HANDHELD_TURN);
+            // Slow: under a pixel of drift between 240 Hz samples.
+            assert!((sway.offset - previous.offset).length() < 0.25);
+            previous = sway;
+        }
+        assert_eq!(handheld(1.3, 0.5).offset * 2.0, handheld(1.3, 1.0).offset);
+    }
 
     #[test]
     fn no_trauma_is_still_and_full_trauma_stays_bounded() {

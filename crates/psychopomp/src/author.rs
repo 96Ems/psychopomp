@@ -350,6 +350,35 @@ impl PlanBuilder {
         });
     }
 
+    /// The motion state of `actor.property` at `at_nanos` under the events
+    /// written so far, or `None` when the channel is undeclared or refers to
+    /// Semantic Targets. Helpers read the pose they move from this way; an
+    /// event written later cannot change a value already read.
+    pub fn sample(
+        &self,
+        actor: &ActorHandle,
+        property: &str,
+        at_nanos: u64,
+    ) -> Option<crate::motion::MotionState> {
+        let id = format!("{}.{}", actor.id, property);
+        let channel = self
+            .plan
+            .continuous_channels
+            .iter()
+            .find(|channel| channel.id == id)?;
+        let key = crate::timeline::PropertyId::new(&id);
+        let timeline = crate::plan::compile_channels(
+            [(channel, key.clone())],
+            self.plan.duration_nanos,
+            |scalar| match scalar {
+                ScalarPlan::Literal(value) => Ok(*value),
+                ScalarPlan::Target(_) => anyhow::bail!("a semantic scalar has no authored value"),
+            },
+        )
+        .ok()?;
+        timeline.sample_at(&key, at_nanos as f64 / 1e9)
+    }
+
     pub fn finish(self) -> Result<ScenePlan, crate::plan::PlanValidationError> {
         self.plan.validate()?;
         Ok(self.plan)
