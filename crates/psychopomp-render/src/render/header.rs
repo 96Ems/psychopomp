@@ -126,7 +126,7 @@ impl HeadlessRenderer {
         );
         let ink_bottom = pixels
             .chunks_exact(width as usize * 4)
-            .rposition(|row| row.chunks_exact(4).any(|p| p[3] > 0))
+            .rposition(|row| row.as_chunks::<4>().0.iter().any(|p| p[3] > 0))
             .map_or(height, |y| y as u32 + 1) as f32;
         Ok(HeaderGlyphs {
             sprite: TextSprite {

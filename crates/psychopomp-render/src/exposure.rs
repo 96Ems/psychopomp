@@ -166,12 +166,19 @@ pub(crate) fn accumulate(
     for &(time, weight) in exposure {
         let pixels = render_sample(renderer, time)?;
         check_frame(&pixels)?;
-        for (sum, pixel) in sum.chunks_exact_mut(4).zip(pixels.chunks_exact(4)) {
+        for (sum, pixel) in sum
+            .as_chunks_mut::<4>()
+            .0
+            .iter_mut()
+            .zip(pixels.as_chunks::<4>().0)
+        {
             add_linear(tables, sum, pixel, weight);
         }
     }
     Ok(sum
-        .chunks_exact(4)
+        .as_chunks::<4>()
+        .0
+        .iter()
         .flat_map(|sum| encode_linear(tables, sum))
         .collect())
 }
@@ -198,8 +205,8 @@ pub(crate) fn accumulate_region(
         if index > 0 {
             render_sample(&mut frame, time)?;
         }
-        let pixels = region.rows().flat_map(|row| frame[row].chunks_exact(4));
-        for (sum, pixel) in sum.chunks_exact_mut(4).zip(pixels) {
+        let pixels = region.rows().flat_map(|row| frame[row].as_chunks::<4>().0);
+        for (sum, pixel) in sum.as_chunks_mut::<4>().0.iter_mut().zip(pixels) {
             add_linear(tables, sum, pixel, weight);
         }
     }
@@ -211,14 +218,19 @@ pub(crate) fn accumulate_region(
         encode_linear(tables, &sum)
     });
     let mut exposed = first;
-    for pixel in exposed.chunks_exact_mut(4) {
+    for pixel in exposed.as_chunks_mut::<4>().0 {
         for (channel, value) in pixel.iter_mut().enumerate() {
             *value = constant[*value as usize][channel];
         }
     }
-    let mut sums = sum.chunks_exact(4);
+    let mut sums = sum.as_chunks::<4>().0.iter();
     for row in region.rows() {
-        for (pixel, sum) in exposed[row].chunks_exact_mut(4).zip(&mut sums) {
+        for (pixel, sum) in exposed[row]
+            .as_chunks_mut::<4>()
+            .0
+            .iter_mut()
+            .zip(&mut sums)
+        {
             pixel.copy_from_slice(&encode_linear(tables, sum));
         }
     }
@@ -412,12 +424,19 @@ mod tests {
         let tables = linear_tables();
         let mut sum = vec![0.0_f32; FRAME_BYTES];
         for &(time, weight) in &samples {
-            for (sum, pixel) in sum.chunks_exact_mut(4).zip(sample(time).chunks_exact(4)) {
+            for (sum, pixel) in sum
+                .as_chunks_mut::<4>()
+                .0
+                .iter_mut()
+                .zip(sample(time).as_chunks::<4>().0)
+            {
                 add_linear(tables, sum, pixel, weight);
             }
         }
         let whole = sum
-            .chunks_exact(4)
+            .as_chunks::<4>()
+            .0
+            .iter()
             .flat_map(|sum| encode_linear(tables, sum))
             .collect::<Vec<_>>();
 

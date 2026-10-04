@@ -839,8 +839,10 @@ mod tests {
             // Heading green is at least as bright as every cell/stroke/label in
             // this scene. An alpha overlay cannot produce a dark green remnant.
             let dark = pixels
-                .chunks_exact(4)
-                .zip(base.chunks_exact(4))
+                .as_chunks::<4>()
+                .0
+                .iter()
+                .zip(base.as_chunks::<4>().0)
                 .filter(|(pixel, base)| pixel[1] < base[1])
                 .count();
             assert_eq!(dark, 0, "dark heading residue at {time}: {dark} pixels");
