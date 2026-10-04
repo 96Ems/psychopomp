@@ -21,6 +21,7 @@ machinery:
 | Springs, easing, retargeting, or a metric as curves; a plan's channels over time | `scenes/charts` | `plot::PlotActor` (`draw`, `ride`, `velocity`), `lanes::LanesPlan::from_scene_plan` |
 | A payload, config, or emitted plan as structured data | `scenes/tree` | `tree::TreeActor` (`open`, `reveal`, `highlight`, `set`) |
 | Pointing at a card or code range while it moves | `scenes/callouts` | `callout::CalloutActor` (`show`, `move_to`, `emphasize`) |
+| Labels, counters, or images riding a card or code range | `scenes/anchors` | `anchor::AnchorPlan` on captions, Rolling Numbers, `text::TextActor`, `image::ImageActor` (`move_to`) |
 | Real product behavior from a screen recording | `scenes/video`, `scenes/opencode-session-tool` | `video::VideoActor` (`fly_in`, `focus`, `unfocus`) |
 | Before and after, side by side | `scenes/compare` | `ReelSegmentPlan::wiped` with `ReelWipePlan` holds and labels |
 | A version or count changing | `scenes/rolling-number` | `rolling::RollingNumberActor::roll` |
@@ -511,15 +512,17 @@ their fuller documentation elsewhere.
   `end` (`participant`, `label`), each with optional `slot` and `aside`. Channels:
   `opacity`, `x`, `y`, `lifelines`, `participant.<id>.opacity|emphasis`,
   `row.<id>.reveal|opacity|strike`. Use `SequenceActor` to write reveals by row.
-- `caption`: `origin`, `align`, `size`, `lines` of `{ text, tone }` spans, `chip`.
-  Channels: `opacity`, `x`, `y`, `typed`, `caret`. `CaptionActor::type_in` writes
-  one exact step per character; `show` and `hide` fade.
+- `caption`: `origin`, `align`, `size`, `lines` of `{ text, tone }` spans, `chip`,
+  and optional [`anchors`](#pin-overlays-to-anchors).
+  Channels: `opacity`, `x`, `y`, `typed`, `caret`, `anchor.<id>`. `CaptionActor::type_in` writes
+  one exact step per character; `show` and `hide` fade; `move_to` glides between anchors.
 - `rolling-number`: `origin` (aligned edge x, center y), `align`, `size`, `bold`,
   `tone`, static `prefix`/`suffix` spans (`{ text, tone }`), the initial `value`,
   and `rolls` of `{ atNanos, value }` in increasing time. Optional
   `durationNanos` (500 ms), `stagger` (`outward` | `start` | `end` | `none`),
   `direction` (`auto` | `up` | `down`), `blur` (smear strength, 1; 0 disables),
-  and `chip`. Channels: `opacity`, `x`, `y`. Digits roll; `,` between digits
+  `chip`, and [`anchors`](#pin-overlays-to-anchors). Channels: `opacity`, `x`,
+  `y`, `anchor.<id>`. Digits roll; `,` between digits
   groups and `.` between digits starts a fraction, so `rc.` and `/` are literals.
   `RollingNumberActor::roll` appends a change at a phrase's time; `show`/`hide`
   fade like a caption. Plans using it are export-only (not `plan present`).
@@ -623,6 +626,42 @@ their fuller documentation elsewhere.
   card.focus(&mut scene, seconds(3.0), [920.0, 225.0, 900.0, 356.0], 0.9);
   ```
   The showroom is `cargo run -p psychopomp-video` (writes `target/video.json`).
+- `text` (typed with `psychopomp::text::TextPlan`, in the JSON shape hand-built
+  `text` actors always used): `text`, `center`, `fontSize` (28), `color`
+  (`[r, g, b]`, white), optional `verticalMask`, and
+  [`anchors`](#pin-overlays-to-anchors). Its content may follow a `content`
+  State Channel. Channels are strict: `opacity`, `x`, `y` (absolute canvas
+  coordinates defaulting to `center`; while pinned, their displacement from
+  `center` moves the text from its anchor), and `anchor.<id>`. `TextActor`
+  writes `show` (fade and rise; text whose first write is `show` starts hidden),
+  `hide`, `show_during(from, until)`, `swap(next, at)` (this text lifts and
+  fades as `next` rises into the same place 80 ms later), and `move_to`.
+  ```rust
+  let region = TextPlan::new("us-east-1", [0.0, 0.0]).size(22.0).color([150, 160, 178])
+      .anchor(AnchorPlan::stage("api", "api", Edge::Bottom).with_offset([0.0, 34.0]));
+  let mut cold = TextActor::declare(&mut scene, "region", &region)?;
+  let mut warm = TextActor::declare(&mut scene, "region-warm",
+      &TextPlan { text: "us-east-1 · warm".into(), ..region.clone() })?;
+  cold.show(&mut scene, at);
+  cold.swap(&mut scene, &mut warm, landed);
+  ```
+- `image`: `mediaId` (a planned `image` media placement: PNG, JPEG, or WebP,
+  recognized by content), `center`, `width` (at scale 1; the height follows the
+  image), `framed` (a card with the theme's material, border, and shadow),
+  `title` (a 44 px title bar; framed only), `radius` (corners of a bare image),
+  and [`anchors`](#pin-overlays-to-anchors), which replace `center`. Channels:
+  `x`, `y` (offsets), `scale`, `opacity`, `rotation`, `tilt-x`, `tilt-y`, `blur`
+  (near-edge defocus), and `anchor.<id>`. The file is decoded once and halved
+  until it is at most twice its shown width. `ImageActor::declare(scene, id,
+  &plan, image::media(id, path, from, until))` adds the actor and its placement;
+  `fly_in`, `hide`, and `move_to` write the motion. Images draw with the Video
+  Cards, beneath other overlays; plans using them are export-only.
+  ```rust
+  let mut trace = ImageActor::declare(&mut scene, "trace",
+      &ImagePlan::new("trace", [960.0, 300.0], 340.0).titled("trace.png"),
+      image::media("trace", "../assets/anchors/trace.png", 0, scene.duration_nanos()))?;
+  trace.fly_in(&mut scene, at);
+  ```
 - `callout`: `anchors` (one to eight; the first is where it starts), `lines` (one
   to three lines of `{ text, tone }` spans), `size` (24), `side` (where the label
   sits: `top`, `bottom`, `left`, `right`, `top-left`, `top-right` (default),
@@ -634,7 +673,9 @@ their fuller documentation elsewhere.
   (`center` by default, or a side or corner of the outline) and an optional
   per-anchor `side`. Channels: `opacity`, `draw` (leader draw-on; the mark
   appears with it), `label` (fade and 8 px rise), `emphasis`, and
-  `anchor.<id>` weights (1 for the first anchor, 0 otherwise). The renderer
+  `anchor.<id>` weights (1 for the first anchor, 0 otherwise). Anchors may also
+  be `participant` (`sequence`, `participant`) or `row` (`sequence`, `row`) of a
+  Sequence Diagram actor. The renderer
   resolves every weighted anchor at every sample from the prepared root and
   blends them, so the leader stays on its card through camera moves, jolts, and
   shutter samples, and on its code range as lines move or the panel zooms.
@@ -656,6 +697,8 @@ their fuller documentation elsewhere.
   The showroom is `cargo run -p psychopomp-callouts` (writes the reel
   `target/callouts.json` and its segments under `target/callouts/`); render it
   with `cargo run --release -- plan render target/callouts.json output/callouts.mp4 --theme neutral`.
+  Callout anchors are the shared [Anchor](#pin-overlays-to-anchors) targets
+  plus a per-anchor label `side`; `CalloutSide` is `psychopomp::anchor::Edge`.
 - Editor Line Marks: `"mark": "added" | "removed"` on a line, with presence
   channel `mark.<line-id>`; `panel-x`, `panel-y`, and `panel-opacity` move and fade the card (the Stepped Diff
   enters on `panel-y`).
@@ -718,6 +761,50 @@ Scene Programs too. `--theme opencode` renders with the OpenCode TUI's tokens;
 `--theme neutral` with the OpenCode blog's clear-neutral diagram palette (the
 #50825 film's look).
 
+### Pin Overlays To Anchors
+
+Captions, Rolling Numbers, text, and images take the same optional `anchors` as
+callouts, instead of hand-computed canvas coordinates. Each anchor has an `id`, a
+`kind` (`point` with `at`; `stage` with `element`, a positioned element of the
+Stage root; `editor` with `target`, a Semantic Target of the editor root;
+`participant` with `sequence` and `participant`, that participant's header in a
+Sequence Diagram actor; `row` with `sequence` and `row`, the span of a message
+arrow, a note, or an End mark), an optional `edge` (`center` by default, or a
+side or corner), and an optional `offset` in canvas pixels:
+
+```json
+"anchors": [
+  { "id": "client", "kind": "stage", "element": "client", "edge": "bottom", "offset": [0, 40] },
+  { "id": "api", "kind": "stage", "element": "api", "edge": "bottom", "offset": [0, 84] }
+]
+```
+
+While an overlay has anchors, the blended point replaces its `origin` (captions,
+Rolling Numbers) or `center` (text, images); its other channels still move it
+from there. `anchor.<id>` weights choose the anchor (1 for the first, 0
+otherwise), and every handle's `move_to(anchor, at)` springs them on one
+critically damped profile, so an interrupted move keeps its velocity. The root
+resolves each weighted anchor at every Temporal Sample, so pinned overlays ride
+camera dollies, jolts, line insertions, and panel zooms without lag; they follow
+position, not perspective scale. Anchors must name something the root can
+place: preflight rejects a `stage` anchor without a Stage root, a beam or packet
+element, an unknown Semantic Target, sequence, participant, or row, and weight
+channels for undeclared anchors. Sequence anchors follow the diagram's `x`/`y`
+channels and its measured header and note widths.
+
+```rust
+let mut request = CaptionActor::declare(&mut scene, "request",
+    &CaptionPlan::line([0.0, 0.0], 24.0, spans).aligned(CaptionAlign::Center).chip()
+        .anchor(AnchorPlan::stage("client", "client", Edge::Bottom).with_offset([0.0, 40.0]))
+        .anchor(AnchorPlan::stage("api", "api", Edge::Bottom).with_offset([0.0, 84.0])))?;
+request.type_in(&mut scene, at, 30.0, 0.6);
+request.move_to(&mut scene, "api", launch)?; // glides beside the packet
+```
+
+The showroom is `cargo run -p psychopomp-anchors` (writes the reel
+`target/anchors.json` and its segments beside it); render it with
+`cargo run --release -- plan render target/anchors.json output/anchors.mp4 --theme neutral`.
+
 ## Keep The Renderer Running
 
 `psychopomp plan serve` reads one JSON request per line from standard input and writes one JSON response per line to standard output. Progress and GPU diagnostics use standard error, leaving standard output machine-readable.
@@ -777,7 +864,7 @@ Renderer Recipe payloads remain adapter-owned. The lightweight core validates st
 
 Scene Plan v2 scalar values may reference a component of a stable Semantic Target. The target's selector remains recipe-owned; for the hero, the editor recipe resolves logical code range IDs through `cosmic-text` before compiling highlight and pointer channels into the shared Timeline.
 
-The plan runtime's recipes are listed under [Recipe Payloads And Channels](#recipe-payloads-and-channels). Planned audio lowers into exact script or layer placements for FFmpeg. Planned video is accepted only when a `video` actor consumes its media ID; unconsumed video and all image media still return request errors. The Video Card maps the global scene clock through the media placement into source time, so cue and range renders do not restart footage. Editor and Video Card recipes independently produce RGBA content but delegate framing to the same private immediate-mode card compositor; this reuse does not add recursive presentation nodes to Scene Plan.
+The plan runtime's recipes are listed under [Recipe Payloads And Channels](#recipe-payloads-and-channels). Planned audio lowers into exact script or layer placements for FFmpeg. Planned video is accepted only when a `video` actor consumes its media ID, and image media only when an `image` actor draws it; other unconsumed video and image media still return request errors. The Video Card maps the global scene clock through the media placement into source time, so cue and range renders do not restart footage. Editor and Video Card recipes independently produce RGBA content but delegate framing to the same private immediate-mode card compositor; this reuse does not add recursive presentation nodes to Scene Plan.
 
 ## Package Direction
 
