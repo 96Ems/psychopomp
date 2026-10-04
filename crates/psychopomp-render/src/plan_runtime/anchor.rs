@@ -1,10 +1,11 @@
 //! Shared anchor resolution for every pinnable overlay (callouts, captions,
 //! Rolling Numbers, text, images). Preflight checks that each anchor names
-//! something the plan's root can place; at every sample the prepared root
-//! places it: `render::stage_anchor` projects a Stage element through the same
-//! camera, roll, and punch-in the Stage paints with, and
-//! `PreparedEditor::anchor` carries a measured code range through line motion
-//! and the panel's card projection. Overlays only ask for points.
+//! something the plan can place; at every sample the prepared root places it:
+//! `render::stage_anchor` projects a Stage element through the same camera,
+//! roll, and punch-in the Stage paints with, and `PreparedEditor::anchor`
+//! carries a measured code range through line motion and the panel's card
+//! projection. Sequence Diagram participants and rows are placed by their own
+//! prepared overlay. Overlays only ask for points.
 use anyhow::{Result, bail};
 use psychopomp::{
     anchor::{self, AnchorPlan, AnchorTarget},
@@ -14,20 +15,63 @@ use psychopomp::{
     stage::StageElement,
 };
 
-use super::{PreparedRoot, preflight::RootPlan};
+use super::{PreparedRoot, preflight::RootPlan, sequence::PreparedSequence};
 use crate::render::stage_anchor;
 
-/// Every anchor of `kind` actor `owner` must name something the root can place.
+/// What anchors may name: the root, its Semantic Targets, and the plan's
+/// Sequence Diagrams.
+pub(super) struct Placeable<'a> {
+    pub root: &'a RootPlan,
+    pub targets: &'a [SemanticTargetPlan],
+    pub sequences: &'a [PreparedSequence],
+}
+
+/// Every anchor of `kind` actor `owner` must name something the plan can place.
 pub(super) fn validate<'a>(
     kind: &str,
     owner: &str,
     anchors: impl IntoIterator<Item = (&'a str, AnchorTarget<'a>)>,
-    root: &RootPlan,
-    targets: &[SemanticTargetPlan],
+    placeable: &Placeable<'_>,
 ) -> Result<()> {
+    let Placeable {
+        root,
+        targets,
+        sequences,
+    } = placeable;
     for (id, target) in anchors {
         match (target, root) {
             (AnchorTarget::Point(_), _) => {}
+            (
+                AnchorTarget::Participant {
+                    sequence,
+                    participant,
+                    ..
+                },
+                _,
+            ) => {
+                let Some(found) = sequences.iter().find(|s| s.id() == sequence) else {
+                    bail!(
+                        "{kind} '{owner}' anchor '{id}' references unknown sequence '{sequence}'"
+                    );
+                };
+                if found.plan().participant_index(participant).is_none() {
+                    bail!(
+                        "{kind} '{owner}' anchor '{id}' references unknown participant '{participant}' of sequence '{sequence}'"
+                    );
+                }
+            }
+            (AnchorTarget::Row { sequence, row, .. }, _) => {
+                let Some(found) = sequences.iter().find(|s| s.id() == sequence) else {
+                    bail!(
+                        "{kind} '{owner}' anchor '{id}' references unknown sequence '{sequence}'"
+                    );
+                };
+                if found.plan().row_index(row).is_none() {
+                    bail!(
+                        "{kind} '{owner}' anchor '{id}' references unknown row '{row}' of sequence '{sequence}'"
+                    );
+                }
+            }
             (AnchorTarget::Stage { element, .. }, RootPlan::Stage { recipe, .. }) => {
                 if recipe
                     .element(element)
@@ -65,22 +109,22 @@ pub(super) fn validate_plans(
     kind: &str,
     owner: &str,
     anchors: &[AnchorPlan],
-    root: &RootPlan,
-    targets: &[SemanticTargetPlan],
+    placeable: &Placeable<'_>,
 ) -> Result<()> {
     validate(
         kind,
         owner,
         anchors.iter().map(|anchor| (anchor.id(), anchor.target())),
-        root,
-        targets,
+        placeable,
     )
 }
 
-/// Where `target` is on the delivered frame at `time`, from the prepared root:
-/// the root recipe owns the layout, the overlay only asks for a point.
+/// Where `target` is on the delivered frame at `time`, from the prepared root
+/// or Sequence Diagram: the recipe owns the layout, the overlay only asks for
+/// a point.
 pub(super) fn resolve(
     root: &PreparedRoot,
+    sequences: &[PreparedSequence],
     target: AnchorTarget<'_>,
     size: [u32; 2],
     value: impl Fn(&str, &str, f32) -> f32,
@@ -89,6 +133,12 @@ pub(super) fn resolve(
 ) -> Option<Vec2> {
     match (target, root) {
         (AnchorTarget::Point(at), _) => Some(at),
+        (AnchorTarget::Participant { sequence, .. } | AnchorTarget::Row { sequence, .. }, _) => {
+            sequences
+                .iter()
+                .find(|candidate| candidate.id() == sequence)?
+                .anchor(target, value)
+        }
         (AnchorTarget::Stage { element, edge }, PreparedRoot::Stage(stage)) => stage_anchor(
             stage.plan(),
             &|property, default| value(stage.id(), property, default),
@@ -311,6 +361,122 @@ mod tests {
             prepared.overlay_key(4.9, "stage", size).unwrap(),
             prepared.overlay_key(4.905, "stage", size).unwrap()
         );
+    }
+
+    fn sequenced(anchor: AnchorPlan) -> ScenePlan {
+        use psychopomp::sequence::{
+            SequenceActor, SequenceParticipantPlan, SequencePlan, SequenceRowPlan,
+        };
+        let mut scene = PlanBuilder::new("sequenced", 3_000_000_000);
+        let recipe = SequencePlan {
+            origin: [300.0, 200.0],
+            width: 1320.0,
+            row_height: 80.0,
+            slots: None,
+            participants: vec![
+                SequenceParticipantPlan::new("client", "client", ""),
+                SequenceParticipantPlan::new("api", "api", "us-east-1"),
+            ],
+            rows: vec![
+                SequenceRowPlan::message("request", "client", "api", "GET /user", Tone::Request),
+                SequenceRowPlan::note("cold", &["api"], "cold start", Tone::Warning),
+            ],
+        };
+        let mut sequence = SequenceActor::declare(&mut scene, "flow", &recipe).unwrap();
+        sequence.animate(&mut scene, "x", 0.0, 1_000_000_000, 120.0, 0.5);
+        CaptionActor::declare(
+            &mut scene,
+            "caption",
+            &CaptionPlan::line(
+                [0.0, 0.0],
+                24.0,
+                vec![CaptionSpanPlan::new("pinned", Tone::Plain)],
+            )
+            .anchor(anchor),
+        )
+        .unwrap();
+        scene.finish().unwrap()
+    }
+
+    #[test]
+    fn sequence_participants_and_rows_are_anchors() {
+        for anchor in [
+            AnchorPlan::participant("p", "flow", "api", Edge::Bottom),
+            AnchorPlan::row("r", "flow", "request", Edge::Top),
+            AnchorPlan::row("n", "flow", "cold", Edge::Right),
+        ] {
+            validate_renderer_plan(&sequenced(anchor)).unwrap();
+        }
+        for (anchor, expected) in [
+            (
+                AnchorPlan::participant("p", "nowhere", "api", Edge::Bottom),
+                "unknown sequence 'nowhere'",
+            ),
+            (
+                AnchorPlan::participant("p", "flow", "db", Edge::Bottom),
+                "unknown participant 'db'",
+            ),
+            (
+                AnchorPlan::row("r", "flow", "reply", Edge::Top),
+                "unknown row 'reply'",
+            ),
+        ] {
+            let error = validate_renderer_plan(&sequenced(anchor)).unwrap_err();
+            assert!(format!("{error:#}").contains(expected), "{error:#}");
+        }
+    }
+
+    #[test]
+    #[ignore = "requires a headless GPU; anchors on Sequence Diagram headers and rows follow the diagram"]
+    fn sequence_anchors_land_on_measured_headers_and_follow_the_diagram() {
+        use psychopomp::{
+            callout::{CalloutActor, CalloutAnchorPlan, CalloutPlan},
+            math::Vec2,
+        };
+
+        use crate::plan_runtime::{PreparedPlan, new_renderer};
+
+        let mut renderer = pollster::block_on(new_renderer("sequence-anchors")).unwrap();
+        let mut plan = sequenced(
+            AnchorPlan::participant("p", "flow", "api", Edge::Bottom).with_offset([0.0, 20.0]),
+        );
+        let mut scene = PlanBuilder::new("callout", plan.duration_nanos);
+        CalloutActor::declare(
+            &mut scene,
+            "note",
+            &CalloutPlan::new(
+                CalloutAnchorPlan::Row {
+                    id: "request".into(),
+                    sequence: "flow".into(),
+                    row: "request".into(),
+                    edge: Edge::Center,
+                    side: None,
+                },
+                vec![CaptionSpanPlan::new("note", Tone::Plain)],
+            ),
+        )
+        .unwrap();
+        plan.actors.extend(scene.finish().unwrap().actors);
+        let prepared =
+            PreparedPlan::prepare(plan, std::path::Path::new("."), &mut renderer).unwrap();
+        let size = renderer.size();
+        let timeline = &prepared.timeline;
+        let sequence = prepared.sequences[0].plan();
+        let anchors = prepared.captions[0].anchors();
+        let at = |time: f64| {
+            prepared
+                .pin("caption", anchors, Vec2::ZERO, time, timeline, size)
+                .unwrap()
+        };
+        let header = sequence.header_box(1, renderer.sequence_widths(sequence).0[1]);
+        assert!(header.max.x - header.min.x >= 150.0);
+        assert_eq!(at(0.5), vec2(header.center().x, header.max.y + 20.0));
+        assert_eq!(at(2.9) - at(0.5), vec2(120.0, 0.0), "rides the diagram's x");
+        let request = sequence.row_box(0, 0.0).unwrap().center();
+        let pose = prepared
+            .callout_pose(&prepared.callouts[0], 0.5, timeline, size)
+            .unwrap();
+        assert_eq!(pose.anchor, request);
     }
 
     #[test]

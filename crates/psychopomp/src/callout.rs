@@ -86,6 +86,28 @@ pub enum CalloutAnchorPlan {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         side: Option<CalloutSide>,
     },
+    /// A participant's header in a Sequence Diagram actor.
+    #[serde(rename_all = "camelCase")]
+    Participant {
+        id: String,
+        sequence: String,
+        participant: String,
+        #[serde(default, skip_serializing_if = "CalloutSide::is_center")]
+        edge: CalloutSide,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        side: Option<CalloutSide>,
+    },
+    /// A row of a Sequence Diagram actor: its arrow, note, or End mark.
+    #[serde(rename_all = "camelCase")]
+    Row {
+        id: String,
+        sequence: String,
+        row: String,
+        #[serde(default, skip_serializing_if = "CalloutSide::is_center")]
+        edge: CalloutSide,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        side: Option<CalloutSide>,
+    },
 }
 
 fn default_size() -> f32 {
@@ -107,15 +129,21 @@ fn is_accent(tone: &Tone) -> bool {
 impl CalloutAnchorPlan {
     pub fn id(&self) -> &str {
         match self {
-            Self::Point { id, .. } | Self::Stage { id, .. } | Self::Editor { id, .. } => id,
+            Self::Point { id, .. }
+            | Self::Stage { id, .. }
+            | Self::Editor { id, .. }
+            | Self::Participant { id, .. }
+            | Self::Row { id, .. } => id,
         }
     }
 
     fn side(&self) -> Option<CalloutSide> {
         match self {
-            Self::Point { side, .. } | Self::Stage { side, .. } | Self::Editor { side, .. } => {
-                *side
-            }
+            Self::Point { side, .. }
+            | Self::Stage { side, .. }
+            | Self::Editor { side, .. }
+            | Self::Participant { side, .. }
+            | Self::Row { side, .. } => *side,
         }
     }
 
@@ -129,6 +157,26 @@ impl CalloutAnchorPlan {
             },
             Self::Editor { target, edge, .. } => AnchorTarget::Editor {
                 target,
+                edge: *edge,
+            },
+            Self::Participant {
+                sequence,
+                participant,
+                edge,
+                ..
+            } => AnchorTarget::Participant {
+                sequence,
+                participant,
+                edge: *edge,
+            },
+            Self::Row {
+                sequence,
+                row,
+                edge,
+                ..
+            } => AnchorTarget::Row {
+                sequence,
+                row,
                 edge: *edge,
             },
         }

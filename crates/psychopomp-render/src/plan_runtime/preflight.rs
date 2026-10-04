@@ -497,8 +497,13 @@ impl Plan {
             .iter()
             .map(ImageInput::media_id)
             .collect::<HashSet<_>>();
+        let placeable = super::anchor::Placeable {
+            root: &root,
+            targets: &plan.semantic_targets,
+            sequences: &sequences,
+        };
         for callout in &callouts {
-            callout.validate_anchors(&root, &plan.semantic_targets)?;
+            callout.validate_anchors(&placeable)?;
         }
         let pinned = captions
             .iter()
@@ -519,7 +524,7 @@ impl Plan {
                     .map(|image| ("image", image.id(), image.anchors())),
             );
         for (kind, owner, anchors) in pinned {
-            super::anchor::validate_plans(kind, owner, anchors, &root, &plan.semantic_targets)?;
+            super::anchor::validate_plans(kind, owner, anchors, &placeable)?;
         }
         for media in &plan.media {
             if matches!(media.kind, MediaKindPlan::Audio)

@@ -566,6 +566,10 @@ impl PreparedPlan {
             .into_iter()
             .map(|(id, recipe)| header::PreparedHeader::from_recipe(id, recipe, renderer))
             .collect::<Result<Vec<_>>>()?;
+        let mut sequences = sequences;
+        for sequence in &mut sequences {
+            sequence.measure(renderer);
+        }
         let rolling = rolling
             .into_iter()
             .map(|input| input.prepare(renderer))
@@ -963,6 +967,7 @@ impl PreparedPlan {
     ) -> Option<Vec2> {
         anchor::resolve(
             &self.root,
+            &self.sequences,
             target,
             size,
             |actor, property, default| {

@@ -8,10 +8,10 @@ use psychopomp::{
     anchor::{self, AnchorTarget},
     callout::{CalloutLeg, CalloutPlan},
     math::{Vec2, shapes::Box2},
-    plan::{ActorPlan, ContinuousChannelPlan, SemanticTargetPlan},
+    plan::{ActorPlan, ContinuousChannelPlan},
 };
 
-use super::preflight::{RootPlan, decode, strict_channels};
+use super::preflight::{decode, strict_channels};
 use crate::render::{CalloutPose, HeadlessRenderer};
 
 pub(super) struct PreparedCallout {
@@ -31,12 +31,8 @@ impl PreparedCallout {
         })
     }
 
-    /// Every anchor must name something the plan's root can place.
-    pub(super) fn validate_anchors(
-        &self,
-        root: &RootPlan,
-        targets: &[SemanticTargetPlan],
-    ) -> Result<()> {
+    /// Every anchor must name something the plan can place.
+    pub(super) fn validate_anchors(&self, placeable: &super::anchor::Placeable<'_>) -> Result<()> {
         super::anchor::validate(
             "callout",
             &self.id,
@@ -44,8 +40,7 @@ impl PreparedCallout {
                 .anchors
                 .iter()
                 .map(|anchor| (anchor.id(), anchor.target())),
-            root,
-            targets,
+            placeable,
         )
     }
 

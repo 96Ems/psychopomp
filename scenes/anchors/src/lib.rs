@@ -3,6 +3,8 @@
 //! two cards through a dolly, a jolt, and glides between anchors (one of them
 //! redirected mid-flight). In an editor, a caption and a Rolling Number stay
 //! on their code ranges while lines are inserted above and the panel zooms.
+//! In a Sequence Diagram, a callout, a counter, and a cursor ride its rows and
+//! participant headers as the diagram slides.
 use anyhow::Result;
 use psychopomp::{
     anchor::{AnchorPlan, Edge},
@@ -19,6 +21,7 @@ use psychopomp::{
     math::easing::Ease,
     plan::{ReelPlan, ScenePlan},
     rolling::{RollingNumberActor, RollingNumberPlan},
+    sequence::{SequenceActor, SequenceParticipantPlan, SequencePlan, SequenceRowPlan},
     stage::{StageActor, StagePlan},
     text::{TextActor, TextPlan},
     tone::Tone,
@@ -28,7 +31,11 @@ const MS: u64 = 1_000_000;
 const MUTED_INK: [u8; 3] = [150, 160, 178];
 
 pub fn build_reel() -> Result<ReelPlan> {
-    ReelPlan::dipped("anchors", vec![build_stage()?, build_editor()?], 600 * MS)
+    ReelPlan::dipped(
+        "anchors",
+        vec![build_stage()?, build_editor()?, build_sequence()?],
+        600 * MS,
+    )
 }
 
 fn span(text: &str, tone: Tone) -> CaptionSpanPlan {
@@ -318,11 +325,112 @@ pub fn build_editor() -> Result<ScenePlan> {
     Ok(scene.finish()?)
 }
 
+/// A request travels through three participants; a cursor caption steps
+/// from row to row as each arrow lands, a callout marks the query, and a
+/// counter sits under the database header. Then the whole diagram slides and
+/// everything pinned to it follows.
+pub fn build_sequence() -> Result<ScenePlan> {
+    let mut scene = PlanBuilder::new("anchors-sequence", 7 * SECOND);
+    let recipe = SequencePlan {
+        origin: [260.0, 190.0],
+        width: 1400.0,
+        row_height: 96.0,
+        slots: None,
+        participants: vec![
+            SequenceParticipantPlan::new("client", "client", "browser"),
+            SequenceParticipantPlan::new("api", "api", "us-east-1"),
+            SequenceParticipantPlan::new("db", "postgres", "primary"),
+        ],
+        rows: vec![
+            SequenceRowPlan::message("request", "client", "api", "GET /user", Tone::Request),
+            SequenceRowPlan::message("query", "api", "db", "SELECT user", Tone::Request),
+            SequenceRowPlan::reply("rows", "db", "api", "1 row", Tone::Success),
+            SequenceRowPlan::reply("done", "api", "client", "200 OK", Tone::Success),
+        ],
+    };
+    let mut flow = SequenceActor::declare(&mut scene, "flow", &recipe)?;
+    flow.animate(&mut scene, "opacity", 0.0, 0, 1.0, 0.5);
+
+    let rows = ["request", "query", "rows", "done"];
+    let mut cursor = CaptionActor::declare(
+        &mut scene,
+        "cursor",
+        &rows.iter().fold(
+            CaptionPlan::line(
+                [0.0, 0.0],
+                20.0,
+                vec![span("← ", Tone::Accent), span("now", Tone::Muted)],
+            ),
+            |plan, row| {
+                plan.anchor(
+                    AnchorPlan::row(*row, "flow", *row, Edge::Right).with_offset([18.0, 0.0]),
+                )
+            },
+        ),
+    )?;
+    let mut queries = RollingNumberActor::declare(
+        &mut scene,
+        "queries",
+        RollingNumberPlan::new([0.0, 0.0], 22.0, "0")
+            .aligned(CaptionAlign::Center)
+            .tone(Tone::Accent)
+            .prefix(vec![span("queries ", Tone::Muted)])
+            .chip()
+            .anchor(
+                AnchorPlan::participant("db", "flow", "db", Edge::Bottom).with_offset([0.0, 34.0]),
+            )
+            .roll(1900 * MS, "1"),
+    )?;
+    queries.show(&mut scene, 700 * MS);
+    let mut index = CalloutActor::declare(
+        &mut scene,
+        "index",
+        &CalloutPlan::new(
+            CalloutAnchorPlan::Row {
+                id: "query".into(),
+                sequence: "flow".into(),
+                row: "query".into(),
+                edge: Edge::Left,
+                side: None,
+            },
+            vec![
+                span("index scan ", Tone::Plain),
+                span("2 ms", Tone::Success),
+            ],
+        )
+        .side(Edge::TopLeft)
+        .elbow()
+        .reach(44.0)
+        .tone(Tone::Success),
+    )?;
+
+    for (step, row) in rows.iter().enumerate() {
+        let at = (800 + 800 * step as u64) * MS;
+        flow.reveal(&mut scene, row, at);
+        if step == 0 {
+            cursor.show(&mut scene, at + 300 * MS);
+        } else {
+            cursor.move_to(&mut scene, row, at + 300 * MS)?;
+        }
+    }
+    index.show(&mut scene, 2000 * MS);
+
+    // The diagram slides; the cursor, the counter, and the callout follow.
+    flow.animate(&mut scene, "x", 0.0, 4600 * MS, -110.0, 0.8);
+    flow.animate(&mut scene, "y", 0.0, 4600 * MS, 60.0, 0.8);
+    cursor.hide(&mut scene, 6200 * MS);
+    queries.hide(&mut scene, 6200 * MS);
+    index.hide(&mut scene, 6200 * MS);
+
+    scene.cue("pinned", 0, 7 * SECOND);
+    Ok(scene.finish()?)
+}
+
 #[cfg(test)]
 mod tests {
     #[test]
     fn the_showroom_builds() {
         let reel = super::build_reel().unwrap();
-        assert_eq!(reel.segments.len(), 2);
+        assert_eq!(reel.segments.len(), 3);
     }
 }

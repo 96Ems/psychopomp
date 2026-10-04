@@ -1,9 +1,9 @@
 //! Anchors: places an overlay can pin to whose position only the renderer
 //! knows. A fixed canvas point, an edge of a positioned Stage element seen
-//! through the camera, or an edge of an editor Semantic Target (a measured code
-//! range after line motion and the panel's projection). The root recipe
-//! resolves every anchor at every Temporal Sample, so a pinned overlay never
-//! lags its target; `anchor.<id>` weight channels blend the resolved points,
+//! through the camera, an edge of an editor Semantic Target (a measured code
+//! range after line motion and the panel's projection), or a Sequence
+//! Diagram's participant header or row. The renderer resolves every anchor at
+//! every Temporal Sample, so a pinned overlay never lags its target; `anchor.<id>` weight channels blend the resolved points,
 //! and springing those weights moves between anchors with velocity.
 //!
 //! Callouts, captions, Rolling Numbers, text, and images share this model. An
@@ -89,6 +89,19 @@ pub enum AnchorTarget<'a> {
     Stage { element: &'a str, edge: Edge },
     /// A Semantic Target of the plan's editor root: a logical code range.
     Editor { target: &'a str, edge: Edge },
+    /// A participant's header box in a Sequence Diagram actor.
+    Participant {
+        sequence: &'a str,
+        participant: &'a str,
+        edge: Edge,
+    },
+    /// The span of a row in a Sequence Diagram actor: a message's arrow, a
+    /// note's box, or an End mark.
+    Row {
+        sequence: &'a str,
+        row: &'a str,
+        edge: Edge,
+    },
 }
 
 impl AnchorTarget<'_> {
@@ -124,6 +137,26 @@ pub enum AnchorPlan {
     Editor {
         id: String,
         target: String,
+        #[serde(default, skip_serializing_if = "Edge::is_center")]
+        edge: Edge,
+        #[serde(default, skip_serializing_if = "is_zero")]
+        offset: [f32; 2],
+    },
+    #[serde(rename_all = "camelCase")]
+    Participant {
+        id: String,
+        sequence: String,
+        participant: String,
+        #[serde(default, skip_serializing_if = "Edge::is_center")]
+        edge: Edge,
+        #[serde(default, skip_serializing_if = "is_zero")]
+        offset: [f32; 2],
+    },
+    #[serde(rename_all = "camelCase")]
+    Row {
+        id: String,
+        sequence: String,
+        row: String,
         #[serde(default, skip_serializing_if = "Edge::is_center")]
         edge: Edge,
         #[serde(default, skip_serializing_if = "is_zero")]
@@ -165,19 +198,57 @@ impl AnchorPlan {
         }
     }
 
+    /// `edge` of `participant`'s header in the Sequence Diagram `sequence`.
+    pub fn participant(
+        id: impl Into<String>,
+        sequence: impl Into<String>,
+        participant: impl Into<String>,
+        edge: Edge,
+    ) -> Self {
+        Self::Participant {
+            id: id.into(),
+            sequence: sequence.into(),
+            participant: participant.into(),
+            edge,
+            offset: [0.0, 0.0],
+        }
+    }
+
+    /// `edge` of `row`'s span in the Sequence Diagram `sequence`.
+    pub fn row(
+        id: impl Into<String>,
+        sequence: impl Into<String>,
+        row: impl Into<String>,
+        edge: Edge,
+    ) -> Self {
+        Self::Row {
+            id: id.into(),
+            sequence: sequence.into(),
+            row: row.into(),
+            edge,
+            offset: [0.0, 0.0],
+        }
+    }
+
     /// Move the pinned origin `offset` canvas pixels from the anchor.
     pub fn with_offset(mut self, offset: [f32; 2]) -> Self {
         match &mut self {
             Self::Point { offset: own, .. }
             | Self::Stage { offset: own, .. }
-            | Self::Editor { offset: own, .. } => *own = offset,
+            | Self::Editor { offset: own, .. }
+            | Self::Participant { offset: own, .. }
+            | Self::Row { offset: own, .. } => *own = offset,
         }
         self
     }
 
     pub fn id(&self) -> &str {
         match self {
-            Self::Point { id, .. } | Self::Stage { id, .. } | Self::Editor { id, .. } => id,
+            Self::Point { id, .. }
+            | Self::Stage { id, .. }
+            | Self::Editor { id, .. }
+            | Self::Participant { id, .. }
+            | Self::Row { id, .. } => id,
         }
     }
 
@@ -185,7 +256,9 @@ impl AnchorPlan {
         match self {
             Self::Point { offset, .. }
             | Self::Stage { offset, .. }
-            | Self::Editor { offset, .. } => Vec2::from(*offset),
+            | Self::Editor { offset, .. }
+            | Self::Participant { offset, .. }
+            | Self::Row { offset, .. } => Vec2::from(*offset),
         }
     }
 
@@ -198,6 +271,26 @@ impl AnchorPlan {
             },
             Self::Editor { target, edge, .. } => AnchorTarget::Editor {
                 target,
+                edge: *edge,
+            },
+            Self::Participant {
+                sequence,
+                participant,
+                edge,
+                ..
+            } => AnchorTarget::Participant {
+                sequence,
+                participant,
+                edge: *edge,
+            },
+            Self::Row {
+                sequence,
+                row,
+                edge,
+                ..
+            } => AnchorTarget::Row {
+                sequence,
+                row,
                 edge: *edge,
             },
         }
@@ -248,6 +341,18 @@ pub fn validate_target(kind: &str, id: &str, target: AnchorTarget<'_>) -> Result
         AnchorTarget::Editor { target, .. } => ensure!(
             !target.is_empty(),
             "{kind} anchor '{id}' needs a semantic target"
+        ),
+        AnchorTarget::Participant {
+            sequence,
+            participant,
+            ..
+        } => ensure!(
+            !sequence.is_empty() && !participant.is_empty(),
+            "{kind} anchor '{id}' needs a sequence and a participant"
+        ),
+        AnchorTarget::Row { sequence, row, .. } => ensure!(
+            !sequence.is_empty() && !row.is_empty(),
+            "{kind} anchor '{id}' needs a sequence and a row"
         ),
     }
     Ok(())
@@ -359,6 +464,19 @@ mod tests {
             serde_json::from_value::<Vec<AnchorPlan>>(json).unwrap(),
             anchors
         );
+        let sequence = vec![
+            AnchorPlan::participant("db", "flow", "db", Edge::Bottom),
+            AnchorPlan::row("query", "flow", "query", Edge::Right).with_offset([12.0, 0.0]),
+        ];
+        validate("callout", &sequence).unwrap();
+        assert_eq!(
+            serde_json::to_value(&sequence).unwrap(),
+            serde_json::json!([
+                { "kind": "participant", "id": "db", "sequence": "flow", "participant": "db", "edge": "bottom" },
+                { "kind": "row", "id": "query", "sequence": "flow", "row": "query", "edge": "right", "offset": [12.0, 0.0] }
+            ])
+        );
+        assert!(validate("caption", &[AnchorPlan::row("r", "flow", "", Edge::Top)]).is_err());
         let typo = serde_json::json!({ "kind": "stage", "id": "a", "element": "b", "egde": "top" });
         assert!(serde_json::from_value::<AnchorPlan>(typo).is_err());
     }
