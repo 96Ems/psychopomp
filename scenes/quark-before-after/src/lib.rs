@@ -3,8 +3,8 @@ use psychopomp::{
     author::{PlanBuilder, SECOND},
     code::{StyledSpan, SyntaxStyle},
     editor::{
-        EDITOR_RECIPE, EditorInlineRevealPlan, EditorLinePlan, EditorPartPlan, EditorRecipePlan,
-        EditorSemanticRangePlan,
+        EDITOR_RECIPE, EditorInlineRevealPlan, EditorRecipePlan, line, part, semantic_line,
+        semantic_range,
     },
     plan::{MediaKindPlan, MediaPlan, MediaRolePlan, ScenePlan},
 };
@@ -337,47 +337,6 @@ fn reveal_on(
         range_id: range_id.to_owned(),
         channel: Some(channel.to_owned()),
         reversed,
-    }
-}
-
-fn line(id: &str, spans: Vec<StyledSpan>) -> EditorLinePlan {
-    EditorLinePlan {
-        id: id.to_owned(),
-        parts: spans
-            .into_iter()
-            .enumerate()
-            .map(|(index, span)| part(&format!("span-{index}"), vec![span]))
-            .collect(),
-        semantic_ranges: Vec::new(),
-        mark: None,
-    }
-}
-
-fn semantic_line(
-    id: &str,
-    parts: Vec<EditorPartPlan>,
-    semantic_ranges: Vec<EditorSemanticRangePlan>,
-) -> EditorLinePlan {
-    EditorLinePlan {
-        id: id.to_owned(),
-        parts,
-        semantic_ranges,
-        mark: None,
-    }
-}
-
-fn part(id: &str, spans: Vec<StyledSpan>) -> EditorPartPlan {
-    EditorPartPlan {
-        id: id.to_owned(),
-        spans,
-    }
-}
-
-fn semantic_range(id: &str, first: &str, last: &str) -> EditorSemanticRangePlan {
-    EditorSemanticRangePlan {
-        id: id.to_owned(),
-        first_part_id: first.to_owned(),
-        last_part_id: last.to_owned(),
     }
 }
 

@@ -13,10 +13,7 @@ use psychopomp::{
     callout::{CalloutActor, CalloutAnchorPlan, CalloutPlan, CalloutSide},
     caption::{CaptionAlign, CaptionSpanPlan},
     code::{StyledSpan, SyntaxStyle},
-    editor::{
-        EditorPartPlan, EditorRecipePlan, EditorSemanticRangePlan, EditorTargetSelector,
-        LineMarkPlan,
-    },
+    editor::{EditorRecipePlan, EditorTargetSelector, LineMarkPlan, part, semantic_range},
     effects::{combustion, spinner::Mark},
     highlight,
     math::{Vec2, Vec3, vec2},
@@ -516,20 +513,14 @@ fn stop_code(narration: &Narration) -> Result<ScenePlan> {
     let mut recipe: EditorRecipePlan = serde_json::from_value(editor.data.clone())?;
     if let Some(line) = recipe.lines.iter_mut().find(|line| line.id == "line-8") {
         line.parts = vec![
-            EditorPartPlan {
-                id: "indent".into(),
-                spans: vec![StyledSpan::new("  ", SyntaxStyle::Plain)],
-            },
-            EditorPartPlan {
-                id: "sigkill".into(),
-                spans: highlight::typescript("yield* signal(info.pid, \"SIGKILL\")"),
-            },
+            part("indent", vec![StyledSpan::new("  ", SyntaxStyle::Plain)]),
+            part(
+                "sigkill",
+                highlight::typescript("yield* signal(info.pid, \"SIGKILL\")"),
+            ),
         ];
-        line.semantic_ranges.push(EditorSemanticRangePlan {
-            id: "sigkill".into(),
-            first_part_id: "sigkill".into(),
-            last_part_id: "sigkill".into(),
-        });
+        line.semantic_ranges
+            .push(semantic_range("sigkill", "sigkill", "sigkill"));
         line.mark = Some(LineMarkPlan::Added);
     }
     recipe.compile()?;

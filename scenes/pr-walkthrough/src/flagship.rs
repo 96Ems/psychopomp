@@ -62,10 +62,7 @@ pub fn build_flagship(narration_dir: &std::path::Path) -> Result<ReelPlan> {
 /// splitting the computation. Their lines trade places; only edited slots fade.
 fn stable_code(mut plan: ScenePlan) -> Result<ScenePlan> {
     use psychopomp::{
-        editor::{
-            EditorInlineRevealPlan, EditorPartPlan, EditorRecipePlan, EditorSemanticRangePlan,
-            LineMarkPlan,
-        },
+        editor::{self, EditorInlineRevealPlan, EditorRecipePlan, LineMarkPlan},
         highlight,
         plan::{SpringPlan, destination_channel},
     };
@@ -80,10 +77,7 @@ fn stable_code(mut plan: ScenePlan) -> Result<ScenePlan> {
         .first()
         .context("version split snapshot")?
         .at_nanos;
-    let part = |id: &str, text: &str| EditorPartPlan {
-        id: id.into(),
-        spans: highlight::typescript(text),
-    };
+    let part = |id: &str, text: &str| editor::part(id, highlight::typescript(text));
     recipe
         .lines
         .retain(|line| line.id != "line-3" && line.id != "line-4");
@@ -115,11 +109,8 @@ fn stable_code(mut plan: ScenePlan) -> Result<ScenePlan> {
             .iter_mut()
             .find(|line| line.id == line_id)
             .context("stable split line")?;
-        line.semantic_ranges.push(EditorSemanticRangePlan {
-            id: part_id.into(),
-            first_part_id: part_id.into(),
-            last_part_id: part_id.into(),
-        });
+        line.semantic_ranges
+            .push(editor::semantic_range(part_id, part_id, part_id));
         recipe
             .additional_inline_reveals
             .push(EditorInlineRevealPlan {
