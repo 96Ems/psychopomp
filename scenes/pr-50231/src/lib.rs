@@ -17,17 +17,14 @@ use std::path::Path;
 use anyhow::Result;
 use psychopomp::{
     author::PlanBuilder,
-    caption::{CaptionActor, CaptionAlign, CaptionPlan, CaptionSpanPlan},
+    caption::CaptionSpanPlan,
+    chrome::{self, chip, footer},
     narration::Narration,
     plan::{ReelPlan, ReelSegmentPlan, ReelTransitionStyle},
     sfx::Sfx,
     tone::Tone,
 };
 
-const LEFT: f32 = 140.0;
-const RIGHT: f32 = 1780.0;
-const HEADER_Y: f32 = 96.0;
-const FOOTER_Y: f32 = 1004.0;
 const DIP: u64 = 600_000_000;
 const ZOOM: u64 = 1_000_000_000;
 
@@ -66,16 +63,7 @@ fn span(text: &str, tone: Tone) -> CaptionSpanPlan {
 
 /// `#50231  saved settings`, top left.
 fn header(scene: &mut PlanBuilder, title: &str, type_at: Option<u64>) -> Result<()> {
-    let plan = CaptionPlan::line(
-        [LEFT, HEADER_Y],
-        30.0,
-        vec![
-            span("#50231", Tone::Accent),
-            span("  ", Tone::Plain),
-            span(title, Tone::Plain),
-        ],
-    );
-    let mut caption = CaptionActor::declare(scene, "header", &plan)?;
+    let mut caption = chrome::header(scene, "#50231", title)?;
     match type_at {
         Some(at) => {
             caption.type_in(scene, at, 60.0, 0.5);
@@ -83,22 +71,6 @@ fn header(scene: &mut PlanBuilder, title: &str, type_at: Option<u64>) -> Result<
         None => caption.show(scene, 0),
     }
     Ok(())
-}
-
-/// A status chip, top right: `● before`.
-fn chip(scene: &mut PlanBuilder, id: &str, dot: Tone, text: &str) -> Result<CaptionActor> {
-    let plan = CaptionPlan::line(
-        [RIGHT, HEADER_Y],
-        22.0,
-        vec![span("● ", dot), span(text, Tone::Plain)],
-    )
-    .aligned(CaptionAlign::Right)
-    .chip();
-    CaptionActor::declare(scene, id, &plan)
-}
-
-fn footer(scene: &mut PlanBuilder, id: &str, spans: Vec<CaptionSpanPlan>) -> Result<CaptionActor> {
-    CaptionActor::declare(scene, id, &CaptionPlan::line([LEFT, FOOTER_Y], 28.0, spans))
 }
 
 // Eleven Sound Effects v2 stems from `sfx/generate.ts`, with their exact

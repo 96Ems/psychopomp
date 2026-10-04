@@ -20,7 +20,8 @@ use std::path::Path;
 use anyhow::Result;
 use psychopomp::{
     author::{PlanBuilder, seconds},
-    caption::{CaptionActor, CaptionAlign, CaptionPlan, CaptionSpanPlan},
+    caption::{CaptionActor, CaptionSpanPlan},
+    chrome,
     narration::{Narration, Spoken},
     plan::{ReelPlan, ReelSegmentPlan, ReelTransitionStyle, ScenePlan},
     sfx,
@@ -29,10 +30,6 @@ use psychopomp::{
 };
 
 const TRANSITION: f64 = 0.7;
-const LEFT: f32 = 140.0;
-const RIGHT: f32 = 1780.0;
-const HEADER_Y: f32 = 96.0;
-const FOOTER_Y: f32 = 1004.0;
 
 pub fn build_reel(narration_dir: &Path) -> Result<ReelPlan> {
     let narration = Narration::load(narration_dir)?;
@@ -120,16 +117,7 @@ fn header(sc: &mut PlanBuilder, number: &str, title: &str) -> Result<()> {
 
 /// The header, typed at `typed`, or already present when `None`.
 fn header_at(sc: &mut PlanBuilder, number: &str, title: &str, typed: Option<u64>) -> Result<()> {
-    let plan = CaptionPlan::line(
-        [LEFT, HEADER_Y],
-        30.0,
-        vec![
-            span(number, Tone::Accent),
-            span("  ", Tone::Plain),
-            span(title, Tone::Plain),
-        ],
-    );
-    let mut caption = CaptionActor::declare(sc, "header", &plan)?;
+    let mut caption = chrome::header(sc, number, title)?;
     if let Some(at) = typed {
         caption.type_in(sc, at, 50.0, 0.6);
     }
@@ -142,14 +130,7 @@ fn chip(sc: &mut PlanBuilder, text: &str) -> Result<CaptionActor> {
 }
 
 fn chip_at(sc: &mut PlanBuilder, text: &str, shown: Option<u64>) -> Result<CaptionActor> {
-    let plan = CaptionPlan::line(
-        [RIGHT, HEADER_Y],
-        22.0,
-        vec![span("● ", Tone::Muted), span(text, Tone::Plain)],
-    )
-    .aligned(CaptionAlign::Right)
-    .chip();
-    let mut chip = CaptionActor::declare(sc, "chip", &plan)?;
+    let mut chip = chrome::chip(sc, "chip", Tone::Muted, text)?;
     if let Some(at) = shown {
         chip.show(sc, at);
     }
@@ -158,11 +139,7 @@ fn chip_at(sc: &mut PlanBuilder, text: &str, shown: Option<u64>) -> Result<Capti
 
 /// The one caption that sums up a beat, typed bottom left.
 fn footer(sc: &mut PlanBuilder, id: &str, parts: &[(&str, Tone)], at: u64) -> Result<CaptionActor> {
-    let mut caption = CaptionActor::declare(
-        sc,
-        id,
-        &CaptionPlan::line([LEFT, FOOTER_Y], 28.0, spans(parts)),
-    )?;
+    let mut caption = chrome::footer(sc, id, spans(parts))?;
     caption.type_in(sc, at, 42.0, 0.8);
     Ok(caption)
 }

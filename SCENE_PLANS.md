@@ -16,7 +16,7 @@ machinery:
 | You are explaining | Start from | Library pieces |
 | --- | --- | --- |
 | A pull request: broken behavior, the fix, the diff | `scenes/config-migration` (smallest) or `scenes/pr-walkthrough` | `psychopomp_pr_walkthrough::film`, `narration`, `editor::diff`, `sequence` rows |
-| A system, as a 3D film of cards, orbs, and packets | `scenes/opencode-jr-architecture`, `scenes/pr-walkthrough/src/flagship.rs` | `stage::StageActor` (`settle_in`, `send`, `hit`, `jolt`), `caption` |
+| A system, as a 3D film of cards, orbs, and packets | `scenes/opencode-jr-architecture`, `scenes/pr-walkthrough/src/flagship.rs` | `stage::StageActor` (`settle_in`, `send`, `hit`, `jolt`, `orb_in`, `rewind`), `StageElement` constructors, `sfx`, `chrome` |
 | Code changing step by step, presented live | `scenes/effect-succeed-slides`, `scenes/interactive-showcase` | `editor` recipes, `PresentationStepPlan` |
 | Springs, easing, retargeting, or a metric as curves; a plan's channels over time | `scenes/charts` | `plot::PlotActor` (`draw`, `ride`, `velocity`), `lanes::LanesPlan::from_scene_plan` |
 | A payload, config, or emitted plan as structured data | `scenes/tree` | `tree::TreeActor` (`open`, `reveal`, `highlight`, `set`) |
@@ -418,8 +418,11 @@ reusable for any code explainer:
   builds participants; `SequenceActor::row_channel`/`participant_channel` address
   their channels.
 - `ReelPlan::dipped(id, plans, transition_nanos)` joins segments with dips.
-- `psychopomp_pr_walkthrough::film` is the PR-film template itself (`header`,
-  `chip`, `footer`, `behavior`, `code`); `scenes/config-migration` reuses it.
+- `psychopomp::chrome` places a film's fixed captions: `header(scene, label,
+  title)` top left, `chip(scene, id, dot, text)` top right, and `footer(scene,
+  id, spans)` bottom left; each returns its Caption to type in, show, or hide.
+- `psychopomp_pr_walkthrough::film` is the PR-film template itself (`header`
+  for a `Pr`, `behavior`, `code`); `scenes/config-migration` reuses it.
 
 ```sh
 # 1. Voice the script (Fish Audio via 1Password; --draft uses macOS `say`).

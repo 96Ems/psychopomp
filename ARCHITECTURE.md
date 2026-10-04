@@ -35,6 +35,7 @@ Lightweight crate (`crates/psychopomp/src`):
 - `crates/psychopomp/src/tone.rs`: semantic Tone roles shared by explainer recipes
 - `crates/psychopomp/src/sequence.rs`: Sequence Diagram recipe values and row constructors, slot geometry, validation, and the `SequenceActor` authoring handle
 - `crates/psychopomp/src/caption.rs`: Caption recipe values and the `CaptionActor` authoring handle (typing, show, hide)
+- `crates/psychopomp/src/chrome.rs`: an explainer film's fixed captions (header, chips, footer) at their shared positions
 - `crates/psychopomp/src/rolling.rs`: Rolling Number recipe values, value tokenization, the closed-form roll compiler, and the `RollingNumberActor` handle (`roll`, show, hide)
 - `crates/psychopomp/src/tree.rs`: Tree recipe values, JSONPath identity, the fold-driven pure layout, and the `TreeActor` handle (`open`, `close`, `highlight`, `set`, `scroll_to`, `reveal`, show, hide)
 - `crates/psychopomp/src/axis.rs`: `AxisPlan` (range, ticks, label, unit), `nice_ticks`, and tabular tick labels shared by Plot and Lanes

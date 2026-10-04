@@ -6,7 +6,7 @@
 use anyhow::{Context, Result};
 use psychopomp::{
     author::{PlanBuilder, seconds},
-    caption::{CaptionActor, CaptionAlign, CaptionPlan, CaptionSpanPlan},
+    caption::CaptionSpanPlan,
     editor::diff::Diff,
     narration::Narration,
     plan::ScenePlan,
@@ -14,12 +14,10 @@ use psychopomp::{
     tone::Tone,
 };
 
+pub use psychopomp::chrome::{FOOTER_Y, HEADER_Y, LEFT, RIGHT, chip, footer};
+
 /// The dip between segments.
 pub const TRANSITION: u64 = 700_000_000;
-pub const LEFT: f32 = 140.0;
-pub const RIGHT: f32 = 1780.0;
-pub const HEADER_Y: f32 = 96.0;
-pub const FOOTER_Y: f32 = 1004.0;
 
 pub struct Pr {
     pub number: &'static str,
@@ -31,42 +29,14 @@ pub fn span(text: &str, tone: Tone) -> CaptionSpanPlan {
     CaptionSpanPlan::new(text, tone)
 }
 
-/// `#50784  keep the real startup error`, top left.
+/// `#50784  keep the real startup error`, top left: typed at `type_at`, or
+/// already present when `None`.
 pub fn header(scene: &mut PlanBuilder, pr: &Pr, type_at: Option<u64>) -> Result<()> {
-    let plan = CaptionPlan::line(
-        [LEFT, HEADER_Y],
-        30.0,
-        vec![
-            span(pr.number, Tone::Accent),
-            span("  ", Tone::Plain),
-            span(pr.title, Tone::Plain),
-        ],
-    );
-    let mut caption = CaptionActor::declare(scene, "header", &plan)?;
+    let mut caption = psychopomp::chrome::header(scene, pr.number, pr.title)?;
     if let Some(at) = type_at {
         caption.type_in(scene, at, 55.0, 0.6);
     }
     Ok(())
-}
-
-/// A status chip, top right: `● before`.
-pub fn chip(scene: &mut PlanBuilder, id: &str, dot: Tone, text: &str) -> Result<CaptionActor> {
-    let plan = CaptionPlan::line(
-        [RIGHT, HEADER_Y],
-        22.0,
-        vec![span("● ", dot), span(text, Tone::Plain)],
-    )
-    .aligned(CaptionAlign::Right)
-    .chip();
-    CaptionActor::declare(scene, id, &plan)
-}
-
-pub fn footer(
-    scene: &mut PlanBuilder,
-    id: &str,
-    spans: Vec<CaptionSpanPlan>,
-) -> Result<CaptionActor> {
-    CaptionActor::declare(scene, id, &CaptionPlan::line([LEFT, FOOTER_Y], 28.0, spans))
 }
 
 #[derive(Clone, Copy)]

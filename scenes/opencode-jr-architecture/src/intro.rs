@@ -75,7 +75,7 @@ pub fn film(narration: &crate::Narration) -> Result<ScenePlan> {
     } = begin(narration, "intro", 0.9, 2.2, &stage())?;
     let (s, sc) = (&mut actor, &mut scene);
     let title = psychopomp::caption::CaptionPlan::line(
-        [crate::LEFT, crate::HEADER_Y],
+        [psychopomp::chrome::LEFT, psychopomp::chrome::HEADER_Y],
         30.0,
         vec![
             crate::span("opencode jr", Tone::Accent),
