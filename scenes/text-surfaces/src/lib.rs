@@ -8,6 +8,7 @@ use psychopomp::{
     changed_files::{ChangedFilePlan, ChangedFilesActor, ChangedFilesPlan, FileStatus},
     chat::{ChatActor, ChatPersonPlan, ChatPlan, ChatSpanPlan, ChatStyle},
     effects::spinner::Mark,
+    lower_third::{LowerThirdActor, LowerThirdPlan},
     plan::{ReelPlan, ScenePlan},
     terminal::{TerminalActor, TerminalPlan},
     tone::Tone,
@@ -52,7 +53,7 @@ pub fn build_slack() -> Result<ScenePlan> {
                 ChatPersonPlan::new("bot", "opencode", Tone::Accent).badge("APP"),
             ],
         )
-        .titled("# opencode-dev", Some("CI, flakes, and releases"))
+        .titled("# opencode-dev", None)
         .composer("Message #opencode-dev"),
     )?;
     let shown = chat.show(&mut scene, 200 * MS);
@@ -119,7 +120,7 @@ pub fn build_messages() -> Result<ScenePlan> {
         )
         .style(ChatStyle::Bubbles)
         .me("kit")
-        .titled("Olive", Some("iMessage"))
+        .titled("Olive", None)
         .composer("iMessage"),
     )?;
     let shown = chat.show(&mut scene, 200 * MS);
@@ -160,6 +161,13 @@ pub fn build_terminal() -> Result<ScenePlan> {
             ]),
     )?;
     let shown = term.show(&mut scene, 200 * MS);
+    let mut intro = LowerThirdActor::declare(
+        &mut scene,
+        "intro",
+        &LowerThirdPlan::new([120.0, 905.0], "opencode").role("coding agent"),
+    )?;
+    intro.show(&mut scene, shown + 300 * MS);
+    intro.hide(&mut scene, shown + 4200 * MS);
     let entered = term.type_command(
         &mut scene,
         shown,
