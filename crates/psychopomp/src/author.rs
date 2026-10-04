@@ -350,7 +350,13 @@ impl PlanBuilder {
         });
     }
 
-    pub fn finish(self) -> Result<ScenePlan, crate::plan::PlanValidationError> {
+    pub fn finish(mut self) -> Result<ScenePlan, crate::plan::PlanValidationError> {
+        for channel in &mut self.plan.continuous_channels {
+            channel.events.sort_by_key(TrackEventPlan::at_nanos);
+        }
+        for channel in &mut self.plan.state_channels {
+            channel.events.sort_by_key(|event| event.at_nanos);
+        }
         self.plan.validate()?;
         Ok(self.plan)
     }
