@@ -24,6 +24,7 @@ members = [
   "scenes/2password",
   "scenes/psychopomp-intro",
   "scenes/hello",
+  "scenes/viz-components",
 ]
 default-members = ["crates/psychopomp-render"]
 resolver = "3"
