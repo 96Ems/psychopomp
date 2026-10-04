@@ -30,3 +30,106 @@ fn main() -> Result<()> {
 
     pollster::block_on(plan_runtime::render_builtin_hero(&output))
 }
+
+#[cfg(test)]
+mod wgsl_tests {
+    use wgpu::naga::{
+        front::wgsl,
+        valid::{Capabilities, ValidationFlags, Validator},
+    };
+
+    fn validate_wgsl(
+        label: &str,
+        source: &str,
+        expected_entries: &[&str],
+        expected_structs: &[(&str, u32)],
+    ) {
+        let module = wgsl::parse_str(source).unwrap_or_else(|err| {
+            panic!("{label}: WGSL parse error:\n{}", err.emit_to_string(source))
+        });
+        let mut validator = Validator::new(ValidationFlags::all(), Capabilities::default());
+        validator
+            .validate(&module)
+            .unwrap_or_else(|err| panic!("{label}: WGSL validation error: {err:?}"));
+        for &entry in expected_entries {
+            assert!(
+                module.entry_points.iter().any(|ep| ep.name == entry),
+                "{label}: missing entry point '{entry}'"
+            );
+        }
+        for &(struct_name, expected_span) in expected_structs {
+            let (_, ty) = module
+                .types
+                .iter()
+                .find(|(_, ty)| ty.name.as_deref() == Some(struct_name))
+                .unwrap_or_else(|| panic!("{label}: missing struct '{struct_name}'"));
+            let wgpu::naga::TypeInner::Struct { span, .. } = ty.inner else {
+                panic!("{label}: '{struct_name}' is not a struct");
+            };
+            assert_eq!(
+                span, expected_span,
+                "{label}: struct '{struct_name}' byte size mismatch with Rust #[repr(C)] layout"
+            );
+        }
+    }
+
+    #[test]
+    fn all_shader_modules_and_composed_effect_pipelines_validate_without_a_gpu() {
+        validate_wgsl(
+            "scene.wgsl",
+            include_str!("scene.wgsl"),
+            &["vertex_main", "fragment_main"],
+            &[("SceneUniforms", 80)],
+        );
+        validate_wgsl(
+            "present.wgsl",
+            include_str!("plan_runtime/presentation/present.wgsl"),
+            &["vertex_main", "fragment_main"],
+            &[],
+        );
+        validate_wgsl(
+            "grid.wgsl",
+            include_str!("render/grid.wgsl"),
+            &["vertex_main", "fragment_main", "fragment_heading"],
+            &[("Camera", 80)],
+        );
+        validate_wgsl(
+            "grid/edges.wgsl",
+            include_str!("render/grid/edges.wgsl"),
+            &["vertex_main", "fragment_depth", "fragment_ink"],
+            &[("Camera", 80)],
+        );
+        validate_wgsl(
+            "grid/edges_composite.wgsl",
+            include_str!("render/grid/edges_composite.wgsl"),
+            &["vertex_main", "fragment_main"],
+            &[],
+        );
+        validate_wgsl(
+            "stage.wgsl (with noise + combustion)",
+            concat!(
+                include_str!("render/effects/noise.wgsl"),
+                "\n",
+                include_str!("render/effects/combustion.wgsl"),
+                "\n",
+                include_str!("render/stage.wgsl"),
+            ),
+            &["vs", "fs"],
+            &[("Globals", 16), ("Prim", 176)],
+        );
+        validate_wgsl(
+            "stage_post.wgsl (with noise + pressure + rewind)",
+            concat!(
+                include_str!("render/effects/noise.wgsl"),
+                "\n",
+                include_str!("render/effects/pressure.wgsl"),
+                "\n",
+                include_str!("render/effects/rewind.wgsl"),
+                "\n",
+                include_str!("render/stage_post.wgsl"),
+            ),
+            &["vs", "accumulate", "prefilter", "down", "up", "composite"],
+            &[("Post", 96)],
+        );
+    }
+}

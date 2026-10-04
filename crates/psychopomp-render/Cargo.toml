@@ -18,7 +18,7 @@ png = "0.18"
 resvg = "0.47"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-wgpu = "30.0"
+wgpu = { version = "30.0", features = ["naga-ir"] }
 winit = "0.30"
 
 [dev-dependencies]
