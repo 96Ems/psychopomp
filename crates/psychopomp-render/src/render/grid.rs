@@ -1136,7 +1136,7 @@ mod tests {
             false,
         );
         assert!(sprite.advance <= (TILE[0] - 7) as f32);
-        assert!(sprite.pixels.chunks_exact(4).any(|p| p[3] > 0));
+        assert!(sprite.pixels.as_chunks::<4>().0.iter().any(|p| p[3] > 0));
     }
 
     #[test]
@@ -1210,9 +1210,11 @@ mod tests {
             let mut hidden = 0;
             let mut shown = 0;
             for (i, ((full, blank), half)) in full
-                .chunks_exact(4)
-                .zip(blank.chunks_exact(4))
-                .zip(half.chunks_exact(4))
+                .as_chunks::<4>()
+                .0
+                .iter()
+                .zip(blank.as_chunks::<4>().0)
+                .zip(half.as_chunks::<4>().0)
                 .enumerate()
             {
                 if full == blank {
@@ -1306,9 +1308,11 @@ mod tests {
             let feather = render(&mut renderer, reveal, 1., GridTextClip::Cell);
             assert_ne!(sharp, feather, "edge must cross actual ink: {reveal:?}");
             for ((sharp, blank), feather) in sharp
-                .chunks_exact(4)
-                .zip(blank.chunks_exact(4))
-                .zip(feather.chunks_exact(4))
+                .as_chunks::<4>()
+                .0
+                .iter()
+                .zip(blank.as_chunks::<4>().0)
+                .zip(feather.as_chunks::<4>().0)
             {
                 if sharp == blank {
                     assert_eq!(sharp, feather, "only ink may change");
@@ -1443,8 +1447,10 @@ mod tests {
             let pixels = renderer.render_grid(frame).unwrap();
             let mut bounds = [1920, 1080, 0, 0];
             for (index, (pixel, background)) in pixels
-                .chunks_exact(4)
-                .zip(blank.chunks_exact(4))
+                .as_chunks::<4>()
+                .0
+                .iter()
+                .zip(blank.as_chunks::<4>().0)
                 .enumerate()
             {
                 if pixel == background {
