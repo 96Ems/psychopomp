@@ -24,6 +24,7 @@ Lightweight crate (`crates/psychopomp/src`):
 - `crates/psychopomp/src/plan.rs`: versioned renderer-independent Scene Plan, Deck, and Reel values and structured validation
 - `crates/psychopomp/src/plan/channels.rs`: exact scalar-event lowering and opt-in snapshot-destination reduction; raw event ordering remains distinct
 - `crates/psychopomp/src/plan/wipe.rs`: Reel wipe values (direction, mid-frame holds, labels) and the closed-form divider position
+- `crates/psychopomp/src/plan/transition.rs`: Composited Transition phases and their closed-form timing and geometry (travel curves, iris radius, rect-to-rect match camera, card and cube turns, cut envelopes)
 - `crates/psychopomp/src/state.rs`: deterministic arbitrary-time discrete State Tracks
 - `crates/psychopomp/src/playback.rs`: interruptible step destinations, continuous track retargeting, and a pausable local presentation clock
 - `crates/psychopomp/src/timeline.rs`: explicit-time continuous Property Track compilation
@@ -100,6 +101,7 @@ Renderer crate, pixels and delivery:
 - `crates/psychopomp-render/src/render/callout.rs`: callout mark, leader, and label pixels
 - `crates/psychopomp-render/src/render/video.rs`: projected Video Card pixels with a focus window
 - `crates/psychopomp-render/src/render/wipe.rs`: Reel wipe pixels: antialiased split, divider line and shadow, riding labels
+- `crates/psychopomp-render/src/render/transition.rs` and `transition/`: Composited Transition pixels in linear light: `travel` (push, slide, whip), `reveal` (iris, ink), `turn` (match, flip, cube), `light` (glitch, flash, light leak)
 - `crates/psychopomp-render/src/render/stage.rs`, `stage.wgsl`, `stage_post.wgsl`: Stage primitives, HDR bloom, and composite; `PSYCHOPOMP_SHADER_DIR` loads the WGSL live
 - `crates/psychopomp-render/src/render/effects/*.wgsl`: binding-free noise, combustion, pressure, and rewind Modules, composed by the Stage shaders; see `EFFECTS.md`
 - `crates/psychopomp-render/src/render/debug.rs`: optional native debug HUD
@@ -128,6 +130,7 @@ Scene Programs (`scenes/`), each emitting a Scene Plan, Deck, or Reel:
 - `scenes/callouts/`: Callout showroom reel: callouts pinned to Stage cards through a dolly, a jolt, and a glide between anchors, then to a code range that moves as lines are inserted and the panel zooms
 - `scenes/video/`: Video Card showroom: a screen recording flies in, zooms into the prompt, and back out
 - `scenes/compare/`: wipe showroom: a held before/after wipe between two Stage frames, then a plain wipe
+- `scenes/transitions/`: transitions showroom: every reel transition between Stage, code, and title frames, each named in a chip
 
 ## Scene Programs And Rendering Compile Separately
 
@@ -705,6 +708,45 @@ the outgoing side with a soft Gaussian shadow, draws a two-pixel theme-ink line
 that fades near the frame edges, and places optional labels as caption chips that
 ride the divider and fade as their side narrows. The divider position is part of
 the reel sample key, so sweeps get motion blur and holds collapse to one sample.
+
+Composited Transitions are reel transitions too. Their settings live in the
+style itself (`Push(direction)`, `Match(target)`, `Iris { ring }`), so older reel
+JSON and struct literals are unchanged; `layers_at` returns the outgoing layer
+and the incoming layer carrying a `TransitionPhase` (style, linear progress,
+duration, focus). `plan/transition.rs` owns their poses in closed form: travel
+curves with exact rates (minimum-jerk push, critically damped slide, a whip
+that is minimum-jerk travel through a minimum-jerk clock), the iris radius,
+the match camera (geometric scale, straight-line travel of the matched center,
+one transform for both frames so the shared element agrees), card and cube
+turns with their pull-back, and the glitch, flash, and leak envelopes.
+`render/transition.rs` composites one sample's two frames in linear light,
+row-parallel over `std::thread::scope` and deterministic:
+
+- `travel`: each frame line becomes running sums, so a box smear of any length
+  costs the same; smears fill the gap between the 16 temporal samples (a whip
+  exposes 1.4 shutters longer, with a faint long streak), so samples join into
+  one streak. A slide dims and shadows the frame it covers.
+- `reveal`: an iris opens from the focus center with a soft, speed-widened
+  edge, a shadow on the outgoing side, an optional accent ring, and a slight
+  settle of the incoming frame. Ink thresholds a domain-warped fractal noise
+  field (cached per frame size and focus) that is rank-equalized, so a
+  threshold covers exactly that share of the frame and the edge width is
+  measured in pixels from the field's slope.
+- `turn`: frames are sampled through inverse transforms from a mip chain. A
+  match fades the element into its counterpart before the scene around it,
+  and feathers a shrunken frame's border so its vignette never draws a box.
+  Flips and cubes ray-cast faces in a turned space (vertical motion swaps x
+  and y), shade them from an overhead key, light their rims, and average
+  anisotropic footprints with taps along the long axis.
+- `light`: a glitch holds discrete corruption frames (24 per second) of torn
+  bands, misread color planes, and displaced macroblocks around a hard cut; a
+  flash overexposes then washes to the theme's ink; a light leak screens
+  elliptical warm glows in from the left edge while the frames swap beneath.
+
+Transition progress joins the reel sample key, so every style is exposed
+through the shutter. At most two segments are visible at any instant; J- and
+L-cuts are overlaps whose picture cuts at one end, so both segments' media
+play through the overlap.
 
 `psychopomp/src/playback.rs` derives numeric step destinations from a renderer-prepared Timeline, after semantic geometry has resolved. Next, Previous, First, and Last append only changed channel targets through the shared Timeline compiler. Each spring therefore inherits position and velocity, including mid-flight reversals; unchanged destinations do not restart motion. Per-channel motion profiles come from the destination's latest authored spring (or its first spring before any event; set-only channels use a 0.4-second zero-bounce default). Replay alone resets to the entry pose. The local clock freezes on pause or once all channels settle, without retiming the authored video. Immutable `Arc<Timeline>` revisions make sampling history-independent even while input creates a newer revision.
 
