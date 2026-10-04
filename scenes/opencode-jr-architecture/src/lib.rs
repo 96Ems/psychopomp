@@ -106,9 +106,9 @@ fn begin<'a>(
     tail: f64,
     stage: &StagePlan,
 ) -> Result<Film<'a>> {
-    let clip = narration.clip(id)?;
-    let mut sc = PlanBuilder::new(id, seconds(lead) + clip.duration() + seconds(tail));
-    let v = clip.place(&mut sc, seconds(lead));
+    let reading = narration.reading(seconds(lead), [(id, seconds(tail))])?;
+    let mut sc = PlanBuilder::new(id, reading.duration());
+    let [v] = reading.place(&mut sc);
     let mut s = StageActor::declare(&mut sc, "stage", stage)?;
     s.channel(&mut sc, "camera.z", -140.0);
     s.channel(&mut sc, "camera.dof", 0.4);

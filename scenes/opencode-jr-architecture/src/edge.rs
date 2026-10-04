@@ -2,10 +2,11 @@
 //! mailbox, and only then does Slack get its 200. A redelivery dedupes.
 use anyhow::{Context, Result};
 use psychopomp::{
+    author::PlanTime,
     caption::CaptionAlign,
     math::{Vec2, Vec3, vec2},
     plan::ScenePlan,
-    stage::{Camera, StagePlan},
+    stage::{Camera, StagePlan, reply_after},
     tone::Tone,
 };
 
@@ -185,7 +186,7 @@ pub fn film(narration: &Narration) -> Result<(ScenePlan, [f32; 4])> {
     let receipt_at = v.at("get its");
     status(s, sc, "worker", receipt_at, 3);
     s.to(sc, "camera.x", receipt_at, -40.0, 1.6);
-    let receipt = send(s, sc, "ok", receipt_at.max(back + seconds(0.4)), 0.8);
+    let receipt = send(s, sc, "ok", receipt_at.not_before(back + seconds(0.4)), 0.8);
     s.hit(sc, "slack.flash", receipt, 0.6, 0.0);
     s.clock(sc, "slack.mark", receipt);
     status(s, sc, "slack", receipt, 2);
@@ -218,11 +219,11 @@ pub fn film(narration: &Narration) -> Result<(ScenePlan, [f32; 4])> {
     }
     let again = send(s, sc, "again", retry, 0.75);
     s.land(sc, "worker", again);
-    let duplicate = send(s, sc, "enqueue-2", again + seconds(0.42), 0.75);
+    let duplicate = send(s, sc, "enqueue-2", reply_after(again), 0.75);
     status(s, sc, "session", duplicate, 2);
     s.hit(sc, "session.flash", duplicate, 0.4, 0.0);
     sc.media(sound("dedupe", CONFIRM, duplicate, -16.0));
-    let dedupe = v.at("by message timestamp").max(duplicate);
+    let dedupe = v.at("by message timestamp").not_before(duplicate);
     s.type_in(sc, "dedupe", dedupe, 40.0);
     let answered = send(s, sc, "ok-2", duplicate + seconds(0.5), 0.75);
     s.hit(sc, "slack.flash", answered, 0.5, 0.0);

@@ -19,6 +19,7 @@ use crate::{
         shapes::{Box2, Circle, Shape, fibonacci_sphere},
         vec3,
     },
+    plan::SpringPlan,
     tone::Tone,
 };
 
@@ -603,6 +604,17 @@ pub mod packet {
 pub const PORT_POP_SECONDS: f32 = 0.3;
 pub const DRAW_CURVE: Ease = Ease::CubicBezier([0.45, 0.0, 0.2, 1.0]);
 
+/// How long a receiver takes to react once a request has landed, before its
+/// reply starts to gather.
+pub const REACT_SECONDS: f32 = 0.08;
+
+/// The earliest launch of a reply to a packet that arrives at `arrival`:
+/// reaction follows contact, so even the reply's gather waits for the arrival
+/// (340 ms gather plus an 80 ms beat). Pass it to [`StageActor::send`].
+pub fn reply_after(arrival: u64) -> u64 {
+    arrival + whole_millis(packet::GATHER) + whole_millis(REACT_SECONDS)
+}
+
 /// Authoring handle: declares each stage channel once, on first use.
 pub struct StageActor {
     actor: ActorHandle,
@@ -655,6 +667,20 @@ impl StageActor {
         seconds: f32,
     ) {
         self.bounce(scene, property, at_nanos, target, seconds, 0.0);
+    }
+
+    /// Spring `property` to `target` with a named feel, such as
+    /// [`SpringPlan::CAMERA`] or [`SpringPlan::PANEL`].
+    pub fn spring(
+        &mut self,
+        scene: &mut PlanBuilder,
+        property: &str,
+        at_nanos: u64,
+        target: f32,
+        feel: SpringPlan,
+    ) {
+        let channel = self.resting(scene, property);
+        scene.spring_with(&channel, at_nanos, target, feel);
     }
 
     /// Like `to`, with overshoot: `bounce` 0.2 reads as a lively landing.
@@ -854,6 +880,37 @@ impl StageActor {
         let flight = self.channel(scene, &format!("{packet}.flight"), seconds);
         scene.set(&flight, dispatch, seconds);
         dispatch + whole_millis(packet::GATHER) + whole_millis(seconds)
+    }
+
+    /// Send `packet` so that it arrives at `arrival` after flying for
+    /// `seconds`, as when a hit must land on a spoken word: it launches one
+    /// flight earlier and gathers before that. Returns the arrival time.
+    pub fn send_arriving(
+        &mut self,
+        scene: &mut PlanBuilder,
+        packet: &str,
+        arrival: u64,
+        seconds: f32,
+    ) -> u64 {
+        self.send(
+            scene,
+            packet,
+            arrival.saturating_sub(whole_millis(seconds)),
+            seconds,
+        )
+    }
+
+    /// Plug `beam` in so that the wire reaches its far end at `contact`,
+    /// drawing for `seconds` after the port resolves. Returns the contact time.
+    pub fn connect_contacting(
+        &mut self,
+        scene: &mut PlanBuilder,
+        beam: &str,
+        contact: u64,
+        seconds: f32,
+    ) -> u64 {
+        let lead = whole_millis(PORT_POP_SECONDS) + whole_millis(seconds);
+        self.connect(scene, beam, contact.saturating_sub(lead), seconds)
     }
 
     /// Plug `beam` in, starting at `at_nanos`: the port resolves softly and
@@ -1179,6 +1236,32 @@ mod tests {
             "hottest at the head"
         );
         assert_eq!(heat(COOLING), 0.0);
+    }
+
+    #[test]
+    fn beats_can_be_timed_by_where_they_land() {
+        let mut scene = PlanBuilder::new("stage-demo", 5_000_000_000);
+        let mut stage = StageActor::declare(&mut scene, "stage", &plan()).unwrap();
+        let word = 2_000_000_000;
+        assert_eq!(stage.send_arriving(&mut scene, "probe", word, 0.8), word);
+        let contact = stage.connect_contacting(&mut scene, "link", word, 0.6);
+        assert_eq!(contact, word, "port 0.3 s plus draw 0.6 s before the word");
+        assert_eq!(
+            reply_after(word),
+            word + 420_000_000,
+            "a 340 ms gather and an 80 ms reaction"
+        );
+        let plan = scene.finish().unwrap();
+        let first = |property: &str| {
+            plan.continuous_channels
+                .iter()
+                .find(|c| c.property == property)
+                .unwrap()
+                .events[0]
+                .at_nanos()
+        };
+        assert_eq!(first("probe.age"), word - 800_000_000 - 340_000_000);
+        assert_eq!(first("link.port"), word - 900_000_000);
     }
 
     #[test]

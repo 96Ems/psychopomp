@@ -111,10 +111,9 @@ fn editor(scene: &mut PlanBuilder, step_times: [u64; 3]) -> Result<()> {
 }
 
 pub fn film(narration: &Narration) -> Result<ScenePlan> {
-    let clip = narration.clip("edge-code")?;
-    let lead = seconds(0.9);
-    let mut sc = PlanBuilder::new("edge-code", lead + clip.duration() + seconds(1.8));
-    let v = clip.place(&mut sc, lead);
+    let reading = narration.reading(seconds(0.9), [("edge-code", seconds(1.8))])?;
+    let mut sc = PlanBuilder::new("edge-code", reading.duration());
+    let [v] = reading.place(&mut sc);
     header_at(&mut sc, "1", "the edge", None)?;
     chip_at(&mut sc, "src/ingress.ts", None)?;
     editor(

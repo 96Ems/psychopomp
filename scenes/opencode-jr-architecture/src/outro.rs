@@ -1,7 +1,13 @@
 //! The whole shape in one line: the edge, one object per thread, the sandbox,
 //! and back to Slack.
 use anyhow::{Context, Result};
-use psychopomp::{caption::CaptionAlign, plan::ScenePlan, stage::StagePlan, tone::Tone};
+use psychopomp::{
+    author::PlanTime,
+    caption::CaptionAlign,
+    plan::ScenePlan,
+    stage::{StagePlan, reply_after},
+    tone::Tone,
+};
 
 use crate::{
     BLOOM, Film, Narration, arrive, beam, begin, card, footer, header, label, orb, orb_in, packet,
@@ -86,13 +92,13 @@ pub fn film(narration: &Narration) -> Result<ScenePlan> {
     arrive(s, sc, "workspace", "c", sandbox - seconds(0.6));
     arrive(s, sc, "sandbox", "d", sandbox - seconds(0.4));
     let at_workspace = send(s, sc, "c-out", sandbox + seconds(0.3), 0.55);
-    let at_sandbox = send(s, sc, "d-out", at_workspace + seconds(0.42), 0.55);
+    let at_sandbox = send(s, sc, "d-out", reply_after(at_workspace), 0.55);
     s.land(sc, "sandbox", at_sandbox);
     // The answer runs the chain back to Slack.
-    let back = v.at("flows back").max(at_sandbox + seconds(0.2));
+    let back = v.at("flows back").not_before(at_sandbox + seconds(0.2));
     let mut at = send(s, sc, "d-back", back, 0.5);
     for packet in ["c-back", "answer", "a-back"] {
-        at = send(s, sc, packet, at + seconds(0.42), 0.5);
+        at = send(s, sc, packet, reply_after(at), 0.5);
     }
     s.hit(sc, "slack.flash", at, 0.7, 0.0);
     sc.media(sound("answered", BLOOM, at, -13.0));

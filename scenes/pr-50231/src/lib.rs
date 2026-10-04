@@ -7,7 +7,6 @@
 //! story is keyed to phrases in the Eleven v4 narration.
 mod diff;
 mod intro;
-mod narration;
 mod outro;
 mod permissions;
 mod settings;
@@ -16,11 +15,11 @@ mod tools;
 use std::path::{Path, PathBuf};
 
 use anyhow::Result;
-use narration::Narration;
 use psychopomp::{
-    author::PlanBuilder,
+    author::{PlanBuilder, seconds},
     caption::{CaptionActor, CaptionAlign, CaptionPlan, CaptionSpanPlan},
     effects::spinner::Mark,
+    narration::Narration,
     plan::{
         MediaKindPlan, MediaPlan, MediaRolePlan, ReelPlan, ReelSegmentPlan, ReelTransitionStyle,
     },
@@ -62,10 +61,6 @@ pub fn build_reel(narration_dir: &Path) -> Result<ReelPlan> {
     };
     reel.validate()?;
     Ok(reel)
-}
-
-fn ns(seconds: f64) -> u64 {
-    (seconds * 1e9).round() as u64
 }
 
 fn span(text: &str, tone: Tone) -> CaptionSpanPlan {
@@ -194,8 +189,8 @@ const SHUFFLE: Sfx = Sfx("sfx/shuffle.wav", 0.868);
 const DROP: Sfx = Sfx("sfx/drop.wav", 0.878);
 const RESOLUTION: Sfx = Sfx("sfx/resolution.wav", 0.878);
 
-fn sound(id: &str, Sfx(file, seconds): Sfx, at: u64, gain_db: f32) -> MediaPlan {
-    let length = ns(seconds);
+fn sound(id: &str, Sfx(file, length): Sfx, at: u64, gain_db: f32) -> MediaPlan {
+    let length = seconds(length);
     MediaPlan {
         id: id.to_owned(),
         path: PathBuf::from(file),

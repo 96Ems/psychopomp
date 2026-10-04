@@ -20,7 +20,7 @@ Lightweight crate (`crates/psychopomp/src`):
 - `crates/psychopomp/src/grid.rs`: finite keyed product catalogs and semantic Grid Snapshots
 - `crates/psychopomp/src/value.rs`: immutable Value Token recipe data for finite teaching diagrams
 - `crates/psychopomp/src/component_prototype.rs`: provisional Typeset, width-text, Collection, Connector, rich-text, header, and Venn payloads
-- `crates/psychopomp/src/author.rs`: typed Scene Plan builder and stable actor/channel handles for lightweight Scene Programs
+- `crates/psychopomp/src/author.rs`: typed Scene Plan builder, stable actor/channel handles, and timing vocabulary (`millis`, `stagger`, `spread`, `PlanTime::not_before`, named `SpringPlan` feels) for lightweight Scene Programs
 - `crates/psychopomp/src/plan.rs`: versioned renderer-independent Scene Plan, Deck, and Reel values and structured validation
 - `crates/psychopomp/src/plan/channels.rs`: exact scalar-event lowering and opt-in snapshot-destination reduction; raw event ordering remains distinct
 - `crates/psychopomp/src/plan/wipe.rs`: Reel wipe values (direction, mid-frame holds, labels) and the closed-form divider position
@@ -30,7 +30,7 @@ Lightweight crate (`crates/psychopomp/src`):
 - `crates/psychopomp/src/timeline/retarget.rs`: shared cancellation-safe numeric schedule for Playback and authored resting entrances
 - `crates/psychopomp/src/motion.rs`: deterministic arbitrary-time analytic spring sampling with position and velocity
 - `crates/psychopomp/src/transcript.rs`: word timing ingestion, word and phrase cue lookup
-- `crates/psychopomp/src/narration.rs`: `scripts/narrate.ts` manifests loaded as narration clips, placed as Script Clips, with panicking phrase lookups
+- `crates/psychopomp/src/narration.rs`: `scripts/narrate.ts` manifests loaded as narration clips, scheduled back to back (`Narration::reading`), placed whole or as split ranges (`place_range`, `split`) as Script Clips, with panicking phrase lookups
 - `crates/psychopomp/src/tone.rs`: semantic Tone roles shared by explainer recipes
 - `crates/psychopomp/src/sequence.rs`: Sequence Diagram recipe values and row constructors, slot geometry, validation, and the `SequenceActor` authoring handle
 - `crates/psychopomp/src/caption.rs`: Caption recipe values and the `CaptionActor` authoring handle (typing, show, hide)

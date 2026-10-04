@@ -4,16 +4,17 @@
 //! against every provider's request body.
 use anyhow::{Context, Result};
 use psychopomp::{
-    author::PlanBuilder,
+    author::{PlanBuilder, seconds},
     caption::CaptionAlign,
+    narration::Narration,
     plan::ScenePlan,
     stage::{StageActor, StagePlan},
     tone::Tone,
 };
 
 use crate::{
-    FAILURE, MARK, POST, SEND, TICK, beam, card, chip, footer, header, label, narration::Narration,
-    ns, packet, sound, span, status,
+    FAILURE, MARK, POST, SEND, TICK, beam, card, chip, footer, header, label, packet, sound, span,
+    status,
 };
 
 const ROWS: [f32; 3] = [340.0, 500.0, 660.0];
@@ -166,23 +167,24 @@ fn stage_plan() -> StagePlan {
 }
 
 pub fn build(narration: &Narration) -> Result<ScenePlan> {
-    let before_clip = narration.clip("tools-before")?;
-    let after_clip = narration.clip("tools-after")?;
-    let lead = ns(0.5);
-    let gap = ns(1.0);
-    let duration = lead + before_clip.duration() + gap + after_clip.duration() + ns(0.8);
-    let mut scene = PlanBuilder::new("tools", duration);
-    let before = before_clip.place(&mut scene, lead);
-    let after = after_clip.place(&mut scene, before.end() + gap);
+    let reading = narration.reading(
+        seconds(0.5),
+        [
+            ("tools-before", seconds(1.0)),
+            ("tools-after", seconds(0.8)),
+        ],
+    )?;
+    let mut scene = PlanBuilder::new("tools", reading.duration());
+    let [before, after] = reading.place(&mut scene);
     let b = |phrase: &str| before.at(phrase);
     let a = |phrase: &str| after.at(phrase);
     let mut stage = StageActor::declare(&mut scene, "stage", &stage_plan())?;
     let s = &mut stage;
     let sc = &mut scene;
 
-    header(sc, "2 · tool schemas", Some(ns(0.15)))?;
+    header(sc, "2 · tool schemas", Some(seconds(0.15)))?;
     let mut before_chip = chip(sc, "chip-before", Tone::Muted, "before")?;
-    before_chip.show(sc, ns(0.4));
+    before_chip.show(sc, seconds(0.4));
     s.channel(sc, "camera.z", -60.0);
     s.to(sc, "camera.z", 0, 0.0, 1.6);
 
@@ -193,24 +195,30 @@ pub fn build(narration: &Narration) -> Result<ScenePlan> {
     }
     let writes = b("now writes");
     for index in 0..LANES.len() {
-        let stagger = ns(0.12 * index as f64);
+        let stagger = seconds(0.12 * index as f64);
         s.settle_in(sc, &format!("source-{index}"), tools + stagger);
         s.settle_in(
             sc,
             &format!("result-{index}"),
-            writes.saturating_sub(ns(0.5)) + stagger,
+            writes.saturating_sub(seconds(0.5)) + stagger,
         );
         let link = format!("lane-{index}");
-        let contact = s.connect(sc, &link, writes + ns(0.15 * index as f64), 0.45);
-        s.to(sc, &format!("{link}.flow"), contact + ns(0.7), 0.0, 0.45);
+        let contact = s.connect(sc, &link, writes + seconds(0.15 * index as f64), 0.45);
+        s.to(
+            sc,
+            &format!("{link}.flow"),
+            contact + seconds(0.7),
+            0.0,
+            0.45,
+        );
         sc.media(sound(&format!("lane-{index}"), TICK, contact, -26.0));
     }
 
     // Each shape arrives and its reader rejects it.
     for (index, (at, red)) in [
         (b("reference names"), true),
-        (b("plain numbers") + ns(0.3), false),
-        (b("stops being").saturating_sub(ns(0.94)), true),
+        (b("plain numbers") + seconds(0.3), false),
+        (b("stops being").saturating_sub(seconds(0.94)), true),
     ]
     .into_iter()
     .enumerate()
@@ -243,24 +251,24 @@ pub fn build(narration: &Narration) -> Result<ScenePlan> {
     footer_before.type_in(sc, b("object at all"), 45.0, 0.5);
 
     // Reset the readers; the same packets replay with their repairs.
-    let switch = before.end() + ns(0.15);
+    let switch = before.end() + seconds(0.15);
     before_chip.hide(sc, switch);
     footer_before.hide(sc, switch);
     let mut after_chip = chip(sc, "chip-after", Tone::Success, "after the fix")?;
-    after_chip.show(sc, switch + ns(0.25));
+    after_chip.show(sc, switch + seconds(0.25));
     for index in 0..LANES.len() {
         let result = format!("result-{index}");
         s.to(sc, &format!("{result}.alarm"), switch, 0.0, 0.4);
         s.to(
             sc,
             &format!("{result}.status"),
-            switch + ns(0.1 * index as f64),
+            switch + seconds(0.1 * index as f64),
             0.0,
             0.35,
         );
     }
     for (index, (repair, land)) in [
-        (a("decode the names"), a("decode") + ns(0.6)),
+        (a("decode the names"), a("decode") + seconds(0.6)),
         (a("show effects"), a("just a number")),
         (a("empty tools"), a("real empty")),
     ]
@@ -269,19 +277,14 @@ pub fn build(narration: &Narration) -> Result<ScenePlan> {
     {
         s.type_in(sc, &format!("repair-{index}"), repair, 50.0);
         let result = format!("result-{index}");
-        let arrival = s.send(
-            sc,
-            &format!("fixed-{index}"),
-            land.saturating_sub(ns(0.55)),
-            0.55,
-        );
+        let arrival = s.send_arriving(sc, &format!("fixed-{index}"), land, 0.55);
         s.to(sc, &format!("{result}.status"), arrival, 2.0, 0.3);
         s.hit(sc, &format!("{result}.flash"), arrival, 0.55, 0.0);
         s.hit(sc, &format!("{result}.glow"), arrival, 0.5, 0.0);
         sc.media(sound(
             &format!("fixed-send-{index}"),
             SEND,
-            land.saturating_sub(ns(0.55)),
+            land.saturating_sub(seconds(0.55)),
             -20.0,
         ));
         sc.media(sound(&format!("fixed-land-{index}"), MARK, arrival, -20.0));
@@ -291,13 +294,13 @@ pub fn build(narration: &Narration) -> Result<ScenePlan> {
     // Checked against each provider's request body.
     let checked = a("checked against");
     for index in 0..PROVIDERS.len() {
-        let at = checked + ns(0.12 * index as f64);
+        let at = checked + seconds(0.12 * index as f64);
         s.settle_in(sc, &format!("provider-{index}"), at);
-        let contact = s.connect(sc, &format!("receive-{index}"), at + ns(0.15), 0.35);
+        let contact = s.connect(sc, &format!("receive-{index}"), at + seconds(0.15), 0.35);
         s.to(
             sc,
             &format!("receive-{index}.flow"),
-            contact + ns(0.6),
+            contact + seconds(0.6),
             0.0,
             0.45,
         );
@@ -311,6 +314,6 @@ pub fn build(narration: &Narration) -> Result<ScenePlan> {
             span("the shapes each provider expects", Tone::Success),
         ],
     )?;
-    footer_after.type_in(sc, checked + ns(0.8), 50.0, 0.6);
+    footer_after.type_in(sc, checked + seconds(0.8), 50.0, 0.6);
     scene.finish().context("tools")
 }

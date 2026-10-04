@@ -6,7 +6,7 @@ use std::{fs, path::PathBuf};
 
 use anyhow::{Context, Result};
 use psychopomp::{
-    author::{PlanBuilder, seconds},
+    author::{PlanBuilder, seconds, spread},
     callout::{CalloutActor, CalloutAnchorPlan, CalloutPlan, CalloutSide},
     caption::{CaptionAlign, CaptionSpanPlan},
     effects::{combustion, spinner::Mark},
@@ -267,22 +267,13 @@ fn sound(sc: &mut PlanBuilder, id: &str, Sfx(file, length): Sfx, at: u64, gain_d
 }
 
 fn film(narration: &Narration) -> Result<ScenePlan> {
-    let hush_clip = narration.clip("hush")?;
-    let toys_clip = narration.clip("toys")?;
-    let fever_clip = narration.clip("fever")?;
-    let lead = seconds(1.3);
     let gap = seconds(0.35);
-    let duration = lead
-        + hush_clip.duration()
-        + gap
-        + toys_clip.duration()
-        + gap
-        + fever_clip.duration()
-        + seconds(2.6);
-    let mut scene = PlanBuilder::new("psychopomp-intro", duration);
-    let hush = hush_clip.place(&mut scene, lead);
-    let toys = toys_clip.place(&mut scene, hush.end() + gap);
-    let fever = fever_clip.place(&mut scene, toys.end() + gap);
+    let reading = narration.reading(
+        seconds(1.3),
+        [("hush", gap), ("toys", gap), ("fever", seconds(2.6))],
+    )?;
+    let mut scene = PlanBuilder::new("psychopomp-intro", reading.duration());
+    let [hush, toys, fever] = reading.place(&mut scene);
     let h = |phrase: &str| hush.at(phrase);
     let t = |phrase: &str| toys.at(phrase);
     let f = |phrase: &str| fever.at(phrase);
@@ -412,11 +403,12 @@ fn film(narration: &Narration) -> Result<ScenePlan> {
     // AND PACKETS FLY DOWN THE WIRES!!
     let packets = t("packets");
     let wires = toys.at_after("wires", "packets");
-    let step = (wires.saturating_sub(packets)) / (VOLLEY.len() as u64 - 1);
     s.to(sc, "camera.quake", packets, 0.7, 0.25);
     s.to(sc, "camera.z", packets, 30.0, 0.6);
-    for (index, (id, beam, _)) in VOLLEY.iter().enumerate() {
-        let launch = packets + step * index as u64;
+    for ((id, beam, _), launch) in VOLLEY
+        .iter()
+        .zip(spread(VOLLEY.len() as u64, packets, wires))
+    {
         let arrival = s.send(sc, id, launch, 0.32);
         let card = if *beam == "link-l" {
             "terminal"

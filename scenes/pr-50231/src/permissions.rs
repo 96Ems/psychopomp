@@ -6,7 +6,7 @@
 //! and `edit deny`. The camera then flies into `inInputOrder`'s code.
 use anyhow::{Context, Result};
 use psychopomp::{
-    author::PlanBuilder,
+    author::{PlanBuilder, seconds},
     caption::CaptionAlign,
     editor::{
         EditorInlineRevealPlan, EditorPartPlan, EditorRecipePlan, EditorSemanticRangePlan,
@@ -14,6 +14,7 @@ use psychopomp::{
     },
     highlight,
     math::{Vec2, Vec3, easing::Ease, vec2},
+    narration::Narration,
     plan::{ScenePlan, SpringPlan, destination_channel},
     stage::{Camera, DRAW_CURVE, StageActor, StagePlan},
     tone::Tone,
@@ -22,9 +23,7 @@ use psychopomp::{
 use crate::{
     FAILURE, MARK, POST, RESOLUTION, REWIND, SEND, SHUFFLE, ZOOM, beam, card, chip,
     diff::{Diff, fresh, keep},
-    footer, header, label,
-    narration::Narration,
-    ns, packet, sound, span, status,
+    footer, header, label, packet, sound, span, status,
 };
 
 const SLOTS: [f32; 3] = [420.0, 530.0, 640.0];
@@ -232,7 +231,14 @@ fn shuffle(s: &mut StageActor, sc: &mut PlanBuilder, at: u64, into_schema_order:
         for (axis, peak) in [("x", arc), ("z", depth)] {
             let channel = format!("rule-{card}.{axis}");
             s.ease(sc, &channel, at, peak, 0.5, Ease::Smootherstep);
-            s.ease(sc, &channel, at + ns(0.5), 0.0, 0.5, Ease::Smootherstep);
+            s.ease(
+                sc,
+                &channel,
+                at + seconds(0.5),
+                0.0,
+                0.5,
+                Ease::Smootherstep,
+            );
         }
     }
     sc.media(sound(
@@ -241,7 +247,7 @@ fn shuffle(s: &mut StageActor, sc: &mut PlanBuilder, at: u64, into_schema_order:
         at,
         -15.0,
     ));
-    let landed = at + ns(1.0);
+    let landed = at + seconds(1.0);
     for index in 0..RULES.len() {
         s.twang(sc, &format!("wire-{index}"), landed);
     }
@@ -268,7 +274,7 @@ fn rise(s: &mut StageActor, sc: &mut PlanBuilder, probe: usize, slot: f32, at: u
 
 /// The probe's wire draws to the card it matched; returns the contact time.
 fn strike(s: &mut StageActor, sc: &mut PlanBuilder, wire: &str, contact: u64) -> u64 {
-    s.connect(sc, wire, contact.saturating_sub(ns(0.52)), 0.22)
+    s.connect_contacting(sc, wire, contact, 0.22)
 }
 
 pub fn build(narration: &Narration) -> Result<(ScenePlan, ScenePlan, [f32; 4])> {
@@ -278,9 +284,9 @@ pub fn build(narration: &Narration) -> Result<(ScenePlan, ScenePlan, [f32; 4])> 
     // silence 5.88–6.14 s): the code segment carries the rest, entered by a
     // zoom into `inInputOrder`.
     let split = after_clip.split(6.0, "denied", "new tests");
-    let lead = ns(0.5);
-    let rewind = ns(1.9);
-    let hold = ns(0.15);
+    let lead = seconds(0.5);
+    let rewind = seconds(1.9);
+    let hold = seconds(0.15);
     let after_start = lead + before_clip.duration() + rewind;
     let zoom_start = after_start + split + hold;
     let mut scene = PlanBuilder::new("permissions", zoom_start + ZOOM);
@@ -292,23 +298,34 @@ pub fn build(narration: &Narration) -> Result<(ScenePlan, ScenePlan, [f32; 4])> 
     let s = &mut stage;
     let sc = &mut scene;
 
-    header(sc, "3 · permission order", Some(ns(0.15)))?;
+    header(sc, "3 · permission order", Some(seconds(0.15)))?;
     let mut before_chip = chip(sc, "chip-before", Tone::Muted, "before")?;
-    before_chip.show(sc, ns(0.4));
+    before_chip.show(sc, seconds(0.4));
     s.channel(sc, "camera.z", -80.0);
     s.to(sc, "camera.z", 0, 0.0, 1.8);
 
     // The config wires into its rules, in the order written.
     let rules = b("permission rules");
     s.fade_in(sc, "config-head", rules, 1.0, 0.4);
-    s.fade_in(sc, "rules-head", rules + ns(0.3), 1.0, 0.4);
+    s.fade_in(sc, "rules-head", rules + seconds(0.3), 1.0, 0.4);
     for (index, (id, ..)) in RULES.iter().enumerate() {
-        let stagger = ns(0.1 * index as f64);
+        let stagger = seconds(0.1 * index as f64);
         s.settle_in(sc, &format!("config-{index}"), rules + stagger);
-        s.settle_in(sc, &format!("rule-{id}"), rules + ns(0.3) + stagger);
+        s.settle_in(sc, &format!("rule-{id}"), rules + seconds(0.3) + stagger);
         let wire = format!("wire-{index}");
-        let contact = s.connect(sc, &wire, rules + ns(0.6) + ns(0.12 * index as f64), 0.45);
-        s.to(sc, &format!("{wire}.flow"), contact + ns(0.7), 0.0, 0.45);
+        let contact = s.connect(
+            sc,
+            &wire,
+            rules + seconds(0.6) + seconds(0.12 * index as f64),
+            0.45,
+        );
+        s.to(
+            sc,
+            &format!("{wire}.flow"),
+            contact + seconds(0.7),
+            0.0,
+            0.45,
+        );
     }
     // Last match wins: the check runs bottom to top.
     let wins = b("last match wins");
@@ -317,7 +334,7 @@ pub fn build(narration: &Narration) -> Result<(ScenePlan, ScenePlan, [f32; 4])> 
         s.hit(
             sc,
             &format!("rule-{id}.flash"),
-            wins + ns(0.65 + 0.14 * step as f64),
+            wins + seconds(0.65 + 0.14 * step as f64),
             0.35,
             0.0,
         );
@@ -348,17 +365,17 @@ pub fn build(narration: &Narration) -> Result<(ScenePlan, ScenePlan, [f32; 4])> 
     let would = b("it would have");
     let silently = b("silently");
     let both = b("both");
-    for (probe, at) in [(0, would), (1, would + ns(0.15))] {
+    for (probe, at) in [(0, would), (1, would + seconds(0.15))] {
         s.settle_in(
             sc,
             &format!("probe-{}", PROBES[probe].0),
-            at.saturating_sub(ns(0.45)),
+            at.saturating_sub(seconds(0.45)),
         );
     }
     rise(s, sc, 0, SLOTS[2], would, 0.55);
-    rise(s, sc, 1, SLOTS[2], both.saturating_sub(ns(1.05)), 0.55);
+    rise(s, sc, 1, SLOTS[2], both.saturating_sub(seconds(1.05)), 0.55);
     for (probe, wire, at) in [
-        (0, "miss-shell", silently + ns(0.2)),
+        (0, "miss-shell", silently + seconds(0.2)),
         (1, "miss-edit", both),
     ] {
         let name = PROBES[probe].0;
@@ -373,7 +390,7 @@ pub fn build(narration: &Narration) -> Result<(ScenePlan, ScenePlan, [f32; 4])> 
             s.set(
                 sc,
                 "rule-star.glitch",
-                contact + ns(0.027 * step as f64),
+                contact + seconds(0.027 * step as f64),
                 seed,
             );
         }
@@ -391,10 +408,10 @@ pub fn build(narration: &Narration) -> Result<(ScenePlan, ScenePlan, [f32; 4])> 
             span("both silently allowed", Tone::Error),
         ],
     )?;
-    footer_before.type_in(sc, both + ns(0.25), 55.0, 0.5);
+    footer_before.type_in(sc, both + seconds(0.25), 55.0, 0.5);
 
     // Rewind to before the probes rose.
-    let switch = before.end() + ns(0.3);
+    let switch = before.end() + seconds(0.3);
     s.channel(sc, "post.rewind", -1.0);
     s.set(sc, "post.rewind", switch, 0.0);
     s.ease(sc, "post.rewind", switch, 1.4, 1.4, Ease::Linear);
@@ -402,16 +419,16 @@ pub fn build(narration: &Narration) -> Result<(ScenePlan, ScenePlan, [f32; 4])> 
     sc.media(sound(
         "rewind",
         REWIND,
-        switch.saturating_sub(ns(0.05)),
+        switch.saturating_sub(seconds(0.05)),
         -13.0,
     ));
     before_chip.hide(sc, switch);
     footer_before.hide(sc, switch);
     let mut rewind_chip = chip(sc, "chip-rewind", Tone::Accent, "◀◀ rewind")?;
-    rewind_chip.show(sc, switch + ns(0.25));
-    rewind_chip.hide(sc, switch + ns(1.45));
+    rewind_chip.show(sc, switch + seconds(0.25));
+    rewind_chip.hide(sc, switch + seconds(1.45));
     let mut after_chip = chip(sc, "chip-after", Tone::Success, "after the fix")?;
-    after_chip.show(sc, switch + ns(1.6));
+    after_chip.show(sc, switch + seconds(1.6));
     for (name, _) in PROBES {
         s.to(
             sc,
@@ -423,7 +440,7 @@ pub fn build(narration: &Narration) -> Result<(ScenePlan, ScenePlan, [f32; 4])> 
         s.ease(
             sc,
             &format!("probe-{name}.y"),
-            switch + ns(0.1),
+            switch + seconds(0.1),
             0.0,
             1.1,
             Ease::Smootherstep,
@@ -431,14 +448,14 @@ pub fn build(narration: &Narration) -> Result<(ScenePlan, ScenePlan, [f32; 4])> 
         s.to(
             sc,
             &format!("probe-{name}.alarm"),
-            switch + ns(0.2),
+            switch + seconds(0.2),
             0.0,
             0.5,
         );
         s.ease(
             sc,
             &format!("probe-{name}.opacity"),
-            switch + ns(0.9),
+            switch + seconds(0.9),
             0.0,
             0.3,
             Ease::Smootherstep,
@@ -448,7 +465,7 @@ pub fn build(narration: &Narration) -> Result<(ScenePlan, ScenePlan, [f32; 4])> 
         s.ease(
             sc,
             &format!("{wire}.draw"),
-            switch + ns(0.1),
+            switch + seconds(0.1),
             0.0,
             0.5,
             DRAW_CURVE,
@@ -456,18 +473,18 @@ pub fn build(narration: &Narration) -> Result<(ScenePlan, ScenePlan, [f32; 4])> 
         s.ease(
             sc,
             &format!("{wire}.port"),
-            switch + ns(0.5),
+            switch + seconds(0.5),
             0.0,
             0.3,
             Ease::Smootherstep,
         );
     }
-    s.to(sc, "rule-star.alarm", switch + ns(0.2), 0.0, 0.5);
+    s.to(sc, "rule-star.alarm", switch + seconds(0.2), 0.0, 0.5);
 
     // The fix rebuilds the rules in the order written: the wires uncross.
     let fix = a("the fix");
-    s.settle_in(sc, "fix", fix.saturating_sub(ns(0.1)));
-    let rebuild = a("rebuilds") + ns(0.15);
+    s.settle_in(sc, "fix", fix.saturating_sub(seconds(0.1)));
+    let rebuild = a("rebuilds") + seconds(0.15);
     s.hit(sc, "fix.glow", rebuild, 0.8, 0.25);
     s.hit(sc, "fix.flash", rebuild, 0.5, 0.0);
     shuffle(s, sc, rebuild, false);
@@ -479,14 +496,14 @@ pub fn build(narration: &Narration) -> Result<(ScenePlan, ScenePlan, [f32; 4])> 
             span("the order you wrote", Tone::Success),
         ],
     )?;
-    footer_after.type_in(sc, rebuild + ns(0.4), 55.0, 0.5);
+    footer_after.type_in(sc, rebuild + seconds(0.4), 55.0, 0.5);
 
     // Shell: the probe passes `edit deny` and stops at `shell ask`.
     let asks = a("shell asks");
-    s.settle_in(sc, "probe-shell", asks.saturating_sub(ns(0.95)));
-    let rise_at = asks.saturating_sub(ns(0.55));
+    s.settle_in(sc, "probe-shell", asks.saturating_sub(seconds(0.95)));
+    let rise_at = asks.saturating_sub(seconds(0.55));
     rise(s, sc, 0, SLOTS[1], rise_at, 0.7);
-    s.hit(sc, "rule-edit.flash", rise_at + ns(0.38), 0.2, 0.0);
+    s.hit(sc, "rule-edit.flash", rise_at + seconds(0.38), 0.2, 0.0);
     let contact = strike(s, sc, "match-shell", a("asks"));
     s.hit(sc, "rule-shell.flash", contact, 0.6, 0.0);
     s.hit(sc, "rule-shell.glow", contact, 0.6, 0.15);
@@ -496,8 +513,8 @@ pub fn build(narration: &Narration) -> Result<(ScenePlan, ScenePlan, [f32; 4])> 
 
     // Edit: the bottom card is `edit deny` again.
     let edits = a("edits are");
-    s.settle_in(sc, "probe-edit", edits.saturating_sub(ns(0.7)));
-    rise(s, sc, 1, SLOTS[2], edits.saturating_sub(ns(0.3)), 0.5);
+    s.settle_in(sc, "probe-edit", edits.saturating_sub(seconds(0.7)));
+    rise(s, sc, 1, SLOTS[2], edits.saturating_sub(seconds(0.3)), 0.5);
     let contact = strike(s, sc, "match-edit", a("denied"));
     s.hit(sc, "rule-edit.flash", contact, 0.6, 0.0);
     s.hit(sc, "rule-edit.glow", contact, 0.6, 0.15);
@@ -522,14 +539,14 @@ pub fn build(narration: &Narration) -> Result<(ScenePlan, ScenePlan, [f32; 4])> 
 
 /// The change, opened from the `inInputOrder` card. Continues the narration
 /// from the split, with the new function whole and the call site swapping.
-fn code(clip: &crate::narration::Clip, split: u64) -> Result<ScenePlan> {
+fn code(clip: &psychopomp::narration::NarrationClip, split: u64) -> Result<ScenePlan> {
     let rest = clip.duration() - split;
-    let duration = rest + ns(3.0);
+    let duration = rest + seconds(3.0);
     let mut scene = PlanBuilder::new("permissions-code", duration);
     let spoken = clip.place_range(&mut scene, 0, split, clip.duration(), "-code");
     header(&mut scene, "3 · permission order", None)?;
     let mut change = chip(&mut scene, "chip-change", Tone::Accent, "the change")?;
-    change.show(&mut scene, ns(0.5));
+    change.show(&mut scene, seconds(0.5));
     let diff = Diff {
         file_name: "v1/config/migrate.ts",
         lines: vec![
@@ -653,7 +670,7 @@ mod tests {
     fn the_call_site_swap_has_no_stability_warnings() {
         use psychopomp::{editor::inspect_steps, plan::PresentationStepPlan};
         let root = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-        let narration = crate::narration::Narration::load(&root.join("narration")).unwrap();
+        let narration = psychopomp::narration::Narration::load(&root.join("narration")).unwrap();
         let (_, mut code, _) = super::build(&narration).unwrap();
         let end = code.duration_nanos;
         code.presentation_steps = [(0, 1), (end - 2, end - 1)]

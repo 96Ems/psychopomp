@@ -315,14 +315,13 @@ fn stage_plan() -> StagePlan {
 
 fn stage_film(narration: &Narration) -> Result<ScenePlan> {
     let pr = &PRS[3];
-    let before_clip = narration.clip("stop-before")?;
-    let after_clip = narration.clip("stop-after")?;
-    let lead = seconds(1.4);
-    let rewind = seconds(2.2);
-    let duration = lead + before_clip.duration() + rewind + after_clip.duration() + seconds(2.2);
-    let mut scene = PlanBuilder::new("stop-stage", duration);
-    let before = before_clip.place(&mut scene, lead);
-    let after = after_clip.place(&mut scene, before.end() + rewind);
+    // Before, a rewind, after, and a tail for the closing camera.
+    let reading = narration.reading(
+        seconds(1.4),
+        [("stop-before", seconds(2.2)), ("stop-after", seconds(2.2))],
+    )?;
+    let mut scene = PlanBuilder::new("stop-stage", reading.duration());
+    let [before, after] = reading.place(&mut scene);
     let b = |phrase: &str| before.at(phrase);
     let a = |phrase: &str| after.at(phrase);
 

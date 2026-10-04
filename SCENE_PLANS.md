@@ -27,10 +27,14 @@ machinery:
 | A single titled idea | `scenes/agent-demo` | `PlanBuilder` channels and cues |
 
 1. Write the narration script and voice it with `bun scripts/narrate.ts` (`--draft`
-   for a local voice). Place clips with `Narration::load(dir)?.clip(id)?.place(..)`
-   and time everything from `spoken.at("phrase")`, so re-voicing re-times the film.
+   for a local voice). Schedule the clips with `Narration::reading(lead, [(id,
+   gap_after), ..])`: its `duration()` sizes the `PlanBuilder` and `place(&mut
+   scene)` returns one `Spoken` per clip. Time everything from
+   `spoken.at("phrase")`, so re-voicing re-times the film. A clip can be split
+   across segments with `clip.split(seconds, earlier, later)` and `place_range`.
 2. Declare actors with `PlanBuilder`; write motion through typed handles. Time
-   literals use `author::SECOND` and `author::seconds(f64)`.
+   literals use `author::SECOND`, `author::seconds(f64)`, and
+   `author::millis(u64)`; see [Author with timing helpers](#author-with-timing-helpers).
 3. Emit with `ScenePlan::write_or_print`, `DeckPlan::write_with_slides`, or
    `ReelPlan::dipped(..)`, then `plan validate` and `plan inspect`.
 4. Review exact frames before encoding: `bun scripts/sheet.ts <plan> 0:10:0.5
@@ -779,6 +783,42 @@ let plan = scene.finish()?;
 ```
 
 Renderer Recipe payloads remain adapter-owned. The lightweight core validates stable IDs, channel references, event ordering, finite values, cue ranges, exact media ranges, and Scene Plan versioning without knowing what a Task, editor, Video Card, or title card looks like.
+
+### Author With Timing Helpers
+
+Authoring helpers emit ordinary events; none changes the plan format.
+
+```rust
+use psychopomp::author::{PlanTime, millis, seconds, spread, stagger};
+use psychopomp::stage::reply_after;
+
+// Narration: a lead, then each clip and the gap after it.
+let reading = narration.reading(seconds(1.6), [("before", seconds(2.4)), ("after", seconds(2.4))])?;
+let mut scene = PlanBuilder::new("film", reading.duration());
+let [before, after] = reading.place(&mut scene);
+
+// Rows ripple 120 ms apart; `stagger` returns the latest end.
+let settled = stagger(["api", "db", "cache"], before.at("three services"), millis(120), |card, at| {
+    s.settle_in(sc, card, at)
+});
+// Six packets spread evenly between two words, both included.
+for (packet, launch) in VOLLEY.iter().zip(spread(6, before.at("packets"), before.at("wires"))) { .. }
+
+// A beat keyed to a word that must still wait for its cause.
+let lookup = s.send(sc, "lookup", after.at("just once").not_before(reply_after(find)), 0.55);
+// Time a beat by where it lands rather than where it starts.
+s.send_arriving(sc, "kill", before.at("sigterm"), 0.55);   // the packet arrives on the word
+s.connect_contacting(sc, "link", before.at("plugs in"), 0.4); // port pop + draw end on the word
+s.spring(sc, "camera.x", at, -110.0, SpringPlan::CAMERA);
+```
+
+- `reply_after(arrival)`: a reply's gather may only begin once its request has
+  landed: 340 ms of gather plus an 80 ms reaction (`REACT_SECONDS`).
+- Named spring feels on `SpringPlan`, for `StageActor::spring` and
+  `PlanBuilder::spring_with`: `PANEL` (0.6 s, bounce 0.12, a rigid panel
+  settling), `CONTENT` (0.36 s, ink following its panel), `SNAP` (0.3 s, a
+  status or fade), `CAMERA` (1.6 s critically damped move), and `LIVELY`
+  (0.85 s, bounce 0.2, a hero landing).
 
 Scene Plan v2 scalar values may reference a component of a stable Semantic Target. The target's selector remains recipe-owned; for the hero, the editor recipe resolves logical code range IDs through `cosmic-text` before compiling highlight and pointer channels into the shared Timeline.
 

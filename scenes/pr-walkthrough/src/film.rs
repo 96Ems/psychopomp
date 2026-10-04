@@ -114,14 +114,15 @@ pub struct Flow {
 // ---------------------------------------------------------------------------
 
 pub fn behavior(pr: &Pr, narration: &Narration, flow: Flow) -> Result<ScenePlan> {
-    let before_clip = narration.clip(&format!("{}-before", pr.slug))?;
-    let after_clip = narration.clip(&format!("{}-after", pr.slug))?;
-    let lead = seconds(1.0);
-    let gap = seconds(1.6);
-    let duration = lead + before_clip.duration() + gap + after_clip.duration() + seconds(1.4);
-    let mut scene = PlanBuilder::new(format!("{}-behavior", pr.slug), duration);
-    let spoken_before = before_clip.place(&mut scene, lead);
-    let spoken_after = after_clip.place(&mut scene, spoken_before.end() + gap);
+    let reading = narration.reading(
+        seconds(1.0),
+        [
+            (&format!("{}-before", pr.slug), seconds(1.6)),
+            (&format!("{}-after", pr.slug), seconds(1.4)),
+        ],
+    )?;
+    let mut scene = PlanBuilder::new(format!("{}-behavior", pr.slug), reading.duration());
+    let [spoken_before, spoken_after] = reading.place(&mut scene);
     let switch = spoken_before.end() + seconds(0.4);
     let time = |at: At| -> u64 {
         let base = match at.0 {
@@ -191,11 +192,10 @@ pub fn code(
     (diff, steps, note): (Diff, Vec<&'static str>, &'static str),
     entrance: bool,
 ) -> Result<ScenePlan> {
-    let clip = narration.clip(&format!("{}-code", pr.slug))?;
-    let lead = seconds(0.9);
-    let duration = lead + clip.duration() + seconds(1.6);
-    let mut scene = PlanBuilder::new(format!("{}-code", pr.slug), duration);
-    let spoken = clip.place(&mut scene, lead);
+    let reading =
+        narration.reading(seconds(0.9), [(&format!("{}-code", pr.slug), seconds(1.6))])?;
+    let mut scene = PlanBuilder::new(format!("{}-code", pr.slug), reading.duration());
+    let [spoken] = reading.place(&mut scene);
     header(&mut scene, pr, None)?;
     let mut change = chip(&mut scene, "chip-change", Tone::Accent, "the change")?;
     change.show(&mut scene, seconds(0.2));

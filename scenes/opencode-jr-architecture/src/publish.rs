@@ -3,7 +3,9 @@
 //! indicator, and a write-ahead intent plus Slack metadata keep a crash from
 //! posting twice.
 use anyhow::{Context, Result};
-use psychopomp::{caption::CaptionAlign, plan::ScenePlan, stage::StagePlan, tone::Tone};
+use psychopomp::{
+    author::PlanTime, caption::CaptionAlign, plan::ScenePlan, stage::StagePlan, tone::Tone,
+};
 
 use crate::{
     Film, GLITCH, IMPACT, MARK, Narration, SUCCESS, arrive, beam, begin, card, chip, footer,
@@ -163,7 +165,7 @@ pub fn film(narration: &Narration) -> Result<ScenePlan> {
     s.land(sc, "follower", read);
     let fold = v.at("folds it into");
     status(s, sc, "follower", fold, 1);
-    let folded = send(s, sc, "turn", fold.max(read + seconds(0.4)), 0.7);
+    let folded = send(s, sc, "turn", fold.not_before(read + seconds(0.4)), 0.7);
     s.land(sc, "publication", folded);
     // The working indicator goes up first and stays above the answers.
     arrive(s, sc, "indicator", "pi", folded);
@@ -182,7 +184,7 @@ pub fn film(narration: &Narration) -> Result<ScenePlan> {
     }
     s.land(sc, "answer", at);
     status(s, sc, "answer", at, 3);
-    let edited = v.at("edited in").max(at + seconds(0.3));
+    let edited = v.at("edited in").not_before(at + seconds(0.3));
     status(s, sc, "answer", edited, 4);
     s.hit(sc, "indicator.flash", v.at("working indicator"), 0.5, 0.0);
     let footer_at = v.at("footer only");
@@ -198,7 +200,7 @@ pub fn film(narration: &Narration) -> Result<ScenePlan> {
         s,
         sc,
         "intent",
-        (posting + seconds(0.2)).max(contact + seconds(0.2)),
+        (posting + seconds(0.2)).not_before(contact + seconds(0.2)),
         0.6,
     );
     s.land(sc, "sqlite", flushed);
@@ -209,7 +211,12 @@ pub fn film(narration: &Narration) -> Result<ScenePlan> {
     let posted = send(s, sc, "post-footer", flushed + seconds(0.75), 0.6);
     s.land(sc, "footer", posted);
     s.to(sc, "footer.dim", posted, 0.0, 0.4);
-    s.type_in(sc, "metadata", v.at("slack metadata").max(posted), 40.0);
+    s.type_in(
+        sc,
+        "metadata",
+        v.at("slack metadata").not_before(posted),
+        40.0,
+    );
 
     // A crash rolls the handle back; the post is found by its metadata.
     let crash = v.at("after a crash");
@@ -230,10 +237,10 @@ pub fn film(narration: &Narration) -> Result<ScenePlan> {
     let found = send(s, sc, "probe", crash + seconds(0.6), 0.8);
     s.hit(sc, "footer.flash", found, 0.6, 0.0);
     status(s, sc, "footer", found, 1);
-    status(s, sc, "publication", adopt.max(found), 3);
-    s.clock(sc, "indicator.mark", adopt.max(found));
-    status(s, sc, "indicator", adopt.max(found), 1);
-    sc.media(sound("adopted", SUCCESS, adopt.max(found), -13.0));
+    status(s, sc, "publication", adopt.not_before(found), 3);
+    s.clock(sc, "indicator.mark", adopt.not_before(found));
+    status(s, sc, "indicator", adopt.not_before(found), 1);
+    sc.media(sound("adopted", SUCCESS, adopt.not_before(found), -13.0));
     footer(
         sc,
         "footer-adopt",
@@ -242,7 +249,7 @@ pub fn film(narration: &Narration) -> Result<ScenePlan> {
             ("adopt", Tone::Accent),
             (" the post instead of reposting", Tone::Plain),
         ],
-        adopt.max(found),
+        adopt.not_before(found),
     )?;
     scene.finish().context("publish")
 }

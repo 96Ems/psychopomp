@@ -69,11 +69,9 @@ pub fn build_reel(narration_dir: &Path) -> Result<ReelPlan> {
 }
 
 fn intro(narration: &Narration) -> Result<ScenePlan> {
-    let clip = narration.clip("intro")?;
-    let lead = seconds(0.8);
-    let duration = lead + clip.duration() + seconds(2.2);
-    let mut scene = PlanBuilder::new("intro", duration);
-    let spoken = clip.place(&mut scene, lead);
+    let reading = narration.reading(seconds(0.8), [("intro", seconds(2.2))])?;
+    let mut scene = PlanBuilder::new("intro", reading.duration());
+    let [spoken] = reading.place(&mut scene);
 
     let title = CaptionPlan::line(
         [LEFT, HEADER_Y],
@@ -153,11 +151,9 @@ fn intro(narration: &Narration) -> Result<ScenePlan> {
 }
 
 fn outro(narration: &Narration) -> Result<ScenePlan> {
-    let clip = narration.clip("outro")?;
-    let lead = seconds(0.7);
-    let duration = lead + clip.duration() + seconds(2.6);
-    let mut scene = PlanBuilder::new("outro", duration);
-    let spoken = clip.place(&mut scene, lead);
+    let reading = narration.reading(seconds(0.7), [("outro", seconds(2.6))])?;
+    let mut scene = PlanBuilder::new("outro", reading.duration());
+    let [spoken] = reading.place(&mut scene);
     let title = CaptionPlan::line(
         [LEFT, HEADER_Y],
         30.0,
@@ -192,7 +188,7 @@ fn outro(narration: &Narration) -> Result<ScenePlan> {
             0.4,
             0.0,
         );
-        scene.spring(&opacity, duration - seconds(1.2), 0.0, 0.6, 0.0);
+        scene.spring(&opacity, reading.duration() - seconds(1.2), 0.0, 0.6, 0.0);
     }
     let mut closing = CaptionActor::declare(
         &mut scene,
@@ -208,7 +204,7 @@ fn outro(narration: &Narration) -> Result<ScenePlan> {
         .aligned(CaptionAlign::Center),
     )?;
     closing.type_in(&mut scene, spoken.at("each one is small"), 40.0, 1.2);
-    closing.hide(&mut scene, duration - seconds(1.2));
+    closing.hide(&mut scene, reading.duration() - seconds(1.2));
     scene.finish().context("outro")
 }
 

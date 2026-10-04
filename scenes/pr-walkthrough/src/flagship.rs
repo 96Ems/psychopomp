@@ -6,7 +6,7 @@ use std::path::PathBuf;
 
 use anyhow::{Context, Result};
 use psychopomp::{
-    author::{PlanBuilder, seconds},
+    author::{PlanBuilder, millis, seconds, stagger},
     caption::{CaptionAlign, CaptionSpanPlan},
     effects::{
         combustion,
@@ -18,7 +18,7 @@ use psychopomp::{
         MediaKindPlan, MediaPlan, MediaRolePlan, ReelPlan, ReelSegmentPlan, ReelTransitionStyle,
         ScenePlan,
     },
-    stage::{Camera, StageActor, StageElement, StagePlan, StagePost, StatusText},
+    stage::{Camera, StageActor, StageElement, StagePlan, StagePost, StatusText, reply_after},
     tone::Tone,
 };
 
@@ -425,14 +425,16 @@ fn sound(id: &str, Sfx(file, length): Sfx, at: u64, gain_db: f32) -> MediaPlan {
 
 fn stage_film(narration: &Narration) -> Result<ScenePlan> {
     let pr = &PRS[1];
-    let before_clip = narration.clip("mismatch-before")?;
-    let after_clip = narration.clip("mismatch-after")?;
-    let lead = seconds(1.6);
-    let rewind = seconds(2.4);
-    let duration = lead + before_clip.duration() + rewind + after_clip.duration() + seconds(2.4);
-    let mut scene = PlanBuilder::new("mismatch-stage", duration);
-    let before = before_clip.place(&mut scene, lead);
-    let after = after_clip.place(&mut scene, before.end() + rewind);
+    // Before, a rewind, after, and a tail for the closing camera.
+    let reading = narration.reading(
+        seconds(1.6),
+        [
+            ("mismatch-before", seconds(2.4)),
+            ("mismatch-after", seconds(2.4)),
+        ],
+    )?;
+    let mut scene = PlanBuilder::new("mismatch-stage", reading.duration());
+    let [before, after] = reading.place(&mut scene);
     let b = |phrase: &str| before.at(phrase);
     let a = |phrase: &str| after.at(phrase);
     let mut stage = StageActor::declare(&mut scene, "stage", &stage_plan())?;
@@ -463,9 +465,15 @@ fn stage_film(narration: &Narration) -> Result<ScenePlan> {
         Ease::CubicOut,
     );
     s.fade_in(sc, "service", seconds(0.15), 1.0, 0.6);
-    for (index, name) in ["service-name", "service-healthy"].iter().enumerate() {
-        s.fade_in(sc, name, seconds(0.9 + index as f64 * 0.15), 1.0, 0.5);
-    }
+    stagger(
+        ["service-name", "service-healthy"],
+        seconds(0.9),
+        millis(150),
+        |name, at| {
+            s.fade_in(sc, name, at, 1.0, 0.5);
+            at
+        },
+    );
     let clients = [("client", "link")]
         .into_iter()
         .chain(OTHERS.map(|(card, link, ..)| (card, link)));
@@ -704,9 +712,7 @@ fn stage_film(narration: &Narration) -> Result<ScenePlan> {
     s.to(sc, "camera.focus", now - seconds(0.4), -60.0, 1.0);
     let probe_2 = s.send(sc, "probe-2", now - seconds(0.1), 0.75);
     sc.media(sound("probe-send-2", SAVE, now - seconds(0.1), -8.0));
-    // `send` includes pre-launch gathering: even that preparation must wait
-    // until the request has arrived (340 ms gather plus an 80 ms response beat).
-    let reply_2 = s.send(sc, "reply-2", probe_2 + seconds(0.42), 0.7);
+    let reply_2 = s.send(sc, "reply-2", reply_after(probe_2), 0.7);
     s.hit(sc, "client.flash", reply_2, 0.3, 0.0);
     s.type_in(sc, "thought-after", a("health protocols"), 44.0);
     let message = a("clear message");

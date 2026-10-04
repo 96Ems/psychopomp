@@ -3,6 +3,7 @@
 //! side effects, alarms are backstops, and storage is versioned.
 use anyhow::{Context, Result};
 use psychopomp::{
+    author::PlanTime,
     caption::CaptionAlign,
     effects::combustion,
     math::{Vec3, easing::Ease},
@@ -159,7 +160,7 @@ pub fn film(narration: &Narration) -> Result<ScenePlan> {
     s.to(sc, "out.flow", reset, 0.0, 0.2);
     s.to(sc, "out.break", reset + seconds(0.15), 1.0, 0.8);
     s.to(sc, "db.break", reset + seconds(0.2), 1.0, 0.8);
-    let roll = v.at("roll back").max(reset + seconds(0.3));
+    let roll = v.at("roll back").not_before(reset + seconds(0.3));
     hide(s, sc, "unflushed", roll);
     s.type_in(sc, "rolled-back", roll + seconds(0.15), 40.0);
     sc.media(sound("rolled-back", GLITCH, roll, -18.0));

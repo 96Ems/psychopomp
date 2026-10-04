@@ -2,7 +2,12 @@
 //! settings and connectors objects behind the web dashboard.
 use anyhow::{Context, Result};
 use psychopomp::{
-    caption::CaptionAlign, math::easing::Ease, plan::ScenePlan, stage::StagePlan, tone::Tone,
+    author::{PlanTime, millis, stagger},
+    caption::CaptionAlign,
+    math::easing::Ease,
+    plan::ScenePlan,
+    stage::StagePlan,
+    tone::Tone,
 };
 
 use crate::{
@@ -153,20 +158,17 @@ pub fn film(narration: &Narration) -> Result<ScenePlan> {
     orb_in(s, sc, "session", seconds(0.3));
     show(s, sc, "session-name", seconds(0.9));
     // The shared objects take their places, dim, until each one is named.
-    let shared = v.at("shared objects");
-    for (index, card) in [
+    let shared = [
         "approval",
         "settings",
         "dashboard",
         "connectors",
         "scheduler",
-    ]
-    .into_iter()
-    .enumerate()
-    {
+    ];
+    stagger(shared, v.at("shared objects"), millis(120), |card, at| {
         s.channel(sc, &format!("{card}.dim"), 0.6);
-        s.settle_in(sc, card, shared + seconds(index as f64 * 0.12));
-    }
+        s.settle_in(sc, card, at)
+    });
 
     // A gated tool records its call and posts a card; the turn ends.
     let approval = v.at("humans approval");
@@ -176,7 +178,7 @@ pub fn film(narration: &Narration) -> Result<ScenePlan> {
     s.to(sc, "camera.y", approval - seconds(0.4), -40.0, 1.6);
     let call = send(s, sc, "call", contact + seconds(0.3), 0.8);
     s.land(sc, "approval", call);
-    s.type_in(sc, "args", v.at("full arguments").max(call), 44.0);
+    s.type_in(sc, "args", v.at("full arguments").not_before(call), 44.0);
     s.hit(sc, "approval.flash", v.at("card is posted"), 0.5, 0.0);
     s.clock(sc, "approval.spinner", v.at("card is posted"));
     let ends = v.at("turn ends");
@@ -243,7 +245,7 @@ pub fn film(narration: &Narration) -> Result<ScenePlan> {
         s,
         sc,
         "fire",
-        (fresh - seconds(0.1)).max(contact + seconds(0.2)),
+        (fresh - seconds(0.1)).not_before(contact + seconds(0.2)),
         0.6,
     );
     orb_in(s, sc, "fresh", fired - seconds(0.1));
@@ -255,7 +257,7 @@ pub fn film(narration: &Narration) -> Result<ScenePlan> {
     s.type_in(
         sc,
         "burst",
-        v.at("never in a burst").max(once + seconds(0.3)),
+        v.at("never in a burst").not_before(once + seconds(0.3)),
         44.0,
     );
     let mut once_footer = footer(

@@ -2,17 +2,18 @@
 //! then the title card and the promise that nothing you depend on changes.
 use anyhow::{Context, Result};
 use psychopomp::{
-    author::PlanBuilder,
+    author::{PlanBuilder, seconds},
     caption::CaptionAlign,
     effects::spinner,
     math::easing::Ease,
+    narration::Narration,
     plan::ScenePlan,
     rolling::{RollingNumberActor, RollingNumberPlan},
     stage::{StageActor, StagePlan},
     tone::Tone,
 };
 
-use crate::{MARK, POST, RESOLUTION, card, label, narration::Narration, ns, sound, span, status};
+use crate::{MARK, POST, RESOLUTION, card, label, sound, span, status};
 
 const CHECKS: [&str; 8] = [
     "typecheck",
@@ -68,11 +69,9 @@ fn stage_plan() -> StagePlan {
 }
 
 pub fn build(narration: &Narration) -> Result<ScenePlan> {
-    let clip = narration.clip("outro")?;
-    let lead = ns(0.5);
-    let duration = lead + clip.duration() + ns(1.6);
-    let mut scene = PlanBuilder::new("outro", duration);
-    let spoken = clip.place(&mut scene, lead);
+    let reading = narration.reading(seconds(0.5), [("outro", seconds(1.6))])?;
+    let mut scene = PlanBuilder::new("outro", reading.duration());
+    let [spoken] = reading.place(&mut scene);
     let w = |phrase: &str| spoken.at(phrase);
     let mut stage = StageActor::declare(&mut scene, "stage", &stage_plan())?;
     let s = &mut stage;
@@ -89,23 +88,23 @@ pub fn build(narration: &Narration) -> Result<ScenePlan> {
             .tone(Tone::Success)
             .suffix(vec![span(" checks pass", Tone::Plain)]),
     )?;
-    count.show(sc, ns(0.2));
+    count.show(sc, seconds(0.2));
 
     // Every check starts spinning, then resolves into its mark in turn.
-    let start = lead;
+    let start = spoken.start();
     let pass = w("pass");
     let mut drawn_at = Vec::new();
     for index in 0..CHECKS.len() {
         let card = format!("check-{index}");
-        let settle = start + ns(0.07 * index as f64);
+        let settle = start + seconds(0.07 * index as f64);
         s.settle_in(sc, &card, settle);
-        let spin = settle + ns(0.2);
+        let spin = settle + seconds(0.2);
         s.clock(sc, &format!("{card}.spinner"), spin);
-        let target = pass + ns(0.17 * index as f64);
+        let target = pass + seconds(0.17 * index as f64);
         let waited = target.saturating_sub(spin) as f32 / 1e9;
-        let mark = spin + ns(f64::from(spinner::handoff(waited)));
+        let mark = spin + seconds(f64::from(spinner::handoff(waited)));
         s.clock(sc, &format!("{card}.mark"), mark);
-        let drawn = mark + ns(f64::from(spinner::DRAW));
+        let drawn = mark + seconds(f64::from(spinner::DRAW));
         s.to(sc, &format!("{card}.status"), drawn, 1.0, 0.3);
         sc.media(sound(&format!("mark-{index}"), MARK, drawn, -25.0));
         drawn_at.push(drawn);
@@ -121,19 +120,19 @@ pub fn build(narration: &Narration) -> Result<ScenePlan> {
         s.to(
             sc,
             &format!("check-{index}.dim"),
-            title + ns(0.03 * index as f64),
+            title + seconds(0.03 * index as f64),
             0.45,
             0.8,
         );
     }
     s.to(sc, "camera.y", title, 40.0, 1.6);
-    s.type_in(sc, "title", title + ns(0.2), 60.0);
+    s.type_in(sc, "title", title + seconds(0.2), 60.0);
     let nothing = w("nothing you depend");
     let done = s.type_in(sc, "tagline", nothing, 40.0);
     sc.media(sound("resolve", RESOLUTION, done, -20.0));
 
     // Fade out together.
-    let out = duration - ns(0.75);
+    let out = reading.duration() - seconds(0.75);
     count.hide(sc, out);
     let names = ["title", "tagline"]
         .into_iter()

@@ -3,14 +3,12 @@
 //! place and later shrinks. Every change is one `roll` call at a time.
 use anyhow::Result;
 use psychopomp::{
-    author::{PlanBuilder, SECOND},
+    author::{PlanBuilder, SECOND, millis},
     caption::{CaptionAlign, CaptionSpanPlan},
     plan::ScenePlan,
     rolling::{RollingNumberActor, RollingNumberPlan},
     tone::Tone,
 };
-
-const MS: u64 = 1_000_000;
 
 pub fn build_plan() -> Result<ScenePlan> {
     let mut scene = PlanBuilder::new("rolling-number", 8 * SECOND);
@@ -25,9 +23,9 @@ pub fn build_plan() -> Result<ScenePlan> {
             .prefix(vec![muted("opencode ")])
             .chip(),
     )?;
-    version.show(&mut scene, 200 * MS);
-    version.roll(&mut scene, 1000 * MS, "rc.117")?;
-    version.roll(&mut scene, 4500 * MS, "rc.113")?;
+    version.show(&mut scene, millis(200));
+    version.roll(&mut scene, millis(1000), "rc.117")?;
+    version.roll(&mut scene, millis(4500), "rc.113")?;
 
     let mut checks = RollingNumberActor::declare(
         &mut scene,
@@ -38,11 +36,11 @@ pub fn build_plan() -> Result<ScenePlan> {
             .prefix(vec![muted("CI ")])
             .suffix(vec![muted(" checks")]),
     )?;
-    checks.show(&mut scene, 350 * MS);
-    checks.roll(&mut scene, 1800 * MS, "3/8")?;
+    checks.show(&mut scene, millis(350));
+    checks.roll(&mut scene, millis(1800), "3/8")?;
     // Redirected while the first roll is still fast.
-    checks.roll(&mut scene, 1950 * MS, "8/8")?;
-    checks.roll(&mut scene, 5200 * MS, "7/8")?;
+    checks.roll(&mut scene, millis(1950), "8/8")?;
+    checks.roll(&mut scene, millis(5200), "7/8")?;
 
     let mut tests = RollingNumberActor::declare(
         &mut scene,
@@ -51,10 +49,10 @@ pub fn build_plan() -> Result<ScenePlan> {
             .aligned(CaptionAlign::Center)
             .suffix(vec![muted(" tests")]),
     )?;
-    tests.show(&mut scene, 500 * MS);
-    tests.roll(&mut scene, 2800 * MS, "1,000")?;
-    tests.roll(&mut scene, 3800 * MS, "1,383")?;
-    tests.roll(&mut scene, 6000 * MS, "998")?;
+    tests.show(&mut scene, millis(500));
+    tests.roll(&mut scene, millis(2800), "1,000")?;
+    tests.roll(&mut scene, millis(3800), "1,383")?;
+    tests.roll(&mut scene, millis(6000), "998")?;
 
     scene.cue("rolls", 0, 8 * SECOND);
     Ok(scene.finish()?)

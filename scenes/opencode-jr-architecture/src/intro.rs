@@ -1,7 +1,11 @@
 //! Slack, three threads, and for each thread its own agent and sandbox.
 use anyhow::{Context, Result};
 use psychopomp::{
-    author::PlanBuilder, caption::CaptionAlign, plan::ScenePlan, stage::StagePlan, tone::Tone,
+    author::{PlanBuilder, millis, stagger},
+    caption::CaptionAlign,
+    plan::ScenePlan,
+    stage::{StagePlan, reply_after},
+    tone::Tone,
 };
 
 use crate::{
@@ -100,23 +104,25 @@ pub fn film(narration: &crate::Narration) -> Result<ScenePlan> {
 
     s.settle_in(sc, "slack", seconds(0.45));
     // One thread per mention: each settles and plugs into slack.
-    let mention = v.at("mention it in");
-    for index in 0..3 {
+    stagger(0..3, v.at("mention it in"), millis(140), |index, at| {
         arrive(
             s,
             sc,
             &format!("thread-{index}"),
             &format!("in-{index}"),
-            mention + seconds(index as f64 * 0.14),
-        );
-    }
+            at,
+        )
+    });
     // Each thread gathers its own agent out of a blur.
-    let agent = v.at("its own coding agent");
-    for index in 0..3 {
-        let at = agent + seconds(index as f64 * 0.14);
-        orb_in(s, sc, &format!("agent-{index}"), at);
-        plug(s, sc, &format!("own-{index}"), at + seconds(0.35));
-    }
+    stagger(
+        0..3,
+        v.at("its own coding agent"),
+        millis(140),
+        |index, at| {
+            orb_in(s, sc, &format!("agent-{index}"), at);
+            plug(s, sc, &format!("own-{index}"), at + seconds(0.35))
+        },
+    );
     let durable = v.at("durable state");
     s.type_in(sc, "agents-name", durable, 40.0);
     let sandbox = v.at("sandboxed computer");
@@ -139,7 +145,7 @@ pub fn film(narration: &crate::Narration) -> Result<ScenePlan> {
     hide_others(s, sc, follow);
     let landed = send(s, sc, "mention", follow + seconds(0.3), 0.8);
     s.land(sc, "thread-1", landed);
-    let woke = send(s, sc, "wake", landed + seconds(0.42), 0.7);
+    let woke = send(s, sc, "wake", reply_after(landed), 0.7);
     s.hit(sc, "agent-1.pulse", woke, 0.75, 0.0);
     sc.media(sound("wake", BLOOM, woke, -14.0));
     footer(

@@ -3,8 +3,8 @@ use serde::Serialize;
 use crate::math::easing::Ease;
 use crate::plan::{
     ActorPlan, ContinuousChannelPlan, CuePlan, MediaPlan, PresentationStepPlan, ScalarPlan,
-    ScenePlan, SemanticTargetPlan, StateChannelPlan, StateEventPlan, TargetComponentPlan,
-    TargetScalarPlan, TrackEventPlan,
+    ScenePlan, SemanticTargetPlan, SpringPlan, StateChannelPlan, StateEventPlan,
+    TargetComponentPlan, TargetScalarPlan, TrackEventPlan,
 };
 
 pub struct PlanBuilder {
@@ -14,9 +14,83 @@ pub struct PlanBuilder {
 /// One second on the plan clock, in nanoseconds.
 pub const SECOND: u64 = 1_000_000_000;
 
+/// One millisecond on the plan clock, in nanoseconds.
+pub const MILLISECOND: u64 = 1_000_000;
+
 /// `seconds` on the plan clock, rounded to the nearest nanosecond.
 pub fn seconds(seconds: f64) -> u64 {
     (seconds * 1e9).round() as u64
+}
+
+/// `millis` whole milliseconds on the plan clock.
+pub const fn millis(millis: u64) -> u64 {
+    millis * MILLISECOND
+}
+
+/// Readable clamps for plan times, such as a beat keyed to a phrase that must
+/// still wait for what causes it: `f("injected").not_before(contact)`.
+pub trait PlanTime {
+    /// This time, or `earliest` if that is later.
+    fn not_before(self, earliest: u64) -> u64;
+}
+
+impl PlanTime for u64 {
+    fn not_before(self, earliest: u64) -> u64 {
+        self.max(earliest)
+    }
+}
+
+/// Start one beat per item, `gap` apart from `start` (rows ripple about 120 ms
+/// apart). `beat` receives each item and its start, and returns when that
+/// beat ends; `stagger` returns the latest end, or `start` with no items.
+pub fn stagger<T>(
+    items: impl IntoIterator<Item = T>,
+    start: u64,
+    gap: u64,
+    mut beat: impl FnMut(T, u64) -> u64,
+) -> u64 {
+    items
+        .into_iter()
+        .zip(0..)
+        .map(|(item, index)| beat(item, start + gap * index))
+        .fold(start, u64::max)
+}
+
+/// `count` times spread evenly from `from` to `to`, both included (one time
+/// is `from`), in whole nanoseconds.
+pub fn spread(count: u64, from: u64, to: u64) -> impl Iterator<Item = u64> {
+    let span = u128::from(to.saturating_sub(from));
+    (0..count).map(move |index| {
+        let step = span * u128::from(index) / u128::from(count.saturating_sub(1).max(1));
+        from + step as u64
+    })
+}
+
+/// Named spring feels from the explainer-motion calibrations
+/// (`.agents/skills/explainer-motion/TECHNIQUES.md`), for
+/// [`PlanBuilder::spring_with`] and `StageActor::spring`.
+impl SpringPlan {
+    /// A rigid panel settling into place: 0.6 s, bounce 0.12.
+    pub const PANEL: Self = Self::feel(0.6, 0.12);
+    /// Ink following its panel, or a label fading: 0.36 s, no bounce.
+    pub const CONTENT: Self = Self::feel(0.36, 0.0);
+    /// A quick state change, such as a status cross-fade: 0.3 s, no bounce.
+    pub const SNAP: Self = Self::feel(0.3, 0.0);
+    /// A camera move with weight and a natural tail: 1.6 s, critically damped.
+    pub const CAMERA: Self = Self::feel(1.6, 0.0);
+    /// A hero landing with a little overshoot: 0.85 s, bounce 0.2.
+    pub const LIVELY: Self = Self::feel(0.85, 0.2);
+
+    /// [`SpringPlan::visual`] in a constant: the same arithmetic, so a named
+    /// feel and its literal duration and bounce emit identical plans.
+    const fn feel(duration: f32, bounce: f32) -> Self {
+        Self {
+            response_seconds: duration * 1.2,
+            damping_ratio: 1. - bounce,
+            position_threshold: 0.001,
+            velocity_threshold: 0.001,
+        }
+    }
 }
 
 /// Whole milliseconds in nanoseconds: an f32 duration such as 0.8 is not exact
@@ -455,5 +529,65 @@ mod tests {
         assert_eq!(plan.semantic_targets[0].id, "title-text");
         assert_eq!(plan.cues[0].id, "change");
         assert_eq!(plan.presentation_steps[0].title, "Change the title");
+    }
+}
+
+#[cfg(test)]
+mod timing_tests {
+    use super::*;
+
+    #[test]
+    fn stagger_starts_beats_a_gap_apart_and_returns_the_latest_end() {
+        let mut starts = Vec::new();
+        let end = stagger(["a", "b", "c"], SECOND, millis(120), |item, at| {
+            starts.push((item, at));
+            at + if item == "b" { 2 * SECOND } else { SECOND }
+        });
+        assert_eq!(
+            starts,
+            [
+                ("a", SECOND),
+                ("b", SECOND + millis(120)),
+                ("c", SECOND + millis(240))
+            ]
+        );
+        assert_eq!(end, 3 * SECOND + millis(120), "b ends last");
+        assert_eq!(stagger(Vec::<u8>::new(), SECOND, 1, |_, at| at), SECOND);
+    }
+
+    #[test]
+    fn spread_includes_both_ends() {
+        assert_eq!(
+            spread(3, 0, SECOND).collect::<Vec<_>>(),
+            [0, SECOND / 2, SECOND]
+        );
+        assert_eq!(spread(1, 7, 99).collect::<Vec<_>>(), [7]);
+        assert_eq!(spread(0, 7, 99).count(), 0);
+        assert_eq!(spread(4, 10, 10).collect::<Vec<_>>(), [10; 4]);
+        assert_eq!(
+            spread(3, 0, 10).last(),
+            Some(10),
+            "whole nanoseconds, exact end"
+        );
+    }
+
+    #[test]
+    fn times_read_as_clamps_and_milliseconds() {
+        assert_eq!(millis(420), seconds(0.42));
+        assert_eq!(5.not_before(9), 9);
+        assert_eq!(12.not_before(9), 12);
+    }
+
+    #[test]
+    fn named_feels_match_their_literal_springs() {
+        for (feel, duration, bounce) in [
+            (SpringPlan::PANEL, 0.6, 0.12),
+            (SpringPlan::CONTENT, 0.36, 0.0),
+            (SpringPlan::SNAP, 0.3, 0.0),
+            (SpringPlan::CAMERA, 1.6, 0.0),
+            (SpringPlan::LIVELY, 0.85, 0.2),
+        ] {
+            assert_eq!(feel, SpringPlan::visual(duration, bounce));
+        }
     }
 }

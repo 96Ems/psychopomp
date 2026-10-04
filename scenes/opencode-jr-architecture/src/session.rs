@@ -3,7 +3,12 @@
 //! keeps its state in the object's own SQLite.
 use anyhow::{Context, Result};
 use psychopomp::{
-    caption::CaptionAlign, math::easing::Ease, plan::ScenePlan, stage::StagePlan, tone::Tone,
+    author::PlanTime,
+    caption::CaptionAlign,
+    math::easing::Ease,
+    plan::ScenePlan,
+    stage::{StagePlan, reply_after},
+    tone::Tone,
 };
 
 use crate::{
@@ -231,7 +236,7 @@ pub fn film(narration: &Narration) -> Result<ScenePlan> {
         status(s, sc, "admission", arrived, verdict);
         s.type_in(sc, row, arrived, 45.0);
         if decision != "p-context" {
-            let landed = send(s, sc, decision, arrived + seconds(0.42), 0.75);
+            let landed = send(s, sc, decision, reply_after(arrived), 0.75);
             s.hit(sc, "runtime.pulse", landed, 0.6, 0.0);
         }
     }
@@ -267,7 +272,13 @@ pub fn film(narration: &Narration) -> Result<ScenePlan> {
     let prompted = send(s, sc, "prompt", upfront + seconds(0.5), 0.8);
     s.hit(sc, "runtime.pulse", prompted, 0.6, 0.0);
     let twice = v.at("never submits twice");
-    let retried = send(s, sc, "retry", twice.max(prompted + seconds(0.4)), 0.8);
+    let retried = send(
+        s,
+        sc,
+        "retry",
+        twice.not_before(prompted + seconds(0.4)),
+        0.8,
+    );
     s.hit(sc, "runtime.pulse", retried, 0.2, 0.0);
     s.type_in(sc, "once", retried, 40.0);
     sc.media(sound("once", BLOOM, retried, -15.0));

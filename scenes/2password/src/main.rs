@@ -8,7 +8,7 @@ use std::{fs, path::PathBuf};
 
 use anyhow::{Context, Result};
 use psychopomp::{
-    author::{PlanBuilder, seconds},
+    author::{PlanBuilder, PlanTime, millis, seconds, stagger},
     caption::{CaptionAlign, CaptionSpanPlan},
     effects::spinner::Mark,
     math::easing::Ease,
@@ -17,7 +17,7 @@ use psychopomp::{
         MediaKindPlan, MediaPlan, MediaRolePlan, ReelPlan, ReelSegmentPlan, ReelTransitionStyle,
         ScenePlan,
     },
-    stage::{DRAW_CURVE, StageActor, StageElement, StagePlan, StagePost, StatusText},
+    stage::{DRAW_CURVE, StageActor, StageElement, StagePlan, StagePost, StatusText, reply_after},
     tone::Tone,
 };
 use psychopomp_pr_walkthrough::film::{Pr, chip, footer, header, span};
@@ -444,22 +444,17 @@ fn sound(sc: &mut PlanBuilder, id: &str, Sfx(file, length): Sfx, at: u64, gain_d
 }
 
 fn film(narration: &Narration) -> Result<ScenePlan> {
-    let problem_clip = narration.clip("problem")?;
-    let layer_clip = narration.clip("layer")?;
-    let features_clip = narration.clip("features")?;
-    let lead = seconds(2.0);
-    let rewind = seconds(1.6);
-    let duration = lead
-        + problem_clip.duration()
-        + rewind
-        + layer_clip.duration()
-        + seconds(0.5)
-        + features_clip.duration()
-        + seconds(3.2);
-    let mut scene = PlanBuilder::new("2password-stage", duration);
-    let problem = problem_clip.place(&mut scene, lead);
-    let layer = layer_clip.place(&mut scene, problem.end() + rewind);
-    let features = features_clip.place(&mut scene, layer.end() + seconds(0.5));
+    // The problem, a rewind, the layer, a breath, the features, and a tail.
+    let reading = narration.reading(
+        seconds(2.0),
+        [
+            ("problem", seconds(1.6)),
+            ("layer", seconds(0.5)),
+            ("features", seconds(3.2)),
+        ],
+    )?;
+    let mut scene = PlanBuilder::new("2password-stage", reading.duration());
+    let [problem, layer, features] = reading.place(&mut scene);
     let p = |phrase: &str| problem.at(phrase);
     let l = |phrase: &str| layer.at(phrase);
     let f = |phrase: &str| features.at(phrase);
@@ -559,17 +554,15 @@ fn film(narration: &Narration) -> Result<ScenePlan> {
     // STUCK: everything glitches at once and the frame takes the blow.
     let stuck = p("stuck");
     s.to(sc, "agent.status", stuck, 2.0, 0.2);
-    for (index, card) in [
+    let cards = [
         "op", "agent", "prompt-1", "prompt-2", "prompt-3", "prompt-4",
-    ]
-    .iter()
-    .enumerate()
-    {
-        let at = stuck + seconds(index as f64 * 0.035);
+    ];
+    stagger(cards, stuck, millis(35), |card, at| {
         glitch(s, sc, card, at, [7.0, 9.0, 8.0]);
         glitch(s, sc, card, at + seconds(0.32), [9.0, 6.0, 7.0]);
         s.set(sc, &format!("{card}.damage"), at, 1.0);
-    }
+        at
+    });
     s.jolt(sc, stuck, [-0.4, 1.0], 1.0);
     s.hit(sc, "post.chroma", stuck, 0.2, 0.0);
     s.hit(sc, "post.bloom", stuck, 0.35, 0.18);
@@ -578,11 +571,11 @@ fn film(narration: &Narration) -> Result<ScenePlan> {
 
     // "When it finally works": the dialogs give way, one by one, into silence.
     let finally = p("finally");
-    for (index, (id, ..)) in PROMPTS.iter().enumerate() {
-        let at = finally + seconds(index as f64 * 0.09);
-        s.to(sc, &format!("{id}.opacity"), at, 0.0, 0.35);
+    stagger(PROMPTS, finally, millis(90), |(id, ..), at| {
+        s.fade_out(sc, id, at, 0.35);
         s.set(sc, &format!("{id}.damage"), at, 0.0);
-    }
+        at
+    });
     for card in ["op", "agent"] {
         s.set(sc, &format!("{card}.damage"), finally, 0.0);
     }
@@ -680,12 +673,12 @@ fn film(narration: &Narration) -> Result<ScenePlan> {
         "lookup",
         l("just once")
             .saturating_sub(seconds(0.35))
-            .max(find + seconds(0.42)),
+            .not_before(reply_after(find)),
         0.55,
     );
     sound(sc, "lookup", SEND, lookup - seconds(0.55), -11.0);
     s.land(sc, "op", lookup);
-    let fetch = s.send(sc, "fetch", lookup + seconds(0.42), 0.45);
+    let fetch = s.send(sc, "fetch", reply_after(lookup), 0.45);
     s.land(sc, "vault", fetch);
 
     // ONE approval.
@@ -702,12 +695,12 @@ fn film(narration: &Narration) -> Result<ScenePlan> {
         "refs-in",
         l("references")
             .saturating_sub(seconds(0.9))
-            .max(fetch + seconds(0.42)),
+            .not_before(reply_after(fetch)),
         0.5,
     );
     s.land(sc, "layer", refs_in);
     s.to(sc, "prompt-ok.opacity", refs_in, 0.0, 0.4);
-    let refs = s.send(sc, "refs", refs_in + seconds(0.42), 0.55);
+    let refs = s.send(sc, "refs", reply_after(refs_in), 0.55);
     s.land(sc, "agent", refs);
     s.to(sc, "agent.status", refs, 5.0, 0.3);
     s.to(sc, "layer.status", refs, 2.0, 0.3);
@@ -735,7 +728,7 @@ fn film(narration: &Narration) -> Result<ScenePlan> {
     let secrets = s.send(
         sc,
         "secrets",
-        f("injected").max(inject_contact + seconds(0.34)),
+        f("injected").not_before(inject_contact + seconds(0.34)),
         0.5,
     );
     s.land(sc, "process", secrets);
@@ -749,13 +742,23 @@ fn film(narration: &Narration) -> Result<ScenePlan> {
     let new_key = s.send(
         sc,
         "new-key",
-        f("clipboard").max(paste_contact + seconds(0.34)),
+        f("clipboard").not_before(paste_contact + seconds(0.34)),
         0.5,
     );
     s.land(sc, "layer", new_key);
-    let store = s.send(sc, "store", f("checks").max(new_key + seconds(0.42)), 0.5);
+    let store = s.send(
+        sc,
+        "store",
+        f("checks").not_before(reply_after(new_key)),
+        0.5,
+    );
     s.land(sc, "op", store);
-    let verified = s.send(sc, "verified", f("landed").max(store + seconds(0.42)), 0.5);
+    let verified = s.send(
+        sc,
+        "verified",
+        f("landed").not_before(reply_after(store)),
+        0.5,
+    );
     s.land(sc, "layer", verified);
     s.to(sc, "layer.status", verified, 4.0, 0.3);
     sound(sc, "verified", SUCCESS, verified, -11.0);

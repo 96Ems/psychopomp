@@ -3,7 +3,12 @@
 //! snapshotted, shut down, and restored on demand.
 use anyhow::{Context, Result};
 use psychopomp::{
-    caption::CaptionAlign, math::easing::Ease, plan::ScenePlan, stage::StagePlan, tone::Tone,
+    author::PlanTime,
+    caption::CaptionAlign,
+    math::easing::Ease,
+    plan::ScenePlan,
+    stage::{StagePlan, reply_after},
+    tone::Tone,
 };
 
 use crate::{
@@ -150,14 +155,14 @@ pub fn film(narration: &Narration) -> Result<ScenePlan> {
     s.to(sc, "camera.x", shell, 40.0, 1.6);
     let at_workspace = send(s, sc, "cmd", shell, 0.75);
     s.land(sc, "workspace", at_workspace);
-    let at_sandbox = send(s, sc, "cmd-2", at_workspace + seconds(0.42), 0.7);
+    let at_sandbox = send(s, sc, "cmd-2", reply_after(at_workspace), 0.7);
     s.land(sc, "sandbox", at_sandbox);
     status(s, sc, "sandbox", at_sandbox, 1);
     s.clock(sc, "sandbox.spinner", at_sandbox);
     let back = send(s, sc, "out-2", at_sandbox + seconds(0.9), 0.7);
     s.set(sc, "sandbox.spinner", back, -1.0);
     status(s, sc, "sandbox", back, 0);
-    let returned = send(s, sc, "out", back + seconds(0.42), 0.75);
+    let returned = send(s, sc, "out", reply_after(back), 0.75);
     s.hit(sc, "session.pulse", returned, 0.6, 0.0);
     s.type_in(sc, "no-wait", v.at("dont wait"), 40.0);
 
@@ -182,7 +187,7 @@ pub fn film(narration: &Narration) -> Result<ScenePlan> {
         s,
         sc,
         "mount",
-        (mount - seconds(0.2)).max(contact + seconds(0.3)),
+        (mount - seconds(0.2)).not_before(contact + seconds(0.3)),
         0.7,
     );
     s.land(sc, "sandbox", mounted);
@@ -216,7 +221,7 @@ pub fn film(narration: &Narration) -> Result<ScenePlan> {
         Ease::Smootherstep,
     );
     s.type_in(sc, "idle-name", idle - seconds(0.3), 40.0);
-    let snapshotted = v.at("snapshotted").max(idle + seconds(1.0));
+    let snapshotted = v.at("snapshotted").not_before(idle + seconds(1.0));
     hide(s, sc, "idle", snapshotted);
     hide(s, sc, "idle-name", snapshotted + seconds(0.2));
     status(s, sc, "sandbox", snapshotted, 3);
@@ -232,7 +237,7 @@ pub fn film(narration: &Narration) -> Result<ScenePlan> {
     sc.media(sound("down", RESET, down, -16.0));
 
     // Restored from that snapshot when it is needed again.
-    let restored = v.at("restored").max(down + seconds(0.8));
+    let restored = v.at("restored").not_before(down + seconds(0.8));
     status(s, sc, "workspace", restored - seconds(0.4), 3);
     let reached = send(s, sc, "restore", restored - seconds(0.2), 0.7);
     s.to(sc, "sb.opacity", restored - seconds(0.4), 1.0, 0.4);
