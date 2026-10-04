@@ -26,9 +26,12 @@ machinery:
 | A version or count changing | `scenes/rolling-number` | `rolling::RollingNumberActor::roll` |
 | A single titled idea | `scenes/agent-demo` | `PlanBuilder` channels and cues |
 
-1. Write the narration script and voice it with `bun scripts/narrate.ts` (`--draft`
-   for a local voice). Place clips with `Narration::load(dir)?.clip(id)?.place(..)`
-   and time everything from `spoken.at("phrase")`, so re-voicing re-times the film.
+1. Declare the narration in the Scene Program with `psychopomp-media`
+   ([Declare Narration And Sound](#declare-narration-and-sound)): `media.say(..)`
+   generates each line once and records it in `media.lock.json`. Place lines with
+   `audio.place(..)` and time everything from `spoken.at("phrase")`, so re-voicing
+   re-times the film. (`bun scripts/narrate.ts` and `Narration::load` still work
+   for scenes not yet moved.)
 2. Declare actors with `PlanBuilder`; write motion through typed handles. Time
    literals use `author::SECOND` and `author::seconds(f64)`.
 3. Emit with `ScenePlan::write_or_print`, `DeckPlan::write_with_slides`, or
@@ -394,6 +397,78 @@ Old JSON plans need no new fields. Rust recipe literals use `snapshots: Vec::new
 to retain the old behavior. Do not author in the generated `line.<id>.y`,
 `line.<id>.opacity`, or `__attachment-*` namespaces.
 
+## Declare Narration And Sound
+
+`psychopomp-media` makes generated audio part of the Scene Program. Declare
+what you want; the first run generates it, every run times the choreography to
+the real words, and later runs call nothing until a declaration changes:
+
+```rust
+use psychopomp_media::{Effect, FISH_KIT, Line, Media, Sound, Voice};
+
+let media = Media::open(env!("CARGO_MANIFEST_DIR"))?; // media.lock.json + media/
+let kit = Voice::eleven(KIT).v4().stability(0.2).similarity(0.65);
+let guest = Voice::eleven(GUEST).v4().stability(0.2).similarity(0.65);
+let intro = media.say("intro", &kit, "[warm, conversational] When a client reconnects...")?;
+let fix = media.say("fix", &kit, Line::new("[relieved] Nothing gets killed.").after(&intro))?;
+let chant = media.say("chant", &Voice::fish(FISH_KIT), "Balls! Balls! BALLS!")?;
+let duet = media.dialogue("duet", [(&kit, "You first."), (&guest, "No, you.")])?;
+let pop = media.sfx("pop", "a single soft glassy pop, tiny and dry", seconds(0.5))?;
+let bed = media.sfx("bed", Sound::new("light rain on a tin roof").looping(), seconds(8.0))?;
+let demon = intro.derive(Effect::pitch(-6.0))?; // id "intro.pitch(-6)"
+media.finish()?; // reports orphans; fails an offline plan that found missing audio
+
+let said = intro.place(&mut scene, SECOND); // Script Clip "narration-intro"
+for at in said.words("balls") { pop.play(&mut scene, at, -18.0); } // Layer Clips
+scene.cue("intro-end", said.end(), said.end());
+```
+
+- **Voices.** `Voice::eleven(id)` uses `eleven_v4`; `.stability`, `.similarity`,
+  `.seed`, `.language`, `.ivc()` (`use_pvc_as_ivc`), and `.whisper()` (time with
+  Whisper instead of ElevenLabs' character alignment). v4 has no speed or style:
+  direct performance with bracketed tags in the text, and `/IPA/` for
+  pronunciation. `Voice::fish(id)` uses `s2.1-pro-free` with `.speed`;
+  `Voice::say(name)` is a free macOS voice.
+- **Lines.** `media.say` is one Text to Speech request; `Line::new(text).after(&previous)`
+  stitches it to an earlier ElevenLabs line with `previous_request_ids` (the
+  predecessor's key joins this line's, so re-voicing it re-voices this one).
+  `media.dialogue` is one Text to Dialogue performance of several voices that
+  share one model, settings, and alignment (2,000 characters at most).
+- **Sound effects.** `media.sfx(id, prompt, duration)` uses
+  `eleven_text_to_sound_v2` (0.5 to 30 s; `Sound::new(..).influence(x).looping()`);
+  the result is trimmed to its onset, peak-matched to -6 dBFS, and faded, so
+  `play` at the moment of contact.
+- **Derived audio.** `audio.derive(Effect::pitch | tempo | reverse | trim | gain)`
+  runs ffmpeg and moves the words with the audio. Pitch shifts formants too.
+- **Placement.** `audio.place(scene, at)` returns `Spoken` (`at`, `at_after`,
+  `at_any`, `words`, `end`); `audio.play(scene, at, gain_db)` adds a Layer Clip
+  `<id>@<time>`. `duration()` is exact, so a reel's length is known before the
+  scene exists.
+
+`PSYCHOPOMP_MEDIA` selects the mode:
+
+```sh
+PSYCHOPOMP_MEDIA=plan cargo run -p <scene>   # print the delta (+ ~ = -) and cost; zero API calls
+cargo run -p <scene>                         # generate what is missing or changed
+PSYCHOPOMP_MEDIA=draft cargo run -p <scene>  # time it with macOS say and silent sfx first
+PSYCHOPOMP_MEDIA=prune cargo run -p <scene>  # zero calls; delete orphans and superseded files
+cargo run -p psychopomp-media -- show scenes/<scene>
+```
+
+Credentials come from `ELEVENLABS_API_KEY` and `FISH_AUDIO_API_KEY`, or the
+nearest `.env` above the scene; only a run that generates needs them. Commit
+`media.lock.json` and `media/` with the scene. Media paths are relative to the
+scene directory, so write the plan there. Each id names one role: give a new
+line a new id, keep the id when rewording a line, and prune orphans when done.
+
+To move a scene from `scripts/narrate.ts`, run
+`cargo run -p psychopomp-media -- adopt scenes/<scene>/narration`, then declare
+each clip as narrate.ts made it, one-voice dialogue timed by Whisper, with the
+same text: `media.dialogue(id, [(&Voice::eleven(V).stability(s).similarity(m).whisper(), TEXT)])`
+(Fish clips: `media.say(id, &Voice::fish(V), TEXT)`). Adopted lines report `=`
+and keep their files; `scenes/psychopomp-intro` is the worked example, and its
+reel stayed byte-identical.
+
 ## Make A Narrated Explainer Reel
 
 `scenes/pr-walkthrough` walks through five pull requests: for each, a Sequence
@@ -401,9 +476,11 @@ Diagram plays the broken behavior and replays the fix in the same slots, then an
 editor animates the actual change as a diff with Line Marks. The workflow is
 reusable for any code explainer:
 
-- `psychopomp::narration::Narration::load(dir)` reads `narration.json`;
-  `clip(id)?.place(&mut scene, start)` adds the Script Clip and returns a
-  `Spoken` whose `at(phrase)`, `at_any`, and `at_after` give plan-clock times.
+- `psychopomp_media::Media` declares narration ([above](#declare-narration-and-sound));
+  for scenes still voiced by `scripts/narrate.ts`,
+  `psychopomp::narration::Narration::load(dir)` reads `narration.json`. Either way
+  `place(&mut scene, start)` adds the Script Clip and returns a `Spoken` whose
+  `at(phrase)`, `at_any`, `at_after`, and `words` give plan-clock times.
 - `psychopomp::editor::diff::Diff` of `keep`/`add(step, ..)`/`remove(step, ..)`
   lines declares the stepped editor; `declare(scene, step_times, warning, entrance)`.
   A hand-built editor recipe (one with semantic ranges to pin a callout, say)

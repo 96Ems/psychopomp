@@ -65,6 +65,18 @@ authoring. Engineering rules are in `AGENTS.md`.
    and writes `<id>.mp3`, `<id>.words.json`, and `narration.json`. When switching
    voices or engines, rebuild the Scene Plan against the new word timings.
 
+   **Or declare the narration in the Scene Program** with `psychopomp-media`
+   (SCENE_PLANS.md, "Declare Narration And Sound"): `media.say(id, &voice, text)`,
+   `media.dialogue`, `media.sfx`, and `audio.derive(Effect::pitch(..))`, then
+   `media.finish()?`. Each line is generated once and recorded in
+   `media.lock.json`; later runs call nothing unless a declaration changed, and
+   ElevenLabs words come from its character alignment with the script's spelling.
+   Check the cost first with `PSYCHOPOMP_MEDIA=plan cargo run -p <crate>` (zero
+   API calls), time with `PSYCHOPOMP_MEDIA=draft`, and clean up with
+   `PSYCHOPOMP_MEDIA=prune`. Move a narrate.ts scene with
+   `cargo run -p psychopomp-media -- adopt scenes/<name>/narration` (no
+   regeneration). Done when a plain run reports every resource `=`.
+
 4. **Author the Scene Program** in `scenes/<name>` (add it to the workspace). Behavior
    stories are Stage films built with `StageActor` (see `flagship.rs` and
    `stop_stage.rs`). Load the `explainer-motion` skill and apply it to every beat:

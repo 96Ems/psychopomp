@@ -12,6 +12,11 @@
 //   "clips": [{ "id": string, "text": string }] }
 // Writes next to the script: <id>.mp3, <id>.words.json ({ wordTimings: [...] }), narration.json.
 // Bracketed delivery cues such as "[confident]" are spoken as direction, not words.
+//
+// Scene Programs can instead declare narration with the psychopomp-media crate
+// (SCENE_PLANS.md, "Declare Narration And Sound"), which keeps state in
+// media.lock.json; `cargo run -p psychopomp-media -- adopt <narration-dir>`
+// moves a scene voiced by this script into that lock without regenerating it.
 import { createHash } from "node:crypto"
 import { mkdtemp, rm } from "node:fs/promises"
 import { tmpdir } from "node:os"

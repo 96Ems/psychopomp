@@ -17,8 +17,9 @@ vibe-coded prototype, tested on macOS (Metal).
 - **Code**: an editor that animates diffs while every line keeps its identity.
 - **Overlays**: callouts pinned to anything, rolling numbers, captions, sequence
   diagrams, charts, trees, and video cards.
-- **Narration**: optional ElevenLabs or Fish Audio voice-over. Each beat waits
-  for the word that triggers it, so re-voicing re-times the film.
+- **Narration and sound**: optional ElevenLabs or Fish Audio voice-over and
+  generated sound effects, declared in the Scene Program and generated once.
+  Each beat waits for the word that triggers it, so re-voicing re-times the film.
 
 ## Example
 
@@ -64,6 +65,7 @@ bun scripts/sheet.ts target/hello.json 0.5,1.5,2.7 --theme neutral --shutter
 | [`2password`](scenes/2password) | A narrated product explainer on the Stage |
 | [`pr-walkthrough`](scenes/pr-walkthrough) | Pull requests as Stage films that zoom into their diffs |
 | [`camera`](scenes/camera) | A Stage diagram shot like a film: every camera move |
+| [`generated-media`](scenes/generated-media) | Speech, a chant, sound effects, and a derived voice, generated once and timed to their words |
 | [`callouts`](scenes/callouts), [`rolling-number`](scenes/rolling-number), [`charts`](scenes/charts), [`tree`](scenes/tree) | Component showrooms |
 | [`interactive-showcase`](scenes/interactive-showcase) | A native, steppable presentation (`plan present`) |
 
@@ -82,6 +84,8 @@ npx skills add kitlangton/psychopomp
 ## How it fits together
 
 ```text
+crates/psychopomp-media   declared speech and sound, reconciled against media.lock.json
+   ↓ exact durations and words
 scenes/*              Rust Scene Programs: meaning, timing, choreography
    ↓ Scene Plan (JSON)
 crates/psychopomp     plans, validation, timelines, springs; no GPU
