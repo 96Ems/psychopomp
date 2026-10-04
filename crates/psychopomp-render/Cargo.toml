@@ -16,6 +16,8 @@ pollster = "0.4"
 pulldown-cmark = { version = "0.13", default-features = false }
 png = "0.18"
 resvg = "0.47"
+image-webp = "0.2"
+zune-jpeg = "0.5"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 wgpu = "30.0"

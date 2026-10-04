@@ -10,6 +10,7 @@ pub mod editor;
 pub mod effects;
 pub mod grid;
 pub mod highlight;
+pub mod image;
 pub mod lanes;
 pub mod math;
 pub mod motion;

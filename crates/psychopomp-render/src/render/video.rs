@@ -106,7 +106,7 @@ impl HeadlessRenderer {
 
     /// A transparent title bar: three quiet window dots, the centered title,
     /// and a hairline above the footage.
-    fn video_title_bar(&mut self, title: &str, width: f32) -> (Vec<u8>, [u32; 2]) {
+    pub(super) fn video_title_bar(&mut self, title: &str, width: f32) -> (Vec<u8>, [u32; 2]) {
         let palette = self.theme.palette();
         let size = [
             (width * TITLE_DENSITY).ceil() as u32,

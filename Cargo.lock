@@ -1738,6 +1738,7 @@ dependencies = [
  "anyhow",
  "bytemuck",
  "cosmic-text",
+ "image-webp",
  "png",
  "pollster",
  "psychopomp",
@@ -1754,6 +1755,7 @@ dependencies = [
  "serde_json",
  "wgpu",
  "winit",
+ "zune-jpeg",
 ]
 
 [[package]]

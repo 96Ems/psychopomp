@@ -8,6 +8,7 @@ use super::{
     generated,
     grid::PreparedGrid,
     header,
+    image::ImageInput,
     lanes::PreparedLanes,
     plot::PreparedPlot,
     rolling::RollingNumberInput,
@@ -28,6 +29,7 @@ use psychopomp::{
     },
     editor::{EDITOR_RECIPE, EditorTargetSelector, POINTER_RECIPE, PointerRecipePlan},
     grid::GRID_RECIPE,
+    image::IMAGE_RECIPE,
     lanes::LANES_RECIPE,
     plan::{ActorPlan, ContinuousChannelPlan, MediaKindPlan, ScenePlan, StateChannelPlan},
     plot::PLOT_RECIPE,
@@ -63,6 +65,7 @@ pub(super) struct Plan {
     pub lanes: Vec<PreparedLanes>,
     pub videos: Vec<VideoInput>,
     pub callouts: Vec<PreparedCallout>,
+    pub images: Vec<ImageInput>,
 }
 pub(super) enum RootPlan {
     Blank,
@@ -366,6 +369,7 @@ impl Plan {
         let mut lanes = Vec::new();
         let mut videos = Vec::new();
         let mut callouts = Vec::new();
+        let mut images = Vec::new();
         for actor in &plan.actors {
             match actor.recipe.as_str() {
                 "title-card" => put_root(&mut root, RootPlan::Title(Title::new(actor, &plan)?))?,
@@ -440,6 +444,11 @@ impl Plan {
                 CALLOUT_RECIPE => {
                     callouts.push(PreparedCallout::new(actor, &plan.continuous_channels)?)
                 }
+                IMAGE_RECIPE => images.push(ImageInput::new(
+                    actor,
+                    &plan.media,
+                    &plan.continuous_channels,
+                )?),
                 recipe => bail!("unsupported actor recipe '{recipe}'"),
             }
         }
@@ -484,6 +493,10 @@ impl Plan {
             .iter()
             .map(VideoInput::media_id)
             .collect::<HashSet<_>>();
+        let drawn = images
+            .iter()
+            .map(ImageInput::media_id)
+            .collect::<HashSet<_>>();
         for callout in &callouts {
             callout.validate_anchors(&root, &plan.semantic_targets)?;
         }
@@ -499,6 +512,11 @@ impl Plan {
                 texts
                     .iter()
                     .map(|text| ("text", text.id.as_str(), text.anchors.as_slice())),
+            )
+            .chain(
+                images
+                    .iter()
+                    .map(|image| ("image", image.id(), image.anchors())),
             );
         for (kind, owner, anchors) in pinned {
             super::anchor::validate_plans(kind, owner, anchors, &root, &plan.semantic_targets)?;
@@ -507,6 +525,7 @@ impl Plan {
             if matches!(media.kind, MediaKindPlan::Audio)
                 || (matches!(media.kind, MediaKindPlan::Video)
                     && consumed.contains(media.id.as_str()))
+                || (matches!(media.kind, MediaKindPlan::Image) && drawn.contains(media.id.as_str()))
             {
                 continue;
             }
@@ -535,6 +554,7 @@ impl Plan {
             lanes,
             videos,
             callouts,
+            images,
         };
         match &result.root {
             RootPlan::Editor { editor, .. } => editor.compile_channels(&mut result.plan)?,

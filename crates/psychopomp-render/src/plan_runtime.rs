@@ -35,6 +35,7 @@ mod editor;
 mod generated;
 mod grid;
 mod header;
+mod image;
 mod lanes;
 mod plot;
 mod preflight;
@@ -452,6 +453,7 @@ struct PreparedPlan {
     callouts: Vec<callout::PreparedCallout>,
     headers: Vec<header::PreparedHeader>,
     videos: Vec<video::PreparedVideo>,
+    images: Vec<image::PreparedImage>,
 }
 
 // A prepared scene exposes a read-only view of its compiled data. There is no
@@ -524,6 +526,7 @@ impl PreparedPlan {
             lanes,
             videos,
             callouts,
+            images,
         } = input;
         let components = component_prototype::PreparedComponents::prepare_inputs(
             &mut plan, components, renderer,
@@ -571,6 +574,10 @@ impl PreparedPlan {
             .into_iter()
             .map(|input| input.open(base))
             .collect::<Result<Vec<_>>>()?;
+        let images = images
+            .into_iter()
+            .map(|input| input.open(base))
+            .collect::<Result<Vec<_>>>()?;
         let root = match root {
             preflight::RootPlan::Blank => PreparedRoot::Blank,
             preflight::RootPlan::Title(title) => PreparedRoot::Title(title),
@@ -602,6 +609,7 @@ impl PreparedPlan {
             callouts,
             headers,
             videos,
+            images,
         })
     }
 }
@@ -926,6 +934,11 @@ impl PreparedPlan {
                     .iter()
                     .map(|text| (text.id.as_str(), text.anchors.as_slice())),
             )
+            .chain(
+                self.images
+                    .iter()
+                    .map(|image| (image.id(), image.anchors())),
+            )
     }
 
     /// Where every overlay pinned to a Stage element lands at `time`: they
@@ -1092,12 +1105,24 @@ impl PreparedPlan {
         let value = |actor: &str, property: &str, default: f32| {
             self.property_value(timeline, actor, property, time, default)
         };
-        // Video cards are the bottom media surface. Value tiles are diagram
-        // surfaces; ordinary text is their foreground annotation layer,
-        // regardless of declaration order.
+        // Video cards and images are the bottom media surface. Value tiles
+        // are diagram surfaces; ordinary text is their foreground annotation
+        // layer, regardless of declaration order.
         let size = renderer.size();
         for video in &self.videos {
             video.render(pixels, renderer, time, value)?;
+        }
+        for image in &self.images {
+            if let Some(center) = self.pin(
+                image.id(),
+                image.anchors(),
+                image.center(),
+                time,
+                timeline,
+                size,
+            ) {
+                image.render(pixels, renderer, center, value)?;
+            }
         }
         for diagram in &self.venn {
             diagram.render(pixels, renderer, value);
