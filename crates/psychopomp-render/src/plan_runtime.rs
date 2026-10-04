@@ -33,6 +33,7 @@ mod editor;
 mod generated;
 mod grid;
 mod header;
+mod ide;
 mod lanes;
 mod plot;
 mod preflight;

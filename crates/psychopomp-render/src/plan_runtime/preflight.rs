@@ -8,6 +8,7 @@ use super::{
     generated,
     grid::PreparedGrid,
     header,
+    ide::PreparedAnnotation,
     lanes::PreparedLanes,
     plot::PreparedPlot,
     rolling::RollingNumberInput,
@@ -352,7 +353,12 @@ impl Plan {
         let mut lanes = Vec::new();
         let mut videos = Vec::new();
         let mut callouts = Vec::new();
+        let mut annotations = Vec::new();
         for actor in &plan.actors {
+            if let Some(annotation) = PreparedAnnotation::parse(actor, &plan.continuous_channels)? {
+                annotations.push(annotation);
+                continue;
+            }
             match actor.recipe.as_str() {
                 "title-card" => put_root(&mut root, RootPlan::Title(Title::new(actor, &plan)?))?,
                 EDITOR_RECIPE => put_root(
@@ -465,6 +471,12 @@ impl Plan {
                 .with_context(|| format!("parse editor semantic target '{}'", target.id))?;
             let selection = editor.select(&target.id, &selector)?;
             selectors.push((target.id.clone(), selection));
+        }
+        for annotation in annotations {
+            let RootPlan::Editor { editor, .. } = &mut root else {
+                bail!("annotation '{}' needs an editor root", annotation.id());
+            };
+            editor.attach(annotation, &plan.semantic_targets)?;
         }
         let consumed = videos
             .iter()

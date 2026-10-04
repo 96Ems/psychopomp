@@ -14,16 +14,17 @@ use psychopomp::{
     plan::{ActorPlan, ScalarPlan, ScenePlan, TrackEventPlan},
 };
 
-use super::{TargetGeometry, generated};
+use super::{TargetGeometry, generated, ide};
 use crate::render::{
-    EditorFrame, EditorPanel, HeadlessRenderer, InlineRangeMetrics, InlineRevealFrame,
-    LineMarkFrame, PointerFrame, TokenHighlight,
+    EditorAnnotations, EditorFrame, EditorPanel, HeadlessRenderer, InlayFrame, InlineRangeMetrics,
+    InlineRevealFrame, LineMarkFrame, PointerFrame, TokenHighlight,
 };
 
 pub(super) struct PreparedEditor {
     actor_id: String,
     editor: CompiledEditor,
     targets: HashMap<String, MeasuredTarget>,
+    annotations: Vec<ide::PreparedAnnotation>,
 }
 
 pub(super) struct EditorSelection {
@@ -65,7 +66,19 @@ impl PreparedEditor {
             actor_id: actor.id.clone(),
             editor,
             targets: HashMap::new(),
+            annotations: Vec::new(),
         })
+    }
+
+    /// Attach a Diagnostic, Hover Card, or Cursor drawn on this editor.
+    pub(super) fn attach(
+        &mut self,
+        annotation: ide::PreparedAnnotation,
+        targets: &[psychopomp::plan::SemanticTargetPlan],
+    ) -> Result<()> {
+        annotation.validate_targets(&self.actor_id, targets)?;
+        self.annotations.push(annotation);
+        Ok(())
     }
 
     pub(super) fn actor_id(&self) -> &str {
@@ -319,6 +332,44 @@ impl PreparedEditor {
                 }
             })
             .collect::<Vec<_>>();
+        let inlays = self
+            .editor
+            .inline_reveals()
+            .iter()
+            .filter(|reveal| {
+                reveal
+                    .plan
+                    .range_id
+                    .starts_with(psychopomp::ide::INLAY_PART_PREFIX)
+            })
+            .map(|reveal| InlayFrame {
+                line_id: &reveal.plan.line_id,
+                start_span: reveal.spans.start,
+                end_span: reveal.spans.end,
+            })
+            .collect::<Vec<_>>();
+        let mut sampled = ide::Sampled::default();
+        for annotation in &self.annotations {
+            annotation.sample(
+                &mut sampled,
+                |property, default| value(annotation.id(), property, default),
+                |target| {
+                    let motion = self
+                        .target_motion(target, |actor, property| sample(actor, property, time))?;
+                    let line = &self.targets.get(target)?.line_id;
+                    let line_opacity = lines
+                        .iter()
+                        .find(|placed| placed.line.id.as_str() == line)
+                        .map_or(0.0, |placed| placed.opacity);
+                    Some(ide::RangeSample {
+                        x: motion.x.position,
+                        width: motion.width.position,
+                        line_y: motion.line_y.position,
+                        line_opacity,
+                    })
+                },
+            );
+        }
         let line_marks = self
             .editor
             .marks()
@@ -346,6 +397,13 @@ impl PreparedEditor {
             pointer,
             inline_reveals: &inline_reveals,
             lines: &lines,
+            annotations: EditorAnnotations {
+                inlays: &inlays,
+                diagnostics: &sampled.diagnostics,
+                selections: &sampled.selections,
+                carets: &sampled.carets,
+                hovers: &sampled.hovers,
+            },
         })
     }
 }
@@ -460,4 +518,79 @@ fn pointer_frame(
         scale: state("scale", time)?.position,
         blur: state("blur", time)?.position.max(0.0),
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use psychopomp::motion::MotionState;
+
+    use super::MeasuredTarget;
+    use crate::render::InlineRangeMetrics;
+
+    /// `const program` | an Inlay Hint | `= run()`, targeting `run`.
+    fn target() -> MeasuredTarget {
+        let metrics = |spans: std::ops::Range<usize>, advance, selection| InlineRangeMetrics {
+            spans,
+            advance,
+            selection,
+        };
+        MeasuredTarget {
+            line_id: "program".into(),
+            keyed_lines: true,
+            segments: vec![
+                (metrics(0..1, 218.0, None), None),
+                (
+                    metrics(1..2, 604.5, None),
+                    Some(("inlay.type".into(), false)),
+                ),
+                (metrics(2..3, 134.0, Some([33.5, 117.5])), None),
+            ],
+            before: [0.0, 132.0],
+            after: [0.0, 132.0],
+        }
+    }
+
+    #[test]
+    fn ranges_follow_line_motion_and_an_inlay_opening_before_them() {
+        let target = target();
+        let sample = |inlay: MotionState, y: MotionState| {
+            target.sample(
+                |property, default| match property {
+                    "inlay.type" => inlay,
+                    "line.program.y" => y,
+                    "layout" | "content" => MotionState::at(1.0),
+                    _ => MotionState::at(default),
+                },
+                false,
+            )
+        };
+        let closed = sample(MotionState::at(0.0), MotionState::at(132.0));
+        assert_eq!(closed.x.position, 218.0 + 33.5);
+        assert_eq!(closed.width.position, 84.0);
+        assert_eq!(closed.line_y.position, 132.0);
+        // Mid-opening, the range sits after exactly the opened room, keeps its
+        // width, and carries the room's velocity; the line's row carries its own.
+        let opening = sample(
+            MotionState {
+                position: 0.4,
+                velocity: 2.0,
+            },
+            MotionState {
+                position: 150.0,
+                velocity: 90.0,
+            },
+        );
+        assert!((opening.x.position - (218.0 + 604.5 * 0.4 + 33.5)).abs() < 1e-3);
+        assert!((opening.x.velocity - 604.5 * 2.0).abs() < 1e-3);
+        assert_eq!(opening.width.position, 84.0);
+        assert_eq!(opening.width.velocity, 0.0);
+        assert_eq!(opening.line_y.position, 150.0);
+        assert_eq!(opening.line_y.velocity, 90.0);
+        let open = sample(MotionState::at(1.0), MotionState::at(176.0));
+        assert_eq!(open.x.position, 218.0 + 604.5 + 33.5);
+        assert_eq!(open.line_y.position, 176.0);
+        // The expanded preparation baseline is the fully open layout.
+        let expanded = target.sample(|_, default| MotionState::at(default), true);
+        assert_eq!(expanded.x.position, open.x.position);
+    }
 }

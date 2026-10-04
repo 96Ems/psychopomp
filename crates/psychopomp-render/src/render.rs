@@ -19,6 +19,7 @@ mod debug;
 mod fonts;
 mod grid;
 mod header;
+mod ide;
 mod lanes;
 mod line_marks;
 mod plot;
@@ -43,6 +44,9 @@ pub use grid::{
     GridFrame, GridItemFrame, GridLabelStyle, GridLinePalette, GridTextClip, GridTextDisclosure,
 };
 pub(crate) use header::{HeaderGlyphs, header_words};
+pub use ide::{
+    CaretFrame, DiagnosticFrame, EditorAnnotations, HoverFrame, InlayFrame, SelectionFrame,
+};
 pub(crate) use rich_text::{RichTextGlyphs, RichTextSource, parse as parse_rich_text};
 pub(crate) use stage::{StageGpu, stage_anchor};
 pub use task::{BubblePose, ContentPose, TaskContentFrame, TaskVisualFrame};
@@ -81,6 +85,8 @@ pub struct EditorFrame<'a> {
     pub pointer: PointerFrame,
     pub inline_reveals: &'a [InlineRevealFrame<'a>],
     pub lines: &'a [PlacedLine<'a>],
+    /// Diagnostics, Hover Cards, Inlay Hints, and Cursors.
+    pub annotations: EditorAnnotations<'a>,
 }
 
 impl EditorFrame<'_> {
@@ -717,6 +723,7 @@ impl HeadlessRenderer {
             } else {
                 let background_frame = EditorFrame {
                     lines: &[],
+                    annotations: EditorAnnotations::default(),
                     focus_intensity: 0.,
                     token_highlight: TokenHighlight {
                         opacity: 0.,
@@ -773,6 +780,7 @@ impl HeadlessRenderer {
             pointer: frame.pointer,
             inline_reveals: frame.inline_reveals,
             lines: frame.lines,
+            annotations: frame.annotations,
         };
         let mut flat_pixels = self.render_shapes(&flat_frame)?;
         self.composite_editor_title(&mut flat_pixels, flat_frame.panel_offset_y);
@@ -1007,6 +1015,11 @@ impl HeadlessRenderer {
         let code_bottom = panel_top + self.spec.height as f32 * 0.70;
         let code_right = self.spec.width as f32 * 0.89 - 32.0;
         self.composite_line_marks(pixels, frame, [code_top, code_bottom]);
+        let area = ide::CodeArea {
+            origin: psychopomp::math::vec2(self.spec.width as f32 * 0.145, code_top),
+            clip_y: [code_top, code_bottom],
+        };
+        self.composite_selections(pixels, frame, area);
         for placed in frame.lines {
             if placed.opacity <= 0.001 {
                 continue;
@@ -1031,6 +1044,7 @@ impl HeadlessRenderer {
                     pixels,
                     placed,
                     &reveals,
+                    frame.annotations.inlays,
                     line_x,
                     line_y,
                     code_right,
@@ -1057,6 +1071,7 @@ impl HeadlessRenderer {
                 },
             );
         }
+        self.composite_annotations(pixels, frame, area, panel_top);
         composite_sprite_rotated(
             pixels,
             self.spec.width,
@@ -1079,6 +1094,7 @@ impl HeadlessRenderer {
         pixels: &mut [u8],
         placed: &PlacedLine<'_>,
         reveals: &[InlineRevealFrame],
+        inlays: &[InlayFrame],
         x: f32,
         y: f32,
         right: f32,
@@ -1110,6 +1126,18 @@ impl HeadlessRenderer {
             let available = (right - cursor_x).max(0.0);
             let progress = progress.unwrap_or(1.0).clamp(0.0, 1.0);
             let width = sprite.advance * progress;
+            if inlays.iter().any(|inlay| {
+                inlay.line_id == placed.line.id.as_str()
+                    && (inlay.start_span, inlay.end_span) == (start, end)
+            }) {
+                self.composite_inlay_chip(
+                    pixels,
+                    psychopomp::math::vec2(cursor_x, y),
+                    width.min(available),
+                    placed.opacity * progress,
+                    clip_y,
+                );
+            }
             composite_text(
                 pixels,
                 [self.spec.width, self.spec.height],
@@ -2571,6 +2599,7 @@ mod tests {
             },
             inline_reveals: &[],
             lines: &[],
+            annotations: Default::default(),
         };
         let hidden = can_preview_editor(&frame, [1920, 1080]);
         frame.focus_line_y = 100.;
