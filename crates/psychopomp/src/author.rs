@@ -424,6 +424,77 @@ impl PlanBuilder {
     }
 }
 
+/// Declare a recipe's canonical ID, strict continuous channel table,
+/// typed sampled channel struct (with renderer rest defaults), and typed
+/// [`ContinuousHandle`] accessors on its authoring actor handle from one
+/// single source of truth.
+#[macro_export]
+macro_rules! recipe_channels {
+    (
+        $(#[$recipe_meta:meta])*
+        recipe: $recipe_const:ident = $recipe_str:literal,
+        plan: $plan_ty:ty,
+        actor: $actor_ty:ty,
+        $(#[$sampled_meta:meta])*
+        sampled: $sampled_vis:vis struct $sampled_ty:ident {
+            $(
+                $(#[$field_meta:meta])*
+                $field:ident : $prop:literal, default = $default:expr, initial = $initial:expr
+            ),+ $(,)?
+        }
+    ) => {
+        $(#[$recipe_meta])*
+        pub const $recipe_const: &str = $recipe_str;
+
+        $(#[$sampled_meta])*
+        #[derive(Clone, Copy, Debug, PartialEq)]
+        $sampled_vis struct $sampled_ty {
+            $(
+                $(#[$field_meta])*
+                pub $field: f32,
+            )+
+        }
+
+        impl $sampled_ty {
+            /// Rest values sampled when a channel is undeclared in the plan.
+            pub const REST: Self = Self {
+                $( $field: $default, )+
+            };
+
+            /// Sample every channel of this recipe from `sample(property, default)`.
+            #[inline]
+            pub fn sample(mut sample: impl FnMut(&str, f32) -> f32) -> Self {
+                Self {
+                    $( $field: sample($prop, $default), )+
+                }
+            }
+        }
+
+        impl $plan_ty {
+            /// Canonical continuous channel property names accepted by this recipe.
+            pub const CHANNELS: &'static [&'static str] = &[ $( $prop ),+ ];
+
+            /// True when `property` is a valid continuous channel on this recipe.
+            #[inline]
+            pub fn accepts(property: &str) -> bool {
+                matches!(property, $( $prop )|+ )
+            }
+        }
+
+        impl $actor_ty {
+            $(
+                $(#[$field_meta])*
+                #[inline]
+                pub fn $field(&mut self, scene: &mut $crate::author::PlanBuilder) -> $crate::author::ContinuousHandle {
+                    self.channel(scene, $prop, $initial)
+                }
+            )+
+        }
+    };
+}
+
+pub use recipe_channels;
+
 #[cfg(test)]
 mod tests {
     use serde_json::json;

@@ -230,6 +230,55 @@ fn shader(file: &str, builtin: &'static str) -> std::borrow::Cow<'static, str> {
     builtin.into()
 }
 
+/// The modules joined, in order, into the Stage primitive shader: binding-free
+/// effect modules first, then the shader that calls them.
+pub(crate) const PRIMITIVE_SHADER: [(&str, &str); 7] = [
+    ("effects/noise.wgsl", include_str!("effects/noise.wgsl")),
+    (
+        "effects/combustion.wgsl",
+        include_str!("effects/combustion.wgsl"),
+    ),
+    (
+        "effects/lightning.wgsl",
+        include_str!("effects/lightning.wgsl"),
+    ),
+    (
+        "effects/dissolve.wgsl",
+        include_str!("effects/dissolve.wgsl"),
+    ),
+    ("effects/shield.wgsl", include_str!("effects/shield.wgsl")),
+    ("effects/scan.wgsl", include_str!("effects/scan.wgsl")),
+    ("stage.wgsl", include_str!("stage.wgsl")),
+];
+
+/// The modules joined, in order, into the Stage post-processing shader.
+pub(crate) const POST_SHADER: [(&str, &str); 4] = [
+    ("effects/noise.wgsl", include_str!("effects/noise.wgsl")),
+    (
+        "effects/pressure.wgsl",
+        include_str!("effects/pressure.wgsl"),
+    ),
+    ("effects/rewind.wgsl", include_str!("effects/rewind.wgsl")),
+    ("stage_post.wgsl", include_str!("stage_post.wgsl")),
+];
+
+/// Byte sizes of the Rust structs the Stage shaders read, by WGSL name.
+#[cfg(test)]
+pub(crate) const SHADER_STRUCTS: [(&str, usize); 3] = [
+    ("Prim", std::mem::size_of::<Prim>()),
+    ("Globals", std::mem::size_of::<Globals>()),
+    ("Post", std::mem::size_of::<PostUniform>()),
+];
+
+/// One shader from its modules, each read live under `PSYCHOPOMP_SHADER_DIR`.
+fn compose(modules: &[(&str, &'static str)]) -> String {
+    modules
+        .iter()
+        .map(|(file, builtin)| shader(file, builtin))
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
 fn text_key(element: &str, part: &str) -> String {
     format!("{element}#{part}")
 }
@@ -361,28 +410,7 @@ impl HeadlessRenderer {
         });
         let primitive_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("stage primitives"),
-            source: wgpu::ShaderSource::Wgsl(
-                format!(
-                    "{}\n{}\n{}\n{}\n{}\n{}\n{}",
-                    shader("effects/noise.wgsl", include_str!("effects/noise.wgsl")),
-                    shader(
-                        "effects/combustion.wgsl",
-                        include_str!("effects/combustion.wgsl")
-                    ),
-                    shader(
-                        "effects/lightning.wgsl",
-                        include_str!("effects/lightning.wgsl")
-                    ),
-                    shader(
-                        "effects/dissolve.wgsl",
-                        include_str!("effects/dissolve.wgsl")
-                    ),
-                    shader("effects/shield.wgsl", include_str!("effects/shield.wgsl")),
-                    shader("effects/scan.wgsl", include_str!("effects/scan.wgsl")),
-                    shader("stage.wgsl", include_str!("stage.wgsl")),
-                )
-                .into(),
-            ),
+            source: wgpu::ShaderSource::Wgsl(compose(&PRIMITIVE_SHADER).into()),
         });
         let premultiplied = wgpu::BlendState {
             color: wgpu::BlendComponent {
@@ -442,19 +470,7 @@ impl HeadlessRenderer {
         });
         let post_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("stage post"),
-            source: wgpu::ShaderSource::Wgsl(
-                format!(
-                    "{}\n{}\n{}\n{}",
-                    shader("effects/noise.wgsl", include_str!("effects/noise.wgsl")),
-                    shader(
-                        "effects/pressure.wgsl",
-                        include_str!("effects/pressure.wgsl")
-                    ),
-                    shader("effects/rewind.wgsl", include_str!("effects/rewind.wgsl")),
-                    shader("stage_post.wgsl", include_str!("stage_post.wgsl")),
-                )
-                .into(),
-            ),
+            source: wgpu::ShaderSource::Wgsl(compose(&POST_SHADER).into()),
         });
         let post_pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: None,
