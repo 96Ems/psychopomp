@@ -214,6 +214,36 @@ impl Shape {
             },
         }
     }
+
+    /// Where the ray from the center toward `target` leaves the outline, with
+    /// the outward normal there: the straight-line contact for something that
+    /// strikes the shape rather than plugging into a side's middle.
+    pub fn boundary_toward(&self, target: Vec2) -> Port {
+        let center = self.center();
+        let direction = (target - center).normalize_or(Vec2::X);
+        match self {
+            Self::Box(bounds) => {
+                let extents = bounds.extents();
+                let reach = |e: f32, d: f32| {
+                    if d.abs() > 1e-6 {
+                        e / d.abs()
+                    } else {
+                        f32::MAX
+                    }
+                };
+                let (tx, ty) = (reach(extents.x, direction.x), reach(extents.y, direction.y));
+                Port {
+                    point: center + direction * tx.min(ty),
+                    normal: if tx <= ty {
+                        Vec2::new(direction.x.signum(), 0.0)
+                    } else {
+                        Vec2::new(0.0, direction.y.signum())
+                    },
+                }
+            }
+            _ => self.port_toward(target),
+        }
+    }
 }
 
 /// A connector between two outlines. Each end attaches to the side facing the
@@ -262,6 +292,23 @@ pub fn segment_distance(point: Vec2, a: Vec2, b: Vec2) -> f32 {
 mod tests {
     use super::*;
     use crate::math::vec2;
+
+    #[test]
+    fn boundary_rays_leave_a_box_where_the_line_to_the_target_does() {
+        let card = Shape::Box(Box2::from_center_size(vec2(0.0, 0.0), vec2(200.0, 100.0)));
+        let side = card.boundary_toward(vec2(500.0, 100.0));
+        assert_eq!((side.point, side.normal), (vec2(100.0, 20.0), Vec2::X));
+        let top = card.boundary_toward(vec2(30.0, -400.0));
+        assert!(top.point.abs_diff_eq(vec2(3.75, -50.0), 1e-4) && top.normal == Vec2::NEG_Y);
+        let orb = Shape::Circle(Circle {
+            center: Vec2::ZERO,
+            radius: 50.0,
+        });
+        assert_eq!(
+            orb.boundary_toward(vec2(0.0, 90.0)),
+            orb.port_toward(vec2(0.0, 90.0))
+        );
+    }
 
     #[test]
     fn measured_boxes_stop_before_either_port_without_changing_size() {

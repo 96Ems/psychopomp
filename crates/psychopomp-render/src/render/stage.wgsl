@@ -21,6 +21,9 @@ struct Prim {
     light_color: vec4<f32>,
     pool: vec4<f32>,   // rounded rects: a pool of light in the glass, same form
     pool_color: vec4<f32>,
+    mask: vec4<f32>,       // dissolve: age (0 for none), card center x, y, scale
+    mask_shape: vec4<f32>, // dissolve: card half size in world pixels, field seed, 0
+    mask_color: vec4<f32>, // dissolve: rim tone, linear RGB
 };
 
 @group(0) @binding(0) var<uniform> globals: Globals;
@@ -103,6 +106,33 @@ fn card_light(prim: Prim, px: vec2<f32>, band: f32, inside: f32) -> vec3<f32> {
 
 fn direction(angle: f32) -> vec2<f32> {
     return vec2<f32>(cos(angle), sin(angle));
+}
+
+// Nearest point of the first `drawn` pixels of a polyline: (distance, length
+// along it, interpolated point energy). Points are (x, y, length so far, energy).
+fn path_nearest(px: vec2<f32>, first: u32, count: u32, drawn: f32) -> vec3<f32> {
+    var best = 1.0e9;
+    var along = 0.0;
+    var energy = 0.0;
+    for (var k = 0u; k + 1u < count; k = k + 1u) {
+        let a = points[first + k];
+        let b = points[first + k + 1u];
+        if a.z >= drawn {
+            break;
+        }
+        let t_end = clamp((drawn - a.z) / max(b.z - a.z, 1.0e-4), 0.0, 1.0);
+        let end = mix(a.xy, b.xy, t_end);
+        let pa = px - a.xy;
+        let ba = end - a.xy;
+        let h = clamp(dot(pa, ba) / max(dot(ba, ba), 1.0e-4), 0.0, 1.0);
+        let distance = length(pa - ba * h);
+        if distance < best {
+            best = distance;
+            along = mix(a.z, b.z, h * t_end);
+            energy = mix(a.w, b.w, h * t_end);
+        }
+    }
+    return vec3<f32>(best, along, energy);
 }
 
 @fragment
@@ -256,7 +286,38 @@ fn fs(in: VOut) -> @location(0) vec4<f32> {
         case 6u: {
             return combustion_volume(px - prim.a.yz, prim.a.w, prim.b.x) * prim.b.y;
         }
+        // Lightning channel: a = (kind, core half width, drawn length, taper toward
+        // the end), b = (blur, corona radius, reach, 0); fill.rgb = core light,
+        // stroke.rgb = corona light; uv = (first point, count). Pure emission.
+        case 10u: {
+            let hit = path_nearest(px, u32(prim.uv.x + 0.5), u32(prim.uv.y + 0.5), prim.a.z);
+            let taper = 1.0 - prim.a.w * clamp(hit.y / max(prim.a.z, 1.0), 0.0, 1.0);
+            let light = lightning_channel(hit.x, prim.a.y * taper, prim.b.x, prim.fill.rgb, prim.stroke.rgb, prim.b.y, prim.b.z);
+            return vec4<f32>(light * hit.z, 0.0);
+        }
+        // Forcefield bubble: a = (kind, cx, cy, radius), b = (up, time, opacity, blur),
+        // fill.rgb = tone; light, pool, uv, light_color = four contacts. Pure emission.
+        case 11u: {
+            let light = shield_bubble((px - prim.a.yz) / max(prim.a.w, 1.0), prim.a.w, prim.b.x, prim.b.y, prim.b.w, prim.fill.rgb, prim.light, prim.pool, prim.uv, prim.light_color);
+            return vec4<f32>(light * prim.b.z, 0.0);
+        }
+        // Scan line: a = (kind, cx, cy, corner), b = (half w, half h, line y offset, heading),
+        // fill = tone and strength, stroke = (wake length, line width, blur, 0). Pure emission.
+        case 12u: {
+            let s = scan_light(px - prim.a.yz, prim.b.xy, prim.a.w, prim.b.z, prim.b.w, prim.stroke.x, prim.stroke.y, prim.stroke.z);
+            let light = prim.fill.rgb * (s.x * 1.2 + s.y * 0.07 + s.z * 0.8) + vec3<f32>(0.7) * (s.x * 0.8);
+            return vec4<f32>(light * prim.fill.a, 0.0);
+        }
         default: {}
+    }
+    if prim.mask.x > 0.0 {
+        // Dissolve: the material burns away along the card's noise field,
+        // scorched just ahead of the front and glowing just behind it.
+        let scale = max(prim.mask.w, 0.05);
+        let field = dissolve_field((px - prim.mask.yz) / scale, prim.mask_shape.xy, u32(prim.mask_shape.z + 0.5));
+        let burn = dissolve_burn(field, prim.mask.x, 0.012 / scale);
+        color = color * burn.x * (1.0 - 0.6 * (burn.z - burn.y)) + dissolve_glow(burn.y, prim.mask_color.rgb) * alpha;
+        alpha = alpha * burn.x;
     }
     return vec4<f32>(color, alpha);
 }

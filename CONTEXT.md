@@ -184,6 +184,15 @@ An orb's **Burst** is a reversible destruction clock: gravitational collapse,
 hot combustion, an expanding refractive pressure wave, cooling smoke, and
 ballistic embers. Its procedural volume and trajectories need no simulation
 history. Wires and arrivals pass beneath the intact orb's occluding shell.
+A **Bolt** is lightning between two elements or points, run by one **Discharge**
+clock: a stepped leader, then return strokes that strobe a few frames apart,
+each re-rolling the path's detail around a persisting channel, flashing both
+contacts, and throwing sparks, then a cooling afterglow. A bolt can also
+**hum**, a sustained arc. **Charge** is crackle crawling an outline; it lights
+the rim it crawls. A **Shield** is a forcefield bubble around an element that
+ripples where packets cross it or bolts strike it. A card's **Dissolve** is a
+reversible burn clock: a noisy front with a hot rim and ash; played backwards it
+materializes the card. A **Scan** sweeps a line down a card.
 
 ## Stage Camera
 
