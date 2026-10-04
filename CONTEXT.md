@@ -245,6 +245,60 @@ Sample, so the callout follows its target with no lag; moving to another
 anchor springs weight channels that blend the two resolved positions. Labels
 slide back inside the frame rather than leave it, and the leader follows.
 
+## Readout
+
+A number whose digit wheels follow one channel's continuous value, like an
+odometer: each displayed unit holds still for most of its interval and rolls
+to the next near the rounding boundary, a place turns only while every place
+below it rolls over from 9, and a new leading place rolls in as it opens its
+room. A wheel turning too fast to read smears instead of strobing. Unlike a
+Rolling Number, which plays authored changes on its own schedule, a Readout is
+a pure function of the value, so a bar's label counts with the bar and a timer
+counts with its ring.
+
+## Checklist
+
+Rows of items that wait, run, and resolve, like CI checks. Each item has four
+channels: `reveal`, the status spinner's `spinner` and `mark` clocks, and an
+`outcome` (pending, done, failed, skipped). A resolution waits for the
+spinner's next handoff crossing, then the same tip draws the ✓ or ✕; a skip
+coasts the spinner out, draws a dash, and strikes the label through. An
+optional rail fills below each resolved item, and a title counts what passed.
+Starting a resolved item again clears its mark, as for a retry.
+
+## Meter
+
+A circular gauge, a closed countdown ring, or a linear bar driven by one
+`value` channel: the arc, its head, the lit ticks, the tone, and a centered
+Readout all follow it. Thresholds hand the value to another Tone, whole at the
+threshold itself; a countdown sweeps the ring closed on a clock and flashes as
+it crosses each threshold and runs out.
+
+## Benchmark Bars
+
+A horizontal bar chart comparing one or more series per row (before and
+after) on one shared Axis. Bars grow on springs with Readouts at their ends; a
+delta chip compares two series (`−34%`, tone by whether lower or higher is
+better); and rows re-sort by springing their own `slot` channels, so a row
+keeps its identity while it races to its new place, passing over the rows it
+overtakes.
+
+## Subtitles
+
+Burned-in captions driven by narration word timings. Words chunk into pages of
+balanced lines no wider than a maximum, breaking at sentence ends, pauses, and
+width; each page replaces the last with a short fade and rise, its backing
+surface morphing rather than blinking. The spoken word takes the highlight
+tone with a pill that glides from word to word. Everything after measuring is a
+pure function of time and the word list.
+
+## Confetti
+
+A success burst: seeded paper pieces and sparkles launched in a cone under
+gravity and drag, fluttering and tumbling as they fall, all closed-form from
+one `burst` clock, so the burst samples in any order and is the same for its
+seed every time.
+
 ## Tone
 
 A semantic color role shared by explainer recipes: plain, request, success,
