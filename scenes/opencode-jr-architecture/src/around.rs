@@ -226,7 +226,8 @@ pub fn film(narration: &Narration) -> Result<ScenePlan> {
     }
     s.to(sc, "camera.y", scheduler - seconds(0.3), 80.0, 1.6);
     s.to(sc, "scheduler.dim", scheduler - seconds(0.2), 0.0, 0.5);
-    s.to(sc, "clock.opacity", scheduler + seconds(0.3), 1.0, 0.3);
+    s.fade_in(sc, "clock", scheduler + seconds(0.3), 1.0, 0.3);
+    s.channel(sc, "clock.sweep", 0.0);
     s.ease(
         sc,
         "clock.sweep",

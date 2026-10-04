@@ -223,6 +223,88 @@ impl StageElement {
             Self::Ring { .. } => &["opacity", "x", "y", "z", "scale", "sweep", "expand"],
         }
     }
+
+    /// The Stage's channel defaults: what each of [`Self::properties`] reads
+    /// before anything writes it. `StageActor` declares a new channel at this
+    /// value and the renderer falls back to it, so the two cannot disagree.
+    /// A property added to `properties` needs its default here (a test checks).
+    pub fn channel_defaults(&self) -> &'static [(&'static str, f32)] {
+        match self {
+            Self::Card { .. } => &[
+                ("opacity", 1.0),
+                ("x", 0.0),
+                ("y", 0.0),
+                ("z", 0.0),
+                ("scale", 1.0),
+                ("blur", 0.0),
+                ("glow", 0.0),
+                ("flash", 0.0),
+                ("alarm", 0.0),
+                ("dim", 0.0),
+                ("status", 0.0),
+                ("content", 1.0),
+                ("cool", 0.0),
+                ("damage", 0.0),
+                ("glitch", 0.0),
+                ("cut", 0.0),
+                ("ghost", 0.0),
+                ("spinner", -1.0),
+                ("release", -1.0),
+                ("mark", -1.0),
+            ],
+            Self::Orb { .. } => &[
+                ("opacity", 1.0),
+                ("x", 0.0),
+                ("y", 0.0),
+                ("z", 0.0),
+                ("scale", 1.0),
+                ("blur", 0.0),
+                ("rotation", 0.0),
+                ("burst", -1.0),
+                ("shatter", 0.0),
+                ("pulse", 0.0),
+                ("hurt", 0.0),
+                ("spin", 1.0),
+            ],
+            Self::Beam { .. } => &[
+                ("opacity", 1.0),
+                ("sweep", 0.0),
+                ("port", 0.0),
+                ("draw", 1.0),
+                ("break", 0.0),
+                ("flow", 0.0),
+                ("emphasis", 0.0),
+                ("surge", 0.0),
+                ("twang", 0.0),
+            ],
+            Self::Packet { .. } => &[("opacity", 1.0), ("age", -1.0), ("flight", 0.8)],
+            Self::Label { .. } => &[
+                ("opacity", 1.0),
+                ("x", 0.0),
+                ("y", 0.0),
+                ("z", 0.0),
+                ("scale", 1.0),
+                ("typed", 1.0),
+            ],
+            Self::Ring { .. } => &[
+                ("opacity", 1.0),
+                ("x", 0.0),
+                ("y", 0.0),
+                ("z", 0.0),
+                ("scale", 1.0),
+                ("sweep", 1.0),
+                ("expand", 0.0),
+            ],
+        }
+    }
+
+    /// What `property` reads before anything writes it, if this element reads it.
+    pub fn channel_default(&self, property: &str) -> Option<f32> {
+        self.channel_defaults()
+            .iter()
+            .find(|(name, _)| *name == property)
+            .map(|&(_, value)| value)
+    }
 }
 
 /// Channels that belong to the whole stage rather than an element.
@@ -250,9 +332,39 @@ pub const STAGE_PROPERTIES: [&str; 17] = [
     "post.flash",
 ];
 
+impl StagePost {
+    /// The defaults of the [`STAGE_PROPERTIES`]: what each reads before
+    /// anything writes it. `post.bloom` and `post.vignette` rest at this look.
+    /// A stage property added above needs its default here (a test checks).
+    pub fn channel_default(&self, property: &str) -> Option<f32> {
+        Some(match property {
+            "camera.x" | "camera.y" | "camera.z" | "camera.focus" | "camera.dof" => 0.0,
+            "camera.shake" | "camera.quake" | "camera.kick-x" | "camera.kick-y" => 0.0,
+            "camera.punch" => 0.0,
+            "post.bloom" => self.bloom,
+            "post.vignette" => self.vignette,
+            "post.exposure" => 1.0,
+            "post.rewind" => -1.0,
+            "post.chroma" | "post.zoom" | "post.flash" => 0.0,
+            _ => return None,
+        })
+    }
+}
+
 impl StagePlan {
     pub fn element(&self, id: &str) -> Option<&StageElement> {
         self.elements.iter().find(|element| element.id() == id)
+    }
+
+    /// What a stage channel (`camera.z`) or an element's (`client.opacity`)
+    /// reads before anything writes it, from the one table of Stage channel
+    /// defaults ([`StagePost::channel_default`], [`StageElement::channel_defaults`]).
+    /// `None` for a property the Stage does not read.
+    pub fn channel_default(&self, property: &str) -> Option<f32> {
+        self.post.channel_default(property).or_else(|| {
+            let (id, rest) = property.split_once('.')?;
+            self.element(id)?.channel_default(rest)
+        })
     }
 
     /// True when `property` names a stage channel or a property of an element.
@@ -522,8 +634,18 @@ impl StageActor {
         scene.channel(&self.actor, property, initial)
     }
 
+    /// The channel for `property`, declared on first use at the value the
+    /// renderer reads when nothing writes it ([`StagePlan::channel_default`]).
+    /// An unknown property starts at 0; the renderer's preflight rejects it.
+    fn resting(&mut self, scene: &mut PlanBuilder, property: &str) -> ContinuousHandle {
+        let initial = self.plan.channel_default(property).unwrap_or(0.0);
+        self.channel(scene, property, initial)
+    }
+
     /// Spring `property` to `target` at `at_nanos`. Channels not declared
-    /// with [`Self::channel`] start at 0.
+    /// with [`Self::channel`] start at their resting value, the Stage channel
+    /// default (opacity 1, burst -1, most others 0): declare another starting
+    /// pose, such as an opacity of 0 to fade in, with `channel`.
     pub fn to(
         &mut self,
         scene: &mut PlanBuilder,
@@ -545,7 +667,7 @@ impl StageActor {
         seconds: f32,
         bounce: f32,
     ) {
-        let channel = self.channel(scene, property, 0.0);
+        let channel = self.resting(scene, property);
         scene.spring(&channel, at_nanos, target, seconds, bounce);
     }
 
@@ -559,13 +681,38 @@ impl StageActor {
         seconds: f32,
         curve: Ease,
     ) {
-        let channel = self.channel(scene, property, 0.0);
+        let channel = self.resting(scene, property);
         scene.ease(&channel, at_nanos, target, seconds, curve);
+    }
+
+    /// Fade `element` in to `opacity` on a `seconds` spring. It starts hidden:
+    /// the first write declares its opacity at 0, though the Stage rests visible.
+    pub fn fade_in(
+        &mut self,
+        scene: &mut PlanBuilder,
+        element: &str,
+        at_nanos: u64,
+        opacity: f32,
+        seconds: f32,
+    ) {
+        let channel = self.channel(scene, &format!("{element}.opacity"), 0.0);
+        scene.spring(&channel, at_nanos, opacity, seconds, 0.0);
+    }
+
+    /// Fade `element` out on a `seconds` spring.
+    pub fn fade_out(
+        &mut self,
+        scene: &mut PlanBuilder,
+        element: &str,
+        at_nanos: u64,
+        seconds: f32,
+    ) {
+        self.to(scene, &format!("{element}.opacity"), at_nanos, 0.0, seconds);
     }
 
     /// Jump `property` to `value` at `at_nanos`.
     pub fn set(&mut self, scene: &mut PlanBuilder, property: &str, at_nanos: u64, value: f32) {
-        let channel = self.channel(scene, property, 0.0);
+        let channel = self.resting(scene, property);
         scene.set(&channel, at_nanos, value);
     }
 
@@ -791,6 +938,117 @@ mod tests {
                 && !plan.accepts("missing.opacity")
                 && !plan.accepts("camera.roll")
         );
+    }
+
+    /// One element of every kind, so each kind's table is checked.
+    fn every_kind() -> Vec<StageElement> {
+        let plan = plan();
+        let kinds = ["card", "orb", "beam", "packet", "label", "ring"];
+        let elements = plan.elements;
+        for kind in kinds {
+            assert!(
+                elements
+                    .iter()
+                    .any(|e| serde_json::to_value(e).unwrap()["kind"] == kind),
+                "the test plan lacks a {kind}"
+            );
+        }
+        elements
+    }
+
+    #[test]
+    fn every_stage_property_has_exactly_one_default() {
+        let plan = plan();
+        for property in STAGE_PROPERTIES {
+            assert!(
+                plan.channel_default(property).is_some(),
+                "stage property '{property}' has no default"
+            );
+        }
+        for element in every_kind() {
+            let defaults = element.channel_defaults();
+            let names = defaults.iter().map(|(name, _)| *name).collect::<Vec<_>>();
+            let properties = element.properties();
+            assert_eq!(
+                names.iter().collect::<HashSet<_>>(),
+                properties.iter().collect::<HashSet<_>>(),
+                "'{}' defaults must name exactly its properties",
+                element.id()
+            );
+            assert_eq!(names.len(), properties.len(), "a property is listed twice");
+            for property in properties {
+                let id = format!("{}.{property}", element.id());
+                assert_eq!(plan.channel_default(&id), element.channel_default(property));
+            }
+        }
+        assert_eq!(plan.channel_default("camera.roll"), None);
+        assert_eq!(
+            plan.channel_default("client.age"),
+            None,
+            "cards have no age"
+        );
+        assert_eq!(plan.channel_default("missing.opacity"), None);
+    }
+
+    #[test]
+    fn defaults_are_resting_poses() {
+        let plan = plan();
+        for (property, rest) in [
+            ("client.opacity", 1.0),
+            ("client.content", 1.0),
+            ("client.mark", -1.0),
+            ("service.burst", -1.0),
+            ("service.spin", 1.0),
+            ("link.draw", 1.0),
+            ("probe.age", -1.0),
+            ("probe.flight", 0.8),
+            ("caption.typed", 1.0),
+            ("timer.sweep", 1.0),
+            ("camera.z", 0.0),
+            ("post.exposure", 1.0),
+            ("post.rewind", -1.0),
+            ("post.bloom", StagePost::default().bloom),
+        ] {
+            assert_eq!(plan.channel_default(property), Some(rest), "{property}");
+        }
+        let custom = StagePlan {
+            post: StagePost {
+                vignette: 0.22,
+                ..StagePost::default()
+            },
+            ..plan
+        };
+        assert_eq!(custom.channel_default("post.vignette"), Some(0.22));
+    }
+
+    #[test]
+    fn undeclared_channels_start_at_their_default() {
+        let mut scene = PlanBuilder::new("stage-demo", 5_000_000_000);
+        let mut stage = StageActor::declare(&mut scene, "stage", &plan()).unwrap();
+        stage.to(&mut scene, "link.opacity", 1_000_000_000, 0.0, 0.5);
+        stage.set(&mut scene, "client.mark", 1_000_000_000, -1.0);
+        stage.ease(&mut scene, "camera.x", 0, 40.0, 1.0, Ease::Smootherstep);
+        stage.channel(&mut scene, "service.opacity", 0.0);
+        stage.to(&mut scene, "service.opacity", 0, 1.0, 0.5);
+        let plan = scene.finish().unwrap();
+        let initial = |property: &str| match plan
+            .continuous_channels
+            .iter()
+            .find(|c| c.property == property)
+            .unwrap()
+            .initial
+        {
+            crate::plan::ScalarPlan::Literal(value) => value,
+            _ => unreachable!(),
+        };
+        assert_eq!(
+            initial("link.opacity"),
+            1.0,
+            "a wire fading out was visible"
+        );
+        assert_eq!(initial("client.mark"), -1.0);
+        assert_eq!(initial("camera.x"), 0.0);
+        assert_eq!(initial("service.opacity"), 0.0, "a declared pose wins");
     }
 
     #[test]

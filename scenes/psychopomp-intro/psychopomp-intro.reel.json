@@ -4463,7 +4463,7 @@
             "id": "stage.link-l.opacity",
             "actorId": "stage",
             "property": "link-l.opacity",
-            "initial": 0.0,
+            "initial": 1.0,
             "events": [
               {
                 "operation": "spring",
@@ -4480,7 +4480,7 @@
             "id": "stage.link-r.opacity",
             "actorId": "stage",
             "property": "link-r.opacity",
-            "initial": 0.0,
+            "initial": 1.0,
             "events": [
               {
                 "operation": "spring",

@@ -3084,7 +3084,7 @@
             "id": "stage.check-link.opacity",
             "actorId": "stage",
             "property": "check-link.opacity",
-            "initial": 0.0,
+            "initial": 1.0,
             "events": [
               {
                 "operation": "spring",
@@ -3101,7 +3101,7 @@
             "id": "stage.bind-link.opacity",
             "actorId": "stage",
             "property": "bind-link.opacity",
-            "initial": 0.0,
+            "initial": 1.0,
             "events": [
               {
                 "operation": "spring",
@@ -3127,7 +3127,7 @@
             "id": "stage.new.mark",
             "actorId": "stage",
             "property": "new.mark",
-            "initial": 0.0,
+            "initial": -1.0,
             "events": [
               {
                 "operation": "set",
@@ -3152,7 +3152,7 @@
             "id": "stage.client.mark",
             "actorId": "stage",
             "property": "client.mark",
-            "initial": 0.0,
+            "initial": -1.0,
             "events": [
               {
                 "operation": "set",

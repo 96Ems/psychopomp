@@ -682,8 +682,13 @@ their fuller documentation elsewhere.
   `kick` (a two-frame shove that springs back past rest), `jolt` (an impact: the
   camera kicks along the blow, a squared-trauma noise rumble with slight roll
   decays, and the frame punches in about 2%),
-  `twang`, and `land`. `bounce` and `to` spring any channel (undeclared
-  channels start at 0; declare other starting poses with `channel`), `ease` follows
+  `twang`, and `land`. `bounce` and `to` spring any channel (an undeclared
+  channel starts at its resting value, the same Stage channel default the
+  renderer reads when nothing writes it: opacity, scale, `content`, `draw`,
+  `typed`, ring `sweep`, and orb `spin` rest at 1, the `burst`/`age`/spinner
+  clocks and `post.rewind` at -1, `flight` at 0.8, `post.bloom`/`post.vignette`
+  at the plan's `post`, everything else at 0; declare other starting poses with
+  `channel`, and fade something in from hidden with `fade_in`), `ease` follows
   any curve, and `clock` starts an elapsed-seconds channel that runs to the scene's
   end for effect rigs such as the card spinner (`clock_for` stops it after a fixed
   lifetime, as for `burst` or `post.rewind`). Use a `Smootherstep` ease for staged

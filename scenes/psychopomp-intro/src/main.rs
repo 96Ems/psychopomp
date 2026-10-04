@@ -311,10 +311,10 @@ fn film(narration: &Narration) -> Result<ScenePlan> {
     s.bounce(sc, "orb.scale", seconds(0.2), 1.0, 1.1, 0.2);
     s.to(sc, "orb.blur", seconds(0.2), 0.0, 0.9);
     s.ease(sc, "orb.rotation", seconds(0.2), 0.0, 1.6, Ease::CubicOut);
-    s.to(sc, "orb.opacity", seconds(0.2), 1.0, 0.8);
+    s.fade_in(sc, "orb", seconds(0.2), 1.0, 0.8);
     sound(sc, "wake", SPARKLE, seconds(0.25), -16.0);
     s.hit(sc, "orb.pulse", h("hi"), 0.4, 0.0);
-    s.to(sc, "title.opacity", h("this is"), 1.0, 0.6);
+    s.fade_in(sc, "title", h("this is"), 1.0, 0.6);
     s.bounce(sc, "title.scale", h("this is"), 1.0, 1.0, 0.15);
     sound(sc, "title", SPARKLE, h("this is"), -14.0);
     s.type_in(sc, "subtitle", h("tiny"), 34.0);
@@ -342,6 +342,7 @@ fn film(narration: &Narration) -> Result<ScenePlan> {
         ("shout-frame", h("any frame"), [1.0, 0.3], "31.40"),
         ("shout-order", h("any order"), [-1.0, -0.4], "0.07"),
     ] {
+        s.channel(sc, &format!("{shout}.opacity"), 0.0);
         s.set(sc, &format!("{shout}.opacity"), at, 1.0);
         s.bounce(sc, &format!("{shout}.scale"), at, 1.0, 0.3, 0.3);
         s.jolt(sc, at, direction, 1.0);
@@ -669,6 +670,7 @@ fn film(narration: &Narration) -> Result<ScenePlan> {
     s.hit(sc, "orb.pulse", bloom, 1.2, 0.0);
     for (ring, delay) in [("ripple-1", 0.0), ("ripple-2", 0.12)] {
         let at = bloom + seconds(delay);
+        s.channel(sc, &format!("{ring}.opacity"), 0.0);
         s.set(sc, &format!("{ring}.opacity"), at, 0.8);
         s.ease(sc, &format!("{ring}.expand"), at, 1.0, 0.9, Ease::CubicOut);
     }
@@ -751,8 +753,8 @@ fn film(narration: &Narration) -> Result<ScenePlan> {
     sound(sc, "name", SPARKLE, name, -12.0);
     s.type_in(sc, "url", f("give it"), 42.0);
     let knows = f("knows");
-    s.to(sc, "calm.opacity", knows, 0.35, 0.3);
-    s.to(sc, "calm-outer.opacity", knows + seconds(0.06), 0.5, 0.3);
+    s.fade_in(sc, "calm", knows, 0.35, 0.3);
+    s.fade_in(sc, "calm-outer", knows + seconds(0.06), 0.5, 0.3);
     s.hit(sc, "orb.pulse", knows, 0.7, 0.0);
     sound(sc, "knows", BLOOM, knows, -14.0);
 

@@ -346,9 +346,9 @@ fn stage_film(narration: &Narration) -> Result<ScenePlan> {
     s.to(sc, "old.blur", seconds(0.12), 0.0, 0.65);
     s.channel(sc, "old.rotation", -1.4);
     s.ease(sc, "old.rotation", seconds(0.12), 0.0, 1.15, Ease::CubicOut);
-    s.to(sc, "old.opacity", seconds(0.12), 1.0, 0.55);
-    s.to(sc, "old-name.opacity", seconds(0.65), 1.0, 0.45);
-    s.to(sc, "old-active.opacity", seconds(0.8), 1.0, 0.45);
+    s.fade_in(sc, "old", seconds(0.12), 1.0, 0.55);
+    s.fade_in(sc, "old-name", seconds(0.65), 1.0, 0.45);
+    s.fade_in(sc, "old-active", seconds(0.8), 1.0, 0.45);
 
     let file_land = s.settle_in(sc, "file", seconds(0.32));
     s.connect(sc, "reg-link", file_land + seconds(0.1), 0.48);
@@ -431,13 +431,7 @@ fn stage_film(narration: &Narration) -> Result<ScenePlan> {
     // "still running": the orb lingers on :49374 instead of exiting
     let running = b("still running");
     s.to(sc, "old-active.opacity", running, 0.0, 0.15);
-    s.to(
-        sc,
-        "old-lingering.opacity",
-        running + seconds(0.22),
-        1.0,
-        0.25,
-    );
+    s.fade_in(sc, "old-lingering", running + seconds(0.22), 1.0, 0.25);
 
     // "registration file had disappeared": old server unlinks service.json
     let reg_file = b("registration file");
@@ -576,13 +570,7 @@ fn stage_film(narration: &Narration) -> Result<ScenePlan> {
         0.0,
         0.15,
     );
-    s.to(
-        sc,
-        "old-exited.opacity",
-        sigkill_hit + seconds(0.38),
-        1.0,
-        0.25,
-    );
+    s.fade_in(sc, "old-exited", sigkill_hit + seconds(0.38), 1.0, 0.25);
     target_note.hide(sc, sigkill_hit + seconds(0.1));
 
     // Service.stop spinner resolves into check mark
@@ -594,14 +582,8 @@ fn stage_film(narration: &Narration) -> Result<ScenePlan> {
 
     // Port :49374 opens cleanly and new server takes it
     let port_free = sigkill_hit + seconds(0.55);
-    s.to(sc, "port-ring.opacity", port_free, 0.35, 0.25);
-    s.to(
-        sc,
-        "port-ring-outer.opacity",
-        port_free + seconds(0.06),
-        0.5,
-        0.25,
-    );
+    s.fade_in(sc, "port-ring", port_free, 0.35, 0.25);
+    s.fade_in(sc, "port-ring-outer", port_free + seconds(0.06), 0.5, 0.25);
 
     let new_ready_enter = a("if even that fails");
     s.to(sc, "camera.x", new_ready_enter - seconds(0.15), 55.0, 1.3);

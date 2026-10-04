@@ -202,8 +202,9 @@ pub fn film(narration: &Narration) -> Result<ScenePlan> {
     status(s, sc, "slack", rewind + seconds(0.6), 0);
     stand_footer.hide(sc, rewind);
     let ring_at = rewind + seconds(1.3);
-    s.to(sc, "gate.opacity", ring_at, 0.3, 0.4);
-    s.to(sc, "budget.opacity", ring_at, 1.0, 0.3);
+    s.fade_in(sc, "gate", ring_at, 0.3, 0.4);
+    s.fade_in(sc, "budget", ring_at, 1.0, 0.3);
+    s.channel(sc, "budget.sweep", 0.0);
     s.ease(sc, "budget.sweep", ring_at, 0.67, 1.4, Ease::Smootherstep);
     s.type_in(sc, "budget-name", ring_at, 44.0);
     s.hit(sc, "session.pulse", ring_at + seconds(1.4), 0.5, 0.0);
@@ -232,7 +233,8 @@ pub fn film(narration: &Narration) -> Result<ScenePlan> {
 
     // Alarms are backstops.
     let backstop = v.at("backstops");
-    s.to(sc, "alarm.opacity", backstop - seconds(0.3), 1.0, 0.3);
+    s.fade_in(sc, "alarm", backstop - seconds(0.3), 1.0, 0.3);
+    s.channel(sc, "alarm.sweep", 0.0);
     s.ease(
         sc,
         "alarm.sweep",

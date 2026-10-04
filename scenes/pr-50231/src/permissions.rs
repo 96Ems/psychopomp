@@ -300,8 +300,8 @@ pub fn build(narration: &Narration) -> Result<(ScenePlan, ScenePlan, [f32; 4])> 
 
     // The config wires into its rules, in the order written.
     let rules = b("permission rules");
-    s.to(sc, "config-head.opacity", rules, 1.0, 0.4);
-    s.to(sc, "rules-head.opacity", rules + ns(0.3), 1.0, 0.4);
+    s.fade_in(sc, "config-head", rules, 1.0, 0.4);
+    s.fade_in(sc, "rules-head", rules + ns(0.3), 1.0, 0.4);
     for (index, (id, ..)) in RULES.iter().enumerate() {
         let stagger = ns(0.1 * index as f64);
         s.settle_in(sc, &format!("config-{index}"), rules + stagger);

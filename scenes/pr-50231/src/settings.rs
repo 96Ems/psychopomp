@@ -193,31 +193,25 @@ pub fn build(narration: &Narration) -> Result<ScenePlan> {
 
     // Saved settings: one field the schema knows, one it does not.
     let saved = w("saved settings");
-    s.to(sc, "col-saved.opacity", saved, 1.0, 0.4);
+    s.fade_in(sc, "col-saved", saved, 1.0, 0.4);
     s.settle_in(sc, "theme", saved + ns(0.08));
     s.settle_in(sc, "flag", saved + ns(0.2));
 
     // The parser and its gate.
     let parser = w("the new parser");
     s.settle_in(sc, "parser", parser.saturating_sub(ns(0.25)));
-    s.to(sc, "parser-tab.opacity", parser, 1.0, 0.4);
+    s.fade_in(sc, "parser-tab", parser, 1.0, 0.4);
     s.type_in(sc, "code-read", parser, 95.0);
     s.type_in(sc, "code-preserve", parser + ns(0.4), 95.0);
     for (index, ring) in ["gate-mid", "gate-end"].iter().enumerate() {
-        s.to(
-            sc,
-            &format!("{ring}.opacity"),
-            parser + ns(0.4 + index as f64 * 0.3),
-            0.8,
-            0.3,
-        );
+        s.fade_in(sc, ring, parser + ns(0.4 + index as f64 * 0.3), 0.8, 0.3);
     }
     let top = s.connect(sc, "gate-top", parser + ns(0.3), 0.4);
     let bottom = s.connect(sc, "gate-bottom", top, 0.25);
     for gate in ["gate-top", "gate-bottom"] {
         s.to(sc, &format!("{gate}.flow"), bottom + ns(0.5), 0.0, 0.4);
     }
-    s.to(sc, "col-app.opacity", parser + ns(0.6), 1.0, 0.4);
+    s.fade_in(sc, "col-app", parser + ns(0.6), 1.0, 0.4);
 
     // rc.117 removed the option that kept undeclared keys.
     let drops = w("drops");
@@ -229,6 +223,7 @@ pub fn build(narration: &Narration) -> Result<ScenePlan> {
         0.12,
         Ease::Smootherstep,
     );
+    s.channel(sc, "code-preserve-red.opacity", 0.0);
     s.ease(
         sc,
         "code-preserve-red.opacity",

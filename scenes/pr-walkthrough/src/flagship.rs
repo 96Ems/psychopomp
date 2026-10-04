@@ -441,7 +441,7 @@ fn stage_film(narration: &Narration) -> Result<ScenePlan> {
 
     // Establish the service, then its clients. Rigid panels drift into place;
     // their ink follows. The camera carries the composition without bouncing.
-    // Starting poses that are not zero; every other channel starts at 0.
+    // Starting poses away from rest; every other channel starts at its default.
     for (property, initial) in [
         ("camera.z", -160.0),
         ("camera.dof", 0.45),
@@ -462,15 +462,9 @@ fn stage_film(narration: &Narration) -> Result<ScenePlan> {
         1.25,
         Ease::CubicOut,
     );
-    s.to(sc, "service.opacity", seconds(0.15), 1.0, 0.6);
+    s.fade_in(sc, "service", seconds(0.15), 1.0, 0.6);
     for (index, name) in ["service-name", "service-healthy"].iter().enumerate() {
-        s.to(
-            sc,
-            &format!("{name}.opacity"),
-            seconds(0.9 + index as f64 * 0.15),
-            1.0,
-            0.5,
-        );
+        s.fade_in(sc, name, seconds(0.9 + index as f64 * 0.15), 1.0, 0.5);
     }
     let clients = [("client", "link")]
         .into_iter()
@@ -565,9 +559,9 @@ fn stage_film(narration: &Narration) -> Result<ScenePlan> {
         0.0,
         0.15,
     );
-    s.to(
+    s.fade_in(
         sc,
-        "service-stopped.opacity",
+        "service-stopped",
         kill_arrival + seconds(0.4),
         1.0,
         0.25,
@@ -737,8 +731,8 @@ fn stage_film(narration: &Narration) -> Result<ScenePlan> {
     s.to(sc, "camera.focus", safe - seconds(0.2), 0.0, 1.0);
     s.hit(sc, "service.pulse", safe + seconds(0.2), 0.75, 0.0);
     // The blog's tile glow: the inner ring rises first, the outer 60 ms later.
-    s.to(sc, "safe.opacity", safe, 0.3, 0.22);
-    s.to(sc, "safe-outer.opacity", safe + seconds(0.06), 0.45, 0.22);
+    s.fade_in(sc, "safe", safe, 0.3, 0.22);
+    s.fade_in(sc, "safe-outer", safe + seconds(0.06), 0.45, 0.22);
     for (_, link, ..) in OTHERS {
         s.to(sc, &format!("{link}.flow"), safe, 0.45, 0.5);
         s.to(sc, &format!("{link}.flow"), safe + seconds(1.3), 0.0, 0.5);

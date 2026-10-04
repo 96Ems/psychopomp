@@ -544,7 +544,10 @@ Sequence Diagram anchors are not implemented.
 ### Stage
 
 `stage` is an exclusive root recipe. The lightweight crate (`stage.rs`) owns the
-element model, strict channel names, the perspective `Camera`, element outlines, and
+element model, strict channel names and their one table of defaults
+(`StageElement::channel_defaults`, `StagePost::channel_default`; `StageActor`
+declares new channels at them and the renderer falls back to them, so authoring
+and pixels agree), the perspective `Camera`, element outlines, and
 the deterministic orb geometry (Fibonacci points, shatter trajectories), so authoring
 helpers (`StageActor`: `to`, `ease`, `clock`, `hit`, `send`, `type_in`) and tests need no GPU.
 `render/stage.rs` is small pieces: `Scene` samples the camera, every element's

@@ -166,7 +166,8 @@ pub fn film(narration: &Narration) -> Result<ScenePlan> {
     s.to(sc, "camera.x", hour - seconds(0.2), 90.0, 1.6);
     s.to(sc, "camera.y", hour - seconds(0.2), -60.0, 1.6);
     s.settle_in(sc, "template", hour - seconds(0.3));
-    s.to(sc, "hourly.opacity", hour, 1.0, 0.3);
+    s.fade_in(sc, "hourly", hour, 1.0, 0.3);
+    s.channel(sc, "hourly.sweep", 0.0);
     s.ease(sc, "hourly.sweep", hour, 1.0, 1.2, Ease::Smootherstep);
     show(s, sc, "hourly-name", hour + seconds(0.2));
     status(s, sc, "template", hour + seconds(0.2), 1);
@@ -204,7 +205,8 @@ pub fn film(narration: &Narration) -> Result<ScenePlan> {
     s.to(sc, "camera.y", idle - seconds(0.6), 30.0, 1.6);
     s.to(sc, "tp.opacity", idle - seconds(0.6), 0.25, 0.6);
     s.to(sc, "template.dim", idle - seconds(0.6), 0.6, 0.8);
-    s.to(sc, "idle.opacity", idle - seconds(0.5), 0.7, 0.3);
+    s.fade_in(sc, "idle", idle - seconds(0.5), 0.7, 0.3);
+    s.channel(sc, "idle.sweep", 0.0);
     s.ease(
         sc,
         "idle.sweep",

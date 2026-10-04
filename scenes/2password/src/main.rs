@@ -488,8 +488,8 @@ fn film(narration: &Narration) -> Result<ScenePlan> {
         1.25,
         Ease::CubicOut,
     );
-    s.to(sc, "vault.opacity", seconds(0.15), 1.0, 0.6);
-    s.to(sc, "vault-name.opacity", seconds(0.9), 1.0, 0.5);
+    s.fade_in(sc, "vault", seconds(0.15), 1.0, 0.6);
+    s.fade_in(sc, "vault-name", seconds(0.9), 1.0, 0.5);
     let op_ready = s.settle_in(sc, "op", seconds(0.45));
     let vault_contact = s.connect(sc, "vault-link", op_ready + seconds(0.1), 0.5);
     sound(sc, "connect-vault", TICK, vault_contact, -20.0);
@@ -782,8 +782,8 @@ fn film(narration: &Narration) -> Result<ScenePlan> {
     let all = f("at all");
     s.hit(sc, "vault.pulse", all + seconds(0.15), 0.85, 0.0);
     s.ease(sc, "vault.rotation", all, 1.6, 2.4, Ease::CubicOut);
-    s.to(sc, "calm.opacity", all, 0.35, 0.22);
-    s.to(sc, "calm-outer.opacity", all + seconds(0.06), 0.5, 0.22);
+    s.fade_in(sc, "calm", all, 0.35, 0.22);
+    s.fade_in(sc, "calm-outer", all + seconds(0.06), 0.5, 0.22);
     s.hit(sc, "post.bloom", all, 0.3, 0.18);
     s.to(sc, "camera.z", all, -60.0, 2.0);
     for beam in ["ask", "batch", "inject", "paste", "token", "vault-link"] {
@@ -824,8 +824,8 @@ fn film(narration: &Narration) -> Result<ScenePlan> {
     let title = f("install").saturating_sub(seconds(0.6));
     s.channel(sc, "title.scale", 0.86);
     s.bounce(sc, "title.scale", title, 1.0, 0.8, 0.2);
-    s.to(sc, "title.opacity", title, 1.0, 0.4);
-    s.to(sc, "subtitle.opacity", title + seconds(0.3), 1.0, 0.5);
+    s.fade_in(sc, "title", title, 1.0, 0.4);
+    s.fade_in(sc, "subtitle", title + seconds(0.3), 1.0, 0.5);
     sound(sc, "title", CONFIRM, title, -12.0);
     s.type_in(sc, "install", f("install"), 40.0);
     s.type_in(sc, "skill", f("skill").saturating_sub(seconds(0.2)), 48.0);

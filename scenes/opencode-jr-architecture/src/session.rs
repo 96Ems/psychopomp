@@ -178,7 +178,8 @@ pub fn film(narration: &Narration) -> Result<ScenePlan> {
 
     // The alarm: a ring sweeps closed, and the mailbox takes its energy.
     let alarm = v.at("an alarm wakes");
-    s.to(sc, "alarm.opacity", alarm - seconds(0.2), 1.0, 0.3);
+    s.fade_in(sc, "alarm", alarm - seconds(0.2), 1.0, 0.3);
+    s.channel(sc, "alarm.sweep", 0.0);
     s.ease(
         sc,
         "alarm.sweep",

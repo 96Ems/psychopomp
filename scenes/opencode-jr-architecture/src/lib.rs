@@ -280,12 +280,12 @@ fn orb_in(s: &mut StageActor, sc: &mut PlanBuilder, id: &str, at: u64) {
         1.25,
         psychopomp::math::easing::Ease::CubicOut,
     );
-    s.to(sc, &format!("{id}.opacity"), at, 1.0, 0.6);
+    s.fade_in(sc, id, at, 1.0, 0.6);
 }
 
 /// Fade a label in place.
 fn show(s: &mut StageActor, sc: &mut PlanBuilder, id: &str, at: u64) {
-    s.to(sc, &format!("{id}.opacity"), at, 1.0, 0.4);
+    s.fade_in(sc, id, at, 1.0, 0.4);
 }
 
 fn hide(s: &mut StageActor, sc: &mut PlanBuilder, id: &str, at: u64) {

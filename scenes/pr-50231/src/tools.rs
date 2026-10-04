@@ -189,7 +189,7 @@ pub fn build(narration: &Narration) -> Result<ScenePlan> {
     // Establish the lanes, then let them rest.
     let tools = b("tool schemas");
     for column in ["col-source", "col-result"] {
-        s.to(sc, &format!("{column}.opacity"), tools, 1.0, 0.4);
+        s.fade_in(sc, column, tools, 1.0, 0.4);
     }
     let writes = b("now writes");
     for index in 0..LANES.len() {
