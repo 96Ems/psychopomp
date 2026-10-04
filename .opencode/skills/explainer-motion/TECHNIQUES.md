@@ -42,6 +42,18 @@ restrained calibration immediately below.
   neon halos. Reduce the per-primitive light sources before reducing global bloom:
   turning down bloom alone does not remove emissive halos authored into primitives.
 
+## Hype register
+
+For deliberately over-the-top films (see `scenes/psychopomp-intro`), keep the
+quiet rules for the sweet beats and let the loud ones escalate:
+
+- **Build:** ramp `camera.quake` linearly between shouted words (0.45 → 1.0 →
+  1.5 → 2.0) under a riser that ends on the peak word; jolts still add on top.
+- **Slam:** shouted text scales 1.7 → 1 on a 0.3 s / 0.3-bounce spring with a
+  jolt, a 0.14 `post.zoom` streak, chroma, and a short 0.4 `post.flash`.
+- **Cut to silence:** a full `post.flash` on the peak hides setting the quake to
+  0 and fading everything but the hero; the sweet line lands in the stillness.
+
 ## Procedural destruction
 
 Research foundations: [Quilez, domain warping](https://iquilezles.org/articles/warp/)

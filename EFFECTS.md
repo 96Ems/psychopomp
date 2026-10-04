@@ -72,7 +72,12 @@ demonstrate its Interface. Preserve independent timing, spatial coordinates,
 seed identity, and deterministic sampling across every composition.
 
 `camera.shake` is trauma in 0..1; `StageActor::jolt` sets it with a `hit` and adds
-the spring-loaded `camera.kick-x|y` shove and a `camera.punch` zoom. The renderer
+the spring-loaded `camera.kick-x|y` shove and a `camera.punch` zoom.
+`camera.quake` is sustained trauma a scene ramps itself to build tension; it adds
+to `shake`, and the sum may overdrive to 2 (four times a full hit's rumble).
+`post.zoom` (0..0.5) averages 16 taps along each pixel's ray to the frame center,
+a radial streak for lunges and whip pans; `post.flash` (0..1) washes the developed
+frame toward white before the vignette, for impacts that blind or to hide a cut. The renderer
 moves the camera by kick plus rumble in every shutter sample, so the shake
 motion-blurs; roll and punch transform the developed frame in the composite, and
 the punch also covers corners a roll would expose. Plan overlays (headers,

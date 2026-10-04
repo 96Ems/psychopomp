@@ -1,7 +1,8 @@
 //! Camera shake from trauma (after Squirrel Eiserloh's "juicy" camera talk).
-//! The shake channel is trauma in 0..1; motion grows with its square, so a
-//! light knock stays subtle and a full hit jolts. Smooth noise rather than
-//! sines, so the rumble never repeats or reads as a wobble.
+//! Trauma is 0..1 for ordinary hits; motion grows with its square, so a light
+//! knock stays subtle and a full hit jolts. Sustained quakes may overdrive it
+//! up to 2 (four times a full hit). Smooth noise rather than sines, so the
+//! rumble never repeats or reads as a wobble.
 use crate::math::{Vec2, random::smooth_noise, vec2};
 
 /// Peak rumble offset in world pixels at full trauma.
@@ -18,9 +19,12 @@ pub struct Rumble {
     pub roll: f32,
 }
 
+/// Highest trauma: a sustained quake's overdrive.
+pub const MAX_TRAUMA: f32 = 2.0;
+
 /// The rumble at scene time `time` for a trauma level.
 pub fn rumble(time: f32, trauma: f32) -> Rumble {
-    let shake = trauma.clamp(0.0, 1.0).powi(2);
+    let shake = trauma.clamp(0.0, MAX_TRAUMA).powi(2);
     if shake == 0.0 {
         return Rumble::default();
     }
@@ -49,5 +53,14 @@ mod tests {
             (quarter * 4.0 - full).abs() < 1e-4,
             "motion grows with trauma squared"
         );
+    }
+
+    #[test]
+    fn overdrive_quadruples_a_full_hit_and_then_stops_growing() {
+        let full = rumble(0.37, 1.0);
+        let overdrive = rumble(0.37, MAX_TRAUMA);
+        assert!((overdrive.offset.length() - full.offset.length() * 4.0).abs() < 1e-4);
+        assert!((overdrive.roll - full.roll * 4.0).abs() < 1e-6);
+        assert_eq!(rumble(0.37, 9.0), overdrive);
     }
 }

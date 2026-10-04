@@ -69,6 +69,8 @@ struct PostUniform {
     look: [f32; 4],
     shock: [f32; 4],
     rewind: [f32; 4],
+    /// Radial zoom streak toward the frame center and white flash (0 for none).
+    motion: [f32; 4],
 }
 
 struct AtlasText {
@@ -656,7 +658,7 @@ impl HeadlessRenderer {
             .map(|(time, _)| *time)
             .min_by(|a, b| (a - mean).abs().total_cmp(&(b - mean).abs()))
             .context("an exposure needs at least one sample")?;
-        let mut post = [[0.0; 4]; 4];
+        let mut post = [[0.0; 4]; 5];
         for (index, &(time, weight)) in exposure.iter().enumerate() {
             let value = |property: &str, default: f32| value(time, property, default);
             let scene = Scene::sample(plan, &value, time as f32, size);
@@ -705,6 +707,7 @@ impl HeadlessRenderer {
                 look: [0.0; 4],
                 shock: [0.0; 4],
                 rewind: [0.0; 4],
+                motion: [0.0; 4],
             }),
         );
         let mut encoder = self
@@ -756,7 +759,7 @@ impl HeadlessRenderer {
 
     /// Bloom and composite the finished exposure into the frame. `post` is
     /// the bloom parameters and the composite look.
-    fn develop(&mut self, gpu: &StageGpu, post: [[f32; 4]; 4]) -> Result<Vec<u8>> {
+    fn develop(&mut self, gpu: &StageGpu, post: [[f32; 4]; 5]) -> Result<Vec<u8>> {
         for pass in &gpu.passes {
             self.queue.write_buffer(
                 &pass.uniform,
@@ -767,6 +770,7 @@ impl HeadlessRenderer {
                     look: post[1],
                     shock: post[2],
                     rewind: post[3],
+                    motion: post[4],
                 }),
             );
         }
@@ -842,21 +846,26 @@ pub(crate) fn stage_anchor(
     let point = edge.on(Scene::camera(plan, value, time as f32, size)
         .place(element)?
         .outline);
-    let roll = shake::rumble(time as f32, value("camera.shake", 0.0)).roll;
+    let roll = shake::rumble(time as f32, trauma(value)).roll;
     // Mirrors `composite` in stage_post.wgsl, which samples the inverse.
     let zoom = 1.0 + value("camera.punch", 0.0).max(0.0) + roll.abs() * 0.6;
     let center = size * 0.5;
     Some(center + Vec2::from_angle(roll).rotate(point - center) * zoom)
 }
 
-/// Bloom, look, pressure wave, and rewind settings at one sample.
+/// Camera trauma: a jolt's decaying `shake` plus a scene's sustained `quake`.
+fn trauma(value: &dyn Fn(&str, f32) -> f32) -> f32 {
+    value("camera.shake", 0.0).max(0.0) + value("camera.quake", 0.0).max(0.0)
+}
+
+/// Bloom, look, pressure wave, rewind, zoom-streak, and flash settings at one sample.
 fn post_settings(
     plan: &StagePlan,
     scene: &Scene,
     value: &dyn Fn(&str, f32) -> f32,
     look: Look,
     time: f64,
-) -> [[f32; 4]; 4] {
+) -> [[f32; 4]; 5] {
     let params = [
         value("post.bloom", plan.post.bloom).max(0.0),
         0.95,
@@ -887,10 +896,16 @@ fn post_settings(
     let rewind = [
         value("post.rewind", -1.0),
         look.background.dot(Vec3::new(0.2126, 0.7152, 0.0722)),
-        shake::rumble(time as f32, value("camera.shake", 0.0)).roll,
+        shake::rumble(time as f32, trauma(value)).roll,
         value("camera.punch", 0.0).max(0.0),
     ];
-    [params, grade, shock, rewind]
+    let motion = [
+        value("post.zoom", 0.0).clamp(0.0, 0.5),
+        value("post.flash", 0.0).clamp(0.0, 1.0),
+        0.0,
+        0.0,
+    ];
+    [params, grade, shock, rewind, motion]
 }
 
 /// The theme's colors in linear light.
@@ -1058,7 +1073,7 @@ impl<'a> Scene<'a> {
     ) -> Self {
         // A jolt's spring-loaded shove plus its trauma rumble, sampled per
         // shutter sample so the shake itself motion-blurs.
-        let rumble = shake::rumble(time, value("camera.shake", 0.0));
+        let rumble = shake::rumble(time, trauma(value));
         let position = vec3(
             value("camera.x", 0.0) + value("camera.kick-x", 0.0) + rumble.offset.x,
             value("camera.y", 0.0) + value("camera.kick-y", 0.0) + rumble.offset.y,
@@ -3022,6 +3037,41 @@ mod tests {
                 })
                 .unwrap()
         };
+        let post = |renderer: &mut HeadlessRenderer, name: &str, amount: f32| {
+            renderer
+                .render_stage(&plan, &gpu, 2.0, |property, default| {
+                    if property == name { amount } else { default }
+                })
+                .unwrap()
+        };
+        let mean =
+            |frame: &[u8]| frame.iter().map(|&b| f64::from(b)).sum::<f64>() / frame.len() as f64;
+        assert!(
+            post(&mut renderer, "post.zoom", 0.0) == intact,
+            "no streak is the identity"
+        );
+        let streak = post(&mut renderer, "post.zoom", 0.3);
+        assert!(streak != intact, "the zoom streak reaches pixels");
+        assert!(
+            post(&mut renderer, "post.zoom", 0.3) == streak,
+            "the streak is deterministic"
+        );
+        assert!(
+            post(&mut renderer, "post.flash", 0.0) == intact,
+            "no flash is the identity"
+        );
+        assert!(
+            mean(&post(&mut renderer, "post.flash", 1.0)) > 200.0,
+            "a full flash washes the frame toward white"
+        );
+        assert!(
+            post(&mut renderer, "camera.quake", 0.0) == intact,
+            "no quake is the identity"
+        );
+        assert!(
+            post(&mut renderer, "camera.quake", 2.0) != intact,
+            "a quake moves the camera"
+        );
         assert!(
             rewind(&mut renderer, 0.0) == intact,
             "rewind starts without a cut"

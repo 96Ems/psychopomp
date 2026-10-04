@@ -1639,6 +1639,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "psychopomp-hello"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "psychopomp",
+ "serde_json",
+]
+
+[[package]]
 name = "psychopomp-hero"
 version = "0.1.0"
 dependencies = [
@@ -1653,6 +1662,15 @@ dependencies = [
  "anyhow",
  "psychopomp",
  "psychopomp-effect-succeed-slides",
+ "serde_json",
+]
+
+[[package]]
+name = "psychopomp-intro"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "psychopomp",
  "serde_json",
 ]
 

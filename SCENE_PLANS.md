@@ -664,9 +664,11 @@ their fuller documentation elsewhere.
   `packet` (`beam`, `reverse`, `label`), `label` (`at`, `size`, `spans`), and `ring`
   (`at`, `radius`, `thickness`), plus `post` (`bloom`, `grain`, `vignette`,
   `backdrop`). Channels are `<element>.<property>` (for example `service.shatter`,
-  `link.draw`, `probe.age`, `client.blur|content`) and `camera.x|y|z|focus|dof|shake|kick-x|kick-y|punch`,
-   `post.bloom|chroma|exposure|vignette|rewind`. `post.rewind` is a 1.4-second local
-   age for VHS rewind interference (-1 inactive). Cards also take the deletion
+  `link.draw`, `probe.age`, `client.blur|content`) and `camera.x|y|z|focus|dof|shake|quake|kick-x|kick-y|punch`,
+   `post.bloom|chroma|exposure|vignette|rewind|zoom|flash`. `post.rewind` is a 1.4-second local
+   age for VHS rewind interference (-1 inactive). `camera.quake` is sustained
+   trauma (0..2) added to a jolt's `shake`; `post.zoom` is a radial streak toward
+   the frame center (0..0.5); `post.flash` washes the frame toward white (0..1). Cards also take the deletion
    channels `cool|damage|glitch|cut|ghost` and the status-spinner clocks
    `spinner|release|mark` (seconds; -1 inactive), with `mark: "check" | "cross"`.
    A packet is one clock: `age` (seconds since

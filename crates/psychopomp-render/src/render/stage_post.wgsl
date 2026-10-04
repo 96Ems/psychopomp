@@ -1,7 +1,7 @@
 // Stage post-processing: a physically inspired bloom (13-tap downsample,
 // tent upsample) and a composite with the burst's pressure wave, VHS rewind
-// interference, highlight rolloff, chromatic aberration, vignette, and
-// frame-locked film grain. Concatenated after effects/noise, pressure, rewind.
+// interference, a radial zoom streak, highlight rolloff, a white flash,
+// chromatic aberration, vignette, and frame-locked film grain. Concatenated after effects/noise, pressure, rewind.
 //
 // Live editing: set PSYCHOPOMP_SHADER_DIR to this directory and re-render.
 
@@ -11,6 +11,7 @@ struct Post {
     look: vec4<f32>,   // chroma, vignette, grain, frame seed
     shock: vec4<f32>,  // center pixels, burst age (-1 inactive), projected scale
     rewind: vec4<f32>, // VHS rewind age (-1 inactive), background luminance, camera roll (radians), punch-in
+    motion: vec4<f32>, // radial zoom streak (fraction toward the center), white flash, 0, 0
 };
 
 @group(0) @binding(0) var<uniform> post: Post;
@@ -98,6 +99,23 @@ fn rolloff(c: vec3<f32>) -> vec3<f32> {
     return select(c, compressed, c > vec3<f32>(knee));
 }
 
+// Scene light plus bloom at `uv`, with red and blue split by `offset`.
+fn develop_tap(uv: vec2<f32>, offset: vec2<f32>) -> vec3<f32> {
+    let uv_r = uv + offset;
+    let uv_b = uv - offset;
+    let hdr = vec3<f32>(
+        textureSampleLevel(source, linear_sampler, uv_r, 0.0).r,
+        textureSampleLevel(source, linear_sampler, uv, 0.0).g,
+        textureSampleLevel(source, linear_sampler, uv_b, 0.0).b,
+    );
+    let glow = vec3<f32>(
+        textureSampleLevel(bloom, linear_sampler, uv_r, 0.0).r,
+        textureSampleLevel(bloom, linear_sampler, uv, 0.0).g,
+        textureSampleLevel(bloom, linear_sampler, uv_b, 0.0).b,
+    );
+    return hdr + glow * post.params.x;
+}
+
 @fragment
 fn composite(in: VOut) -> @location(0) vec4<f32> {
     let size = vec2<f32>(textureDimensions(source));
@@ -122,19 +140,19 @@ fn composite(in: VOut) -> @location(0) vec4<f32> {
     let tape = rewind_envelope(post.rewind.x);
     uv.x += rewind_tear(in.position.xy, size, post.rewind.x, tape) / size.x;
     let offset = (in.uv - vec2<f32>(0.5)) * post.look.x * 0.006;
-    let uv_r = uv + offset;
-    let uv_b = uv - offset;
-    let hdr = vec3<f32>(
-        textureSampleLevel(source, linear_sampler, uv_r, 0.0).r,
-        textureSampleLevel(source, linear_sampler, uv, 0.0).g,
-        textureSampleLevel(source, linear_sampler, uv_b, 0.0).b,
-    );
-    let glow = vec3<f32>(
-        textureSampleLevel(bloom, linear_sampler, uv_r, 0.0).r,
-        textureSampleLevel(bloom, linear_sampler, uv, 0.0).g,
-        textureSampleLevel(bloom, linear_sampler, uv_b, 0.0).b,
-    );
-    var color = (hdr + glow * post.params.x) * post.params.w;
+    // A zoom streak averages taps along the ray to the frame center, so the
+    // image smears outward as if the lens lunged. Fixed taps keep it stable.
+    let streak = post.motion.x;
+    var light = develop_tap(uv, offset);
+    if streak > 0.0 {
+        let taps = 16;
+        for (var i = 1; i < taps; i = i + 1) {
+            let scale = 1.0 - streak * f32(i) / f32(taps - 1);
+            light += develop_tap(vec2<f32>(0.5) + (uv - vec2<f32>(0.5)) * scale, offset * scale);
+        }
+        light = light / f32(taps);
+    }
+    var color = light * post.params.w;
     if tape > 0.0 {
         // Snow sits only on ink, so the empty canvas stays clean; shade darkens
         // the tracking band and scanlines everywhere (invisible on black).
@@ -146,6 +164,8 @@ fn composite(in: VOut) -> @location(0) vec4<f32> {
     }
     color += vec3<f32>(0.035, 0.028, 0.021) * pressure;
     color = rolloff(color);
+    // A flash washes the developed frame toward white; the vignette still frames it.
+    color = mix(color, vec3<f32>(1.0), clamp(post.motion.y, 0.0, 1.0));
 
     let centered = (in.uv - vec2<f32>(0.5)) * vec2<f32>(1.0, 0.82);
     let vignette = 1.0 - post.look.y * smoothstep(0.28, 0.95, length(centered) * 1.35);

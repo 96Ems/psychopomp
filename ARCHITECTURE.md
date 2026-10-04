@@ -623,7 +623,9 @@ composite. These concrete Modules form the initial [effects library](EFFECTS.md)
 effect physics and shader optics can be reused without Stage identities.
 `effects/rewind.wgsl` adds the blog's VHS tape interference (tear, snow on ink,
 scanlines) to the same composite, controlled by `post.rewind`; it needs no
-previous-frame textures or feedback. Card deletion (glitch bands, hairline cut)
+previous-frame textures or feedback. The composite's radial zoom streak
+(`post.zoom`) and white flash (`post.flash`) sample the same developed exposure,
+and `camera.quake` adds sustained trauma to the jolt rumble. Card deletion (glitch bands, hairline cut)
 clips copies of the card's primitives by their bounding quads, since every
 primitive rasterizes only inside its box. `Theme::Neutral` is the blog's "clear
 neutral" palette: quiet frames and wires, ivory signals, and desaturated

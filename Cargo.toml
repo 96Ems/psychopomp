@@ -22,6 +22,8 @@ members = [
   "scenes/video",
   "scenes/compare",
   "scenes/2password",
+  "scenes/psychopomp-intro",
+  "scenes/hello",
 ]
 default-members = ["crates/psychopomp-render"]
 resolver = "3"

@@ -1,81 +1,97 @@
 # Psychopomp
 
-Code-first motion graphics in Rust. One authored scene can become a native,
-interruptible presentation or a shutter-sampled video.
+Code-first motion graphics in Rust. A small Rust program describes a scene;
+Psychopomp renders it as a 1080p60 video with real motion blur, or plays it as
+an interactive presentation.
 
-The project was previously named Kinograph; a psychopomp is a guide that leads
-souls between worlds, as these scenes lead a viewer from one state to the next.
+Every frame is a pure function of time, so any frame renders identically in any
+order, and interrupted motion keeps its velocity. It is an early, thoroughly
+vibe-coded prototype, tested on macOS (Metal).
 
-Psychopomp is an early prototype, not a general-purpose scene graph. Its examples
-explore stable code edits, teaching diagrams, typography, and narrated explainers.
-Motion is sampled at arbitrary times; reversing a transition preserves its
-current position and velocity instead of restarting an animation.
+## What it draws
 
-## Run a presentation
+- **Stage**: a 2.5D camera over particle orbs, cards, wires, travelling packets,
+  labels, and rings, with bloom, depth of field, screen shake, zoom streaks,
+  explosions, and a VHS rewind.
+- **Code**: an editor that animates diffs while every line keeps its identity.
+- **Overlays**: callouts pinned to anything, rolling numbers, captions, sequence
+  diagrams, charts, trees, and video cards.
+- **Narration**: optional ElevenLabs or Fish Audio voice-over. Each beat waits
+  for the word that triggers it, so re-voicing re-times the film.
 
-From the repository root:
+## Example
 
-```sh
-cargo run -p psychopomp-interactive-showcase
-cargo run --release -- plan present target/interactive-showcase/deck.json --theme original
+```rust
+let plan: StagePlan = serde_json::from_value(serde_json::json!({
+    "elements": [
+        { "kind": "card", "id": "client", "at": [560, 540, 0], "size": [300, 110], "title": "client" },
+        { "kind": "orb", "id": "server", "at": [1360, 540, 0], "radius": 140 },
+        { "kind": "beam", "id": "link", "from": "client", "to": "server" },
+        { "kind": "packet", "id": "hello", "beam": "link", "label": "GET /hello" }
+    ]
+}))?;
+let mut scene = PlanBuilder::new("hello", 4 * SECOND);
+let mut stage = StageActor::declare(&mut scene, "stage", &plan)?;
+let ready = stage.settle_in(&mut scene, "client", 0); // the card drifts into place
+let wired = stage.connect(&mut scene, "link", ready, 0.6); // the wire draws on
+let landed = stage.send(&mut scene, "hello", wired + SECOND / 2, 0.8); // a packet flies
+stage.land(&mut scene, "server", landed); // the orb lights up
+stage.jolt(&mut scene, landed, [1.0, 0.0], 0.6); // and the camera takes the hit
+std::fs::write("target/hello.json", serde_json::to_string_pretty(&scene.finish()?)?)?;
 ```
 
-This opens a four-slide deck of code reveals and Effect Tasks. **' / Shift+'**
-changes slides; **← / →** changes steps; **R** replays; **P** pauses; **S** slows motion.
-
-You need a recent Rust toolchain, a working `wgpu` adapter, and a desktop display.
-The prototype has been exercised on macOS/Metal. CommitMono is bundled
-(`assets/fonts`, SIL OFL) and compiled in, so text renders identically on every
-machine; installed fonts only supply glyphs CommitMono lacks, such as CJK or emoji.
-
-For the typography, table, and component showroom, see
-[Scene Programs and presentations](SCENE_PLANS.md).
-
-## Export the same scene
-
-With FFmpeg and `libx264` on `PATH`:
+The full program is [`scenes/hello`](scenes/hello/src/main.rs). Run it and render
+the plan it writes (you need a recent Rust toolchain, a GPU, and FFmpeg with
+`libx264`):
 
 ```sh
-cargo run --release -- plan render target/interactive-showcase/task-lifecycle.json output/task-lifecycle.mp4 --range 3..6 --theme original
+cargo run -p psychopomp-hello
+cargo run --release -- plan render target/hello.json output/hello.mp4 --theme neutral
 ```
 
-The range samples the original scene clock, so cutting into a transition does
-not restart it. Exports choose their theme explicitly; native preferences do not
-silently change exported pixels. Generated plans and media belong in ignored
-`target/` and `output/` directories.
-
-## Make a narrated explainer
-
-`scenes/pr-walkthrough` is a complete narrated reel: sequence diagrams replay broken
-and fixed behavior, and editors animate each change as a diff. See
-[Make A Narrated Explainer Reel](SCENE_PLANS.md#make-a-narrated-explainer-reel).
+Check frames without encoding a video:
 
 ```sh
-cargo run -p psychopomp-pr-walkthrough
-cargo run --release -- plan render scenes/pr-walkthrough/pr-walkthrough.reel.json output/pr-walkthrough.mp4 --theme opencode
+bun scripts/sheet.ts target/hello.json 0.5,1.5,2.7 --theme neutral --shutter
 ```
 
-## Change intent, motion, or pixels in the right place
+## Examples
 
-A **Scene Program** is a small Rust executable under `scenes/`. It writes a
-**Scene Plan**: JSON containing identities, destinations, timing, and recipe data.
-The renderer prepares that plan once, then samples it for either delivery.
+| Scene | What it shows |
+| --- | --- |
+| [`psychopomp-intro`](scenes/psychopomp-intro) | This library introducing itself, loudly |
+| [`2password`](scenes/2password) | A narrated product explainer on the Stage |
+| [`pr-walkthrough`](scenes/pr-walkthrough) | Pull requests as Stage films that zoom into their diffs |
+| [`callouts`](scenes/callouts), [`rolling-number`](scenes/rolling-number), [`charts`](scenes/charts), [`tree`](scenes/tree) | Component showrooms |
+| [`interactive-showcase`](scenes/interactive-showcase) | A native, steppable presentation (`plan present`) |
+
+## Use it with a coding agent
+
+[`.opencode/skills`](.opencode/skills) holds two skills: `psychopomp` (the reel
+workflow: facts, script, narration, choreography, review, render) and
+`explainer-motion` (how to make diagrams move like physical things). OpenCode
+loads them inside this repository; copy them to your agent's skills directory to
+use them elsewhere.
+
+## How it fits together
 
 ```text
-scenes/*                         authored meaning, destinations, choreography
-    ↓ Scene Plan
-crates/psychopomp                  identity, validation, tracks, retargeting, time
-    ↓ typed preflight and resource preparation
-crates/psychopomp-render           measured typography, recipes, sampled pixels
-    ├─ native presentation       Playback, window and worker scheduling
-    └─ video export              temporal sampling, readback and FFmpeg
+scenes/*              Rust Scene Programs: meaning, timing, choreography
+   ↓ Scene Plan (JSON)
+crates/psychopomp     plans, validation, timelines, springs; no GPU
+   ↓
+crates/psychopomp-render   wgpu rendering → native presentation or FFmpeg video
 ```
 
-Share a rule when two real callers need the same behavior. Keep recipe-specific
-layout, identity, and motion choices visible. A Grid product, an editor line,
-and a sequence row are not interchangeable just because each has a key.
+| Question | Read |
+| --- | --- |
+| What do the terms mean? | [CONTEXT.md](CONTEXT.md) |
+| Where does a behavior live? | [ARCHITECTURE.md](ARCHITECTURE.md) |
+| How do I author, present, or render? | [SCENE_PLANS.md](SCENE_PLANS.md) |
+| Which effects exist, and how are they built? | [EFFECTS.md](EFFECTS.md) |
+| What inspired the motion? | [PRIOR_ART.md](PRIOR_ART.md) |
 
-## Verify a change
+## Develop
 
 ```sh
 cargo test --workspace
@@ -83,21 +99,5 @@ cargo fmt --check
 cargo clippy --workspace --all-targets --all-features -- -D warnings
 ```
 
-For rendering or choreography changes, also inspect targeted frames and
-transitions, including interrupted navigation. Passing tests is not aesthetic
-approval.
-
-## Read further by question
-
-| Question | Document |
-| --- | --- |
-| What do the domain terms mean? | [CONTEXT.md](CONTEXT.md) |
-| Which Module owns this behavior? | [ARCHITECTURE.md](ARCHITECTURE.md) |
-| How do I author, inspect, present, or export? | [SCENE_PLANS.md](SCENE_PLANS.md) |
-| Which references inform the motion? | [PRIOR_ART.md](PRIOR_ART.md) |
-| Where do composable particle and shader effects live? | [EFFECTS.md](EFFECTS.md) |
-| What did earlier experiments establish? | [docs/history/](docs/history/) and [perf/](perf/) |
-
-[AGENTS.md](AGENTS.md) records the engineering, stability, and verification rules.
-Current contracts live in the domain and architecture documents; experiment
-history records evidence and superseded trials, not a second specification.
+[AGENTS.md](AGENTS.md) has the engineering and verification rules. CommitMono is
+bundled under the SIL Open Font License (`assets/fonts`).

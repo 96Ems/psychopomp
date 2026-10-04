@@ -226,13 +226,18 @@ impl StageElement {
 }
 
 /// Channels that belong to the whole stage rather than an element.
-pub const STAGE_PROPERTIES: [&str; 14] = [
+/// `camera.shake` is the trauma jolts write; `camera.quake` is sustained
+/// trauma a scene ramps itself (up to 2 for overdrive). They add.
+/// `post.zoom` streaks the developed frame toward its center (a radial blur);
+/// `post.flash` washes it toward white (0..1), for impacts that blind.
+pub const STAGE_PROPERTIES: [&str; 17] = [
     "camera.x",
     "camera.y",
     "camera.z",
     "camera.focus",
     "camera.dof",
     "camera.shake",
+    "camera.quake",
     "camera.kick-x",
     "camera.kick-y",
     "camera.punch",
@@ -241,6 +246,8 @@ pub const STAGE_PROPERTIES: [&str; 14] = [
     "post.exposure",
     "post.vignette",
     "post.rewind",
+    "post.zoom",
+    "post.flash",
 ];
 
 impl StagePlan {

@@ -1,0 +1,34 @@
+{
+  "clips": [
+    {
+      "id": "hush",
+      "file": "hush.mp3",
+      "words": "hush.words.json",
+      "durationNanos": 11999000000,
+      "textHash": "73a05e9b7cd9c5e7",
+      "engine": "elevenlabs",
+      "model": "eleven_v4",
+      "requestId": "nKzaHONbksPCVFDHqgtn"
+    },
+    {
+      "id": "toys",
+      "file": "toys.mp3",
+      "words": "toys.words.json",
+      "durationNanos": 14559000000,
+      "textHash": "3013fa0f59cab1b9",
+      "engine": "elevenlabs",
+      "model": "eleven_v4",
+      "requestId": "gEAf3bVln0mSbaDwv61B"
+    },
+    {
+      "id": "fever",
+      "file": "fever.mp3",
+      "words": "fever.words.json",
+      "durationNanos": 13119000000,
+      "textHash": "25b675f68ef47a4a",
+      "engine": "elevenlabs",
+      "model": "eleven_v4",
+      "requestId": "XYtCCAGrVtU3ARArN5ib"
+    }
+  ]
+}
