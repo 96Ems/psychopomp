@@ -1800,6 +1800,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "psychopomp-text-surfaces"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "psychopomp",
+ "serde_json",
+]
+
+[[package]]
 name = "psychopomp-tree"
 version = "0.1.0"
 dependencies = [

@@ -46,6 +46,11 @@ Lightweight crate (`crates/psychopomp/src`):
 - `crates/psychopomp/src/stage/camera.rs`: the Stage `Camera` pose and projection (pan, dolly, orbit about a pivot, zoom, roll, billboard screen boxes, framing) shared by the renderer, callouts, and Scene Programs, and the `CameraRig` shots (`frame`, `move_to`, `establish`, `push_in`, `pull_back`, `drift`, `whip`, `orbit`, `dolly_zoom`, `roll`, `focus_on`, `aperture`, `follow`, `release`, `handheld`)
 - `crates/psychopomp/src/effects/`: GPU-free special-effect clocks and particle poses (combustion, lightning, dissolve, shield, surface, shake, spinner); shared dynamics stay in `psychopomp::math::dynamics`
 - `crates/psychopomp/src/stage.rs`: Stage elements, strict channels, perspective camera, orb geometry, form shapes and morphs (`form_points`, `morph_point`), the packet clock and relay legs (`stage::packet`), and the `StageActor` authoring handle (`to`, `ease`, `bounce`, `settle_in`, `clock`/`clock_for`, `connect`, `send`, `relay`, `morph`, `hit`, `kick`, `jolt`, `twang`, `land`)
+- `crates/psychopomp/src/window.rs`: the text surfaces' shared Window channels (`opacity`, `x`, `y`, `scale`, `content`), title-bar height, `settle_in`/`dismiss`, and dot-free sub-channel IDs
+- `crates/psychopomp/src/terminal.rs`: Terminal recipe values, the reveal-driven pure layout with its scroll floor, deterministic `keystrokes`, and the `TerminalActor` handle (`type_command`, `prompt`, `idle`, `print`, `stream`, `spin`, `resolve`, `highlight`, `clear`, `scroll_to`)
+- `crates/psychopomp/src/chat.rs`: Chat Thread recipe values (Slack and bubbles styles), per-style geometry, the composer-anchored pure layout over renderer-measured `ChatMetrics`, typing-dot poses, and the `ChatActor` handle (`typing`, `say`, `stream`, `react`, `highlight`, `stamp`)
+- `crates/psychopomp/src/lower_third.rs`: Lower Third recipe values, bar and text geometry, and the `LowerThirdActor` handle (`show`, `hide`)
+- `crates/psychopomp/src/changed_files.rs`: Changed Files recipe values, GitHub's `diffstat`, fixed row slots, the totals schedule, and the `ChangedFilesActor` handle (`reveal`, `reveal_row`, `focus`, `unfocus`, `highlight`, `scroll_to`)
 - `crates/psychopomp/src/math.rs` and `math/`: shared motion and geometry math (glam vectors, lerp/remap/smoothstep, easing, closed-form dynamics such as the settling spring, arc-length curves, shape ports and connectors, deterministic hash)
 
 Renderer crate (`crates/psychopomp-render/src`), plan runtime:
@@ -80,6 +85,8 @@ Renderer crate (`crates/psychopomp-render/src`), plan runtime:
 - `crates/psychopomp-render/src/plan_runtime/ide.rs`: strict preflight of Diagnostics, Hover Cards, and Cursors attached to the editor root, and their per-sample frames from measured targets
 - `crates/psychopomp-render/src/plan_runtime/video.rs`: Video Card preflight, frame caches, and source-time mapping
 - `crates/psychopomp-render/src/plan_runtime/stage.rs`: Stage root preflight and preparation
+- `crates/psychopomp-render/src/plan_runtime/lower_third.rs`: Lower Third strict-channel preflight
+- `crates/psychopomp-render/src/plan_runtime/terminal.rs`, `chat.rs`, and `changed_files.rs`: text-surface preflight (per-line, per-message, per-reaction, and per-row channels checked against their IDs and kinds); chat preparation measures wrapped text, changed-files preparation measures columns and compiles its rolling totals
 
 Renderer crate, pixels and delivery:
 
@@ -105,6 +112,9 @@ Renderer crate, pixels and delivery:
 - `crates/psychopomp-render/src/render/ide.rs`: selection, Inlay Hint chip, diagnostic wave and gutter icon, caret, and Hover Card pixels on the flat editor surface
 - `crates/psychopomp-render/src/render/video.rs`: projected Video Card pixels with a focus window
 - `crates/psychopomp-render/src/render/wipe.rs`: Reel wipe pixels: antialiased split, divider line and shadow, riding labels
+- `crates/psychopomp-render/src/render/window.rs`: the text surfaces' Window shell (composed once per pose through the projected card and cached as a layer), title bar, CommitMono span runs, and weighted strokes
+- `crates/psychopomp-render/src/render/terminal.rs`, `chat.rs`, and `changed_files.rs`: Terminal, Chat Thread, and Changed Files pixels
+- `crates/psychopomp-render/src/render/lower_third.rs`: Lower Third pixels: the accent bar and sans name and role clipped at a stationary edge
 - `crates/psychopomp-render/src/render/stage.rs`, `stage.wgsl`, `stage_post.wgsl`: Stage primitives, HDR bloom, and composite; `PSYCHOPOMP_SHADER_DIR` loads the WGSL live
 - `crates/psychopomp-render/src/render/effects/*.wgsl`: binding-free noise, combustion, pressure, rewind, lightning, dissolve, shield, and scan Modules, composed by the Stage shaders; see `EFFECTS.md`
 - `crates/psychopomp-render/src/render/debug.rs`: optional native debug HUD
@@ -137,6 +147,7 @@ Scene Programs (`scenes/`), each emitting a Scene Plan, Deck, or Reel:
 - `scenes/camera/`: camera showroom: establish, frame, follow a packet, rack focus, orbit an orb, dolly zoom on an impact, whip, handheld drift, and a push-in, all `CameraRig` shots
 - `scenes/effects-showroom/`: Stage effects reel: a charged build zaps a deploy, a shield blocks an attack and passes a request, a stale config burns away and its replacement materializes and is scanned, a live link hums
 - `scenes/stage-forms/`: Stage diagram vocabulary showroom: shapes, icons, and arrowed paths; a packet relaying through a stop; a dot-matrix plane morphing into a tumbling cube and a sphere over a slab; a cube that bursts
+- `scenes/text-surfaces/`: text-surface showroom reel: an agent, introduced by a Lower Third, in a Terminal session that overflows, scrolls, and clears; a Slack-style Chat Thread reacting while the agent streams its fix; the bubbles style; and a pull request's Changed Files with rolling totals and focus
 
 ## Scene Programs And Rendering Compile Separately
 
@@ -520,6 +531,48 @@ over `render/chart.rs`, which holds the shared ink: snapped CommitMono labels,
 readout), dashes along arc length, dots, diamonds, and readout tabs. Both draw
 only from channels, so they are native-presentable.
 
+### Text surfaces
+
+`terminal`, `chat`, and `changed-files` are overlays (drawn just above Video
+Cards, beneath diagrams and text) that stand in for familiar interfaces where
+scenes used to fake them with Stage cards and cycled statuses. Each lives in a
+Window: the lightweight `window.rs` owns its five channels and `settle_in` (the
+Stage card entrance: 16 px drift, 1.035 scale, content 65 ms behind), and
+`render/window.rs` draws the shell through the shared projected card
+(`FrameUi::card_source` with an empty source, plus `card_layer` for the title
+bar). Composing that shell costs tens of milliseconds, and a window holds still
+while its content moves, so the composed shell is cached per pose and theme as a
+cropped layer and blended at the body's opacity; Porter-Duff over is
+associative, so the layer equals drawing directly. Content is drawn unscaled
+onto the frame with the shared text and fill primitives once the body has
+nearly settled.
+
+Each recipe keeps the Tree's contract: stable IDs, strict per-ID channels, and a
+layout that is a pure function of channels. A Terminal line's
+`line.<id>.reveal` opens its row; rows stack by the sum of reveals above them and
+the window shows the last `rows`, so a full window slides older lines up by
+exactly the new room, and `scroll` is a floor (`clear` springs it to the content
+height). Typing writes one exact step per keystroke at times from
+`terminal::keystrokes`, a hashed, deterministic cadence. Task spinners reuse
+`effects::spinner`; their `spin` and `mark` clocks stop once the mark has cooled,
+so holds merge into one sample. A Chat Thread's rooms are computed from
+`typing`, `reveal`, and reaction presence over heights the renderer measured once
+(`ChatMetrics`), stacked up from the composer; a typing slot and its message are
+one ID, so the indicator grows into the bubble. Wrapped sans-serif text with
+code chips is shaped once at preparation and recolored per theme. Changed Files
+rows hold fixed slots; its header totals are three Rolling Numbers built at
+preparation from a `totals` schedule the handle writes as rows land, reusing the
+Rolling Number compiler and painter. Terminals and chats are channel-only and run
+in `plan present`; a changed-files card whose totals roll is export-only, like a
+Rolling Number.
+
+A `lower-third` overlay (drawn just after Rolling Numbers) is a name and role
+beside an accent bar. Its `bar`, `name`, and `role` channels are independent
+phases: the bar draws up on the draw-on curve, and each line slides out from
+behind it through a stationary clip edge, so nothing ever shows on the bar's far
+side. Sans sprites are cached per theme. It is channel-only and presents
+natively; it is not a header or chapter template.
+
 ### Callouts
 
 A `callout` overlay (drawn after Rolling Numbers, below plain text) points at
@@ -853,7 +906,7 @@ the reel sample key, so sweeps get motion blur and holds collapse to one sample.
 
 `psychopomp/src/playback.rs` derives numeric step destinations from a renderer-prepared Timeline, after semantic geometry has resolved. Next, Previous, First, and Last append only changed channel targets through the shared Timeline compiler. Each spring therefore inherits position and velocity, including mid-flight reversals; unchanged destinations do not restart motion. Per-channel motion profiles come from the destination's latest authored spring (or its first spring before any event; set-only channels use a 0.4-second zero-bounce default). Replay alone resets to the entry pose. The local clock freezes on pause or once all channels settle, without retiming the authored video. Immutable `Arc<Timeline>` revisions make sampling history-independent even while input creates a newer revision.
 
-`plan_runtime/presentation.rs` owns winit lifecycle, slide/step navigation, full screen, letterboxed resizing, and smooth/pixelated display filtering. `presentation/worker.rs` retains the deck's prepared scenes, fonts, and GPU. At most one render is in flight; requests and results carry slide identity and immutable timeline revisions, so switching slides cannot display a stale result from another scene. Each slide retains its selected step and paused local clock while inactive. Explicit pause stays paused on return; previously running motion resumes. Held/paused scenes sleep unless a planned Task requests ambient clock advancement. Generic State Channels, recorded media, and Rolling Numbers (whose changes follow the authored clock) remain unsupported by interruptible playback; video export supports them.
+`plan_runtime/presentation.rs` owns winit lifecycle, slide/step navigation, full screen, letterboxed resizing, and smooth/pixelated display filtering. `presentation/worker.rs` retains the deck's prepared scenes, fonts, and GPU. At most one render is in flight; requests and results carry slide identity and immutable timeline revisions, so switching slides cannot display a stale result from another scene. Each slide retains its selected step and paused local clock while inactive. Explicit pause stays paused on return; previously running motion resumes. Held/paused scenes sleep unless a planned Task requests ambient clock advancement. Generic State Channels, recorded media, and Rolling Numbers (whose changes follow the authored clock, including Changed Files totals that roll) remain unsupported by interruptible playback; video export supports them.
 
 The GPU-free `presentation/scheduler.rs` owns request eligibility, complete-sample
 equality, invalidation, completion freshness, and phase-preserving deadlines.

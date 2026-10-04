@@ -19,6 +19,9 @@ vibe-coded prototype, tested on macOS (Metal).
 - **Code**: an editor that animates diffs while every line keeps its identity.
 - **Overlays**: callouts pinned to anything, rolling numbers, captions, sequence
   diagrams, charts, trees, and video cards.
+- **Text surfaces**: a terminal, a Slack or iMessage thread, and a pull request's
+  changed files, drawn natively so they follow the theme and re-time with the
+  scene, plus lower thirds that introduce who or what is on screen.
 - **Narration**: optional ElevenLabs or Fish Audio voice-over. Each beat waits
   for the word that triggers it, so re-voicing re-times the film.
 
@@ -68,6 +71,7 @@ bun scripts/sheet.ts target/hello.json 0.5,1.5,2.7 --theme neutral --shutter
 | [`camera`](scenes/camera) | A Stage diagram shot like a film: every camera move |
 | [`callouts`](scenes/callouts), [`rolling-number`](scenes/rolling-number), [`charts`](scenes/charts), [`tree`](scenes/tree), [`diagnostics`](scenes/diagnostics) | Component showrooms |
 | [`effects-showroom`](scenes/effects-showroom) | Lightning, charge, shields, dissolve, and scans on the Stage |
+| [`callouts`](scenes/callouts), [`rolling-number`](scenes/rolling-number), [`charts`](scenes/charts), [`tree`](scenes/tree), [`text-surfaces`](scenes/text-surfaces) | Component showrooms |
 | [`interactive-showcase`](scenes/interactive-showcase) | A native, steppable presentation (`plan present`) |
 | [`stage-forms`](scenes/stage-forms) | Stage diagram vocabulary: particle forms that morph and tumble, shapes, icons, arrows, a relaying packet |
 

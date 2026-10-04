@@ -13,7 +13,9 @@ use psychopomp::code::{CodeLine, LineId, PlacedLine, StyledSpan, SyntaxStyle};
 
 mod callout;
 mod caption;
+mod changed_files;
 mod chart;
+mod chat;
 mod component_prototype;
 mod debug;
 mod fonts;
@@ -22,12 +24,14 @@ mod header;
 mod ide;
 mod lanes;
 mod line_marks;
+mod lower_third;
 mod plot;
 mod rich_text;
 mod rolling;
 mod sequence;
 mod stage;
 mod task;
+mod terminal;
 mod text;
 mod theme;
 mod tree;
@@ -35,10 +39,13 @@ mod ui;
 mod value;
 mod venn;
 mod video;
+mod window;
 mod wipe;
 use text::{PlainTextSpec, TextSprite, blend_pixel, blend_pixel_at, make_sprite, paint_rect};
 
 pub(crate) use callout::CalloutPose;
+pub(crate) use changed_files::ChangedFilesLayout;
+pub(crate) use chat::ChatGlyphs;
 pub(crate) use component_prototype::PrototypeGlyphs;
 pub use grid::{
     GridFrame, GridItemFrame, GridLabelStyle, GridLinePalette, GridTextClip, GridTextDisclosure,
@@ -47,9 +54,11 @@ pub(crate) use header::{HeaderGlyphs, header_words};
 pub use ide::{
     CaretFrame, DiagnosticFrame, EditorAnnotations, HoverFrame, InlayFrame, SelectionFrame,
 };
+pub(crate) use lower_third::LowerThirdGlyphs;
 pub(crate) use rich_text::{RichTextGlyphs, RichTextSource, parse as parse_rich_text};
 pub(crate) use stage::{StageGpu, icon_svg, stage_anchor};
 pub use task::{BubblePose, ContentPose, TaskContentFrame, TaskVisualFrame};
+pub(crate) use terminal::TerminalNames;
 pub use theme::Theme;
 pub(crate) use tree::TreeNames;
 pub(crate) use venn::validate as validate_venn;

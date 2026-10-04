@@ -3,6 +3,8 @@
 use super::{
     callout::PreparedCallout,
     caption::PreparedCaption,
+    changed_files::ChangedFilesInput,
+    chat::ChatInput,
     component_prototype::{self, ComponentInput},
     editor::{EditorSelection, PreparedEditor},
     generated,
@@ -10,9 +12,11 @@ use super::{
     header,
     ide::PreparedAnnotation,
     lanes::PreparedLanes,
+    lower_third::PreparedLowerThird,
     plot::PreparedPlot,
     rolling::RollingNumberInput,
     sequence::PreparedSequence,
+    terminal::PreparedTerminal,
     tree::PreparedTree,
     value::PreparedValueToken,
     venn::PreparedVenn,
@@ -23,12 +27,15 @@ use anyhow::{Context, Result, bail};
 use psychopomp::{
     callout::CALLOUT_RECIPE,
     caption::CAPTION_RECIPE,
+    changed_files::CHANGED_FILES_RECIPE,
+    chat::CHAT_RECIPE,
     component_prototype::{
         COLLECTION, CONNECTOR, HEADER, HeaderPlan, RICH_TEXT, TYPESET, VENN, WIDTH_TEXT,
     },
     editor::{EDITOR_RECIPE, EditorTargetSelector, POINTER_RECIPE, PointerRecipePlan},
     grid::GRID_RECIPE,
     lanes::LANES_RECIPE,
+    lower_third::LOWER_THIRD_RECIPE,
     plan::{ActorPlan, ContinuousChannelPlan, MediaKindPlan, ScenePlan, StateChannelPlan},
     plot::PLOT_RECIPE,
     rolling::ROLLING_NUMBER_RECIPE,
@@ -36,6 +43,7 @@ use psychopomp::{
     stage::{STAGE_RECIPE, StagePlan},
     state::{StateTrack, TimedState},
     task::{TASK_RECIPE, TaskRecipePlan},
+    terminal::TERMINAL_RECIPE,
     tree::TREE_RECIPE,
     value::VALUE_TOKEN_RECIPE,
     video::VIDEO_RECIPE,
@@ -62,6 +70,10 @@ pub(super) struct Plan {
     pub lanes: Vec<PreparedLanes>,
     pub videos: Vec<VideoInput>,
     pub callouts: Vec<PreparedCallout>,
+    pub terminals: Vec<PreparedTerminal>,
+    pub chats: Vec<ChatInput>,
+    pub changed_files: Vec<ChangedFilesInput>,
+    pub lower_thirds: Vec<PreparedLowerThird>,
 }
 pub(super) enum RootPlan {
     Blank,
@@ -354,6 +366,10 @@ impl Plan {
         let mut videos = Vec::new();
         let mut callouts = Vec::new();
         let mut annotations = Vec::new();
+        let mut terminals = Vec::new();
+        let mut chats = Vec::new();
+        let mut changed_files = Vec::new();
+        let mut lower_thirds = Vec::new();
         for actor in &plan.actors {
             if let Some(annotation) = PreparedAnnotation::parse(actor, &plan.continuous_channels)? {
                 annotations.push(annotation);
@@ -431,6 +447,18 @@ impl Plan {
                 )?),
                 CALLOUT_RECIPE => {
                     callouts.push(PreparedCallout::new(actor, &plan.continuous_channels)?)
+                }
+                TERMINAL_RECIPE => {
+                    terminals.push(PreparedTerminal::new(actor, &plan.continuous_channels)?)
+                }
+                CHAT_RECIPE => chats.push(ChatInput::new(actor, &plan.continuous_channels)?),
+                CHANGED_FILES_RECIPE => changed_files.push(ChangedFilesInput::new(
+                    actor,
+                    &plan.continuous_channels,
+                    plan.duration_nanos,
+                )?),
+                LOWER_THIRD_RECIPE => {
+                    lower_thirds.push(PreparedLowerThird::new(actor, &plan.continuous_channels)?)
                 }
                 recipe => bail!("unsupported actor recipe '{recipe}'"),
             }
@@ -517,6 +545,10 @@ impl Plan {
             lanes,
             videos,
             callouts,
+            terminals,
+            chats,
+            changed_files,
+            lower_thirds,
         };
         match &result.root {
             RootPlan::Editor { editor, .. } => editor.compile_channels(&mut result.plan)?,
@@ -548,6 +580,7 @@ impl Plan {
             && self.plan.media.is_empty()
             // Their changes follow the authored clock, not Playback destinations.
             && self.rolling.is_empty()
+            && self.changed_files.iter().all(ChangedFilesInput::native)
     }
 
     pub(super) fn require_native(&self) -> Result<()> {

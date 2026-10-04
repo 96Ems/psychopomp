@@ -26,6 +26,10 @@ machinery:
 | Real product behavior from a screen recording | `scenes/video`, `scenes/opencode-session-tool` | `video::VideoActor` (`fly_in`, `focus`, `unfocus`) |
 | Before and after, side by side | `scenes/compare` | `ReelSegmentPlan::wiped` with `ReelWipePlan` holds and labels |
 | A version or count changing | `scenes/rolling-number` | `rolling::RollingNumberActor::roll` |
+| A CLI session, an agent run, or a build in a terminal | `scenes/text-surfaces` | `terminal::TerminalActor` (`type_command`, `print`, `stream`, `spin`, `resolve`, `clear`) |
+| A Slack thread or text conversation reacting | `scenes/text-surfaces` | `chat::ChatActor` (`typing`, `say`, `stream`, `react`, `highlight`) |
+| Who is speaking, or what a subject is | `scenes/text-surfaces` | `lower_third::LowerThirdActor` (`show`, `hide`) |
+| A pull request's changed files and diffstat | `scenes/text-surfaces` | `changed_files::ChangedFilesActor` (`reveal`, `focus`, `highlight`) |
 | A single titled idea | `scenes/agent-demo` | `PlanBuilder` channels and cues |
 
 1. Write the narration script and voice it with `bun scripts/narrate.ts` (`--draft`
@@ -260,7 +264,7 @@ work from waiting for a drawable; it is a diagnostic mode, not normal playback.
 The interruptible player accepts any plan driven only by Continuous Channels:
 Task, grid, editor, and Tree snapshots lower into continuous visual tracks.
 Plans with generic State Channels, media (including Video Cards), or Rolling
-Numbers are still rejected until their interactive timing is defined. The same Scene Plan still exports as MP4
+Numbers (including Changed Files totals that roll) are still rejected until their interactive timing is defined. The same Scene Plan still exports as MP4
 through `plan render`, with its original timing and media placements. Live source
 reloading, native higher-DPI glyph rasterization, and presentation audio remain open.
 
@@ -700,6 +704,96 @@ their fuller documentation elsewhere.
   The showroom is `cargo run -p psychopomp-diagnostics` (writes
   `target/diagnostics.json`); render it with
   `cargo run --release -- plan render target/diagnostics.json output/diagnostics.mp4 --theme opencode`.
+- Text surfaces (`terminal`, `chat`, `changed-files`) share the Window
+  channels `opacity`, `x`, `y` (offsets), `scale`, and `content` (everything
+  inside, 0 to 1). Each handle's `show` settles the window in like a Stage card
+  (16 px drift, 1.035 scale, content 65 ms behind) and `hide` fades it.
+  Sub-channel IDs are letters, digits, `-`, and `_`. Lines, messages, and rows
+  already in a recipe are shown from time zero; the handles append them as the
+  scene is authored and reveal them with channels.
+- `terminal`: `origin` (window top-left), `width`, `rows` (visible text rows),
+  `size` (22), optional `title` (title bar), `prompt` spans (`❯ ` in the accent
+  by default), and `lines` of `kind` `command` (`id`, `text`), `output` (`id`,
+  `spans` of `{ text, tone }`; none is a blank line), or `task` (`id`, `spans`,
+  `done` spans, `mark`: `check` | `cross`). Channels: Window channels, `scroll`
+  (a floor on the first visible row), `caret` (block caret on the last visible
+  command), and per line `line.<id>.reveal` (opens its row and fades it in),
+  `line.<id>.typed` (fraction of characters, commands and output),
+  `line.<id>.highlight`, and for tasks `line.<id>.spin` (spinner motor age,
+  seconds, -1 before), `line.<id>.mark` (seconds since the handoff), and
+  `line.<id>.status` (0 shows `spans`, 1 `done`). Rows stack by their reveals
+  and the window shows the last `rows`, so a full window slides older lines up
+  by exactly the new room. `TerminalActor` writes `type_command` (a prompt opens,
+  keystrokes land at a deterministic natural cadence, the caret leaves on Enter,
+  which it returns), `prompt` and `idle` (a waiting, blinking caret), `print`
+  (lines 45 ms apart), `stream` (one line by character), `spin`/`resolve` (the
+  mark draws at the motor's next top-right crossing; its clocks stop once it
+  cools), `highlight`, `clear`, and `scroll_to`. Channel-only: runs in
+  `plan present`.
+  let mut term = TerminalActor::declare(&mut scene, "term",
+      TerminalPlan::new([300.0, 170.0], 1320.0, 15).titled("~/code/opencode — zsh"))?;
+  let at = term.show(&mut scene, 0);
+  let entered = term.type_command(&mut scene, at, "bun test")?;
+  let task = term.spin(&mut scene, entered, vec![CaptionSpanPlan::new("Running tests", Tone::Muted)])?;
+  term.resolve(&mut scene, &task, entered + 2 * SECOND, Mark::Check,
+      vec![CaptionSpanPlan::new("24 pass", Tone::Success)])?;
+- `chat`: `origin`, `size` (window), `style` (`slack` | `bubbles`), `textSize`
+  (22), optional `title`, `subtitle`, `composer` (placeholder), and `me` (whose
+  bubbles sit on the right), `people` of `{ id, name, tone, initials?, badge? }`,
+  and `messages` of `{ id, author, spans: [{ text, tone, code }], time?,
+  reactions: [{ id, label, count }] }`. Text wraps in sans-serif; `code` spans
+  are monospaced on a chip. Channels: Window channels, per message
+  `message.<id>.typing` (indicator presence), `.wait` (the dots' clock, seconds),
+  `.reveal` (grows the slot into the message), `.typed` (streams the text), and
+  `.highlight`, and per reaction `reaction.<message>.<reaction>` (pop). Rooms
+  stack up from the composer, so a new message pushes every older one up by
+  exactly its room; a run by one author shows its avatar and name once.
+  `ChatActor` writes `typing` (opens the next slot), `say`/`say_text` (fills the
+  author's typing slot or opens one; returns the message ID), `stream` (the
+  text by character), `react`, `highlight`, and `stamp` (timestamps for later
+  messages). Channel-only: runs in `plan present`.
+  let mut chat = ChatActor::declare(&mut scene, "thread", ChatPlan::new([460.0, 110.0], [1000.0, 860.0],
+      vec![ChatPersonPlan::new("dax", "Dax Raad", Tone::Warning)])
+      .titled("# opencode-dev", None).composer("Message #opencode-dev"))?;
+  chat.typing(&mut scene, at, "dax")?;
+  let said = chat.say_text(&mut scene, at + SECOND, "dax", "it races compaction")?;
+  chat.react(&mut scene, at + 2 * SECOND, &said, "👀", 2)?;
+- `changed-files`: `origin`, `width`, `size` (22), optional `maxRows` (a
+  scrolling window) and `title` (title bar), `files` of `{ id, path, status:
+  added | modified | deleted | renamed, added, removed, from? }`, and `totals`
+  of `{ atNanos, files, added, removed }` in increasing time (zero before the
+  first; without any, the sum of every file). Channels: Window channels,
+  `scroll`, and per file `row.<id>.reveal` (fade and rise into its fixed slot;
+  diffstat blocks pop in left to right), `row.<id>.highlight`, and
+  `row.<id>.dim`. The diffstat follows GitHub: a change of under five lines
+  shows a block per line, a larger one splits all five by the share of
+  additions. The header's file count and `+N −M` totals are Rolling Numbers.
+  `ChangedFilesActor` writes `reveal` (every row, staggered; totals roll as each
+  lands), `reveal_row`, `focus`/`unfocus` (one row lit, the rest receding),
+  `highlight`, and `scroll_to`. A card whose totals roll is export-only, like a
+  Rolling Number; one with static totals is channel-only.
+  let mut files = ChangedFilesActor::declare(&mut scene, "files", ChangedFilesPlan::new([310.0, 190.0], 1300.0, vec![
+      ChangedFilePlan::new("compaction", "src/session/compaction.ts", FileStatus::Modified, 38, 11),
+      ChangedFilePlan::new("sleep", "src/util/sleep.ts", FileStatus::Deleted, 0, 17),
+  ]).titled("opencode #51842 · fix(session): await compaction"))?;
+  let shown = files.show(&mut scene, 0);
+  let landed = files.reveal(&mut scene, shown, 0.11)?;
+  files.focus(&mut scene, "compaction", landed + SECOND)?;
+- `lower-third`: `origin` (the bar's left edge, the name's vertical center),
+  `name`, optional `role`, `tone` (the bar's, `accent`), and `size` (46; the
+  role is set at about half). Channels: `opacity`, `x`, `y`, and the phases
+  `bar` (draws up from its foot), `name`, and `role` (each slides out from
+  behind the bar), 0 to 1. `LowerThirdActor::show` draws the bar on
+  `cubic-bezier(.45, 0, .2, 1)` with the name 140 ms and the role 280 ms behind;
+  `hide` reverses them. Channel-only: runs in `plan present`.
+  let mut intro = LowerThirdActor::declare(&mut scene, "intro",
+      &LowerThirdPlan::new([120.0, 905.0], "opencode").role("coding agent"))?;
+  intro.show(&mut scene, at);
+  intro.hide(&mut scene, at + 4 * SECOND);
+  The showroom is `cargo run -p psychopomp-text-surfaces` (writes the reel
+  `target/text-surfaces.json` and its segments under `target/text-surfaces/`);
+  render it with
+  `cargo run --release -- plan render target/text-surfaces.json output/text-surfaces.mp4 --theme opencode`.
 - Editor Line Marks: `"mark": "added" | "removed"` on a line, with presence
   channel `mark.<line-id>`; `panel-x`, `panel-y`, and `panel-opacity` move and fade the card (the Stepped Diff
   enters on `panel-y`).
