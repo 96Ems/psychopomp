@@ -19,9 +19,9 @@ Every showroom and component is evaluated against the house motion rules (`expla
 - [x] **Stage, Camera, Forms & Effects** (`psychopomp-camera`, `psychopomp-stage-forms`, `psychopomp-effects-showroom`)
 - [x] **Reel Transitions & Compare** (`psychopomp-transitions`, `psychopomp-compare`)
 - [x] **Overlays, Callouts, Anchors & Lens** (`psychopomp-callouts`, `psychopomp-anchors`, `psychopomp-loupe`)
-- [ ] **Text Surfaces & Lower Third** (`psychopomp-text-surfaces`)
-- [ ] **Visualization Overlays & Subtitles** (`psychopomp-viz-components`, `psychopomp-charts`, `psychopomp-tree`, `psychopomp-rolling-number`)
-- [ ] **Editor, Diagnostics, Footage & Films** (`psychopomp-diagnostics`, `psychopomp-footage`, `scenes/2password`, `scenes/psychopomp-intro`)
+- [x] **Text Surfaces & Lower Third** (`psychopomp-text-surfaces`)
+- [x] **Visualization Overlays & Subtitles** (`psychopomp-viz-components`, `psychopomp-charts`, `psychopomp-tree`, `psychopomp-rolling-number`)
+- [x] **Editor, Diagnostics, Footage & Films** (`psychopomp-diagnostics`, `psychopomp-footage`, `scenes/2password`, `scenes/psychopomp-intro`)
 
 ### 1.1 Stage, Camera, Forms & Effects
 
@@ -89,6 +89,67 @@ Every showroom and component is evaluated against the house motion rules (`expla
    - In `loupe-capsule.jpg` (`5.60s..6.20s`), when the loupe moves from `schedule` (capsule `560×96`) to `limit` (circle `300×300`), `resize` uses a `0.55 s` spring with `0.12` bounce while `move_to` and `slide` use a `0.75 s` critically damped spring (`0.0` bounce). At `6.00s`, the lens has already collapsed into a circle while still mid-flight between lines, and the `0.12` bounce on `width`/`height` causes the loupe rim to wobble after changing shape. Aligning `resize`, `magnify`, `focus`, `slide`, and `move_to` to coherent zero-bounce profiles (`0.65 s` glide / `0.55 s` reshape, `0.0` bounce) makes the glass move and reshape as one physical optic.
 4. **Entrance / exit symmetry on `caption::hide` and `TextActor::hide` (`crates/psychopomp/src/caption.rs:254-266`, `text.rs:176-187`)**:
    - `caption::show` and `TextActor::show` fade in over `0.35 s` and rise `10 px` over `0.45 s`; `hide` uses `0.30 s` — only `50 ms` faster than entry. Tightening `hide` to `0.24 s` (`Feel::EXIT`) gives exits a noticeably cleaner, snappier release than entries, consistent with `window::dismiss` (`0.25 s`).
+
+### 1.4 Text Surfaces & Lower Third
+
+**Evidence sheets:**
+- `output/polish/audit/text-surfaces-overview.jpg` (`0:50:2.5`)
+- `output/polish/audit/lower-third-show.jpg` (`0.8:1.8:0.08`)
+- `output/polish/audit/lower-third-hide.jpg` (`4.8:5.45:0.05`)
+- `output/polish/audit/text-surfaces-chat.jpg` (`20.5:34.0:0.85`)
+- `output/polish/audit/text-surfaces-files.jpg` (`43.2:51.2:0.5`)
+
+**Findings:**
+1. **`LowerThird` text only slides 1–2 characters (`size * 1.4`) and gets guillotined in mid-air while the bar retracts early (`crates/psychopomp-render/src/render/lower_third.rs:78-102`, `crates/psychopomp/src/lower_third.rs:173-193`)**:
+   - In `lower-third-show.jpg` (`1.20s..1.36s`) and `lower-third-hide.jpg` (`5.00s..5.20s`), the slide distance is fixed at `plan.size * 1.4` (`64 px`) while `"opencode"` is `~210 px` wide, and the clip edge sits `12.5 px` to the right of the bar. As a result, at `1.20s` and `5.05s` the word reads `"pencode"` with `"o"` hard-clipped in open space to the right of the bar while `"ncode"` merely fades in place.
+   - In `lower-third-hide.jpg` (`5.15s..5.20s`), `bar` begins retracting at `at + 220 ms` while `name` (`at + 70 ms`, `0.36 s` spring) is still ~25% visible, so at `5.15s..5.20s` the bar shrinks to a stub beside still-visible text.
+   - Sliding each line by its full measured advance (`sprite.advance + plan.size * 0.4`), placing the clip edge flush with the bar's right edge, and sequencing `hide` so the bar retracts as the name finishes clearing makes the text genuinely emerge from and withdraw behind the bar.
+2. **Whole-thread vertical bounce on `ChatActor::say` (`crates/psychopomp/src/chat.rs:30-31, 547`)**:
+   - `SAY_BOUNCE = 0.12` on `message.<id>.reveal` causes `ChatPlan::room` (`lerp(waiting, said, reveal)`) to overshoot `1.0` on every sent message. Because `ChatPlan::layout` stacks all older messages upward from the composer (`top -= gap + room`), every message in the thread bounces up past its resting y-coordinate and sinks back down whenever a new message lands (`text-surfaces-chat.jpg`). Persistent layout growth should be critically damped (`SAY_BOUNCE = 0.0`, `SAY_SECONDS = 0.45`), matching `Tree` and `Terminal`, with restrained pop reserved for reaction pills (`REACT_BOUNCE = 0.2`).
+
+### 1.5 Visualization Overlays & Subtitles
+
+**Evidence sheets:**
+- `output/polish/audit/viz-components-overview.jpg` (`0:52:2.6`)
+- `output/polish/audit/viz-checklist.jpg` (`0.4:12.4:0.75`)
+- `output/polish/audit/viz-meters.jpg` (`13.2:22.8:0.6`)
+- `output/polish/audit/viz-bars.jpg` (`23.8:33.4:0.6`)
+- `output/polish/audit/viz-subtitles.jpg` (`35.0:51.0:1.0`)
+- `output/polish/audit/subtitles-swap.jpg` (`40.35:40.95:0.04`)
+- `output/polish/audit/charts-overview.jpg` (`0:22:1.1`)
+- `output/polish/audit/tree-overview.jpg` (`0:12:0.6`)
+- `output/polish/audit/tree-fold-scroll.jpg` (`5.7:6.6:0.08`)
+- `output/polish/audit/rolling-number-overview.jpg` (`0:8:0.4`)
+- `output/polish/audit/rolling-redirect.jpg` (`1.75:2.35:0.05`)
+
+**Findings:**
+1. **`Readout` smears stationary higher-place digits and double-exposes fast decimal wheels (`crates/psychopomp/src/readout.rs:155-225`, `crates/psychopomp-render/src/render/viz/readout.rs:105-110`)**:
+   - In `viz-meters.jpg` (`15.00s..21.00s`), `draw_readout` computes smear from `wheel_rate(format, place, velocity)` (`|v| * 10^(decimals - place)`), even though a higher place (`place > 0`) only turns while every lower place is rolling over from `9` (`below >= unit - 1.0`). When `cpu` springs from `96` to `41`, the tens digit is smeared even while parked on `4` or `8`.
+   - When the lowest place turns faster than ~8 units/s (such as the tenths digit of `upload` sweeping at `15.2 %/s`, `152 faces/s`), `odometer`'s `ROLL = 0.35` step-and-hold snaps between integers across temporal samples inside a single frame's shutter, producing a double-exposed vertical bar (`10.||%`, `34.||%`, `54.||%`). Gating `wheel_rate` / smear by whether the place is actually carrying (`wheel.fract() != 0.0`) keeps stationary digits crisp!
+2. **Value overshoot on `MeterActor::set` and `BarsActor::set` causes readouts to count past the target and roll backward (`crates/psychopomp/src/meter.rs:359`, `bars.rs:485,541`)**:
+   - `MeterActor::set` uses `bounce = 0.12` and `BarsActor::set` uses `bounce = 0.08`. Because their `Readout`s are pure functions of the sampled `value`, springing `cpu` to `74%` or `cold start` to `1,840 ms` makes the odometer count up past the target (`76%`, `1,865 ms`) and then roll backward. Similarly, `BarsActor::sort` uses `bounce = 0.1` on `slot`, causing sorted rows to overshoot their destination row and bob back. Critically damped springs (`bounce = 0.0`) on `MeterActor::set`, `BarsActor::set`, and `BarsActor::sort` make readouts and row re-sorts monotonic.
+3. **Subtitles page swap has a zero-opacity text gap and a double-pumped backing morph (`crates/psychopomp/src/subtitles.rs:466-586`)**:
+   - In `subtitles-swap.jpg` at `40.71s`, the subtitle backing box sits completely empty with zero text! During a direct swap (`page.swaps`), `page[i]` fades out over `[hide - FADE_OUT, hide]` (reaching `0.0` at `hide`) while `page[i+1]` fades in over `[show, show + FADE_IN]` (starting from `0.0` at `show == hide`).
+   - Worse, `SubtitleLayout::backing` computes `k = smootherstep(leaving * 0.5)` before `hide` and `k = smootherstep(0.5 + entering * 0.5)` after `hide`, where `leaving` and `entering` are already `smoothstep`ped. Because `smoothstep'(1.0) = 0` and `smoothstep'(0.0) = 0`, the backing box's width/height morph comes to a complete stop (`dk/dt = 0`) at `k = 0.5` (`40.71s`) and then re-accelerates! Using a single linear parameter across the swap window inside `smootherstep` eliminates the mid-swap stall, and overlapping the outgoing/incoming page fades slightly across the swap boundary eliminates the blank-box frame.
+4. **Desynchronized fold vs scroll springs in `TreeActor` (`crates/psychopomp/src/tree.rs:34-36`)**:
+   - In `tree-fold-scroll.jpg` (`5.90s..6.50s`), `OPEN_SECONDS = 0.45` while `SCROLL_SECONDS = 0.55`. When `open` and `reveal` are triggered together at `5.90s`, the container expands faster than the scroll window moves, pushing the bottom rows into the bottom fade mask around `6.02s..6.18s` before the scroll catches up. Matching `SCROLL_SECONDS` to `OPEN_SECONDS` (`0.45 s`) keeps fold expansion and scroll tracking locked together.
+
+### 1.6 Editor, Diagnostics, Footage & Films
+
+**Evidence sheets:**
+- `output/polish/audit/diagnostics-overview.jpg` (`0:13:0.65`)
+- `output/polish/audit/footage-overview.jpg` (`0:28:1.4`)
+- `output/polish/audit/footage-toss.jpg` (`0.2:1.2:0.08`)
+- `output/polish/audit/hello-overview.jpg` (`0:4:0.25`)
+- `output/polish/audit/2password-overview.jpg` (`0:56:2.8`)
+- `output/polish/audit/psychopomp-intro-overview.jpg` (`0:34:1.7`)
+
+**Findings:**
+1. **`CursorActor::select` uses `Ease::CubicInOut` (mid-flight acceleration jump) and rigid `300 ms` pre-wait (`crates/psychopomp/src/ide.rs:768-769`)**:
+   - `CursorActor::select` sweeps `head` with `Ease::CubicInOut` (which has an acceleration discontinuity at `t = 0.5`, explicitly warned against in `explainer-motion/SKILL.md`) instead of `Ease::Smootherstep`.
+   - `FootageActor::drift` (`crates/psychopomp/src/footage.rs:1073`) and `FootageActor::treat` (`footage.rs:1117`) also use `Ease::CubicInOut` instead of `Ease::Smootherstep`.
+2. **Shouted text `"ANY FRAME!"` collides with the hero orb in `scenes/psychopomp-intro` (`psychopomp-intro-overview.jpg` `10.20s`, `11.90s`)**:
+   - In `scenes/psychopomp-intro/src/main.rs:125`, `"shout-frame"` is placed at `[960.0, 330.0, 160.0]` (`size: 150`) while the orb sits at `[960.0, 500.0, 0.0]` (`radius: 140`, top at `y = 360`), so the bottom of `"ANY FRAME!"` is occluded by the dark orb shell. Raising `"shout-frame"` to `y = 260.0` (and `"shout-order"` to `y = 740.0`) clears the orb silhouette cleanly.
 
 ---
 
