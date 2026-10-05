@@ -49,6 +49,7 @@ Lightweight crate (`crates/psychopomp/src`):
 - `crates/psychopomp/src/meter.rs`: Meter recipe values (ring, countdown, bar), angle and threshold-tone math, and the `MeterActor` handle (`set`, `sweep`, `countdown`, `flash`, show, hide)
 - `crates/psychopomp/src/bars.rs`: Benchmark Bars recipe values, row geometry, delta chip text, stable `ranking` and crossing `paint_order`, and the `BarsActor` handle (`grow`, `set`, `sort`, `reveal_rows`, `reveal_deltas`, show, hide)
 - `crates/psychopomp/src/subtitles.rs`: Subtitles recipe values (from a placed narration clip), page chunking and line balancing, and the time-sampled page, word-ink, pill, and backing poses
+- `crates/psychopomp/src/face.rs`: the typefaces a Stage label or Subtitles can be set in (`Face`): bundled CommitMono or an installed display face
 - `crates/psychopomp/src/confetti.rs`: Confetti recipe values and the `ConfettiActor` handle (`burst`)
 - `crates/psychopomp/src/lens.rs`: Lens recipe values, the sampled `Glass` (outline, rim bend, source mapping, bounds), and the `LensActor` handle (`show`, `hide`, `move_to`, `slide`, `magnify`, `resize`, `focus`)
 - `crates/psychopomp/src/video.rs`: Video Card recipe values (footage size, card rect, title), focus-window math, placement helper, and the `VideoActor` handle (`fly_in`, `focus`, `unfocus`, `hide`)
@@ -121,7 +122,7 @@ Renderer crate, pixels and delivery:
 - `crates/psychopomp-render/src/render.rs`: concrete headless `wgpu` renderer and sprite compositor
 - `crates/psychopomp-render/src/scene.wgsl`: editor geometry and focus shader
 - `crates/psychopomp-render/src/render/theme.rs`: named native/export paint palettes; no layout or motion
-- `crates/psychopomp-render/src/render/fonts.rs`: bundled CommitMono faces
+- `crates/psychopomp-render/src/render/fonts.rs`: bundled CommitMono faces, and the installed faces a `Face` selects
 - `crates/psychopomp-render/src/render/text.rs` and `text/raster.rs`: typed plain-text cache and exact native glyph rasterization
 - `crates/psychopomp-render/src/render/rich_text.rs`: bounded Markdown shaping, decoration, and theme-aware glyph cache
 - `crates/psychopomp-render/src/render/line_marks.rs`: coverage union for editor diff backgrounds

@@ -1,0 +1,94 @@
+{
+ "wordTimings": [
+  {
+   "word": "Woo",
+   "start": 0,
+   "end": 0.1
+  },
+  {
+   "word": "woo",
+   "start": 0.1,
+   "end": 0.32
+  },
+  {
+   "word": "woo",
+   "start": 0.32,
+   "end": 0.52
+  },
+  {
+   "word": "woo!",
+   "start": 0.52,
+   "end": 0.78
+  },
+  {
+   "word": "AAAAAAAA!",
+   "start": 0.78,
+   "end": 1.16
+  },
+  {
+   "word": "AAAAAAAA!",
+   "start": 1.58,
+   "end": 2.04
+  },
+  {
+   "word": "AAAAAAAA!",
+   "start": 2.08,
+   "end": 2.42
+  },
+  {
+   "word": "Woo",
+   "start": 2.42,
+   "end": 2.42
+  },
+  {
+   "word": "woo",
+   "start": 2.42,
+   "end": 2.58
+  },
+  {
+   "word": "woo!",
+   "start": 2.58,
+   "end": 2.84
+  },
+  {
+   "word": "Ah",
+   "start": 3.02,
+   "end": 3.42
+  },
+  {
+   "word": "ah",
+   "start": 3.42,
+   "end": 3.64
+  },
+  {
+   "word": "ah!",
+   "start": 3.64,
+   "end": 3.88
+  },
+  {
+   "word": "Woo",
+   "start": 4.04,
+   "end": 4.32
+  },
+  {
+   "word": "woo",
+   "start": 4.32,
+   "end": 4.56
+  },
+  {
+   "word": "ah",
+   "start": 4.56,
+   "end": 4.74
+  },
+  {
+   "word": "ah",
+   "start": 4.74,
+   "end": 4.98
+  },
+  {
+   "word": "aaaaaaah!",
+   "start": 4.98,
+   "end": 5.76
+  }
+ ]
+}

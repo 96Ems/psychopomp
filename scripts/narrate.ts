@@ -9,9 +9,11 @@
 //
 // script.json: { "engine"?: "fish" | "elevenlabs", "voice"?: string, "speed"?: number,
 //   "model"?: string, "settings"?: { "stability": number, "similarity": number },
-//   "clips": [{ "id": string, "text": string }] }
+//   "loudness"?: "dynamic" | "linear", "clips": [{ "id": string, "text": string }] }
 // Writes next to the script: <id>.mp3, <id>.words.json ({ wordTimings: [...] }), narration.json.
 // Bracketed delivery cues such as "[confident]" are spoken as direction, not words.
+// "dynamic" loudness (the default) evens the level within each clip; "linear" applies
+// one gain per clip and limits peaks, so a whisper that builds to a scream keeps its swell.
 //
 // Scene Programs can instead declare narration with the psychopomp-media crate
 // (SCENE_PLANS.md, "Declare Narration And Sound"), which keeps state in
@@ -28,6 +30,7 @@ type Script = {
   speed?: number
   model?: string
   settings?: { stability: number; similarity: number }
+  loudness?: "dynamic" | "linear"
   clips: { id: string; text: string }[]
 }
 type Clip = { id: string; file: string; words: string; durationNanos: number; textHash: string; engine: string; model?: string; requestId?: string }
@@ -50,6 +53,8 @@ if (engine === "elevenlabs" && (!script.voice || !process.env.ELEVENLABS_API_KEY
 if (engine === "elevenlabs" && script.speed !== undefined)
   throw new Error("Eleven v4 uses text directions for pace; speed is not supported")
 const model = engine === "elevenlabs" ? script.model ?? "eleven_v4" : undefined
+const loudness = script.loudness ?? "dynamic"
+if (!["dynamic", "linear"].includes(loudness)) throw new Error(`unknown loudness '${loudness}'`)
 const manifestPath = path.join(dir, "narration.json")
 const previous: Record<string, Clip> = Object.fromEntries(
   ((await Bun.file(manifestPath).exists()) ? (await Bun.file(manifestPath).json()).clips : []).map((clip: Clip) => [
@@ -66,6 +71,7 @@ for (const clip of script.clips) {
   const textHash = createHash("sha256")
     .update(`${engine}|${script.voice ?? ""}|${script.speed ?? 1}|${clip.text}`)
   if (engine === "elevenlabs") textHash.update(JSON.stringify({ model, settings: script.settings }))
+  if (loudness !== "dynamic") textHash.update(loudness)
   const hash = textHash
     .digest("hex")
     .slice(0, 16)
@@ -119,12 +125,17 @@ for (const clip of script.clips) {
         ...(script.speed ? ["--speed", String(script.speed)] : []),
       ])
     // One loudness target for every clip keeps the voice even across segments.
-    run(["ffmpeg", "-y", "-loglevel", "error", "-i", raw, "-af", "loudnorm=I=-16:TP=-1.5:LRA=11", "-ar", "48000", "-ac", "1", "-b:a", "160k", path.join(dir, file)])
+    const normalize =
+      loudness === "linear"
+        ? `volume=${(-16 - integratedLoudness(raw)).toFixed(2)}dB,alimiter=limit=0.84:level=0:latency=1`
+        : "loudnorm=I=-16:TP=-1.5:LRA=11"
+    run(["ffmpeg", "-y", "-loglevel", "error", "-i", raw, "-af", normalize, "-ar", "48000", "-ac", "1", "-b:a", "160k", path.join(dir, file)])
     run([
       "uvx", "--from", "mlx-whisper", "mlx_whisper", "--model", whisperModel, "--word-timestamps", "True",
       "--output-format", "json", "--output-dir", work, "--output-name", clip.id, path.join(dir, file),
     ])
-    const transcript = await Bun.file(path.join(work, `${clip.id}.json`)).json()
+    // Whisper writes bare NaN statistics for wordless audio such as a howl.
+    const transcript = JSON.parse((await Bun.file(path.join(work, `${clip.id}.json`)).text()).replace(/\bNaN\b/g, "null"))
     let previousEnd = 0
     const wordTimings = transcript.segments
       .flatMap((segment: { words: { word: string; start: number; end: number }[] }) => segment.words)
@@ -155,6 +166,13 @@ function run(command: string[]) {
   const result = Bun.spawnSync(command, { stderr: "pipe", stdout: "pipe" })
   if (result.exitCode !== 0) throw new Error(`${command[0]} failed: ${result.stderr.toString()}`)
   return result.stdout.toString()
+}
+
+function integratedLoudness(file: string) {
+  const result = Bun.spawnSync(["ffmpeg", "-hide_banner", "-nostats", "-i", file, "-af", "ebur128", "-f", "null", "-"], { stderr: "pipe" })
+  const lufs = result.stderr.toString().match(/Integrated loudness:\s+I:\s+(-?[\d.]+) LUFS/)
+  if (result.exitCode !== 0 || !lufs) throw new Error(`cannot measure loudness of ${file}`)
+  return Number(lufs[1])
 }
 
 // Decoded sample count, not container metadata: MP3 padding makes the latter imprecise.

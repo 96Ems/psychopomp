@@ -22,6 +22,7 @@ pub(super) fn matched(
     frames: Frames,
     phase: TransitionPhase,
     to: [f32; 4],
+    round: bool,
     paint: Paint,
 ) -> Vec<u8> {
     let Frames {
@@ -49,7 +50,11 @@ pub(super) fn matched(
             let rgb = mix(paint.background, below, below_cover);
             // The element turns into its counterpart first; the scene around
             // it follows, its shrunken border dissolving into the outgoing one.
-            let edge = rounded_box(point - center, half, 12.0);
+            let edge = if round {
+                ellipse(point - center, half)
+            } else {
+                rounded_box(point - center, half, 12.0)
+            };
             let element = smoothstep(0.5 - edge / ELEMENT_FEATHER);
             let weight = (inside * element).max(around);
             if weight <= 0.0 {
@@ -84,6 +89,13 @@ fn sample_zoomed(mips: &Mips, zoom: ReelZoom, point: Vec2, size: Vec2) -> ([f32;
         fade(centered.x) * fade(centered.y)
     };
     (mips.sample(source.x, source.y, 1.0 / zoom.scale), cover)
+}
+
+/// The approximate signed distance from `point` to the ellipse of `half`
+/// axes, in pixels: exact on a circle, and smooth enough for a feather.
+fn ellipse(point: Vec2, half: Vec2) -> f32 {
+    let scaled = point / half.max(Vec2::splat(1.0));
+    (scaled.length() - 1.0) * half.min_element()
 }
 
 /// Signed distance from a rounded box centered at the origin; negative inside.
@@ -469,6 +481,18 @@ mod tests {
                 "{direction:?}"
             );
         }
+    }
+
+    #[test]
+    fn ellipses_measure_signed_distance_exactly_on_a_circle() {
+        let half = vec2(20.0, 20.0);
+        assert_eq!(ellipse(Vec2::ZERO, half), -20.0);
+        assert_eq!(ellipse(vec2(0.0, 20.0), half), 0.0);
+        assert!((ellipse(vec2(30.0, 0.0), half) - 10.0).abs() < 1e-5);
+        assert!(
+            ellipse(vec2(19.0, 19.0), half) > 0.0,
+            "a circle cuts the box corner"
+        );
     }
 
     #[test]

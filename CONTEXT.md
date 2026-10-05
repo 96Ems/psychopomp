@@ -126,7 +126,9 @@ posed by a pure function of the transition's progress: a push, slide, or whip
 moves both frames along a direction, smeared by their speed; an iris or ink
 reveals the incoming frame through a growing circle or blot; a **Match** flies
 one camera so a rectangle of the outgoing frame lands on a rectangle of the
-incoming one, and the element visibly becomes its counterpart; a flip or cube
+incoming one, and the element visibly becomes its counterpart (a **Round Match**
+carries the ellipse inside each rectangle rather than a card, so a dot opens as a
+circle onto the ball it becomes); a flip or cube
 turns the frames in perspective; a glitch, flash, or light leak hides a cut
 under corruption or light. A **J-cut** and an **L-cut** overlap two segments'
 sound but cut their pictures at the end or the start of the overlap.
@@ -207,6 +209,9 @@ to another; a fractional `status` instead passes through every entry between.
 Every Stage channel has one **Channel Default**, its resting value, which both
 authoring and rendering read when nothing writes it: an element is visible and
 whole at rest.
+A label may be set in a **Face** other than bundled CommitMono: a display serif
+for quiet titles, a light sans, or a condensed black for shouting. These are
+faces macOS installs, so another machine substitutes its own.
 An orb's **Burst** is a reversible destruction clock: gravitational collapse,
 hot combustion, an expanding refractive pressure wave, cooling smoke, and
 ballistic embers. Its procedural volume and trajectories need no simulation
@@ -249,7 +254,9 @@ slab), a dot-matrix plane, a lattice, a cylinder, or a torus. A form turns in 3D
 (ambient spin, an authored `rotation`, and `pitch` and `roll` for tumbling),
 pulses, shatters, and bursts like an orb. Wires attach to its sampled, turned
 silhouette (a convex hull), not a fixed circle. The orb's surface ripple is
-spherical and stays the orb's alone.
+spherical and stays the orb's alone. A form is solid at rest, its dark body
+hiding what passes behind it; a **Hollow** form (`solid` 0), such as a ring of
+dots, hides nothing.
 
 A **Morph** carries every point of a form from one of its shapes to the next.
 Point identity is stable: point `i` of every shape is the same particle, and each
@@ -423,8 +430,10 @@ Burned-in captions driven by narration word timings. Words chunk into pages of
 balanced lines no wider than a maximum, breaking at sentence ends, pauses, and
 width; each page replaces the last with a short fade and rise, its backing
 surface morphing rather than blinking. The spoken word takes the highlight
-tone with a pill that glides from word to word. Everything after measuring is a
-pure function of time and the word list.
+tone with a pill that glides from word to word. Revealed **word by word**, a
+page shows only what has been said, each line centered on it; a tilted page
+steps its words up or down while each stays upright. Everything after measuring
+is a pure function of time and the word list.
 ## Confetti
 A success burst: seeded paper pieces and sparkles launched in a cone under
 gravity and drag, fluttering and tumbling as they fall, all closed-form from

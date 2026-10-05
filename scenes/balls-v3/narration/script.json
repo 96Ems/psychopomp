@@ -1,0 +1,16 @@
+{
+  "engine": "elevenlabs",
+  "model": "eleven_v4",
+  "voice": "8olojUk4IXpvKgaOCHXj",
+  "settings": {
+    "stability": 0.2,
+    "similarity": 0.65
+  },
+  "loudness": "linear",
+  "clips": [
+    {
+      "id": "cubes",
+      "text": "[screaming, possessed, completely unhinged, each word its own scream] CUBES! ARE! BALLS!"
+    }
+  ]
+}

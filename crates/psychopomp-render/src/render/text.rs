@@ -2,6 +2,7 @@
 //! SVG/bubble resources and bounded debug slots. Callers choose paint policy.
 use super::{HeadlessRenderer, fonts};
 use cosmic_text::{Attrs, Color, FontSystem, Metrics, SwashCache, Weight};
+use psychopomp::face::Face;
 use std::collections::HashMap;
 mod raster;
 pub(super) use raster::{TextSprite, blend_pixel, blend_pixel_at, make_sprite, paint_rect};
@@ -37,7 +38,7 @@ impl From<PlainTextSpec> for RasterKey {
 
 #[derive(Default)]
 pub(super) struct PlainTextCache {
-    sprites: HashMap<RasterKey, HashMap<String, TextSprite>>,
+    sprites: HashMap<(Face, RasterKey), HashMap<String, TextSprite>>,
 }
 impl PlainTextCache {
     pub(super) fn clear(&mut self) {
@@ -51,19 +52,21 @@ impl PlainTextCache {
         &mut self,
         fonts: &mut FontSystem,
         swash: &mut SwashCache,
+        face: Face,
         text: &str,
         spec: PlainTextSpec,
     ) -> &TextSprite {
-        let sprites = self.sprites.entry(spec.into()).or_default();
+        let sprites = self.sprites.entry((face, spec.into())).or_default();
         if !sprites.contains_key(text) {
-            let attrs = Attrs::new()
-                .family(fonts::MONO)
-                .weight(if spec.semibold {
+            let attrs = match face {
+                Face::Mono => Attrs::new().family(fonts::MONO).weight(if spec.semibold {
                     Weight::SEMIBOLD
                 } else {
                     Weight::NORMAL
-                })
-                .color(Color::rgb(spec.color[0], spec.color[1], spec.color[2]));
+                }),
+                face => fonts::attrs(face),
+            }
+            .color(Color::rgb(spec.color[0], spec.color[1], spec.color[2]));
             let mut sprite = make_sprite(
                 fonts,
                 swash,
@@ -84,8 +87,23 @@ impl PlainTextCache {
 
 impl HeadlessRenderer {
     pub(super) fn plain_text_sprite(&mut self, text: &str, spec: PlainTextSpec) -> &TextSprite {
-        self.plain_text_sprites
-            .get(&mut self.font_system, &mut self.swash_cache, text, spec)
+        self.plain_text_sprite_in(Face::Mono, text, spec)
+    }
+
+    /// `text` set in `face` rather than CommitMono.
+    pub(super) fn plain_text_sprite_in(
+        &mut self,
+        face: Face,
+        text: &str,
+        spec: PlainTextSpec,
+    ) -> &TextSprite {
+        self.plain_text_sprites.get(
+            &mut self.font_system,
+            &mut self.swash_cache,
+            face,
+            text,
+            spec,
+        )
     }
 }
 
@@ -131,7 +149,9 @@ mod tests {
                     semibold,
                     crop_to_advance: crop,
                 };
-                let actual = cache.get(&mut fonts, &mut swash, text, spec).clone();
+                let actual = cache
+                    .get(&mut fonts, &mut swash, Face::Mono, text, spec)
+                    .clone();
                 let attrs = Attrs::new()
                     .family(fonts::MONO)
                     .weight(if semibold {
@@ -240,12 +260,14 @@ mod tests {
             assert_ne!(RasterKey::from(base), RasterKey::from(other));
         }
         for text in ["", " ", "fi", "e\u{301}", "♞", "debug:row.0"] {
-            let first = cache.get(&mut fonts, &mut swash, text, base).clone();
+            let first = cache
+                .get(&mut fonts, &mut swash, Face::Mono, text, base)
+                .clone();
             let pointer = cache
-                .get(&mut fonts, &mut swash, text, base)
+                .get(&mut fonts, &mut swash, Face::Mono, text, base)
                 .pixels
                 .as_ptr();
-            let hit = cache.get(&mut fonts, &mut swash, text, base);
+            let hit = cache.get(&mut fonts, &mut swash, Face::Mono, text, base);
             assert_eq!(hit.pixels, first.pixels);
             assert_eq!(hit.advance.to_bits(), first.advance.to_bits());
             assert_eq!(hit.pixels.as_ptr(), pointer);

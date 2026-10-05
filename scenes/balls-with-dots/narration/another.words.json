@@ -1,0 +1,69 @@
+{
+ "wordTimings": [
+  {
+   "word": "But",
+   "start": 0,
+   "end": 0.16
+  },
+  {
+   "word": "what",
+   "start": 0.16,
+   "end": 0.36
+  },
+  {
+   "word": "if,",
+   "start": 0.36,
+   "end": 0.68
+  },
+  {
+   "word": "but",
+   "start": 0.76,
+   "end": 1.22
+  },
+  {
+   "word": "what",
+   "start": 1.22,
+   "end": 1.44
+  },
+  {
+   "word": "if,",
+   "start": 1.44,
+   "end": 1.7
+  },
+  {
+   "word": "there",
+   "start": 1.76,
+   "end": 2.16
+  },
+  {
+   "word": "was",
+   "start": 2.16,
+   "end": 2.38
+  },
+  {
+   "word": "another",
+   "start": 2.38,
+   "end": 2.72
+  },
+  {
+   "word": "ball",
+   "start": 2.72,
+   "end": 3.1
+  },
+  {
+   "word": "with",
+   "start": 3.1,
+   "end": 3.86
+  },
+  {
+   "word": "more",
+   "start": 3.86,
+   "end": 4.18
+  },
+  {
+   "word": "dots?",
+   "start": 4.18,
+   "end": 4.56
+  }
+ ]
+}

@@ -1,0 +1,884 @@
+{
+ "clips": {
+  "hush": {
+   "textHash": "fc5e8ad749990c5f",
+   "beats": [
+    {
+     "start": 0.14,
+     "end": 0.158,
+     "peakDb": -19.3
+    },
+    {
+     "start": 0.17,
+     "end": 0.68,
+     "peakDb": -6.2
+    },
+    {
+     "start": 1.09,
+     "end": 1.103,
+     "peakDb": -20.7
+    },
+    {
+     "start": 1.113,
+     "end": 1.943,
+     "peakDb": -7.3
+    },
+    {
+     "start": 2.038,
+     "end": 2.168,
+     "peakDb": -14.8
+    },
+    {
+     "start": 2.533,
+     "end": 3.145,
+     "peakDb": -7.9
+    },
+    {
+     "start": 3.645,
+     "end": 3.855,
+     "peakDb": -7.6
+    },
+    {
+     "start": 3.925,
+     "end": 4.19,
+     "peakDb": -10.2
+    },
+    {
+     "start": 4.253,
+     "end": 4.458,
+     "peakDb": -15.2
+    },
+    {
+     "start": 4.938,
+     "end": 5.178,
+     "peakDb": -9.9
+    },
+    {
+     "start": 5.2,
+     "end": 5.28,
+     "peakDb": -17.7
+    },
+    {
+     "start": 5.29,
+     "end": 5.558,
+     "peakDb": -11.4
+    },
+    {
+     "start": 5.613,
+     "end": 5.913,
+     "peakDb": -12.3
+    },
+    {
+     "start": 6.47,
+     "end": 6.64,
+     "peakDb": -5
+    },
+    {
+     "start": 6.7,
+     "end": 6.91,
+     "peakDb": -7.1
+    },
+    {
+     "start": 6.93,
+     "end": 7.185,
+     "peakDb": -13.6
+    }
+   ]
+  },
+  "another": {
+   "textHash": "bdcf55705dc436eb",
+   "beats": [
+    {
+     "start": 0.115,
+     "end": 0.238,
+     "peakDb": -12.2
+    },
+    {
+     "start": 0.335,
+     "end": 0.853,
+     "peakDb": -11.3
+    },
+    {
+     "start": 1.168,
+     "end": 1.273,
+     "peakDb": -9.5
+    },
+    {
+     "start": 1.288,
+     "end": 1.31,
+     "peakDb": -16.1
+    },
+    {
+     "start": 1.375,
+     "end": 1.825,
+     "peakDb": -5.4
+    },
+    {
+     "start": 2.165,
+     "end": 2.938,
+     "peakDb": -9.1
+    },
+    {
+     "start": 2.995,
+     "end": 3.393,
+     "peakDb": -12.5
+    },
+    {
+     "start": 3.833,
+     "end": 4.037,
+     "peakDb": -16.1
+    },
+    {
+     "start": 4.082,
+     "end": 4.358,
+     "peakDb": -6.6
+    },
+    {
+     "start": 4.42,
+     "end": 4.688,
+     "peakDb": -11.1
+    },
+    {
+     "start": 4.735,
+     "end": 4.935,
+     "peakDb": -10.1
+    }
+   ]
+  },
+  "chant": {
+   "textHash": "c46836ee5d50e6cc",
+   "beats": [
+    {
+     "start": 0.113,
+     "end": 0.725,
+     "peakDb": -11.3
+    },
+    {
+     "start": 1.283,
+     "end": 1.945,
+     "peakDb": -12.7
+    },
+    {
+     "start": 2.258,
+     "end": 2.663,
+     "peakDb": -11.6
+    },
+    {
+     "start": 2.893,
+     "end": 3.25,
+     "peakDb": -11.6
+    },
+    {
+     "start": 3.473,
+     "end": 3.895,
+     "peakDb": -9.5
+    },
+    {
+     "start": 4.168,
+     "end": 4.408,
+     "peakDb": -9.8
+    },
+    {
+     "start": 4.46,
+     "end": 4.673,
+     "peakDb": -9.5
+    },
+    {
+     "start": 4.708,
+     "end": 4.925,
+     "peakDb": -9.5
+    },
+    {
+     "start": 4.95,
+     "end": 5.163,
+     "peakDb": -9.9
+    },
+    {
+     "start": 5.193,
+     "end": 5.415,
+     "peakDb": -10
+    },
+    {
+     "start": 5.438,
+     "end": 5.663,
+     "peakDb": -9.2
+    },
+    {
+     "start": 5.678,
+     "end": 5.938,
+     "peakDb": -8.8
+    },
+    {
+     "start": 6.023,
+     "end": 6.613,
+     "peakDb": -7.6
+    }
+   ]
+  },
+  "theory": {
+   "textHash": "8ed30bd6c347fe8c",
+   "beats": [
+    {
+     "start": 0.008,
+     "end": 0.073,
+     "peakDb": -12.5
+    },
+    {
+     "start": 0.08,
+     "end": 0.465,
+     "peakDb": -8.9
+    },
+    {
+     "start": 0.578,
+     "end": 0.743,
+     "peakDb": -11.2
+    },
+    {
+     "start": 0.77,
+     "end": 0.955,
+     "peakDb": -14.6
+    },
+    {
+     "start": 0.998,
+     "end": 1.23,
+     "peakDb": -12.1
+    },
+    {
+     "start": 1.313,
+     "end": 1.593,
+     "peakDb": -14.1
+    },
+    {
+     "start": 2.038,
+     "end": 2.095,
+     "peakDb": -18.9
+    },
+    {
+     "start": 2.105,
+     "end": 2.47,
+     "peakDb": -9.8
+    },
+    {
+     "start": 2.645,
+     "end": 2.863,
+     "peakDb": -8.5
+    },
+    {
+     "start": 3.01,
+     "end": 3.115,
+     "peakDb": -9.8
+    },
+    {
+     "start": 3.143,
+     "end": 3.583,
+     "peakDb": -10
+    },
+    {
+     "start": 3.588,
+     "end": 4.353,
+     "peakDb": -12
+    },
+    {
+     "start": 4.57,
+     "end": 5,
+     "peakDb": -9.7
+    },
+    {
+     "start": 5.123,
+     "end": 5.293,
+     "peakDb": -11
+    },
+    {
+     "start": 5.315,
+     "end": 5.515,
+     "peakDb": -9.9
+    },
+    {
+     "start": 5.538,
+     "end": 5.813,
+     "peakDb": -10.4
+    },
+    {
+     "start": 5.855,
+     "end": 6.21,
+     "peakDb": -9.2
+    },
+    {
+     "start": 6.338,
+     "end": 6.59,
+     "peakDb": -8.8
+    },
+    {
+     "start": 7,
+     "end": 7.388,
+     "peakDb": -6.9
+    },
+    {
+     "start": 7.473,
+     "end": 7.633,
+     "peakDb": -9.6
+    },
+    {
+     "start": 7.72,
+     "end": 8.123,
+     "peakDb": -9.1
+    },
+    {
+     "start": 8.188,
+     "end": 8.435,
+     "peakDb": -9.1
+    },
+    {
+     "start": 8.455,
+     "end": 8.583,
+     "peakDb": -9.5
+    },
+    {
+     "start": 8.615,
+     "end": 9.058,
+     "peakDb": -9.8
+    }
+   ]
+  },
+  "andy": {
+   "textHash": "54e16e111a105e20",
+   "beats": [
+    {
+     "start": 0.115,
+     "end": 0.988,
+     "peakDb": -10.9
+    },
+    {
+     "start": 1.028,
+     "end": 1.533,
+     "peakDb": -11.1
+    },
+    {
+     "start": 1.87,
+     "end": 1.93,
+     "peakDb": -11.8
+    },
+    {
+     "start": 1.975,
+     "end": 2.113,
+     "peakDb": -8.7
+    },
+    {
+     "start": 2.153,
+     "end": 2.905,
+     "peakDb": -11.2
+    },
+    {
+     "start": 2.923,
+     "end": 3.208,
+     "peakDb": -12.9
+    },
+    {
+     "start": 3.24,
+     "end": 3.598,
+     "peakDb": -11.1
+    },
+    {
+     "start": 3.698,
+     "end": 3.9,
+     "peakDb": -11.7
+    },
+    {
+     "start": 3.938,
+     "end": 4.025,
+     "peakDb": -24.6
+    },
+    {
+     "start": 4.175,
+     "end": 4.538,
+     "peakDb": -9.8
+    },
+    {
+     "start": 4.545,
+     "end": 4.978,
+     "peakDb": -10.9
+    },
+    {
+     "start": 5.008,
+     "end": 5.273,
+     "peakDb": -12.7
+    },
+    {
+     "start": 5.475,
+     "end": 5.555,
+     "peakDb": -11.4
+    },
+    {
+     "start": 5.585,
+     "end": 5.895,
+     "peakDb": -10
+    },
+    {
+     "start": 6.15,
+     "end": 7.148,
+     "peakDb": -10.4
+    }
+   ]
+  },
+  "spaghetti": {
+   "textHash": "1aa549f1278b3130",
+   "beats": [
+    {
+     "start": 0.035,
+     "end": 1.353,
+     "peakDb": -11.3
+    },
+    {
+     "start": 1.61,
+     "end": 1.72,
+     "peakDb": -12.2
+    },
+    {
+     "start": 1.725,
+     "end": 1.95,
+     "peakDb": -13.6
+    },
+    {
+     "start": 1.958,
+     "end": 2.22,
+     "peakDb": -13.2
+    },
+    {
+     "start": 2.245,
+     "end": 2.818,
+     "peakDb": -10.8
+    },
+    {
+     "start": 2.94,
+     "end": 3.063,
+     "peakDb": -23.4
+    },
+    {
+     "start": 3.083,
+     "end": 3.748,
+     "peakDb": -11.1
+    },
+    {
+     "start": 3.783,
+     "end": 4.505,
+     "peakDb": -11
+    },
+    {
+     "start": 4.53,
+     "end": 5.168,
+     "peakDb": -12.2
+    },
+    {
+     "start": 5.198,
+     "end": 5.493,
+     "peakDb": -11.5
+    },
+    {
+     "start": 5.513,
+     "end": 5.823,
+     "peakDb": -14.6
+    },
+    {
+     "start": 5.963,
+     "end": 6.085,
+     "peakDb": -21.8
+    },
+    {
+     "start": 6.095,
+     "end": 6.365,
+     "peakDb": -13.4
+    },
+    {
+     "start": 6.398,
+     "end": 8.215,
+     "peakDb": -9.3
+    }
+   ]
+  },
+  "chaos-yowl": {
+   "textHash": "8472c9082c11f182",
+   "beats": [
+    {
+     "start": 0.188,
+     "end": 1.403,
+     "peakDb": -12.5
+    },
+    {
+     "start": 1.443,
+     "end": 4.675,
+     "peakDb": -10.9
+    }
+   ]
+  },
+  "chaos-howl": {
+   "textHash": "b2d585423eb43f8c",
+   "beats": [
+    {
+     "start": 0.083,
+     "end": 1.838,
+     "peakDb": -12.1
+    },
+    {
+     "start": 2.36,
+     "end": 4.503,
+     "peakDb": -8.3
+    }
+   ]
+  },
+  "chaos-laugh": {
+   "textHash": "81b17b7d6d2d029c",
+   "beats": [
+    {
+     "start": 0.09,
+     "end": 0.613,
+     "peakDb": -9.7
+    },
+    {
+     "start": 0.63,
+     "end": 0.773,
+     "peakDb": -11
+    },
+    {
+     "start": 0.833,
+     "end": 0.96,
+     "peakDb": -12.6
+    },
+    {
+     "start": 1.045,
+     "end": 1.183,
+     "peakDb": -12.8
+    },
+    {
+     "start": 1.258,
+     "end": 1.4,
+     "peakDb": -13.3
+    },
+    {
+     "start": 1.463,
+     "end": 1.723,
+     "peakDb": -23.6
+    },
+    {
+     "start": 1.735,
+     "end": 2.303,
+     "peakDb": -9.5
+    },
+    {
+     "start": 2.343,
+     "end": 2.488,
+     "peakDb": -10.3
+    },
+    {
+     "start": 2.723,
+     "end": 3.123,
+     "peakDb": -11.1
+    },
+    {
+     "start": 3.128,
+     "end": 3.35,
+     "peakDb": -9.6
+    },
+    {
+     "start": 3.385,
+     "end": 3.543,
+     "peakDb": -12.7
+    },
+    {
+     "start": 3.64,
+     "end": 3.788,
+     "peakDb": -13
+    },
+    {
+     "start": 4.073,
+     "end": 4.513,
+     "peakDb": -10.1
+    },
+    {
+     "start": 4.518,
+     "end": 4.768,
+     "peakDb": -10.5
+    },
+    {
+     "start": 4.828,
+     "end": 5.008,
+     "peakDb": -11.2
+    },
+    {
+     "start": 5.095,
+     "end": 5.28,
+     "peakDb": -12.2
+    },
+    {
+     "start": 5.38,
+     "end": 5.545,
+     "peakDb": -13.8
+    },
+    {
+     "start": 5.66,
+     "end": 5.815,
+     "peakDb": -16.5
+    },
+    {
+     "start": 5.933,
+     "end": 6.043,
+     "peakDb": -22.2
+    },
+    {
+     "start": 6.635,
+     "end": 6.723,
+     "peakDb": -17.9
+    },
+    {
+     "start": 6.885,
+     "end": 6.985,
+     "peakDb": -23.1
+    },
+    {
+     "start": 7.225,
+     "end": 7.275,
+     "peakDb": -23.4
+    }
+   ]
+  },
+  "chaos-babble": {
+   "textHash": "3008f05938453433",
+   "beats": [
+    {
+     "start": 0.04,
+     "end": 0.775,
+     "peakDb": -14.5
+    },
+    {
+     "start": 0.788,
+     "end": 1.18,
+     "peakDb": -21.5
+    },
+    {
+     "start": 1.36,
+     "end": 1.993,
+     "peakDb": -12.2
+    },
+    {
+     "start": 2.09,
+     "end": 2.403,
+     "peakDb": -9.7
+    },
+    {
+     "start": 2.728,
+     "end": 2.85,
+     "peakDb": -10
+    },
+    {
+     "start": 2.868,
+     "end": 3.068,
+     "peakDb": -11.2
+    },
+    {
+     "start": 3.083,
+     "end": 3.143,
+     "peakDb": -18.2
+    },
+    {
+     "start": 3.198,
+     "end": 3.49,
+     "peakDb": -13
+    },
+    {
+     "start": 3.743,
+     "end": 4.02,
+     "peakDb": -7.6
+    },
+    {
+     "start": 4.085,
+     "end": 4.418,
+     "peakDb": -9.6
+    },
+    {
+     "start": 4.463,
+     "end": 4.78,
+     "peakDb": -7.7
+    },
+    {
+     "start": 4.848,
+     "end": 5.195,
+     "peakDb": -8.6
+    },
+    {
+     "start": 5.268,
+     "end": 5.418,
+     "peakDb": -9.3
+    },
+    {
+     "start": 5.488,
+     "end": 5.755,
+     "peakDb": -9.6
+    },
+    {
+     "start": 5.83,
+     "end": 6.018,
+     "peakDb": -8.6
+    },
+    {
+     "start": 6.025,
+     "end": 6.335,
+     "peakDb": -9.8
+    },
+    {
+     "start": 6.395,
+     "end": 6.55,
+     "peakDb": -9.5
+    },
+    {
+     "start": 6.573,
+     "end": 6.72,
+     "peakDb": -18.3
+    },
+    {
+     "start": 6.773,
+     "end": 6.92,
+     "peakDb": -12.6
+    },
+    {
+     "start": 6.945,
+     "end": 7.058,
+     "peakDb": -21.1
+    },
+    {
+     "start": 7.098,
+     "end": 7.265,
+     "peakDb": -14.9
+    },
+    {
+     "start": 7.305,
+     "end": 7.48,
+     "peakDb": -16.7
+    }
+   ]
+  },
+  "chaos-chimp": {
+   "textHash": "1beeaf72b67e3d9a",
+   "beats": [
+    {
+     "start": 0.043,
+     "end": 0.26,
+     "peakDb": -13.3
+    },
+    {
+     "start": 0.268,
+     "end": 0.37,
+     "peakDb": -11.5
+    },
+    {
+     "start": 0.383,
+     "end": 0.603,
+     "peakDb": -10.3
+    },
+    {
+     "start": 0.663,
+     "end": 0.838,
+     "peakDb": -10.3
+    },
+    {
+     "start": 0.843,
+     "end": 1.263,
+     "peakDb": -11.4
+    },
+    {
+     "start": 1.285,
+     "end": 1.565,
+     "peakDb": -13.7
+    },
+    {
+     "start": 1.588,
+     "end": 1.71,
+     "peakDb": -18
+    },
+    {
+     "start": 1.738,
+     "end": 1.83,
+     "peakDb": -20.6
+    },
+    {
+     "start": 2.385,
+     "end": 2.565,
+     "peakDb": -9.4
+    },
+    {
+     "start": 2.61,
+     "end": 2.813,
+     "peakDb": -8.6
+    },
+    {
+     "start": 2.825,
+     "end": 3.14,
+     "peakDb": -11.8
+    },
+    {
+     "start": 3.335,
+     "end": 3.508,
+     "peakDb": -11.8
+    },
+    {
+     "start": 3.585,
+     "end": 3.738,
+     "peakDb": -10.6
+    },
+    {
+     "start": 3.81,
+     "end": 4.088,
+     "peakDb": -11.8
+    },
+    {
+     "start": 4.303,
+     "end": 4.445,
+     "peakDb": -9.4
+    },
+    {
+     "start": 4.508,
+     "end": 4.653,
+     "peakDb": -11.2
+    },
+    {
+     "start": 4.693,
+     "end": 4.865,
+     "peakDb": -9
+    },
+    {
+     "start": 4.923,
+     "end": 5.093,
+     "peakDb": -11.1
+    },
+    {
+     "start": 5.145,
+     "end": 5.97,
+     "peakDb": -11.2
+    }
+   ]
+  },
+  "after": {
+   "textHash": "e8f6ca75d6ab4bff",
+   "beats": [
+    {
+     "start": 0.155,
+     "end": 1.143,
+     "peakDb": -13.4
+    },
+    {
+     "start": 1.783,
+     "end": 2.47,
+     "peakDb": -8.5
+    },
+    {
+     "start": 2.565,
+     "end": 2.85,
+     "peakDb": -11.9
+    },
+    {
+     "start": 2.913,
+     "end": 3.135,
+     "peakDb": -9.7
+    }
+   ]
+  }
+ }
+}

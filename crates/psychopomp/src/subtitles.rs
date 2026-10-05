@@ -14,6 +14,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     author::{ActorHandle, ContinuousHandle, PlanBuilder},
+    face::Face,
     math::{easing::smootherstep, lerp, smoothstep},
     narration::Spoken,
     tone::Tone,
@@ -57,6 +58,13 @@ pub struct SubtitlesPlan {
     /// A dark rounded surface behind each page, for legibility over footage.
     #[serde(default = "yes", skip_serializing_if = "is_yes")]
     pub backing: bool,
+    /// How much ink a word not yet spoken shows (0.5); 0 reveals the page
+    /// word by word as it is said.
+    #[serde(default = "half", skip_serializing_if = "is_half")]
+    pub upcoming: f32,
+    /// The words' typeface: bundled CommitMono by default.
+    #[serde(default, skip_serializing_if = "Face::is_mono")]
+    pub face: Face,
     pub words: Vec<SubtitleWordPlan>,
 }
 
@@ -96,6 +104,14 @@ fn yes() -> bool {
     true
 }
 
+fn half() -> f32 {
+    0.5
+}
+
+fn is_half(value: &f32) -> bool {
+    *value == 0.5
+}
+
 fn is_yes(value: &bool) -> bool {
     *value
 }
@@ -109,6 +125,8 @@ impl SubtitlesPlan {
             max_lines: default_lines(),
             highlight: Tone::Accent,
             backing: true,
+            upcoming: half(),
+            face: Face::Mono,
             words: Vec::new(),
         }
     }
@@ -158,6 +176,18 @@ impl SubtitlesPlan {
         self
     }
 
+    /// Show each word only as it is said.
+    pub fn word_by_word(mut self) -> Self {
+        self.upcoming = 0.0;
+        self
+    }
+
+    /// Set the words in `face` rather than CommitMono.
+    pub fn face(mut self, face: Face) -> Self {
+        self.face = face;
+        self
+    }
+
     pub fn line_height(&self) -> f32 {
         (self.size * 1.35).round()
     }
@@ -178,6 +208,10 @@ impl SubtitlesPlan {
         ensure!(
             (1..=3).contains(&self.max_lines),
             "subtitles show one to three lines"
+        );
+        ensure!(
+            (0.0..=1.0).contains(&self.upcoming),
+            "subtitles upcoming ink must be between 0 and 1"
         );
         ensure!(
             (1..=4000).contains(&self.words.len()),

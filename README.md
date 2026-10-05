@@ -70,6 +70,7 @@ bun scripts/sheet.ts target/hello.json 0.5,1.5,2.7 --theme neutral --shutter
 | [`psychopomp-intro`](scenes/psychopomp-intro) | This library introducing itself, loudly |
 | [`2password`](scenes/2password) | A narrated product explainer on the Stage |
 | [`pr-walkthrough`](scenes/pr-walkthrough) | Pull requests as Stage films that zoom into their diffs |
+| [`balls-with-dots`](scenes/balls-with-dots), [`balls-v3`](scenes/balls-v3) | One reply film in two cuts: a whisper about a ball with dots that builds through a chant and a theory into a drum-cut montage of every effect, then one small ball |
 | [`camera`](scenes/camera) | A Stage diagram shot like a film: every camera move |
 | [`generated-media`](scenes/generated-media) | Speech, a chant, sound effects, and a derived voice, generated once and timed to their words |
 | [`callouts`](scenes/callouts), [`rolling-number`](scenes/rolling-number), [`charts`](scenes/charts), [`tree`](scenes/tree), [`diagnostics`](scenes/diagnostics), [`text-surfaces`](scenes/text-surfaces), [`viz-components`](scenes/viz-components), [`transitions`](scenes/transitions) | Component showrooms |

@@ -1,0 +1,79 @@
+{
+ "wordTimings": [
+  {
+   "word": "Oh,",
+   "start": 0,
+   "end": 0.34
+  },
+  {
+   "word": "I",
+   "start": 0.44,
+   "end": 1.08
+  },
+  {
+   "word": "hear",
+   "start": 1.08,
+   "end": 1.4
+  },
+  {
+   "word": "you",
+   "start": 1.4,
+   "end": 1.6
+  },
+  {
+   "word": "like",
+   "start": 1.6,
+   "end": 1.88
+  },
+  {
+   "word": "balls",
+   "start": 1.88,
+   "end": 2.68
+  },
+  {
+   "word": "with",
+   "start": 2.68,
+   "end": 3.7
+  },
+  {
+   "word": "dots.",
+   "start": 3.7,
+   "end": 4.04
+  },
+  {
+   "word": "Just",
+   "start": 4.36,
+   "end": 5.02
+  },
+  {
+   "word": "one",
+   "start": 5.02,
+   "end": 5.36
+  },
+  {
+   "word": "ball",
+   "start": 5.36,
+   "end": 5.7
+  },
+  {
+   "word": "with",
+   "start": 5.7,
+   "end": 6.48
+  },
+  {
+   "word": "dots",
+   "start": 6.48,
+   "end": 6.78
+  },
+  {
+   "word": "on",
+   "start": 6.78,
+   "end": 7.1
+  },
+  {
+   "word": "it.",
+   "start": 7.1,
+   "end": 7.26
+  }
+ ]
+}

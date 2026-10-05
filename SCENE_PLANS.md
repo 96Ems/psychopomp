@@ -553,7 +553,10 @@ For ElevenLabs v4, use `"engine": "elevenlabs"`, `"model": "eleven_v4"`, the
 voice ID, and optional `"settings": { "stability": 0.5, "similarity": 0.7 }` in
 the script. Inject `ELEVENLABS_API_KEY`; `speed` is unsupported. Directions in
 square brackets guide performance; Whisper timestamps the resulting speech.
-The script records model/request IDs and checkpoints completed clips. The
+The script records model/request IDs and checkpoints completed clips. Clips are
+normalized to -16 LUFS; the default evens the level within each clip, while
+`"loudness": "linear"` applies one gain per clip and limits peaks, so a whisper
+that builds to a scream keeps its swell (`scenes/balls-with-dots`). The
 flagship's directed example is `scenes/pr-walkthrough/narration-v4/script.json`.
 Copy it under `output/` before generating to keep alternate audio there:
 
@@ -618,7 +621,8 @@ plan and the overlap in nanoseconds; at most two segments are ever visible.
 | `slid(plan, ns, direction)` | `{ "slide": "up" }` | The segment slides over the dimming outgoing frame and settles |
 | `whipped(plan, ns, direction)` | `{ "whip": "right" }` | A whip pan: lean in, tear across in a streak, catch |
 | `irised(plan, ns, ring)` | `{ "iris": { "ring": true } }` | A soft circle opens from the focus center or the frame's |
-| `matched(plan, ns, from, to)` | `{ "match": [x, y, w, h] }` | `from` (the focus) in the outgoing frame flies onto `to` in this one |
+| `matched(plan, ns, from, to)` | `{ "match": [x, y, w, h] }` | `from` (the focus) in the outgoing frame flies onto `to` in this one, carried as a card with rounded corners |
+| `matched_round(plan, ns, from, to)` | `{ "match-round": [x, y, w, h] }` | A match whose element is round (a ball, an orb, a dot): the ellipse inside each rectangle is carried, so a square opens as a circle |
 | `flipped(plan, ns, direction)` | `{ "flip": "left" }` | The frame turns over like a card, this segment on its back |
 | `cubed(plan, ns, direction)` | `{ "cube": "up" }` | The frames are faces of a turning cube |
 | `inked(plan, ns)` | `"ink"` | The segment spreads in like ink, from the focus if set |
@@ -1103,8 +1107,13 @@ their fuller documentation elsewhere.
   bench.sort(&mut scene, later + 2 * SECOND, "after", SortOrder::Ascending)?;
 - `subtitles`: `origin` (lines' center x, the bottom line's center y),
   `maxWidth`, `size` (40), `maxLines` (2), `highlight` (accent), `backing`
-  (true), and `words` of `{ text, startNanos, endNanos }` on the plan clock.
-  Channels: `opacity`, `x`, `y`. Pages break at sentence ends, pauses, and
+  (true), `upcoming` (ink of words not yet said, 0.5; 0, or `.word_by_word()`,
+  reveals each word as it is said, the line centered on what has been said),
+  `face` (any Stage label face, `mono` by default; `.face(face)`), and `words`
+  of `{ text, startNanos, endNanos }` on the plan clock.
+  Channels: `opacity`, `x`, `y`, and `tilt` (radians, 0; each word steps up or
+  down by its distance from the center and stays upright, and the backing grows
+  to hold them). Pages break at sentence ends, pauses, and
   width, with balanced lines; the spoken word takes the highlight with a
   gliding pill. `SubtitlesPlan::from_spoken(&spoken, origin, max_width)` takes a
   placed narration clip's words (`.spoken(&other)` appends another). Plans
@@ -1155,9 +1164,15 @@ their fuller documentation elsewhere.
 - Editor Line Marks: `"mark": "added" | "removed"` on a line, with presence
   channel `mark.<line-id>`; `panel-x`, `panel-y`, and `panel-opacity` move and fade the card (the Stepped Diff
   enters on `panel-y`).
-- `stage` (root): `elements` of `kind` `card` (`at`, `size`, `title`, `status`,
+- `stage` (root): up to 128 `elements` of `kind` `card` (`at`, `size`, `title`, `status`,
   `tone`), `orb` (`at`, `radius`, `points`), `beam` (`from`, `to`, `bend`),
-  `packet` (`beam`, `reverse`, `label`), `label` (`at`, `size`, `spans`), `ring`
+  `packet` (`beam`, `reverse`, `label`), `label` (`at`, `size`, `spans`, and an
+  optional `face`: `mono` (bundled CommitMono, the default), `serif` and
+  `serif-italic` (Didot), `light` (Helvetica Neue Light), or `shout`
+  (Helvetica Neue Condensed Black), set with `StageElement::label(..).face(Face::Serif)`;
+  the last four are faces macOS installs, and a machine without them shapes the
+  text in whatever face its font database substitutes, so the same plan renders
+  in another typeface there), `ring`
   (`at`, `radius`, `thickness`), `bolt` and `shield` (see Effects below), and the
   diagram vocabulary below (`form`, `shape`, `path`, `icon`), plus `post` (`bloom`,
   `grain`, `vignette`,
@@ -1292,8 +1307,10 @@ their fuller documentation elsewhere.
     their defaults: `opacity` 1, `x`/`y`/`z` 0, `scale` 1, `blur` 0, `rotation` 0
     (about the vertical axis, plus ambient `spin` 1), `pitch` 0 and `roll` 0
     (radians; ease them to tumble), `morph` 0 (a fractional index into `shapes`),
-    `burst` -1, `shatter` 0, `pulse` 0, `hurt` 0. `StageActor::morph(form, at,
-    index, seconds)` eases to a shape on a minimum-jerk curve; `land` pulses a form.
+    `burst` -1, `shatter` 0, `pulse` 0, `hurt` 0, and `solid` 1 (the dark silhouette
+    that hides what passes behind; 0 leaves a ring of dots see-through).
+    `StageActor::morph(form, at, index, seconds)` eases to a shape on a minimum-jerk
+    curve; `land` pulses a form.
   - `shape`: `shape` is `{ "rect": [w, h] }`, `{ "circle": r }`, `{ "arc": { radius,
     start, sweep } }` (turns clockwise from twelve o'clock), or `{ "polygon": [[x,
     y], ...] }` relative to `at`. `corner` rounds a rectangle or polygon; `fill` is a
@@ -1371,6 +1388,13 @@ Continuous channel events are `set`, `spring`, and `ease`
 `curve` one of `linear`, `smoothstep`, `smootherstep`, `cubic-out`, `cubic-in-out`,
 `{ "decelerate": s }`, or `{ "cubic-bezier": [x1, y1, x2, y2] }`). Use `ease` for
 timed curves; never approximate one with stepped `set` events, which stutter.
+Beats authored independently may write one channel out of time order, and a
+segment cut from a longer gesture may write past its end:
+`scene.sort_events()` orders each channel's events by time (keeping the source
+order at one instant), and `scene.drop_events_after_end()` drops events that
+start after the plan's duration, before `finish` (`scenes/balls-v3`).
+`scene.channel_ids()` lists continuous channels in declaration order, the index a
+`continuousChannels[n]` validation path names.
 Reusable math is `psychopomp::math` (`lerp`, `remap_clamp`, `smoothstep`, `easing`,
 `dynamics::settle`, `curve::Polyline`, `shapes::connect`, glam vectors); use it in
 Scene Programs too. `--theme opencode` renders with the OpenCode TUI's tokens;

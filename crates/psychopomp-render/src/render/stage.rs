@@ -17,6 +17,7 @@ use psychopomp::{
     effects::spinner::{self, Mark},
     effects::surface,
     effects::{dissolve, shield},
+    face::Face,
     footage::{Fit, Mask, focus_window},
     math::{
         Quat, Vec2, Vec3,
@@ -758,26 +759,31 @@ impl HeadlessRenderer {
         &mut self,
         plan: &StagePlan,
     ) -> Result<(wgpu::TextureView, [f32; 2], HashMap<String, AtlasText>)> {
-        let mut strings: Vec<(String, String, f32)> = Vec::new();
+        let mut strings: Vec<(String, String, f32, Face)> = Vec::new();
         for element in &plan.elements {
             match element {
                 StageElement::Card {
                     id, title, status, ..
                 } => {
-                    strings.push((text_key(id, "title"), title.clone(), 26.0));
+                    strings.push((text_key(id, "title"), title.clone(), 26.0, Face::Mono));
                     for (index, entry) in status.iter().enumerate() {
                         strings.push((
                             text_key(id, &format!("status{index}")),
                             entry.text.clone(),
                             18.0,
+                            Face::Mono,
                         ));
                     }
                 }
                 StageElement::Packet { id, label, .. } if !label.is_empty() => {
-                    strings.push((text_key(id, "label"), label.clone(), 19.0));
+                    strings.push((text_key(id, "label"), label.clone(), 19.0, Face::Mono));
                 }
                 StageElement::Label {
-                    id, size, spans, ..
+                    id,
+                    size,
+                    spans,
+                    face,
+                    ..
                 } => {
                     for (index, span) in spans.iter().enumerate() {
                         if !span.text.is_empty() {
@@ -785,6 +791,7 @@ impl HeadlessRenderer {
                                 text_key(id, &format!("span{index}")),
                                 span.text.clone(),
                                 *size,
+                                *face,
                             ));
                         }
                     }
@@ -794,12 +801,10 @@ impl HeadlessRenderer {
         }
         let mut sprites = strings
             .iter()
-            .map(|(_, text, size)| {
+            .map(|(_, text, size, face)| {
                 let raster = size * TEXT_RASTER;
                 let line = (raster * 1.35).ceil();
-                let attrs = Attrs::new()
-                    .family(fonts::MONO)
-                    .color(Color::rgb(255, 255, 255));
+                let attrs = fonts::attrs(*face).color(Color::rgb(255, 255, 255));
                 let width = ((text.chars().count() as f32 * raster * 0.7) as u32 + 64).min(4096);
                 make_sprite(
                     &mut self.font_system,
@@ -813,10 +818,7 @@ impl HeadlessRenderer {
             })
             .collect::<Vec<_>>();
         // Icons follow the text, rasterized at the same density.
-        let mut keys = strings
-            .into_iter()
-            .map(|(key, _, _)| key)
-            .collect::<Vec<_>>();
+        let mut keys = strings.into_iter().map(|(key, ..)| key).collect::<Vec<_>>();
         for element in &plan.elements {
             if let StageElement::Icon {
                 id,
@@ -3650,12 +3652,14 @@ impl<'a> Painter<'a> {
             let red = look.tone(Tone::Error);
             let scale = place.scale * collapse;
             let blur = scene.blur_at(place.depth) + scene.v(id, "blur").max(0.0) * scale;
+            // A hollow form (`solid` 0), such as a ring of dots, hides nothing.
+            let solid = scene.unit(id, "solid");
             self.frame.polygon(
                 form.hull.scaled(collapse).vertices(),
                 0.0,
                 5.0 * scale + blur,
                 Paint {
-                    fill: rgba(look.background, opacity * (1.0 - shatter)),
+                    fill: rgba(look.background, opacity * (1.0 - shatter) * solid),
                     ..Default::default()
                 },
             );

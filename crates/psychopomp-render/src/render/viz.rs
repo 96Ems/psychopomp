@@ -10,7 +10,7 @@ mod meter;
 mod readout;
 mod subtitles;
 
-use psychopomp::math::lerp;
+use psychopomp::{face::Face, math::lerp};
 
 use super::{
     HeadlessRenderer, PlainTextSpec, TextDraw, blend_pixel, chart::Anchor, composite_text,
@@ -55,12 +55,28 @@ impl HeadlessRenderer {
         at: [f32; 2],
         opacity: f32,
     ) -> f32 {
+        self.viz_text_in(Face::Mono, pixels, text, size, color, anchor, at, opacity)
+    }
+
+    /// [`Self::viz_text`] set in `face`.
+    #[allow(clippy::too_many_arguments)]
+    fn viz_text_in(
+        &mut self,
+        face: Face,
+        pixels: &mut [u8],
+        text: &str,
+        size: f32,
+        color: [u8; 3],
+        anchor: Anchor,
+        at: [f32; 2],
+        opacity: f32,
+    ) -> f32 {
         if text.is_empty() {
             return 0.0;
         }
         let canvas = self.viz_canvas();
         let spec = text_spec(size, color);
-        let sprite = self.plain_text_sprite(text, spec);
+        let sprite = self.plain_text_sprite_in(face, text, spec);
         let advance = sprite.advance;
         if opacity <= 0.001 {
             return advance;

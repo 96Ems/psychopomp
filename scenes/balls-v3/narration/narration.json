@@ -1,0 +1,14 @@
+{
+  "clips": [
+    {
+      "id": "cubes",
+      "file": "cubes.mp3",
+      "words": "cubes.words.json",
+      "durationNanos": 3119000000,
+      "textHash": "2172a638e33a38d2",
+      "engine": "elevenlabs",
+      "model": "eleven_v4",
+      "requestId": "MiUBqA7ivjAT24tjdmEb"
+    }
+  ]
+}
