@@ -8,16 +8,13 @@ use std::{fs, path::PathBuf};
 
 use anyhow::{Context, Result};
 use psychopomp::{
-    author::{PlanBuilder, seconds},
-    caption::{CaptionAlign, CaptionSpanPlan},
-    effects::spinner::Mark,
+    author::{PlanBuilder, PlanTime, millis, seconds, stagger},
+    caption::CaptionAlign,
     math::easing::Ease,
     narration::Narration,
-    plan::{
-        MediaKindPlan, MediaPlan, MediaRolePlan, ReelPlan, ReelSegmentPlan, ReelTransitionStyle,
-        ScenePlan,
-    },
-    stage::{DRAW_CURVE, StageActor, StageElement, StagePlan, StagePost, StatusText},
+    plan::{ReelPlan, ReelSegmentPlan, ReelTransitionStyle, ScenePlan},
+    sfx,
+    stage::{OrbEntrance, StageActor, StageElement, StagePlan, StagePost, reply_after},
     tone::Tone,
 };
 use psychopomp_pr_walkthrough::film::{Pr, chip, footer, header, span};
@@ -100,366 +97,191 @@ fn main() -> Result<()> {
     Ok(())
 }
 
-fn status(text: &str, tone: Tone) -> StatusText {
-    StatusText {
-        text: text.to_owned(),
-        tone,
-    }
-}
-
-fn card(
-    id: &str,
-    at: [f32; 3],
-    size: [f32; 2],
-    title: &str,
-    status: Vec<StatusText>,
-    tone: Tone,
-) -> StageElement {
-    StageElement::Card {
-        id: id.into(),
-        at,
-        size,
-        title: title.into(),
-        status,
-        tone,
-        mark: Mark::Check,
-    }
-}
-
-fn beam(id: &str, from: &str, to: &str, tone: Tone) -> StageElement {
-    StageElement::Beam {
-        id: id.into(),
-        from: from.into(),
-        to: to.into(),
-        bend: 0.0,
-        tone,
-    }
-}
-
-fn packet(id: &str, beam: &str, reverse: bool, label: &str, tone: Tone) -> StageElement {
-    StageElement::Packet {
-        id: id.into(),
-        beam: beam.into(),
-        reverse,
-        label: label.into(),
-        tone,
-    }
-}
-
-fn label(
-    id: &str,
-    at: [f32; 3],
-    size: f32,
-    align: CaptionAlign,
-    parts: &[(&str, Tone)],
-) -> StageElement {
-    StageElement::Label {
-        id: id.into(),
-        at,
-        size,
-        align,
-        spans: parts
-            .iter()
-            .map(|(text, tone)| CaptionSpanPlan::new(*text, *tone))
-            .collect(),
-    }
-}
-
-fn ring(id: &str, radius: f32) -> StageElement {
-    StageElement::Ring {
-        id: id.into(),
-        at: VAULT,
-        radius,
-        thickness: 1.3,
-        tone: Tone::Success,
-    }
-}
-
 fn stage_plan() -> StagePlan {
     let mut elements = vec![
-        StageElement::Orb {
-            id: "vault".into(),
-            at: VAULT,
-            radius: 118.0,
-            points: 900,
-            tone: Tone::Plain,
-        },
-        label(
+        StageElement::orb("vault", VAULT, 118.0)
+            .points(900)
+            .tone(Tone::Plain),
+        StageElement::label(
             "vault-name",
             [VAULT[0], 704.0, 0.0],
             24.0,
-            CaptionAlign::Center,
             &[("1Password", Tone::Plain)],
         ),
-        card(
-            "agent",
-            AGENT,
-            CARD,
-            "coding agent",
-            vec![
-                status("needs one API key", Tone::Plain),
-                status("waiting for approval…", Tone::Warning),
-                status("stuck", Tone::Error),
-                status("secret in the chat!", Tone::Error),
-                status("asking 2password", Tone::Plain),
-                status("references only ✓", Tone::Success),
-            ],
-            Tone::Request,
-        ),
-        card(
-            "op",
-            OP,
-            [330.0, 124.0],
-            "op · 1Password CLI",
-            vec![
-                status("ready", Tone::Muted),
-                status("approval required", Tone::Warning),
-                status("locked", Tone::Error),
-                status("ready", Tone::Muted),
-                status("approved once ✓", Tone::Success),
-            ],
-            Tone::Plain,
-        ),
-        card(
-            "layer",
-            LAYER,
-            CARD,
-            "2password",
-            vec![
-                status("a layer on top of op", Tone::Muted),
-                status("batching every lookup", Tone::Plain),
-                status("references only", Tone::Success),
-                status("injecting secrets", Tone::Plain),
-                status("verified ✓", Tone::Success),
-                status("no prompts", Tone::Success),
-            ],
-            Tone::Accent,
-        ),
-        card(
-            "process",
-            PROCESS,
-            SMALL,
-            "bun dev",
-            vec![
-                status("starting", Tone::Muted),
-                status("running with secrets ✓", Tone::Success),
-            ],
-            Tone::Plain,
-        ),
-        card(
-            "clipboard",
-            CLIPBOARD,
-            SMALL,
-            "clipboard",
-            vec![status("a new API key", Tone::Muted)],
-            Tone::Plain,
-        ),
-        card(
-            "keychain",
-            KEYCHAIN,
-            SMALL,
-            "macOS Keychain",
-            vec![status("service-account token", Tone::Muted)],
-            Tone::Plain,
-        ),
-        beam("direct", "agent", "op", Tone::Request),
-        beam("vault-link", "op", "vault", Tone::Plain),
-        beam("ask", "agent", "layer", Tone::Request),
-        beam("batch", "layer", "op", Tone::Accent),
-        beam("inject", "layer", "process", Tone::Success),
-        beam("paste", "clipboard", "layer", Tone::Plain),
-        beam("token", "keychain", "layer", Tone::Plain),
+        StageElement::card("agent", AGENT, CARD, "coding agent")
+            .statuses(&[
+                ("needs one API key", Tone::Plain),
+                ("waiting for approval…", Tone::Warning),
+                ("stuck", Tone::Error),
+                ("secret in the chat!", Tone::Error),
+                ("asking 2password", Tone::Plain),
+                ("references only ✓", Tone::Success),
+            ])
+            .tone(Tone::Request),
+        StageElement::card("op", OP, [330.0, 124.0], "op · 1Password CLI").statuses(&[
+            ("ready", Tone::Muted),
+            ("approval required", Tone::Warning),
+            ("locked", Tone::Error),
+            ("ready", Tone::Muted),
+            ("approved once ✓", Tone::Success),
+        ]),
+        StageElement::card("layer", LAYER, CARD, "2password")
+            .statuses(&[
+                ("a layer on top of op", Tone::Muted),
+                ("batching every lookup", Tone::Plain),
+                ("references only", Tone::Success),
+                ("injecting secrets", Tone::Plain),
+                ("verified ✓", Tone::Success),
+                ("no prompts", Tone::Success),
+            ])
+            .tone(Tone::Accent),
+        StageElement::card("process", PROCESS, SMALL, "bun dev").statuses(&[
+            ("starting", Tone::Muted),
+            ("running with secrets ✓", Tone::Success),
+        ]),
+        StageElement::card("clipboard", CLIPBOARD, SMALL, "clipboard")
+            .statuses(&[("a new API key", Tone::Muted)]),
+        StageElement::card("keychain", KEYCHAIN, SMALL, "macOS Keychain")
+            .statuses(&[("service-account token", Tone::Muted)]),
+        StageElement::beam("direct", "agent", "op").tone(Tone::Request),
+        StageElement::beam("vault-link", "op", "vault"),
+        StageElement::beam("ask", "agent", "layer").tone(Tone::Request),
+        StageElement::beam("batch", "layer", "op").tone(Tone::Accent),
+        StageElement::beam("inject", "layer", "process").tone(Tone::Success),
+        StageElement::beam("paste", "clipboard", "layer"),
+        StageElement::beam("token", "keychain", "layer"),
     ];
     for (id, at, text, tone) in PROMPTS {
-        elements.push(card(
-            id,
-            at,
-            PROMPT,
-            "1Password",
-            vec![status(text, tone)],
-            tone,
-        ));
+        elements.push(
+            StageElement::card(id, at, PROMPT, "1Password")
+                .statuses(&[(text, tone)])
+                .tone(tone),
+        );
     }
-    elements.push(card(
-        "prompt-ok",
-        [1210.0, 320.0, -80.0],
-        PROMPT,
-        "1Password",
-        vec![status("approved once ✓", Tone::Success)],
-        Tone::Success,
-    ));
+    elements.push(
+        StageElement::card("prompt-ok", [1210.0, 320.0, -80.0], PROMPT, "1Password")
+            .statuses(&[("approved once ✓", Tone::Success)])
+            .tone(Tone::Success),
+    );
     elements.extend([
-        packet(
-            "ask-1",
-            "direct",
-            false,
-            "op item get \"OpenAI API Key\"",
-            Tone::Request,
-        ),
-        packet(
-            "ask-2",
-            "direct",
-            false,
-            "op item get \"OpenAI API Key\"",
-            Tone::Request,
-        ),
-        packet(
-            "ask-3",
-            "direct",
-            false,
-            "op item get --reveal",
-            Tone::Request,
-        ),
-        packet("leak", "direct", true, "sk-proj-7Hq2Zx9mK4pL", Tone::Error),
-        packet(
-            "find",
-            "ask",
-            false,
-            "find openai stripe github",
-            Tone::Request,
-        ),
-        packet("lookup", "batch", false, "one batched lookup", Tone::Accent),
-        packet("fetch", "vault-link", false, "", Tone::Plain),
-        packet("refs-in", "batch", true, "op:// references", Tone::Success),
-        packet("refs", "ask", true, "op:// references", Tone::Success),
-        packet("secrets", "inject", false, "OPENAI_API_KEY", Tone::Success),
-        packet("new-key", "paste", false, "new key", Tone::Plain),
-        packet(
-            "store",
-            "batch",
-            false,
-            "create, then read back",
-            Tone::Accent,
-        ),
-        packet("verified", "batch", true, "verified ✓", Tone::Success),
-        packet("unlock", "token", false, "token", Tone::Plain),
-        label(
+        StageElement::packet("ask-1", "direct")
+            .labeled("op item get \"OpenAI API Key\"")
+            .tone(Tone::Request),
+        StageElement::packet("ask-2", "direct")
+            .labeled("op item get \"OpenAI API Key\"")
+            .tone(Tone::Request),
+        StageElement::packet("ask-3", "direct")
+            .labeled("op item get --reveal")
+            .tone(Tone::Request),
+        StageElement::packet("leak", "direct")
+            .reversed()
+            .labeled("sk-proj-7Hq2Zx9mK4pL")
+            .tone(Tone::Error),
+        StageElement::packet("find", "ask")
+            .labeled("find openai stripe github")
+            .tone(Tone::Request),
+        StageElement::packet("lookup", "batch")
+            .labeled("one batched lookup")
+            .tone(Tone::Accent),
+        StageElement::packet("fetch", "vault-link"),
+        StageElement::packet("refs-in", "batch")
+            .reversed()
+            .labeled("op:// references")
+            .tone(Tone::Success),
+        StageElement::packet("refs", "ask")
+            .reversed()
+            .labeled("op:// references")
+            .tone(Tone::Success),
+        StageElement::packet("secrets", "inject")
+            .labeled("OPENAI_API_KEY")
+            .tone(Tone::Success),
+        StageElement::packet("new-key", "paste").labeled("new key"),
+        StageElement::packet("store", "batch")
+            .labeled("create, then read back")
+            .tone(Tone::Accent),
+        StageElement::packet("verified", "batch")
+            .reversed()
+            .labeled("verified ✓")
+            .tone(Tone::Success),
+        StageElement::packet("unlock", "token").labeled("token"),
+        StageElement::label(
             "leak-line",
             [CHAT_X, 440.0, 0.0],
             22.0,
-            CaptionAlign::Left,
             &[
                 ("chat ▸ ", Tone::Muted),
                 ("sk-proj-7Hq2Zx9mK4pLw3eR8vN…", Tone::Error),
             ],
-        ),
-        label(
+        )
+        .align(CaptionAlign::Left),
+        StageElement::label(
             "refs-line",
             [CHAT_X, 440.0, 0.0],
             22.0,
-            CaptionAlign::Left,
             &[
                 ("chat ▸ ", Tone::Muted),
                 ("op://Personal/OpenAI API Key/credential", Tone::Success),
             ],
-        ),
-        label(
+        )
+        .align(CaptionAlign::Left),
+        StageElement::label(
             "zero",
             [OP[0], 330.0, -80.0],
             44.0,
-            CaptionAlign::Center,
             &[("prompts: ", Tone::Muted), ("0", Tone::Success)],
         ),
-        label(
+        StageElement::label(
             "title",
             [960.0, -470.0, 0.0],
             120.0,
-            CaptionAlign::Center,
             &[("2password", Tone::Accent)],
         ),
-        label(
+        StageElement::label(
             "subtitle",
             [960.0, -360.0, 0.0],
             34.0,
-            CaptionAlign::Center,
             &[("1Password for coding agents", Tone::Plain)],
         ),
-        label(
+        StageElement::label(
             "install",
             [960.0, -262.0, 0.0],
             30.0,
-            CaptionAlign::Center,
             &[("$ ", Tone::Muted), ("bun add -g 2password", Tone::Plain)],
         ),
-        label(
+        StageElement::label(
             "skill",
             [960.0, -212.0, 0.0],
             30.0,
-            CaptionAlign::Center,
             &[
                 ("$ ", Tone::Muted),
                 ("bunx skills add kitlangton/2password", Tone::Plain),
             ],
         ),
-        ring("calm", 132.0),
-        ring("calm-outer", 138.0),
+        StageElement::ring("calm", VAULT, 132.0)
+            .thickness(1.3)
+            .tone(Tone::Success),
+        StageElement::ring("calm-outer", VAULT, 138.0)
+            .thickness(1.3)
+            .tone(Tone::Success),
     ]);
     StagePlan {
-        post: StagePost {
-            bloom: 0.18,
-            grain: 0.012,
-            vignette: 0.22,
-            backdrop: 0.12,
-        },
+        post: StagePost::RESTRAINED,
         elements,
     }
 }
 
-/// Glitch layouts about a frame and a half apart, then still. Returns when still.
-fn glitch(s: &mut StageActor, sc: &mut PlanBuilder, card: &str, at: u64, seeds: [f32; 3]) -> u64 {
-    let mut step = at;
-    for seed in seeds.into_iter().chain([0.0]) {
-        s.set(sc, &format!("{card}.glitch"), step, seed);
-        step += seconds(0.027);
-    }
-    step - seconds(0.027)
-}
-
-struct Sfx(&'static str, f64);
-const TICK: Sfx = Sfx("visual-effects/task-running.wav", 0.13);
-const SEND: Sfx = Sfx("opencode-hot-reload/save.wav", 0.15);
-const ALARM: Sfx = Sfx("visual-effects/task-failure.wav", 0.47);
-const LAUNCH: Sfx = Sfx("opencode-hot-reload/launch.wav", 1.36);
-const IMPACT: Sfx = Sfx("opencode-hot-reload/impact.wav", 0.51);
-const DEATH: Sfx = Sfx("visual-effects/task-death.wav", 1.09);
-const GLITCH: Sfx = Sfx("pr-walkthrough/glitch.wav", 0.2);
-const MARK: Sfx = Sfx("pr-walkthrough/mark.wav", 0.3);
-const SUCCESS: Sfx = Sfx("visual-effects/task-success.wav", 0.42);
-const CONFIRM: Sfx = Sfx("opencode-hot-reload/confirm.wav", 0.34);
-const BLOOM: Sfx = Sfx("effect-shows-errors/prismatic-bloom.wav", 0.785);
-
-fn sound(sc: &mut PlanBuilder, id: &str, Sfx(file, length): Sfx, at: u64, gain_db: f32) {
-    let length = seconds(length);
-    sc.media(MediaPlan {
-        id: id.to_owned(),
-        path: PathBuf::from(format!("../../assets/{file}")),
-        kind: MediaKindPlan::Audio,
-        role: MediaRolePlan::Layer,
-        source_start_nanos: 0,
-        source_end_nanos: length,
-        timeline_start_nanos: at,
-        timeline_end_nanos: at + length,
-        gain_db,
-    });
-}
-
 fn film(narration: &Narration) -> Result<ScenePlan> {
-    let problem_clip = narration.clip("problem")?;
-    let layer_clip = narration.clip("layer")?;
-    let features_clip = narration.clip("features")?;
-    let lead = seconds(2.0);
-    let rewind = seconds(1.6);
-    let duration = lead
-        + problem_clip.duration()
-        + rewind
-        + layer_clip.duration()
-        + seconds(0.5)
-        + features_clip.duration()
-        + seconds(3.2);
-    let mut scene = PlanBuilder::new("2password-stage", duration);
-    let problem = problem_clip.place(&mut scene, lead);
-    let layer = layer_clip.place(&mut scene, problem.end() + rewind);
-    let features = features_clip.place(&mut scene, layer.end() + seconds(0.5));
+    // The problem, a rewind, the layer, a breath, the features, and a tail.
+    let reading = narration.reading(
+        seconds(2.0),
+        [
+            ("problem", seconds(1.6)),
+            ("layer", seconds(0.5)),
+            ("features", seconds(3.2)),
+        ],
+    )?;
+    let mut scene = PlanBuilder::new("2password-stage", reading.duration());
+    let [problem, layer, features] = reading.place(&mut scene);
     let p = |phrase: &str| problem.at(phrase);
     let l = |phrase: &str| layer.at(phrase);
     let f = |phrase: &str| features.at(phrase);
@@ -468,34 +290,17 @@ fn film(narration: &Narration) -> Result<ScenePlan> {
     let sc = &mut scene;
 
     // ── Establish: the vault, the command line, the agent, plugged together ──
-    for (property, initial) in [
-        ("camera.z", -160.0),
-        ("camera.dof", 0.45),
-        ("vault.scale", 0.58),
-        ("vault.blur", 11.0),
-        ("vault.rotation", -1.8),
-    ] {
-        s.channel(sc, property, initial);
-    }
+    s.channel(sc, "camera.z", -160.0);
+    s.channel(sc, "camera.dof", 0.45);
     s.to(sc, "camera.z", 0, 0.0, 2.2);
-    s.bounce(sc, "vault.scale", seconds(0.15), 1.0, 0.85, 0.2);
-    s.to(sc, "vault.blur", seconds(0.15), 0.0, 0.7);
-    s.ease(
-        sc,
-        "vault.rotation",
-        seconds(0.15),
-        0.0,
-        1.25,
-        Ease::CubicOut,
-    );
-    s.to(sc, "vault.opacity", seconds(0.15), 1.0, 0.6);
-    s.to(sc, "vault-name.opacity", seconds(0.9), 1.0, 0.5);
+    s.orb_in(sc, "vault", seconds(0.15), OrbEntrance::HERO);
+    s.fade_in(sc, "vault-name", seconds(0.9), 1.0, 0.5);
     let op_ready = s.settle_in(sc, "op", seconds(0.45));
     let vault_contact = s.connect(sc, "vault-link", op_ready + seconds(0.1), 0.5);
-    sound(sc, "connect-vault", TICK, vault_contact, -20.0);
+    sfx::TICK.play(sc, "connect-vault", vault_contact, -20.0);
     let agent_ready = s.settle_in(sc, "agent", seconds(0.7));
     let direct_contact = s.connect(sc, "direct", agent_ready + seconds(0.15), 0.75);
-    sound(sc, "connect-direct", TICK, direct_contact, -20.0);
+    sfx::TICK.play(sc, "connect-direct", direct_contact, -20.0);
     header(sc, &PR, Some(seconds(0.4)))?;
     let mut raw_chip = chip(sc, "chip-raw", Tone::Error, "raw op")?;
     raw_chip.show(sc, seconds(0.7));
@@ -504,7 +309,7 @@ fn film(narration: &Narration) -> Result<ScenePlan> {
     s.to(sc, "agent.glow", p("needs"), 0.4, 0.5);
     s.to(sc, "direct.emphasis", p("asks"), 1.0, 0.5);
     let ask_1 = s.send(sc, "ask-1", p("asks"), 0.8);
-    sound(sc, "ask-1", SEND, p("asks"), -10.0);
+    sfx::SEND.play(sc, "ask-1", p("asks"), -10.0);
     s.land(sc, "op", ask_1);
     s.to(sc, "camera.x", p("asks"), 70.0, 1.6);
     s.to(sc, "camera.focus", p("asks"), -60.0, 1.2);
@@ -520,17 +325,10 @@ fn film(narration: &Narration) -> Result<ScenePlan> {
             0.25 + 0.15 * index as f32,
             0.0,
         );
-        glitch(
-            s,
+        s.glitch(sc, id, at + seconds(0.06), [5.0 + index as f32, 8.0, 6.0]);
+        sfx::FAILURE.play(
             sc,
-            id,
-            at + seconds(0.06),
-            [5.0 + index as f32, 8.0, 6.0],
-        );
-        sound(
-            sc,
-            &format!("prompt-{index}"),
-            ALARM,
+            format!("prompt-{index}"),
             at,
             -12.0 + 2.0 * index as f32,
         );
@@ -553,36 +351,34 @@ fn film(narration: &Narration) -> Result<ScenePlan> {
     s.to(sc, "vault.hurt", unlock, 0.55, 0.4);
     s.to(sc, "vault-link.break", unlock + seconds(0.1), 1.0, 0.9);
     s.hit(sc, "op.alarm", unlock, 0.5, 0.15);
-    sound(sc, "unlock", GLITCH, unlock, -14.0);
+    sfx::GLITCH.play(sc, "unlock", unlock, -14.0);
     s.clock(sc, "op.spinner", p("sign in"));
 
     // STUCK: everything glitches at once and the frame takes the blow.
     let stuck = p("stuck");
     s.to(sc, "agent.status", stuck, 2.0, 0.2);
-    for (index, card) in [
+    let cards = [
         "op", "agent", "prompt-1", "prompt-2", "prompt-3", "prompt-4",
-    ]
-    .iter()
-    .enumerate()
-    {
-        let at = stuck + seconds(index as f64 * 0.035);
-        glitch(s, sc, card, at, [7.0, 9.0, 8.0]);
-        glitch(s, sc, card, at + seconds(0.32), [9.0, 6.0, 7.0]);
+    ];
+    stagger(cards, stuck, millis(35), |card, at| {
+        s.glitch(sc, card, at, [7.0, 9.0, 8.0]);
+        s.glitch(sc, card, at + seconds(0.32), [9.0, 6.0, 7.0]);
         s.set(sc, &format!("{card}.damage"), at, 1.0);
-    }
+        at
+    });
     s.jolt(sc, stuck, [-0.4, 1.0], 1.0);
     s.hit(sc, "post.chroma", stuck, 0.2, 0.0);
     s.hit(sc, "post.bloom", stuck, 0.35, 0.18);
-    sound(sc, "stuck-impact", IMPACT, stuck, -7.0);
-    sound(sc, "stuck-glitch", GLITCH, stuck + seconds(0.05), -10.0);
+    sfx::IMPACT.play(sc, "stuck-impact", stuck, -7.0);
+    sfx::GLITCH.play(sc, "stuck-glitch", stuck + seconds(0.05), -10.0);
 
     // "When it finally works": the dialogs give way, one by one, into silence.
     let finally = p("finally");
-    for (index, (id, ..)) in PROMPTS.iter().enumerate() {
-        let at = finally + seconds(index as f64 * 0.09);
-        s.to(sc, &format!("{id}.opacity"), at, 0.0, 0.35);
+    stagger(PROMPTS, finally, millis(90), |(id, ..), at| {
+        s.fade_out(sc, id, at, 0.35);
         s.set(sc, &format!("{id}.damage"), at, 0.0);
-    }
+        at
+    });
     for card in ["op", "agent"] {
         s.set(sc, &format!("{card}.damage"), finally, 0.0);
     }
@@ -597,7 +393,7 @@ fn film(narration: &Narration) -> Result<ScenePlan> {
     s.to(sc, "camera.x", p("prints"), LEAK_CAMERA[0], 1.1);
     s.to(sc, "camera.z", p("prints"), LEAK_CAMERA[2], 1.1);
     let leak = s.send(sc, "leak", p("prints"), 0.6);
-    sound(sc, "leak-send", LAUNCH, p("prints") - seconds(0.35), -16.0);
+    sfx::LAUNCH.play(sc, "leak-send", p("prints") - seconds(0.35), -16.0);
     s.hit(sc, "agent.alarm", leak, 0.6, 0.2);
     s.to(sc, "agent.status", leak, 3.0, 0.2);
     s.set(sc, "agent.spinner", leak, -1.0);
@@ -607,8 +403,8 @@ fn film(narration: &Narration) -> Result<ScenePlan> {
     s.hit(sc, "post.chroma", chat, 0.28, 0.0);
     s.hit(sc, "post.bloom", chat, 0.4, 0.18);
     s.hit(sc, "agent.alarm", chat, 0.9, 0.3);
-    sound(sc, "chat-impact", IMPACT, chat, -5.0);
-    sound(sc, "chat-death", DEATH, chat + seconds(0.05), -9.0);
+    sfx::IMPACT.play(sc, "chat-impact", chat, -5.0);
+    sfx::DEATH.play(sc, "chat-death", chat + seconds(0.05), -9.0);
     let mut footer_problem = footer(
         sc,
         "footer-problem",
@@ -622,9 +418,8 @@ fn film(narration: &Narration) -> Result<ScenePlan> {
 
     // ── Rewind ──
     let switch = problem.end() + seconds(0.25);
-    s.clock_for(sc, "post.rewind", switch, 1.4);
-    s.hit(sc, "post.chroma", switch, 0.12, 0.0);
-    sound(sc, "rewind", LAUNCH, switch - seconds(0.1), -14.0);
+    s.rewind(sc, switch, 0.12);
+    sfx::LAUNCH.play(sc, "rewind", switch - seconds(0.1), -14.0);
     raw_chip.hide(sc, switch);
     footer_problem.hide(sc, switch);
     let mut rewind_chip = chip(sc, "chip-rewind", Tone::Accent, "◀◀ rewind")?;
@@ -645,23 +440,15 @@ fn film(narration: &Narration) -> Result<ScenePlan> {
     // ── The layer: the direct wire unplugs, 2password settles in between ──
     let meet = l("meet");
     let unplug = meet.saturating_sub(seconds(0.3));
-    s.ease(sc, "direct.draw", unplug, 0.0, 0.35, DRAW_CURVE);
-    s.ease(
-        sc,
-        "direct.port",
-        unplug + seconds(0.25),
-        0.0,
-        0.3,
-        Ease::Smootherstep,
-    );
+    s.disconnect(sc, "direct", unplug, 0.35);
     let layer_ready = s.settle_in(sc, "layer", meet + seconds(0.1));
-    sound(sc, "meet", BLOOM, meet + seconds(0.1), -12.0);
+    sfx::BLOOM.play(sc, "meet", meet + seconds(0.1), -12.0);
     let ask_contact = s.connect(sc, "ask", layer_ready, 0.45);
     let batch_contact = s.connect(sc, "batch", layer_ready + seconds(0.15), 0.45);
     for (beam, at) in [("ask", ask_contact), ("batch", batch_contact)] {
         s.hit(sc, &format!("{beam}.surge"), at, 0.45, 0.0);
         s.twang(sc, beam, at);
-        sound(sc, &format!("connect-{beam}"), TICK, at, -19.0);
+        sfx::TICK.play(sc, format!("connect-{beam}"), at, -19.0);
     }
     s.to(sc, "layer.glow", l("tiny layer"), 0.55, 0.6);
     s.hit(sc, "layer.flash", l("tiny layer"), 0.45, 0.0);
@@ -672,7 +459,7 @@ fn film(narration: &Narration) -> Result<ScenePlan> {
     let everything = l("everything");
     s.to(sc, "agent.status", everything, 4.0, 0.3);
     let find = s.send(sc, "find", everything - seconds(0.2), 0.6);
-    sound(sc, "find", SEND, everything - seconds(0.2), -11.0);
+    sfx::SEND.play(sc, "find", everything - seconds(0.2), -11.0);
     s.land(sc, "layer", find);
     s.to(sc, "layer.status", find, 1.0, 0.3);
     let lookup = s.send(
@@ -680,12 +467,12 @@ fn film(narration: &Narration) -> Result<ScenePlan> {
         "lookup",
         l("just once")
             .saturating_sub(seconds(0.35))
-            .max(find + seconds(0.42)),
+            .not_before(reply_after(find)),
         0.55,
     );
-    sound(sc, "lookup", SEND, lookup - seconds(0.55), -11.0);
+    sfx::SEND.play(sc, "lookup", lookup - seconds(0.55), -11.0);
     s.land(sc, "op", lookup);
-    let fetch = s.send(sc, "fetch", lookup + seconds(0.42), 0.45);
+    let fetch = s.send(sc, "fetch", reply_after(lookup), 0.45);
     s.land(sc, "vault", fetch);
 
     // ONE approval.
@@ -693,7 +480,7 @@ fn film(narration: &Narration) -> Result<ScenePlan> {
     s.settle_in(sc, "prompt-ok", approval);
     s.hit(sc, "prompt-ok.flash", approval + seconds(0.2), 0.6, 0.0);
     s.to(sc, "op.status", approval, 4.0, 0.3);
-    sound(sc, "approval", SUCCESS, approval, -8.0);
+    sfx::SUCCESS.play(sc, "approval", approval, -8.0);
     s.to(sc, "camera.x", approval, 60.0, 1.6);
 
     // References come back; the secret itself never does.
@@ -702,17 +489,17 @@ fn film(narration: &Narration) -> Result<ScenePlan> {
         "refs-in",
         l("references")
             .saturating_sub(seconds(0.9))
-            .max(fetch + seconds(0.42)),
+            .not_before(reply_after(fetch)),
         0.5,
     );
     s.land(sc, "layer", refs_in);
     s.to(sc, "prompt-ok.opacity", refs_in, 0.0, 0.4);
-    let refs = s.send(sc, "refs", refs_in + seconds(0.42), 0.55);
+    let refs = s.send(sc, "refs", reply_after(refs_in), 0.55);
     s.land(sc, "agent", refs);
     s.to(sc, "agent.status", refs, 5.0, 0.3);
     s.to(sc, "layer.status", refs, 2.0, 0.3);
     s.type_in(sc, "refs-line", refs, 60.0);
-    sound(sc, "refs", MARK, refs, -14.0);
+    sfx::MARK.play(sc, "refs", refs, -14.0);
     s.to(sc, "camera.x", refs - seconds(0.4), -40.0, 1.6);
     let mut footer_layer = footer(
         sc,
@@ -731,34 +518,44 @@ fn film(narration: &Narration) -> Result<ScenePlan> {
     s.to(sc, "camera.z", f("runs"), -130.0, 1.8);
     let process_ready = s.settle_in(sc, "process", f("runs"));
     let inject_contact = s.connect(sc, "inject", process_ready, 0.4);
-    sound(sc, "connect-inject", TICK, inject_contact, -19.0);
+    sfx::TICK.play(sc, "connect-inject", inject_contact, -19.0);
     let secrets = s.send(
         sc,
         "secrets",
-        f("injected").max(inject_contact + seconds(0.34)),
+        f("injected").not_before(inject_contact + seconds(0.34)),
         0.5,
     );
     s.land(sc, "process", secrets);
     s.to(sc, "process.status", secrets, 1.0, 0.3);
     s.to(sc, "layer.status", secrets, 3.0, 0.3);
-    sound(sc, "secrets", CONFIRM, secrets, -12.0);
+    sfx::CONFIRM.play(sc, "secrets", secrets, -12.0);
 
     let clipboard_ready = s.settle_in(sc, "clipboard", f("saves"));
     let paste_contact = s.connect(sc, "paste", clipboard_ready, 0.4);
-    sound(sc, "connect-paste", TICK, paste_contact, -19.0);
+    sfx::TICK.play(sc, "connect-paste", paste_contact, -19.0);
     let new_key = s.send(
         sc,
         "new-key",
-        f("clipboard").max(paste_contact + seconds(0.34)),
+        f("clipboard").not_before(paste_contact + seconds(0.34)),
         0.5,
     );
     s.land(sc, "layer", new_key);
-    let store = s.send(sc, "store", f("checks").max(new_key + seconds(0.42)), 0.5);
+    let store = s.send(
+        sc,
+        "store",
+        f("checks").not_before(reply_after(new_key)),
+        0.5,
+    );
     s.land(sc, "op", store);
-    let verified = s.send(sc, "verified", f("landed").max(store + seconds(0.42)), 0.5);
+    let verified = s.send(
+        sc,
+        "verified",
+        f("landed").not_before(reply_after(store)),
+        0.5,
+    );
     s.land(sc, "layer", verified);
     s.to(sc, "layer.status", verified, 4.0, 0.3);
-    sound(sc, "verified", SUCCESS, verified, -11.0);
+    sfx::SUCCESS.play(sc, "verified", verified, -11.0);
     let mut footer_features = footer(
         sc,
         "footer-features",
@@ -771,7 +568,7 @@ fn film(narration: &Narration) -> Result<ScenePlan> {
 
     let keychain_ready = s.settle_in(sc, "keychain", f("service account"));
     let token_contact = s.connect(sc, "token", keychain_ready, 0.4);
-    sound(sc, "connect-token", TICK, token_contact, -19.0);
+    sfx::TICK.play(sc, "connect-token", token_contact, -19.0);
     let unlock = s.send(sc, "unlock", token_contact + seconds(0.34), 0.45);
     s.land(sc, "layer", unlock);
 
@@ -782,8 +579,7 @@ fn film(narration: &Narration) -> Result<ScenePlan> {
     let all = f("at all");
     s.hit(sc, "vault.pulse", all + seconds(0.15), 0.85, 0.0);
     s.ease(sc, "vault.rotation", all, 1.6, 2.4, Ease::CubicOut);
-    s.to(sc, "calm.opacity", all, 0.35, 0.22);
-    s.to(sc, "calm-outer.opacity", all + seconds(0.06), 0.5, 0.22);
+    s.halo(sc, [("calm", 0.35), ("calm-outer", 0.5)], all, 0.22);
     s.hit(sc, "post.bloom", all, 0.3, 0.18);
     s.to(sc, "camera.z", all, -60.0, 2.0);
     for beam in ["ask", "batch", "inject", "paste", "token", "vault-link"] {
@@ -793,7 +589,7 @@ fn film(narration: &Narration) -> Result<ScenePlan> {
     for card in ["agent", "op", "process", "clipboard", "keychain"] {
         s.hit(sc, &format!("{card}.flash"), all + seconds(0.1), 0.35, 0.0);
     }
-    sound(sc, "all", BLOOM, all + seconds(0.1), -8.0);
+    sfx::BLOOM.play(sc, "all", all + seconds(0.1), -8.0);
 
     // ── Let your agent fly: the camera rises to the install lines ──
     let rise = all + seconds(1.6);
@@ -824,13 +620,13 @@ fn film(narration: &Narration) -> Result<ScenePlan> {
     let title = f("install").saturating_sub(seconds(0.6));
     s.channel(sc, "title.scale", 0.86);
     s.bounce(sc, "title.scale", title, 1.0, 0.8, 0.2);
-    s.to(sc, "title.opacity", title, 1.0, 0.4);
-    s.to(sc, "subtitle.opacity", title + seconds(0.3), 1.0, 0.5);
-    sound(sc, "title", CONFIRM, title, -12.0);
+    s.fade_in(sc, "title", title, 1.0, 0.4);
+    s.fade_in(sc, "subtitle", title + seconds(0.3), 1.0, 0.5);
+    sfx::CONFIRM.play(sc, "title", title, -12.0);
     s.type_in(sc, "install", f("install"), 40.0);
     s.type_in(sc, "skill", f("skill").saturating_sub(seconds(0.2)), 48.0);
     s.hit(sc, "post.bloom", f("fly"), 0.25, 0.18);
-    sound(sc, "fly", BLOOM, f("fly"), -10.0);
+    sfx::BLOOM.play(sc, "fly", f("fly"), -10.0);
     for beam in ["ask", "batch", "inject", "paste", "token", "vault-link"] {
         s.to(sc, &format!("{beam}.flow"), f("fly"), 0.0, 1.2);
     }

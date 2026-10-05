@@ -5,26 +5,21 @@
 //! glides from `service.json` to the lingering server orb, a RollingNumber
 //! grace-period timer (`0.0 s` → `5.0 s` → `10.0 s`), and a Zoom transition
 //! into the Stepped Diff with an Editor Callout pinned to `SIGKILL`.
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use anyhow::{Context, Result};
 use psychopomp::{
-    author::{PlanBuilder, seconds},
+    author::{PlanBuilder, millis, seconds},
     callout::{CalloutActor, CalloutAnchorPlan, CalloutPlan, CalloutSide},
     caption::{CaptionAlign, CaptionSpanPlan},
     editor::{LineMarkPlan, diff::keep},
-    effects::{
-        combustion,
-        spinner::{self, Mark},
-    },
-    math::{Vec2, Vec3, easing::Ease, vec2},
+    effects::{combustion, spinner::Mark},
+    math::{Vec2, Vec3, vec2},
     narration::Narration,
-    plan::{
-        MediaKindPlan, MediaPlan, MediaRolePlan, ReelPlan, ReelSegmentPlan, ReelTransitionStyle,
-        ScenePlan,
-    },
+    plan::{ReelPlan, ReelSegmentPlan, ReelTransitionStyle, ScenePlan},
     rolling::{RollingNumberActor, RollingNumberPlan},
-    stage::{Camera, StageActor, StageElement, StagePlan, StagePost, StatusText},
+    sfx,
+    stage::{Camera, OrbEntrance, StageActor, StageElement, StagePlan, StagePost},
     tone::Tone,
 };
 
@@ -41,33 +36,6 @@ const REG_SIZE: [f32; 2] = [270.0, 96.0];
 const NEW_SERVICE: [f32; 3] = [1530.0, 540.0, -40.0];
 const NEW_SIZE: [f32; 2] = [320.0, 122.0];
 const CLOSING_CAMERA: [f32; 3] = [-130.0, 15.0, 60.0];
-
-struct Sfx(&'static str, f64);
-
-const TASK_RUNNING: Sfx = Sfx("visual-effects/task-running.wav", 0.13);
-const SAVE: Sfx = Sfx("opencode-hot-reload/save.wav", 0.15);
-const TASK_FAILURE: Sfx = Sfx("visual-effects/task-failure.wav", 0.47);
-const LAUNCH: Sfx = Sfx("opencode-hot-reload/launch.wav", 1.36);
-const IMPACT: Sfx = Sfx("opencode-hot-reload/impact.wav", 0.51);
-const TASK_DEATH: Sfx = Sfx("visual-effects/task-death.wav", 1.09);
-const GLITCH: Sfx = Sfx("pr-walkthrough/glitch.wav", 0.2);
-const MARK: Sfx = Sfx("pr-walkthrough/mark.wav", 0.3);
-const PRISMATIC_BLOOM: Sfx = Sfx("effect-shows-errors/prismatic-bloom.wav", 0.785);
-
-fn sound(id: &str, Sfx(file, length): Sfx, at: u64, gain_db: f32) -> MediaPlan {
-    let length = seconds(length);
-    MediaPlan {
-        id: id.to_owned(),
-        path: PathBuf::from(format!("../../assets/{file}")),
-        kind: MediaKindPlan::Audio,
-        role: MediaRolePlan::Layer,
-        source_start_nanos: 0,
-        source_end_nanos: length,
-        timeline_start_nanos: at,
-        timeline_end_nanos: at + length,
-        gain_db,
-    }
-}
 
 pub fn build_stop_reel(narration_dir: &Path) -> Result<ReelPlan> {
     let narration = Narration::load(narration_dir)?;
@@ -98,223 +66,123 @@ pub fn build_stop_reel(narration_dir: &Path) -> Result<ReelPlan> {
 }
 
 fn client_rect() -> [f32; 4] {
-    let camera = Camera::at(Vec3::from(CLOSING_CAMERA), vec2(1920.0, 1080.0));
-    let (center, scale) = camera
-        .project(Vec3::from(CLIENT))
-        .expect("client is in front of the camera");
-    let size = Vec2::from(CLIENT_SIZE) * scale;
-    let corner = center - size * 0.5;
-    [corner.x, corner.y, size.x, size.y]
-}
-
-fn status(text: &str, tone: Tone) -> StatusText {
-    StatusText {
-        text: text.to_owned(),
-        tone,
-    }
-}
-
-fn spans(parts: &[(&str, Tone)]) -> Vec<CaptionSpanPlan> {
-    parts.iter().map(|(text, tone)| span(text, *tone)).collect()
-}
-
-fn card(
-    id: &str,
-    at: [f32; 3],
-    size: [f32; 2],
-    title: &str,
-    status: Vec<StatusText>,
-    tone: Tone,
-    mark: Mark,
-) -> StageElement {
-    StageElement::Card {
-        id: id.into(),
-        at,
-        size,
-        title: title.into(),
-        status,
-        tone,
-        mark,
-    }
-}
-
-fn beam(id: &str, from: &str, to: &str, bend: f32, tone: Tone) -> StageElement {
-    StageElement::Beam {
-        id: id.into(),
-        from: from.into(),
-        to: to.into(),
-        bend,
-        tone,
-    }
-}
-
-fn packet(id: &str, beam: &str, reverse: bool, label: &str, tone: Tone) -> StageElement {
-    StageElement::Packet {
-        id: id.into(),
-        beam: beam.into(),
-        reverse,
-        label: label.into(),
-        tone,
-    }
-}
-
-fn label(
-    id: &str,
-    at: [f32; 3],
-    size: f32,
-    align: CaptionAlign,
-    parts: &[(&str, Tone)],
-) -> StageElement {
-    StageElement::Label {
-        id: id.into(),
-        at,
-        size,
-        align,
-        spans: spans(parts),
-    }
-}
-
-fn glitch(s: &mut StageActor, sc: &mut PlanBuilder, card: &str, at: u64, seeds: [f32; 3]) -> u64 {
-    let mut step = at;
-    for seed in seeds.into_iter().chain([0.0]) {
-        s.set(sc, &format!("{card}.glitch"), step, seed);
-        step += seconds(0.027);
-    }
-    step - seconds(0.027)
+    Camera::at(Vec3::from(CLOSING_CAMERA), vec2(1920.0, 1080.0))
+        .project_rect(Vec3::from(CLIENT), Vec2::from(CLIENT_SIZE))
+        .expect("client is in front of the camera")
 }
 
 fn stage_plan() -> StagePlan {
     let elements = vec![
-        StageElement::Orb {
-            id: "old".into(),
-            at: OLD_SERVICE,
-            radius: 126.0,
-            points: 850,
-            tone: Tone::Plain,
-        },
-        StageElement::Ring {
-            id: "port-ring".into(),
-            at: OLD_SERVICE,
-            radius: 138.0,
-            thickness: 1.5,
-            tone: Tone::Success,
-        },
-        StageElement::Ring {
-            id: "port-ring-outer".into(),
-            at: OLD_SERVICE,
-            radius: 146.0,
-            thickness: 1.3,
-            tone: Tone::Success,
-        },
-        label(
+        StageElement::orb("old", OLD_SERVICE, 126.0)
+            .points(850)
+            .tone(Tone::Plain),
+        StageElement::ring("port-ring", OLD_SERVICE, 138.0)
+            .thickness(1.5)
+            .tone(Tone::Success),
+        StageElement::ring("port-ring-outer", OLD_SERVICE, 146.0)
+            .thickness(1.3)
+            .tone(Tone::Success),
+        StageElement::label(
             "old-name",
             [OLD_SERVICE[0], 700.0, 0.0],
             23.0,
-            CaptionAlign::Center,
             &[("old server · pid 4127", Tone::Plain)],
         ),
-        label(
+        StageElement::label(
             "old-active",
             [OLD_SERVICE[0], 732.0, 0.0],
             19.0,
-            CaptionAlign::Center,
             &[("●", Tone::Success), (" holds :49374", Tone::Muted)],
         ),
-        label(
+        StageElement::label(
             "old-lingering",
             [OLD_SERVICE[0], 732.0, 0.0],
             19.0,
-            CaptionAlign::Center,
             &[
                 ("●", Tone::Warning),
                 (" lingering · still holds :49374", Tone::Error),
             ],
         ),
-        label(
+        StageElement::label(
             "old-exited",
             [OLD_SERVICE[0], 732.0, 0.0],
             19.0,
-            CaptionAlign::Center,
             &[
                 ("●", Tone::Success),
                 (" pid 4127 exited · :49374 free", Tone::Muted),
             ],
         ),
-        card(
-            "file",
-            REG_FILE,
-            REG_SIZE,
-            "service.json",
-            vec![
-                status("owner: pid 4127", Tone::Muted),
-                status("unregistered", Tone::Warning),
-            ],
-            Tone::Plain,
-            Mark::Cross,
-        ),
-        card(
-            "client",
-            CLIENT,
-            CLIENT_SIZE,
-            "Service.stop",
-            vec![
-                status("stopping pid 4127", Tone::Plain),
-                status("file gone → return early", Tone::Warning),
-                status("watching pid 4127", Tone::Plain),
-                status("escalating → SIGKILL", Tone::Error),
-                status("stopped cleanly", Tone::Success),
-            ],
-            Tone::Request,
-            Mark::Check,
-        ),
-        card(
-            "new",
-            NEW_SERVICE,
-            NEW_SIZE,
-            "new server",
-            vec![
-                status("starting", Tone::Plain),
-                status("EADDRINUSE :49374", Tone::Error),
-                status("starting", Tone::Plain),
-                status("listening :49374", Tone::Success),
-            ],
-            Tone::Accent,
-            Mark::Check,
-        ),
-        beam("stop-link", "client", "old", 0.0, Tone::Error),
-        beam("reg-link", "old", "file", 0.0, Tone::Plain),
-        beam("check-link", "client", "file", -32.0, Tone::Request),
-        beam("bind-link", "new", "old", 0.0, Tone::Accent),
-        packet("sigterm", "stop-link", false, "SIGTERM", Tone::Error),
-        packet("sigkill", "stop-link", false, "SIGKILL", Tone::Error),
-        packet("unreg", "reg-link", false, "unlink", Tone::Warning),
-        packet("check", "check-link", false, "read file", Tone::Request),
-        packet("gone", "check-link", true, "missing", Tone::Warning),
-        packet("bind-1", "bind-link", false, "bind :49374", Tone::Request),
-        packet("clash", "bind-link", true, "EADDRINUSE", Tone::Error),
-        packet("bind-2", "bind-link", false, "bind :49374", Tone::Success),
+        StageElement::card("file", REG_FILE, REG_SIZE, "service.json")
+            .statuses(&[
+                ("owner: pid 4127", Tone::Muted),
+                ("unregistered", Tone::Warning),
+            ])
+            .mark(Mark::Cross),
+        StageElement::card("client", CLIENT, CLIENT_SIZE, "Service.stop")
+            .statuses(&[
+                ("stopping pid 4127", Tone::Plain),
+                ("file gone → return early", Tone::Warning),
+                ("watching pid 4127", Tone::Plain),
+                ("escalating → SIGKILL", Tone::Error),
+                ("stopped cleanly", Tone::Success),
+            ])
+            .tone(Tone::Request),
+        StageElement::card("new", NEW_SERVICE, NEW_SIZE, "new server")
+            .statuses(&[
+                ("starting", Tone::Plain),
+                ("EADDRINUSE :49374", Tone::Error),
+                ("starting", Tone::Plain),
+                ("listening :49374", Tone::Success),
+            ])
+            .tone(Tone::Accent),
+        StageElement::beam("stop-link", "client", "old").tone(Tone::Error),
+        StageElement::beam("reg-link", "old", "file"),
+        StageElement::beam("check-link", "client", "file")
+            .bend(-32.0)
+            .tone(Tone::Request),
+        StageElement::beam("bind-link", "new", "old").tone(Tone::Accent),
+        StageElement::packet("sigterm", "stop-link")
+            .labeled("SIGTERM")
+            .tone(Tone::Error),
+        StageElement::packet("sigkill", "stop-link")
+            .labeled("SIGKILL")
+            .tone(Tone::Error),
+        StageElement::packet("unreg", "reg-link")
+            .labeled("unlink")
+            .tone(Tone::Warning),
+        StageElement::packet("check", "check-link")
+            .labeled("read file")
+            .tone(Tone::Request),
+        StageElement::packet("gone", "check-link")
+            .reversed()
+            .labeled("missing")
+            .tone(Tone::Warning),
+        StageElement::packet("bind-1", "bind-link")
+            .labeled("bind :49374")
+            .tone(Tone::Request),
+        StageElement::packet("clash", "bind-link")
+            .reversed()
+            .labeled("EADDRINUSE")
+            .tone(Tone::Error),
+        StageElement::packet("bind-2", "bind-link")
+            .labeled("bind :49374")
+            .tone(Tone::Success),
     ];
     StagePlan {
-        post: StagePost {
-            bloom: 0.18,
-            grain: 0.012,
-            vignette: 0.22,
-            backdrop: 0.12,
-        },
+        post: StagePost::RESTRAINED,
         elements,
     }
 }
 
 fn stage_film(narration: &Narration) -> Result<ScenePlan> {
     let pr = &PRS[3];
-    let before_clip = narration.clip("stop-before")?;
-    let after_clip = narration.clip("stop-after")?;
-    let lead = seconds(1.4);
-    let rewind = seconds(2.2);
-    let duration = lead + before_clip.duration() + rewind + after_clip.duration() + seconds(2.2);
-    let mut scene = PlanBuilder::new("stop-stage", duration);
-    let before = before_clip.place(&mut scene, lead);
-    let after = after_clip.place(&mut scene, before.end() + rewind);
+    // Before, a rewind, after, and a tail for the closing camera.
+    let reading = narration.reading(
+        seconds(1.4),
+        [("stop-before", seconds(2.2)), ("stop-after", seconds(2.2))],
+    )?;
+    let mut scene = PlanBuilder::new("stop-stage", reading.duration());
+    let [before, after] = reading.place(&mut scene);
     let b = |phrase: &str| before.at(phrase);
     let a = |phrase: &str| after.at(phrase);
 
@@ -325,29 +193,29 @@ fn stage_film(narration: &Narration) -> Result<ScenePlan> {
     // -----------------------------------------------------------------------
     // Opening establish: orb, service.json, and Service.stop client card
     // -----------------------------------------------------------------------
-    for (property, initial) in [
-        ("camera.z", -140.0),
-        ("camera.dof", 0.38),
-        ("old.scale", 0.62),
-        ("old.blur", 10.0),
-    ] {
-        s.channel(sc, property, initial);
-    }
+    s.channel(sc, "camera.z", -140.0);
+    s.channel(sc, "camera.dof", 0.38);
     s.to(sc, "camera.z", 0, 0.0, 2.0);
-    s.bounce(sc, "old.scale", seconds(0.12), 1.0, 0.8, 0.2);
-    s.to(sc, "old.blur", seconds(0.12), 0.0, 0.65);
-    s.channel(sc, "old.rotation", -1.4);
-    s.ease(sc, "old.rotation", seconds(0.12), 0.0, 1.15, Ease::CubicOut);
-    s.to(sc, "old.opacity", seconds(0.12), 1.0, 0.55);
-    s.to(sc, "old-name.opacity", seconds(0.65), 1.0, 0.45);
-    s.to(sc, "old-active.opacity", seconds(0.8), 1.0, 0.45);
+    // A slightly quicker, smaller entrance than the hero's.
+    let entrance = OrbEntrance {
+        scale: 0.62,
+        scale_seconds: 0.8,
+        blur: 10.0,
+        blur_seconds: 0.65,
+        rotation: -1.4,
+        turn_seconds: 1.15,
+        fade_seconds: 0.55,
+    };
+    s.orb_in(sc, "old", seconds(0.12), entrance);
+    s.fade_in(sc, "old-name", seconds(0.65), 1.0, 0.45);
+    s.fade_in(sc, "old-active", seconds(0.8), 1.0, 0.45);
 
     let file_land = s.settle_in(sc, "file", seconds(0.32));
     s.connect(sc, "reg-link", file_land + seconds(0.1), 0.48);
 
     let client_land = s.settle_in(sc, "client", seconds(0.45));
     let client_conn = s.connect(sc, "stop-link", client_land + seconds(0.12), 0.5);
-    sc.media(sound("connect-0", TASK_RUNNING, client_conn, -20.0));
+    sfx::TICK.play(sc, "connect-0", client_conn, -20.0);
 
     header(sc, pr, Some(seconds(0.3)))?;
     let mut before_chip = chip(sc, "chip-before", Tone::Muted, "before")?;
@@ -407,8 +275,8 @@ fn stage_film(narration: &Narration) -> Result<ScenePlan> {
 
     let sigterm_at = before.at_any(&["sigterm", "sig term"]);
     let sigterm_hit = s.send(sc, "sigterm", sigterm_at, 0.58);
-    sc.media(sound("sigterm-send", SAVE, sigterm_at, -9.0));
-    sc.media(sound("sigterm-hit", IMPACT, sigterm_hit, -11.0));
+    sfx::SEND.play(sc, "sigterm-send", sigterm_at, -9.0);
+    sfx::IMPACT.play(sc, "sigterm-hit", sigterm_hit, -11.0);
 
     let blow = Vec3::from(OLD_SERVICE) - Vec3::from(CLIENT);
     s.jolt(sc, sigterm_hit, [blow.x * 0.45, blow.y * 0.45], 0.55);
@@ -422,14 +290,7 @@ fn stage_film(narration: &Narration) -> Result<ScenePlan> {
 
     // "still running": the orb lingers on :49374 instead of exiting
     let running = b("still running");
-    s.to(sc, "old-active.opacity", running, 0.0, 0.15);
-    s.to(
-        sc,
-        "old-lingering.opacity",
-        running + seconds(0.22),
-        1.0,
-        0.25,
-    );
+    s.swap_labels(sc, ["old-active", "old-lingering"], running, millis(220));
 
     // "registration file had disappeared": old server unlinks service.json
     let reg_file = b("registration file");
@@ -463,15 +324,15 @@ fn stage_film(narration: &Narration) -> Result<ScenePlan> {
     let collide = b("collide with it");
     let bind_1_send = collide.saturating_sub(seconds(0.85));
     let bind_1_hit = s.send(sc, "bind-1", bind_1_send, 0.42);
-    sc.media(sound("bind-1", SAVE, bind_1_send, -10.0));
+    sfx::SEND.play(sc, "bind-1", bind_1_send, -10.0);
     s.hit(sc, "old.pulse", bind_1_hit, 0.65, 0.0);
 
     let clash_hit = s.send(sc, "clash", bind_1_hit + seconds(0.36), 0.42);
-    sc.media(sound("clash-hit", TASK_FAILURE, clash_hit, -8.0));
+    sfx::FAILURE.play(sc, "clash-hit", clash_hit, -8.0);
     s.hit(sc, "new.alarm", clash_hit, 0.28, 0.0);
     s.set(sc, "new.damage", clash_hit, 1.0);
-    glitch(s, sc, "new", clash_hit, [7.0, 9.0, 8.0]);
-    sc.media(sound("clash-glitch", GLITCH, clash_hit, -18.0));
+    s.glitch(sc, "new", clash_hit, [7.0, 9.0, 8.0]);
+    sfx::GLITCH.play(sc, "clash-glitch", clash_hit, -18.0);
     s.to(sc, "new.status", clash_hit, 1.0, 0.2);
     s.clock(sc, "new.release", clash_hit);
     s.to(sc, "bind-link.break", clash_hit + seconds(0.08), 1.0, 0.55);
@@ -498,7 +359,7 @@ fn stage_film(narration: &Narration) -> Result<ScenePlan> {
     rewind_chip.hide(sc, switch + seconds(1.4));
     let mut after_chip = chip(sc, "chip-after", Tone::Success, "after the fix")?;
     after_chip.show(sc, switch + seconds(1.55));
-    sc.media(sound("rewind", LAUNCH, switch - seconds(0.08), -13.0));
+    sfx::LAUNCH.play(sc, "rewind", switch - seconds(0.08), -13.0);
 
     s.hit(sc, "post.chroma", switch, 0.12, 0.0);
     s.to(sc, "camera.x", switch, -35.0, 1.4);
@@ -533,19 +394,9 @@ fn stage_film(narration: &Narration) -> Result<ScenePlan> {
     let sigkill_send = sigkill_at.saturating_sub(seconds(0.35));
     s.to(sc, "client.status", sigkill_send, 3.0, 0.25);
     let sigkill_hit = s.send(sc, "sigkill", sigkill_send, 0.52);
-    sc.media(sound(
-        "sigkill-launch",
-        LAUNCH,
-        sigkill_send - seconds(0.3),
-        -15.0,
-    ));
-    sc.media(sound("sigkill-impact", IMPACT, sigkill_hit, -5.0));
-    sc.media(sound(
-        "sigkill-shatter",
-        TASK_DEATH,
-        sigkill_hit + seconds(0.05),
-        -7.0,
-    ));
+    sfx::LAUNCH.play(sc, "sigkill-launch", sigkill_send - seconds(0.3), -15.0);
+    sfx::IMPACT.play(sc, "sigkill-impact", sigkill_hit, -5.0);
+    sfx::DEATH.play(sc, "sigkill-shatter", sigkill_hit + seconds(0.05), -7.0);
 
     // The lingering orb compresses and combusts on SIGKILL
     s.clock_for(sc, "old.burst", sigkill_hit, combustion::DURATION);
@@ -561,37 +412,21 @@ fn stage_film(narration: &Narration) -> Result<ScenePlan> {
         0.42,
         0.35,
     );
-    s.to(
-        sc,
-        "old-lingering.opacity",
-        sigkill_hit + seconds(0.12),
-        0.0,
-        0.15,
-    );
-    s.to(
-        sc,
-        "old-exited.opacity",
-        sigkill_hit + seconds(0.38),
-        1.0,
-        0.25,
-    );
+    let labels = ["old-lingering", "old-exited"];
+    s.swap_labels(sc, labels, sigkill_hit + seconds(0.12), millis(260));
     target_note.hide(sc, sigkill_hit + seconds(0.1));
 
     // Service.stop spinner resolves into check mark
     let client_done = sigkill_hit + seconds(0.45);
     s.to(sc, "client.status", client_done, 4.0, 0.3);
-    let client_waited = client_done.saturating_sub(watch_at) as f32 / 1e9;
-    let client_handoff = watch_at + seconds(f64::from(spinner::handoff(client_waited)));
-    s.clock(sc, "client.mark", client_handoff);
+    s.resolve_spinner(sc, "client", watch_at, client_done);
 
     // Port :49374 opens cleanly and new server takes it
     let port_free = sigkill_hit + seconds(0.55);
-    s.to(sc, "port-ring.opacity", port_free, 0.35, 0.25);
-    s.to(
+    s.halo(
         sc,
-        "port-ring-outer.opacity",
-        port_free + seconds(0.06),
-        0.5,
+        [("port-ring", 0.35), ("port-ring-outer", 0.5)],
+        port_free,
         0.25,
     );
 
@@ -611,25 +446,13 @@ fn stage_film(narration: &Narration) -> Result<ScenePlan> {
 
     let bind_2_send = a("clear error");
     let bind_2_hit = s.send(sc, "bind-2", bind_2_send, 0.48);
-    sc.media(sound("bind-2", SAVE, bind_2_send, -9.0));
+    sfx::SEND.play(sc, "bind-2", bind_2_send, -9.0);
     s.hit(sc, "new.flash", bind_2_hit, 0.35, 0.0);
     s.to(sc, "new.status", bind_2_hit, 3.0, 0.3);
     s.to(sc, "new.glow", bind_2_hit, 0.55, 0.5);
-    let new_waited = bind_2_hit.saturating_sub(new_spin) as f32 / 1e9;
-    let new_handoff = new_spin + seconds(f64::from(spinner::handoff(new_waited)));
-    s.clock(sc, "new.mark", new_handoff);
-    sc.media(sound(
-        "new-mark",
-        MARK,
-        new_handoff + seconds(f64::from(spinner::DRAW)),
-        -18.0,
-    ));
-    sc.media(sound(
-        "clean-restart",
-        PRISMATIC_BLOOM,
-        bind_2_hit + seconds(0.1),
-        -10.0,
-    ));
+    let new_drawn = s.resolve_spinner(sc, "new", new_spin, bind_2_hit);
+    sfx::MARK.play(sc, "new-mark", new_drawn, -18.0);
+    sfx::BLOOM.play(sc, "clean-restart", bind_2_hit + seconds(0.1), -10.0);
 
     // Roll timer to 10.0 s on "10 seconds"
     timer.roll(sc, after.at_any(&["10 seconds", "ten seconds"]), "10.0")?;
@@ -657,8 +480,7 @@ fn stage_film(narration: &Narration) -> Result<ScenePlan> {
     after_chip.hide(sc, close);
     footer_after.hide(sc, close);
     timer.hide(sc, close);
-    s.to(sc, "port-ring-outer.opacity", close, 0.0, 0.6);
-    s.to(sc, "port-ring.opacity", close + seconds(0.08), 0.0, 0.6);
+    s.halo_out(sc, ["port-ring", "port-ring-outer"], close, 0.6);
 
     scene.finish().context("stop-stage")
 }

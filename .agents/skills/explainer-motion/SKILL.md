@@ -92,8 +92,11 @@ Constants and formulas for each are in [TECHNIQUES.md](TECHNIQUES.md).
    than copying source alpha or bounce blindly. Done when the focal action reads
    at thumbnail size and all retained actors fit every camera composition.
 3. Build it as clock-derived, deterministic motion. In Psychopomp, use the
-   `StageActor` helpers (`send`, `connect`, `settle_in`, `hit`, `twang`, `land`)
-   and `psychopomp::math`; the `psychopomp` skill covers the reel workflow.
+   `StageActor` beats (`send`, `send_arriving`, `connect`, `connect_contacting`,
+   `settle_in`, `hit`, `twang`, `land`, `orb_in`, `glitch`, `rewind`,
+   `swap_status`, `halo`, `ring_timer`, `disconnect`), `stage::reply_after` for
+   a reply's earliest launch, `author::stagger` for ripples, and
+   `psychopomp::math`; the `psychopomp` skill covers the reel workflow.
 4. Render short normal-speed studies before the full film. Compare against the
    previous treatment, then inspect contact frames at 40 ms or less. Check body,
    content, ports, and camera separately. Done when the result reads in motion,

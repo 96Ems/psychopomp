@@ -13,6 +13,7 @@ use super::{
     header,
     ide::PreparedAnnotation,
     lanes::PreparedLanes,
+    lens::PreparedLens,
     lower_third::PreparedLowerThird,
     plot::PreparedPlot,
     rolling::RollingNumberInput,
@@ -38,6 +39,7 @@ use psychopomp::{
     grid::GRID_RECIPE,
     image::IMAGE_RECIPE,
     lanes::LANES_RECIPE,
+    lens::LENS_RECIPE,
     lower_third::LOWER_THIRD_RECIPE,
     plan::{ActorPlan, ContinuousChannelPlan, MediaKindPlan, ScenePlan, StateChannelPlan},
     plot::PLOT_RECIPE,
@@ -80,6 +82,7 @@ pub(super) struct Plan {
     pub changed_files: Vec<ChangedFilesInput>,
     pub lower_thirds: Vec<PreparedLowerThird>,
     pub viz: super::viz::VizInputs,
+    pub lenses: Vec<PreparedLens>,
 }
 pub(super) enum RootPlan {
     Blank,
@@ -389,6 +392,7 @@ impl Plan {
         let mut changed_files = Vec::new();
         let mut lower_thirds = Vec::new();
         let mut viz = super::viz::VizInputs::default();
+        let mut lenses = Vec::new();
         for actor in &plan.actors {
             if let Some(annotation) = PreparedAnnotation::parse(actor, &plan.continuous_channels)? {
                 annotations.push(annotation);
@@ -480,6 +484,7 @@ impl Plan {
                 }
                 IMAGE_RECIPE => footage.image(actor, &plan.media, &plan.continuous_channels)?,
                 FOOTAGE_RECIPE => footage.footage(actor, &plan.media, &plan.continuous_channels)?,
+                LENS_RECIPE => lenses.push(PreparedLens::new(actor, &plan.continuous_channels)?),
                 recipe => bail!("unsupported actor recipe '{recipe}'"),
             }
         }
@@ -559,6 +564,9 @@ impl Plan {
         for (kind, owner, anchors) in pinned {
             super::anchor::validate_plans(kind, owner, anchors, &placeable)?;
         }
+        for lens in &lenses {
+            lens.validate_anchors(&placeable)?;
+        }
         for media in &plan.media {
             if matches!(media.kind, MediaKindPlan::Audio) || consumed.contains(media.id.as_str()) {
                 continue;
@@ -593,6 +601,7 @@ impl Plan {
             changed_files,
             lower_thirds,
             viz,
+            lenses,
         };
         match &result.root {
             RootPlan::Editor { editor, .. } => editor.compile_channels(&mut result.plan)?,

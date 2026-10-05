@@ -30,6 +30,10 @@ pub struct CaptionPlan {
     /// starts.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub anchors: Vec<AnchorPlan>,
+    /// Make the chip liquid glass: a frosted pane that refracts the scene
+    /// behind the text instead of covering it.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub glass: bool,
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
@@ -74,6 +78,7 @@ impl CaptionPlan {
             lines: vec![spans],
             chip: false,
             anchors: Vec::new(),
+            glass: false,
         }
     }
 
@@ -90,6 +95,13 @@ impl CaptionPlan {
     /// Pin the caption's origin to `anchor`; the first anchor is where it starts.
     pub fn anchor(mut self, anchor: AnchorPlan) -> Self {
         self.anchors.push(anchor);
+        self
+    }
+
+    /// A chip of liquid glass.
+    pub fn glass(mut self) -> Self {
+        self.chip = true;
+        self.glass = true;
         self
     }
 
@@ -271,6 +283,7 @@ mod tests {
         assert_eq!(plan.char_count(), 25);
         let json = serde_json::to_value(&plan).unwrap();
         assert!(json.get("align").is_none() && json.get("chip").is_none());
+        assert!(json.get("glass").is_none());
         assert_eq!(json["lines"][0][0]["tone"], "accent");
         assert!(json["lines"][0][1].get("tone").is_none());
         assert_eq!(serde_json::from_value::<CaptionPlan>(json).unwrap(), plan);

@@ -314,18 +314,26 @@ impl FootageInputs {
     }
 }
 
-/// Open `clip` from `media` in `store`, about `shown` pixels wide in a box
-/// of `size` cut by `fit`; a Video Card passes its own decode.
-fn open_source(
-    base: &Path,
-    store: &mut FootageStore,
-    clip: &Clip,
-    media: &MediaPlan,
+/// What to open: `clip` from `media`, about `shown` pixels wide in a box of
+/// `size` cut by `fit`; a Video Card passes its own decode size and rate.
+struct Request<'a> {
+    clip: &'a Clip,
+    media: &'a MediaPlan,
     fit: Fit,
     size: [f32; 2],
     shown: f32,
     fixed: Option<([u32; 2], u32)>,
-) -> Result<SourceId> {
+}
+
+fn open_source(base: &Path, store: &mut FootageStore, request: Request<'_>) -> Result<SourceId> {
+    let Request {
+        clip,
+        media,
+        fit,
+        size,
+        shown,
+        fixed,
+    } = request;
     let path = super::resolve_media_path(base, media);
     if matches!(media.kind, MediaKindPlan::Image) {
         return store.still(&path, shown);
@@ -391,17 +399,16 @@ impl FootageInput {
             Recipe::Video { size, fps } => Some((size, fps)),
             _ => None,
         };
-        let source = open_source(
-            base,
-            store,
-            &self.plan.clip,
-            &self.media,
-            self.plan.fit,
-            self.plan.size,
-            self.shown,
+        let request = Request {
+            clip: &self.plan.clip,
+            media: &self.media,
+            fit: self.plan.fit,
+            size: self.plan.size,
+            shown: self.shown,
             fixed,
-        )
-        .with_context(|| format!("open footage '{}'", self.id))?;
+        };
+        let source = open_source(base, store, request)
+            .with_context(|| format!("open footage '{}'", self.id))?;
         let mut plan = self.plan;
         if self.recipe == Recipe::Image {
             let pixels = store.size(source);
@@ -422,17 +429,16 @@ impl FootageInput {
 
 impl StageFootageInput {
     fn open(self, base: &Path, store: &mut FootageStore) -> Result<StageFootage> {
-        let source = open_source(
-            base,
-            store,
-            &self.clip,
-            &self.media,
-            self.fit,
-            self.size,
-            self.shown,
-            None,
-        )
-        .with_context(|| format!("open stage footage '{}'", self.element))?;
+        let request = Request {
+            clip: &self.clip,
+            media: &self.media,
+            fit: self.fit,
+            size: self.size,
+            shown: self.shown,
+            fixed: None,
+        };
+        let source = open_source(base, store, request)
+            .with_context(|| format!("open stage footage '{}'", self.element))?;
         let trim = self
             .clip
             .trim_nanos()

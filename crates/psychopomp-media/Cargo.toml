@@ -1,0 +1,17 @@
+[package]
+name = "psychopomp-media"
+version = "0.1.0"
+edition = "2024"
+
+[[bin]]
+name = "psychopomp-media"
+path = "src/main.rs"
+
+[dependencies]
+anyhow = "1.0"
+base64 = "0.23"
+psychopomp = { path = "../psychopomp" }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+sha2 = "0.11"
+ureq = { version = "3.4", default-features = false, features = ["rustls"] }

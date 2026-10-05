@@ -16,7 +16,7 @@ machinery:
 | You are explaining | Start from | Library pieces |
 | --- | --- | --- |
 | A pull request: broken behavior, the fix, the diff | `scenes/config-migration` (smallest) or `scenes/pr-walkthrough` | `psychopomp_pr_walkthrough::film`, `narration`, `editor::diff`, `sequence` rows |
-| A system, as a 3D film of cards, orbs, and packets | `scenes/opencode-jr-architecture`, `scenes/pr-walkthrough/src/flagship.rs` | `stage::StageActor` (`settle_in`, `send`, `hit`, `jolt`), `caption` |
+| A system, as a 3D film of cards, orbs, and packets | `scenes/opencode-jr-architecture`, `scenes/pr-walkthrough/src/flagship.rs` | `stage::StageActor` (`settle_in`, `send`, `hit`, `jolt`, `orb_in`, `rewind`), `StageElement` constructors, `sfx`, `chrome` |
 | Lightning, charge, a forcefield, a burn-away, a scan | `scenes/effects-showroom` | `stage::StageActor` (`zap`, `charge`, `hum`, `raise`, `dissolve`, `materialize`, `scan`) |
 | A diagram of shapes, icons, arrows, and particle forms | `scenes/stage-forms` | `stage` `form`/`shape`/`path`/`icon`, `StageActor` (`connect`, `relay`, `morph`) |
 | Code changing step by step, presented live | `scenes/effect-succeed-slides`, `scenes/interactive-showcase` | `editor` recipes, `PresentationStepPlan` |
@@ -24,8 +24,10 @@ machinery:
 | A payload, config, or emitted plan as structured data | `scenes/tree` | `tree::TreeActor` (`open`, `reveal`, `highlight`, `set`) |
 | Pointing at a card or code range while it moves | `scenes/callouts` | `callout::CalloutActor` (`show`, `move_to`, `emphasize`) |
 | Labels, counters, or images riding a card or code range | `scenes/anchors` | `anchor::AnchorPlan` on captions, Rolling Numbers, `text::TextActor`, `image::ImageActor` (`move_to`) |
+| Magnifying a code range or a card's status | `scenes/loupe` | `lens::LensActor` (`show`, `move_to`, `slide`, `resize`, `focus`) |
 | Real product behavior from a screen recording | `scenes/video`, `scenes/opencode-session-tool` | `video::VideoActor` (`fly_in`, `focus`, `unfocus`) |
 | Before and after, side by side | `scenes/compare` | `ReelSegmentPlan::wiped` with `ReelWipePlan` holds and labels |
+| Changing scenes: pushes, irises, matched zooms, flips, cuts | `scenes/transitions` | `ReelPlan::new` with `ReelSegmentPlan::pushed`, `matched`, `irised`, `flipped`, ... |
 | A version or count changing | `scenes/rolling-number` | `rolling::RollingNumberActor::roll` |
 | A CLI session, an agent run, or a build in a terminal | `scenes/text-surfaces` | `terminal::TerminalActor` (`type_command`, `print`, `stream`, `spin`, `resolve`, `clear`) |
 | A Slack thread or text conversation reacting | `scenes/text-surfaces` | `chat::ChatActor` (`typing`, `say`, `stream`, `react`, `highlight`) |
@@ -37,13 +39,22 @@ machinery:
 | Captions for a narrated film | `scenes/viz-components` (`subtitles`) | `subtitles::SubtitlesPlan::from_spoken` |
 | A single titled idea | `scenes/agent-demo` | `PlanBuilder` channels and cues |
 
-1. Write the narration script and voice it with `bun scripts/narrate.ts` (`--draft`
-   for a local voice). Place clips with `Narration::load(dir)?.clip(id)?.place(..)`
-   and time everything from `spoken.at("phrase")`, so re-voicing re-times the film.
+1. Declare the narration in the Scene Program with `psychopomp-media`
+   ([Declare Narration And Sound](#declare-narration-and-sound)): `media.say(..)`
+   generates each line once and records it in `media.lock.json`. Schedule lines
+   with `Reading::new(lead, [(audio.clip(), gap_after), ..])` (or
+   `Narration::reading(lead, [(id, gap_after), ..])` for `narrate.ts` clips): its
+   `duration()` sizes the `PlanBuilder` and `place(&mut scene)` returns one
+   `Spoken` per clip. Time everything from `spoken.at("phrase")`, so re-voicing
+   re-times the film. A clip can be split across segments with
+   `clip.split(seconds, earlier, later)` and `place_range`. (`bun
+   scripts/narrate.ts` and `Narration::load` still work for scenes not yet moved.)
 2. Declare actors with `PlanBuilder`; write motion through typed handles. Time
-   literals use `author::SECOND` and `author::seconds(f64)`.
+   literals use `author::SECOND`, `author::seconds(f64)`, and
+   `author::millis(u64)`; see [Author with timing helpers](#author-with-timing-helpers).
 3. Emit with `ScenePlan::write_or_print`, `DeckPlan::write_with_slides`, or
-   `ReelPlan::dipped(..)`, then `plan validate` and `plan inspect`.
+   `ReelPlan::new(id, segments)` / `ReelPlan::dipped(..)`, then `plan validate`
+   and `plan inspect`.
 4. Review exact frames before encoding: `bun scripts/sheet.ts <plan> 0:10:0.5
    [--crop x,y,w,h] [--shutter]`, `plan frame <plan> <t> out.png --shutter`, and for
    code steps `plan steps`.
@@ -231,6 +242,11 @@ scene.presentation_step("initial", "Start with a value", 0, 0);
 scene.presentation_step("reveal", "Reveal the type", 1_000_000_000, 2_500_000_000);
 ```
 
+A deck of evenly spaced steps is `scene.steps("step", titles, 3 * SECOND, 2 *
+SECOND)`: step `i` enters at `i × 3 s` and holds 2 s later (the first is a still
+at zero); it returns the entry times. `scene.cue_steps(3 * SECOND)` adds a Cue
+per step so `--cue step-2` renders one.
+
 Build the Effect Institute `effect-succeed` adaptation:
 
 ```bash
@@ -406,6 +422,78 @@ Old JSON plans need no new fields. Rust recipe literals use `snapshots: Vec::new
 to retain the old behavior. Do not author in the generated `line.<id>.y`,
 `line.<id>.opacity`, or `__attachment-*` namespaces.
 
+## Declare Narration And Sound
+
+`psychopomp-media` makes generated audio part of the Scene Program. Declare
+what you want; the first run generates it, every run times the choreography to
+the real words, and later runs call nothing until a declaration changes:
+
+```rust
+use psychopomp_media::{Effect, FISH_KIT, Line, Media, Sound, Voice};
+
+let media = Media::open(env!("CARGO_MANIFEST_DIR"))?; // media.lock.json + media/
+let kit = Voice::eleven(KIT).v4().stability(0.2).similarity(0.65);
+let guest = Voice::eleven(GUEST).v4().stability(0.2).similarity(0.65);
+let intro = media.say("intro", &kit, "[warm, conversational] When a client reconnects...")?;
+let fix = media.say("fix", &kit, Line::new("[relieved] Nothing gets killed.").after(&intro))?;
+let chant = media.say("chant", &Voice::fish(FISH_KIT), "Balls! Balls! BALLS!")?;
+let duet = media.dialogue("duet", [(&kit, "You first."), (&guest, "No, you.")])?;
+let pop = media.sfx("pop", "a single soft glassy pop, tiny and dry", seconds(0.5))?;
+let bed = media.sfx("bed", Sound::new("light rain on a tin roof").looping(), seconds(8.0))?;
+let demon = intro.derive(Effect::pitch(-6.0))?; // id "intro.pitch(-6)"
+media.finish()?; // reports orphans; fails an offline plan that found missing audio
+
+let said = intro.place(&mut scene, SECOND); // Script Clip "narration-intro"
+for at in said.at_every("balls") { pop.play(&mut scene, at, -18.0); } // Layer Clips
+scene.cue("intro-end", said.end(), said.end());
+```
+
+- **Voices.** `Voice::eleven(id)` uses `eleven_v4`; `.stability`, `.similarity`,
+  `.seed`, `.language`, `.ivc()` (`use_pvc_as_ivc`), and `.whisper()` (time with
+  Whisper instead of ElevenLabs' character alignment). v4 has no speed or style:
+  direct performance with bracketed tags in the text, and `/IPA/` for
+  pronunciation. `Voice::fish(id)` uses `s2.1-pro-free` with `.speed`;
+  `Voice::say(name)` is a free macOS voice.
+- **Lines.** `media.say` is one Text to Speech request; `Line::new(text).after(&previous)`
+  stitches it to an earlier ElevenLabs line with `previous_request_ids` (the
+  predecessor's key joins this line's, so re-voicing it re-voices this one).
+  `media.dialogue` is one Text to Dialogue performance of several voices that
+  share one model, settings, and alignment (2,000 characters at most).
+- **Sound effects.** `media.sfx(id, prompt, duration)` uses
+  `eleven_text_to_sound_v2` (0.5 to 30 s; `Sound::new(..).influence(x).looping()`);
+  the result is trimmed to its onset, peak-matched to -6 dBFS, and faded, so
+  `play` at the moment of contact.
+- **Derived audio.** `audio.derive(Effect::pitch | tempo | reverse | trim | gain)`
+  runs ffmpeg and moves the words with the audio. Pitch shifts formants too.
+- **Placement.** `audio.place(scene, at)` returns `Spoken` (`at`, `at_after`,
+  `at_any`, `at_every`, `words`, `end`); `audio.play(scene, at, gain_db)` adds a Layer Clip
+  `<id>@<time>`. `duration()` is exact, so a reel's length is known before the
+  scene exists.
+
+`PSYCHOPOMP_MEDIA` selects the mode:
+
+```sh
+PSYCHOPOMP_MEDIA=plan cargo run -p <scene>   # print the delta (+ ~ = -) and cost; zero API calls
+cargo run -p <scene>                         # generate what is missing or changed
+PSYCHOPOMP_MEDIA=draft cargo run -p <scene>  # time it with macOS say and silent sfx first
+PSYCHOPOMP_MEDIA=prune cargo run -p <scene>  # zero calls; delete orphans and superseded files
+cargo run -p psychopomp-media -- show scenes/<scene>
+```
+
+Credentials come from `ELEVENLABS_API_KEY` and `FISH_AUDIO_API_KEY`, or the
+nearest `.env` above the scene; only a run that generates needs them. Commit
+`media.lock.json` and `media/` with the scene. Media paths are relative to the
+scene directory, so write the plan there. Each id names one role: give a new
+line a new id, keep the id when rewording a line, and prune orphans when done.
+
+To move a scene from `scripts/narrate.ts`, run
+`cargo run -p psychopomp-media -- adopt scenes/<scene>/narration`, then declare
+each clip as narrate.ts made it, one-voice dialogue timed by Whisper, with the
+same text: `media.dialogue(id, [(&Voice::eleven(V).stability(s).similarity(m).whisper(), TEXT)])`
+(Fish clips: `media.say(id, &Voice::fish(V), TEXT)`). Adopted lines report `=`
+and keep their files; `scenes/psychopomp-intro` is the worked example, and its
+reel stayed byte-identical.
+
 ## Make A Narrated Explainer Reel
 
 `scenes/pr-walkthrough` walks through five pull requests: for each, a Sequence
@@ -413,9 +501,12 @@ Diagram plays the broken behavior and replays the fix in the same slots, then an
 editor animates the actual change as a diff with Line Marks. The workflow is
 reusable for any code explainer:
 
-- `psychopomp::narration::Narration::load(dir)` reads `narration.json`;
-  `clip(id)?.place(&mut scene, start)` adds the Script Clip and returns a
-  `Spoken` whose `at(phrase)`, `at_any`, and `at_after` give plan-clock times.
+- `psychopomp_media::Media` declares narration ([above](#declare-narration-and-sound));
+  for scenes still voiced by `scripts/narrate.ts`,
+  `psychopomp::narration::Narration::load(dir)` reads `narration.json`. Either way
+  `place(&mut scene, start)` adds the Script Clip and returns a `Spoken` whose
+  `at(phrase)`, `at_any`, `at_after`, and `at_every` give plan-clock times,
+  and `words()` every word with its start and end.
 - `psychopomp::editor::diff::Diff` of `keep`/`add(step, ..)`/`remove(step, ..)`
   lines declares the stepped editor; `declare(scene, step_times, warning, entrance)`.
   A hand-built editor recipe (one with semantic ranges to pin a callout, say)
@@ -433,8 +524,11 @@ reusable for any code explainer:
   builds participants; `SequenceActor::row_channel`/`participant_channel` address
   their channels.
 - `ReelPlan::dipped(id, plans, transition_nanos)` joins segments with dips.
-- `psychopomp_pr_walkthrough::film` is the PR-film template itself (`header`,
-  `chip`, `footer`, `behavior`, `code`); `scenes/config-migration` reuses it.
+- `psychopomp::chrome` places a film's fixed captions: `header(scene, label,
+  title)` top left, `chip(scene, id, dot, text)` top right, and `footer(scene,
+  id, spans)` bottom left; each returns its Caption to type in, show, or hide.
+- `psychopomp_pr_walkthrough::film` is the PR-film template itself (`header`
+  for a `Pr`, `behavior`, `code`); `scenes/config-migration` reuses it.
 
 ```sh
 # 1. Voice the script (Fish Audio via 1Password; --draft uses macOS `say`).
@@ -475,10 +569,13 @@ and original scene assets. The explicit `sig term`/`sigterm` cue alternatives
 handle ASR word segmentation without changing recorded timings. Rebuild and
 review the new clock before rendering; replacing just the audio desynchronizes it.
 
-A reel is `{ "version": 1, "id", "segments": [{ "transitionNanos", "transitionStyle": "crossfade" | "dip" | "zoom" | "wipe", "transitionFocus"?, "transitionWipe"?, "plan" }] }`.
+A reel is `{ "version": 1, "id", "segments": [{ "transitionNanos", "transitionStyle", "transitionFocus"?, "transitionWipe"?, "plan" }] }`.
+`transitionStyle` is a name (`"crossfade"`, `"dip"`, `"zoom"`, `"wipe"`, `"j-cut"`,
+`"l-cut"`, `"ink"`, `"glitch"`, `"flash"`, `"light-leak"`) or, for styles with a
+setting, a one-key object; see [Transitions](#transitions).
 A `zoom` needs `transitionFocus: [x, y, width, height]` in the outgoing frame; compute
-it with `stage::Camera::project` (or `CameraRig::screen_box`) so it matches the
-card the camera flies into.
+it with `stage::Camera::project_rect(card_at, card_size)` at the closing camera
+(or `CameraRig::screen_box`) so it matches the card the camera flies into.
 Relative media paths resolve against the reel file. Prefer `dip` between frames
 that are both dense with text; a crossfade between two editors turns both unreadable.
 
@@ -502,6 +599,62 @@ ReelSegmentPlan::wiped(after, seconds(4.4), ReelWipePlan::new(WipeDirection::Lef
 
 The showroom is `cargo run -p psychopomp-compare` (writes `target/compare.json`):
 a held before/after between two Stage frames, then a plain downward wipe.
+
+### Transitions
+
+Every transition has a `ReelSegmentPlan` constructor; `ReelPlan::new(id,
+segments)` builds and validates the reel. Each constructor takes the incoming
+plan and the overlap in nanoseconds; at most two segments are ever visible.
+
+| Constructor | `transitionStyle` | What happens |
+| --- | --- | --- |
+| `cut(plan)` | `"crossfade"`, 0 ns | A hard cut |
+| `j_cut(plan, lead)` / `l_cut(plan, tail)` | `"j-cut"` / `"l-cut"` | The incoming sound leads the picture cut, or the outgoing sound trails it |
+| `crossfaded` / `dipped` | `"crossfade"` / `"dip"` | Mix, or fade through the background |
+| `zoomed(plan, ns, focus)` | `"zoom"` | Fly into `focus` while the segment grows out of it |
+| `wiped(plan, ns, wipe)` | `"wipe"` | A divider sweeps across, optionally resting with labels |
+| `pushed(plan, ns, direction)` | `{ "push": "left" }` | Both frames travel together, motion-blurred |
+| `slid(plan, ns, direction)` | `{ "slide": "up" }` | The segment slides over the dimming outgoing frame and settles |
+| `whipped(plan, ns, direction)` | `{ "whip": "right" }` | A whip pan: lean in, tear across in a streak, catch |
+| `irised(plan, ns, ring)` | `{ "iris": { "ring": true } }` | A soft circle opens from the focus center or the frame's |
+| `matched(plan, ns, from, to)` | `{ "match": [x, y, w, h] }` | `from` (the focus) in the outgoing frame flies onto `to` in this one |
+| `flipped(plan, ns, direction)` | `{ "flip": "left" }` | The frame turns over like a card, this segment on its back |
+| `cubed(plan, ns, direction)` | `{ "cube": "up" }` | The frames are faces of a turning cube |
+| `inked(plan, ns)` | `"ink"` | The segment spreads in like ink, from the focus if set |
+| `glitched` / `flashed` / `leaked` | `"glitch"` / `"flash"` / `"light-leak"` | Corruption, a white-out, or a warm light leak hides a cut |
+
+Directions are `"left"`, `"right"`, `"up"`, and `"down"`: the way the motion
+travels. `.focused(rect)` sets `transitionFocus` for an iris or ink origin;
+`zoom` and `match` require it, and other new styles reject it. Rectangles are
+`[x, y, width, height]` in canvas pixels; a Stage card under the default camera
+is `[x - w / 2, y - h / 2, w, h]` from its `at` and `size`, and under a moved
+camera use `stage::Camera::project`. A match moves one camera for both frames, so the
+element lands exactly on its counterpart; give its target frame the element
+already at rest at time zero.
+
+```rust
+ReelPlan::new("film", vec![
+    ReelSegmentPlan::cut(overview),
+    ReelSegmentPlan::matched(detail, seconds(1.3), api_card, api_card_large),
+    ReelSegmentPlan::pushed(code, seconds(0.75), WipeDirection::Left),
+    ReelSegmentPlan::irised(title, seconds(1.1), true).focused(orb_rect),
+])?
+```
+
+Push, slide, and whip suit frames that sit side by side in one space; a match
+or zoom suits a detail opening into its own scene; a flip suits a before and
+after of the same thing; ink, flashes, and leaks suit section breaks; a glitch
+suits failure. Keep glitches and flashes short (0.4 to 0.7 seconds).
+
+The showroom is `cargo run -p psychopomp-transitions` (writes
+`target/transitions.json`), every transition between Stage, code, and title
+frames, each naming itself in a chip:
+
+```sh
+cargo run -p psychopomp-transitions
+bun scripts/sheet.ts target/transitions.json 4.35:5.55:0.15 --shutter --theme neutral
+cargo run --release -- plan render target/transitions.json output/transitions.mp4 --theme neutral
+```
 
 `scenes/pr-walkthrough` also emits `pr-50825.reel.json`, a Stage film of #50825
 that zooms from the client card into its code:
@@ -535,6 +688,8 @@ their fuller documentation elsewhere.
   and optional [`anchors`](#pin-overlays-to-anchors).
   Channels: `opacity`, `x`, `y`, `typed`, `caret`, `anchor.<id>`. `CaptionActor::type_in` writes
   one exact step per character; `show` and `hide` fade; `move_to` glides between anchors.
+  and `glass` (the chip is a frosted liquid-glass pane that refracts the scene
+  behind it and condenses in with `opacity`; `CaptionPlan::glass()`).
 - `rolling-number`: `origin` (aligned edge x, center y), `align`, `size`, `bold`,
   `tone`, static `prefix`/`suffix` spans (`{ text, tone }`), the initial `value`,
   and `rolls` of `{ atNanos, value }` in increasing time. Optional
@@ -918,6 +1073,35 @@ their fuller documentation elsewhere.
   `cargo run --release -- plan render target/viz-components/reel.json output/viz-components.mp4 --theme opencode`.
   Callout anchors are the shared [Anchor](#pin-overlays-to-anchors) targets
   plus a per-anchor label `side`; `CalloutSide` is `psychopomp::anchor::Edge`.
+- `lens`: a loupe of thick glass that magnifies and refracts the frame beneath
+  it. `anchors` (one to eight, callout anchors without a `side`; the first is
+  where it starts), `size` (`[width, height]` at full presence), optional
+  `corner` (omitted: fully round, so a square is a circle and a wide lens a
+  capsule at every size), `magnification` (1.6; 0.5..4), optional `bevel` (rim
+  width in px; 28% of the shorter half side), `refraction` (page depth in rim
+  widths, 0.6: how hard the rim bends), `dispersion` (0.04), `frost` (0), and
+  `shadow` (0.5). Channels: `presence` (0 absent, 1 full; it condenses rather
+  than fades), `x` and `y` (offsets from the blended anchor), `width`,
+  `height`, `magnification`, `focus-x` and `focus-y` (the point shown at the
+  center, from the center), `frost`, and `anchor.<id>` weights. A lens draws
+  after callouts and before plain text and Tasks, refracting the root and every
+  overlay beneath it at each temporal sample, over any root.
+  `LensActor` writes `show` (a springy condense), `hide`, `move_to(anchor)`
+  (weights on one critically damped profile, so a redirected glide keeps its
+  velocity), `slide([dx, dy])`, `magnify`, `resize([w, h])` (a round loupe
+  stretches into a capsule), and `focus([dx, dy])`, which with an opposite
+  `slide` floats the glass beside what it reads.
+  let mut loupe = LensActor::declare(&mut scene, "loupe",
+      &LensPlan::circle(CalloutAnchorPlan::Editor { id: "call".into(),
+          target: "call".into(), edge: CalloutSide::Center, side: None }, 250.0)
+          .anchor(schedule).magnification(1.7))?;
+  loupe.show(&mut scene, at);
+  loupe.move_to(&mut scene, "schedule", later)?;
+  loupe.resize(&mut scene, [560.0, 96.0], later + SECOND);  // read along the line
+  loupe.slide(&mut scene, [150.0, 0.0], later + 2 * SECOND);
+  The showroom is `cargo run -p psychopomp-loupe` (writes the reel
+  `target/loupe.json` and its segments under `target/loupe/`); render it with
+  `cargo run --release -- plan render target/loupe.json output/loupe.mp4 --theme neutral`.
 - Editor Line Marks: `"mark": "added" | "removed"` on a line, with presence
   channel `mark.<line-id>`; `panel-x`, `panel-y`, and `panel-opacity` move and fade the card (the Stepped Diff
   enters on `panel-y`).
@@ -934,9 +1118,13 @@ their fuller documentation elsewhere.
    age for VHS rewind interference (-1 inactive). `camera.quake` is sustained
    trauma (0..2) added to a jolt's `shake`; `post.zoom` is a radial streak toward
    the frame center (0..0.5); `post.flash` washes the frame toward white (0..1). Cards also take the deletion
-   channels `cool|damage|glitch|cut|ghost` and the status-spinner clocks
+   channels `cool|damage|glitch|cut|ghost`, the status-spinner clocks
    `spinner|release|mark` (seconds; -1 inactive), with `mark: "check" | "cross"`,
-   plus `charge|dissolve|scan` (orbs take `charge`).
+   and `status-from|swap`: while `status-from` names an entry (-1 is unset), the
+   status line cross-fades straight from it to `status` by `swap` (0..1), so
+   `StageActor::swap_status(card, at, [from, to], seconds)` never passes the
+   entries between them as the fractional `status` channel does; plus
+   `charge|dissolve|scan` (orbs take `charge`).
    A packet is one clock: `age` (seconds since
   dispatch, -1 before) and `flight`; the renderer derives its gather, flight, trail,
   landing ring, and light from them. Beams choose their own ports and curve; leave
@@ -949,13 +1137,37 @@ their fuller documentation elsewhere.
   camera kicks along the blow, a squared-trauma noise rumble with slight roll
   decays, and the frame punches in about 2%),
   `twang`, and `land`. `glide` is the minimum-jerk (smootherstep) move of
-  exact duration between resting compositions. `bounce` and `to` spring any channel (undeclared
-  channels start at 0; declare other starting poses with `channel`), `ease` follows
+  exact duration between resting compositions. `bounce` and `to` spring any channel (an undeclared
+  channel starts at its resting value, the same Stage channel default the
+  renderer reads when nothing writes it: opacity, scale, `content`, `draw`,
+  `fill`, `typed`, ring `sweep`, `spin`, shield `up`, and `camera.zoom` rest at
+  1, the `burst`/`age`/`dissolve`/spinner clocks and `post.rewind` at -1,
+  `flight` at 0.8, `post.bloom`/`post.vignette`
+  at the plan's `post`, everything else at 0; declare other starting poses with
+  `channel`, and fade something in from hidden with `fade_in`), `ease` follows
   any curve, and `clock` starts an elapsed-seconds channel that runs to the scene's
   end for effect rigs such as the card spinner (`clock_for` stops it after a fixed
   lifetime, as for `burst` or `post.rewind`). Use a `Smootherstep` ease for staged
   camera moves with exact timing, springs for responsive camera/panel settling,
   and instant-attack fades for light.
+  Composed beats return when they settle: `orb_in(orb, at, OrbEntrance::HERO)`
+  (the hero entrance: scale, blur, and angular offset gather in while it fades
+  in), `glitch(card, at, seeds)` (three layouts 27 ms apart, then still),
+  `rewind(at, chroma)` (`post.rewind`'s 1.4 s of tape interference with a
+  chromatic hit) and `unburst(orb, at, seconds)` (the burst clock plays back
+  to intact), `shock_kick(source, at, card, push, falloff)` (a card is shoved
+  away as the burst's pressure front passes it; returns when it passes),
+  `resolve_spinner(card, started, done)` (the spinner draws its mark at its
+  next crossing; returns when the mark is drawn, where its sound belongs),
+  `swap_status(card, at, [from, to], seconds)`, `swap_labels([from, to], at,
+  gap)` (one label out, the other in `gap` later), `dim(cards, at, amount,
+  seconds)`, `halo([(inner, opacity),
+  (outer, opacity)], at, seconds)` and `halo_out`
+  (two rings 60 ms apart in, 80 ms apart out), `ring_timer(ring, at, seconds,
+  sweep)`, and `disconnect(beam, at, seconds)` (the reverse of `connect`).
+  Build elements with `StageElement::card|orb|beam|packet|label|ring` and their
+  options (`.tone`, `.statuses`, `.mark`, `.points`, `.bend`, `.reversed`,
+  `.labeled`, `.align`, `.thickness`); `StagePost::RESTRAINED` is the films' look.
   Orb `pulse` changes illumination, not geometry or attached beam ports. Card
   `flash` lifts ink and rim, not the entire fill. Connecting does not implicitly
   trigger `land`, `twang`, `surge`, or `flow`; author those only when the story
@@ -1205,6 +1417,48 @@ let plan = scene.finish()?;
 ```
 
 Renderer Recipe payloads remain adapter-owned. The lightweight core validates stable IDs, channel references, event ordering, finite values, cue ranges, exact media ranges, and Scene Plan versioning without knowing what a Task, editor, Video Card, or title card looks like.
+
+### Author With Timing Helpers
+
+Authoring helpers emit ordinary events; none changes the plan format.
+
+```rust
+use psychopomp::author::{PlanTime, millis, seconds, spread, stagger};
+use psychopomp::stage::reply_after;
+
+// Narration: a lead, then each clip and the gap after it.
+let reading = narration.reading(seconds(1.6), [("before", seconds(2.4)), ("after", seconds(2.4))])?;
+let mut scene = PlanBuilder::new("film", reading.duration());
+let [before, after] = reading.place(&mut scene);
+
+// Rows ripple 120 ms apart; `stagger` returns the latest end.
+let settled = stagger(["api", "db", "cache"], before.at("three services"), millis(120), |card, at| {
+    s.settle_in(sc, card, at)
+});
+// Six packets spread evenly between two words, both included.
+for (packet, launch) in VOLLEY.iter().zip(spread(6, before.at("packets"), before.at("wires"))) { .. }
+
+// A beat keyed to a word that must still wait for its cause.
+let lookup = s.send(sc, "lookup", after.at("just once").not_before(reply_after(find)), 0.55);
+// Time a beat by where it lands rather than where it starts.
+s.send_arriving(sc, "kill", before.at("sigterm"), 0.55);   // the packet arrives on the word
+s.connect_contacting(sc, "link", before.at("plugs in"), 0.4); // port pop + draw end on the word
+s.spring(sc, "camera.x", at, -110.0, SpringPlan::CAMERA);
+```
+
+- Sound effects come from `psychopomp::sfx` (`TICK`, `SEND`, `FAILURE`,
+  `LAUNCH`, `IMPACT`, `DEATH`, `GLITCH`, `MARK`, `BLOOM`, `SEVER`, `RESET`,
+  `SUCCESS`, `CONFIRM`, `RISER`, `BOOM`, `WHOOSH`, `SPARKLE`) with exact lengths:
+  `sfx::IMPACT.play(sc, "kill-impact", arrival, -5.0)`. Their paths assume the
+  plan is written beside its Scene Program in `scenes/<name>/`; a scene's own
+  files use `Sfx::new(path, length_nanos)`.
+- `reply_after(arrival)`: a reply's gather may only begin once its request has
+  landed: 340 ms of gather plus an 80 ms reaction (`REACT_SECONDS`).
+- Named spring feels on `SpringPlan`, for `StageActor::spring` and
+  `PlanBuilder::spring_with`: `PANEL` (0.6 s, bounce 0.12, a rigid panel
+  settling), `CONTENT` (0.36 s, ink following its panel), `SNAP` (0.3 s, a
+  status or fade), `CAMERA` (1.6 s critically damped move), and `LIVELY`
+  (0.85 s, bounce 0.2, a hero landing).
 
 Scene Plan v2 scalar values may reference a component of a stable Semantic Target. The target's selector remains recipe-owned; for the hero, the editor recipe resolves logical code range IDs through `cosmic-text` before compiling highlight and pointer channels into the shared Timeline.
 

@@ -21,20 +21,23 @@ Lightweight crate (`crates/psychopomp/src`):
 - `crates/psychopomp/src/grid.rs`: finite keyed product catalogs and semantic Grid Snapshots
 - `crates/psychopomp/src/value.rs`: immutable Value Token recipe data for finite teaching diagrams
 - `crates/psychopomp/src/component_prototype.rs`: provisional Typeset, width-text, Collection, Connector, rich-text, header, and Venn payloads
-- `crates/psychopomp/src/author.rs`: typed Scene Plan builder and stable actor/channel handles for lightweight Scene Programs; `sample` and `destination` read a channel's authored value so helpers move from the pose written so far
+- `crates/psychopomp/src/author.rs`: typed Scene Plan builder, stable actor/channel handles, and timing vocabulary (`millis`, `stagger`, `spread`, `PlanTime::not_before`, named `SpringPlan` feels) for lightweight Scene Programs; `sample` and `destination` read a channel's authored value so helpers move from the pose written so far
 - `crates/psychopomp/src/plan.rs`: versioned renderer-independent Scene Plan, Deck, and Reel values and structured validation
 - `crates/psychopomp/src/plan/channels.rs`: exact scalar-event lowering and opt-in snapshot-destination reduction; raw event ordering remains distinct
 - `crates/psychopomp/src/plan/wipe.rs`: Reel wipe values (direction, mid-frame holds, labels) and the closed-form divider position
+- `crates/psychopomp/src/plan/transition.rs`: Composited Transition phases and their closed-form timing and geometry (travel curves, iris radius, rect-to-rect match camera, card and cube turns, cut envelopes)
 - `crates/psychopomp/src/state.rs`: deterministic arbitrary-time discrete State Tracks
 - `crates/psychopomp/src/playback.rs`: interruptible step destinations, continuous track retargeting, and a pausable local presentation clock
 - `crates/psychopomp/src/timeline.rs`: explicit-time continuous Property Track compilation
 - `crates/psychopomp/src/timeline/retarget.rs`: shared cancellation-safe numeric schedule for Playback and authored resting entrances
 - `crates/psychopomp/src/motion.rs`: deterministic arbitrary-time analytic spring sampling with position and velocity
-- `crates/psychopomp/src/transcript.rs`: word timing ingestion, word and phrase cue lookup
-- `crates/psychopomp/src/narration.rs`: `scripts/narrate.ts` manifests loaded as narration clips, placed as Script Clips, with panicking phrase lookups
+- `crates/psychopomp/src/transcript.rs`: word timing ingestion, word and phrase cue lookup, every occurrence of a phrase
+- `crates/psychopomp/src/narration.rs`: narration clips (from `scripts/narrate.ts` manifests or any timed audio), scheduled back to back (`Narration::reading`, `Reading::new`), placed whole or as split ranges (`place_range`, `split`) as Script Clips, with panicking phrase lookups
+- `crates/psychopomp/src/sfx.rs`: the `assets/` sound-effect catalog with exact lengths, placed whole as Layer Clips (`Sfx::play`)
 - `crates/psychopomp/src/tone.rs`: semantic Tone roles shared by explainer recipes
 - `crates/psychopomp/src/sequence.rs`: Sequence Diagram recipe values and row constructors, slot, header, and row-box geometry, validation, and the `SequenceActor` authoring handle
 - `crates/psychopomp/src/caption.rs`: Caption recipe values and the `CaptionActor` authoring handle (typing, show, hide)
+- `crates/psychopomp/src/chrome.rs`: an explainer film's fixed captions (header, chips, footer) at their shared positions
 - `crates/psychopomp/src/rolling.rs`: Rolling Number recipe values, value tokenization, the closed-form roll compiler, and the `RollingNumberActor` handle (`roll`, show, hide)
 - `crates/psychopomp/src/tree.rs`: Tree recipe values, JSONPath identity, the fold-driven pure layout, and the `TreeActor` handle (`open`, `close`, `highlight`, `set`, `scroll_to`, `reveal`, show, hide)
 - `crates/psychopomp/src/axis.rs`: `AxisPlan` (range, ticks, label, unit), `nice_ticks`, and tabular tick labels shared by Plot and Lanes
@@ -47,21 +50,31 @@ Lightweight crate (`crates/psychopomp/src`):
 - `crates/psychopomp/src/bars.rs`: Benchmark Bars recipe values, row geometry, delta chip text, stable `ranking` and crossing `paint_order`, and the `BarsActor` handle (`grow`, `set`, `sort`, `reveal_rows`, `reveal_deltas`, show, hide)
 - `crates/psychopomp/src/subtitles.rs`: Subtitles recipe values (from a placed narration clip), page chunking and line balancing, and the time-sampled page, word-ink, pill, and backing poses
 - `crates/psychopomp/src/confetti.rs`: Confetti recipe values and the `ConfettiActor` handle (`burst`)
+- `crates/psychopomp/src/lens.rs`: Lens recipe values, the sampled `Glass` (outline, rim bend, source mapping, bounds), and the `LensActor` handle (`show`, `hide`, `move_to`, `slide`, `magnify`, `resize`, `focus`)
 - `crates/psychopomp/src/video.rs`: Video Card recipe values (footage size, card rect, title), focus-window math, placement helper, and the `VideoActor` handle (`fly_in`, `focus`, `unfocus`, `hide`)
-- `crates/psychopomp/src/stage.rs`: Stage elements, strict channels, perspective camera, orb geometry, the packet clock (`stage::packet`), and the `StageActor` authoring handle (`to`, `ease`, `glide`, `bounce`, `settle_in`, `clock`/`clock_for`, `connect`, `send`, `hit`, `kick`, `jolt`, `twang`, `land`, and `camera` for the `CameraRig`)
-- `crates/psychopomp/src/stage/camera.rs`: the Stage `Camera` pose and projection (pan, dolly, orbit about a pivot, zoom, roll, billboard screen boxes, framing) shared by the renderer, callouts, and Scene Programs, and the `CameraRig` shots (`frame`, `move_to`, `establish`, `push_in`, `pull_back`, `drift`, `whip`, `orbit`, `dolly_zoom`, `roll`, `focus_on`, `aperture`, `follow`, `release`, `handheld`)
-- `crates/psychopomp/src/effects/`: GPU-free special-effect clocks and particle poses (combustion, lightning, dissolve, shield, surface, shake, spinner); shared dynamics stay in `psychopomp::math::dynamics`
-- `crates/psychopomp/src/stage.rs`: Stage elements, strict channels, perspective camera, orb geometry, form shapes and morphs (`form_points`, `morph_point`), the packet clock and relay legs (`stage::packet`), and the `StageActor` authoring handle (`to`, `ease`, `bounce`, `settle_in`, `clock`/`clock_for`, `connect`, `send`, `relay`, `morph`, `hit`, `kick`, `jolt`, `twang`, `land`)
+- `crates/psychopomp/src/stage.rs`: Stage elements and their builder constructors, strict channels and their one table of defaults (`StagePlan::channel_default`), orb geometry, form shapes and morphs (`form_points`, `morph_point`), the packet clock and relay legs (`stage::packet`), `reply_after`, and the `StageActor` authoring handle: primitives (`to`, `spring`, `ease`, `glide`, `bounce`, `set`, `fade_in`/`fade_out`, `clock`/`clock_for`), beats (`settle_in`, `connect`/`connect_contacting`/`disconnect`, `send`/`send_arriving`, `relay`, `morph`, `hit`, `kick`, `jolt`, `twang`, `land`, `orb_in`, `glitch`, `rewind`, `unburst`, `shock_kick`, `resolve_spinner`, `swap_status`, `swap_labels`, `dim`, `halo`, `ring_timer`), effect beats (`zap`, `charge`, `hum`, `dissolve`, `materialize`, `scan`, `raise`, `lower`), and `camera` for the `CameraRig`
+- `crates/psychopomp/src/stage/camera.rs`: the Stage `Camera` pose and projection (`project`, `project_rect`; pan, dolly, orbit about a pivot, zoom, roll, billboard screen boxes, framing) shared by the renderer, callouts, and Scene Programs, and the `CameraRig` shots (`frame`, `move_to`, `establish`, `push_in`, `pull_back`, `drift`, `whip`, `orbit`, `dolly_zoom`, `roll`, `focus_on`, `aperture`, `follow`, `release`, `handheld`)
+- `crates/psychopomp/src/effects/`: GPU-free special-effect clocks and particle poses (combustion, lightning, dissolve, shield, surface, shake, the status spinner, confetti); shared dynamics stay in `psychopomp::math::dynamics`
 - `crates/psychopomp/src/window.rs`: the text surfaces' shared Window channels (`opacity`, `x`, `y`, `scale`, `content`), title-bar height, `settle_in`/`dismiss`, and dot-free sub-channel IDs
 - `crates/psychopomp/src/terminal.rs`: Terminal recipe values, the reveal-driven pure layout with its scroll floor, deterministic `keystrokes`, and the `TerminalActor` handle (`type_command`, `prompt`, `idle`, `print`, `stream`, `spin`, `resolve`, `highlight`, `clear`, `scroll_to`)
 - `crates/psychopomp/src/chat.rs`: Chat Thread recipe values (Slack and bubbles styles), per-style geometry, the composer-anchored pure layout over renderer-measured `ChatMetrics`, typing-dot poses, and the `ChatActor` handle (`typing`, `say`, `stream`, `react`, `highlight`, `stamp`)
 - `crates/psychopomp/src/lower_third.rs`: Lower Third recipe values, bar and text geometry, and the `LowerThirdActor` handle (`show`, `hide`)
 - `crates/psychopomp/src/changed_files.rs`: Changed Files recipe values, GitHub's `diffstat`, fixed row slots, the totals schedule, and the `ChangedFilesActor` handle (`reveal`, `reveal_row`, `focus`, `unfocus`, `highlight`, `scroll_to`)
-- `crates/psychopomp/src/effects/`: GPU-free special-effect clocks and particle poses (combustion, the status spinner, confetti); shared dynamics stay in `psychopomp::math::dynamics`
 - `crates/psychopomp/src/anchor.rs`: the shared Anchor model: `Edge` (re-exported as `CalloutSide`), `AnchorPlan` (point, stage, editor, with offsets), the borrowed `AnchorTarget` every renderer path resolves, weight channel names, validation, `blend`, and `move_to`
 - `crates/psychopomp/src/text.rs`: typed `text` recipe values in the hand-built JSON shape and the `TextActor` handle (`show`, `hide`, `show_during`, `swap`, `move_to`)
 - `crates/psychopomp/src/image.rs`: Image recipe values (bare or framed, title, radius, anchors), the image placement helper, and the `ImageActor` handle (`fly_in`, `hide`, `move_to`)
-- `crates/psychopomp/src/math.rs` and `math/`: shared motion and geometry math (glam vectors, lerp/remap/smoothstep, easing, closed-form dynamics such as the settling spring, arc-length curves, shape ports and connectors, deterministic hash)
+- `crates/psychopomp/src/math.rs` and `math/`: shared motion and geometry math (glam vectors, lerp/remap/smoothstep, easing, closed-form dynamics such as the settling spring, arc-length curves, shape ports and connectors, rounded-box distance fields, thin-surface glass optics, deterministic hash)
+
+Media crate (`crates/psychopomp-media/src`), Generated Resources for Scene Programs:
+
+- `crates/psychopomp-media/src/media.rs`: `Media`, the reconciler (declare, resolve against the lock, generate, `finish`), `Mode`, `Report`, and the `Audio` resource handle (`place`, `play`, `derive`)
+- `crates/psychopomp-media/src/spec.rs`: `Voice`, `Line`, `Sound`, `Effect`, and the canonical `Spec` whose SHA-256 is the Resource Key; effect retiming
+- `crates/psychopomp-media/src/lock.rs`: the Media Lock schema, atomic writes, and its one-word-per-line formatter
+- `crates/psychopomp-media/src/words.rs`: words from provider character alignment (directions filtered), from Whisper, and estimated from text
+- `crates/psychopomp-media/src/studio.rs`: the `Generator` seam and `Studio`, the real one (providers, loudness, Whisper, `say`), plus credentials from the environment or `.env`
+- `crates/psychopomp-media/src/eleven.rs` and `fish.rs`: ElevenLabs Text to Speech/Dialogue/Sound Effects and Fish Audio requests
+- `crates/psychopomp-media/src/ffmpeg.rs`: loudness, sound-effect finishing, silence, effects, and exact durations
+- `crates/psychopomp-media/src/adopt.rs` and `main.rs`: adopting `scripts/narrate.ts` narration into a lock; the `adopt` and `show` commands
 
 Renderer crate (`crates/psychopomp-render/src`), plan runtime:
 
@@ -94,6 +107,7 @@ Renderer crate (`crates/psychopomp-render/src`), plan runtime:
 - `crates/psychopomp-render/src/plan_runtime/ide.rs`: strict preflight of Diagnostics, Hover Cards, and Cursors attached to the editor root, and their per-sample frames from measured targets
 - `crates/psychopomp-render/src/plan_runtime/viz.rs` and `viz/`: the visualization overlays as one group (`VizInputs`, `PreparedViz`) with strict-channel preflight per recipe in `viz/{checklist,meter,bars,subtitles,confetti}.rs`
 - `crates/psychopomp-render/src/plan_runtime/callout.rs`: callout poses from anchors validated and resolved through the shared `plan_runtime/anchor.rs`
+- `crates/psychopomp-render/src/plan_runtime/lens.rs`: Lens preflight, anchor validation, and per-sample glass from blended anchors
 - `crates/psychopomp-render/src/plan_runtime/video.rs`: Video Card preflight, frame caches, and source-time mapping
 - `crates/psychopomp-render/src/plan_runtime/anchor.rs`: shared anchor validation against the root, per-sample resolution (`render::stage_anchor`, `PreparedEditor::anchor`), and weighted pinning for every pinnable overlay
 - `crates/psychopomp-render/src/plan_runtime/image.rs`: Image preflight (recipe, channels, image placement) and one-time decoding
@@ -124,12 +138,14 @@ Renderer crate, pixels and delivery:
 - `crates/psychopomp-render/src/render/callout.rs`: callout mark, leader, and label pixels
 - `crates/psychopomp-render/src/render/ide.rs`: selection, Inlay Hint chip, diagnostic wave and gutter icon, caret, and Hover Card pixels on the flat editor surface
 - `crates/psychopomp-render/src/render/viz.rs` and `viz/`: checklist, meter, bars, subtitles, and confetti pixels over the chart ink, plus the shared Readout painter (`viz/readout.rs`), a weighted stroke, arcs, and rotated rectangles
+- `crates/psychopomp-render/src/render/lens.rs`: Lens pixels: linear-light refraction of the composed frame, rim softening, specular light, and contact shadow
 - `crates/psychopomp-render/src/render/video.rs`: projected Video Card pixels with a focus window
 - `crates/psychopomp-render/src/render/image.rs`: PNG/JPEG/WebP decoding by signature, premultiplied halving, and bare or framed projected image pixels
 - `crates/psychopomp-render/src/render/wipe.rs`: Reel wipe pixels: antialiased split, divider line and shadow, riding labels
 - `crates/psychopomp-render/src/render/window.rs`: the text surfaces' Window shell (composed once per pose through the projected card and cached as a layer), title bar, CommitMono span runs, and weighted strokes
 - `crates/psychopomp-render/src/render/terminal.rs`, `chat.rs`, and `changed_files.rs`: Terminal, Chat Thread, and Changed Files pixels
 - `crates/psychopomp-render/src/render/lower_third.rs`: Lower Third pixels: the accent bar and sans name and role clipped at a stationary edge
+- `crates/psychopomp-render/src/render/transition.rs` and `transition/`: Composited Transition pixels in linear light: `travel` (push, slide, whip), `reveal` (iris, ink), `turn` (match, flip, cube), `light` (glitch, flash, light leak)
 - `crates/psychopomp-render/src/render/stage.rs`, `stage.wgsl`, `stage_post.wgsl`: Stage primitives, HDR bloom, and composite; `PSYCHOPOMP_SHADER_DIR` loads the WGSL live
 - `crates/psychopomp-render/src/render/effects/*.wgsl`: binding-free noise, combustion, pressure, rewind, lightning, dissolve, shield, and scan Modules, composed by the Stage shaders; see `EFFECTS.md`
 - `crates/psychopomp-render/src/render/debug.rs`: optional native debug HUD
@@ -159,16 +175,19 @@ Scene Programs (`scenes/`), each emitting a Scene Plan, Deck, or Reel:
 - `scenes/diagnostics/`: IDE annotation showroom: an Effect program's error wave, inferred-type Inlay Hint, Hover Card, caret selection, and a Stepped Diff fix that the error rides down with before it clears
 - `scenes/video/`: Video Card showroom: a screen recording flies in, zooms into the prompt, and back out
 - `scenes/compare/`: wipe showroom: a held before/after wipe between two Stage frames, then a plain wipe
+- `scenes/generated-media/`: Generated Resource showroom: an ElevenLabs line, a Fish Audio chant whose every "balls" spawns an orb and a generated pop, and a pitched-down derivation, all in `media.lock.json`
 - `scenes/camera/`: camera showroom: establish, frame, follow a packet, rack focus, orbit an orb, dolly zoom on an impact, whip, handheld drift, and a push-in, all `CameraRig` shots
 - `scenes/effects-showroom/`: Stage effects reel: a charged build zaps a deploy, a shield blocks an attack and passes a request, a stale config burns away and its replacement materializes and is scanned, a live link hums
 - `scenes/stage-forms/`: Stage diagram vocabulary showroom: shapes, icons, and arrowed paths; a packet relaying through a stop; a dot-matrix plane morphing into a tumbling cube and a sphere over a slab; a cube that bursts
 - `scenes/text-surfaces/`: text-surface showroom reel: an agent, introduced by a Lower Third, in a Terminal session that overflows, scrolls, and clears; a Slack-style Chat Thread reacting while the agent streams its fix; the bubbles style; and a pull request's Changed Files with rolling totals and focus
 - `scenes/viz-components/`: visualization showroom reel: a CI checklist that fails, retries, and celebrates with confetti; a countdown ring, a gauge, and an upload bar; a before/after benchmark that grows and re-sorts; and word-timed subtitles over a narrated Stage clip
 - `scenes/anchors/`: Anchor showroom reel: a caption, a Rolling Number, text labels, a callout, and a framed image riding Stage cards through a dolly, a jolt, and glides between anchors; then a caption and a Rolling Number on code ranges while lines insert and the panel zooms; then a cursor caption, a counter, and a callout on Sequence Diagram rows and headers as the diagram slides
+- `scenes/loupe/`: Lens showroom reel: a loupe reads code ranges (glide, capsule scan, floating focus), then follows a Stage card's changing status through a dolly
+- `scenes/transitions/`: transitions showroom: every reel transition between Stage, code, and title frames, each named in a chip
 
 ## Scene Programs And Rendering Compile Separately
 
-The workspace has one demonstrated package seam. `crates/psychopomp` is a lightweight library containing authoring values, versioned Scene Plans, validation, exact composition time, continuous Property Tracks, discrete State Tracks, and stable code identity. `crates/psychopomp-render` contains `wgpu`, `cosmic-text`, video decoding, FFmpeg encoding, built-in renderer recipes, and the CLI.
+The workspace has two demonstrated package seams. `crates/psychopomp` is a lightweight library containing authoring values, versioned Scene Plans, validation, exact composition time, continuous Property Tracks, discrete State Tracks, and stable code identity. `crates/psychopomp-render` contains `wgpu`, `cosmic-text`, video decoding, FFmpeg encoding, built-in renderer recipes, and the CLI. `crates/psychopomp-media` generates audio for the Scene Programs that declare it; it carries the HTTP and TLS dependencies that neither the lightweight crate nor the renderer needs.
 
 ```text
 Rust Scene Program -> Scene Plan -> persistent psychopomp-render process
@@ -259,13 +278,83 @@ partially overwritten bytes as a cache hit.
 Transcript parsing does not understand code, actors, or rendering. It only connects semantic words to the shared media clock.
 
 `Transcript::phrase` and `phrase_after` match consecutive normalized words (case,
-punctuation, and number words versus digits are ignored). `scripts/narrate.ts`
-produces clips, loudness-normalized MP3s, Whisper word timings, and a manifest of
-exact durations; its `--draft` mode uses macOS `say` so a scene can be timed before
-the final voice exists. `psychopomp::narration` loads that manifest and places each
-clip as a Script Clip whose phrase lookups return plan-clock times. The
-`pr-walkthrough` Scene Program keys every reveal to a
-phrase and fails with the clip and phrase when narration no longer says it.
+punctuation, and number words versus digits are ignored); `phrases` finds every
+occurrence, so a chant can cue one beat per word. `psychopomp::narration` places
+a clip as a Script Clip whose phrase lookups return plan-clock times. Clips come
+from two producers. `scripts/narrate.ts` writes loudness-normalized MP3s, Whisper
+word timings, and a manifest of exact durations (`--draft` uses macOS `say`);
+`Narration::load` reads it. `psychopomp-media` produces the same clips from
+declarations in the Scene Program itself (see below). The `pr-walkthrough` Scene
+Program keys every reveal to a phrase and fails with the clip and phrase when
+narration no longer says it.
+
+## Generated Media Is Reconciled
+
+`crates/psychopomp-media` treats generated audio the way infrastructure-as-code
+tools treat cloud resources: the Scene Program declares desired state, a lock
+records actual state, and each run acts on the delta. The declaration is the
+whole interface:
+
+```rust
+let media = Media::open(env!("CARGO_MANIFEST_DIR"))?;
+let kit = Voice::eleven(KIT).v4().stability(0.2);
+let hush = media.say("hush", &kit, "[soft ASMR whisper] Oh... I hear you like... balls.")?;
+let pop = media.sfx("pop", "a single soft glassy pop", seconds(0.5))?;
+let demon = hush.derive(Effect::pitch(-6.0))?;
+media.finish()?;
+let said = hush.place(&mut scene, SECOND); // a Script Clip; `said.at_every("balls")`
+```
+
+Each declaration lowers to a canonical `Spec`, serialized with sorted keys and
+absent options omitted, so builder order and later optional fields never rekey
+existing resources. The Resource Key is the first 64 bits of its SHA-256. The
+spec includes post-processing and alignment as versioned strings: changing the
+loudness pass or the Whisper model changes them and so regenerates honestly.
+Keys identify recipes, not bytes; providers are not deterministic, so a key
+match, not a content hash of the audio, decides reuse.
+
+Declarations resolve eagerly, one at a time, like Alchemy rather than a
+Terraform plan/apply: the call returns an `Audio` with the real duration and
+words, so the choreography after it uses real timings in the same run. The
+reconciler checks the lock entry for the id (`=` when its key matches and the
+file exists), then any entry with the same key (renamed or duplicated ids
+reuse audio), and otherwise generates (`+` or `~`, naming the changed spec
+fields). Each generation checkpoints the lock, so a later failure keeps
+paid work. `finish` runs after the last declaration: ids the lock holds but nothing
+declared are orphans (`-`), deleted only in prune mode along with unreferenced
+store files. Files outside the store (adopted narration) are never deleted.
+
+Offline modes still run the whole Scene Program. A plan cannot pause on
+"known after apply" values, so missing speech gets estimated words (each spoken
+word of the text, 0.4 s apart) and missing sound its declared length; every
+phrase lookup still resolves, the delta and its estimated characters and sound
+seconds are complete, and `finish` fails before the scene writes its plan.
+Draft mode substitutes macOS `say` for speech and silence for sound effects;
+the lock then holds the draft's key, which a draft run accepts and an apply run
+replaces.
+
+`Generator` is the one seam: `Studio` produces real audio and the tests' fake
+records jobs without HTTP, ffmpeg, or Whisper. ElevenLabs and Fish Audio are
+two concrete branches inside `Studio`, not plugins. ElevenLabs Text to Speech
+with timestamps returns character alignment; bracketed directions and lone
+pauses are filtered and words keep the script's spelling, so lookups need no
+speech-recognition alternatives. Fish Audio and `say` return audio only, and
+Whisper times them as `narrate.ts` does. Speech is loudness-normalized like
+`narrate.ts`; sound effects are trimmed to their onset, peak-matched, and
+faded like the intro's stems; derived resources run one ffmpeg filter and
+retime their source's words. HTTP is blocking `ureq`; a Scene Program is a
+short batch process, and generation is sequential so request stitching can
+pass a predecessor's request IDs.
+
+Word times computed by the reconciler are rounded to whole microseconds before
+they reach the lock, because serde_json's default float parser is exact only
+for short decimals; Whisper's values already are, and adoption carries them
+through the lock bit for bit. The lock and the `media/` store are the state
+seam for a later remote backend (for example R2: the lock written with
+conditional puts, objects keyed `<key>.<ext>`, the local directory a cache);
+nothing remote exists yet. `scripts/narrate.ts` remains for scenes that still
+use manifests; `psychopomp-media adopt` moves such a scene into a lock without
+regenerating it.
 
 ## Rendering Is One Concrete Adapter
 
@@ -726,12 +815,64 @@ marks transition samples distinct (`ambient_time`, including over a Stage) and
 plans using them are export-only. Confetti poses come from
 `effects::confetti::Burst` over `math::dynamics::ballistic` with seeded
 `random::hash` per piece; reversing the clock reassembles the burst.
+### Lenses
+A `lens` overlay is thick glass over the composed frame. The lightweight
+`lens.rs` owns the payload and the sampled `Glass`: a `math::shapes::RoundedBox`
+outline (circle, capsule, or rounded box), a superellipse rim whose surface
+slope (`math::optics::superellipse_slope`) refracts a vertical ray by Snell's law
+(`math::optics::refraction_offset`) toward the center over a page `depth` below,
+and an even magnification about a focus point on the flat top. `Glass::source`
+maps a canvas point to the page point it shows; the bend is zero on the flat
+top, so the middle is undistorted and only the rim splits color. Presence
+condenses the glass: size, rim depth, and magnification grow together. None of
+this needs a GPU, and the optics are tested directly.
+The lens is a pass over the composed frame, not a root feature, so one
+implementation serves every root. `render_overlays` applies each visible lens
+after callouts and before plain text and Tasks: `render/lens.rs` copies the
+page under the source bounds into linear light (plus a two-pixel softened copy
+from running box sums), then shades each pixel inside `Glass::bounds` in row
+bands on scoped threads. The flat top samples with a Keys cubic that sharpens
+from Catmull-Rom toward `a = -0.75` as magnification rises, clamped to the four
+nearest texels so enlarged strokes neither ring nor halo; the rim softens where
+it compresses the page so moving text does not crawl. Light is additive in
+linear light: a fresnel sheen of a sky brighter above, a crisp specular line
+with a soft glow where the rim faces the upper-left light, a fainter line and
+inner glow opposite, and an edge hairline; a drop shadow and contact darkening
+fall outside the outline. Pixels outside the bounds are untouched, so plans
+without a lens keep identical pixels.
+Each temporal sample refracts its own frame. On CPU roots with nothing above
+the glass (no plain text or Tasks), `render_lensed_exposure` renders the page
+beneath the lenses once per distinct non-lens sample key and refracts a copy per
+sample, so a lens gliding over still code costs a lens per sample rather than a
+page; a GPU test proves it bit-identical to whole samples. Otherwise the lens is
+part of `render_sample`. Over a Stage it refracts the developed exposure (a
+motion-blurred base, like every overlay there) at each overlay sample. A Stage lens's
+resolved anchor joins the overlay key, so a lens riding a card through a dolly
+re-composites per shutter sample even while its own channels rest, and any
+visible lens takes the whole-sample composite rather than the callout-region
+shortcut, because it reads pixels beyond its own ink. Anchors resolve through
+`callout::resolve` (and `LensAnchorPlan` is the callout anchor type), so moving
+to a shared anchor Module is a rename. Stage grain is developed before overlays,
+so a lens enlarges it with the page.
+`Glass::pane` reuses the same optics as a panel material: no magnification, a
+thick pill rim, heavy frost (an eight-pixel softened page), and a dim so light
+text reads over light pixels. A caption with `glass` composites that pane in
+place of its solid chip, before its text, so the scene behind refracts at the
+pill's rim and diffuses through it, the way a packet's light passes under a
+label on its wire.
 ### Stage
 
 `stage` is an exclusive root recipe. The lightweight crate (`stage.rs`) owns the
-element model, strict channel names, the perspective `Camera`, element outlines, and
+element model, strict channel names and their one table of defaults
+(`StageElement::channel_defaults`, `StagePost::channel_default`; `StageActor`
+declares new channels at them and the renderer falls back to them, so authoring
+and pixels agree), the perspective `Camera`, element outlines, and
 the deterministic orb geometry (Fibonacci points, shatter trajectories), so authoring
-helpers (`StageActor`: `to`, `ease`, `clock`, `hit`, `send`, `type_in`, and the effect beats `zap`, `charge`, `hum`, `dissolve`, `materialize`, `scan`, `raise`, `lower`) and tests need no GPU.
+helpers (`StageActor`: `to`, `ease`, `clock`, `hit`, `send`, `type_in`, the
+composed beats such as `orb_in` and `rewind`, and the effect beats `zap`, `charge`,
+`hum`, `dissolve`, `materialize`, `scan`, `raise`, `lower`) and tests need no GPU.
+Every renderer read of a Stage channel falls back to `StagePlan::channel_default`,
+the same value `StageActor` declares a new channel at.
 `render/stage.rs` is small pieces: `Scene` samples the camera, every element's
 placement, and every beam's path once per sample; `Painter` has one method per
 element kind; `StageFrame` owns primitive helpers and depth-sorted layers. A beam is
@@ -997,6 +1138,45 @@ that fades near the frame edges, and places optional labels as caption chips tha
 ride the divider and fade as their side narrows. The divider position is part of
 the reel sample key, so sweeps get motion blur and holds collapse to one sample.
 
+Composited Transitions are reel transitions too. Their settings live in the
+style itself (`Push(direction)`, `Match(target)`, `Iris { ring }`), so older reel
+JSON and struct literals are unchanged; `layers_at` returns the outgoing layer
+and the incoming layer carrying a `TransitionPhase` (style, linear progress,
+duration, focus). `plan/transition.rs` owns their poses in closed form: travel
+curves with exact rates (minimum-jerk push, critically damped slide, a whip
+that is minimum-jerk travel through a minimum-jerk clock), the iris radius,
+the match camera (geometric scale, straight-line travel of the matched center,
+one transform for both frames so the shared element agrees), card and cube
+turns with their pull-back, and the glitch, flash, and leak envelopes.
+`render/transition.rs` composites one sample's two frames in linear light,
+row-parallel over `std::thread::scope` and deterministic:
+
+- `travel`: each frame line becomes running sums, so a box smear of any length
+  costs the same; smears fill the gap between the 16 temporal samples (a whip
+  exposes 1.4 shutters longer, with a faint long streak), so samples join into
+  one streak. A slide dims and shadows the frame it covers.
+- `reveal`: an iris opens from the focus center with a soft, speed-widened
+  edge, a shadow on the outgoing side, an optional accent ring, and a slight
+  settle of the incoming frame. Ink thresholds a domain-warped fractal noise
+  field (cached per frame size and focus) that is rank-equalized, so a
+  threshold covers exactly that share of the frame and the edge width is
+  measured in pixels from the field's slope.
+- `turn`: frames are sampled through inverse transforms from a mip chain. A
+  match fades the element into its counterpart before the scene around it,
+  and feathers a shrunken frame's border so its vignette never draws a box.
+  Flips and cubes ray-cast faces in a turned space (vertical motion swaps x
+  and y), shade them from an overhead key, light their rims, and average
+  anisotropic footprints with taps along the long axis.
+- `light`: a glitch holds discrete corruption frames (24 per second) of torn
+  bands, misread color planes, and displaced macroblocks around a hard cut; a
+  flash overexposes then washes to the theme's ink; a light leak screens
+  elliptical warm glows in from the left edge while the frames swap beneath.
+
+Transition progress joins the reel sample key, so every style is exposed
+through the shutter. At most two segments are visible at any instant; J- and
+L-cuts are overlaps whose picture cuts at one end, so both segments' media
+play through the overlap.
+
 `psychopomp/src/playback.rs` derives numeric step destinations from a renderer-prepared Timeline, after semantic geometry has resolved. Next, Previous, First, and Last append only changed channel targets through the shared Timeline compiler. Each spring therefore inherits position and velocity, including mid-flight reversals; unchanged destinations do not restart motion. Per-channel motion profiles come from the destination's latest authored spring (or its first spring before any event; set-only channels use a 0.4-second zero-bounce default). Replay alone resets to the entry pose. The local clock freezes on pause or once all channels settle, without retiming the authored video. Immutable `Arc<Timeline>` revisions make sampling history-independent even while input creates a newer revision.
 
 `plan_runtime/presentation.rs` owns winit lifecycle, slide/step navigation, full screen, letterboxed resizing, and smooth/pixelated display filtering. `presentation/worker.rs` retains the deck's prepared scenes, fonts, and GPU. At most one render is in flight; requests and results carry slide identity and immutable timeline revisions, so switching slides cannot display a stale result from another scene. Each slide retains its selected step and paused local clock while inactive. Explicit pause stays paused on return; previously running motion resumes. Held/paused scenes sleep unless a planned Task requests ambient clock advancement. Generic State Channels, recorded media, and Rolling Numbers (whose changes follow the authored clock, including Changed Files totals that roll) remain unsupported by interruptible playback; video export supports them.
@@ -1067,4 +1247,4 @@ Scene Programs may serialize generated Scene Plans as JSON for the process proto
 
 ## Explicit Non-Abstractions
 
-The prototype does not have a generic scene graph, renderer trait, plugin interface, render graph, dynamically loaded Rust library, or recursive slot AST. The two-crate workspace exists only to keep lightweight Scene Programs independent from the heavyweight persistent renderer. Further package seams require another demonstrated compilation or deployment need.
+The prototype does not have a generic scene graph, renderer trait, plugin interface, render graph, dynamically loaded Rust library, or recursive slot AST. The core crates exist only to keep lightweight Scene Programs independent from the heavyweight persistent renderer and from the HTTP stack that generating media needs. Further package seams require another demonstrated compilation or deployment need. `psychopomp-media` has one `Generator` seam, justified by its test fake and by the offline modes that must never reach a provider; its two providers are match arms, not implementations of a provider trait.

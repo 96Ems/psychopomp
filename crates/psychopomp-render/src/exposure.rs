@@ -20,6 +20,10 @@ const FPS: u32 = 60;
 const TEMPORAL_SAMPLES: u32 = 8;
 const ENTRANCE_TEMPORAL_SAMPLES: u32 = 16;
 const SHUTTER_ANGLE: f32 = 180.0;
+/// How long a frame's shutter stays open.
+pub(crate) const SHUTTER_SECONDS: f64 = SHUTTER_ANGLE as f64 / 360.0 / FPS as f64;
+/// The fewest samples a reel frame takes while its segments mix or move.
+pub(crate) const TRANSITION_TEMPORAL_SAMPLES: u32 = 16;
 
 /// Samples per frame for Scene Plans: more in the first second, where
 /// entrances move fastest.
@@ -364,12 +368,19 @@ fn encode_frame(tables: &LinearTables, sum: &[f32]) -> Vec<u8> {
     exposed
 }
 
-struct LinearTables {
-    to_linear: [f32; 256],
+pub(crate) struct LinearTables {
+    pub(crate) to_linear: [f32; 256],
     to_srgb: Vec<u8>,
 }
 
-fn linear_tables() -> &'static LinearTables {
+impl LinearTables {
+    /// One linear-light value as an sRGB byte.
+    pub(crate) fn encode(&self, linear: f32) -> u8 {
+        self.to_srgb[(linear.clamp(0.0, 1.0) * 65535.0).round() as usize]
+    }
+}
+
+pub(crate) fn linear_tables() -> &'static LinearTables {
     static TABLES: std::sync::LazyLock<LinearTables> = std::sync::LazyLock::new(|| LinearTables {
         to_linear: std::array::from_fn(|value| {
             let encoded = value as f32 / 255.0;

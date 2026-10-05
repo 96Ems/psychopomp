@@ -157,14 +157,13 @@ fn task_slide(
             },
         )?;
     }
-    for (index, (caption, _)) in steps.iter().enumerate() {
-        let at = index as u64 * 3 * SECOND;
-        scene.presentation_step(
-            format!("step-{index}"),
-            *caption,
-            at,
-            if index == 0 { 0 } else { at + 2 * SECOND },
-        );
+    let entries = scene.steps(
+        "step",
+        steps.iter().map(|step| step.0),
+        3 * SECOND,
+        2 * SECOND,
+    );
+    for (index, ((caption, _), at)) in steps.iter().zip(entries).enumerate() {
         // Like visual-types' CyclingSection/FadeOverlays: the aperture stays
         // fixed while rows roll through its 12-pixel top and bottom fades.
         let text = scene.actor(format!("caption-{index}"), "text", json!({"text": caption, "center": [960, 780], "fontSize": 30, "color": [170, 182, 200], "verticalMask": {"top": 750, "bottom": 810, "fade": 12}}))?;
@@ -334,24 +333,14 @@ fn code_slide() -> Result<ScenePlan> {
         21.,
         [115, 125, 140],
     )?;
-    for (index, title) in [
+    let edits = [
         "Return the ID",
         "Fetch the user and return its name",
         "Add logging without replacing the return",
         "Remove only the logging line",
         "Return to the original code",
-    ]
-    .into_iter()
-    .enumerate()
-    {
-        let at = index as u64 * 3 * SECOND;
-        scene.presentation_step(
-            format!("edit-{index}"),
-            title,
-            at,
-            if index == 0 { 0 } else { at + 2 * SECOND },
-        );
-    }
+    ];
+    scene.steps("edit", edits, 3 * SECOND, 2 * SECOND);
     Ok(scene.finish()?)
 }
 

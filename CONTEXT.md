@@ -109,6 +109,16 @@ its own running clock, before the sweep goes on. At most two segments are
 visible at any instant. Segment media is retimed onto the reel clock for one audio
 mix. Unlike a Presentation Deck, a reel is delivered rather than navigated.
 
+A **Composited Transition** is one the renderer draws from both frames at once,
+posed by a pure function of the transition's progress: a push, slide, or whip
+moves both frames along a direction, smeared by their speed; an iris or ink
+reveals the incoming frame through a growing circle or blot; a **Match** flies
+one camera so a rectangle of the outgoing frame lands on a rectangle of the
+incoming one, and the element visibly becomes its counterpart; a flip or cube
+turns the frames in perspective; a glitch, flash, or light leak hides a cut
+under corruption or light. A **J-cut** and an **L-cut** overlap two segments'
+sound but cut their pictures at the end or the start of the overlap.
+
 ## Playback
 
 Interactive navigation among Presentation Steps. Next and Previous retarget continuous channels from their sampled position and velocity through the same Property Track compiler used for video. Unchanged channel destinations retain their trajectories. Pause freezes the local clock without losing motion state; Replay deliberately restarts from an entry pose. Playback retains an immutable compiled timeline for each navigation revision, so late rendered frames cannot change the current destination. It is not reverse playback of a movie.
@@ -180,6 +190,11 @@ is a pure function of time, so any frame renders identically in any order.
 An orb pulse is an illumination response, independent of its scale and attached
 ports. A card's content can settle after its body; its `content` channel controls
 the ink's presence, small vertical offset, and sharpening together.
+A card's **Status Swap** cross-fades its status line straight from one entry
+to another; a fractional `status` instead passes through every entry between.
+Every Stage channel has one **Channel Default**, its resting value, which both
+authoring and rendering read when nothing writes it: an element is visible and
+whole at rest.
 An orb's **Burst** is a reversible destruction clock: gravitational collapse,
 hot combustion, an expanding refractive pressure wave, cooling smoke, and
 ballistic embers. Its procedural volume and trajectories need no simulation
@@ -423,6 +438,19 @@ One planned image media placement (PNG, JPEG, or WebP) drawn bare or inside a
 framed card, through the same projected card as a Video Card, so it can move,
 scale, rotate, tilt, defocus, and pin to an Anchor. The file is decoded once;
 its width at rest is authored and its height follows the image.
+## Lens
+A loupe of thick glass laid over the frame: a circle, or a capsule for reading
+along a line. Its flat top enlarges a focus point evenly, so what it shows stays
+legible; its rounded rim bends sight inward by Snell's law, strongest at the
+edge, splits color slightly there, catches a specular light, and casts a soft
+contact shadow. A lens refracts whatever is composed beneath it (any root and
+the overlays drawn before it) at every Temporal Sample. It pins to the same
+anchors as a Callout and glides between them like a puck of glass, following
+its card or code range as they move. A lens **condenses** rather than fades:
+its presence grows its size, rim, and magnification together. Its focus can
+sit away from its center, so the glass can float beside what it reads. The
+same glass, frosted and unmagnified, is a material for chips: a glass caption
+refracts the scene behind its text instead of covering it.
 ## Tone
 
 A semantic color role shared by explainer recipes: plain, request, success,
@@ -504,6 +532,42 @@ An ordered set of words with source start and end times. Looking up a word occur
 ## Media Placement
 
 A compiled relationship between a clip's immutable source range and its scheduled timeline range. Media placement time uses integer nanoseconds so edit boundaries remain exact across repeated edits.
+
+## Generated Resource
+
+Audio a Scene Program declares rather than supplies: a spoken line, a
+dialogue, a sound effect, or a resource derived from another by an effect
+such as a pitch shift. It has an author-chosen id that names its role in the
+scene, and a Resource Key that names its content. Once reconciled it is an
+Asset with an exact duration and, for speech, a Transcript, so choreography is
+timed to what was actually generated.
+
+## Resource Key
+
+The hash of everything that affects a Generated Resource's audio: backend,
+model, voice, the exact text with its direction tags, settings, seed, the
+lines it is stitched after, output format, post-processing, and how its words
+were timed. Equal keys mean interchangeable audio; a derived resource's key
+includes its source's, so regenerating a source regenerates what derives from
+it. A key identifies a recipe, not the bytes: providers are not deterministic.
+
+## Media Lock
+
+The recorded state of a scene's Generated Resources (`media.lock.json`): for
+each id, the key it was generated for, its file, exact duration, words, and
+provenance such as request IDs and billed credits. Files live in a
+content-addressed store beside it. Narration made before the lock existed can
+be adopted into it, keyed by the recipe that made it, without regenerating.
+
+## Reconcile
+
+Comparing declared Generated Resources with the Media Lock and acting on the
+delta: `=` up to date (the lock holds this key and its file), `+` create (no
+entry for the id), `~` replace (the entry was made for another key), and `-`
+orphan (an entry nothing declares). A run generates what is missing; a plan
+reports the delta and its cost and calls nothing; a draft stands in free local
+audio; a prune deletes orphans. Only declarations, never elapsed time or
+file dates, decide what is generated.
 
 ## Property Track
 

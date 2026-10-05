@@ -958,32 +958,29 @@ impl FootageActor {
         )
     }
 
-    fn spring(
-        &self,
-        scene: &mut PlanBuilder,
-        property: &str,
-        at: u64,
-        from: f32,
-        to: f32,
-        seconds: f32,
-        bounce: f32,
-    ) {
-        let channel = scene.channel(&self.actor, property, from);
-        scene.spring(&channel, at, to, seconds, bounce);
+    /// Spring each `(property, from, to, seconds, bounce)` from `from`, a
+    /// channel's starting pose when this declares it.
+    fn springs(&self, scene: &mut PlanBuilder, at: u64, moves: &[(&str, f32, f32, f32, f32)]) {
+        for &(property, from, to, seconds, bounce) in moves {
+            let channel = scene.channel(&self.actor, property, from);
+            scene.spring(&channel, at, to, seconds, bounce);
+        }
     }
 
     /// Fly up into place, as a Video Card does: it starts low, small, tipped
     /// back, and soft, and lands on critically damped springs.
     pub fn fly_in(&self, scene: &mut PlanBuilder, at: u64) -> u64 {
-        for (property, from, rest, seconds) in [
-            ("y", 160.0, 0.0, 0.8),
-            ("scale", 0.86, 1.0, 0.8),
-            ("tilt-x", 0.42, 0.0, 0.85),
-            ("blur", 9.0, 0.0, 0.7),
-            ("opacity", 0.0, 1.0, 0.35),
-        ] {
-            self.spring(scene, property, at, from, rest, seconds, 0.0);
-        }
+        self.springs(
+            scene,
+            at,
+            &[
+                ("y", 160.0, 0.0, 0.8, 0.0),
+                ("scale", 0.86, 1.0, 0.8, 0.0),
+                ("tilt-x", 0.42, 0.0, 0.85, 0.0),
+                ("blur", 9.0, 0.0, 0.7, 0.0),
+                ("opacity", 0.0, 1.0, 0.35, 0.0),
+            ],
+        );
         at + whole_millis(0.85)
     }
 
@@ -991,15 +988,17 @@ impl FootageActor {
     /// `spin` radians on the way and dropping from just above the table, so
     /// it lands with a little settle. Fast, so it motion-blurs.
     pub fn toss_in(&self, scene: &mut PlanBuilder, at: u64, from: [f32; 2], spin: f32) -> u64 {
-        for (property, start, rest, seconds, bounce) in [
-            ("x", from[0], 0.0, 0.62, 0.12),
-            ("y", from[1], 0.0, 0.62, 0.12),
-            ("rotation", spin, 0.0, 0.7, 0.18),
-            ("scale", 1.22, 1.0, 0.55, 0.1),
-            ("opacity", 0.0, 1.0, 0.12, 0.0),
-        ] {
-            self.spring(scene, property, at, start, rest, seconds, bounce);
-        }
+        self.springs(
+            scene,
+            at,
+            &[
+                ("x", from[0], 0.0, 0.62, 0.12),
+                ("y", from[1], 0.0, 0.62, 0.12),
+                ("rotation", spin, 0.0, 0.7, 0.18),
+                ("scale", 1.22, 1.0, 0.55, 0.1),
+                ("opacity", 0.0, 1.0, 0.12, 0.0),
+            ],
+        );
         at + whole_millis(0.7)
     }
 
@@ -1246,13 +1245,11 @@ fn parse_probe(report: &serde_json::Value) -> Result<Probe> {
     let pix_fmt = video["pix_fmt"].as_str().unwrap_or("");
     let codec = video["codec_name"].as_str().unwrap_or("");
     let side_alpha = video["tags"]["alpha_mode"] == "1" || video["tags"]["ALPHA_MODE"] == "1";
-    let vpx_alpha = side_alpha
-        .then(|| match codec {
-            "vp8" => Some("libvpx"),
-            "vp9" => Some("libvpx-vp9"),
-            _ => None,
-        })
-        .flatten();
+    let vpx_alpha = match codec {
+        "vp8" if side_alpha => Some("libvpx"),
+        "vp9" if side_alpha => Some("libvpx-vp9"),
+        _ => None,
+    };
     let alpha = side_alpha
         || pix_fmt.starts_with("yuva")
         || pix_fmt.starts_with("gbrap")

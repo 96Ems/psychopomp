@@ -3,18 +3,18 @@
 //! side effects, alarms are backstops, and storage is versioned.
 use anyhow::{Context, Result};
 use psychopomp::{
+    author::PlanTime,
     caption::CaptionAlign,
     effects::combustion,
-    math::{Vec3, easing::Ease},
+    math::Vec3,
     plan::ScenePlan,
-    stage::StagePlan,
+    sfx,
+    stage::{OrbEntrance, StageElement, StagePlan, StagePost},
     tone::Tone,
 };
 
 use crate::{
-    DEATH, Film, GLITCH, IMPACT, LAUNCH, MARK, Narration, RESET, arrive, beam, begin, card, chip,
-    footer, header, hide, label, orb, orb_in, packet, post, ring, seconds, send, show, sound,
-    status,
+    Film, Narration, arrive, begin, chip, footer, header, hide, seconds, send, show, status,
 };
 
 const SESSION: [f32; 3] = [640.0, 460.0, 0.0];
@@ -23,92 +23,82 @@ const SQLITE: [f32; 3] = [640.0, 850.0, 0.0];
 
 fn stage() -> StagePlan {
     StagePlan {
-        post: post(),
+        post: StagePost::RESTRAINED,
         elements: vec![
-            orb("session", SESSION, 128.0, 900),
-            label(
+            StageElement::orb("session", SESSION, 128.0)
+                .points(900)
+                .tone(Tone::Plain),
+            StageElement::label(
                 "session-name",
                 [SESSION[0], 628.0, 0.0],
                 22.0,
-                CaptionAlign::Center,
                 &[("SessionDO", Tone::Plain)],
             ),
-            label(
+            StageElement::label(
                 "unflushed",
                 [SESSION[0], 690.0, 0.0],
                 20.0,
-                CaptionAlign::Center,
                 &[("+ ", Tone::Warning), ("an unflushed write", Tone::Muted)],
             ),
-            label(
+            StageElement::label(
                 "rolled-back",
                 [SESSION[0], 690.0, 0.0],
                 20.0,
-                CaptionAlign::Center,
                 &[("✕ ", Tone::Error), ("rolled back", Tone::Muted)],
             ),
-            card(
-                "slack",
-                SLACK,
-                [320.0, 120.0],
-                "slack thread",
-                &[("waiting", Tone::Muted), ("post · stands", Tone::Plain)],
-                Tone::Plain,
-            ),
-            label(
+            StageElement::card("slack", SLACK, [320.0, 120.0], "slack thread")
+                .statuses(&[("waiting", Tone::Muted), ("post · stands", Tone::Plain)]),
+            StageElement::label(
                 "stands",
                 [SLACK[0], 575.0, 0.0],
                 20.0,
-                CaptionAlign::Center,
                 &[("still there after the reset", Tone::Warning)],
             ),
-            card(
-                "sqlite",
-                SQLITE,
-                [300.0, 90.0],
-                "sqlite",
-                &[
-                    ("committed rows", Tone::Muted),
-                    ("flushed", Tone::Success),
-                    ("schema version mismatch", Tone::Warning),
-                    ("tables wiped · recreated", Tone::Plain),
-                ],
-                Tone::Plain,
-            ),
-            ring("gate", SESSION, 176.0, 1.5, Tone::Muted),
-            ring("budget", SESSION, 176.0, 2.5, Tone::Accent),
-            label(
+            StageElement::card("sqlite", SQLITE, [300.0, 90.0], "sqlite").statuses(&[
+                ("committed rows", Tone::Muted),
+                ("flushed", Tone::Success),
+                ("schema version mismatch", Tone::Warning),
+                ("tables wiped · recreated", Tone::Plain),
+            ]),
+            StageElement::ring("gate", SESSION, 176.0)
+                .thickness(1.5)
+                .tone(Tone::Muted),
+            StageElement::ring("budget", SESSION, 176.0)
+                .thickness(2.5)
+                .tone(Tone::Accent),
+            StageElement::label(
                 "budget-name",
                 [SESSION[0], 250.0, 0.0],
                 20.0,
-                CaptionAlign::Center,
                 &[
                     ("time-boxed pass", Tone::Accent),
                     (" · returns before the limit", Tone::Muted),
                 ],
             ),
-            ring(
-                "alarm",
-                [SESSION[0] + 400.0, 760.0, 0.0],
-                16.0,
-                2.0,
-                Tone::Warning,
-            ),
-            label(
+            StageElement::ring("alarm", [SESSION[0] + 400.0, 760.0, 0.0], 16.0)
+                .thickness(2.0)
+                .tone(Tone::Warning),
+            StageElement::label(
                 "alarm-name",
                 [SESSION[0] + 428.0, 760.0, 0.0],
                 20.0,
-                CaptionAlign::Left,
                 &[
                     ("alarm", Tone::Warning),
                     (" · a backstop, not a poll loop", Tone::Muted),
                 ],
-            ),
-            beam("out", "session", "slack", Tone::Request),
-            beam("db", "session", "sqlite", Tone::Plain),
-            packet("first", "out", false, "post", Tone::Request),
-            packet("flush", "db", false, "flush", Tone::Success),
-            packet("second", "out", false, "post", Tone::Request),
+            )
+            .align(CaptionAlign::Left),
+            StageElement::beam("out", "session", "slack").tone(Tone::Request),
+            StageElement::beam("db", "session", "sqlite"),
+            StageElement::packet("first", "out")
+                .labeled("post")
+                .tone(Tone::Request),
+            StageElement::packet("flush", "db")
+                .labeled("flush")
+                .tone(Tone::Success),
+            StageElement::packet("second", "out")
+                .labeled("post")
+                .tone(Tone::Request),
         ],
     }
 }
@@ -123,7 +113,7 @@ pub fn film(narration: &Narration) -> Result<ScenePlan> {
     header(sc, "5", "surviving resets")?;
     chip(sc, "src/session/alarm-timing.ts")?;
 
-    orb_in(s, sc, "session", seconds(0.2));
+    s.orb_in(sc, "session", seconds(0.2), OrbEntrance::HERO);
     show(s, sc, "session-name", seconds(0.8));
     arrive(s, sc, "slack", "out", seconds(0.6));
     arrive(s, sc, "sqlite", "db", seconds(0.8));
@@ -143,26 +133,18 @@ pub fn film(narration: &Narration) -> Result<ScenePlan> {
     s.hit(sc, "post.bloom", reset, 0.35, 0.18);
     let blow = Vec3::from(SESSION) - Vec3::from(SLACK);
     s.jolt(sc, reset, [blow.x, blow.y], 0.8);
-    for (card, at) in [("slack", SLACK), ("sqlite", SQLITE)] {
-        let away = (Vec3::from(at) - Vec3::from(SESSION)).truncate();
-        let passes = reset + seconds(f64::from(combustion::shock_arrival(away.length())));
-        let push = away.normalize() * 8.0;
-        s.kick(
-            sc,
-            [&format!("{card}.x"), &format!("{card}.y")],
-            passes,
-            push.into(),
-        );
+    for card in ["slack", "sqlite"] {
+        s.shock_kick(sc, "session", reset, card, 8.0, None);
     }
-    sc.media(sound("reset-impact", IMPACT, reset, -8.0));
-    sc.media(sound("reset-burst", DEATH, reset + seconds(0.05), -10.0));
+    sfx::IMPACT.play(sc, "reset-impact", reset, -8.0);
+    sfx::DEATH.play(sc, "reset-burst", reset + seconds(0.05), -10.0);
     s.to(sc, "out.flow", reset, 0.0, 0.2);
     s.to(sc, "out.break", reset + seconds(0.15), 1.0, 0.8);
     s.to(sc, "db.break", reset + seconds(0.2), 1.0, 0.8);
-    let roll = v.at("roll back").max(reset + seconds(0.3));
+    let roll = v.at("roll back").not_before(reset + seconds(0.3));
     hide(s, sc, "unflushed", roll);
     s.type_in(sc, "rolled-back", roll + seconds(0.15), 40.0);
-    sc.media(sound("rolled-back", GLITCH, roll, -18.0));
+    sfx::GLITCH.play(sc, "rolled-back", roll, -18.0);
     let stand = v.at("still stand");
     s.hit(sc, "slack.flash", stand, 0.6, 0.0);
     s.to(sc, "slack.glow", stand, 0.4, 0.5);
@@ -180,18 +162,9 @@ pub fn film(narration: &Narration) -> Result<ScenePlan> {
     // Rewind: the object reassembles, and the pass is time-boxed.
     let boxed = v.at("coordinator");
     let rewind = boxed - seconds(0.4);
-    s.clock_for(sc, "post.rewind", rewind, 1.4);
-    sc.media(sound("rewind", LAUNCH, rewind - seconds(0.1), -15.0));
-    s.ease(
-        sc,
-        "session.burst",
-        rewind + seconds(0.1),
-        0.0,
-        1.2,
-        Ease::Smootherstep,
-    );
-    s.set(sc, "session.burst", rewind + seconds(1.3), -1.0);
-    s.to(sc, "session.hurt", rewind + seconds(0.6), 0.0, 0.6);
+    s.rewind(sc, rewind, 0.0);
+    sfx::LAUNCH.play(sc, "rewind", rewind - seconds(0.1), -15.0);
+    s.unburst(sc, "session", rewind + seconds(0.1), 1.2);
     s.to(sc, "out.break", rewind + seconds(0.4), 0.0, 0.9);
     s.to(sc, "db.break", rewind + seconds(0.5), 0.0, 0.9);
     s.twang(sc, "out", rewind + seconds(1.2));
@@ -202,12 +175,11 @@ pub fn film(narration: &Narration) -> Result<ScenePlan> {
     status(s, sc, "slack", rewind + seconds(0.6), 0);
     stand_footer.hide(sc, rewind);
     let ring_at = rewind + seconds(1.3);
-    s.to(sc, "gate.opacity", ring_at, 0.3, 0.4);
-    s.to(sc, "budget.opacity", ring_at, 1.0, 0.3);
-    s.ease(sc, "budget.sweep", ring_at, 0.67, 1.4, Ease::Smootherstep);
+    s.fade_in(sc, "gate", ring_at, 0.3, 0.4);
+    s.ring_timer(sc, "budget", ring_at, 1.4, 0.67);
     s.type_in(sc, "budget-name", ring_at, 44.0);
     s.hit(sc, "session.pulse", ring_at + seconds(1.4), 0.5, 0.0);
-    sc.media(sound("budget", MARK, ring_at + seconds(1.4), -18.0));
+    sfx::MARK.play(sc, "budget", ring_at + seconds(1.4), -18.0);
 
     // Flush, then the side effect.
     let flush = v.at("before the side effect");
@@ -232,15 +204,7 @@ pub fn film(narration: &Narration) -> Result<ScenePlan> {
 
     // Alarms are backstops.
     let backstop = v.at("backstops");
-    s.to(sc, "alarm.opacity", backstop - seconds(0.3), 1.0, 0.3);
-    s.ease(
-        sc,
-        "alarm.sweep",
-        backstop - seconds(0.3),
-        1.0,
-        0.7,
-        Ease::Smootherstep,
-    );
+    s.ring_timer(sc, "alarm", backstop - seconds(0.3), 0.7, 1.0);
     s.type_in(sc, "alarm-name", backstop, 44.0);
 
     // Never migrated: a version mismatch wipes and recreates the tables.
@@ -252,18 +216,11 @@ pub fn film(narration: &Narration) -> Result<ScenePlan> {
     status(s, sc, "sqlite", migrated, 2);
     s.hit(sc, "sqlite.alarm", migrated, 0.3, 0.0);
     let wiped = v.at("wipes the tables");
-    for (step, seed) in [8.0, 7.0, 9.0, 0.0].into_iter().enumerate() {
-        s.set(
-            sc,
-            "sqlite.glitch",
-            wiped + seconds(step as f64 * 0.027),
-            seed,
-        );
-    }
-    sc.media(sound("wiped", GLITCH, wiped, -18.0));
+    s.glitch(sc, "sqlite", wiped, [8.0, 7.0, 9.0]);
+    sfx::GLITCH.play(sc, "wiped", wiped, -18.0);
     status(s, sc, "sqlite", wiped + seconds(0.1), 3);
     s.hit(sc, "sqlite.flash", wiped + seconds(0.3), 0.6, 0.0);
-    sc.media(sound("recreated", RESET, wiped + seconds(0.3), -16.0));
+    sfx::RESET.play(sc, "recreated", wiped + seconds(0.3), -16.0);
     footer(
         sc,
         "footer-schema",

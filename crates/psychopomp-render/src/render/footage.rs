@@ -89,8 +89,10 @@ impl FootageLayer {
         for y in first..last {
             let line = &self.pixels[(y - self.origin[1] as usize) * width..][..width];
             let target = &mut rows[(y - top) * stride + left..][..width];
-            if target.chunks_exact(4).all(|pixel| pixel[3] == 255) {
-                for (destination, source) in target.chunks_exact_mut(4).zip(line.chunks_exact(4)) {
+            let (pixels, _) = target.as_chunks_mut::<4>();
+            let (sources, _) = line.as_chunks::<4>();
+            if pixels.iter().all(|pixel| pixel[3] == 255) {
+                for (destination, source) in pixels.iter_mut().zip(sources) {
                     let alpha = u32::from(source[3]);
                     for channel in 0..3 {
                         let mixed = u32::from(source[channel]) * alpha
@@ -100,12 +102,8 @@ impl FootageLayer {
                     }
                 }
             } else {
-                for (destination, source) in target.chunks_exact_mut(4).zip(line.chunks_exact(4)) {
-                    blend_pixel(
-                        destination,
-                        [source[0], source[1], source[2], source[3]],
-                        1.0,
-                    );
+                for (destination, source) in pixels.iter_mut().zip(sources) {
+                    blend_pixel(destination, *source, 1.0);
                 }
             }
         }

@@ -3,7 +3,7 @@
 //! range that moves when lines are inserted above it and the panel zooms.
 use anyhow::Result;
 use psychopomp::{
-    author::{PlanBuilder, SECOND},
+    author::{PlanBuilder, SECOND, millis},
     callout::{CalloutActor, CalloutAnchorPlan, CalloutPlan, CalloutSide},
     caption::CaptionSpanPlan,
     code::{StyledSpan, SyntaxStyle},
@@ -18,10 +18,12 @@ use psychopomp::{
     tone::Tone,
 };
 
-const MS: u64 = 1_000_000;
-
 pub fn build_reel() -> Result<ReelPlan> {
-    ReelPlan::dipped("callouts", vec![build_stage()?, build_editor()?], 600 * MS)
+    ReelPlan::dipped(
+        "callouts",
+        vec![build_stage()?, build_editor()?],
+        millis(600),
+    )
 }
 
 fn span(text: &str, tone: Tone) -> CaptionSpanPlan {
@@ -52,9 +54,9 @@ pub fn build_stage() -> Result<ScenePlan> {
         ]
     }))?;
     let mut stage = StageActor::declare(&mut scene, "stage", &recipe)?;
-    stage.settle_in(&mut scene, "client", 100 * MS);
-    stage.settle_in(&mut scene, "api", 220 * MS);
-    stage.connect(&mut scene, "link", 700 * MS, 0.5);
+    stage.settle_in(&mut scene, "client", millis(100));
+    stage.settle_in(&mut scene, "api", millis(220));
+    stage.connect(&mut scene, "link", millis(700), 0.5);
 
     let mut retries = CalloutActor::declare(
         &mut scene,
@@ -105,32 +107,32 @@ pub fn build_stage() -> Result<ScenePlan> {
         .tone(Tone::Muted),
     )?;
 
-    retries.show(&mut scene, 1300 * MS);
-    cache.show(&mut scene, 1700 * MS);
-    fixed.show(&mut scene, 2000 * MS);
+    retries.show(&mut scene, millis(1300));
+    cache.show(&mut scene, millis(1700));
+    fixed.show(&mut scene, millis(2000));
 
     // Dolly in toward the API; the callouts ride with their cards, and the
     // cache label slides back inside the frame rather than leave it.
-    stage.to(&mut scene, "camera.z", 2800 * MS, 340.0, 1.4);
-    stage.to(&mut scene, "camera.x", 2800 * MS, 100.0, 1.4);
-    stage.to(&mut scene, "camera.y", 2800 * MS, -30.0, 1.4);
+    stage.to(&mut scene, "camera.z", millis(2800), 340.0, 1.4);
+    stage.to(&mut scene, "camera.x", millis(2800), 100.0, 1.4);
+    stage.to(&mut scene, "camera.y", millis(2800), -30.0, 1.4);
 
     // A request lands on the API with a jolt.
-    let landed = stage.send(&mut scene, "request", 4300 * MS, 0.7);
+    let landed = stage.send(&mut scene, "request", millis(4300), 0.7);
     stage.land(&mut scene, "api", landed);
     stage.jolt(&mut scene, landed, [1.0, 0.0], 0.8);
     cache.emphasize(&mut scene, landed);
 
     // The retry note moves to the card that actually retries.
-    retries.move_to(&mut scene, "api", 5600 * MS)?;
+    retries.move_to(&mut scene, "api", millis(5600))?;
 
     // Pull back out; then everything retracts.
-    stage.to(&mut scene, "camera.z", 6600 * MS, 0.0, 1.4);
-    stage.to(&mut scene, "camera.x", 6600 * MS, 0.0, 1.4);
-    stage.to(&mut scene, "camera.y", 6600 * MS, 0.0, 1.4);
-    fixed.hide(&mut scene, 7900 * MS);
-    cache.hide(&mut scene, 8000 * MS);
-    retries.hide(&mut scene, 8100 * MS);
+    stage.to(&mut scene, "camera.z", millis(6600), 0.0, 1.4);
+    stage.to(&mut scene, "camera.x", millis(6600), 0.0, 1.4);
+    stage.to(&mut scene, "camera.y", millis(6600), 0.0, 1.4);
+    fixed.hide(&mut scene, millis(7900));
+    cache.hide(&mut scene, millis(8000));
+    retries.hide(&mut scene, millis(8100));
 
     scene.cue("pinned", 0, 9 * SECOND);
     Ok(scene.finish()?)
@@ -197,7 +199,7 @@ pub fn build_editor() -> Result<ScenePlan> {
     ]);
     // As in a Stepped Diff, blank rows open first and the new lines enter
     // that room, so the moving call never crosses entering code.
-    let snapshots = diff::step_snapshots(&before, &after, 2600 * MS);
+    let snapshots = diff::step_snapshots(&before, &after, millis(2600));
     let lines = FILE
         .iter()
         .map(|(id, text)| match *id {
@@ -253,16 +255,16 @@ pub fn build_editor() -> Result<ScenePlan> {
         .reach(70.0)
         .tone(Tone::Error),
     )?;
-    fails.show(&mut scene, 1000 * MS);
-    fails.emphasize(&mut scene, 2600 * MS);
+    fails.show(&mut scene, millis(1000));
+    fails.emphasize(&mut scene, millis(2600));
 
     // Zoom the panel toward the call; the callout follows the projection.
     let scale = scene.continuous(&editor, "panel-scale", 1.0);
     let panel_x = scene.continuous(&editor, "panel-x", 0.0);
-    scene.ease(&scale, 4200 * MS, 1.12, 1.2, Ease::Smootherstep);
-    scene.ease(&panel_x, 4200 * MS, -90.0, 1.2, Ease::Smootherstep);
-    scene.spring(&panel_y, 4200 * MS, -40.0, 1.0, 0.0);
-    fails.hide(&mut scene, 6200 * MS);
+    scene.ease(&scale, millis(4200), 1.12, 1.2, Ease::Smootherstep);
+    scene.ease(&panel_x, millis(4200), -90.0, 1.2, Ease::Smootherstep);
+    scene.spring(&panel_y, millis(4200), -40.0, 1.0, 0.0);
+    fails.hide(&mut scene, millis(6200));
 
     scene.cue("pinned", 0, 7 * SECOND);
     Ok(scene.finish()?)

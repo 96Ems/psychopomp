@@ -25,6 +25,7 @@ use crate::{
         vec3,
     },
     plan::MediaPlan,
+    plan::SpringPlan,
     tone::Tone,
 };
 
@@ -65,6 +66,17 @@ impl Default for StagePost {
     }
 }
 
+impl StagePost {
+    /// The explainer films' look: restrained bloom on a quiet, nearly flat
+    /// frame, so only what is alive glows.
+    pub const RESTRAINED: Self = Self {
+        bloom: 0.18,
+        grain: 0.012,
+        vignette: 0.22,
+        backdrop: 0.12,
+    };
+}
+
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct StatusText {
@@ -73,11 +85,22 @@ pub struct StatusText {
     pub tone: Tone,
 }
 
+impl StatusText {
+    pub fn new(text: impl Into<String>, tone: Tone) -> Self {
+        Self {
+            text: text.into(),
+            tone,
+        }
+    }
+}
+
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(tag = "kind", rename_all = "kebab-case", deny_unknown_fields)]
 pub enum StageElement {
     /// A floating panel with a title and an optional status line. `status`
-    /// entries cross-fade by the fractional `status` channel.
+    /// entries cross-fade by the fractional `status` channel, or straight
+    /// from entry `status-from` to `status` by the `swap` channel while
+    /// `status-from` is set (-1 is unset).
     #[serde(rename_all = "camelCase")]
     Card {
         id: String,
@@ -665,6 +688,167 @@ fn center() -> CaptionAlign {
     CaptionAlign::Center
 }
 
+/// Constructors with each kind's serialized defaults, and builder-style
+/// options: `StageElement::card("client", at, size, "client").tone(Tone::Request)`.
+/// An option on a kind that lacks it is a programming error and panics.
+impl StageElement {
+    /// A card with a title, no statuses, the plain tone, and a check mark.
+    pub fn card(id: &str, at: [f32; 3], size: [f32; 2], title: &str) -> Self {
+        Self::Card {
+            id: id.into(),
+            at,
+            size,
+            title: title.into(),
+            status: Vec::new(),
+            tone: Tone::default(),
+            mark: Mark::default(),
+        }
+    }
+
+    /// An orb of 720 points in the accent tone.
+    pub fn orb(id: &str, at: [f32; 3], radius: f32) -> Self {
+        Self::Orb {
+            id: id.into(),
+            at,
+            radius,
+            points: default_points(),
+            tone: accent(),
+        }
+    }
+
+    /// A straight, plain beam from one positioned element to another.
+    pub fn beam(id: &str, from: &str, to: &str) -> Self {
+        Self::Beam {
+            id: id.into(),
+            from: from.into(),
+            to: to.into(),
+            bend: 0.0,
+            tone: Tone::default(),
+        }
+    }
+
+    /// An unlabeled, plain packet that travels `beam` from its `from` end.
+    pub fn packet(id: &str, beam: &str) -> Self {
+        Self::Packet {
+            id: id.into(),
+            beam: beam.into(),
+            reverse: false,
+            label: String::new(),
+            tone: Tone::default(),
+        }
+    }
+
+    /// Centered text of `(text, tone)` spans.
+    pub fn label(id: &str, at: [f32; 3], size: f32, spans: &[(&str, Tone)]) -> Self {
+        Self::Label {
+            id: id.into(),
+            at,
+            size,
+            align: center(),
+            spans: spans
+                .iter()
+                .map(|&(text, tone)| CaptionSpanPlan::new(text, tone))
+                .collect(),
+        }
+    }
+
+    /// A plain 3 px ring.
+    pub fn ring(id: &str, at: [f32; 3], radius: f32) -> Self {
+        Self::Ring {
+            id: id.into(),
+            at,
+            radius,
+            thickness: default_thickness(),
+            tone: Tone::default(),
+        }
+    }
+
+    pub fn tone(mut self, tone: Tone) -> Self {
+        match &mut self {
+            Self::Card { tone: own, .. }
+            | Self::Orb { tone: own, .. }
+            | Self::Beam { tone: own, .. }
+            | Self::Packet { tone: own, .. }
+            | Self::Ring { tone: own, .. } => *own = tone,
+            other => panic!("stage element '{}' has no tone", other.id()),
+        }
+        self
+    }
+
+    /// A card's status lines, cross-faded by its `status` channel.
+    pub fn statuses(mut self, statuses: &[(&str, Tone)]) -> Self {
+        let Self::Card { status, .. } = &mut self else {
+            panic!("only cards have statuses, not '{}'", self.id());
+        };
+        *status = statuses
+            .iter()
+            .map(|&(text, tone)| StatusText::new(text, tone))
+            .collect();
+        self
+    }
+
+    /// What a card's status spinner resolves into.
+    pub fn mark(mut self, mark: Mark) -> Self {
+        let Self::Card { mark: own, .. } = &mut self else {
+            panic!("only cards have marks, not '{}'", self.id());
+        };
+        *own = mark;
+        self
+    }
+
+    pub fn points(mut self, points: u32) -> Self {
+        let Self::Orb { points: own, .. } = &mut self else {
+            panic!("only orbs have points, not '{}'", self.id());
+        };
+        *own = points;
+        self
+    }
+
+    /// A beam's sideways bow, in pixels.
+    pub fn bend(mut self, bend: f32) -> Self {
+        let Self::Beam { bend: own, .. } = &mut self else {
+            panic!("only beams bend, not '{}'", self.id());
+        };
+        *own = bend;
+        self
+    }
+
+    /// The packet travels from its beam's `to` end back to its `from`.
+    pub fn reversed(mut self) -> Self {
+        let Self::Packet { reverse, .. } = &mut self else {
+            panic!("only packets reverse, not '{}'", self.id());
+        };
+        *reverse = true;
+        self
+    }
+
+    /// The text a packet carries.
+    pub fn labeled(mut self, text: &str) -> Self {
+        let Self::Packet { label, .. } = &mut self else {
+            panic!("only packets carry labels, not '{}'", self.id());
+        };
+        *label = text.into();
+        self
+    }
+
+    pub fn align(mut self, align: CaptionAlign) -> Self {
+        let Self::Label { align: own, .. } = &mut self else {
+            panic!("only labels align, not '{}'", self.id());
+        };
+        *own = align;
+        self
+    }
+
+    /// A ring's stroke, in pixels.
+    pub fn thickness(mut self, thickness: f32) -> Self {
+        let Self::Ring { thickness: own, .. } = &mut self else {
+            panic!("only rings have a thickness, not '{}'", self.id());
+        };
+        *own = thickness;
+        self
+    }
+}
+
 impl StageElement {
     pub fn id(&self) -> &str {
         match self {
@@ -758,9 +942,31 @@ impl StageElement {
     pub fn properties(&self) -> &'static [&'static str] {
         match self {
             Self::Card { .. } => &[
-                "opacity", "x", "y", "z", "scale", "blur", "glow", "flash", "alarm", "dim",
-                "status", "content", "cool", "damage", "glitch", "cut", "ghost", "spinner",
-                "release", "mark", "charge", "dissolve", "scan",
+                "opacity",
+                "x",
+                "y",
+                "z",
+                "scale",
+                "blur",
+                "glow",
+                "flash",
+                "alarm",
+                "dim",
+                "status",
+                "content",
+                "cool",
+                "damage",
+                "glitch",
+                "cut",
+                "ghost",
+                "spinner",
+                "release",
+                "mark",
+                "status-from",
+                "swap",
+                "charge",
+                "dissolve",
+                "scan",
             ],
             Self::Orb { .. } => &[
                 "opacity", "x", "y", "z", "scale", "blur", "rotation", "burst", "shatter", "pulse",
@@ -788,10 +994,172 @@ impl StageElement {
         }
     }
 
+    /// True for what the camera can follow (`camera.track.<id>`): packets
+    /// and positioned elements.
+    pub fn followable(&self) -> bool {
+        self.anchor().is_some() || matches!(self, Self::Packet { .. })
+    }
+
     /// True for the particle bodies (orbs and forms): wires end beneath their
     /// occluding shell, and arrivals are absorbed out of sight.
     pub fn is_body(&self) -> bool {
         matches!(self, Self::Orb { .. } | Self::Form { .. })
+    }
+
+    /// The Stage's channel defaults: what each of [`Self::properties`] reads
+    /// before anything writes it. `StageActor` declares a new channel at this
+    /// value and the renderer falls back to it, so the two cannot disagree.
+    /// A property added to `properties` needs its default here (a test checks).
+    pub fn channel_defaults(&self) -> &'static [(&'static str, f32)] {
+        match self {
+            Self::Card { .. } => &[
+                ("opacity", 1.0),
+                ("x", 0.0),
+                ("y", 0.0),
+                ("z", 0.0),
+                ("scale", 1.0),
+                ("blur", 0.0),
+                ("glow", 0.0),
+                ("flash", 0.0),
+                ("alarm", 0.0),
+                ("dim", 0.0),
+                ("status", 0.0),
+                ("content", 1.0),
+                ("cool", 0.0),
+                ("damage", 0.0),
+                ("glitch", 0.0),
+                ("cut", 0.0),
+                ("ghost", 0.0),
+                ("spinner", -1.0),
+                ("release", -1.0),
+                ("mark", -1.0),
+                ("status-from", -1.0),
+                ("swap", 1.0),
+                ("charge", 0.0),
+                ("dissolve", -1.0),
+                ("scan", 0.0),
+            ],
+            Self::Orb { .. } => &[
+                ("opacity", 1.0),
+                ("x", 0.0),
+                ("y", 0.0),
+                ("z", 0.0),
+                ("scale", 1.0),
+                ("blur", 0.0),
+                ("rotation", 0.0),
+                ("burst", -1.0),
+                ("shatter", 0.0),
+                ("pulse", 0.0),
+                ("hurt", 0.0),
+                ("spin", 1.0),
+                ("charge", 0.0),
+            ],
+            Self::Beam { .. } => &[
+                ("opacity", 1.0),
+                ("sweep", 0.0),
+                ("port", 0.0),
+                ("draw", 1.0),
+                ("break", 0.0),
+                ("flow", 0.0),
+                ("emphasis", 0.0),
+                ("surge", 0.0),
+                ("twang", 0.0),
+            ],
+            Self::Packet { .. } => &[("opacity", 1.0), ("age", -1.0), ("flight", 0.8)],
+            Self::Label { .. } => &[
+                ("opacity", 1.0),
+                ("x", 0.0),
+                ("y", 0.0),
+                ("z", 0.0),
+                ("scale", 1.0),
+                ("typed", 1.0),
+            ],
+            Self::Ring { .. } => &[
+                ("opacity", 1.0),
+                ("x", 0.0),
+                ("y", 0.0),
+                ("z", 0.0),
+                ("scale", 1.0),
+                ("sweep", 1.0),
+                ("expand", 0.0),
+            ],
+            Self::Bolt { .. } => &[("opacity", 1.0), ("age", -1.0), ("seed", 0.0), ("hum", 0.0)],
+            Self::Shield { .. } => &[("opacity", 1.0), ("up", 1.0), ("scale", 1.0)],
+            Self::Form { .. } => &[
+                ("opacity", 1.0),
+                ("x", 0.0),
+                ("y", 0.0),
+                ("z", 0.0),
+                ("scale", 1.0),
+                ("blur", 0.0),
+                ("rotation", 0.0),
+                ("spin", 1.0),
+                ("pitch", 0.0),
+                ("roll", 0.0),
+                ("morph", 0.0),
+                ("burst", -1.0),
+                ("shatter", 0.0),
+                ("pulse", 0.0),
+                ("hurt", 0.0),
+            ],
+            Self::Shape { .. } => &[
+                ("opacity", 1.0),
+                ("x", 0.0),
+                ("y", 0.0),
+                ("z", 0.0),
+                ("scale", 1.0),
+                ("rotation", 0.0),
+                ("blur", 0.0),
+                ("draw", 1.0),
+                ("fill", 1.0),
+                ("emphasis", 0.0),
+                ("flash", 0.0),
+            ],
+            Self::Path { .. } => &[
+                ("opacity", 1.0),
+                ("draw", 1.0),
+                ("trim", 0.0),
+                ("flow", 0.0),
+                ("emphasis", 0.0),
+                ("surge", 0.0),
+            ],
+            Self::Icon { .. } => &[
+                ("opacity", 1.0),
+                ("x", 0.0),
+                ("y", 0.0),
+                ("z", 0.0),
+                ("scale", 1.0),
+                ("blur", 0.0),
+                ("flash", 0.0),
+            ],
+            // An unwritten `time` plays the clip naturally: the renderer reads
+            // its placement, not this 0, until something writes the channel
+            // (declare it through `StageActor::footage_playhead`).
+            Self::Footage { .. } => &[
+                ("opacity", 1.0),
+                ("x", 0.0),
+                ("y", 0.0),
+                ("z", 0.0),
+                ("scale", 1.0),
+                ("blur", 0.0),
+                ("rotation", 0.0),
+                ("focus-x", 0.5),
+                ("focus-y", 0.5),
+                ("focus-size", 1.0),
+                ("time", 0.0),
+                ("saturation", 1.0),
+                ("tint", 0.0),
+                ("dim", 0.0),
+            ],
+        }
+    }
+
+    /// What `property` reads before anything writes it, if this element reads it.
+    pub fn channel_default(&self, property: &str) -> Option<f32> {
+        self.channel_defaults()
+            .iter()
+            .find(|(name, _)| *name == property)
+            .map(|&(_, value)| value)
     }
 }
 
@@ -828,9 +1196,44 @@ pub const STAGE_PROPERTIES: [&str; 23] = [
     "post.flash",
 ];
 
+impl StagePost {
+    /// The defaults of the [`STAGE_PROPERTIES`]: what each reads before
+    /// anything writes it. The camera's come from [`CAMERA_CHANNELS`];
+    /// `post.bloom` and `post.vignette` rest at this look.
+    /// A stage property added above needs its default here (a test checks).
+    pub fn channel_default(&self, property: &str) -> Option<f32> {
+        if let Some(&(_, value)) = CAMERA_CHANNELS.iter().find(|(name, _)| *name == property) {
+            return Some(value);
+        }
+        Some(match property {
+            "post.bloom" => self.bloom,
+            "post.vignette" => self.vignette,
+            "post.exposure" => 1.0,
+            "post.rewind" => -1.0,
+            "post.chroma" | "post.zoom" | "post.flash" => 0.0,
+            _ => return None,
+        })
+    }
+}
+
 impl StagePlan {
     pub fn element(&self, id: &str) -> Option<&StageElement> {
         self.elements.iter().find(|element| element.id() == id)
+    }
+
+    /// What a stage channel (`camera.z`) or an element's (`client.opacity`)
+    /// reads before anything writes it, from the one table of Stage channel
+    /// defaults ([`StagePost::channel_default`], [`StageElement::channel_defaults`]).
+    /// `None` for a property the Stage does not read. A `camera.track.<id>`
+    /// follow weight rests at 0.
+    pub fn channel_default(&self, property: &str) -> Option<f32> {
+        if property.starts_with(TRACK) {
+            return self.accepts(property).then_some(0.0);
+        }
+        self.post.channel_default(property).or_else(|| {
+            let (id, rest) = property.split_once('.')?;
+            self.element(id)?.channel_default(rest)
+        })
     }
 
     /// True when `property` names a stage channel or a property of an element.
@@ -838,11 +1241,8 @@ impl StagePlan {
         if STAGE_PROPERTIES.contains(&property) {
             return true;
         }
-        // The camera follows packets and positioned elements.
         if let Some(id) = property.strip_prefix(TRACK) {
-            return self.element(id).is_some_and(|element| {
-                element.anchor().is_some() || matches!(element, StageElement::Packet { .. })
-            });
+            return self.element(id).is_some_and(StageElement::followable);
         }
         property.split_once('.').is_some_and(|(id, rest)| {
             self.element(id)
@@ -1306,6 +1706,17 @@ pub mod packet {
 pub const PORT_POP_SECONDS: f32 = 0.3;
 pub const DRAW_CURVE: Ease = Ease::CubicBezier([0.45, 0.0, 0.2, 1.0]);
 
+/// How long a receiver takes to react once a request has landed, before its
+/// reply starts to gather.
+pub const REACT_SECONDS: f32 = 0.08;
+
+/// The earliest launch of a reply to a packet that arrives at `arrival`:
+/// reaction follows contact, so even the reply's gather waits for the arrival
+/// (340 ms gather plus an 80 ms beat). Pass it to [`StageActor::send`].
+pub fn reply_after(arrival: u64) -> u64 {
+    arrival + whole_millis(packet::GATHER) + whole_millis(REACT_SECONDS)
+}
+
 /// Authoring handle: declares each stage channel once, on first use.
 pub struct StageActor {
     actor: ActorHandle,
@@ -1337,8 +1748,18 @@ impl StageActor {
         scene.channel(&self.actor, property, initial)
     }
 
+    /// The channel for `property`, declared on first use at the value the
+    /// renderer reads when nothing writes it ([`StagePlan::channel_default`]).
+    /// An unknown property starts at 0; the renderer's preflight rejects it.
+    fn resting(&mut self, scene: &mut PlanBuilder, property: &str) -> ContinuousHandle {
+        let initial = self.plan.channel_default(property).unwrap_or(0.0);
+        self.channel(scene, property, initial)
+    }
+
     /// Spring `property` to `target` at `at_nanos`. Channels not declared
-    /// with [`Self::channel`] start at 0.
+    /// with [`Self::channel`] start at their resting value, the Stage channel
+    /// default (opacity 1, burst -1, most others 0): declare another starting
+    /// pose, such as an opacity of 0 to fade in, with `channel`.
     pub fn to(
         &mut self,
         scene: &mut PlanBuilder,
@@ -1348,6 +1769,20 @@ impl StageActor {
         seconds: f32,
     ) {
         self.bounce(scene, property, at_nanos, target, seconds, 0.0);
+    }
+
+    /// Spring `property` to `target` with a named feel, such as
+    /// [`SpringPlan::CAMERA`] or [`SpringPlan::PANEL`].
+    pub fn spring(
+        &mut self,
+        scene: &mut PlanBuilder,
+        property: &str,
+        at_nanos: u64,
+        target: f32,
+        feel: SpringPlan,
+    ) {
+        let channel = self.resting(scene, property);
+        scene.spring_with(&channel, at_nanos, target, feel);
     }
 
     /// Like `to`, with overshoot: `bounce` 0.2 reads as a lively landing.
@@ -1360,7 +1795,7 @@ impl StageActor {
         seconds: f32,
         bounce: f32,
     ) {
-        let channel = self.channel(scene, property, 0.0);
+        let channel = self.resting(scene, property);
         scene.spring(&channel, at_nanos, target, seconds, bounce);
     }
 
@@ -1374,7 +1809,7 @@ impl StageActor {
         seconds: f32,
         curve: Ease,
     ) {
-        let channel = self.channel(scene, property, 0.0);
+        let channel = self.resting(scene, property);
         scene.ease(&channel, at_nanos, target, seconds, curve);
     }
 
@@ -1406,9 +1841,34 @@ impl StageActor {
         CameraRig::new(self.actor.clone(), self.plan.clone())
     }
 
+    /// Fade `element` in to `opacity` on a `seconds` spring. It starts hidden:
+    /// the first write declares its opacity at 0, though the Stage rests visible.
+    pub fn fade_in(
+        &mut self,
+        scene: &mut PlanBuilder,
+        element: &str,
+        at_nanos: u64,
+        opacity: f32,
+        seconds: f32,
+    ) {
+        let channel = self.channel(scene, &format!("{element}.opacity"), 0.0);
+        scene.spring(&channel, at_nanos, opacity, seconds, 0.0);
+    }
+
+    /// Fade `element` out on a `seconds` spring.
+    pub fn fade_out(
+        &mut self,
+        scene: &mut PlanBuilder,
+        element: &str,
+        at_nanos: u64,
+        seconds: f32,
+    ) {
+        self.to(scene, &format!("{element}.opacity"), at_nanos, 0.0, seconds);
+    }
+
     /// Jump `property` to `value` at `at_nanos`.
     pub fn set(&mut self, scene: &mut PlanBuilder, property: &str, at_nanos: u64, value: f32) {
-        let channel = self.channel(scene, property, 0.0);
+        let channel = self.resting(scene, property);
         scene.set(&channel, at_nanos, value);
     }
 
@@ -1612,6 +2072,37 @@ impl StageActor {
             Ease::Smootherstep,
         );
         at_nanos + whole_millis(seconds)
+    }
+
+    /// Send `packet` so that it arrives at `arrival` after flying for
+    /// `seconds`, as when a hit must land on a spoken word: it launches one
+    /// flight earlier and gathers before that. Returns the arrival time.
+    pub fn send_arriving(
+        &mut self,
+        scene: &mut PlanBuilder,
+        packet: &str,
+        arrival: u64,
+        seconds: f32,
+    ) -> u64 {
+        self.send(
+            scene,
+            packet,
+            arrival.saturating_sub(whole_millis(seconds)),
+            seconds,
+        )
+    }
+
+    /// Plug `beam` in so that the wire reaches its far end at `contact`,
+    /// drawing for `seconds` after the port resolves. Returns the contact time.
+    pub fn connect_contacting(
+        &mut self,
+        scene: &mut PlanBuilder,
+        beam: &str,
+        contact: u64,
+        seconds: f32,
+    ) -> u64 {
+        let lead = whole_millis(PORT_POP_SECONDS) + whole_millis(seconds);
+        self.connect(scene, beam, contact.saturating_sub(lead), seconds)
     }
 
     /// Plug `beam` in, starting at `at_nanos`: the port resolves softly and
@@ -1830,6 +2321,289 @@ fn leg_arrival(dispatch: u64, leg: usize, legs: usize, seconds: f32) -> u64 {
         + whole_millis(seconds / legs as f32)
 }
 
+/// How an orb gathers out of a blur while turning into place: it scales up on
+/// a lively spring, sharpens, turns its last angular offset away, and fades in.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct OrbEntrance {
+    pub scale: f32,
+    pub scale_seconds: f32,
+    pub blur: f32,
+    pub blur_seconds: f32,
+    /// The angular offset it turns away, in radians.
+    pub rotation: f32,
+    pub turn_seconds: f32,
+    pub fade_seconds: f32,
+}
+
+impl OrbEntrance {
+    /// The calibrated hero entrance (TECHNIQUES.md): scale 0.58 on a 0.85 s /
+    /// 0.2-bounce spring, blur 11 over 0.7 s, −1.8 rad over 1.25 s cubic-out.
+    pub const HERO: Self = Self {
+        scale: 0.58,
+        scale_seconds: 0.85,
+        blur: 11.0,
+        blur_seconds: 0.7,
+        rotation: -1.8,
+        turn_seconds: 1.25,
+        fade_seconds: 0.6,
+    };
+}
+
+/// A card's VHS-style glitch steps through layouts this far apart (about a
+/// frame and a half at 60 fps).
+pub const GLITCH_STEP_SECONDS: f32 = 0.027;
+
+/// How long `post.rewind`'s tape interference runs.
+pub const REWIND_SECONDS: f32 = 1.4;
+
+/// Explainer beats composed from the primitives above. Each declares the
+/// channels it needs at their starting poses and returns when it settles,
+/// where a later beat would chain from it.
+impl StageActor {
+    /// The orb's entrance: see [`OrbEntrance`]. Call before any other write
+    /// to the orb's scale, blur, rotation, or opacity.
+    pub fn orb_in(&mut self, scene: &mut PlanBuilder, orb: &str, at: u64, entrance: OrbEntrance) {
+        let property = |name: &str| format!("{orb}.{name}");
+        self.channel(scene, &property("scale"), entrance.scale);
+        self.channel(scene, &property("blur"), entrance.blur);
+        self.channel(scene, &property("rotation"), entrance.rotation);
+        self.bounce(
+            scene,
+            &property("scale"),
+            at,
+            1.0,
+            entrance.scale_seconds,
+            0.2,
+        );
+        self.to(scene, &property("blur"), at, 0.0, entrance.blur_seconds);
+        let turn = entrance.turn_seconds;
+        self.ease(scene, &property("rotation"), at, 0.0, turn, Ease::CubicOut);
+        self.fade_in(scene, orb, at, 1.0, entrance.fade_seconds);
+    }
+
+    /// Glitch `card` through three layouts `GLITCH_STEP_SECONDS` apart, then
+    /// still. Returns when it is still.
+    pub fn glitch(&mut self, scene: &mut PlanBuilder, card: &str, at: u64, seeds: [f32; 3]) -> u64 {
+        let step = whole_millis(GLITCH_STEP_SECONDS);
+        let property = format!("{card}.glitch");
+        for (index, seed) in (0..).zip(seeds.into_iter().chain([0.0])) {
+            self.set(scene, &property, at + step * index, seed);
+        }
+        at + step * 3
+    }
+
+    /// Rewind the tape: `post.rewind`'s interference runs its course, with a
+    /// `chroma` hit (0 for none). Returns when the interference has passed.
+    pub fn rewind(&mut self, scene: &mut PlanBuilder, at: u64, chroma: f32) -> u64 {
+        self.clock_for(scene, "post.rewind", at, REWIND_SECONDS);
+        if chroma > 0.0 {
+            self.hit(scene, "post.chroma", at, chroma, 0.0);
+        }
+        at + whole_millis(REWIND_SECONDS)
+    }
+
+    /// Play `orb`'s burst backwards: the clock eases back to 0 over `seconds`
+    /// and the orb rests intact again; its hurt heals half a second in.
+    /// Returns when it is whole.
+    pub fn unburst(&mut self, scene: &mut PlanBuilder, orb: &str, at: u64, seconds: f32) -> u64 {
+        let whole = at + whole_millis(seconds);
+        self.ease(
+            scene,
+            &format!("{orb}.burst"),
+            at,
+            0.0,
+            seconds,
+            Ease::Smootherstep,
+        );
+        self.set(scene, &format!("{orb}.burst"), whole, -1.0);
+        self.to(scene, &format!("{orb}.hurt"), at + 500_000_000, 0.0, 0.6);
+        whole
+    }
+
+    /// Knock `card` away from `source` as the pressure wave of a burst that
+    /// starts at `at` passes it ([`combustion::shock_arrival`]): a shove of
+    /// `push` pixels, weakened in proportion beyond `falloff` pixels from the
+    /// source when given. Returns when the front passes.
+    ///
+    /// [`combustion::shock_arrival`]: crate::effects::combustion::shock_arrival
+    pub fn shock_kick(
+        &mut self,
+        scene: &mut PlanBuilder,
+        source: &str,
+        at: u64,
+        card: &str,
+        push: f32,
+        falloff: Option<f32>,
+    ) -> u64 {
+        let anchor = |id: &str| {
+            self.plan
+                .element(id)
+                .and_then(StageElement::anchor)
+                .map(Vec3::from)
+                .unwrap_or_else(|| panic!("stage element '{id}' has no position"))
+        };
+        let away = (anchor(card) - anchor(source)).truncate();
+        let reach = away.length();
+        let passes = at
+            + crate::author::seconds(f64::from(crate::effects::combustion::shock_arrival(reach)));
+        let mut shove = away.normalize() * push;
+        if let Some(falloff) = falloff {
+            shove *= (falloff / reach).min(1.0);
+        }
+        let [x, y] = [format!("{card}.x"), format!("{card}.y")];
+        self.kick(scene, [&x, &y], passes, shove.into());
+        passes
+    }
+
+    /// `card`'s status spinner, started at `started`, resolves into its mark
+    /// at the motor's next top-right crossing after `done`. Returns when the
+    /// mark has finished drawing, where its sound belongs.
+    pub fn resolve_spinner(
+        &mut self,
+        scene: &mut PlanBuilder,
+        card: &str,
+        started: u64,
+        done: u64,
+    ) -> u64 {
+        use crate::effects::spinner;
+        let waited = done.saturating_sub(started) as f32 / 1e9;
+        let handoff = started + crate::author::seconds(f64::from(spinner::handoff(waited)));
+        self.clock(scene, &format!("{card}.mark"), handoff);
+        handoff + crate::author::seconds(f64::from(spinner::DRAW))
+    }
+
+    /// The blog's tile glow: an inner ring rises to its opacity, the outer
+    /// ring 60 ms later, both on `seconds` springs.
+    pub fn halo(
+        &mut self,
+        scene: &mut PlanBuilder,
+        [(inner, inner_opacity), (outer, outer_opacity)]: [(&str, f32); 2],
+        at: u64,
+        seconds: f32,
+    ) {
+        self.fade_in(scene, inner, at, inner_opacity, seconds);
+        self.fade_in(scene, outer, at + 60_000_000, outer_opacity, seconds);
+    }
+
+    /// Release a [`Self::halo`] in reverse: the outer ring first, the inner
+    /// 80 ms later.
+    pub fn halo_out(
+        &mut self,
+        scene: &mut PlanBuilder,
+        [inner, outer]: [&str; 2],
+        at: u64,
+        seconds: f32,
+    ) {
+        self.fade_out(scene, outer, at, seconds);
+        self.fade_out(scene, inner, at + 80_000_000, seconds);
+    }
+
+    /// A ring as a timer: it appears and its arc sweeps from nothing to
+    /// `sweep` (1 is a full circle) over `seconds`. Returns when it stops.
+    pub fn ring_timer(
+        &mut self,
+        scene: &mut PlanBuilder,
+        ring: &str,
+        at: u64,
+        seconds: f32,
+        sweep: f32,
+    ) -> u64 {
+        self.fade_in(scene, ring, at, 1.0, 0.3);
+        let channel = self.channel(scene, &format!("{ring}.sweep"), 0.0);
+        scene.ease(&channel, at, sweep, seconds, Ease::Smootherstep);
+        at + whole_millis(seconds)
+    }
+
+    /// Step `cards` back to `amount` of dimness on `seconds` springs, so the
+    /// focal action reads alone; an `amount` of 0 brings them forward again.
+    pub fn dim<S: AsRef<str>>(
+        &mut self,
+        scene: &mut PlanBuilder,
+        cards: impl IntoIterator<Item = S>,
+        at: u64,
+        amount: f32,
+        seconds: f32,
+    ) {
+        for card in cards {
+            self.to(
+                scene,
+                &format!("{}.dim", card.as_ref()),
+                at,
+                amount,
+                seconds,
+            );
+        }
+    }
+
+    /// Swap two labels that share a spot, one at a time: `from` fades out
+    /// quickly at `at`, and `to` fades in `gap` later, once `from` is mostly
+    /// gone, so two readable words never overlap. Returns when `to` starts.
+    pub fn swap_labels(
+        &mut self,
+        scene: &mut PlanBuilder,
+        [from, to]: [&str; 2],
+        at: u64,
+        gap: u64,
+    ) -> u64 {
+        self.fade_out(scene, from, at, 0.15);
+        self.fade_in(scene, to, at + gap, 1.0, 0.25);
+        at + gap
+    }
+
+    /// Cross-fade `card`'s status line straight from entry `from` to entry
+    /// `to` over `seconds`, without passing the entries between them (as the
+    /// fractional `status` channel would). Returns when the swap completes;
+    /// afterwards `status` rests at `to` as usual.
+    pub fn swap_status(
+        &mut self,
+        scene: &mut PlanBuilder,
+        card: &str,
+        at: u64,
+        [from, to]: [usize; 2],
+        seconds: f32,
+    ) -> u64 {
+        let done = at + whole_millis(seconds);
+        let property = |name: &str| format!("{card}.{name}");
+        self.set(scene, &property("status-from"), at, from as f32);
+        self.set(scene, &property("status"), at, to as f32);
+        self.set(scene, &property("swap"), at, 0.0);
+        self.ease(
+            scene,
+            &property("swap"),
+            at,
+            1.0,
+            seconds,
+            Ease::Smootherstep,
+        );
+        self.set(scene, &property("status-from"), done, -1.0);
+        done
+    }
+
+    /// Unplug `beam`, the reverse of [`Self::connect`]: the wire withdraws
+    /// over `seconds`, and its port resolves away as it finishes. Returns when
+    /// the port is gone.
+    pub fn disconnect(
+        &mut self,
+        scene: &mut PlanBuilder,
+        beam: &str,
+        at: u64,
+        seconds: f32,
+    ) -> u64 {
+        self.ease(scene, &format!("{beam}.draw"), at, 0.0, seconds, DRAW_CURVE);
+        let port = at + whole_millis(seconds) - 100_000_000;
+        let pop = PORT_POP_SECONDS;
+        self.ease(
+            scene,
+            &format!("{beam}.port"),
+            port,
+            0.0,
+            pop,
+            Ease::Smootherstep,
+        );
+        port + whole_millis(pop)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1873,6 +2647,183 @@ mod tests {
                 && !plan.accepts("camera.track.nowhere")
         );
         assert!(plan.accepts("camera.roll") && plan.accepts("camera.track.probe"));
+    }
+
+    #[test]
+    fn constructors_carry_the_serialized_defaults() {
+        let built = vec![
+            StageElement::orb("service", [960.0, 460.0, 0.0], 150.0),
+            StageElement::card("client", [420.0, 300.0, -40.0], [300.0, 120.0], "client")
+                .statuses(&[("reconnecting", Tone::Plain), ("disconnected", Tone::Error)]),
+            StageElement::beam("link", "client", "service").bend(60.0),
+            StageElement::packet("probe", "link")
+                .labeled("GET /api/info")
+                .tone(Tone::Request),
+            StageElement::label(
+                "caption",
+                [960.0, 700.0, 0.0],
+                28.0,
+                &[("healthy", Tone::Success)],
+            ),
+            StageElement::ring("timer", [960.0, 460.0, 0.0], 190.0),
+        ];
+        assert_eq!(built, plan().elements);
+        let options = StageElement::card("c", [0.0; 3], [100.0, 50.0], "c")
+            .mark(Mark::Cross)
+            .tone(Tone::Accent);
+        assert!(matches!(
+            options,
+            StageElement::Card {
+                mark: Mark::Cross,
+                tone: Tone::Accent,
+                ..
+            }
+        ));
+        assert!(matches!(
+            StageElement::packet("p", "link").reversed(),
+            StageElement::Packet { reverse: true, .. }
+        ));
+    }
+
+    #[test]
+    #[should_panic(expected = "only orbs have points")]
+    fn an_option_on_the_wrong_kind_panics() {
+        let _ = StageElement::ring("timer", [0.0; 3], 10.0).points(9);
+    }
+
+    /// A plan with one element of every kind, so each kind's table is checked.
+    fn every_kind() -> StagePlan {
+        let mut plan = plan();
+        plan.elements.extend(
+            serde_json::from_value::<Vec<StageElement>>(serde_json::json!([
+                { "kind": "bolt", "id": "zap", "from": "client", "to": "service" },
+                { "kind": "shield", "id": "guard", "around": "service", "radius": 200 },
+                { "kind": "form", "id": "cube", "at": [1400, 460, 0],
+                  "shapes": [{ "shape": "box", "size": [120, 120, 120] }] },
+                { "kind": "shape", "id": "frame", "at": [960, 900, 0], "shape": { "rect": [200, 80] } },
+                { "kind": "path", "id": "route", "through": ["client", [960, 900, 0]] },
+                { "kind": "icon", "id": "glyph", "at": [200, 900, 0], "size": 48, "icon": "cloud" },
+                { "kind": "footage", "id": "clip", "at": [1600, 900, -200], "size": [320, 180],
+                  "clip": { "media": "clip" }, "mask": { "shape": "circle" } }
+            ]))
+            .unwrap(),
+        );
+        plan.validate().unwrap();
+        let kinds = [
+            "card", "orb", "beam", "packet", "label", "ring", "bolt", "shield", "form", "shape",
+            "path", "icon", "footage",
+        ];
+        for kind in kinds {
+            assert!(
+                plan.elements
+                    .iter()
+                    .any(|e| serde_json::to_value(e).unwrap()["kind"] == kind),
+                "the test plan lacks a {kind}"
+            );
+        }
+        plan
+    }
+
+    #[test]
+    fn every_stage_property_has_exactly_one_default() {
+        let plan = every_kind();
+        for property in STAGE_PROPERTIES {
+            assert!(
+                plan.channel_default(property).is_some(),
+                "stage property '{property}' has no default"
+            );
+        }
+        for element in &plan.elements {
+            let defaults = element.channel_defaults();
+            let names = defaults.iter().map(|(name, _)| *name).collect::<Vec<_>>();
+            let properties = element.properties();
+            assert_eq!(
+                names.iter().collect::<HashSet<_>>(),
+                properties.iter().collect::<HashSet<_>>(),
+                "'{}' defaults must name exactly its properties",
+                element.id()
+            );
+            assert_eq!(names.len(), properties.len(), "a property is listed twice");
+            for property in properties {
+                let id = format!("{}.{property}", element.id());
+                assert_eq!(plan.channel_default(&id), element.channel_default(property));
+            }
+        }
+        assert_eq!(plan.channel_default("camera.spin"), None);
+        assert_eq!(plan.channel_default("camera.track.probe"), Some(0.0));
+        assert_eq!(plan.channel_default("camera.track.cube"), Some(0.0));
+        assert_eq!(
+            plan.channel_default("camera.track.link"),
+            None,
+            "beams cannot be followed"
+        );
+        assert_eq!(
+            plan.channel_default("client.age"),
+            None,
+            "cards have no age"
+        );
+        assert_eq!(plan.channel_default("missing.opacity"), None);
+    }
+
+    #[test]
+    fn defaults_are_resting_poses() {
+        let plan = plan();
+        for (property, rest) in [
+            ("client.opacity", 1.0),
+            ("client.content", 1.0),
+            ("client.mark", -1.0),
+            ("service.burst", -1.0),
+            ("service.spin", 1.0),
+            ("link.draw", 1.0),
+            ("probe.age", -1.0),
+            ("probe.flight", 0.8),
+            ("caption.typed", 1.0),
+            ("timer.sweep", 1.0),
+            ("camera.z", 0.0),
+            ("post.exposure", 1.0),
+            ("post.rewind", -1.0),
+            ("post.bloom", StagePost::default().bloom),
+        ] {
+            assert_eq!(plan.channel_default(property), Some(rest), "{property}");
+        }
+        let custom = StagePlan {
+            post: StagePost {
+                vignette: 0.22,
+                ..StagePost::default()
+            },
+            ..plan
+        };
+        assert_eq!(custom.channel_default("post.vignette"), Some(0.22));
+    }
+
+    #[test]
+    fn undeclared_channels_start_at_their_default() {
+        let mut scene = PlanBuilder::new("stage-demo", 5_000_000_000);
+        let mut stage = StageActor::declare(&mut scene, "stage", &plan()).unwrap();
+        stage.to(&mut scene, "link.opacity", 1_000_000_000, 0.0, 0.5);
+        stage.set(&mut scene, "client.mark", 1_000_000_000, -1.0);
+        stage.ease(&mut scene, "camera.x", 0, 40.0, 1.0, Ease::Smootherstep);
+        stage.channel(&mut scene, "service.opacity", 0.0);
+        stage.to(&mut scene, "service.opacity", 0, 1.0, 0.5);
+        let plan = scene.finish().unwrap();
+        let initial = |property: &str| match plan
+            .continuous_channels
+            .iter()
+            .find(|c| c.property == property)
+            .unwrap()
+            .initial
+        {
+            crate::plan::ScalarPlan::Literal(value) => value,
+            _ => unreachable!(),
+        };
+        assert_eq!(
+            initial("link.opacity"),
+            1.0,
+            "a wire fading out was visible"
+        );
+        assert_eq!(initial("client.mark"), -1.0);
+        assert_eq!(initial("camera.x"), 0.0);
+        assert_eq!(initial("service.opacity"), 0.0, "a declared pose wins");
     }
 
     #[test]
@@ -1997,6 +2948,227 @@ mod tests {
             "hottest at the head"
         );
         assert_eq!(heat(COOLING), 0.0);
+    }
+
+    #[test]
+    fn beats_can_be_timed_by_where_they_land() {
+        let mut scene = PlanBuilder::new("stage-demo", 5_000_000_000);
+        let mut stage = StageActor::declare(&mut scene, "stage", &plan()).unwrap();
+        let word = 2_000_000_000;
+        assert_eq!(stage.send_arriving(&mut scene, "probe", word, 0.8), word);
+        let contact = stage.connect_contacting(&mut scene, "link", word, 0.6);
+        assert_eq!(contact, word, "port 0.3 s plus draw 0.6 s before the word");
+        assert_eq!(
+            reply_after(word),
+            word + 420_000_000,
+            "a 340 ms gather and an 80 ms reaction"
+        );
+        let plan = scene.finish().unwrap();
+        let first = |property: &str| {
+            plan.continuous_channels
+                .iter()
+                .find(|c| c.property == property)
+                .unwrap()
+                .events[0]
+                .at_nanos()
+        };
+        assert_eq!(first("probe.age"), word - 800_000_000 - 340_000_000);
+        assert_eq!(first("link.port"), word - 900_000_000);
+    }
+
+    /// Each event of `property` as (at, kind, target) for compact assertions.
+    fn events(plan: &crate::plan::ScenePlan, property: &str) -> Vec<(u64, &'static str, f32)> {
+        use crate::plan::{ScalarPlan, TrackEventPlan};
+        let value = |scalar: &ScalarPlan| match scalar {
+            ScalarPlan::Literal(value) => *value,
+            _ => f32::NAN,
+        };
+        plan.continuous_channels
+            .iter()
+            .find(|c| c.property == property)
+            .unwrap_or_else(|| panic!("missing {property}"))
+            .events
+            .iter()
+            .map(|event| match event {
+                TrackEventPlan::Set { at_nanos, value: v } => (*at_nanos, "set", value(v)),
+                TrackEventPlan::Spring {
+                    at_nanos, target, ..
+                } => (*at_nanos, "spring", value(target)),
+                TrackEventPlan::Ease {
+                    at_nanos, target, ..
+                } => (*at_nanos, "ease", value(target)),
+            })
+            .collect()
+    }
+
+    fn initial(plan: &crate::plan::ScenePlan, property: &str) -> f32 {
+        match plan
+            .continuous_channels
+            .iter()
+            .find(|c| c.property == property)
+            .unwrap()
+            .initial
+        {
+            crate::plan::ScalarPlan::Literal(value) => value,
+            _ => unreachable!(),
+        }
+    }
+
+    #[test]
+    fn beats_declare_their_starting_poses_and_return_when_they_settle() {
+        const S: u64 = 1_000_000_000;
+        let mut scene = PlanBuilder::new("beats", 20 * S);
+        let mut s = StageActor::declare(&mut scene, "stage", &plan()).unwrap();
+        s.orb_in(&mut scene, "service", S, OrbEntrance::HERO);
+        assert_eq!(
+            s.glitch(&mut scene, "client", 2 * S, [7.0, 9.0, 8.0]),
+            2 * S + 81_000_000
+        );
+        assert_eq!(s.rewind(&mut scene, 3 * S, 0.12), 3 * S + 1_400_000_000);
+        assert_eq!(
+            s.unburst(&mut scene, "service", 3 * S, 1.3),
+            4 * S + 300_000_000
+        );
+        let drawn = s.resolve_spinner(&mut scene, "client", 5 * S, 6 * S);
+        let handoff =
+            5 * S + crate::author::seconds(f64::from(crate::effects::spinner::handoff(1.0)));
+        assert!(
+            handoff >= 6 * S,
+            "the mark waits for the next crossing after done"
+        );
+        let draw = crate::author::seconds(f64::from(crate::effects::spinner::DRAW));
+        assert_eq!(drawn, handoff + draw);
+        s.halo(&mut scene, [("timer", 0.35), ("caption", 0.5)], 7 * S, 0.22);
+        assert_eq!(
+            s.ring_timer(&mut scene, "timer", 8 * S, 1.2, 0.67),
+            9 * S + 200_000_000
+        );
+        assert_eq!(
+            s.disconnect(&mut scene, "link", 10 * S, 0.35),
+            10 * S + 550_000_000
+        );
+        let passes = s.shock_kick(&mut scene, "service", 11 * S, "client", 9.0, Some(480.0));
+        assert!(
+            passes > 11 * S + 120_000_000,
+            "the front reaches the card after the collapse"
+        );
+        let plan = scene.finish().unwrap();
+
+        assert_eq!(
+            [
+                initial(&plan, "service.scale"),
+                initial(&plan, "service.blur"),
+                initial(&plan, "service.rotation"),
+                initial(&plan, "service.opacity")
+            ],
+            [0.58, 11.0, -1.8, 0.0]
+        );
+        let glitch = events(&plan, "client.glitch");
+        assert_eq!(
+            glitch
+                .iter()
+                .map(|e| (e.0 - 2 * S, e.2))
+                .collect::<Vec<_>>(),
+            [
+                (0, 7.0),
+                (27_000_000, 9.0),
+                (54_000_000, 8.0),
+                (81_000_000, 0.0)
+            ]
+        );
+        assert_eq!(initial(&plan, "post.rewind"), -1.0);
+        assert_eq!(events(&plan, "post.chroma")[0], (3 * S, "set", 0.12));
+        assert_eq!(
+            events(&plan, "service.burst"),
+            [(3 * S, "ease", 0.0), (4 * S + 300_000_000, "set", -1.0)]
+        );
+        assert_eq!(events(&plan, "client.mark")[0], (handoff, "set", 0.0));
+        assert_eq!(
+            events(&plan, "caption.opacity"),
+            [(7 * S + 60_000_000, "spring", 0.5)]
+        );
+        assert_eq!(initial(&plan, "timer.sweep"), 0.0);
+        assert_eq!(events(&plan, "timer.sweep"), [(8 * S, "ease", 0.67)]);
+        assert_eq!(
+            events(&plan, "link.port"),
+            [(10 * S + 250_000_000, "ease", 0.0)],
+            "the port resolves away as the wire finishes"
+        );
+        let kick = events(&plan, "client.x");
+        assert_eq!(kick[0].0, passes);
+        assert!(
+            kick[0].2 < 0.0,
+            "the client sits left of the service and is pushed left"
+        );
+    }
+
+    #[test]
+    fn labels_swap_one_at_a_time_and_cards_step_back_together() {
+        const S: u64 = 1_000_000_000;
+        let mut scene = PlanBuilder::new("labels", 4 * S);
+        let mut s = StageActor::declare(&mut scene, "stage", &plan()).unwrap();
+        let shown = s.swap_labels(&mut scene, ["caption", "timer"], S, 250_000_000);
+        assert_eq!(shown, S + 250_000_000);
+        s.dim(&mut scene, ["client"], 2 * S, 0.5, 0.8);
+        let plan = scene.finish().unwrap();
+        assert_eq!(
+            initial(&plan, "caption.opacity"),
+            1.0,
+            "the outgoing label was showing"
+        );
+        assert_eq!(
+            initial(&plan, "timer.opacity"),
+            0.0,
+            "the incoming label starts hidden"
+        );
+        assert_eq!(events(&plan, "timer.opacity"), [(shown, "spring", 1.0)]);
+        assert_eq!(events(&plan, "client.dim"), [(2 * S, "spring", 0.5)]);
+    }
+
+    #[test]
+    fn a_status_swap_skips_the_entries_between_and_then_rests() {
+        const S: u64 = 1_000_000_000;
+        let mut scene = PlanBuilder::new("swap", 4 * S);
+        let mut s = StageActor::declare(&mut scene, "stage", &plan()).unwrap();
+        assert_eq!(
+            s.swap_status(&mut scene, "client", S, [1, 0], 0.4),
+            S + 400_000_000
+        );
+        let plan = scene.finish().unwrap();
+        assert_eq!(
+            initial(&plan, "client.status-from"),
+            -1.0,
+            "old plans never swap"
+        );
+        assert_eq!(initial(&plan, "client.swap"), 1.0);
+        assert_eq!(
+            events(&plan, "client.status-from"),
+            [(S, "set", 1.0), (S + 400_000_000, "set", -1.0)]
+        );
+        assert_eq!(events(&plan, "client.status"), [(S, "set", 0.0)]);
+        assert_eq!(
+            events(&plan, "client.swap"),
+            [(S, "set", 0.0), (S, "ease", 1.0)]
+        );
+    }
+
+    #[test]
+    fn a_projected_rect_matches_the_projected_center_and_scale() {
+        use crate::math::vec2;
+        let camera = Camera::at(vec3(-110.0, 0.0, 60.0), vec2(1920.0, 1080.0));
+        let at = vec3(430.0, 420.0, -60.0);
+        let [x, y, w, h] = camera.project_rect(at, vec2(340.0, 124.0)).unwrap();
+        let (center, scale) = camera.project(at).unwrap();
+        assert!((x + w * 0.5 - center.x).abs() < 1e-3 && (y + h * 0.5 - center.y).abs() < 1e-3);
+        assert!(
+            (w - 340.0 * scale).abs() < 1e-3 && scale > 1.0,
+            "the dolly magnifies it"
+        );
+        assert!(
+            camera
+                .project_rect(vec3(0.0, 0.0, -2000.0), vec2(1.0, 1.0))
+                .is_none()
+        );
     }
 
     #[test]
