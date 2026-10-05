@@ -178,4 +178,107 @@ Defined in `crates/psychopomp/src/author.rs`, `crates/psychopomp/src/score.rs`, 
 
 ## 3. Polish Changes & Before/After Evidence
 
-_Pending implementation._
+Every before/after contact strip and short MP4 study is stored under `output/polish/`.
+
+### 3.1 Lower Third: Full-Advance Emergence & Sequenced Exit
+- **Code**: `crates/psychopomp/src/lower_third.rs`, `crates/psychopomp-render/src/render/lower_third.rs`
+- **What changed**:
+  - Placed the stationary clip edge flush with the accent bar's right side (`plan.origin[0] + plan.bar_width()`) instead of `12.5 px` to its right.
+  - Scaled each line's slide distance to `sprite.advance + gap` instead of a fixed `size * 1.4` (`64 px`), so the full word genuinely slides out from behind the bar (`Ease::DRAW`, `120 ms` stagger) instead of clipping `"o"` off `"opencode"` in open space.
+  - Sequenced `LowerThirdActor::hide` (`role` at `+0 ms`, `name` at `+60 ms` over `280 ms`, `bar` at `+300 ms` over `260 ms` on `Ease::GLIDE`) so the bar stays full-height until the text has tucked behind it.
+- **Evidence**:
+  - Entrance before/after: `output/polish/lower-third-show-before.jpg` vs `output/polish/lower-third-show-after.jpg` (`0.8:1.8:0.08`)
+  - Exit before/after: `output/polish/lower-third-hide-before.jpg` vs `output/polish/lower-third-hide-after.jpg` (`4.8:5.45:0.05`)
+  - Video clip: `output/polish/lower-third-clip.mp4` (`0.7..5.6 s`)
+
+### 3.2 Reel Transitions: Cushioned Slide Tail, Smooth Flash Attack & Restrained Light Leak
+- **Code**: `crates/psychopomp/src/plan/transition.rs`, `crates/psychopomp-render/src/render/transition/light.rs`
+- **What changed**:
+  - `slide_travel`: blended `dynamics::settle` with a cubic cushion (`1 - u³(1 + 3t)`, weight `0.21`) so the slide still arrives early (`position(0.2) > 0.5`) and rests with zero velocity at both ends, while retaining `3.5×` more travel across `[0.5, 1.0]` instead of stalling for the final `320 ms`.
+  - `flash_intensity` & `FLASH_GAIN`: replaced the delayed cubic attack (`rise³`) with `smoothstep(t / FLASH_PEAK)` and lowered `FLASH_GAIN` from `6.0` to `3.6` so the outgoing frame blooms into the cut instead of popping in two frames.
+  - `leak_strength` & `LEAK_GAIN`: replaced `sin(πt)^1.5` (infinite second derivative at endpoints) with `sin²(πt)` and lowered `LEAK_GAIN` from `2.4` to `1.35` so the warm anamorphic leak veils the cut without scorching 85% of the frame white for `500 ms`.
+  - `ink_threshold`: switched from `smoothstep` to `smootherstep` for continuous acceleration at both ends.
+- **Evidence**:
+  - Slide before/after: `output/polish/transitions-slide-before.jpg` vs `output/polish/transitions-slide-after.jpg` (`15.5:16.5:0.08`), clip `output/polish/transitions-slide-clip.mp4`
+  - Flash before/after: `output/polish/transitions-flash-before.jpg` vs `output/polish/transitions-flash-after.jpg` (`31.8:32.7:0.06`)
+  - Light leak before/after: `output/polish/transitions-leak-before.jpg` vs `output/polish/transitions-leak-after.jpg` (`35.8:37.5:0.12`), clip `output/polish/transitions-flash-leak-clip.mp4`
+
+### 3.3 Subtitles: Unbroken Minimum-Jerk Backing Morph & Snappy Swap Handoff
+- **Code**: `crates/psychopomp/src/subtitles.rs`
+- **What changed**:
+  - Fixed `SubtitleLayout::backing` during direct page swaps (`page.swaps` / `inherited`): previously it fed already-`smoothstep`ped `leaving * 0.5` and `0.5 + entering * 0.5` into `smootherstep`, causing the backing width/height morph to stall at zero velocity (`dk/dt = 0`) at `k = 0.5`. Now `smootherstep` is evaluated on linear progress across the swap window so the backing morphs at peak velocity right through the handoff.
+  - Tightened direct-swap fade-out/fade-in (`SWAP_OUT = 0.08 s`, `SWAP_IN = 0.11 s`) while keeping outgoing and incoming sentences strictly sequential so dissimilar lines never collide.
+  - Removed double-easing (`smootherstep(smoothstep(t))`) on same-line highlight pill glides.
+- **Evidence**:
+  - Swap before/after: `output/polish/subtitles-swap-before.jpg` vs `output/polish/subtitles-swap-after.jpg` (`40.35:40.95:0.04`)
+  - Video clip: `output/polish/subtitles-swap-clip.mp4` (`39.8..42.5 s`)
+
+### 3.4 Readout, Meter & Benchmark Bars: Crisp Stationary Digits & Monotonic Springs
+- **Code**: `crates/psychopomp-render/src/render/viz/readout.rs`, `crates/psychopomp/src/meter.rs`, `crates/psychopomp/src/bars.rs`
+- **What changed**:
+  - Matched `viz/readout.rs`'s `SMEAR_ROWS` (`0.04`) to `rolling.rs`'s `SMEAR_PER_ROW` (`0.035`) instead of `0.16` (`4×` over-blurred), and gated smear on higher places (`cell.place > 0`) so a tens or hundreds digit only smears while it is actively carrying (`(wheel - wheel.round()).abs() > 1e-4`).
+  - Removed bounce from `MeterActor::set` (`0.12 -> 0.0`), `BarsActor::set` (`0.08 -> 0.0`), and `BarsActor::sort` (`0.10 -> 0.0`), and unified `BarsActor::reveal_deltas` on `SpringPlan::POP` (`0.32 s, 0.18`). Gauge and benchmark readouts now count monotonically to their target without ticking past and rolling backward.
+- **Evidence**:
+  - Meters before/after: `output/polish/viz-meters-before.jpg` vs `output/polish/viz-meters-after.jpg` (`13.2:22.8:0.6`), clip `output/polish/viz-meters-clip.mp4`
+  - Bars before/after: `output/polish/viz-bars-before.jpg` vs `output/polish/viz-bars-after.jpg` (`23.8:33.4:0.6`), clip `output/polish/viz-bars-clip.mp4`
+
+### 3.5 Overlays: Callout Leader Handoff, Unified Lens Springs & `hide` Defaults
+- **Code**: `crates/psychopomp/src/callout.rs`, `crates/psychopomp/src/lens.rs`, `crates/psychopomp/src/ide.rs`, `crates/psychopomp/src/caption.rs`, `crates/psychopomp/src/text.rs`, `crates/psychopomp/src/video.rs`, `crates/psychopomp/src/image.rs`, `crates/psychopomp/src/footage.rs`, `crates/psychopomp/src/plot.rs`, `crates/psychopomp/src/anchor.rs`
+- **What changed**:
+  - Reduced `CalloutActor` `LABEL_DELAY` from `280 ms` to `180 ms` so the label rises in as the `Ease::DRAW` leader rounds the knee onto the shelf rather than leaving an empty wire pointing at nothing for `80–100 ms`.
+  - Unified `LensActor`'s `move_to`, `slide`, `resize`, `magnify`, and `focus` on `SpringPlan::MOVE` (`0.6 s, 0.0` bounce) and tightened `show` to `0.5 s, 0.14` bounce so the loupe glides and reshapes between circle and capsule as one piece of glass without rim wobble.
+  - Fixed `CalloutActor::hide`, `LensActor::hide`, `HoverActor::hide`, `CursorActor::hide`, and `PlotActor::stop_ride` to declare their channels at their visible resting value (`1.0`) when `hide` is called without a prior `show`.
+  - Unified `caption::hide`, `TextActor::hide`, `VideoActor::hide`, `ImageActor::hide`, `FootageActor::hide`, and `LensActor::hide` on `SpringPlan::EXIT` (`0.24 s`, faster than `0.35–0.45 s` entries).
+  - Replaced `Ease::CubicInOut` (mid-flight acceleration jump) with `Ease::GLIDE` (`Smootherstep`) in `CursorActor::select`, `FootageActor::drift`, and `FootageActor::treat`.
+- **Evidence**:
+  - Callout enter before/after: `output/polish/callouts-enter-before.jpg` vs `output/polish/callouts-enter-after.jpg` (`1.2:2.5:0.1`), clip `output/polish/callouts-enter-clip.mp4`
+  - Loupe capsule before/after: `output/polish/loupe-capsule-before.jpg` vs `output/polish/loupe-capsule-after.jpg` (`3.2:6.4:0.2`), clip `output/polish/loupe-capsule-clip.mp4`
+
+### 3.6 Text Surfaces & Tree: Zero-Bounce Chat Slot Growth & Synchronized Tree Scroll
+- **Code**: `crates/psychopomp/src/chat.rs`, `crates/psychopomp/src/tree.rs`
+- **What changed**:
+  - Set `ChatActor` `SAY_BOUNCE = 0.0` (was `0.12`) so opening a message slot lifts the thread history monotonically without bouncing every older message up and down, reduced `REACT_BOUNCE` to `0.2`, and aligned `ChatActor::stream`'s text start with `author::CONTENT_LAG` (`65 ms`).
+  - Matched `TreeActor` `SCROLL_SECONDS` and `VALUE_SECONDS` to `OPEN_SECONDS` (`0.45 s`, `SpringPlan::ENTER`) so opening a container and scrolling to reveal its block move in locked sync.
+- **Evidence**:
+  - Tree fold/scroll before/after: `output/polish/tree-fold-scroll-before.jpg` vs `output/polish/tree-fold-scroll-after.jpg` (`5.7:6.6:0.08`)
+  - Chat before/after: `output/polish/text-surfaces-chat-before.jpg` vs `output/polish/text-surfaces-chat-after.jpg` (`20.5:34.0:0.85`)
+
+### 3.7 Stage, CameraRig & Showroom Choreography
+- **Code**: `crates/psychopomp/src/stage.rs`, `crates/psychopomp/src/stage/camera.rs`, `scenes/effects-showroom/src/lib.rs`, `scenes/camera/src/main.rs`, `scenes/stage-forms/src/main.rs`, `scenes/psychopomp-intro/src/main.rs`
+- **What changed**:
+  - Changed `StageActor::scan` from `Ease::Linear` to `Ease::GLIDE` (`Smootherstep`), and upgraded `StageActor::amount`, `raise`, `lower` and `CameraRig::drift`, `whip` zoom-streak, and `handheld` from cubic `Smoothstep` to quintic `Ease::GLIDE`.
+  - Fixed caption overlap (`stagstage.dissolve`) and the `1.1 s` empty-frame gap between `dissolve` and `materialize` in `scenes/effects-showroom`.
+  - Scheduled `queue` and `drain` `settle_in` earlier during the `whip` pan in `scenes/camera` so the destination cluster is already settling as the camera arrives.
+  - Added `PANEL`/`ENTER` spatial entrances for forms and a `shock_kick` + `land` reaction on `gateway` (with prompt `cache-name` / `fill` fade) when `cache` bursts in `scenes/stage-forms`.
+  - Repositioned `"ANY FRAME!"` (`y = 276`, `size = 132`) and `"ANY ORDER!"` (`y = 730`, `size = 132`) in `scenes/psychopomp-intro` so neither collides with the clock chip or the hero orb.
+- **Evidence**:
+  - Effects replace/scan before/after: `output/polish/effects-replace-scan-before.jpg` vs `output/polish/effects-replace-scan-after.jpg` (`14.2:19.6:0.3`), clip `output/polish/effects-replace-scan-clip.mp4`
+  - Camera whip before/after: `output/polish/camera-whip-before.jpg` vs `output/polish/camera-whip-after.jpg` (`21.8:22.7:0.06`), clip `output/polish/camera-whip-clip.mp4`
+  - Stage forms burst before/after: `output/polish/stage-forms-burst-before.jpg` vs `output/polish/stage-forms-burst-after.jpg` (`12.4:13.6:0.08`), clip `output/polish/stage-forms-burst-clip.mp4`
+  - Psychopomp intro before/after: `output/polish/psychopomp-intro-before.jpg` vs `output/polish/psychopomp-intro-after.jpg` (`0:34:1.7`)
+
+---
+
+## 4. Visible Changes Per Showroom & Film
+
+| Showroom / Film | Visible Changes |
+|---|---|
+| `psychopomp-camera` | `queue` and `drain` settle in as the `whip` pan arrives (`22.28s..22.40s`); `drift`, `whip` streak, and `handheld` use `Ease::GLIDE` (`Smootherstep`); slate captions exit in `0.24 s` (`SpringPlan::EXIT`). |
+| `psychopomp-stage-forms` | `slab`, `store`, and `cache` settle in with scale (`0.94 -> 1.0`), vertical drift (`16 px`), and deblur; `cache` burst (`12.50s`) clears `"cache"` and the dashed `fill` wire promptly and `gateway` takes a `shock_kick` and rim flash at `12.72s`. |
+| `psychopomp-effects-showroom` | Outgoing captions fade in `0.15 s` before the next caption starts typing (no overlap at `15.70s`); `config v2` materializes `0.35 s` after `config v1` dissolves (no `1.1 s` empty gap); `scan` sweeps with `Ease::GLIDE` instead of `Ease::Linear`. |
+| `psychopomp-transitions` | `slide` cushions through its second half (`16.06s..16.46s`); `flash` builds smoothly over `[0, FLASH_PEAK]` with `FLASH_GAIN = 3.6`; `light-leak` uses a `sin²(πt)` bell and `LEAK_GAIN = 1.35` so the frame stays readable; `ink` uses `smootherstep`. |
+| `psychopomp-compare` | Unchanged (already uses `smootherstep` held wipes). |
+| `psychopomp-callouts` | Callout labels rise in at `180 ms` as the leader rounds the elbow (`1.50s`, `1.90s`, `2.20s`); `hide` retracts the leader on `Ease::GLIDE` in `0.28 s`. |
+| `psychopomp-anchors` | Callout labels use the `180 ms` handoff; captions, rolling numbers, text, and images exit on `SpringPlan::EXIT` (`0.24 s`). |
+| `psychopomp-loupe` | `LensActor` `move_to`, `slide`, `resize`, `magnify`, and `focus` share `SpringPlan::MOVE` (`0.6 s`, zero bounce), so capsule-to-circle reshaping and anchor glides land together; `show` uses `0.5 s, 0.14` bounce and `hide` uses `SpringPlan::EXIT`. |
+| `psychopomp-text-surfaces` | `LowerThird` slides `"opencode"` and `"coding agent"` across their full measured widths from the bar's right edge and waits to retract the bar until the text clears; `Chat` messages open slots without vertical bounce (`SAY_BOUNCE = 0.0`) and stream after `65 ms`. |
+| `psychopomp-viz-components` | `Meter` and `Bars` readouts keep stationary higher-place digits crisp, use `SMEAR_ROWS = 0.04` (legible `upload` tenths and `cpu` digits), and spring monotonically without value/slot bounce; `Subtitles` morph their backing through page swaps without a midpoint stall. |
+| `psychopomp-charts` | `PlotActor::stop_ride` and caption exits use `SpringPlan::EXIT` (`0.24 s`). |
+| `psychopomp-tree` | `TreeActor` `scroll` (`0.45 s`) and `value` (`0.45 s`) match `open` (`0.45 s`), keeping the viewport bottom aligned during fold reveals. |
+| `psychopomp-rolling-number` | Overlay exit uses `SpringPlan::EXIT` (`0.24 s`). |
+| `psychopomp-diagnostics` | `CursorActor::select` sweeps with `Ease::GLIDE`; `Callout` `"Database provided"` uses the `180 ms` label handoff. |
+| `psychopomp-footage` | `drift` and `treat` use `Ease::GLIDE` (`Smootherstep`); `hide` uses `SpringPlan::EXIT` (`0.24 s`). |
+| `psychopomp-hello` | Unchanged (`hello` and `hello_dsl` remain byte-identical). |
+| `scenes/2password` | Chips and footers exit on `SpringPlan::EXIT` (`0.24 s`); `2password` and `2password_dsl` remain byte-identical. |
+| `scenes/psychopomp-intro` | `"ANY FRAME!"` (`y = 276`, `size = 132`) and `"ANY ORDER!"` (`y = 730`, `size = 132`) clear both the clock chip and the hero orb silhouette; callouts use the `180 ms` label handoff. |
+| `scenes/pr-walkthrough`, `pr-50231`, `config-migration`, `opencode-jr-architecture` | Regenerated `.reel.json` plans with `SpringPlan::EXIT` (`0.24 s`) caption exits and `180 ms` callout label delay. |

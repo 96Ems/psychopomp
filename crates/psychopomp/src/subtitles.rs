@@ -518,7 +518,8 @@ impl SubtitleLayout {
         if let Some(latest) = words.iter().rposition(|ink| ink.upcoming < 1.0) {
             let ink = words[latest];
             let glide = 1.0 - ink.upcoming;
-            let raw_glide = ((seconds - self.starts[ink.word.index]) / SPEAK).clamp(0.0, 1.0) as f32;
+            let raw_glide =
+                ((seconds - self.starts[ink.word.index]) / SPEAK).clamp(0.0, 1.0) as f32;
             let previous = latest.checked_sub(1).map(|i| words[i]);
             match previous {
                 Some(before) if glide < 1.0 && before.current > 0.0 => {

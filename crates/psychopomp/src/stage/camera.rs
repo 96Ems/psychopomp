@@ -594,12 +594,7 @@ impl CameraRig {
             position: lean.extend(pose.position.z + 24.0),
             ..pose
         };
-        Ok(self.move_to(
-            scene,
-            &target,
-            at_nanos,
-            Move::Ease(seconds, Ease::GLIDE),
-        ))
+        Ok(self.move_to(scene, &target, at_nanos, Move::Ease(seconds, Ease::GLIDE)))
     }
 
     /// Whip to frame `targets`: a fast minimum-jerk move that the shutter
