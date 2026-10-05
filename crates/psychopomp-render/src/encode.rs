@@ -71,8 +71,10 @@ impl FfmpegEncoder {
             let inputs = (0..media.len())
                 .map(|index| format!("[a{index}]"))
                 .collect::<String>();
+            // `alimiter`'s `latency` option only exists in FFmpeg 5+; leave it at
+            // its default so the same chain works on FFmpeg 4.x (Ubuntu 22.04).
             filters.push(format!(
-                "{inputs}amix=inputs={}:duration=longest:normalize=0,alimiter=limit=0.95:level=0:latency=1[aout]",
+                "{inputs}amix=inputs={}:duration=longest:normalize=0,alimiter=limit=0.95:level=0[aout]",
                 media.len()
             ));
             arguments.extend([

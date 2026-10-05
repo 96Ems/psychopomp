@@ -25,7 +25,7 @@ import { tmpdir } from "node:os"
 import path from "node:path"
 
 type Script = {
-  engine?: "fish" | "elevenlabs"
+  engine?: "fish" | "elevenlabs" | "kokoro"
   voice?: string
   speed?: number
   model?: string
@@ -43,11 +43,14 @@ const only = new Set(args.includes("--only") ? args[args.indexOf("--only") + 1].
 // cues re-derive themselves when final clips replace the drafts.
 const fishSay = process.env.FISH_SAY ?? path.join(process.env.HOME!, ".opencode/skill/fish-audio/scripts/fish-say.ts")
 const whisperModel = process.env.WHISPER_MODEL ?? "mlx-community/whisper-large-v3-mlx"
+// MLX is Apple-only; on Linux set WHISPER_CMD (e.g. "whisper-ctranslate2") to use a
+// local CPU Whisper with the same flags.
+const whisperCmd = (process.env.WHISPER_CMD ?? "uvx --from mlx-whisper mlx_whisper").split(" ").filter(Boolean)
 
 const dir = path.dirname(path.resolve(scriptPath))
 const script: Script = await Bun.file(scriptPath).json()
 const engine = args.includes("--draft") ? "say" : script.engine ?? "fish"
-if (!["say", "fish", "elevenlabs"].includes(engine)) throw new Error(`unknown narration engine '${engine}'`)
+if (!["say", "fish", "elevenlabs", "kokoro"].includes(engine)) throw new Error(`unknown narration engine '${engine}'`)
 if (engine === "elevenlabs" && (!script.voice || !process.env.ELEVENLABS_API_KEY))
   throw new Error("ElevenLabs requires script.voice and ELEVENLABS_API_KEY")
 if (engine === "elevenlabs" && script.speed !== undefined)
@@ -113,6 +116,18 @@ for (const clip of script.clips) {
       if (!response.headers.get("content-type")?.startsWith("audio/")) throw new Error("ElevenLabs did not return audio")
       requestId = response.headers.get("request-id") ?? undefined
       await Bun.write(raw, await response.arrayBuffer())
+    } else if (engine === "kokoro") {
+      // Local TTS: Kokoro-82M through onnxruntime, no credentials.
+      const python = process.env.KOKORO_PYTHON ?? path.join(process.env.HOME!, ".venvs/tts/bin/python")
+      const helper = process.env.KOKORO_HELPER ?? path.join(import.meta.dir, "kokoro-tts.py")
+      run([
+        python,
+        helper,
+        "--text-file", text,
+        "--out", raw,
+        "--voice", script.voice ?? "am_michael",
+        ...(script.speed ? ["--speed", String(script.speed)] : []),
+      ])
     } else
       run([
         "bun",
@@ -131,7 +146,7 @@ for (const clip of script.clips) {
         : "loudnorm=I=-16:TP=-1.5:LRA=11"
     run(["ffmpeg", "-y", "-loglevel", "error", "-i", raw, "-af", normalize, "-ar", "48000", "-ac", "1", "-b:a", "160k", path.join(dir, file)])
     run([
-      "uvx", "--from", "mlx-whisper", "mlx_whisper", "--model", whisperModel, "--word-timestamps", "True",
+      ...whisperCmd, "--model", whisperModel, "--word-timestamps", "True",
       "--output-format", "json", "--output-dir", work, "--output-name", clip.id, path.join(dir, file),
     ])
     // Whisper writes bare NaN statistics for wordless audio such as a howl.

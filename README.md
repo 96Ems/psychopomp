@@ -8,6 +8,16 @@ Every frame is a pure function of time, so any frame renders identically in any
 order, and interrupted motion keeps its velocity. It is an early, thoroughly
 vibe-coded prototype, tested on macOS (Metal).
 
+## This fork: local TTS + word timings on Linux
+
+Upstream voices a scene with macOS `say` or a paid API and times it with
+`mlx-whisper` (Apple Silicon only). This fork adds a fully local path —
+**Kokoro-82M** for the voice (Apache-2.0, CPU, through onnxruntime) and
+**NVIDIA Parakeet-TDT** for word-level timings (CC-BY-4.0) — plus the FFmpeg 4.4
+fix that audio rendering needs on older distros.
+See [docs/LOCAL_TTS_STT.md](docs/LOCAL_TTS_STT.md).
+
+
 ## What it draws
 
 - **Stage**: a 2.5D camera over particle orbs and forms (cubes, slabs, dot
