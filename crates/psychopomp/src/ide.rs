@@ -281,13 +281,28 @@ pub fn hover_layout(
     gap: f32,
     bounds: Box2,
 ) -> HoverLayout {
-    let below = side == HoverSide::Below;
-    let x = (range.min.x - 14.0).clamp(bounds.min.x, (bounds.max.x - size.x).max(bounds.min.x));
-    let y = if below {
-        range.max.y + gap + HOVER_TIP.y
-    } else {
-        range.min.y - gap - HOVER_TIP.y - size.y
+    let above_y = range.min.y - gap - HOVER_TIP.y - size.y;
+    let below_y = range.max.y + gap + HOVER_TIP.y;
+    let below = match side {
+        HoverSide::Above
+            if above_y < bounds.min.y
+                && bounds.min.y + size.y + HOVER_TIP.y > range.min.y
+                && below_y + size.y <= bounds.max.y =>
+        {
+            true
+        }
+        HoverSide::Below
+            if below_y + size.y > bounds.max.y
+                && (bounds.max.y - size.y).max(bounds.min.y) - HOVER_TIP.y < range.max.y
+                && above_y >= bounds.min.y =>
+        {
+            false
+        }
+        HoverSide::Above => false,
+        HoverSide::Below => true,
     };
+    let x = (range.min.x - 14.0).clamp(bounds.min.x, (bounds.max.x - size.x).max(bounds.min.x));
+    let y = if below { below_y } else { above_y };
     let y = y.clamp(bounds.min.y, (bounds.max.y - size.y).max(bounds.min.y));
     let card = Box2 {
         min: vec2(x, y),
@@ -984,6 +999,14 @@ mod tests {
             bounds,
         );
         assert_eq!(moved.card.min - above.card.min, vec2(0.0, 44.0));
+        // When Above would hit the top bound and overlap its own target, flip Below.
+        let top_range = Box2 {
+            min: vec2(300.0, 20.0),
+            max: vec2(400.0, 64.0),
+        };
+        let flipped = hover_layout(top_range, size, HoverSide::Above, 4.0, bounds);
+        assert!(flipped.below);
+        assert!(flipped.card.min.y >= top_range.max.y);
     }
 
     #[test]

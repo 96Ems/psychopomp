@@ -398,6 +398,48 @@ impl ChangedFilesPlan {
                 .all(|pair| pair[0].at_nanos < pair[1].at_nanos),
             "changed files totals must be in strictly increasing time order"
         );
+        if let Some(title) = &self.title {
+            let needed = title.chars().count() as f32 * 9.0 + 150.0;
+            ensure!(
+                self.width + 1e-3 >= needed,
+                "changed files title '{title}' needs width >= {:.0}, got {:.0}",
+                needed.ceil(),
+                self.width
+            );
+        }
+        let (initial, rolls) = self.totals_schedule();
+        let widest = |file_val: fn(&ChangedFilePlan) -> u32,
+                      total_val: fn(&ChangedTotalsPlan) -> u32| {
+            self.files
+                .iter()
+                .map(|file| grouped(file_val(file)).chars().count() + 1)
+                .chain(
+                    std::iter::once(&initial)
+                        .chain(rolls.iter())
+                        .map(|t| grouped(total_val(t)).chars().count() + 1),
+                )
+                .max()
+                .unwrap_or(2) as f32
+        };
+        let column = self.size * 0.6;
+        let badge = (self.size * 1.08).round();
+        let path = PADDING + badge + (self.size * 0.75).round();
+        let square = (self.size * 0.46).round();
+        let square_gap = (self.size * 0.16).round();
+        let squares = self.width - PADDING - 5.0 * square - 4.0 * square_gap;
+        let removed_right = squares - (self.size * 0.9).round();
+        let removed_width = widest(|f| f.removed, |t| t.removed) * column;
+        let added_right = removed_right - removed_width - (self.size * 0.55).round();
+        let added_width = widest(|f| f.added, |t| t.added) * column;
+        let path_columns =
+            ((added_right - added_width - (self.size * 0.9) - path) / column).floor();
+        ensure!(
+            path_columns >= 12.0,
+            "changed files width {:.0} leaves only {:.0} path columns at size {:.0} (need >= 12)",
+            self.width,
+            path_columns,
+            self.size
+        );
         Ok(())
     }
 }

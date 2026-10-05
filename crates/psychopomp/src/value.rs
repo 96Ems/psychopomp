@@ -37,6 +37,21 @@ impl ValueTokenPlan {
                 "value token needs finite coordinates, dimensions in [32, 1920], and font size in [8, 128]"
             );
         }
+        let label_width = self.label.chars().count() as f32 * (self.font_size * 0.6) + 20.0;
+        let detail_width = if self.detail.is_empty() {
+            0.0
+        } else {
+            self.detail.chars().count() as f32 * (18.0 * 0.6) + 20.0
+        };
+        let needed = label_width.max(detail_width);
+        if self.size[0] + 1e-3 < needed {
+            bail!(
+                "value token '{}' needs width >= {:.0}, got {:.0}",
+                self.label,
+                needed.ceil(),
+                self.size[0]
+            );
+        }
         Ok(())
     }
 }
@@ -75,6 +90,11 @@ mod tests {
             },
             ValueTokenPlan {
                 detail: "two\nlines".into(),
+                ..token.clone()
+            },
+            ValueTokenPlan {
+                size: [120., 100.],
+                detail: "this detail string overflows a 120px token card".into(),
                 ..token.clone()
             },
         ] {

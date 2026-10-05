@@ -250,7 +250,8 @@ dolly so its subject holds still while the depth around it stretches.
 
 The orb's material, glowing points over a dark occluding body, on any of a few
 deterministic shapes: a sphere, a box (a cube with emphasized edges, or a flat
-slab), a dot-matrix plane, a lattice, a cylinder, or a torus. A form turns in 3D
+slab), a dot-matrix plane, a lattice, a cylinder, a torus, a double helix with
+rungs, or a `(p, q)` torus knot. A form turns in 3D
 (ambient spin, an authored `rotation`, and `pitch` and `roll` for tumbling),
 pulses, shatters, and bursts like an orb. Wires attach to its sampled, turned
 silhouette (a convex hull), not a fixed circle. The orb's surface ripple is

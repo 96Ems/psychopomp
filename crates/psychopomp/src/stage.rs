@@ -21,7 +21,7 @@ use crate::{
         random::hash,
         shapes::{
             Box2, Circle, Polygon, Shape, box_points, cylinder_points, fibonacci_sphere,
-            grid_points, match_points, torus_points,
+            grid_points, helix_points, knot_points, match_points, torus_points,
         },
         vec3,
     },
@@ -355,6 +355,36 @@ pub enum FormShape {
         radius: f32,
         tube: f32,
     },
+    /// A double helix about the vertical axis: two opposing strands wound
+    /// through `turns` revolutions over `height`, joined by cross-rungs.
+    Helix {
+        radius: f32,
+        height: f32,
+        #[serde(default = "default_turns")]
+        turns: f32,
+    },
+    /// A `(p, q)` torus knot: a tube wound `p` times around a ring of `radius`
+    /// and `q` times through its hole (a trefoil knot for `2, 3`).
+    Knot {
+        radius: f32,
+        tube: f32,
+        #[serde(default = "default_knot_p")]
+        p: u32,
+        #[serde(default = "default_knot_q")]
+        q: u32,
+    },
+}
+
+fn default_turns() -> f32 {
+    2.5
+}
+
+fn default_knot_p() -> u32 {
+    2
+}
+
+fn default_knot_q() -> u32 {
+    3
 }
 
 impl FormShape {
@@ -371,8 +401,10 @@ impl FormShape {
             Self::Sphere { radius } => radius,
             Self::Box { size, .. } | Self::Lattice { size } => Vec3::from(size).length() * 0.5,
             Self::Plane { size } => Vec2::from(size).length() * 0.5,
-            Self::Cylinder { radius, height } => radius.hypot(height * 0.5),
-            Self::Torus { radius, tube } => radius + tube,
+            Self::Cylinder { radius, height } | Self::Helix { radius, height, .. } => {
+                radius.hypot(height * 0.5)
+            }
+            Self::Torus { radius, tube } | Self::Knot { radius, tube, .. } => radius + tube,
         }
     }
 
@@ -382,8 +414,13 @@ impl FormShape {
             Self::Sphere { radius } => Vec2::splat(radius * 2.0),
             Self::Box { size, .. } | Self::Lattice { size } => Vec2::new(size[0], size[1]),
             Self::Plane { size } => Vec2::from(size),
-            Self::Cylinder { radius, height } => Vec2::new(radius * 2.0, height),
+            Self::Cylinder { radius, height } | Self::Helix { radius, height, .. } => {
+                Vec2::new(radius * 2.0, height)
+            }
             Self::Torus { radius, tube } => Vec2::new((radius + tube) * 2.0, tube * 2.0),
+            Self::Knot { radius, tube, .. } => {
+                Vec2::new((radius + tube) * 2.0, (radius + tube) * 2.0)
+            }
         }
     }
 
@@ -400,6 +437,12 @@ impl FormShape {
             Self::Lattice { size } => grid_points(count, size)?,
             Self::Cylinder { radius, height } => cylinder_points(count, radius, height),
             Self::Torus { radius, tube } => torus_points(count, radius, tube),
+            Self::Helix {
+                radius,
+                height,
+                turns,
+            } => helix_points(count, radius, height, turns),
+            Self::Knot { radius, tube, p, q } => knot_points(count, radius, tube, p, q),
         })
     }
 
@@ -415,6 +458,19 @@ impl FormShape {
             Self::Lattice { size } => sized(&size, 10.0),
             Self::Cylinder { radius, height } => sized(&[radius, height], 4.0),
             Self::Torus { radius, tube } => sized(&[radius, tube], 4.0) && tube < radius,
+            Self::Helix {
+                radius,
+                height,
+                turns,
+            } => {
+                sized(&[radius, height], 10.0) && turns.is_finite() && (0.5..=16.0).contains(&turns)
+            }
+            Self::Knot { radius, tube, p, q } => {
+                sized(&[radius, tube], 4.0)
+                    && tube < radius
+                    && (1..=12).contains(&p)
+                    && (1..=12).contains(&q)
+            }
         };
         ensure!(ok, "form '{id}' has a shape whose size is out of range");
         ensure!(
@@ -1335,9 +1391,28 @@ impl StagePlan {
                         "card '{id}' size is out of range"
                     );
                     line(id, title, 48)?;
+                    let title_width = if title.trim().is_empty() {
+                        0.0
+                    } else {
+                        title.chars().count() as f32 * 15.6 + 5.6
+                    };
+                    ensure!(
+                        size[0] + 1e-3 >= title_width,
+                        "card '{id}' title '{title}' needs width >= {:.0}, got {:.0}",
+                        title_width.ceil(),
+                        size[0]
+                    );
                     ensure!(status.len() <= 6, "card '{id}' has more than six statuses");
                     for entry in status {
                         line(id, &entry.text, 48)?;
+                        let status_width = entry.text.chars().count() as f32 * 10.8 + 6.0;
+                        ensure!(
+                            size[0] + 1e-3 >= status_width,
+                            "card '{id}' status '{}' needs width >= {:.0}, got {:.0}",
+                            entry.text,
+                            status_width.ceil(),
+                            size[0]
+                        );
                     }
                 }
                 StageElement::Orb { radius, points, .. } => {
@@ -2710,6 +2785,14 @@ mod tests {
             StageElement::packet("p", "link").reversed(),
             StageElement::Packet { reverse: true, .. }
         ));
+        let overflow_card = StagePlan {
+            post: StagePost::default(),
+            elements: vec![
+                StageElement::card("c", [0.0, 0.0, 0.0], [200.0, 90.0], "c")
+                    .statuses(&[("status text that is far wider than 200 pixels", Tone::Plain)]),
+            ],
+        };
+        assert!(overflow_card.validate().is_err());
     }
 
     #[test]

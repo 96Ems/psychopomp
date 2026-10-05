@@ -286,9 +286,15 @@ impl Diff {
             step_times.len()
         );
         for (index, line) in self.lines.iter().enumerate() {
+            let columns = line.text.chars().count()
+                + line
+                    .inlays
+                    .iter()
+                    .map(|&(.., text)| text.chars().count())
+                    .sum::<usize>();
             anyhow::ensure!(
-                line.text.chars().count() <= MAX_COLUMNS,
-                "{} line {index} is wider than the editor: {}",
+                columns <= MAX_COLUMNS,
+                "{} line {index} is {columns} columns (max {MAX_COLUMNS}): {}",
                 self.file_name,
                 line.text
             );
@@ -568,6 +574,17 @@ mod tests {
         assert_eq!(recipe.additional_inline_reveals[0].channel(), "inlay.type");
         assert_eq!(plan.continuous_channels[0].id, "editor.inlay.type");
         recipe.compile().unwrap();
+
+        let overflowing = Diff {
+            file_name: "a.ts",
+            lines: vec![
+                keep("static Live = Layer.effect(this, Effect.gen(function* () {")
+                    .range("live", "Live")
+                    .inlay("type", "live", ": Layer<Codebase, never, Scope>"),
+            ],
+        };
+        let mut scene = PlanBuilder::new("diff", 2_000_000_000);
+        assert!(overflowing.declare(&mut scene, &[], 0, false).is_err());
     }
 
     #[test]

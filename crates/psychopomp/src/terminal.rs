@@ -320,6 +320,35 @@ impl TerminalPlan {
             self.prompt.iter().all(|span| !span.text.contains('\n')),
             "the terminal prompt must be one line"
         );
+        if let Some(title) = &self.title {
+            let needed = title.chars().count() as f32 * 9.0 + 150.0;
+            ensure!(
+                self.width + 1e-3 >= needed,
+                "terminal title '{title}' needs width >= {:.0}, got {:.0}",
+                needed.ceil(),
+                self.width
+            );
+        }
+        let max_columns = ((self.width - PADDING[0] * 2.0) / (self.size * 0.6)).floor() as usize;
+        let prompt_columns: usize = self.prompt.iter().map(|s| s.text.chars().count()).sum();
+        for line in &self.lines {
+            let columns = match line {
+                TerminalLinePlan::Command { text, .. } => prompt_columns + text.chars().count() + 1,
+                TerminalLinePlan::Output { spans, .. } => {
+                    spans.iter().map(|s| s.text.chars().count()).sum()
+                }
+                TerminalLinePlan::Task { spans, done, .. } => {
+                    let before: usize = spans.iter().map(|s| s.text.chars().count()).sum();
+                    let after: usize = done.iter().map(|s| s.text.chars().count()).sum();
+                    2 + before.max(after)
+                }
+            };
+            ensure!(
+                columns <= max_columns,
+                "terminal line '{}' is {columns} columns, wider than the {max_columns}-column window",
+                line.id()
+            );
+        }
         Ok(())
     }
 

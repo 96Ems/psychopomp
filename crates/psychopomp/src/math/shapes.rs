@@ -1,6 +1,6 @@
 //! Shapes that connectors attach to, the connector itself, and deterministic
-//! points on 3D forms (sphere, box, grid, cylinder, torus) with a matching
-//! that pairs the points of two forms for a morph.
+//! points on 3D forms (sphere, box, grid, cylinder, torus, helix, knot) with a
+//! matching that pairs the points of two forms for a morph.
 use std::f32::consts::{FRAC_PI_2, PI};
 
 use super::{
@@ -703,6 +703,69 @@ pub fn torus_points(count: u32, radius: f32, tube: f32) -> Vec<Vec3> {
         .collect()
 }
 
+/// `count` points on a double helix about the vertical y axis: two opposing
+/// backbone strands wound through `turns` revolutions over `height` at
+/// `radius`, joined by evenly spaced cross-rungs.
+pub fn helix_points(count: u32, radius: f32, height: f32, turns: f32) -> Vec<Vec3> {
+    let count = count.max(4) as usize;
+    let rungs = ((turns.abs() * 6.0).round() as usize).clamp(2, count / 4);
+    let rung_points = (count * 3 / 10).min(rungs * 12);
+    let strand_points = count - rung_points;
+    let first_strand = strand_points.div_ceil(2);
+    let second_strand = strand_points - first_strand;
+    let mut points = Vec::with_capacity(count);
+    for (strand, n) in [(0.0_f32, first_strand), (PI, second_strand)] {
+        for i in 0..n {
+            let t = if n <= 1 {
+                0.5
+            } else {
+                i as f32 / (n - 1) as f32
+            };
+            let angle = t * std::f32::consts::TAU * turns + strand;
+            let y = height * (t - 0.5);
+            points.push(Vec3::new(angle.cos() * radius, y, angle.sin() * radius));
+        }
+    }
+    let weights = vec![1.0; rungs];
+    for (rung, n) in apportion(rung_points, &weights).into_iter().enumerate() {
+        let t = (rung as f32 + 0.5) / rungs as f32;
+        let angle = t * std::f32::consts::TAU * turns;
+        let y = height * (t - 0.5);
+        let a = Vec3::new(angle.cos() * radius, y, angle.sin() * radius);
+        let b = Vec3::new(-a.x, y, -a.z);
+        points.extend((1..=n).map(|k| a.lerp(b, k as f32 / (n + 1) as f32)));
+    }
+    points
+}
+
+/// `count` points on a `(p, q)` torus knot: a tube of radius `tube * 0.36`
+/// wound `p` times around a ring of `radius` and `q` times through its hole.
+pub fn knot_points(count: u32, radius: f32, tube: f32, p: u32, q: u32) -> Vec<Vec3> {
+    let n = count.max(3);
+    let (pf, qf) = (p.max(1) as f32, q.max(1) as f32);
+    let coil = tube * 0.62;
+    let skin = tube * 0.34;
+    let centerline = |t: f32| {
+        let (sin_p, cos_p) = (pf * t).sin_cos();
+        let (sin_q, cos_q) = (qf * t).sin_cos();
+        let ring = radius + coil * cos_q;
+        Vec3::new(ring * cos_p, coil * sin_q, ring * sin_p)
+    };
+    (0..n)
+        .map(|i| {
+            let t = std::f32::consts::TAU * i as f32 / n as f32;
+            let center = centerline(t);
+            let tangent = (centerline(t + 1e-3) - centerline(t - 1e-3)).normalize_or(Vec3::X);
+            let radial = Vec3::new(center.x, 0.0, center.z).normalize_or(Vec3::Z);
+            let normal = (radial - tangent * radial.dot(tangent))
+                .normalize_or(tangent.any_orthonormal_vector());
+            let binormal = tangent.cross(normal);
+            let phi = i as f32 * 2.399_963_1;
+            center + (normal * phi.cos() + binormal * phi.sin()) * skin
+        })
+        .collect()
+}
+
 /// `points` reordered so that point `i` lies near `reference[i]`: each
 /// reference point, outermost first, claims its nearest unclaimed point, then
 /// pairwise swaps shorten the total squared travel. Morphing point `i` from
@@ -1122,6 +1185,15 @@ mod tests {
         // Area-even: the outer half of the tube holds more points than the inner.
         let outer = ring.iter().filter(|p| p.x.hypot(p.z) > 150.0).count();
         assert!(outer > 200 && outer < 260, "{outer}");
+        let dna = helix_points(360, 90.0, 240.0, 2.5);
+        assert_eq!(dna.len(), 360);
+        assert!(
+            dna.iter()
+                .all(|p| p.x.hypot(p.z) <= 90.0 + 1e-3 && p.y.abs() <= 120.0 + 1e-3)
+        );
+        let knot = knot_points(420, 130.0, 48.0, 2, 3);
+        assert_eq!(knot.len(), 420);
+        assert!(knot.iter().all(|p| p.length() <= 130.0 + 48.0 + 1e-2));
     }
 
     #[test]

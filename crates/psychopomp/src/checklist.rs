@@ -270,6 +270,8 @@ impl ChecklistPlan {
             "checklist title is one line of at most 40 characters"
         );
         let mut ids = HashSet::new();
+        let label_offset = self.icon_size() + self.size * 0.65;
+        let result_size = (self.size * 0.85).round();
         for item in &self.items {
             valid_id(&item.id, "item")?;
             ensure!(ids.insert(&item.id), "duplicate item id '{}'", item.id);
@@ -280,11 +282,25 @@ impl ChecklistPlan {
                 "item '{}' label is one line of 1 to 60 characters",
                 item.id
             );
+            let label_width = item.label.chars().count() as f32 * (self.size * 0.6);
             for text in [&item.result, &item.failure] {
                 ensure!(
                     text.chars().count() <= 24 && !text.contains('\n'),
                     "item '{}' results are one line of at most 24 characters",
                     item.id
+                );
+                let result_width = if text.is_empty() {
+                    0.0
+                } else {
+                    self.size * 0.75 + text.chars().count() as f32 * (result_size * 0.6)
+                };
+                let needed = label_offset + label_width + result_width;
+                ensure!(
+                    self.width + 1e-3 >= needed,
+                    "checklist item '{}' needs width >= {:.0}, got {:.0}",
+                    item.id,
+                    needed.ceil(),
+                    self.width
                 );
             }
         }
@@ -597,6 +613,9 @@ mod tests {
         let mut empty = plan();
         empty.items.clear();
         assert!(empty.validate().is_err());
+        let mut narrow = plan();
+        narrow.width = 240.0;
+        assert!(narrow.validate().is_err());
         let plan = plan();
         for property in ["opacity", "item.unit.spinner", "item.e2e.outcome"] {
             assert!(plan.accepts(property), "{property}");

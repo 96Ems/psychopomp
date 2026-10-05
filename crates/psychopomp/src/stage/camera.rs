@@ -621,6 +621,31 @@ impl CameraRig {
         Ok(done)
     }
 
+    /// Crash-zoom onto `targets`: a fast minimum-jerk lunge that frames them
+    /// inside `padding` pixels with a Dutch `roll` (radians) and a radial
+    /// `post.zoom` + `post.chroma` punch through its middle.
+    pub fn crash(
+        &self,
+        scene: &mut PlanBuilder,
+        targets: &[&str],
+        padding: f32,
+        roll: f32,
+        at_nanos: u64,
+        seconds: f32,
+    ) -> Result<u64> {
+        let mut pose = self.framing(scene, targets, padding, at_nanos + whole_millis(seconds))?;
+        pose.roll = roll;
+        let done = self.move_to(scene, &pose, at_nanos, Move::Glide(seconds));
+        let half = seconds * 0.5;
+        let mid = at_nanos + whole_millis(half);
+        for (property, peak) in [("post.zoom", 0.22), ("post.chroma", 0.38)] {
+            let ch = scene.channel(&self.actor, property, 0.0);
+            scene.ease(&ch, at_nanos, peak, half, Ease::GLIDE);
+            scene.ease(&ch, mid, 0.0, half, Ease::GLIDE);
+        }
+        Ok(done)
+    }
+
     /// Swing around `around` to `yaw` and `pitch` (radians), which becomes
     /// the pivot and the center of the frame: nearer things slide one way,
     /// farther things the other, and the subject stays put.

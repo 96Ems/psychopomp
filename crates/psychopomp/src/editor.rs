@@ -92,6 +92,34 @@ impl EditorRecipePlan {
                 parts: resolved.start_part..resolved.end_part + 1,
             });
         }
+        for line in &self.lines {
+            let reveals = compiled_reveals
+                .iter()
+                .filter(|reveal| reveal.plan.line_id == line.id)
+                .collect::<Vec<_>>();
+            for after in [false, true] {
+                let columns: usize = line
+                    .parts
+                    .iter()
+                    .enumerate()
+                    .filter(|&(part_index, _)| {
+                        !reveals.iter().any(|reveal| {
+                            reveal.parts.contains(&part_index) && reveal.plan.reversed == after
+                        })
+                    })
+                    .flat_map(|(_, part)| &part.spans)
+                    .map(|span| span.text.chars().count())
+                    .sum();
+                if columns > diff::MAX_COLUMNS + 2 {
+                    bail!(
+                        "editor '{}' line '{}' is {columns} columns (max {})",
+                        self.file_name,
+                        line.id,
+                        diff::MAX_COLUMNS
+                    );
+                }
+            }
+        }
         if !self.snapshots.is_empty() {
             document
                 .validate_snapshot(&CodeSnapshot::new(self.initial_line_ids.iter().cloned()))?;

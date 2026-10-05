@@ -72,6 +72,11 @@ fn changed_files_round_trip_and_reject_bad_lists() {
     let mut empty = plan.clone();
     empty.files.clear();
     assert!(empty.validate().is_err());
+    let mut narrow = plan.clone();
+    narrow.width = 400.0;
+    assert!(narrow.validate().is_err());
+    let overlong_title = plan.clone().titled("x".repeat(120));
+    assert!(overlong_title.validate().is_err());
 }
 
 #[test]
