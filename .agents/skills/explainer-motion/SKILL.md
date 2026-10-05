@@ -97,7 +97,8 @@ Constants and formulas for each are in [TECHNIQUES.md](TECHNIQUES.md).
    `swap_status`, `halo`, `ring_timer`, `disconnect`), `stage::reply_after` for
    a reply's earliest launch, `author::stagger` for ripples, and
    `psychopomp::math`; the `psychopomp` skill covers the reel workflow.
-4. Render short normal-speed studies before the full film. Compare against the
+4. Render short normal-speed studies before the full film (in Psychopomp,
+   `plan render <plan> out.mp4 --range a..b` in the foreground). Compare against the
    previous treatment, then inspect contact frames at 40 ms or less. Check body,
    content, ports, and camera separately. Done when the result reads in motion,
    every light has a visible source, quiet holds remain quiet, and contact never
