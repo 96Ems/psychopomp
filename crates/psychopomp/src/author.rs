@@ -282,6 +282,16 @@ impl PlanBuilder {
         self.plan.duration_nanos
     }
 
+    /// Every continuous channel's ID, in declaration order: the index a
+    /// validation diagnostic's `continuousChannels[n]` path names.
+    pub fn channel_ids(&self) -> Vec<String> {
+        self.plan
+            .continuous_channels
+            .iter()
+            .map(|channel| channel.id.clone())
+            .collect()
+    }
+
     pub fn set(&mut self, channel: &ContinuousHandle, at_nanos: u64, value: f32) {
         self.set_to(channel, at_nanos, value.into());
     }
@@ -509,6 +519,26 @@ impl PlanBuilder {
             .collect::<Vec<_>>();
         for (id, start) in steps {
             self.cue(id, start, start + beat);
+        }
+    }
+
+    /// Order every continuous channel's events by time, keeping the source
+    /// order of events at the same instant. Beats authored independently may
+    /// write one channel out of order (a jolt inside a kick's rebound, say);
+    /// the timeline samples sorted events the same way.
+    pub fn sort_events(&mut self) {
+        for channel in &mut self.plan.continuous_channels {
+            channel.events.sort_by_key(|event| event.at_nanos());
+        }
+    }
+
+    /// Drop continuous events that start after the scene ends; they can
+    /// never be sampled. A segment cut from a longer gesture (a bounce that
+    /// would settle after the cut) keeps everything before its end.
+    pub fn drop_events_after_end(&mut self) {
+        let end = self.plan.duration_nanos;
+        for channel in &mut self.plan.continuous_channels {
+            channel.events.retain(|event| event.at_nanos() <= end);
         }
     }
 

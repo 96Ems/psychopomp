@@ -1,0 +1,1165 @@
+{
+ "duration": 56.569,
+ "placements": [
+  {
+   "id": "room-tone-a",
+   "file": "audio/sfx/room-tone.flac",
+   "role": "layer",
+   "at": 0,
+   "from": 0,
+   "to": 9.999,
+   "gainDb": -26
+  },
+  {
+   "id": "mic-rustle-open",
+   "file": "audio/sfx/mic-rustle.flac",
+   "role": "layer",
+   "at": 0.05,
+   "from": 0,
+   "to": 1.479,
+   "gainDb": -16
+  },
+  {
+   "id": "narration-hush",
+   "file": "narration/hush.mp3",
+   "role": "script",
+   "at": 0.5,
+   "from": 0,
+   "to": 7.599,
+   "gainDb": -2
+  },
+  {
+   "id": "pop-ball-1",
+   "file": "audio/sfx/pop-00.flac",
+   "role": "layer",
+   "at": 2.38,
+   "from": 0,
+   "to": 0.479,
+   "gainDb": -12
+  },
+  {
+   "id": "sparkle-ball-1",
+   "file": "../../assets/psychopomp-intro/sparkle.wav",
+   "role": "layer",
+   "at": 2.38,
+   "from": 0,
+   "to": 1.479,
+   "gainDb": -20
+  },
+  {
+   "id": "mic-rustle-turn",
+   "file": "audio/sfx/mic-rustle.flac",
+   "role": "layer",
+   "at": 7.899,
+   "from": 0,
+   "to": 1.479,
+   "gainDb": -18
+  },
+  {
+   "id": "narration-another",
+   "file": "narration/another.mp3",
+   "role": "script",
+   "at": 8.449,
+   "from": 0,
+   "to": 5.279,
+   "gainDb": -2
+  },
+  {
+   "id": "room-tone-b",
+   "file": "audio/sfx/room-tone.flac",
+   "role": "layer",
+   "at": 10,
+   "from": 0,
+   "to": 3.878,
+   "gainDb": -26
+  },
+  {
+   "id": "pop-ball-2",
+   "file": "audio/sfx/pop-01.flac",
+   "role": "layer",
+   "at": 10.829,
+   "from": 0,
+   "to": 0.452,
+   "gainDb": -10
+  },
+  {
+   "id": "drone-swell",
+   "file": "audio/sfx/drone-swell.flac",
+   "role": "layer",
+   "at": 10.829,
+   "from": 0,
+   "to": 14.999,
+   "gainDb": -14
+  },
+  {
+   "id": "heartbeat-1",
+   "file": "audio/sfx/heartbeat.flac",
+   "role": "layer",
+   "at": 11.249,
+   "from": 0,
+   "to": 0.999,
+   "gainDb": -10
+  },
+  {
+   "id": "heartbeat-2",
+   "file": "audio/sfx/heartbeat.flac",
+   "role": "layer",
+   "at": 12.259,
+   "from": 0,
+   "to": 0.999,
+   "gainDb": -10
+  },
+  {
+   "id": "heartbeat-3",
+   "file": "audio/sfx/heartbeat.flac",
+   "role": "layer",
+   "at": 13.2,
+   "from": 0,
+   "to": 0.999,
+   "gainDb": -10
+  },
+  {
+   "id": "narration-chant",
+   "file": "narration/chant.mp3",
+   "role": "script",
+   "at": 13.878,
+   "from": 0,
+   "to": 6.879,
+   "gainDb": 0
+  },
+  {
+   "id": "pop-chant-1",
+   "file": "audio/sfx/pop-02.flac",
+   "role": "layer",
+   "at": 13.991,
+   "from": 0,
+   "to": 0.427,
+   "gainDb": -11
+  },
+  {
+   "id": "heartbeat-4",
+   "file": "audio/sfx/heartbeat.flac",
+   "role": "layer",
+   "at": 14.078,
+   "from": 0,
+   "to": 0.999,
+   "gainDb": -10
+  },
+  {
+   "id": "heartbeat-5",
+   "file": "audio/sfx/heartbeat.flac",
+   "role": "layer",
+   "at": 14.896,
+   "from": 0,
+   "to": 0.999,
+   "gainDb": -10
+  },
+  {
+   "id": "pop-chant-2",
+   "file": "audio/sfx/pop-03.flac",
+   "role": "layer",
+   "at": 15.161,
+   "from": 0,
+   "to": 0.403,
+   "gainDb": -10.5
+  },
+  {
+   "id": "heartbeat-6",
+   "file": "audio/sfx/heartbeat.flac",
+   "role": "layer",
+   "at": 15.66,
+   "from": 0,
+   "to": 0.999,
+   "gainDb": -10
+  },
+  {
+   "id": "pop-chant-3",
+   "file": "audio/sfx/pop-04.flac",
+   "role": "layer",
+   "at": 16.136,
+   "from": 0,
+   "to": 0.38,
+   "gainDb": -10
+  },
+  {
+   "id": "heartbeat-7",
+   "file": "audio/sfx/heartbeat.flac",
+   "role": "layer",
+   "at": 16.372,
+   "from": 0,
+   "to": 0.999,
+   "gainDb": -10
+  },
+  {
+   "id": "pop-chant-4",
+   "file": "audio/sfx/pop-05.flac",
+   "role": "layer",
+   "at": 16.771,
+   "from": 0,
+   "to": 0.359,
+   "gainDb": -9.5
+  },
+  {
+   "id": "heartbeat-8",
+   "file": "audio/sfx/heartbeat.flac",
+   "role": "layer",
+   "at": 17.035,
+   "from": 0,
+   "to": 0.999,
+   "gainDb": -10
+  },
+  {
+   "id": "pop-chant-5",
+   "file": "audio/sfx/pop-06.flac",
+   "role": "layer",
+   "at": 17.351,
+   "from": 0,
+   "to": 0.338,
+   "gainDb": -9
+  },
+  {
+   "id": "heartbeat-9",
+   "file": "audio/sfx/heartbeat.flac",
+   "role": "layer",
+   "at": 17.654,
+   "from": 0,
+   "to": 0.999,
+   "gainDb": -10
+  },
+  {
+   "id": "pop-chant-6",
+   "file": "audio/sfx/pop-07.flac",
+   "role": "layer",
+   "at": 18.046,
+   "from": 0,
+   "to": 0.319,
+   "gainDb": -8.5
+  },
+  {
+   "id": "heartbeat-10",
+   "file": "audio/sfx/heartbeat.flac",
+   "role": "layer",
+   "at": 18.232,
+   "from": 0,
+   "to": 0.999,
+   "gainDb": -10
+  },
+  {
+   "id": "pop-chant-7",
+   "file": "audio/sfx/pop-08.flac",
+   "role": "layer",
+   "at": 18.338,
+   "from": 0,
+   "to": 0.301,
+   "gainDb": -8
+  },
+  {
+   "id": "pop-chant-8",
+   "file": "audio/sfx/pop-09.flac",
+   "role": "layer",
+   "at": 18.586,
+   "from": 0,
+   "to": 0.284,
+   "gainDb": -7.5
+  },
+  {
+   "id": "heartbeat-11",
+   "file": "audio/sfx/heartbeat.flac",
+   "role": "layer",
+   "at": 18.77,
+   "from": 0,
+   "to": 0.999,
+   "gainDb": -10
+  },
+  {
+   "id": "pop-chant-9",
+   "file": "audio/sfx/pop-10.flac",
+   "role": "layer",
+   "at": 18.828,
+   "from": 0,
+   "to": 0.268,
+   "gainDb": -7
+  },
+  {
+   "id": "pop-chant-10",
+   "file": "audio/sfx/pop-11.flac",
+   "role": "layer",
+   "at": 19.071,
+   "from": 0,
+   "to": 0.253,
+   "gainDb": -6.5
+  },
+  {
+   "id": "heartbeat-12",
+   "file": "audio/sfx/heartbeat.flac",
+   "role": "layer",
+   "at": 19.272,
+   "from": 0,
+   "to": 0.999,
+   "gainDb": -10
+  },
+  {
+   "id": "pop-chant-11",
+   "file": "audio/sfx/pop-12.flac",
+   "role": "layer",
+   "at": 19.316,
+   "from": 0,
+   "to": 0.239,
+   "gainDb": -6
+  },
+  {
+   "id": "pop-chant-12",
+   "file": "audio/sfx/pop-13.flac",
+   "role": "layer",
+   "at": 19.556,
+   "from": 0,
+   "to": 0.226,
+   "gainDb": -5.5
+  },
+  {
+   "id": "heartbeat-13",
+   "file": "audio/sfx/heartbeat.flac",
+   "role": "layer",
+   "at": 19.74,
+   "from": 0,
+   "to": 0.999,
+   "gainDb": -10
+  },
+  {
+   "id": "pop-chant-13",
+   "file": "audio/sfx/pop-14.flac",
+   "role": "layer",
+   "at": 19.901,
+   "from": 0,
+   "to": 0.213,
+   "gainDb": -5
+  },
+  {
+   "id": "heartbeat-14",
+   "file": "audio/sfx/heartbeat.flac",
+   "role": "layer",
+   "at": 20.176,
+   "from": 0,
+   "to": 0.999,
+   "gainDb": -10
+  },
+  {
+   "id": "narration-theory",
+   "file": "narration/theory.mp3",
+   "role": "script",
+   "at": 20.877,
+   "from": 0,
+   "to": 9.199,
+   "gainDb": 0
+  },
+  {
+   "id": "heartbeat-race",
+   "file": "audio/sfx/heartbeat-race.flac",
+   "role": "layer",
+   "at": 20.877,
+   "from": 0,
+   "to": 9.249,
+   "gainDb": -14
+  },
+  {
+   "id": "zap-atoms",
+   "file": "audio/sfx/zap.flac",
+   "role": "layer",
+   "at": 21.837,
+   "from": 0,
+   "to": 0.999,
+   "gainDb": -14
+  },
+  {
+   "id": "glitch-thoughts",
+   "file": "audio/sfx/glitch.flac",
+   "role": "layer",
+   "at": 23.277,
+   "from": 0,
+   "to": 1.199,
+   "gainDb": -16
+  },
+  {
+   "id": "riser",
+   "file": "audio/sfx/riser.flac",
+   "role": "layer",
+   "at": 25.484,
+   "from": 0,
+   "to": 4.642,
+   "gainDb": -10
+  },
+  {
+   "id": "drone",
+   "file": "audio/sfx/drone.flac",
+   "role": "layer",
+   "at": 25.829,
+   "from": 0,
+   "to": 14.999,
+   "gainDb": -14
+  },
+  {
+   "id": "glitch-dots",
+   "file": "audio/sfx/glitch.flac",
+   "role": "layer",
+   "at": 26.457,
+   "from": 0,
+   "to": 1.199,
+   "gainDb": -14
+  },
+  {
+   "id": "glitch-basketballs",
+   "file": "audio/sfx/glitch.flac",
+   "role": "layer",
+   "at": 28.717,
+   "from": 0,
+   "to": 1.199,
+   "gainDb": -10
+  },
+  {
+   "id": "narration-andy",
+   "file": "narration/andy.mp3",
+   "role": "script",
+   "at": 30.126,
+   "from": 0,
+   "to": 7.439,
+   "gainDb": 1
+  },
+  {
+   "id": "impact-andy",
+   "file": "audio/sfx/impact.flac",
+   "role": "layer",
+   "at": 30.126,
+   "from": 0,
+   "to": 2.999,
+   "gainDb": -2
+  },
+  {
+   "id": "glitch-andy",
+   "file": "audio/sfx/glitch.flac",
+   "role": "layer",
+   "at": 30.126,
+   "from": 0,
+   "to": 1.199,
+   "gainDb": -10
+  },
+  {
+   "id": "flyby-anything",
+   "file": "audio/sfx/flyby.flac",
+   "role": "layer",
+   "at": 34.626,
+   "from": 0,
+   "to": 0.786,
+   "gainDb": -10
+  },
+  {
+   "id": "chimp-cameo",
+   "file": "narration/chaos-chimp.mp3",
+   "role": "layer",
+   "at": 35.956,
+   "from": 0,
+   "to": 0.75,
+   "gainDb": -14
+  },
+  {
+   "id": "narration-spaghetti",
+   "file": "narration/spaghetti.mp3",
+   "role": "script",
+   "at": 37.615,
+   "from": 0,
+   "to": 8.479,
+   "gainDb": 1
+  },
+  {
+   "id": "whoosh-lasagna",
+   "file": "../../assets/psychopomp-intro/whoosh.wav",
+   "role": "layer",
+   "at": 38.155,
+   "from": 0,
+   "to": 0.611,
+   "gainDb": -10
+  },
+  {
+   "id": "whoosh-spaghetti",
+   "file": "../../assets/psychopomp-intro/whoosh.wav",
+   "role": "layer",
+   "at": 39.635,
+   "from": 0,
+   "to": 0.611,
+   "gainDb": -10
+  },
+  {
+   "id": "drone-late",
+   "file": "audio/sfx/drone.flac",
+   "role": "layer",
+   "at": 40.829,
+   "from": 0,
+   "to": 9.451,
+   "gainDb": -14
+  },
+  {
+   "id": "intro-riser",
+   "file": "../../assets/psychopomp-intro/riser.wav",
+   "role": "layer",
+   "at": 44.611,
+   "from": 0,
+   "to": 5.669,
+   "gainDb": -12
+  },
+  {
+   "id": "chaos-glitch-0",
+   "file": "audio/sfx/glitch.flac",
+   "role": "layer",
+   "at": 45.869,
+   "from": 0,
+   "to": 1.199,
+   "gainDb": -12
+  },
+  {
+   "id": "chaos-babble",
+   "file": "narration/chaos-babble.mp3",
+   "role": "layer",
+   "at": 45.88,
+   "from": 0,
+   "to": 4.4,
+   "gainDb": -7
+  },
+  {
+   "id": "chaos-flyby-0",
+   "file": "audio/sfx/flyby.flac",
+   "role": "layer",
+   "at": 45.982,
+   "from": 0,
+   "to": 0.786,
+   "gainDb": -12.247833030298352
+  },
+  {
+   "id": "chaos-pop-0",
+   "file": "audio/sfx/pop-13.flac",
+   "role": "layer",
+   "at": 46,
+   "from": 0,
+   "to": 0.226,
+   "gainDb": -14
+  },
+  {
+   "id": "chaos-yowl",
+   "file": "narration/chaos-yowl.mp3",
+   "role": "layer",
+   "at": 46.03,
+   "from": 0,
+   "to": 4.25,
+   "gainDb": -6
+  },
+  {
+   "id": "chaos-pop-7",
+   "file": "audio/sfx/pop-04.flac",
+   "role": "layer",
+   "at": 46.059,
+   "from": 0,
+   "to": 0.38,
+   "gainDb": -14
+  },
+  {
+   "id": "chaos-laugh",
+   "file": "narration/chaos-laugh.mp3",
+   "role": "layer",
+   "at": 46.18,
+   "from": 0,
+   "to": 4.1,
+   "gainDb": -8
+  },
+  {
+   "id": "chaos-zap-0",
+   "file": "audio/sfx/zap.flac",
+   "role": "layer",
+   "at": 46.223,
+   "from": 0,
+   "to": 0.999,
+   "gainDb": -13
+  },
+  {
+   "id": "chaos-pop-12",
+   "file": "audio/sfx/pop-08.flac",
+   "role": "layer",
+   "at": 46.277,
+   "from": 0,
+   "to": 0.301,
+   "gainDb": -14
+  },
+  {
+   "id": "chaos-babble-chipmunk",
+   "file": "audio/voices/babble-chipmunk.mp3",
+   "role": "layer",
+   "at": 46.28,
+   "from": 0,
+   "to": 4,
+   "gainDb": -11
+  },
+  {
+   "id": "chaos-pop-5",
+   "file": "audio/sfx/pop-04.flac",
+   "role": "layer",
+   "at": 46.432,
+   "from": 0,
+   "to": 0.38,
+   "gainDb": -14
+  },
+  {
+   "id": "chaos-yowl-demon",
+   "file": "audio/voices/yowl-demon.mp3",
+   "role": "layer",
+   "at": 46.48,
+   "from": 0,
+   "to": 3.8,
+   "gainDb": -8
+  },
+  {
+   "id": "chaos-laugh-demon",
+   "file": "audio/voices/laugh-demon.mp3",
+   "role": "layer",
+   "at": 46.58,
+   "from": 0,
+   "to": 3.7,
+   "gainDb": -8
+  },
+  {
+   "id": "chaos-flyby-1",
+   "file": "audio/sfx/flyby.flac",
+   "role": "layer",
+   "at": 46.595,
+   "from": 0,
+   "to": 0.786,
+   "gainDb": -14.796114822849631
+  },
+  {
+   "id": "chaos-howl",
+   "file": "narration/chaos-howl.mp3",
+   "role": "layer",
+   "at": 46.68,
+   "from": 0,
+   "to": 3.6,
+   "gainDb": -7
+  },
+  {
+   "id": "chaos-spaghetti-demon",
+   "file": "audio/voices/spaghetti-demon.mp3",
+   "role": "layer",
+   "at": 46.78,
+   "from": 3.5,
+   "to": 7,
+   "gainDb": -9
+  },
+  {
+   "id": "chaos-babble-demon",
+   "file": "audio/voices/babble-demon.mp3",
+   "role": "layer",
+   "at": 46.88,
+   "from": 0,
+   "to": 3.4,
+   "gainDb": -9
+  },
+  {
+   "id": "chaos-glitch-1",
+   "file": "audio/sfx/glitch.flac",
+   "role": "layer",
+   "at": 46.923,
+   "from": 0,
+   "to": 1.199,
+   "gainDb": -12
+  },
+  {
+   "id": "chaos-flyby-2",
+   "file": "audio/sfx/flyby.flac",
+   "role": "layer",
+   "at": 46.924,
+   "from": 0,
+   "to": 0.786,
+   "gainDb": -13.622086752206087
+  },
+  {
+   "id": "chaos-laugh-chipmunk",
+   "file": "audio/voices/laugh-chipmunk.mp3",
+   "role": "layer",
+   "at": 47.08,
+   "from": 0,
+   "to": 3.2,
+   "gainDb": -12
+  },
+  {
+   "id": "chaos-pop-11",
+   "file": "audio/sfx/pop-12.flac",
+   "role": "layer",
+   "at": 47.102,
+   "from": 0,
+   "to": 0.239,
+   "gainDb": -14
+  },
+  {
+   "id": "chaos-zap-1",
+   "file": "audio/sfx/zap.flac",
+   "role": "layer",
+   "at": 47.176,
+   "from": 0,
+   "to": 0.999,
+   "gainDb": -13
+  },
+  {
+   "id": "chaos-howl-low",
+   "file": "audio/voices/howl-low.mp3",
+   "role": "layer",
+   "at": 47.18,
+   "from": 0,
+   "to": 3.1,
+   "gainDb": -9
+  },
+  {
+   "id": "chaos-pop-8",
+   "file": "audio/sfx/pop-13.flac",
+   "role": "layer",
+   "at": 47.267,
+   "from": 0,
+   "to": 0.226,
+   "gainDb": -14
+  },
+  {
+   "id": "chaos-flyby-3",
+   "file": "audio/sfx/flyby.flac",
+   "role": "layer",
+   "at": 47.333,
+   "from": 0,
+   "to": 0.786,
+   "gainDb": -12.959700743667781
+  },
+  {
+   "id": "chaos-chimp",
+   "file": "narration/chaos-chimp.mp3",
+   "role": "layer",
+   "at": 47.38,
+   "from": 0,
+   "to": 2.9,
+   "gainDb": -9
+  },
+  {
+   "id": "chaos-theory-reversed",
+   "file": "audio/voices/theory-reversed.mp3",
+   "role": "layer",
+   "at": 47.48,
+   "from": 0,
+   "to": 2.8,
+   "gainDb": -13
+  },
+  {
+   "id": "chaos-pop-6",
+   "file": "audio/sfx/pop-08.flac",
+   "role": "layer",
+   "at": 47.509,
+   "from": 0,
+   "to": 0.301,
+   "gainDb": -14
+  },
+  {
+   "id": "chaos-glitch-2",
+   "file": "audio/sfx/glitch.flac",
+   "role": "layer",
+   "at": 47.554,
+   "from": 0,
+   "to": 1.199,
+   "gainDb": -12
+  },
+  {
+   "id": "chaos-chant-demon",
+   "file": "audio/voices/chant-demon.mp3",
+   "role": "layer",
+   "at": 47.68,
+   "from": 4.1,
+   "to": 6.7,
+   "gainDb": -9
+  },
+  {
+   "id": "chaos-pop-9",
+   "file": "audio/sfx/pop-09.flac",
+   "role": "layer",
+   "at": 47.695,
+   "from": 0,
+   "to": 0.284,
+   "gainDb": -14
+  },
+  {
+   "id": "chaos-flyby-4",
+   "file": "audio/sfx/flyby.flac",
+   "role": "layer",
+   "at": 47.771,
+   "from": 0,
+   "to": 0.786,
+   "gainDb": -14.919288359582424
+  },
+  {
+   "id": "chaos-spaghetti-chipmunk",
+   "file": "audio/voices/spaghetti-chipmunk.mp3",
+   "role": "layer",
+   "at": 47.88,
+   "from": 5.8,
+   "to": 8.2,
+   "gainDb": -12
+  },
+  {
+   "id": "chaos-pop-1",
+   "file": "audio/sfx/pop-14.flac",
+   "role": "layer",
+   "at": 48.061,
+   "from": 0,
+   "to": 0.213,
+   "gainDb": -14
+  },
+  {
+   "id": "chaos-babble-reversed",
+   "file": "audio/voices/babble-reversed.mp3",
+   "role": "layer",
+   "at": 48.08,
+   "from": 0,
+   "to": 2.2,
+   "gainDb": -12
+  },
+  {
+   "id": "chaos-flyby-5",
+   "file": "audio/sfx/flyby.flac",
+   "role": "layer",
+   "at": 48.132,
+   "from": 0,
+   "to": 0.786,
+   "gainDb": -12.623793455772102
+  },
+  {
+   "id": "chaos-zap-2",
+   "file": "audio/sfx/zap.flac",
+   "role": "layer",
+   "at": 48.167,
+   "from": 0,
+   "to": 0.999,
+   "gainDb": -13
+  },
+  {
+   "id": "chaos-pop-3",
+   "file": "audio/sfx/pop-15.flac",
+   "role": "layer",
+   "at": 48.365,
+   "from": 0,
+   "to": 0.201,
+   "gainDb": -14
+  },
+  {
+   "id": "chaos-glitch-3",
+   "file": "audio/sfx/glitch.flac",
+   "role": "layer",
+   "at": 48.593,
+   "from": 0,
+   "to": 1.199,
+   "gainDb": -12
+  },
+  {
+   "id": "chaos-pop-2",
+   "file": "audio/sfx/pop-11.flac",
+   "role": "layer",
+   "at": 48.604,
+   "from": 0,
+   "to": 0.253,
+   "gainDb": -14
+  },
+  {
+   "id": "chaos-flyby-6",
+   "file": "audio/sfx/flyby.flac",
+   "role": "layer",
+   "at": 48.653,
+   "from": 0,
+   "to": 0.786,
+   "gainDb": -14.073610182851553
+  },
+  {
+   "id": "chaos-pop-10",
+   "file": "audio/sfx/pop-15.flac",
+   "role": "layer",
+   "at": 48.704,
+   "from": 0,
+   "to": 0.201,
+   "gainDb": -14
+  },
+  {
+   "id": "chaos-flyby-7",
+   "file": "audio/sfx/flyby.flac",
+   "role": "layer",
+   "at": 48.959,
+   "from": 0,
+   "to": 0.786,
+   "gainDb": -13.471834373660386
+  },
+  {
+   "id": "chaos-zap-3",
+   "file": "audio/sfx/zap.flac",
+   "role": "layer",
+   "at": 49.194,
+   "from": 0,
+   "to": 0.999,
+   "gainDb": -13
+  },
+  {
+   "id": "chaos-glitch-4",
+   "file": "audio/sfx/glitch.flac",
+   "role": "layer",
+   "at": 49.237,
+   "from": 0,
+   "to": 1.043,
+   "gainDb": -12
+  },
+  {
+   "id": "chaos-pop-4",
+   "file": "audio/sfx/pop-15.flac",
+   "role": "layer",
+   "at": 49.239,
+   "from": 0,
+   "to": 0.201,
+   "gainDb": -14
+  },
+  {
+   "id": "chaos-flyby-8",
+   "file": "audio/sfx/flyby.flac",
+   "role": "layer",
+   "at": 49.399,
+   "from": 0,
+   "to": 0.786,
+   "gainDb": -14.138958102092147
+  },
+  {
+   "id": "chaos-pop-13",
+   "file": "audio/sfx/pop-05.flac",
+   "role": "layer",
+   "at": 49.606,
+   "from": 0,
+   "to": 0.359,
+   "gainDb": -14
+  },
+  {
+   "id": "tinnitus",
+   "file": "audio/sfx/tinnitus.flac",
+   "role": "layer",
+   "at": 50.28,
+   "from": 0,
+   "to": 3.999,
+   "gainDb": -30
+  },
+  {
+   "id": "slurp",
+   "file": "audio/sfx/slurp.flac",
+   "role": "layer",
+   "at": 50.73,
+   "from": 0,
+   "to": 1.479,
+   "gainDb": -6
+  },
+  {
+   "id": "narration-after",
+   "file": "narration/after.mp3",
+   "role": "script",
+   "at": 51.93,
+   "from": 0,
+   "to": 3.439,
+   "gainDb": -3
+  }
+ ],
+ "markers": [
+  {
+   "at": 0,
+   "cue": "open",
+   "screen": "black; a faint glow at center"
+  },
+  {
+   "at": 2.38,
+   "cue": "hush: balls",
+   "screen": "ball 1 fades in"
+  },
+  {
+   "at": 3.18,
+   "cue": "hush: with dots",
+   "screen": "its dots light up, one by one"
+  },
+  {
+   "at": 4.86,
+   "cue": "hush: just one ball",
+   "screen": "slow push-in on ball 1"
+  },
+  {
+   "at": 10.829,
+   "cue": "another: another",
+   "screen": "ball 2 pops in beside it"
+  },
+  {
+   "at": 12.309,
+   "cue": "another: more dots",
+   "screen": "ball 2's dots multiply"
+  },
+  {
+   "at": 13.991,
+   "cue": "chant: balls #1",
+   "screen": "ball 3 spawns"
+  },
+  {
+   "at": 15.161,
+   "cue": "chant: balls #2",
+   "screen": "ball 4 spawns"
+  },
+  {
+   "at": 16.136,
+   "cue": "chant: balls #3",
+   "screen": "ball 5 spawns"
+  },
+  {
+   "at": 16.771,
+   "cue": "chant: balls #4",
+   "screen": "ball 6 spawns"
+  },
+  {
+   "at": 17.351,
+   "cue": "chant: balls #5",
+   "screen": "ball 7 spawns"
+  },
+  {
+   "at": 18.046,
+   "cue": "chant: balls #6",
+   "screen": "ball 8 spawns"
+  },
+  {
+   "at": 18.338,
+   "cue": "chant: balls #7",
+   "screen": "ball 9 spawns"
+  },
+  {
+   "at": 18.586,
+   "cue": "chant: balls #8",
+   "screen": "ball 10 spawns"
+  },
+  {
+   "at": 18.828,
+   "cue": "chant: balls #9",
+   "screen": "ball 11 spawns"
+  },
+  {
+   "at": 19.071,
+   "cue": "chant: balls #10",
+   "screen": "ball 12 spawns"
+  },
+  {
+   "at": 19.316,
+   "cue": "chant: balls #11",
+   "screen": "ball 13 spawns"
+  },
+  {
+   "at": 19.556,
+   "cue": "chant: balls #12",
+   "screen": "ball 14 spawns"
+  },
+  {
+   "at": 19.901,
+   "cue": "chant: balls #13",
+   "screen": "ball 15 spawns"
+  },
+  {
+   "at": 21.837,
+   "cue": "theory: atoms",
+   "screen": "electrons start orbiting every ball"
+  },
+  {
+   "at": 23.277,
+   "cue": "theory: thoughts",
+   "screen": "balls flicker into thought bubbles"
+  },
+  {
+   "at": 23.977,
+   "cue": "theory: hopes",
+   "screen": "they glow warm"
+  },
+  {
+   "at": 24.597,
+   "cue": "theory: dreams",
+   "screen": "they drift upward"
+  },
+  {
+   "at": 26.457,
+   "cue": "theory: represent balls with dots",
+   "screen": "thought bubbles snap back into dotted balls"
+  },
+  {
+   "at": 28.717,
+   "cue": "theory: basketballs",
+   "screen": "every ball is a basketball for a frame"
+  },
+  {
+   "at": 30.126,
+   "cue": "andy: ANDY SERKIS",
+   "screen": "IMPACT + quake: the balls slam onto a motion-capture suit"
+  },
+  {
+   "at": 34.626,
+   "cue": "andy: anything",
+   "screen": "the suit's markers scatter and re-form"
+  },
+  {
+   "at": 35.606,
+   "cue": "andy: chimp",
+   "screen": "the markers form a chimp"
+  },
+  {
+   "at": 36.446,
+   "cue": "andy: little shriveled guy",
+   "screen": "a small hunched figure"
+  },
+  {
+   "at": 38.155,
+   "cue": "spaghetti: lasagna",
+   "screen": "the figure flattens into lasagna layers"
+  },
+  {
+   "at": 39.635,
+   "cue": "spaghetti: spaghetti",
+   "screen": "then unravels into noodles"
+  },
+  {
+   "at": 40.435,
+   "cue": "spaghetti: (howl)",
+   "screen": "camera quake"
+  },
+  {
+   "at": 42.455,
+   "cue": "spaghetti: spaghetti kid",
+   "screen": "a noodle child with ball eyes"
+  },
+  {
+   "at": 44.915,
+   "cue": "spaghetti: will smith",
+   "screen": "a giant fork descends"
+  },
+  {
+   "at": 45.68,
+   "cue": "chaos",
+   "screen": "balls fly everywhere; glitch, bloom, quake; voices overlap"
+  },
+  {
+   "at": 50.28,
+   "cue": "hard cut",
+   "screen": "black; everything stops"
+  },
+  {
+   "at": 50.73,
+   "cue": "slurp",
+   "screen": "off-screen: one noodle is slurped up"
+  },
+  {
+   "at": 53.59,
+   "cue": "after: balls with dots",
+   "screen": "one ball, dim, its dots glowing softly"
+  },
+  {
+   "at": 56.569,
+   "cue": "end",
+   "screen": "fade out"
+  }
+ ]
+}

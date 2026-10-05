@@ -1,0 +1,19 @@
+{
+ "wordTimings": [
+  {
+   "word": "Balls",
+   "start": 1.6600000000000006,
+   "end": 2.2
+  },
+  {
+   "word": "with",
+   "start": 2.2,
+   "end": 2.22
+  },
+  {
+   "word": "dots.",
+   "start": 2.22,
+   "end": 2.68
+  }
+ ]
+}

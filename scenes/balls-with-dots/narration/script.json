@@ -1,0 +1,60 @@
+{
+  "engine": "elevenlabs",
+  "model": "eleven_v4",
+  "voice": "8olojUk4IXpvKgaOCHXj",
+  "settings": {
+    "stability": 0.2,
+    "similarity": 0.65
+  },
+  "loudness": "linear",
+  "clips": [
+    {
+      "id": "hush",
+      "text": "[whispers, extremely soft ASMR, lips right against the microphone, slow and breathy] Oh... I hear you like... balls. ...With dots. [even softer, tender whisper] Just one ball. ...With dots on it."
+    },
+    {
+      "id": "another",
+      "text": "[whispers, a little faster, slightly unsettled] But what if... there was another ball? [nervous whisper, breathing quicker] ...with MORE dots?"
+    },
+    {
+      "id": "chant",
+      "text": "[obsessive whisper, slow, then speeding up] Balls. ...Balls. [faster, louder, breathless whisper] Balls. Balls. Balls. [rapid-fire, frantic, rising out of the whisper into a shout] Balls, balls, balls, balls, balls, balls, balls, BALLS!"
+    },
+    {
+      "id": "theory",
+      "text": "[suddenly intense, fast, conspiratorial] Balls with dots represent atoms. [faster, louder, wide-eyed] Balls with THOUGHTS represent hopes and dreams. [almost shouting, unravelling] Balls with thoughts represent balls with DOTS. [shouting, manic] Balls with dots represent BASKETBALLS!"
+    },
+    {
+      "id": "andy",
+      "text": "[screaming, completely unhinged] ANDY SERKIS! [frantic, fast, voice cracking] If you cover Andy Serkis in balls with dots, you can make ANYTHING! [yelling, rapid-fire] A CHIMP! A little shriveled guy!"
+    },
+    {
+      "id": "spaghetti",
+      "text": "[screaming, deranged, fast] He could become LASAGNA! He could become SPAGHETTI! [howling] ANDY SERKIS IS A SPAGHETTI KID! [shrieking, totally losing his mind] AND HE'S GOING TO BE EATEN BY WILL SMITH!!!"
+    },
+    {
+      "id": "chaos-yowl",
+      "text": "[animalistic caterwauling, yowling like a feral alley cat, wavering pitch] Mrrrrraaaaaoooowwwww! Rrrraaaaooowwwwrrr!"
+    },
+    {
+      "id": "chaos-howl",
+      "text": "[feral howl at the moon, long, raw and throaty] Aaaaawooooooooooooo!"
+    },
+    {
+      "id": "chaos-laugh",
+      "text": "[maniacal, unhinged cackling laughter] Hahahaha! Ha ha HAHAHAHAHA! [wheezing] Heh heh heh..."
+    },
+    {
+      "id": "chaos-babble",
+      "text": "[incoherent, frantic muttering, fast and breathless, making no sense] balls... dots... dots dots balls... balls with dots, dots with balls, dot ball, ball dot, dots, dots, dots..."
+    },
+    {
+      "id": "chaos-chimp",
+      "text": "[unhinged chimpanzee hooting and chattering] Ooh ooh ooh! Ah ah ah! OOH OOH AH AH AAAAAH!"
+    },
+    {
+      "id": "after",
+      "text": "[long, shaky exhale] [sudden calm, tender, barely audible whisper] ...balls with dots."
+    }
+  ]
+}

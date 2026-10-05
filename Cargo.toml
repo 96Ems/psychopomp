@@ -35,6 +35,8 @@ members = [
   "scenes/generated-media",
   "scenes/loupe",
   "scenes/transitions",
+  "scenes/balls-with-dots",
+  "scenes/balls-v3",
 ]
 default-members = ["crates/psychopomp-render"]
 resolver = "3"

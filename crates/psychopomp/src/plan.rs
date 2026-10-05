@@ -195,6 +195,17 @@ impl ReelSegmentPlan {
         Self::new(plan, transition_nanos, ReelTransitionStyle::Match(to)).focused(from)
     }
 
+    /// [`Self::matched`] for a round element (a ball, a dot, an orb): the
+    /// carried shape is the ellipse inside each rectangle, not a card.
+    pub fn matched_round(
+        plan: ScenePlan,
+        transition_nanos: u64,
+        from: [f32; 4],
+        to: [f32; 4],
+    ) -> Self {
+        Self::new(plan, transition_nanos, ReelTransitionStyle::MatchRound(to)).focused(from)
+    }
+
     /// The frame turns over toward `direction` like a card with this segment
     /// on its back.
     pub fn flipped(plan: ScenePlan, transition_nanos: u64, direction: WipeDirection) -> Self {
@@ -268,6 +279,8 @@ pub enum ReelTransitionStyle {
     /// A shared-element zoom: `transition_focus` in the outgoing frame flies
     /// onto this rectangle (x, y, width, height) of the incoming frame.
     Match([f32; 4]),
+    /// A match whose element is round: the ellipse inside the rectangles.
+    MatchRound([f32; 4]),
     /// The frame turns over like a card, the incoming segment on its back.
     Flip(WipeDirection),
     /// The frames are two faces of a cube turning toward the direction.
@@ -601,17 +614,17 @@ fn validate_transition(segment: &ReelSegmentPlan) -> anyhow::Result<()> {
     let style = segment.transition_style;
     match (style, segment.transition_focus) {
         (Crossfade | Dip | Zoom | Wipe, _) => {}
-        (Match(_), None) => {
+        (Match(_) | MatchRound(_), None) => {
             anyhow::bail!("a match needs a transitionFocus rectangle to carry")
         }
-        (Match(_) | Iris { .. } | Ink, Some(focus)) if !rect_is_valid(focus) => {
+        (Match(_) | MatchRound(_) | Iris { .. } | Ink, Some(focus)) if !rect_is_valid(focus) => {
             anyhow::bail!("transitionFocus must be a finite rectangle at least 8 pixels on a side")
         }
-        (Match(_) | Iris { .. } | Ink, _) => {}
+        (Match(_) | MatchRound(_) | Iris { .. } | Ink, _) => {}
         (_, Some(_)) => anyhow::bail!("a {style:?} transition takes no transitionFocus"),
         (_, None) => {}
     }
-    if let Match(target) = style
+    if let Match(target) | MatchRound(target) = style
         && !rect_is_valid(target)
     {
         anyhow::bail!("a match target must be a finite rectangle at least 8 pixels on a side");

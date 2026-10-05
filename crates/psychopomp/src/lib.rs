@@ -14,6 +14,7 @@ pub mod composition;
 pub mod confetti;
 pub mod editor;
 pub mod effects;
+pub mod face;
 pub mod grid;
 pub mod highlight;
 pub mod ide;

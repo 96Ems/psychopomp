@@ -13,6 +13,7 @@ use crate::{
     author::{ActorHandle, ContinuousHandle, PlanBuilder, whole_millis},
     caption::{self, CaptionAlign, CaptionSpanPlan},
     effects::{dissolve, lightning, shield, spinner::Mark},
+    face::Face,
     math::{
         Vec2, Vec3,
         easing::{Ease, smootherstep},
@@ -158,6 +159,8 @@ pub enum StageElement {
         #[serde(default = "center", skip_serializing_if = "is_center")]
         align: CaptionAlign,
         spans: Vec<CaptionSpanPlan>,
+        #[serde(default, skip_serializing_if = "Face::is_mono")]
+        face: Face,
     },
     /// A circle or arc: a timer when its sweep grows, a ripple when it expands.
     #[serde(rename_all = "camelCase")]
@@ -724,6 +727,7 @@ impl StageElement {
                 .iter()
                 .map(|&(text, tone)| CaptionSpanPlan::new(text, tone))
                 .collect(),
+            face: Face::Mono,
         }
     }
 
@@ -811,6 +815,15 @@ impl StageElement {
             panic!("only labels align, not '{}'", self.id());
         };
         *own = align;
+        self
+    }
+
+    /// Set a label in `face` rather than CommitMono.
+    pub fn face(mut self, face: Face) -> Self {
+        let Self::Label { face: own, .. } = &mut self else {
+            panic!("only labels have a face, not '{}'", self.id());
+        };
+        *own = face;
         self
     }
 
@@ -944,7 +957,7 @@ impl StageElement {
             Self::Shield { .. } => &["opacity", "up", "scale"],
             Self::Form { .. } => &[
                 "opacity", "x", "y", "z", "scale", "blur", "rotation", "spin", "pitch", "roll",
-                "morph", "burst", "shatter", "pulse", "hurt",
+                "morph", "burst", "shatter", "pulse", "hurt", "solid",
             ],
             Self::Shape { .. } => &[
                 "opacity", "x", "y", "z", "scale", "rotation", "blur", "draw", "fill", "emphasis",
@@ -1062,6 +1075,7 @@ impl StageElement {
                 ("shatter", 0.0),
                 ("pulse", 0.0),
                 ("hurt", 0.0),
+                ("solid", 1.0),
             ],
             Self::Shape { .. } => &[
                 ("opacity", 1.0),
@@ -1230,8 +1244,8 @@ impl StagePlan {
             "stage post values are out of range"
         );
         ensure!(
-            !self.elements.is_empty() && self.elements.len() <= 64,
-            "a stage has one to 64 elements"
+            !self.elements.is_empty() && self.elements.len() <= 128,
+            "a stage has one to 128 elements"
         );
         let mut ids = HashSet::new();
         for element in &self.elements {
@@ -2783,6 +2797,7 @@ mod tests {
                 size: 24.0,
                 align,
                 spans: vec![CaptionSpanPlan::new("service", Tone::Plain)],
+                face: Default::default(),
             };
             let json = serde_json::to_value(&label).unwrap();
             assert_eq!(serde_json::from_value::<StageElement>(json).unwrap(), label);

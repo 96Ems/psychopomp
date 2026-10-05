@@ -1,0 +1,124 @@
+{
+ "wordTimings": [
+  {
+   "word": "Balls",
+   "start": 0,
+   "end": 0.26
+  },
+  {
+   "word": "with",
+   "start": 0.26,
+   "end": 0.34
+  },
+  {
+   "word": "dots",
+   "start": 0.34,
+   "end": 0.66
+  },
+  {
+   "word": "represent",
+   "start": 0.66,
+   "end": 0.96
+  },
+  {
+   "word": "atoms.",
+   "start": 0.96,
+   "end": 1.5
+  },
+  {
+   "word": "Balls",
+   "start": 1.7,
+   "end": 2.26
+  },
+  {
+   "word": "with",
+   "start": 2.26,
+   "end": 2.4
+  },
+  {
+   "word": "thoughts",
+   "start": 2.4,
+   "end": 2.8
+  },
+  {
+   "word": "represent",
+   "start": 2.8,
+   "end": 3.1
+  },
+  {
+   "word": "hopes",
+   "start": 3.1,
+   "end": 3.5
+  },
+  {
+   "word": "and",
+   "start": 3.5,
+   "end": 3.72
+  },
+  {
+   "word": "dreams.",
+   "start": 3.72,
+   "end": 4
+  },
+  {
+   "word": "Balls",
+   "start": 4.3,
+   "end": 4.8
+  },
+  {
+   "word": "with",
+   "start": 4.8,
+   "end": 4.88
+  },
+  {
+   "word": "thoughts",
+   "start": 4.88,
+   "end": 5.24
+  },
+  {
+   "word": "represent",
+   "start": 5.24,
+   "end": 5.58
+  },
+  {
+   "word": "balls",
+   "start": 5.58,
+   "end": 5.94
+  },
+  {
+   "word": "with",
+   "start": 5.94,
+   "end": 6.14
+  },
+  {
+   "word": "dots.",
+   "start": 6.14,
+   "end": 6.48
+  },
+  {
+   "word": "Balls",
+   "start": 6.72,
+   "end": 7.18
+  },
+  {
+   "word": "with",
+   "start": 7.18,
+   "end": 7.26
+  },
+  {
+   "word": "dots",
+   "start": 7.26,
+   "end": 7.58
+  },
+  {
+   "word": "represent",
+   "start": 7.58,
+   "end": 7.84
+  },
+  {
+   "word": "basketballs.",
+   "start": 7.84,
+   "end": 8.5
+  }
+ ]
+}

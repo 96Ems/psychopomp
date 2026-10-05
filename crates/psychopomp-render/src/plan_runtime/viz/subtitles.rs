@@ -19,7 +19,7 @@ impl SubtitlesInput {
     pub(super) fn new(actor: &ActorPlan, channels: &[ContinuousChannelPlan]) -> Result<Self> {
         let plan = decode(actor, "subtitles", SubtitlesPlan::validate)?;
         strict_channels(&actor.id, channels, "subtitles", |property| {
-            matches!(property, "opacity" | "x" | "y")
+            matches!(property, "opacity" | "x" | "y" | "tilt")
         })?;
         Ok(Self {
             id: actor.id.clone(),

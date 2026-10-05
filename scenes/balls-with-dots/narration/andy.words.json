@@ -1,0 +1,109 @@
+{
+ "wordTimings": [
+  {
+   "word": "Andy",
+   "start": 0,
+   "end": 0.38
+  },
+  {
+   "word": "Serkis!",
+   "start": 0.38,
+   "end": 1.22
+  },
+  {
+   "word": "If",
+   "start": 1.42,
+   "end": 1.88
+  },
+  {
+   "word": "you",
+   "start": 1.88,
+   "end": 2
+  },
+  {
+   "word": "cover",
+   "start": 2,
+   "end": 2.32
+  },
+  {
+   "word": "Andy",
+   "start": 2.32,
+   "end": 2.58
+  },
+  {
+   "word": "Serkis",
+   "start": 2.58,
+   "end": 3.02
+  },
+  {
+   "word": "in",
+   "start": 3.02,
+   "end": 3.1
+  },
+  {
+   "word": "balls",
+   "start": 3.1,
+   "end": 3.34
+  },
+  {
+   "word": "with",
+   "start": 3.34,
+   "end": 3.52
+  },
+  {
+   "word": "dots,",
+   "start": 3.52,
+   "end": 3.82
+  },
+  {
+   "word": "you",
+   "start": 3.98,
+   "end": 4.18
+  },
+  {
+   "word": "can",
+   "start": 4.18,
+   "end": 4.3
+  },
+  {
+   "word": "make",
+   "start": 4.3,
+   "end": 4.5
+  },
+  {
+   "word": "anything!",
+   "start": 4.5,
+   "end": 4.82
+  },
+  {
+   "word": "A",
+   "start": 5.22,
+   "end": 5.48
+  },
+  {
+   "word": "chimp!",
+   "start": 5.48,
+   "end": 5.84
+  },
+  {
+   "word": "A",
+   "start": 5.94,
+   "end": 6.14
+  },
+  {
+   "word": "little",
+   "start": 6.14,
+   "end": 6.32
+  },
+  {
+   "word": "shriveled",
+   "start": 6.32,
+   "end": 6.78
+  },
+  {
+   "word": "guy!",
+   "start": 6.78,
+   "end": 6.88
+  }
+ ]
+}
