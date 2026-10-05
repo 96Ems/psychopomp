@@ -1793,6 +1793,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "psychopomp-good-morning-dmitriy"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "psychopomp",
+ "psychopomp-media",
+ "serde_json",
+]
+
+[[package]]
 name = "psychopomp-hello"
 version = "0.1.0"
 dependencies = [
@@ -1831,6 +1841,16 @@ dependencies = [
 
 [[package]]
 name = "psychopomp-intro"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "psychopomp",
+ "psychopomp-media",
+ "serde_json",
+]
+
+[[package]]
+name = "psychopomp-ios-build-111"
 version = "0.1.0"
 dependencies = [
  "anyhow",
