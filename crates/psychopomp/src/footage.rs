@@ -1005,8 +1005,8 @@ impl FootageActor {
     /// Fade out in place.
     pub fn hide(&self, scene: &mut PlanBuilder, at: u64) -> u64 {
         let opacity = self.channel(scene, "opacity");
-        scene.spring(&opacity, at, 0.0, 0.3, 0.0);
-        at + whole_millis(0.3)
+        scene.spring_with(&opacity, at, 0.0, crate::plan::SpringPlan::EXIT);
+        at + whole_millis(0.24)
     }
 
     /// Spring any channel to `target`.
@@ -1070,7 +1070,7 @@ impl FootageActor {
             center,
             size,
             seconds_between(at, until),
-            Some(Ease::CubicInOut),
+            Some(Ease::GLIDE),
         )
     }
 
@@ -1114,7 +1114,7 @@ impl FootageActor {
             ("dim", treatment.dim),
         ] {
             let channel = self.channel(scene, property);
-            scene.ease(&channel, at, target, seconds, Ease::CubicInOut);
+            scene.ease(&channel, at, target, seconds, Ease::GLIDE);
         }
         at + whole_millis(seconds)
     }

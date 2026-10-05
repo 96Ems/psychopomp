@@ -177,13 +177,13 @@ impl TextActor {
         let opacity = self.channel(scene, "opacity", 0.0);
         let y = self.channel(scene, "y", self.center[1] + RISE);
         scene.spring(&opacity, at_nanos, 1.0, 0.35, 0.0);
-        scene.spring(&y, at_nanos, self.center[1], 0.45, 0.0);
+        scene.spring_with(&y, at_nanos, self.center[1], crate::plan::SpringPlan::ENTER);
     }
 
     /// Fade out in place.
     pub fn hide(&mut self, scene: &mut PlanBuilder, at_nanos: u64) {
         let opacity = self.channel(scene, "opacity", 1.0);
-        scene.spring(&opacity, at_nanos, 0.0, 0.3, 0.0);
+        scene.spring_with(&opacity, at_nanos, 0.0, crate::plan::SpringPlan::EXIT);
     }
 
     /// Show from `from` and hide at `until`.

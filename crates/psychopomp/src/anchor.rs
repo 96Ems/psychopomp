@@ -396,11 +396,7 @@ pub fn blend(points: impl IntoIterator<Item = (Vec2, f32)>) -> Option<Vec2> {
 /// The profile every anchor weight springs on: critically damped, with
 /// thresholds tight enough for a dimensionless weight.
 pub fn weight_spring() -> SpringPlan {
-    SpringPlan {
-        position_threshold: 1e-5,
-        velocity_threshold: 1e-5,
-        ..SpringPlan::visual(0.6, 0.0)
-    }
+    SpringPlan::MOVE.with_thresholds(1e-5, 1e-5)
 }
 
 /// Glide `actor` to its anchor `to`. Every weight springs on one critically

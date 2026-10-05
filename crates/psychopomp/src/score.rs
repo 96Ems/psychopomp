@@ -58,7 +58,7 @@ use crate::{
     video::{VideoActor, VideoPlan},
 };
 
-pub use crate::author::{MILLISECOND, millis, spread};
+pub use crate::author::{CONTENT_LAG, DRAW_SECONDS, MILLISECOND, STAGGER, millis, spread};
 
 /// Calibrated spring motion profiles from `explainer-motion/TECHNIQUES.md`
 /// (re-exposing [`SpringPlan`] constants).
@@ -67,10 +67,18 @@ pub struct Feel;
 impl Feel {
     /// A rigid panel settling into place: 0.6 s, bounce 0.12.
     pub const PANEL: SpringPlan = SpringPlan::PANEL;
-    /// Ink following its panel, or a label fading: 0.36 s, no bounce.
+    /// Ink following its panel, or an overlay fading in: 0.36 s, no bounce.
     pub const CONTENT: SpringPlan = SpringPlan::CONTENT;
-    /// A quick state change, such as a status cross-fade: 0.3 s, no bounce.
+    /// Spatial entrance and persistent layout room opening: 0.45 s, no bounce.
+    pub const ENTER: SpringPlan = SpringPlan::ENTER;
+    /// Clean exit fade in place, faster than entry: 0.24 s, no bounce.
+    pub const EXIT: SpringPlan = SpringPlan::EXIT;
+    /// Point-to-point spatial translation or anchor weight glide: 0.6 s, no bounce.
+    pub const MOVE: SpringPlan = SpringPlan::MOVE;
+    /// A quick state change, focus shift, or status cross-fade: 0.3 s, no bounce.
     pub const SNAP: SpringPlan = SpringPlan::SNAP;
+    /// A small floating UI pop with restrained overshoot: 0.32 s, bounce 0.18.
+    pub const POP: SpringPlan = SpringPlan::POP;
     /// A camera move with weight and a natural tail: 1.6 s, critically damped.
     pub const CAMERA: SpringPlan = SpringPlan::CAMERA;
     /// A hero landing with a little overshoot: 0.85 s, bounce 0.2.

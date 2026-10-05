@@ -415,10 +415,10 @@ impl PlotActor {
 
     /// Fade the playhead and every riding dot out.
     pub fn stop_ride(&mut self, scene: &mut PlanBuilder, series: &str, at_nanos: u64) {
-        let opacity = self.channel(scene, "playhead.opacity", 0.0);
-        let ride = self.series_channel(scene, series, "ride", 0.0);
-        scene.spring(&opacity, at_nanos, 0.0, 0.3, 0.0);
-        scene.spring(&ride, at_nanos, 0.0, 0.3, 0.0);
+        let opacity = self.channel(scene, "playhead.opacity", 1.0);
+        let ride = self.series_channel(scene, series, "ride", 1.0);
+        scene.spring_with(&opacity, at_nanos, 0.0, crate::plan::SpringPlan::EXIT);
+        scene.spring_with(&ride, at_nanos, 0.0, crate::plan::SpringPlan::EXIT);
     }
 
     /// Show (1) or hide (0) the tangent arrow on `series`' riding dot.

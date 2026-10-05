@@ -594,12 +594,7 @@ impl CameraRig {
             position: lean.extend(pose.position.z + 24.0),
             ..pose
         };
-        Ok(self.move_to(
-            scene,
-            &target,
-            at_nanos,
-            Move::Ease(seconds, Ease::Smoothstep),
-        ))
+        Ok(self.move_to(scene, &target, at_nanos, Move::Ease(seconds, Ease::GLIDE)))
     }
 
     /// Whip to frame `targets`: a fast minimum-jerk move that the shutter
@@ -615,13 +610,13 @@ impl CameraRig {
         let done = self.frame(scene, targets, padding, at_nanos, Move::Glide(seconds))?;
         let streak = scene.channel(&self.actor, "post.zoom", 0.0);
         let half = seconds * 0.5;
-        scene.ease(&streak, at_nanos, 0.14, half, Ease::Smoothstep);
+        scene.ease(&streak, at_nanos, 0.14, half, Ease::GLIDE);
         scene.ease(
             &streak,
             at_nanos + whole_millis(half),
             0.0,
             half,
-            Ease::Smoothstep,
+            Ease::GLIDE,
         );
         Ok(done)
     }
@@ -777,7 +772,7 @@ impl CameraRig {
             "camera.handheld",
             at_nanos,
             amount,
-            Move::Ease(seconds, Ease::Smoothstep),
+            Move::Ease(seconds, Ease::GLIDE),
         );
         at_nanos + whole_millis(seconds)
     }

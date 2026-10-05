@@ -28,11 +28,12 @@ const MAX_NODES: usize = 4000;
 /// A fold below this is treated as fully closed.
 const CLOSED: f32 = 1e-4;
 
-/// Fold and value springs: the 0.45 s zero-bounce line motion of Effect
-/// Institute code, so a tree moves like the code beside it.
+/// Fold, scroll, and value springs: the 0.45 s zero-bounce line motion of
+/// Effect Institute code (`SpringPlan::ENTER`), so opening a node and
+/// scrolling to reveal it move in locked sync.
 const OPEN_SECONDS: f32 = 0.45;
-const VALUE_SECONDS: f32 = 0.5;
-const SCROLL_SECONDS: f32 = 0.55;
+const VALUE_SECONDS: f32 = 0.45;
+const SCROLL_SECONDS: f32 = 0.45;
 const HIGHLIGHT_IN_SECONDS: f32 = 0.18;
 const HIGHLIGHT_OUT_SECONDS: f32 = 0.35;
 

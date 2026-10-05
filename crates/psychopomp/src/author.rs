@@ -27,6 +27,15 @@ pub const fn millis(millis: u64) -> u64 {
     millis * MILLISECOND
 }
 
+/// Canonical `120 ms` stagger gap between rows or cards (`TECHNIQUES.md`).
+pub const STAGGER: u64 = millis(120);
+
+/// Canonical `65 ms` lead between a rigid panel's body and its content.
+pub const CONTENT_LAG: u64 = millis(65);
+
+/// Standard leader and accent-bar draw-on duration (`0.42 s`).
+pub const DRAW_SECONDS: f32 = 0.42;
+
 /// Readable clamps for plan times, such as a beat keyed to a phrase that must
 /// still wait for what causes it: `f("injected").not_before(contact)`.
 pub trait PlanTime {
@@ -72,14 +81,34 @@ pub fn spread(count: u64, from: u64, to: u64) -> impl Iterator<Item = u64> {
 impl SpringPlan {
     /// A rigid panel settling into place: 0.6 s, bounce 0.12.
     pub const PANEL: Self = Self::feel(0.6, 0.12);
-    /// Ink following its panel, or a label fading: 0.36 s, no bounce.
+    /// Ink following its panel, or an overlay fading in: 0.36 s, no bounce.
     pub const CONTENT: Self = Self::feel(0.36, 0.0);
-    /// A quick state change, such as a status cross-fade: 0.3 s, no bounce.
+    /// Spatial entrance and persistent layout room opening (caption/text rise,
+    /// tree fold/scroll, code line motion, chat message slot): 0.45 s, no bounce.
+    pub const ENTER: Self = Self::feel(0.45, 0.0);
+    /// Clean exit fade in place, faster and simpler than entry: 0.24 s, no bounce.
+    pub const EXIT: Self = Self::feel(0.24, 0.0);
+    /// Point-to-point spatial translation or anchor weight glide: 0.6 s, no bounce.
+    pub const MOVE: Self = Self::feel(0.6, 0.0);
+    /// A quick state change, focus shift, or status cross-fade: 0.3 s, no bounce.
     pub const SNAP: Self = Self::feel(0.3, 0.0);
+    /// A small floating UI pop with restrained overshoot (hover card, reaction
+    /// pill, delta chip): 0.32 s, bounce 0.18.
+    pub const POP: Self = Self::feel(0.32, 0.18);
     /// A camera move with weight and a natural tail: 1.6 s, critically damped.
     pub const CAMERA: Self = Self::feel(1.6, 0.0);
     /// A hero landing with a little overshoot: 0.85 s, bounce 0.2.
     pub const LIVELY: Self = Self::feel(0.85, 0.2);
+
+    /// Override settling thresholds, as when a dimensionless weight needs
+    /// tighter bounds than a pixel channel.
+    pub const fn with_thresholds(self, position_threshold: f32, velocity_threshold: f32) -> Self {
+        Self {
+            position_threshold,
+            velocity_threshold,
+            ..self
+        }
+    }
 
     /// [`SpringPlan::visual`] in a constant: the same arithmetic, so a named
     /// feel and its literal duration and bounce emit identical plans.
@@ -842,12 +871,20 @@ mod timing_tests {
         for (feel, duration, bounce) in [
             (SpringPlan::PANEL, 0.6, 0.12),
             (SpringPlan::CONTENT, 0.36, 0.0),
+            (SpringPlan::ENTER, 0.45, 0.0),
+            (SpringPlan::EXIT, 0.24, 0.0),
+            (SpringPlan::MOVE, 0.6, 0.0),
             (SpringPlan::SNAP, 0.3, 0.0),
+            (SpringPlan::POP, 0.32, 0.18),
             (SpringPlan::CAMERA, 1.6, 0.0),
             (SpringPlan::LIVELY, 0.85, 0.2),
         ] {
             assert_eq!(feel, SpringPlan::visual(duration, bounce));
         }
+        let tight = SpringPlan::MOVE.with_thresholds(1e-5, 1e-5);
+        assert_eq!(tight.position_threshold, 1e-5);
+        assert_eq!(tight.velocity_threshold, 1e-5);
+        assert_eq!(tight.response_seconds, SpringPlan::MOVE.response_seconds);
     }
 }
 
