@@ -120,6 +120,7 @@ cargo fmt --check
 cargo clippy --workspace --all-targets --all-features -- -D warnings
 ```
 
-[AGENTS.md](AGENTS.md) has the engineering and verification rules. CommitMono is
-bundled under the SIL Open Font License (`assets/fonts`); Phosphor icons under
-the MIT License (`assets/icons`).
+[AGENTS.md](AGENTS.md) has the engineering and verification rules. Psychopomp is
+licensed under the [MIT License](LICENSE). CommitMono is bundled under the SIL
+Open Font License (`assets/fonts/OFL.txt`); Phosphor icons under the MIT License
+(`assets/icons/LICENSE`).
