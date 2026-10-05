@@ -2,6 +2,7 @@
 
 mod encode;
 mod exposure;
+mod footage;
 mod plan_runtime;
 mod render;
 mod video;

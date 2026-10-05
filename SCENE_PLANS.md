@@ -26,6 +26,7 @@ machinery:
 | Labels, counters, or images riding a card or code range | `scenes/anchors` | `anchor::AnchorPlan` on captions, Rolling Numbers, `text::TextActor`, `image::ImageActor` (`move_to`) |
 | Magnifying a code range or a card's status | `scenes/loupe` | `lens::LensActor` (`show`, `move_to`, `slide`, `resize`, `focus`) |
 | Real product behavior from a screen recording | `scenes/video`, `scenes/opencode-session-tool` | `video::VideoActor` (`fly_in`, `focus`, `unfocus`) |
+| Collages of stills and clips; footage frozen, ramped, or placed in a Stage | `scenes/footage` | `footage::FootageActor` (`toss_in`, `treat`, `freeze`, `ramp`, `stutter`, `drift`), `footage::layout`, Stage `footage`, `StageActor::footage_playhead` |
 | Before and after, side by side | `scenes/compare` | `ReelSegmentPlan::wiped` with `ReelWipePlan` holds and labels |
 | Changing scenes: pushes, irises, matched zooms, flips, cuts | `scenes/transitions` | `ReelPlan::new` with `ReelSegmentPlan::pushed`, `matched`, `irised`, `flipped`, ... |
 | A version or count changing | `scenes/rolling-number` | `rolling::RollingNumberActor::roll` |
@@ -836,6 +837,55 @@ their fuller documentation elsewhere.
       image::media("trace", "../assets/anchors/trace.png", 0, scene.duration_nanos()))?;
   trace.fly_in(&mut scene, at);
   ```
+- `footage`: any image, video, or image sequence as an overlay. `clip` is how
+  the source plays: `media` (a planned `video` or `image` placement, made with
+  `footage::media(id, path, from, until)` or `footage::still`; an image
+  sequence is a printf pattern such as `frames/%03d.png`), `trim` (`[from, to]`
+  seconds into the source; the whole file by default), `rate` (1, up to 16),
+  `repeat` (`hold`, `loop`, or `bounce` at the trim's ends), `reverse`,
+  `freeze` (seconds into the trim, shown throughout), `fps` (decode rate: the
+  video's own up to 60, an image sequence's playback rate, 24), and
+  `resolution` (decoded width; by default about twice the widest it is shown).
+  The playhead starts at the placement's timeline start; the placement is the
+  span the file is available in, not the trim. Then `center`, `size` (the box at
+  scale 1), `rotation` (rest angle), `fit` (`cover`, `contain`, `fill`),
+  `mask` (`{ "shape": "rect", "radius": r }`, `{ "shape": "circle" }`, or
+  `{ "shape": "polygon", "points": [[x, y], ...] }` as fractions of the box),
+  `framed` (the Video Card's card), `title` (framed rectangles), `tint` (the
+  tone the `tint` channel moves toward, accent), and
+  [`anchors`](#pin-overlays-to-anchors). Channels: `x`, `y` (offsets),
+  `scale`, `opacity`, `rotation` (from rest), `tilt-x`, `tilt-y`, `blur`
+  (near-edge), `defocus` (whole surface), `focus-x`, `focus-y`, `focus-size`
+  (the Ken Burns window, fractions of the fitted frame), `time` (the playhead,
+  seconds into the trim; unwritten it plays naturally), `saturation` (1),
+  `tint` (0), `dim` (0), and `anchor.<id>`. `FootageActor` writes `fly_in`,
+  `toss_in(at, from, spin)`, `glide`, `to`, `move_to`, `focus`, `unfocus`,
+  `drift(at, until, from, to)`, `treat(at, Treatment::REFERENCE, seconds)`,
+  `hide`, the playhead beats `freeze`, `play(at, rate)`, `ramp(at, seconds,
+  rate)`, `retime(at, target, seconds, curve)`, `stutter(at, seconds, times)`
+  (each returns when it settles), and `audio(gain)`: the video's own audio as
+  placements that follow its trim and start, and its loops (not a rate, a
+  reverse, or retimes). `footage::layout` arranges collages as `Tile`s:
+  `grid`, `masonry`, `scatter`, `pile`, `filmstrip`, and `by_distance` (a ripple
+  order to stagger in); `FootagePlan::in_tile` places a clip in one.
+  `footage::probe(path, fps)` reads a source's size, rate, alpha, and audio
+  with ffprobe. Footage draws with the Video Cards and images, beneath other
+  overlays; plans using it are export-only.
+  ```rust
+  let tiles = layout::masonry([150.0, 90.0, 1620.0, 880.0], &aspects, 4, 22.0);
+  let wall = FootageActor::declare(&mut scene, "wall-3",
+      &FootagePlan::in_tile(Clip::new("countdown").looping(), tiles[3]).framed(),
+      footage::media("countdown", "../assets/footage/countdown.mp4", 0, scene.duration_nanos()))?;
+  wall.toss_in(&mut scene, at, [0.0, 900.0], 0.4);
+  wall.freeze(&mut scene, seconds(3.7));
+  wall.ramp(&mut scene, seconds(5.1), 1.2, 3.0); // from a standstill to 3x
+  ```
+  The showroom is `cargo run -p psychopomp-footage` (writes the reel
+  `target/footage.json` and its segments beside it); `-- --bench` writes a
+  twenty-clip wall to `target/footage-bench.json`. Decoded videos are cached
+  under `target/psychopomp-cache/footage` (safe to delete);
+  `PSYCHOPOMP_FOOTAGE_CACHE_MB` bounds frames in memory (384) and
+  `PSYCHOPOMP_FOOTAGE_STATS=1` reports the store after a render.
 - `callout`: `anchors` (one to eight; the first is where it starts), `lines` (one
   to three lines of `{ text, tone }` spans), `size` (24), `side` (where the label
   sits: `top`, `bottom`, `left`, `right`, `top-left`, `top-right` (default),
@@ -1272,6 +1322,16 @@ their fuller documentation elsewhere.
     `stage::ICONS`, from `assets/icons`, MIT) or `path` (SVG path data, filled, in a
     `view`-unit square, 256), and `tone` (plain draws in the text color).
     Channels: `opacity` 1, `x`/`y`/`z` 0, `scale` 1, `blur` 0, `flash` 0.
+  - `footage`: `size` (world pixels), `clip`, `fit`, and `mask` as for the
+    [`footage`](#recipe-payloads-and-channels) overlay, `framed` (a card's mat
+    and rim), and `tint` (a tone, accent). A camera-facing quad, like a card,
+    so it takes depth, parallax, draw order, depth of field, follows, and
+    anchors. Channels: `opacity` 1, `x`/`y`/`z` 0, `scale` 1, `blur` 0,
+    `rotation` 0, `focus-x`/`focus-y` 0.5, `focus-size` 1, `time` (the
+    playhead; unwritten it plays naturally), `saturation` 1, `tint` 0, `dim` 0.
+    Its clip's media is a plan placement (`scene.media(footage::media(..))`);
+    `StageActor::footage_playhead(element, &placement)` returns a `Playhead`
+    for `freeze`, `play`, `ramp`, `retime`, `seek`, and `stutter`.
 - Orb `rotation` is an angular offset in radians; animate it for a spin entrance
   rather than changing the ambient `spin` multiplier. `blur` adds defocus in world
   pixels. `burst` defaults to -1 (intact): set 0 on impact and ease linearly to

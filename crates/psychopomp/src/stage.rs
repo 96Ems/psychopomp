@@ -6,13 +6,14 @@
 //! of the sample time, so any frame renders identically in any order.
 use std::collections::HashSet;
 
-use anyhow::{Result, bail, ensure};
+use anyhow::{Context, Result, bail, ensure};
 use serde::{Deserialize, Serialize};
 
 use crate::{
     author::{ActorHandle, ContinuousHandle, PlanBuilder, whole_millis},
     caption::{self, CaptionAlign, CaptionSpanPlan},
     effects::{dissolve, lightning, shield, spinner::Mark},
+    footage::{Clip, Fit, Mask, Playhead, STAGE_FOOTAGE_CHANNELS},
     math::{
         Vec2, Vec3,
         easing::{Ease, smootherstep},
@@ -23,6 +24,7 @@ use crate::{
         },
         vec3,
     },
+    plan::MediaPlan,
     plan::SpringPlan,
     tone::Tone,
 };
@@ -282,6 +284,29 @@ pub enum StageElement {
         #[serde(default = "accent")]
         tone: Tone,
     },
+    /// Footage in the scene: an image, a video, or an image sequence on a
+    /// camera-facing quad `size` world pixels, cut to its mask, optionally
+    /// framed. Its `time` channel is the clip's playhead (see
+    /// [`crate::footage`]); `tint` is the tone its `tint` channel moves toward.
+    #[serde(rename_all = "camelCase")]
+    Footage {
+        id: String,
+        at: [f32; 3],
+        size: [f32; 2],
+        clip: Clip,
+        #[serde(default, skip_serializing_if = "Fit::is_cover")]
+        fit: Fit,
+        #[serde(default, skip_serializing_if = "Mask::is_square")]
+        mask: Mask,
+        #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+        framed: bool,
+        #[serde(default = "accent", skip_serializing_if = "is_accent")]
+        tint: Tone,
+    },
+}
+
+fn is_accent(tone: &Tone) -> bool {
+    *tone == Tone::Accent
 }
 
 /// One end of a bolt: a positioned element or shield by ID, or a world point.
@@ -838,7 +863,8 @@ impl StageElement {
             | Self::Form { id, .. }
             | Self::Shape { id, .. }
             | Self::Path { id, .. }
-            | Self::Icon { id, .. } => id,
+            | Self::Icon { id, .. }
+            | Self::Footage { id, .. } => id,
         }
     }
 
@@ -852,7 +878,8 @@ impl StageElement {
             | Self::Ring { at, .. }
             | Self::Form { at, .. }
             | Self::Shape { at, .. }
-            | Self::Icon { at, .. } => Some(*at),
+            | Self::Icon { at, .. }
+            | Self::Footage { at, .. } => Some(*at),
             Self::Beam { .. }
             | Self::Packet { .. }
             | Self::Path { .. }
@@ -896,6 +923,17 @@ impl StageElement {
             Self::Shape { shape, .. } => shape.outline(center, scale),
             Self::Icon { size, .. } => {
                 Shape::Box(Box2::from_center_size(center, Vec2::splat(size * scale)))
+            }
+            Self::Footage {
+                size,
+                mask: Mask::Circle,
+                ..
+            } => Shape::Circle(Circle {
+                center,
+                radius: size[0].min(size[1]) * 0.5 * scale,
+            }),
+            Self::Footage { size, .. } => {
+                Shape::Box(Box2::from_center_size(center, Vec2::from(*size) * scale))
             }
         }
     }
@@ -952,6 +990,7 @@ impl StageElement {
             ],
             Self::Path { .. } => &["opacity", "draw", "trim", "flow", "emphasis", "surge"],
             Self::Icon { .. } => &["opacity", "x", "y", "z", "scale", "blur", "flash"],
+            Self::Footage { .. } => &STAGE_FOOTAGE_CHANNELS,
         }
     }
 
@@ -1092,6 +1131,25 @@ impl StageElement {
                 ("scale", 1.0),
                 ("blur", 0.0),
                 ("flash", 0.0),
+            ],
+            // An unwritten `time` plays the clip naturally: the renderer reads
+            // its placement, not this 0, until something writes the channel
+            // (declare it through `StageActor::footage_playhead`).
+            Self::Footage { .. } => &[
+                ("opacity", 1.0),
+                ("x", 0.0),
+                ("y", 0.0),
+                ("z", 0.0),
+                ("scale", 1.0),
+                ("blur", 0.0),
+                ("rotation", 0.0),
+                ("focus-x", 0.5),
+                ("focus-y", 0.5),
+                ("focus-size", 1.0),
+                ("time", 0.0),
+                ("saturation", 1.0),
+                ("tint", 0.0),
+                ("dim", 0.0),
             ],
         }
     }
@@ -1432,6 +1490,17 @@ impl StagePlan {
                         path.len() <= 20_000 && !path.contains(['"', '<', '>', '&']),
                         "icon '{id}' path data must be at most 20000 characters of SVG path commands"
                     );
+                }
+                StageElement::Footage {
+                    size, clip, mask, ..
+                } => {
+                    ensure!(
+                        size.iter().all(|v| (8.0..=4096.0).contains(v)),
+                        "footage '{id}' size is out of range"
+                    );
+                    clip.validate()
+                        .and_then(|()| mask.validate())
+                        .with_context(|| format!("stage footage '{id}'"))?;
                 }
                 StageElement::Label { size, spans, .. } => {
                     ensure!(
@@ -2221,6 +2290,28 @@ impl StageActor {
     }
 }
 
+impl StageActor {
+    /// The playhead of footage element `element`, whose clip `media`
+    /// places: freeze, ramp, stutter, or scrub it on its `<id>.time` channel.
+    pub fn footage_playhead(&self, element: &str, media: &MediaPlan) -> Result<Playhead> {
+        let Some(StageElement::Footage { clip, .. }) = self.plan.element(element) else {
+            bail!("the stage has no footage element '{element}'");
+        };
+        ensure!(
+            media.id == clip.media,
+            "footage '{element}' plays media '{}', not '{}'",
+            clip.media,
+            media.id
+        );
+        Ok(Playhead::new(
+            self.actor.clone(),
+            format!("{element}.time"),
+            clip,
+            media,
+        ))
+    }
+}
+
 /// When leg `leg` of `legs` arrives for a packet dispatched at `dispatch`,
 /// in whole milliseconds like every authored clock.
 fn leg_arrival(dispatch: u64, leg: usize, legs: usize, seconds: f32) -> u64 {
@@ -2611,14 +2702,16 @@ mod tests {
                   "shapes": [{ "shape": "box", "size": [120, 120, 120] }] },
                 { "kind": "shape", "id": "frame", "at": [960, 900, 0], "shape": { "rect": [200, 80] } },
                 { "kind": "path", "id": "route", "through": ["client", [960, 900, 0]] },
-                { "kind": "icon", "id": "glyph", "at": [200, 900, 0], "size": 48, "icon": "cloud" }
+                { "kind": "icon", "id": "glyph", "at": [200, 900, 0], "size": 48, "icon": "cloud" },
+                { "kind": "footage", "id": "clip", "at": [1600, 900, -200], "size": [320, 180],
+                  "clip": { "media": "clip" }, "mask": { "shape": "circle" } }
             ]))
             .unwrap(),
         );
         plan.validate().unwrap();
         let kinds = [
             "card", "orb", "beam", "packet", "label", "ring", "bolt", "shield", "form", "shape",
-            "path", "icon",
+            "path", "icon", "footage",
         ];
         for kind in kinds {
             assert!(

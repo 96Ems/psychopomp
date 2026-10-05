@@ -26,7 +26,9 @@ pub(super) fn render_video(
         |center| prepared.temporal_samples(center),
         |time| prepared.visual_sample_key(time),
         |renderer, exposure| prepared.render_exposure(renderer, exposure),
-    )
+    )?;
+    prepared.report_footage();
+    Ok(())
 }
 
 pub(super) fn render_reel(

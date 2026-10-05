@@ -31,6 +31,8 @@ struct Prim {
 @group(0) @binding(2) var<storage, read> points: array<vec4<f32>>;
 @group(0) @binding(3) var atlas: texture_2d<f32>;
 @group(0) @binding(4) var atlas_sampler: sampler;
+// Every footage element's current frame: straight-alpha sRGB, read linear.
+@group(0) @binding(5) var footage: texture_2d<f32>;
 
 struct VOut {
     @builtin(position) position: vec4<f32>,
@@ -155,6 +157,43 @@ fn sd_polygon(p: vec2<f32>, first: u32, count: u32) -> f32 {
         j = i;
     }
     return s * sqrt(d);
+}
+
+// One footage texel as premultiplied linear light, held inside its slot
+// (x0, y0, x1, y1) so neighbors in the atlas never bleed in.
+fn footage_texel(p: vec2<i32>, slot: vec4<f32>) -> vec4<f32> {
+    let q = clamp(p, vec2<i32>(slot.xy), vec2<i32>(slot.zw) - vec2<i32>(1));
+    let t = textureLoad(footage, q, 0);
+    return vec4<f32>(t.rgb * t.a, t.a);
+}
+
+// Bilinear in premultiplied light, so transparent texels add no fringe.
+fn footage_bilinear(at: vec2<f32>, slot: vec4<f32>) -> vec4<f32> {
+    let p = at - vec2<f32>(0.5);
+    let base = floor(p);
+    let f = p - base;
+    let i = vec2<i32>(base);
+    let a = footage_texel(i, slot);
+    let b = footage_texel(i + vec2<i32>(1, 0), slot);
+    let c = footage_texel(i + vec2<i32>(0, 1), slot);
+    let d = footage_texel(i + vec2<i32>(1, 1), slot);
+    return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
+}
+
+// Footage spread over a disc `radius` texels across: 16 golden-angle taps,
+// round where a box shows copies. It defocuses and it antialiases
+// minification alike.
+fn footage_sample(at: vec2<f32>, slot: vec4<f32>, radius: f32) -> vec4<f32> {
+    if radius < 0.35 {
+        return footage_bilinear(at, slot);
+    }
+    var sum = vec4<f32>(0.0);
+    for (var k = 0; k < 16; k = k + 1) {
+        let r = sqrt((f32(k) + 0.5) / 16.0) * radius;
+        let angle = f32(k) * 2.3999632;
+        sum = sum + footage_bilinear(at + vec2<f32>(cos(angle), sin(angle)) * r, slot);
+    }
+    return sum / 16.0;
 }
 
 @fragment
@@ -351,6 +390,52 @@ fn fs(in: VOut) -> @location(0) vec4<f32> {
             let s = scan_light(px - prim.a.yz, prim.b.xy, prim.a.w, prim.b.z, prim.b.w, prim.stroke.x, prim.stroke.y, prim.stroke.z);
             let light = prim.fill.rgb * (s.x * 1.2 + s.y * 0.07 + s.z * 0.8) + vec3<f32>(0.7) * (s.x * 0.8);
             return vec4<f32>(light * prim.fill.a, 0.0);
+        }
+        // Footage: a = (kind, cx, cy, corner), b = (half w, half h, blur, turn),
+        // uv = the source window in atlas texels (x0, y0, x1, y1), light = the
+        // frame's slot, fill = (opacity, saturation, dim, tint), glow = (tint
+        // tone, rim width), stroke = rim, light_color = (mask: 0 rounded box,
+        // 1 circle, 2 polygon; polygon first point, count, 0).
+        case 13u: {
+            let offset = px - prim.a.yz;
+            let c = cos(prim.b.w);
+            let s = sin(prim.b.w);
+            let local = vec2<f32>(offset.x * c + offset.y * s, -offset.x * s + offset.y * c);
+            let half = prim.b.xy;
+            let mask = u32(prim.light_color.x + 0.5);
+            var d = sd_round_box(local, half, prim.a.w);
+            if mask == 1u {
+                d = length(local) - min(half.x, half.y);
+            } else if mask == 2u {
+                d = sd_polygon(px, u32(prim.light_color.y + 0.5), u32(prim.light_color.z + 0.5));
+            }
+            let blur = prim.b.z;
+            let cover = coverage(d, blur);
+            if cover <= 0.0 {
+                return vec4<f32>(0.0);
+            }
+            let window = prim.uv;
+            let f = clamp(local / (2.0 * half) + vec2<f32>(0.5), vec2<f32>(0.0), vec2<f32>(1.0));
+            let at = mix(window.xy, window.zw, f);
+            // Texels per pixel: minified footage spreads its taps to match.
+            let footprint = max((window.z - window.x) / (2.0 * half.x), (window.w - window.y) / (2.0 * half.y));
+            var radius = blur * footprint;
+            if footprint > 1.2 {
+                radius = max(radius, footprint * 0.5);
+            }
+            let texel = footage_sample(at, prim.light, radius);
+            let luma = dot(texel.rgb, vec3<f32>(0.2126, 0.7152, 0.0722));
+            var rgb = mix(vec3<f32>(luma), texel.rgb, prim.fill.y);
+            rgb = mix(rgb, prim.glow.rgb * luma * 1.6, prim.fill.w);
+            rgb = rgb * (1.0 - prim.fill.z);
+            let opacity = prim.fill.x * cover;
+            alpha = texel.a * opacity;
+            color = rgb * opacity;
+            if prim.glow.w > 0.0 {
+                let band = max(cover - coverage(d + prim.glow.w, blur), 0.0) * prim.stroke.a * prim.fill.x;
+                color = prim.stroke.rgb * band + color * (1.0 - band);
+                alpha = band + alpha * (1.0 - band);
+            }
         }
         default: {}
     }

@@ -35,6 +35,7 @@ members = [
   "scenes/generated-media",
   "scenes/loupe",
   "scenes/transitions",
+  "scenes/footage",
 ]
 default-members = ["crates/psychopomp-render"]
 resolver = "3"

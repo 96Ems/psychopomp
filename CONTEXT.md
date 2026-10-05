@@ -438,6 +438,31 @@ One planned image media placement (PNG, JPEG, or WebP) drawn bare or inside a
 framed card, through the same projected card as a Video Card, so it can move,
 scale, rotate, tilt, defocus, and pin to an Anchor. The file is decoded once;
 its width at rest is authored and its height follows the image.
+## Footage
+Any image, video, or image sequence used as scene material, drawn as a
+screen-space overlay (through the projected card, with anchors) or as a Stage
+element seen through the camera (with depth, parallax, and depth of field).
+Images and Video Cards are footage too. Footage is cut to a **Mask** (a
+rounded box, a circle, or a polygon), fills its box by a **Fit** (cover,
+contain, or fill), can sit on a card's frame, and takes a color **Treatment**
+(desaturate, tint toward a Tone, dim) that marks it as reference material.
+Its focus window zooms into a region; easing it between regions is a Ken
+Burns move.
+
+A **Clip** is how a source plays: the part of the file it trims to, a rate,
+whether it holds, loops, or bounces at the trim's ends, whether it runs in
+reverse, or one frame it freezes on. Its placement names the file and the span
+it is available in, and its timeline start is where the **Playhead** starts.
+The playhead is a channel of seconds into the trim: unwritten, the clip plays
+naturally; written, it freezes, ramps between speeds, stutters, or scrubs,
+each a pure function of plan time. A clip's own audio is an ordinary audio
+placement of the same file that follows its trim and start (and its loops),
+not its rate or retimes.
+
+A **Collage** is footage laid out by a layout (a grid, masonry columns, a
+scatter, a pile with seeded turns and overlaps, or a filmstrip) whose tiles a
+Scene Program staggers in. Layouts are values, not containers: each piece is
+its own actor.
 ## Lens
 A loupe of thick glass laid over the frame: a circle, or a capsule for reading
 along a line. Its flat top enlarges a focus point evenly, so what it shows stays

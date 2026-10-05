@@ -1,5 +1,7 @@
 //! Prepared Stage root: decoded and validated once, with strict channel names,
 //! and GPU resources (text atlas, bloom chain, pipelines) built at preparation.
+use std::collections::HashMap;
+
 use anyhow::{Context, Result};
 use psychopomp::{
     plan::{ActorPlan, ContinuousChannelPlan},
@@ -7,7 +9,10 @@ use psychopomp::{
 };
 
 use super::preflight::{decode, strict_channels};
-use crate::render::{HeadlessRenderer, StageGpu, icon_svg};
+use crate::{
+    footage::StageFootageFrame,
+    render::{HeadlessRenderer, StageGpu, icon_svg},
+};
 
 pub(super) fn validate_recipe(
     actor: &ActorPlan,
@@ -48,12 +53,14 @@ pub(super) struct PreparedStage {
 }
 
 impl PreparedStage {
+    /// `footage` is the decoded size of each footage element's frames.
     pub(super) fn from_recipe(
         id: String,
         plan: StagePlan,
+        footage: &HashMap<String, [u32; 2]>,
         renderer: &mut HeadlessRenderer,
     ) -> Result<Self> {
-        let gpu = renderer.prepare_stage(&plan)?;
+        let gpu = renderer.prepare_stage_with(&plan, footage)?;
         Ok(Self { id, plan, gpu })
     }
 
@@ -65,18 +72,21 @@ impl PreparedStage {
         &self.plan
     }
 
-    /// One frame exposed through weighted shutter samples, accumulated on the GPU.
+    /// One frame exposed through weighted shutter samples, accumulated on the
+    /// GPU. `footage` gives each sample's footage frames.
     pub(super) fn render_exposure(
         &self,
         renderer: &mut HeadlessRenderer,
         exposure: &[(f64, f32)],
         value: impl Fn(&str, &str, f64, f32) -> f32,
+        footage: impl Fn(f64) -> Result<Vec<StageFootageFrame>>,
     ) -> Result<Vec<u8>> {
         renderer.render_stage_exposure(
             &self.plan,
             &self.gpu,
             exposure,
             |time, property, default| value(&self.id, property, time, default),
+            footage,
         )
     }
 
@@ -85,10 +95,15 @@ impl PreparedStage {
         renderer: &mut HeadlessRenderer,
         time: f64,
         value: impl Fn(&str, &str, f32) -> f32,
+        footage: impl Fn(f64) -> Result<Vec<StageFootageFrame>>,
     ) -> Result<Vec<u8>> {
-        renderer.render_stage(&self.plan, &self.gpu, time, |property, default| {
-            value(&self.id, property, default)
-        })
+        renderer.render_stage_exposure(
+            &self.plan,
+            &self.gpu,
+            &[(time, 1.0)],
+            |_, property, default| value(&self.id, property, default),
+            footage,
+        )
     }
 }
 

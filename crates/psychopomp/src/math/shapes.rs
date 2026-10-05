@@ -759,6 +759,33 @@ pub fn segment_distance(point: Vec2, a: Vec2, b: Vec2) -> f32 {
     point.distance(a + along * t)
 }
 
+/// Signed distance from `point` to any simple polygon through `points` (in
+/// order, not repeating the first): negative inside, by counting edge
+/// crossings (Quilez's sdPolygon, as the Stage shader evaluates it).
+pub fn polygon_distance(point: Vec2, points: &[Vec2]) -> f32 {
+    let Some(&last) = points.last() else {
+        return f32::MAX;
+    };
+    let mut nearest = f32::MAX;
+    let mut sign = 1.0;
+    let mut previous = last;
+    for &vertex in points {
+        nearest = nearest.min(segment_distance(point, vertex, previous));
+        let edge = previous - vertex;
+        let from = point - vertex;
+        let crossing = [
+            point.y >= vertex.y,
+            point.y < previous.y,
+            edge.x * from.y > edge.y * from.x,
+        ];
+        if crossing.iter().all(|c| *c) || crossing.iter().all(|c| !*c) {
+            sign = -sign;
+        }
+        previous = vertex;
+    }
+    sign * nearest
+}
+
 /// A box with rounded corners, as a signed-distance field: a circle when it is
 /// square with `corner` at half its side, a capsule when `corner` is half its
 /// shorter side.
@@ -1192,6 +1219,27 @@ mod tests {
         assert!(points.iter().all(|p| (p.length() - 1.0).abs() < 1e-4));
         assert_eq!(points[0].y, 1.0);
         assert_eq!(points, fibonacci_sphere(64));
+    }
+
+    #[test]
+    fn polygon_distance_is_signed_for_concave_outlines() {
+        // An L: a concave hexagon.
+        let l = [
+            vec2(0.0, 0.0),
+            vec2(10.0, 0.0),
+            vec2(10.0, 4.0),
+            vec2(4.0, 4.0),
+            vec2(4.0, 10.0),
+            vec2(0.0, 10.0),
+        ];
+        assert!((polygon_distance(vec2(2.0, 2.0), &l) + 2.0).abs() < 1e-5);
+        assert!(
+            (polygon_distance(vec2(7.0, 7.0), &l) - 3.0).abs() < 1e-5,
+            "outside the notch"
+        );
+        assert!((polygon_distance(vec2(-3.0, 5.0), &l) - 3.0).abs() < 1e-5);
+        assert_eq!(polygon_distance(vec2(10.0, 2.0), &l), 0.0);
+        assert_eq!(polygon_distance(Vec2::ZERO, &[]), f32::MAX);
     }
 
     #[test]
