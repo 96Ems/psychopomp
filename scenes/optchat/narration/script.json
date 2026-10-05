@@ -1,0 +1,36 @@
+{
+  "engine": "kokoro",
+  "model": "kokoro-v1.0.fp16",
+  "voice": "am_michael",
+  "speed": 1.0,
+  "clips": [
+    {
+      "id": "intro",
+      "text": "Agent sessions have a hard limit. A chat fills up, gets compacted or thrown away, and the next one starts from zero. And the longer the context, the worse the model works. optchat removes the limit: one chat that never ends, and no compaction ever again."
+    },
+    {
+      "id": "before",
+      "text": "This is what you have today. A very long session: a thousand messages, one and a half megabytes of log. Every turn sends the whole history again. The window fills, the provider re-reads all of it, and the answers decay."
+    },
+    {
+      "id": "after",
+      "text": "optchat keeps the log word for word. A cheap model writes one line per message, and pairs of lines merge into a tree. Every turn starts fresh and sees a view of a fixed size: recent lines one each, older ones many per line. Constant size, infinite context."
+    },
+    {
+      "id": "zoom",
+      "text": "When a line is too vague, the agent zooms. The line opens into the two it was made from, down to the original message. Any fact in your history is a few zooms away, and two tools are enough: zoom, and date."
+    },
+    {
+      "id": "plugin",
+      "text": "The plugin itself is one directory. On the server side it rebuilds the context of every turn, and it answers the harness's own compaction request with the view, so compaction never runs. On the command line it adds a popup. No configuration, no dependency, MIT."
+    },
+    {
+      "id": "tui",
+      "text": "Type slash optchat and the screens are there. Stats: what every turn carries, and what it costs, zero point one six cents a request against zero point eight six for the whole log. View: the context line by line, originals bright, summaries fading with distance. Summaries, the tree. And settings, five knobs."
+    },
+    {
+      "id": "outro",
+      "text": "One line to install. The log, the tree and the tools are plain files on your disk. optchat: the chat is the memory, and you never compact again."
+    }
+  ]
+}

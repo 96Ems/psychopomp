@@ -1,0 +1,204 @@
+{
+ "wordTimings": [
+  {
+   "word": "This",
+   "start": 0,
+   "end": 0
+  },
+  {
+   "word": "is",
+   "start": 0.32,
+   "end": 0.32
+  },
+  {
+   "word": "what",
+   "start": 0.48,
+   "end": 0.48
+  },
+  {
+   "word": "you",
+   "start": 0.64,
+   "end": 0.64
+  },
+  {
+   "word": "have",
+   "start": 0.88,
+   "end": 0.88
+  },
+  {
+   "word": "today.",
+   "start": 1.12,
+   "end": 1.52
+  },
+  {
+   "word": "A",
+   "start": 1.84,
+   "end": 1.84
+  },
+  {
+   "word": "very",
+   "start": 2.16,
+   "end": 2.16
+  },
+  {
+   "word": "long",
+   "start": 2.48,
+   "end": 2.48
+  },
+  {
+   "word": "session.",
+   "start": 2.8000000000000003,
+   "end": 3.2800000000000002
+  },
+  {
+   "word": "A",
+   "start": 3.6,
+   "end": 3.6
+  },
+  {
+   "word": "thousand",
+   "start": 3.84,
+   "end": 4.08
+  },
+  {
+   "word": "messages,",
+   "start": 4.32,
+   "end": 4.8
+  },
+  {
+   "word": "one",
+   "start": 4.96,
+   "end": 4.96
+  },
+  {
+   "word": "and",
+   "start": 5.12,
+   "end": 5.12
+  },
+  {
+   "word": "a",
+   "start": 5.28,
+   "end": 5.28
+  },
+  {
+   "word": "half",
+   "start": 5.36,
+   "end": 5.5200000000000005
+  },
+  {
+   "word": "megabytes",
+   "start": 5.6000000000000005,
+   "end": 6.16
+  },
+  {
+   "word": "of",
+   "start": 6.32,
+   "end": 6.32
+  },
+  {
+   "word": "log.",
+   "start": 6.48,
+   "end": 6.96
+  },
+  {
+   "word": "Every",
+   "start": 7.28,
+   "end": 7.36
+  },
+  {
+   "word": "turn",
+   "start": 7.6000000000000005,
+   "end": 7.84
+  },
+  {
+   "word": "sends",
+   "start": 8.08,
+   "end": 8.24
+  },
+  {
+   "word": "the",
+   "start": 8.4,
+   "end": 8.4
+  },
+  {
+   "word": "whole",
+   "start": 8.56,
+   "end": 8.64
+  },
+  {
+   "word": "history",
+   "start": 8.8,
+   "end": 9.28
+  },
+  {
+   "word": "again.",
+   "start": 9.6,
+   "end": 9.92
+  },
+  {
+   "word": "The",
+   "start": 10.24,
+   "end": 10.24
+  },
+  {
+   "word": "window",
+   "start": 10.4,
+   "end": 10.72
+  },
+  {
+   "word": "fills,",
+   "start": 10.96,
+   "end": 11.44
+  },
+  {
+   "word": "the",
+   "start": 11.68,
+   "end": 11.68
+  },
+  {
+   "word": "provider",
+   "start": 11.84,
+   "end": 12.24
+  },
+  {
+   "word": "re-reads",
+   "start": 12.4,
+   "end": 12.88
+  },
+  {
+   "word": "all",
+   "start": 13.040000000000001,
+   "end": 13.040000000000001
+  },
+  {
+   "word": "of",
+   "start": 13.280000000000001,
+   "end": 13.280000000000001
+  },
+  {
+   "word": "it,",
+   "start": 13.36,
+   "end": 13.52
+  },
+  {
+   "word": "and",
+   "start": 13.68,
+   "end": 13.68
+  },
+  {
+   "word": "the",
+   "start": 13.84,
+   "end": 13.84
+  },
+  {
+   "word": "answers",
+   "start": 14,
+   "end": 14.32
+  },
+  {
+   "word": "decay.",
+   "start": 14.48,
+   "end": 14.96
+  }
+ ]
+}
