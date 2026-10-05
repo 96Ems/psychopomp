@@ -1,6 +1,6 @@
 # Psychopomp Motion Audit & Polish
 
-This document tracks the frame-by-frame motion audit of Psychopomp's showrooms, recipes, and narrated films on `main` (`cc48084`), defines the unified motion token vocabulary, and links before/after contact strips and video studies under `output/polish/`.
+This document tracks the frame-by-frame motion audit of Psychopomp's showrooms, recipes, and narrated films on `main` (`cc48084`), defines the unified motion token vocabulary, and links before/after contact strips and video studies under `output/polish/`. That directory is ignored by git: regenerate a strip with `bun scripts/sheet.ts <plan> <from:to:step> --shutter --theme neutral` at the times listed beside it.
 
 ## Audit Criteria
 
