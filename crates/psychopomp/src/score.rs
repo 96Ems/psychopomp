@@ -17,22 +17,43 @@
 //! actors and sounds compose inside one `all![...]` or `.then(...)` expression
 //! without per-actor contexts or escape hatches.
 
-use std::path::PathBuf;
+use std::{cell::RefCell, path::PathBuf, rc::Rc};
 
 use anyhow::Result;
 use serde_json::Value;
 
 use crate::{
     author::{ActorHandle, ContinuousHandle, PlanBuilder, whole_millis},
+    bars::{BarsActor, BarsPlan, SortOrder},
     callout::{CalloutActor, CalloutPlan},
-    caption::{self, CaptionActor, CaptionPlan},
+    caption::{self, CaptionActor, CaptionPlan, CaptionSpanPlan},
+    changed_files::{ChangedFilesActor, ChangedFilesPlan},
+    chat::{ChatActor, ChatPlan, ChatSpanPlan},
+    checklist::{ChecklistActor, ChecklistPlan, Outcome},
+    chrome,
+    confetti::{ConfettiActor, ConfettiPlan},
+    effects::spinner::Mark,
+    ide::{
+        CursorActor, CursorPlan, DiagnosticActor, DiagnosticPlan, HoverActor, HoverPlan, InlayHint,
+    },
+    image::{ImageActor, ImagePlan},
     lanes::{LanesActor, LanesPlan},
+    lens::{LensActor, LensPlan},
+    lower_third::{LowerThirdActor, LowerThirdPlan},
     math::easing::Ease,
+    meter::{MeterActor, MeterPlan},
     plan::{MediaKindPlan, MediaPlan, MediaRolePlan, ScenePlan, SpringPlan, TrackEventPlan},
     plot::{PlotActor, PlotPlan},
     rolling::{RollingNumberActor, RollingNumberPlan},
     sequence::{SequenceActor, SequencePlan},
-    stage::{PORT_POP_SECONDS, StageActor, StagePlan, packet},
+    stage::{
+        Camera as StageCamera, CameraRig, Move, OrbEntrance, PORT_POP_SECONDS, StageActor,
+        StagePlan, packet, reply_after,
+    },
+    subtitles::{SubtitlesActor, SubtitlesPlan},
+    terminal::{TerminalActor, TerminalPlan},
+    text::{TextActor, TextPlan},
+    tone::Tone,
     tree::{TreeActor, TreeModel, TreePlan},
     video::{VideoActor, VideoPlan},
 };
@@ -114,6 +135,12 @@ pub trait CueTime: Copy {
     /// Expresses causal guards such as `f("injected").not_before(contact.after(millis(340)))`.
     fn not_before(self, earliest: impl CueTime) -> u64 {
         self.cue_nanos().max(earliest.cue_nanos())
+    }
+
+    /// Earliest launch of a reply to a packet that arrives at this time
+    /// ([`crate::stage::reply_after`]: `340 ms` gather + `80 ms` reaction).
+    fn reply(self) -> u64 {
+        reply_after(self.cue_nanos())
     }
 }
 
@@ -520,7 +547,22 @@ macro_rules! all {
     };
 }
 
-pub use {all as parallel, chain};
+/// Play one or more beats in parallel anchored at `time` on `scene`, returning
+/// their combined [`Span`].
+///
+/// Supports both `at!(scene, time => b1, b2, ...)` (cue-sheet style) and
+/// `at!(scene, time, b1, b2, ...)`.
+#[macro_export]
+macro_rules! at {
+    ($scene:expr, $time:expr => $($beat:expr),+ $(,)?) => {
+        $scene.at($time, $crate::all![$($beat),+])
+    };
+    ($scene:expr, $time:expr, $($beat:expr),+ $(,)?) => {
+        $scene.at($time, $crate::all![$($beat),+])
+    };
+}
+
+pub use {all as parallel, at, chain};
 
 /// Schedule a layer audio clip at the cue time (impulse).
 pub fn sound(
@@ -833,17 +875,380 @@ impl Stage {
     /// Spans until the card returns to rest (`3 * 27 ms = 81 ms`).
     pub fn glitch(&self, card: impl Into<String>, seeds: [f32; 3]) -> impl Beat + '_ {
         let card = card.into();
-        let step_nanos = crate::author::seconds(0.027);
-        action(move |scene, at| {
-            let prop = format!("{card}.glitch");
-            let mut stage = self.inner.clone();
-            let mut step = at;
-            for seed in seeds.into_iter().chain([0.0]) {
-                stage.set(scene, &prop, step, seed);
-                step += step_nanos;
-            }
-            step - step_nanos
+        action(move |scene, at| self.inner.clone().glitch(scene, &card, at, seeds))
+    }
+
+    /// Return a value [`Camera`] handle whose shot methods produce composable [`Beat`]s.
+    pub fn camera(&self) -> Camera {
+        Camera {
+            inner: self.inner.camera(),
+        }
+    }
+
+    /// Glide `property` to `target` in `seconds` on a minimum-jerk (smootherstep) curve (impulse).
+    pub fn glide(&self, property: impl Into<String>, target: f32, seconds: f32) -> impl Beat + '_ {
+        let property = property.into();
+        impulse(move |scene, at| {
+            self.inner
+                .clone()
+                .glide(scene, &property, at, target, seconds);
         })
+    }
+
+    /// Fade `element` in to `opacity` on a `seconds` spring, starting hidden (impulse).
+    pub fn fade_in(
+        &self,
+        element: impl Into<String>,
+        opacity: f32,
+        seconds: f32,
+    ) -> impl Beat + '_ {
+        let element = element.into();
+        impulse(move |scene, at| {
+            self.inner
+                .clone()
+                .fade_in(scene, &element, at, opacity, seconds);
+        })
+    }
+
+    /// Fade `element` out to `0.0` on a `seconds` spring from its resting opacity (impulse).
+    pub fn fade_out(&self, element: impl Into<String>, seconds: f32) -> impl Beat + '_ {
+        let element = element.into();
+        impulse(move |scene, at| {
+            self.inner.clone().fade_out(scene, &element, at, seconds);
+        })
+    }
+
+    /// Calibrated orb entrance (scale, deblur, turn, fade in) (impulse).
+    pub fn orb_in(&self, orb: impl Into<String>, entrance: OrbEntrance) -> impl Beat + '_ {
+        let orb = orb.into();
+        impulse(move |scene, at| {
+            self.inner.clone().orb_in(scene, &orb, at, entrance);
+        })
+    }
+
+    /// Send `packet` along its multi-leg route, landing on each stop; spans until final arrival.
+    pub fn relay(&self, packet: impl Into<String>, seconds: f32) -> impl Beat + '_ {
+        let packet = packet.into();
+        action(move |scene, at| {
+            self.inner
+                .clone()
+                .relay(scene, &packet, at, seconds)
+                .last()
+                .copied()
+                .unwrap_or(at)
+        })
+    }
+
+    /// Morph `form` to shape `index` over `seconds`; spans `seconds`.
+    pub fn morph(&self, form: impl Into<String>, index: usize, seconds: f32) -> impl Beat + '_ {
+        let form = form.into();
+        action(move |scene, at| self.inner.clone().morph(scene, &form, at, index, seconds))
+    }
+
+    /// Strike lightning along `bolt`; spans until the first return stroke connects.
+    pub fn zap(&self, bolt: impl Into<String>) -> impl Beat + '_ {
+        let bolt = bolt.into();
+        action(move |scene, at| self.inner.clone().zap(scene, &bolt, at))
+    }
+
+    /// Ease `element`'s electric charge to `intensity` over `seconds` (impulse).
+    pub fn charge(
+        &self,
+        element: impl Into<String>,
+        intensity: f32,
+        seconds: f32,
+    ) -> impl Beat + '_ {
+        let element = element.into();
+        impulse(move |scene, at| {
+            self.inner
+                .clone()
+                .charge(scene, &element, at, intensity, seconds);
+        })
+    }
+
+    /// Keep an electric arc humming along `bolt` at `intensity` (impulse).
+    pub fn hum(&self, bolt: impl Into<String>, intensity: f32, seconds: f32) -> impl Beat + '_ {
+        let bolt = bolt.into();
+        impulse(move |scene, at| {
+            self.inner.clone().hum(scene, &bolt, at, intensity, seconds);
+        })
+    }
+
+    /// Burn `card` away to ash; spans until the card is gone.
+    pub fn dissolve(&self, card: impl Into<String>) -> impl Beat + '_ {
+        let card = card.into();
+        action(move |scene, at| self.inner.clone().dissolve(scene, &card, at))
+    }
+
+    /// Materialize `card` out of ash over `seconds`; spans `seconds`.
+    pub fn materialize(&self, card: impl Into<String>, seconds: f32) -> impl Beat + '_ {
+        let card = card.into();
+        action(move |scene, at| self.inner.clone().materialize(scene, &card, at, seconds))
+    }
+
+    /// Sweep a scan line down `card` over `seconds`; spans `seconds`.
+    pub fn scan(&self, card: impl Into<String>, seconds: f32) -> impl Beat + '_ {
+        let card = card.into();
+        action(move |scene, at| self.inner.clone().scan(scene, &card, at, seconds))
+    }
+
+    /// Raise `shield` over `seconds` (impulse).
+    pub fn raise(&self, shield: impl Into<String>, seconds: f32) -> impl Beat + '_ {
+        let shield = shield.into();
+        impulse(move |scene, at| {
+            self.inner.clone().raise(scene, &shield, at, seconds);
+        })
+    }
+
+    /// Lower `shield` over `seconds` (impulse).
+    pub fn lower(&self, shield: impl Into<String>, seconds: f32) -> impl Beat + '_ {
+        let shield = shield.into();
+        impulse(move |scene, at| {
+            self.inner.clone().lower(scene, &shield, at, seconds);
+        })
+    }
+
+    /// Run `post.rewind` tape interference with `chroma` hit; spans `1.4 s`.
+    pub fn rewind(&self, chroma: f32) -> impl Beat + '_ {
+        action(move |scene, at| self.inner.clone().rewind(scene, at, chroma))
+    }
+
+    /// Play `orb`'s burst backwards over `seconds`; spans until whole.
+    pub fn unburst(&self, orb: impl Into<String>, seconds: f32) -> impl Beat + '_ {
+        let orb = orb.into();
+        action(move |scene, at| self.inner.clone().unburst(scene, &orb, at, seconds))
+    }
+
+    /// Knock `card` away from `source` when its burst pressure wave passes; spans until arrival.
+    pub fn shock_kick(
+        &self,
+        source: impl Into<String>,
+        card: impl Into<String>,
+        push: f32,
+        falloff: Option<f32>,
+    ) -> impl Beat + '_ {
+        let source = source.into();
+        let card = card.into();
+        action(move |scene, at| {
+            self.inner
+                .clone()
+                .shock_kick(scene, &source, at, &card, push, falloff)
+        })
+    }
+
+    /// Resolve `card`'s status spinner (started at `started`) into its mark; spans until drawn.
+    pub fn resolve_spinner(&self, card: impl Into<String>, started: u64) -> impl Beat + '_ {
+        let card = card.into();
+        action(move |scene, at| {
+            self.inner
+                .clone()
+                .resolve_spinner(scene, &card, started, at)
+        })
+    }
+
+    /// Two-ring halo entrance (`inner` then `outer` 60 ms later) (impulse).
+    pub fn halo<'a>(&'a self, rings: [(&'a str, f32); 2], seconds: f32) -> impl Beat + 'a {
+        impulse(move |scene, at| {
+            self.inner.clone().halo(scene, rings, at, seconds);
+        })
+    }
+
+    /// Release a two-ring halo in reverse (impulse).
+    pub fn halo_out<'a>(&'a self, rings: [&'a str; 2], seconds: f32) -> impl Beat + 'a {
+        impulse(move |scene, at| {
+            self.inner.clone().halo_out(scene, rings, at, seconds);
+        })
+    }
+
+    /// Sweep `ring` as a timer to `sweep` over `seconds`; spans `seconds`.
+    pub fn ring_timer(&self, ring: impl Into<String>, seconds: f32, sweep: f32) -> impl Beat + '_ {
+        let ring = ring.into();
+        action(move |scene, at| {
+            self.inner
+                .clone()
+                .ring_timer(scene, &ring, at, seconds, sweep)
+        })
+    }
+
+    /// Step `cards` back to `amount` of dimness on `seconds` springs (impulse).
+    pub fn dim<'a, I, S>(&'a self, cards: I, amount: f32, seconds: f32) -> impl Beat + 'a
+    where
+        I: IntoIterator<Item = S> + 'a,
+        S: AsRef<str>,
+    {
+        impulse(move |scene, at| {
+            self.inner.clone().dim(scene, cards, at, amount, seconds);
+        })
+    }
+
+    /// Swap two labels `[from, to]` separated by `gap`; spans until `to` starts.
+    pub fn swap_labels<'a>(&'a self, pair: [&'a str; 2], gap: u64) -> impl Beat + 'a {
+        action(move |scene, at| self.inner.clone().swap_labels(scene, pair, at, gap))
+    }
+
+    /// Cross-fade `card`'s status directly from `from` to `to` over `seconds`; spans `seconds`.
+    pub fn swap_status(
+        &self,
+        card: impl Into<String>,
+        pair: [usize; 2],
+        seconds: f32,
+    ) -> impl Beat + '_ {
+        let card = card.into();
+        action(move |scene, at| {
+            self.inner
+                .clone()
+                .swap_status(scene, &card, at, pair, seconds)
+        })
+    }
+
+    /// Unplug `beam` over `seconds`; spans until its port resolves away.
+    pub fn disconnect(&self, beam: impl Into<String>, seconds: f32) -> impl Beat + '_ {
+        let beam = beam.into();
+        action(move |scene, at| self.inner.clone().disconnect(scene, &beam, at, seconds))
+    }
+}
+
+/// Value handle for the Stage [`CameraRig`] whose shot methods return [`Beat`]s.
+#[derive(Clone, Debug)]
+pub struct Camera {
+    inner: CameraRig,
+}
+
+impl From<CameraRig> for Camera {
+    fn from(inner: CameraRig) -> Self {
+        Self { inner }
+    }
+}
+
+impl CameraRig {
+    /// Return a value [`Camera`] handle whose shot methods produce composable [`Beat`]s.
+    pub fn beats(&self) -> Camera {
+        Camera {
+            inner: self.clone(),
+        }
+    }
+}
+
+impl Camera {
+    pub fn rig(&self) -> &CameraRig {
+        &self.inner
+    }
+
+    pub fn pose(&self, scene: &PlanBuilder, at_nanos: u64) -> StageCamera {
+        self.inner.pose(scene, at_nanos)
+    }
+
+    pub fn establish(&self, back: f32, seconds: f32) -> impl Beat + '_ {
+        action(move |scene, at| self.inner.establish(scene, at, back, seconds))
+    }
+
+    pub fn frame<'a>(
+        &'a self,
+        targets: &'a [&'a str],
+        padding: f32,
+        motion: Move,
+    ) -> impl Beat + 'a {
+        action(move |scene, at| {
+            self.inner
+                .frame(scene, targets, padding, at, motion)
+                .unwrap_or_else(|err| panic!("camera frame: {err:#}"))
+        })
+    }
+
+    pub fn push_in(&self, distance: f32, motion: Move) -> impl Beat + '_ {
+        action(move |scene, at| self.inner.push_in(scene, at, distance, motion))
+    }
+
+    pub fn pull_back(&self, distance: f32, motion: Move) -> impl Beat + '_ {
+        action(move |scene, at| self.inner.pull_back(scene, at, distance, motion))
+    }
+
+    pub fn drift(&self, toward: impl Into<String>, seconds: f32) -> impl Beat + '_ {
+        let toward = toward.into();
+        action(move |scene, at| {
+            self.inner
+                .drift(scene, &toward, at, seconds)
+                .unwrap_or_else(|err| panic!("camera drift: {err:#}"))
+        })
+    }
+
+    pub fn whip<'a>(
+        &'a self,
+        targets: &'a [&'a str],
+        padding: f32,
+        seconds: f32,
+    ) -> impl Beat + 'a {
+        action(move |scene, at| {
+            self.inner
+                .whip(scene, targets, padding, at, seconds)
+                .unwrap_or_else(|err| panic!("camera whip: {err:#}"))
+        })
+    }
+
+    pub fn orbit(
+        &self,
+        around: impl Into<String>,
+        angles: [f32; 2],
+        motion: Move,
+    ) -> impl Beat + '_ {
+        let around = around.into();
+        action(move |scene, at| {
+            self.inner
+                .orbit(scene, &around, at, angles, motion)
+                .unwrap_or_else(|err| panic!("camera orbit: {err:#}"))
+        })
+    }
+
+    pub fn dolly_zoom(
+        &self,
+        subject: impl Into<String>,
+        dolly: f32,
+        motion: Move,
+    ) -> impl Beat + '_ {
+        let subject = subject.into();
+        action(move |scene, at| {
+            self.inner
+                .dolly_zoom(scene, &subject, at, dolly, motion)
+                .unwrap_or_else(|err| panic!("camera dolly_zoom: {err:#}"))
+        })
+    }
+
+    pub fn roll(&self, radians: f32, motion: Move) -> impl Beat + '_ {
+        action(move |scene, at| self.inner.roll(scene, at, radians, motion))
+    }
+
+    pub fn focus_on(&self, element: impl Into<String>, motion: Move) -> impl Beat + '_ {
+        let element = element.into();
+        action(move |scene, at| {
+            self.inner
+                .focus_on(scene, &element, at, motion)
+                .unwrap_or_else(|err| panic!("camera focus_on: {err:#}"))
+        })
+    }
+
+    pub fn aperture(&self, dof: f32, motion: Move) -> impl Beat + '_ {
+        action(move |scene, at| self.inner.aperture(scene, at, dof, motion))
+    }
+
+    pub fn follow(&self, target: impl Into<String>, motion: Move) -> impl Beat + '_ {
+        let target = target.into();
+        action(move |scene, at| {
+            self.inner
+                .follow(scene, &target, at, motion)
+                .unwrap_or_else(|err| panic!("camera follow: {err:#}"))
+        })
+    }
+
+    pub fn release(&self, motion: Move) -> impl Beat + '_ {
+        action(move |scene, at| {
+            self.inner
+                .release(scene, at, motion)
+                .unwrap_or_else(|err| panic!("camera release: {err:#}"))
+        })
+    }
+
+    pub fn handheld(&self, amount: f32, seconds: f32) -> impl Beat + '_ {
+        action(move |scene, at| self.inner.handheld(scene, at, amount, seconds))
     }
 }
 
@@ -879,6 +1284,32 @@ impl Caption {
         })
     }
 
+    /// Declare the standard top-left explainer header (`#number  title`).
+    pub fn header(scene: &mut PlanBuilder, label: &str, title: &str) -> Result<Self> {
+        Ok(Self {
+            inner: chrome::header(scene, label, title)?,
+        })
+    }
+
+    /// Declare a top-right status chip (`● text`).
+    pub fn chip(scene: &mut PlanBuilder, id: &str, dot: Tone, text: &str) -> Result<Self> {
+        Ok(Self {
+            inner: chrome::chip(scene, id, dot, text)?,
+        })
+    }
+
+    /// Declare a bottom-left explainer footer from `(text, tone)` pairs
+    /// (matching [`crate::stage::StageElement::label`]).
+    pub fn footer(scene: &mut PlanBuilder, id: &str, spans: &[(&str, Tone)]) -> Result<Self> {
+        let spans = spans
+            .iter()
+            .map(|&(text, tone)| CaptionSpanPlan::new(text, tone))
+            .collect();
+        Ok(Self {
+            inner: chrome::footer(scene, id, spans)?,
+        })
+    }
+
     pub fn actor(&self) -> &ActorHandle {
         self.inner.actor()
     }
@@ -898,6 +1329,17 @@ impl Caption {
     pub fn hide(&self) -> impl Beat + '_ {
         impulse(move |scene, at| {
             caption::hide(scene, self.inner.actor(), at);
+        })
+    }
+
+    /// Glide to `anchor` (impulse).
+    pub fn move_to(&self, anchor: impl Into<String>) -> impl Beat + '_ {
+        let anchor = anchor.into();
+        impulse(move |scene, at| {
+            self.inner
+                .clone()
+                .move_to(scene, &anchor, at)
+                .unwrap_or_else(|err| panic!("caption '{}': {err:#}", self.inner.id()));
         })
     }
 
@@ -1044,6 +1486,17 @@ impl RollingNumber {
             self.inner
                 .roll_at(scene, at, value)
                 .unwrap_or_else(|err| panic!("rolling number '{}': {err:#}", self.inner.id()))
+        })
+    }
+
+    /// Glide to `anchor` (impulse).
+    pub fn move_to(&self, anchor: impl Into<String>) -> impl Beat + '_ {
+        let anchor = anchor.into();
+        impulse(move |scene, at| {
+            self.inner
+                .clone()
+                .move_to(scene, &anchor, at)
+                .unwrap_or_else(|err| panic!("rolling number '{}': {err:#}", self.inner.id()));
         })
     }
 }
@@ -1348,6 +1801,25 @@ impl Sequence {
         self.inner.id()
     }
 
+    pub fn show(&self) -> impl Beat + '_ {
+        impulse(move |scene, at| {
+            self.inner.clone().show(scene, at);
+        })
+    }
+
+    pub fn hide(&self) -> impl Beat + '_ {
+        impulse(move |scene, at| {
+            self.inner.clone().hide(scene, at);
+        })
+    }
+
+    pub fn to(&self, property: impl Into<String>, target: f32, seconds: f32) -> impl Beat + '_ {
+        let property = property.into();
+        impulse(move |scene, at| {
+            self.inner.clone().to(scene, &property, at, target, seconds);
+        })
+    }
+
     pub fn animate(
         &self,
         property: impl Into<String>,
@@ -1471,6 +1943,1190 @@ impl Video {
     }
 }
 
+/// Value handle for a [`TerminalActor`] whose choreography methods return [`Beat`]s.
+#[derive(Clone, Debug)]
+pub struct Terminal {
+    inner: Rc<RefCell<TerminalActor>>,
+}
+
+impl From<TerminalActor> for Terminal {
+    fn from(inner: TerminalActor) -> Self {
+        Self {
+            inner: Rc::new(RefCell::new(inner)),
+        }
+    }
+}
+
+impl TerminalActor {
+    /// Return a value [`Terminal`] handle whose methods produce composable [`Beat`]s.
+    pub fn beats(&self) -> Terminal {
+        Terminal::from(self.clone())
+    }
+}
+
+impl Terminal {
+    pub fn declare(
+        scene: &mut PlanBuilder,
+        id: impl Into<String>,
+        plan: TerminalPlan,
+    ) -> Result<Self> {
+        Ok(Self::from(TerminalActor::declare(scene, id, plan)?))
+    }
+
+    pub fn actor(&self) -> ActorHandle {
+        self.inner.borrow().actor().clone()
+    }
+
+    pub fn id(&self) -> String {
+        self.inner.borrow().id().to_owned()
+    }
+
+    pub fn show(&self) -> impl Beat + '_ {
+        action(move |scene, at| self.inner.borrow_mut().show(scene, at))
+    }
+
+    pub fn hide(&self) -> impl Beat + '_ {
+        impulse(move |scene, at| {
+            self.inner.borrow_mut().hide(scene, at);
+        })
+    }
+
+    pub fn prompt(&self) -> impl Beat + '_ {
+        impulse(move |scene, at| {
+            self.inner
+                .borrow_mut()
+                .prompt(scene, at)
+                .unwrap_or_else(|err| panic!("terminal prompt: {err:#}"));
+        })
+    }
+
+    pub fn idle(&self, until_nanos: u64) -> impl Beat + '_ {
+        impulse(move |scene, _at| {
+            self.inner.borrow_mut().idle(scene, until_nanos);
+        })
+    }
+
+    pub fn type_command(&self, text: impl Into<String>) -> impl Beat + '_ {
+        let text = text.into();
+        action(move |scene, at| {
+            self.inner
+                .borrow_mut()
+                .type_command(scene, at, &text)
+                .unwrap_or_else(|err| panic!("terminal type_command: {err:#}"))
+        })
+    }
+
+    pub fn type_at(&self, text: impl Into<String>, chars_per_second: f32) -> impl Beat + '_ {
+        let text = text.into();
+        action(move |scene, at| {
+            self.inner
+                .borrow_mut()
+                .type_at(scene, at, &text, chars_per_second)
+                .unwrap_or_else(|err| panic!("terminal type_at: {err:#}"))
+        })
+    }
+
+    pub fn print(
+        &self,
+        lines: impl IntoIterator<Item = Vec<CaptionSpanPlan>> + 'static,
+    ) -> impl Beat + '_ {
+        action(move |scene, at| {
+            self.inner
+                .borrow_mut()
+                .print(scene, at, lines)
+                .unwrap_or_else(|err| panic!("terminal print: {err:#}"))
+        })
+    }
+
+    pub fn print_text(&self, text: impl Into<String>, tone: Tone) -> impl Beat + '_ {
+        let text = text.into();
+        action(move |scene, at| {
+            self.inner
+                .borrow_mut()
+                .print_text(scene, at, &text, tone)
+                .unwrap_or_else(|err| panic!("terminal print_text: {err:#}"))
+        })
+    }
+
+    pub fn stream(&self, spans: Vec<CaptionSpanPlan>, chars_per_second: f32) -> impl Beat + '_ {
+        action(move |scene, at| {
+            self.inner
+                .borrow_mut()
+                .stream(scene, at, spans, chars_per_second)
+                .unwrap_or_else(|err| panic!("terminal stream: {err:#}"))
+        })
+    }
+
+    pub fn spin(&self, spans: Vec<CaptionSpanPlan>) -> impl Beat + '_ {
+        impulse(move |scene, at| {
+            self.inner
+                .borrow_mut()
+                .spin(scene, at, spans)
+                .unwrap_or_else(|err| panic!("terminal spin: {err:#}"));
+        })
+    }
+
+    pub fn resolve(
+        &self,
+        task: impl Into<String>,
+        mark: Mark,
+        done: Vec<CaptionSpanPlan>,
+    ) -> impl Beat + '_ {
+        let task = task.into();
+        action(move |scene, at| {
+            self.inner
+                .borrow_mut()
+                .resolve(scene, &task, at, mark, done)
+                .unwrap_or_else(|err| panic!("terminal resolve: {err:#}"))
+        })
+    }
+
+    pub fn highlight(&self, line: impl Into<String>, seconds: f32) -> impl Beat + '_ {
+        let line = line.into();
+        impulse(move |scene, at| {
+            self.inner
+                .borrow_mut()
+                .highlight(scene, &line, at, seconds)
+                .unwrap_or_else(|err| panic!("terminal highlight: {err:#}"));
+        })
+    }
+}
+
+/// Value handle for a [`ChatActor`] whose choreography methods return [`Beat`]s.
+#[derive(Clone, Debug)]
+pub struct Chat {
+    inner: Rc<RefCell<ChatActor>>,
+}
+
+impl From<ChatActor> for Chat {
+    fn from(inner: ChatActor) -> Self {
+        Self {
+            inner: Rc::new(RefCell::new(inner)),
+        }
+    }
+}
+
+impl ChatActor {
+    /// Return a value [`Chat`] handle whose methods produce composable [`Beat`]s.
+    pub fn beats(&self) -> Chat {
+        Chat::from(self.clone())
+    }
+}
+
+impl Chat {
+    pub fn declare(scene: &mut PlanBuilder, id: impl Into<String>, plan: ChatPlan) -> Result<Self> {
+        Ok(Self::from(ChatActor::declare(scene, id, plan)?))
+    }
+
+    pub fn actor(&self) -> ActorHandle {
+        self.inner.borrow().actor().clone()
+    }
+
+    pub fn id(&self) -> String {
+        self.inner.borrow().id().to_owned()
+    }
+
+    pub fn show(&self) -> impl Beat + '_ {
+        action(move |scene, at| self.inner.borrow_mut().show(scene, at))
+    }
+
+    pub fn hide(&self) -> impl Beat + '_ {
+        impulse(move |scene, at| {
+            self.inner.borrow_mut().hide(scene, at);
+        })
+    }
+
+    pub fn stamp(&self, label: impl Into<String>) -> impl Beat + '_ {
+        let label = label.into();
+        impulse(move |_scene, _at| {
+            self.inner.borrow_mut().stamp(label);
+        })
+    }
+
+    pub fn typing(&self, author: impl Into<String>) -> impl Beat + '_ {
+        let author = author.into();
+        impulse(move |scene, at| {
+            self.inner
+                .borrow_mut()
+                .typing(scene, at, &author)
+                .unwrap_or_else(|err| panic!("chat typing: {err:#}"));
+        })
+    }
+
+    pub fn say(&self, author: impl Into<String>, spans: Vec<ChatSpanPlan>) -> impl Beat + '_ {
+        let author = author.into();
+        impulse(move |scene, at| {
+            self.inner
+                .borrow_mut()
+                .say(scene, at, &author, spans)
+                .unwrap_or_else(|err| panic!("chat say: {err:#}"));
+        })
+    }
+
+    pub fn say_text(&self, author: impl Into<String>, text: impl Into<String>) -> impl Beat + '_ {
+        let author = author.into();
+        let text = text.into();
+        impulse(move |scene, at| {
+            self.inner
+                .borrow_mut()
+                .say_text(scene, at, &author, &text)
+                .unwrap_or_else(|err| panic!("chat say_text: {err:#}"));
+        })
+    }
+
+    pub fn stream(
+        &self,
+        author: impl Into<String>,
+        spans: Vec<ChatSpanPlan>,
+        chars_per_second: f32,
+    ) -> impl Beat + '_ {
+        let author = author.into();
+        action(move |scene, at| {
+            self.inner
+                .borrow_mut()
+                .stream(scene, at, &author, spans, chars_per_second)
+                .unwrap_or_else(|err| panic!("chat stream: {err:#}"))
+                .1
+        })
+    }
+
+    pub fn react(
+        &self,
+        message: impl Into<String>,
+        label: impl Into<String>,
+        count: u32,
+    ) -> impl Beat + '_ {
+        let message = message.into();
+        let label = label.into();
+        impulse(move |scene, at| {
+            self.inner
+                .borrow_mut()
+                .react(scene, at, &message, &label, count)
+                .unwrap_or_else(|err| panic!("chat react: {err:#}"));
+        })
+    }
+
+    pub fn highlight(&self, message: impl Into<String>, for_seconds: f32) -> impl Beat + '_ {
+        let message = message.into();
+        impulse(move |scene, at| {
+            self.inner
+                .borrow_mut()
+                .highlight(scene, &message, at, for_seconds)
+                .unwrap_or_else(|err| panic!("chat highlight: {err:#}"));
+        })
+    }
+}
+
+/// Value handle for a [`ChangedFilesActor`] whose choreography methods return [`Beat`]s.
+#[derive(Clone, Debug)]
+pub struct ChangedFiles {
+    inner: Rc<RefCell<ChangedFilesActor>>,
+}
+
+impl From<ChangedFilesActor> for ChangedFiles {
+    fn from(inner: ChangedFilesActor) -> Self {
+        Self {
+            inner: Rc::new(RefCell::new(inner)),
+        }
+    }
+}
+
+impl ChangedFilesActor {
+    /// Return a value [`ChangedFiles`] handle whose methods produce composable [`Beat`]s.
+    pub fn beats(&self) -> ChangedFiles {
+        ChangedFiles::from(self.clone())
+    }
+}
+
+impl ChangedFiles {
+    pub fn declare(
+        scene: &mut PlanBuilder,
+        id: impl Into<String>,
+        plan: ChangedFilesPlan,
+    ) -> Result<Self> {
+        Ok(Self::from(ChangedFilesActor::declare(scene, id, plan)?))
+    }
+
+    pub fn actor(&self) -> ActorHandle {
+        self.inner.borrow().actor().clone()
+    }
+
+    pub fn id(&self) -> String {
+        self.inner.borrow().id().to_owned()
+    }
+
+    pub fn show(&self) -> impl Beat + '_ {
+        action(move |scene, at| self.inner.borrow_mut().show(scene, at))
+    }
+
+    pub fn hide(&self) -> impl Beat + '_ {
+        impulse(move |scene, at| {
+            self.inner.borrow_mut().hide(scene, at);
+        })
+    }
+
+    pub fn reveal_row(&self, id: impl Into<String>) -> impl Beat + '_ {
+        let id = id.into();
+        impulse(move |scene, at| {
+            self.inner
+                .borrow_mut()
+                .reveal_row(scene, &id, at)
+                .unwrap_or_else(|err| panic!("changed_files reveal_row: {err:#}"));
+        })
+    }
+
+    pub fn reveal(&self, stagger_seconds: f32) -> impl Beat + '_ {
+        action(move |scene, at| {
+            self.inner
+                .borrow_mut()
+                .reveal(scene, at, stagger_seconds)
+                .unwrap_or_else(|err| panic!("changed_files reveal: {err:#}"))
+        })
+    }
+
+    pub fn highlight(&self, id: impl Into<String>, for_seconds: f32) -> impl Beat + '_ {
+        let id = id.into();
+        impulse(move |scene, at| {
+            self.inner
+                .borrow_mut()
+                .highlight(scene, &id, at, for_seconds)
+                .unwrap_or_else(|err| panic!("changed_files highlight: {err:#}"));
+        })
+    }
+
+    pub fn focus(&self, id: impl Into<String>) -> impl Beat + '_ {
+        let id = id.into();
+        impulse(move |scene, at| {
+            self.inner
+                .borrow_mut()
+                .focus(scene, &id, at)
+                .unwrap_or_else(|err| panic!("changed_files focus: {err:#}"));
+        })
+    }
+
+    pub fn unfocus(&self) -> impl Beat + '_ {
+        impulse(move |scene, at| {
+            self.inner.borrow_mut().unfocus(scene, at);
+        })
+    }
+}
+
+/// Value handle for a [`LowerThirdActor`] whose choreography methods return [`Beat`]s.
+#[derive(Clone, Debug)]
+pub struct LowerThird {
+    inner: LowerThirdActor,
+}
+
+impl From<LowerThirdActor> for LowerThird {
+    fn from(inner: LowerThirdActor) -> Self {
+        Self { inner }
+    }
+}
+
+impl LowerThirdActor {
+    /// Return a value [`LowerThird`] handle whose methods produce composable [`Beat`]s.
+    pub fn beats(&self) -> LowerThird {
+        LowerThird {
+            inner: self.clone(),
+        }
+    }
+}
+
+impl LowerThird {
+    pub fn declare(
+        scene: &mut PlanBuilder,
+        id: impl Into<String>,
+        plan: &LowerThirdPlan,
+    ) -> Result<Self> {
+        Ok(Self {
+            inner: LowerThirdActor::declare(scene, id, plan)?,
+        })
+    }
+
+    pub fn actor(&self) -> &ActorHandle {
+        self.inner.actor()
+    }
+
+    pub fn id(&self) -> &str {
+        self.inner.id()
+    }
+
+    pub fn show(&self) -> impl Beat + '_ {
+        action(move |scene, at| self.inner.clone().show(scene, at))
+    }
+
+    pub fn hide(&self) -> impl Beat + '_ {
+        action(move |scene, at| self.inner.clone().hide(scene, at))
+    }
+}
+
+/// Value handle for a [`ChecklistActor`] whose choreography methods return [`Beat`]s.
+#[derive(Clone, Debug)]
+pub struct Checklist {
+    inner: Rc<RefCell<ChecklistActor>>,
+}
+
+impl From<ChecklistActor> for Checklist {
+    fn from(inner: ChecklistActor) -> Self {
+        Self {
+            inner: Rc::new(RefCell::new(inner)),
+        }
+    }
+}
+
+impl ChecklistActor {
+    /// Return a value [`Checklist`] handle whose methods produce composable [`Beat`]s.
+    pub fn beats(&self) -> Checklist {
+        Checklist::from(self.clone())
+    }
+}
+
+impl Checklist {
+    pub fn declare(
+        scene: &mut PlanBuilder,
+        id: impl Into<String>,
+        plan: &ChecklistPlan,
+    ) -> Result<Self> {
+        Ok(Self::from(ChecklistActor::declare(scene, id, plan)?))
+    }
+
+    pub fn actor(&self) -> ActorHandle {
+        self.inner.borrow().actor().clone()
+    }
+
+    pub fn id(&self) -> String {
+        self.inner.borrow().id().to_owned()
+    }
+
+    pub fn show(&self) -> impl Beat + '_ {
+        impulse(move |scene, at| {
+            self.inner.borrow_mut().show(scene, at);
+        })
+    }
+
+    pub fn hide(&self) -> impl Beat + '_ {
+        impulse(move |scene, at| {
+            self.inner.borrow_mut().hide(scene, at);
+        })
+    }
+
+    pub fn reveal(&self) -> impl Beat + '_ {
+        action(move |scene, at| {
+            self.inner
+                .borrow_mut()
+                .reveal(scene, at)
+                .unwrap_or_else(|err| panic!("checklist reveal: {err:#}"))
+        })
+    }
+
+    pub fn reveal_item(&self, item: impl Into<String>) -> impl Beat + '_ {
+        let item = item.into();
+        impulse(move |scene, at| {
+            self.inner
+                .borrow_mut()
+                .reveal_item(scene, &item, at)
+                .unwrap_or_else(|err| panic!("checklist reveal_item: {err:#}"));
+        })
+    }
+
+    pub fn start(&self, item: impl Into<String>) -> impl Beat + '_ {
+        let item = item.into();
+        impulse(move |scene, at| {
+            self.inner
+                .borrow_mut()
+                .start(scene, &item, at)
+                .unwrap_or_else(|err| panic!("checklist start: {err:#}"));
+        })
+    }
+
+    pub fn resolve(&self, item: impl Into<String>, outcome: impl Into<Outcome>) -> impl Beat + '_ {
+        let item = item.into();
+        let outcome = outcome.into();
+        action(move |scene, at| {
+            self.inner
+                .borrow_mut()
+                .resolve(scene, &item, at, outcome)
+                .unwrap_or_else(|err| panic!("checklist resolve: {err:#}"))
+        })
+    }
+}
+
+/// Value handle for a [`MeterActor`] whose choreography methods return [`Beat`]s.
+#[derive(Clone, Debug)]
+pub struct Meter {
+    inner: MeterActor,
+}
+
+impl From<MeterActor> for Meter {
+    fn from(inner: MeterActor) -> Self {
+        Self { inner }
+    }
+}
+
+impl MeterActor {
+    /// Return a value [`Meter`] handle whose methods produce composable [`Beat`]s.
+    pub fn beats(&self) -> Meter {
+        Meter {
+            inner: self.clone(),
+        }
+    }
+}
+
+impl Meter {
+    pub fn declare(
+        scene: &mut PlanBuilder,
+        id: impl Into<String>,
+        plan: &MeterPlan,
+        initial: f32,
+    ) -> Result<Self> {
+        Ok(Self {
+            inner: MeterActor::declare(scene, id, plan, initial)?,
+        })
+    }
+
+    pub fn actor(&self) -> &ActorHandle {
+        self.inner.actor()
+    }
+
+    pub fn id(&self) -> &str {
+        self.inner.id()
+    }
+
+    pub fn show(&self) -> impl Beat + '_ {
+        impulse(move |scene, at| {
+            self.inner.clone().show(scene, at);
+        })
+    }
+
+    pub fn hide(&self) -> impl Beat + '_ {
+        impulse(move |scene, at| {
+            self.inner.clone().hide(scene, at);
+        })
+    }
+
+    pub fn set(&self, value: f32) -> impl Beat + '_ {
+        impulse(move |scene, at| {
+            self.inner.clone().set(scene, at, value);
+        })
+    }
+
+    pub fn sweep(&self, value: f32, seconds: f32) -> impl Beat + '_ {
+        action(move |scene, at| self.inner.clone().sweep(scene, at, value, seconds))
+    }
+}
+
+/// Value handle for a [`BarsActor`] whose choreography methods return [`Beat`]s.
+#[derive(Clone, Debug)]
+pub struct Bars {
+    inner: Rc<RefCell<BarsActor>>,
+}
+
+impl From<BarsActor> for Bars {
+    fn from(inner: BarsActor) -> Self {
+        Self {
+            inner: Rc::new(RefCell::new(inner)),
+        }
+    }
+}
+
+impl BarsActor {
+    /// Return a value [`Bars`] handle whose methods produce composable [`Beat`]s.
+    pub fn beats(&self) -> Bars {
+        Bars::from(self.clone())
+    }
+}
+
+impl Bars {
+    pub fn declare(
+        scene: &mut PlanBuilder,
+        id: impl Into<String>,
+        plan: &BarsPlan,
+    ) -> Result<Self> {
+        Ok(Self::from(BarsActor::declare(scene, id, plan)?))
+    }
+
+    pub fn actor(&self) -> ActorHandle {
+        self.inner.borrow().actor().clone()
+    }
+
+    pub fn id(&self) -> String {
+        self.inner.borrow().id().to_owned()
+    }
+
+    pub fn show(&self) -> impl Beat + '_ {
+        impulse(move |scene, at| {
+            self.inner.borrow_mut().show(scene, at);
+        })
+    }
+
+    pub fn hide(&self) -> impl Beat + '_ {
+        impulse(move |scene, at| {
+            self.inner.borrow_mut().hide(scene, at);
+        })
+    }
+
+    pub fn reveal_rows(&self) -> impl Beat + '_ {
+        action(move |scene, at| self.inner.borrow_mut().reveal_rows(scene, at))
+    }
+
+    pub fn set(
+        &self,
+        row: impl Into<String>,
+        series: impl Into<String>,
+        value: f32,
+    ) -> impl Beat + '_ {
+        let row = row.into();
+        let series = series.into();
+        impulse(move |scene, at| {
+            self.inner
+                .borrow_mut()
+                .set(scene, &row, &series, at, value)
+                .unwrap_or_else(|err| panic!("bars set: {err:#}"));
+        })
+    }
+
+    pub fn grow<'a>(
+        &'a self,
+        series: impl Into<String>,
+        values: &'a [(&'a str, f32)],
+    ) -> impl Beat + 'a {
+        let series = series.into();
+        action(move |scene, at| {
+            self.inner
+                .borrow_mut()
+                .grow(scene, at, &series, values)
+                .unwrap_or_else(|err| panic!("bars grow: {err:#}"))
+        })
+    }
+
+    pub fn sort(&self, series: impl Into<String>, order: SortOrder) -> impl Beat + '_ {
+        let series = series.into();
+        impulse(move |scene, at| {
+            self.inner
+                .borrow_mut()
+                .sort(scene, at, &series, order)
+                .unwrap_or_else(|err| panic!("bars sort: {err:#}"));
+        })
+    }
+
+    pub fn reveal_deltas(&self) -> impl Beat + '_ {
+        action(move |scene, at| {
+            self.inner
+                .borrow_mut()
+                .reveal_deltas(scene, at)
+                .unwrap_or_else(|err| panic!("bars reveal_deltas: {err:#}"))
+        })
+    }
+}
+
+/// Value handle for a [`SubtitlesActor`] whose choreography methods return [`Beat`]s.
+#[derive(Clone, Debug)]
+pub struct Subtitles {
+    inner: SubtitlesActor,
+}
+
+impl From<SubtitlesActor> for Subtitles {
+    fn from(inner: SubtitlesActor) -> Self {
+        Self { inner }
+    }
+}
+
+impl SubtitlesActor {
+    /// Return a value [`Subtitles`] handle whose methods produce composable [`Beat`]s.
+    pub fn beats(&self) -> Subtitles {
+        Subtitles {
+            inner: self.clone(),
+        }
+    }
+}
+
+impl Subtitles {
+    pub fn declare(
+        scene: &mut PlanBuilder,
+        id: impl Into<String>,
+        plan: &SubtitlesPlan,
+    ) -> Result<Self> {
+        Ok(Self {
+            inner: SubtitlesActor::declare(scene, id, plan)?,
+        })
+    }
+
+    pub fn actor(&self) -> &ActorHandle {
+        self.inner.actor()
+    }
+
+    pub fn id(&self) -> &str {
+        self.inner.id()
+    }
+
+    pub fn show(&self) -> impl Beat + '_ {
+        impulse(move |scene, at| {
+            self.inner.clone().show(scene, at);
+        })
+    }
+
+    pub fn hide(&self) -> impl Beat + '_ {
+        impulse(move |scene, at| {
+            self.inner.clone().hide(scene, at);
+        })
+    }
+}
+
+/// Value handle for a [`ConfettiActor`] whose choreography methods return [`Beat`]s.
+#[derive(Clone, Debug)]
+pub struct Confetti {
+    inner: ConfettiActor,
+}
+
+impl From<ConfettiActor> for Confetti {
+    fn from(inner: ConfettiActor) -> Self {
+        Self { inner }
+    }
+}
+
+impl ConfettiActor {
+    /// Return a value [`Confetti`] handle whose methods produce composable [`Beat`]s.
+    pub fn beats(&self) -> Confetti {
+        Confetti {
+            inner: self.clone(),
+        }
+    }
+}
+
+impl Confetti {
+    pub fn declare(
+        scene: &mut PlanBuilder,
+        id: impl Into<String>,
+        plan: &ConfettiPlan,
+    ) -> Result<Self> {
+        Ok(Self {
+            inner: ConfettiActor::declare(scene, id, plan)?,
+        })
+    }
+
+    pub fn actor(&self) -> &ActorHandle {
+        self.inner.actor()
+    }
+
+    pub fn id(&self) -> &str {
+        self.inner.id()
+    }
+
+    pub fn burst(&self) -> impl Beat + '_ {
+        action(move |scene, at| self.inner.clone().burst(scene, at))
+    }
+}
+
+/// Value handle for a [`TextActor`] whose choreography methods return [`Beat`]s.
+#[derive(Clone, Debug)]
+pub struct Text {
+    inner: TextActor,
+}
+
+impl From<TextActor> for Text {
+    fn from(inner: TextActor) -> Self {
+        Self { inner }
+    }
+}
+
+impl TextActor {
+    /// Return a value [`Text`] handle whose methods produce composable [`Beat`]s.
+    pub fn beats(&self) -> Text {
+        Text {
+            inner: self.clone(),
+        }
+    }
+}
+
+impl Text {
+    pub fn declare(
+        scene: &mut PlanBuilder,
+        id: impl Into<String>,
+        plan: &TextPlan,
+    ) -> Result<Self> {
+        Ok(Self {
+            inner: TextActor::declare(scene, id, plan)?,
+        })
+    }
+
+    pub fn actor(&self) -> &ActorHandle {
+        self.inner.actor()
+    }
+
+    pub fn id(&self) -> &str {
+        self.inner.id()
+    }
+
+    pub fn show(&self) -> impl Beat + '_ {
+        impulse(move |scene, at| {
+            self.inner.clone().show(scene, at);
+        })
+    }
+
+    pub fn hide(&self) -> impl Beat + '_ {
+        impulse(move |scene, at| {
+            self.inner.clone().hide(scene, at);
+        })
+    }
+
+    pub fn swap<'a>(&'a self, next: &'a Self) -> impl Beat + 'a {
+        impulse(move |scene, at| {
+            let mut n = next.inner.clone();
+            self.inner.clone().swap(scene, &mut n, at);
+        })
+    }
+
+    pub fn move_to(&self, anchor: impl Into<String>) -> impl Beat + '_ {
+        let anchor = anchor.into();
+        impulse(move |scene, at| {
+            self.inner
+                .clone()
+                .move_to(scene, &anchor, at)
+                .unwrap_or_else(|err| panic!("text '{}': {err:#}", self.inner.id()));
+        })
+    }
+}
+
+/// Value handle for an [`ImageActor`] whose choreography methods return [`Beat`]s.
+#[derive(Clone, Debug)]
+pub struct Image {
+    inner: ImageActor,
+}
+
+impl From<ImageActor> for Image {
+    fn from(inner: ImageActor) -> Self {
+        Self { inner }
+    }
+}
+
+impl ImageActor {
+    /// Return a value [`Image`] handle whose methods produce composable [`Beat`]s.
+    pub fn beats(&self) -> Image {
+        Image {
+            inner: self.clone(),
+        }
+    }
+}
+
+impl Image {
+    pub fn declare(
+        scene: &mut PlanBuilder,
+        id: impl Into<String>,
+        plan: &ImagePlan,
+        media: MediaPlan,
+    ) -> Result<Self> {
+        Ok(Self {
+            inner: ImageActor::declare(scene, id, plan, media)?,
+        })
+    }
+
+    pub fn actor(&self) -> &ActorHandle {
+        self.inner.actor()
+    }
+
+    pub fn id(&self) -> &str {
+        self.inner.id()
+    }
+
+    pub fn fly_in(&self) -> impl Beat + '_ {
+        impulse(move |scene, at| {
+            self.inner.clone().fly_in(scene, at);
+        })
+    }
+
+    pub fn hide(&self) -> impl Beat + '_ {
+        impulse(move |scene, at| {
+            self.inner.clone().hide(scene, at);
+        })
+    }
+
+    pub fn move_to(&self, anchor: impl Into<String>) -> impl Beat + '_ {
+        let anchor = anchor.into();
+        impulse(move |scene, at| {
+            self.inner
+                .clone()
+                .move_to(scene, &anchor, at)
+                .unwrap_or_else(|err| panic!("image '{}': {err:#}", self.inner.id()));
+        })
+    }
+}
+
+/// Value handle for a [`LensActor`] whose choreography methods return [`Beat`]s.
+#[derive(Clone, Debug)]
+pub struct Lens {
+    inner: LensActor,
+}
+
+impl From<LensActor> for Lens {
+    fn from(inner: LensActor) -> Self {
+        Self { inner }
+    }
+}
+
+impl LensActor {
+    /// Return a value [`Lens`] handle whose methods produce composable [`Beat`]s.
+    pub fn beats(&self) -> Lens {
+        Lens {
+            inner: self.clone(),
+        }
+    }
+}
+
+impl Lens {
+    pub fn declare(
+        scene: &mut PlanBuilder,
+        id: impl Into<String>,
+        plan: &LensPlan,
+    ) -> Result<Self> {
+        Ok(Self {
+            inner: LensActor::declare(scene, id, plan)?,
+        })
+    }
+
+    pub fn actor(&self) -> &ActorHandle {
+        self.inner.actor()
+    }
+
+    pub fn id(&self) -> &str {
+        self.inner.id()
+    }
+
+    pub fn show(&self) -> impl Beat + '_ {
+        impulse(move |scene, at| {
+            self.inner.clone().show(scene, at);
+        })
+    }
+
+    pub fn hide(&self) -> impl Beat + '_ {
+        impulse(move |scene, at| {
+            self.inner.clone().hide(scene, at);
+        })
+    }
+
+    pub fn move_to(&self, anchor: impl Into<String>) -> impl Beat + '_ {
+        let anchor = anchor.into();
+        impulse(move |scene, at| {
+            self.inner
+                .clone()
+                .move_to(scene, &anchor, at)
+                .unwrap_or_else(|err| panic!("lens '{}': {err:#}", self.inner.id()));
+        })
+    }
+
+    pub fn slide(&self, offset: [f32; 2]) -> impl Beat + '_ {
+        impulse(move |scene, at| {
+            self.inner.clone().slide(scene, offset, at);
+        })
+    }
+
+    pub fn magnify(&self, magnification: f32) -> impl Beat + '_ {
+        impulse(move |scene, at| {
+            self.inner.clone().magnify(scene, magnification, at);
+        })
+    }
+
+    pub fn resize(&self, size: [f32; 2]) -> impl Beat + '_ {
+        impulse(move |scene, at| {
+            self.inner.clone().resize(scene, size, at);
+        })
+    }
+
+    pub fn focus(&self, offset: [f32; 2]) -> impl Beat + '_ {
+        impulse(move |scene, at| {
+            self.inner.clone().focus(scene, offset, at);
+        })
+    }
+}
+
+/// Value handle for a [`DiagnosticActor`] whose choreography methods return [`Beat`]s.
+#[derive(Clone, Debug)]
+pub struct Diagnostic {
+    inner: DiagnosticActor,
+}
+
+impl From<DiagnosticActor> for Diagnostic {
+    fn from(inner: DiagnosticActor) -> Self {
+        Self { inner }
+    }
+}
+
+impl DiagnosticActor {
+    /// Return a value [`Diagnostic`] handle whose methods produce composable [`Beat`]s.
+    pub fn beats(&self) -> Diagnostic {
+        Diagnostic {
+            inner: self.clone(),
+        }
+    }
+}
+
+impl Diagnostic {
+    pub fn declare(
+        scene: &mut PlanBuilder,
+        id: impl Into<String>,
+        plan: &DiagnosticPlan,
+    ) -> Result<Self> {
+        Ok(Self {
+            inner: DiagnosticActor::declare(scene, id, plan)?,
+        })
+    }
+
+    pub fn actor(&self) -> &ActorHandle {
+        self.inner.actor()
+    }
+
+    pub fn id(&self) -> &str {
+        self.inner.id()
+    }
+
+    pub fn show(&self) -> impl Beat + '_ {
+        action(move |scene, at| self.inner.show(scene, at))
+    }
+
+    pub fn clear(&self) -> impl Beat + '_ {
+        impulse(move |scene, at| {
+            self.inner.clear(scene, at);
+        })
+    }
+}
+
+/// Value handle for a [`HoverActor`] whose choreography methods return [`Beat`]s.
+#[derive(Clone, Debug)]
+pub struct Hover {
+    inner: HoverActor,
+}
+
+impl From<HoverActor> for Hover {
+    fn from(inner: HoverActor) -> Self {
+        Self { inner }
+    }
+}
+
+impl HoverActor {
+    /// Return a value [`Hover`] handle whose methods produce composable [`Beat`]s.
+    pub fn beats(&self) -> Hover {
+        Hover {
+            inner: self.clone(),
+        }
+    }
+}
+
+impl Hover {
+    pub fn declare(
+        scene: &mut PlanBuilder,
+        id: impl Into<String>,
+        plan: &HoverPlan,
+    ) -> Result<Self> {
+        Ok(Self {
+            inner: HoverActor::declare(scene, id, plan)?,
+        })
+    }
+
+    pub fn actor(&self) -> &ActorHandle {
+        self.inner.actor()
+    }
+
+    pub fn id(&self) -> &str {
+        self.inner.id()
+    }
+
+    pub fn show(&self) -> impl Beat + '_ {
+        impulse(move |scene, at| {
+            self.inner.show(scene, at);
+        })
+    }
+
+    pub fn hide(&self) -> impl Beat + '_ {
+        impulse(move |scene, at| {
+            self.inner.hide(scene, at);
+        })
+    }
+}
+
+/// Value handle for a [`CursorActor`] whose choreography methods return [`Beat`]s.
+#[derive(Clone, Debug)]
+pub struct Cursor {
+    inner: CursorActor,
+}
+
+impl From<CursorActor> for Cursor {
+    fn from(inner: CursorActor) -> Self {
+        Self { inner }
+    }
+}
+
+impl CursorActor {
+    /// Return a value [`Cursor`] handle whose methods produce composable [`Beat`]s.
+    pub fn beats(&self) -> Cursor {
+        Cursor {
+            inner: self.clone(),
+        }
+    }
+}
+
+impl Cursor {
+    pub fn declare(
+        scene: &mut PlanBuilder,
+        id: impl Into<String>,
+        plan: &CursorPlan,
+    ) -> Result<Self> {
+        Ok(Self {
+            inner: CursorActor::declare(scene, id, plan)?,
+        })
+    }
+
+    pub fn actor(&self) -> &ActorHandle {
+        self.inner.actor()
+    }
+
+    pub fn id(&self) -> &str {
+        self.inner.id()
+    }
+
+    pub fn show(&self) -> impl Beat + '_ {
+        impulse(move |scene, at| {
+            self.inner.show(scene, at);
+        })
+    }
+
+    pub fn hide(&self) -> impl Beat + '_ {
+        impulse(move |scene, at| {
+            self.inner.hide(scene, at);
+        })
+    }
+
+    pub fn move_to(&self, anchor: impl Into<String>, head: f32) -> impl Beat + '_ {
+        let anchor = anchor.into();
+        impulse(move |scene, at| {
+            self.inner
+                .move_to(scene, &anchor, head, at)
+                .unwrap_or_else(|err| panic!("cursor '{}': {err:#}", self.inner.id()));
+        })
+    }
+
+    pub fn select(&self, anchor: impl Into<String>, seconds: f32) -> impl Beat + '_ {
+        let anchor = anchor.into();
+        action(move |scene, at| {
+            self.inner
+                .select(scene, &anchor, at, seconds)
+                .unwrap_or_else(|err| panic!("cursor '{}': {err:#}", self.inner.id()))
+        })
+    }
+}
+
+impl InlayHint {
+    pub fn show_beat(&self) -> impl Beat + '_ {
+        impulse(move |scene, at| {
+            self.show(scene, at);
+        })
+    }
+
+    pub fn hide_beat(&self) -> impl Beat + '_ {
+        impulse(move |scene, at| {
+            self.hide(scene, at);
+        })
+    }
+}
+
 /// Low-level channel [`Beat`] helpers for custom properties on any actor.
 pub fn spring_channel(
     channel: &ContinuousHandle,
@@ -1539,7 +3195,10 @@ mod tests {
     use crate::{
         author::SECOND,
         callout::{CalloutAnchorPlan, CalloutSide},
+        caption::CaptionAlign,
         plan::compile_channels,
+        sfx,
+        subtitles::SubtitleWordPlan,
         timeline::{PropertyId, Timeline},
     };
 
@@ -1833,6 +3492,66 @@ mod tests {
         assert_eq!(rolled.rolls.len(), 1);
         assert_eq!(rolled.rolls[0].value, "rc.117");
         assert_eq!(rolled.rolls[0].at_nanos, millis(2200));
+    }
+
+    #[test]
+    fn cross_actor_camera_stage_terminal_subtitles_and_sfx_beat() {
+        let stage_plan: StagePlan = serde_json::from_value(json!({
+            "elements": [
+                { "kind": "card", "id": "client", "at": [560, 540, 0], "size": [300, 110], "title": "client" },
+                { "kind": "orb", "id": "server", "at": [1360, 540, 0], "radius": 140 },
+                { "kind": "beam", "id": "link", "from": "client", "to": "server" },
+                { "kind": "packet", "id": "hello", "beam": "link", "label": "GET /hello" }
+            ]
+        }))
+        .unwrap();
+
+        let mut scene = PlanBuilder::new("camera-terminal-subtitles", 8 * SECOND);
+        let stage = Stage::declare(&mut scene, "stage", &stage_plan).unwrap();
+        let cam = stage.camera();
+        let term = Terminal::declare(
+            &mut scene,
+            "term",
+            TerminalPlan::new([120.0, 680.0], 720.0, 6).titled("zsh"),
+        )
+        .unwrap();
+        let mut sub_plan = SubtitlesPlan::new([960.0, 980.0], 900.0);
+        sub_plan.words.push(SubtitleWordPlan {
+            text: "Connected.".into(),
+            start_nanos: millis(400),
+            end_nanos: millis(1200),
+        });
+        let subs = Subtitles::declare(&mut scene, "subs", &sub_plan).unwrap();
+
+        let span = scene.at(
+            0,
+            all![
+                cam.establish(160.0, 1.4),
+                stage
+                    .settle_in("client")
+                    .with(term.show())
+                    .then(stage.connect("link", 0.6))
+                    .on_end(sfx::TICK.beat("wired", -18.0))
+                    .then(
+                        stage
+                            .send("hello", 0.8)
+                            .with(cam.follow("hello", Move::Spring(0.5)))
+                            .with(term.type_command("curl -s http://server/hello")),
+                    )
+                    .then(all![
+                        stage.land("server"),
+                        cam.release(Move::Spring(0.8)),
+                        term.print_text("200 OK", Tone::Success),
+                        sfx::CONFIRM.beat("ok", -12.0),
+                    ])
+                    .then_after(SECOND, subs.hide()),
+            ],
+        );
+
+        assert!(span.end > 3 * SECOND);
+        let plan = scene.finish().unwrap();
+        assert_eq!(plan.actors.len(), 3);
+        assert_eq!(plan.media.len(), 2);
     }
 
     #[derive(Clone, Debug)]

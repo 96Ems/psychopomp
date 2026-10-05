@@ -124,6 +124,7 @@ impl TextPlan {
 }
 
 /// Authoring handle for one text actor.
+#[derive(Clone, Debug)]
 pub struct TextActor {
     actor: ActorHandle,
     center: [f32; 2],

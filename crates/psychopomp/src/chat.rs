@@ -577,6 +577,7 @@ pub struct ChatBlock {
 
 /// Authoring handle for one chat thread. Messages are appended as the scene
 /// is authored, so every call grows the recipe and writes its channels.
+#[derive(Clone, Debug)]
 pub struct ChatActor {
     actor: ActorHandle,
     plan: ChatPlan,
@@ -596,6 +597,14 @@ impl ChatActor {
             waiting: Vec::new(),
             time: None,
         })
+    }
+
+    pub fn actor(&self) -> &ActorHandle {
+        &self.actor
+    }
+
+    pub fn id(&self) -> &str {
+        self.actor.id()
     }
 
     pub fn plan(&self) -> &ChatPlan {

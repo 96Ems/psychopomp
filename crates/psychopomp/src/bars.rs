@@ -407,6 +407,7 @@ pub const MOVING_SLOT_SPEED: f32 = 0.05;
 
 /// Authoring handle for one bars actor. It remembers each bar's latest
 /// target, so `sort` orders rows by where their bars are going.
+#[derive(Clone, Debug)]
 pub struct BarsActor {
     actor: ActorHandle,
     plan: BarsPlan,
@@ -428,6 +429,10 @@ impl BarsActor {
             targets: HashMap::new(),
             slots: (0..plan.rows.len()).map(|index| index as f32).collect(),
         })
+    }
+
+    pub fn actor(&self) -> &ActorHandle {
+        &self.actor
     }
 
     pub fn id(&self) -> &str {

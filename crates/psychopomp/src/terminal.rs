@@ -377,6 +377,7 @@ pub fn keystrokes(text: &str, at_nanos: u64, chars_per_second: f32, seed: u32) -
 
 /// Authoring handle for one terminal. Lines are appended as the scene is
 /// authored, so every call below grows the recipe and writes its channels.
+#[derive(Clone, Debug)]
 pub struct TerminalActor {
     actor: ActorHandle,
     plan: TerminalPlan,
@@ -407,6 +408,14 @@ impl TerminalActor {
             tasks: Vec::new(),
             caret: None,
         })
+    }
+
+    pub fn actor(&self) -> &ActorHandle {
+        &self.actor
+    }
+
+    pub fn id(&self) -> &str {
+        self.actor.id()
     }
 
     pub fn plan(&self) -> &TerminalPlan {

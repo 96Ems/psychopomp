@@ -135,6 +135,7 @@ impl LowerThirdPlan {
 }
 
 /// Authoring handle for one lower third.
+#[derive(Clone, Debug)]
 pub struct LowerThirdActor {
     actor: ActorHandle,
 }
@@ -148,6 +149,14 @@ impl LowerThirdActor {
         plan.validate()?;
         let actor = scene.actor(id, LOWER_THIRD_RECIPE, plan)?;
         Ok(Self { actor })
+    }
+
+    pub fn actor(&self) -> &ActorHandle {
+        &self.actor
+    }
+
+    pub fn id(&self) -> &str {
+        self.actor.id()
     }
 
     pub fn channel(

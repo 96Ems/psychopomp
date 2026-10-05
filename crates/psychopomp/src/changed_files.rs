@@ -403,6 +403,7 @@ impl ChangedFilesPlan {
 }
 
 /// Authoring handle for one changed-files card.
+#[derive(Clone, Debug)]
 pub struct ChangedFilesActor {
     actor: ActorHandle,
     plan: ChangedFilesPlan,
@@ -424,6 +425,14 @@ impl ChangedFilesActor {
             plan,
             focused: None,
         })
+    }
+
+    pub fn actor(&self) -> &ActorHandle {
+        &self.actor
+    }
+
+    pub fn id(&self) -> &str {
+        self.actor.id()
     }
 
     pub fn plan(&self) -> &ChangedFilesPlan {

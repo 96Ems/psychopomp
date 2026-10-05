@@ -149,6 +149,7 @@ pub fn media(
 }
 
 /// Authoring handle for one image actor.
+#[derive(Clone, Debug)]
 pub struct ImageActor {
     actor: ActorHandle,
     anchors: Vec<String>,
@@ -174,6 +175,10 @@ impl ImageActor {
             actor,
             anchors: anchor::ids(&plan.anchors),
         })
+    }
+
+    pub fn actor(&self) -> &ActorHandle {
+        &self.actor
     }
 
     pub fn id(&self) -> &str {
