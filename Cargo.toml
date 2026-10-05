@@ -39,6 +39,7 @@ members = [
   "scenes/balls-with-dots",
   "scenes/balls-v3",
   "scenes/amdahl",
+  "scenes/high-council",
 ]
 default-members = ["crates/psychopomp-render"]
 resolver = "3"

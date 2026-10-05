@@ -1,0 +1,1987 @@
+{
+  "version": 1,
+  "resources": {
+    "all-close-architect": {
+      "key": "b5c824674c5c0271",
+      "file": "media/b5c824674c5c0271.mp3",
+      "durationNanos": 2959000000,
+      "spec": {
+        "align": "provider",
+        "backend": "elevenlabs",
+        "format": "mp3_44100_192",
+        "kind": "speech",
+        "lines": [{"text": "[all shouting together, eager] Which decree shall we ship today, Sire?!", "voice": "HadaW6eYTMBiTIg99Igv"}],
+        "model": "eleven_v4",
+        "post": "loudnorm=I=-16:TP=-1.5:LRA=11|mp3=48000:mono:160k",
+        "route": "speech",
+        "settings": {"similarity": 0.75, "stability": 0.3}
+      },
+      "requests": [
+        "4iBh4r2mxSNY0V2gnzOE"
+      ],
+      "credits": 9,
+      "words": [
+        ["Which", 0.24, 0.48],
+        ["decree", 0.56, 0.96],
+        ["shall", 1.04, 1.2],
+        ["we", 1.28, 1.36],
+        ["ship", 1.44, 1.68],
+        ["today,", 1.92, 2.24],
+        ["Sire?!", 2.32, 2.959]
+      ]
+    },
+    "all-close-architect.tempo(1.1)": {
+      "key": "73cd8477e95d4a3f",
+      "file": "media/73cd8477e95d4a3f.mp3",
+      "durationNanos": 2693166666,
+      "spec": {
+        "effect": {"tempo": {"factor": 1.1}},
+        "kind": "derive",
+        "post": "ffmpeg-effect/1",
+        "source": "b5c824674c5c0271"
+      },
+      "words": [
+        ["Which", 0.218182, 0.436364],
+        ["decree", 0.509091, 0.872727],
+        ["shall", 0.945455, 1.090909],
+        ["we", 1.163636, 1.236364],
+        ["ship", 1.309091, 1.527273],
+        ["today,", 1.745455, 2.036364],
+        ["Sire?!", 2.109091, 2.69]
+      ]
+    },
+    "all-close-bug-hunter": {
+      "key": "1e10d2e278e9ba2e",
+      "file": "media/1e10d2e278e9ba2e.mp3",
+      "durationNanos": 3039000000,
+      "spec": {
+        "align": "provider",
+        "backend": "elevenlabs",
+        "format": "mp3_44100_192",
+        "kind": "speech",
+        "lines": [{"text": "[all shouting together, eager] Which decree shall we ship today, Sire?!", "voice": "eOnlXxWwbTeZ7SGoAHTL"}],
+        "model": "eleven_v4",
+        "post": "loudnorm=I=-16:TP=-1.5:LRA=11|mp3=48000:mono:160k",
+        "route": "speech",
+        "settings": {"similarity": 0.75, "stability": 0.3}
+      },
+      "requests": [
+        "0VI5W9YUE8nDW9yQ78Xg"
+      ],
+      "credits": 9,
+      "words": [
+        ["Which", 0.32, 0.48],
+        ["decree", 0.6, 0.96],
+        ["shall", 1.04, 1.2],
+        ["we", 1.28, 1.36],
+        ["ship", 1.44, 1.68],
+        ["today,", 1.92, 2.24],
+        ["Sire?!", 2.32, 3.039]
+      ]
+    },
+    "all-close-bug-hunter.tempo(1.1)": {
+      "key": "9f8699fefc0a6eb4",
+      "file": "media/9f8699fefc0a6eb4.mp3",
+      "durationNanos": 2767750000,
+      "spec": {
+        "effect": {"tempo": {"factor": 1.1}},
+        "kind": "derive",
+        "post": "ffmpeg-effect/1",
+        "source": "1e10d2e278e9ba2e"
+      },
+      "words": [
+        ["Which", 0.290909, 0.436364],
+        ["decree", 0.545455, 0.872727],
+        ["shall", 0.945455, 1.090909],
+        ["we", 1.163636, 1.236364],
+        ["ship", 1.309091, 1.527273],
+        ["today,", 1.745455, 2.036364],
+        ["Sire?!", 2.109091, 2.762727]
+      ]
+    },
+    "all-close-contrarian": {
+      "key": "516f4ff491624b7b",
+      "file": "media/516f4ff491624b7b.mp3",
+      "durationNanos": 3199000000,
+      "spec": {
+        "align": "provider",
+        "backend": "elevenlabs",
+        "format": "mp3_44100_192",
+        "kind": "speech",
+        "lines": [{"text": "[all shouting together, eager] Which decree shall we ship today, Sire?!", "voice": "MHyBf3BATJbc21zTBo1j"}],
+        "model": "eleven_v4",
+        "post": "loudnorm=I=-16:TP=-1.5:LRA=11|mp3=48000:mono:160k",
+        "route": "speech",
+        "settings": {"similarity": 0.75, "stability": 0.3}
+      },
+      "requests": [
+        "EJmbUwgrO8edGjcIbp85"
+      ],
+      "credits": 9,
+      "words": [
+        ["Which", 0.24, 0.48],
+        ["decree", 0.56, 1.04],
+        ["shall", 1.12, 1.28],
+        ["we", 1.36, 1.44],
+        ["ship", 1.52, 1.76],
+        ["today,", 2.0, 2.32],
+        ["Sire?!", 2.4, 3.199]
+      ]
+    },
+    "all-close-contrarian.tempo(1.1)": {
+      "key": "70793285ba5415f9",
+      "file": "media/70793285ba5415f9.mp3",
+      "durationNanos": 2912270833,
+      "spec": {
+        "effect": {"tempo": {"factor": 1.1}},
+        "kind": "derive",
+        "post": "ffmpeg-effect/1",
+        "source": "516f4ff491624b7b"
+      },
+      "words": [
+        ["Which", 0.218182, 0.436364],
+        ["decree", 0.509091, 0.945455],
+        ["shall", 1.018182, 1.163636],
+        ["we", 1.236364, 1.309091],
+        ["ship", 1.381818, 1.6],
+        ["today,", 1.818182, 2.109091],
+        ["Sire?!", 2.181818, 2.908182]
+      ]
+    },
+    "all-close-performance": {
+      "key": "8051c3a99b2d4c51",
+      "file": "media/8051c3a99b2d4c51.mp3",
+      "durationNanos": 2959000000,
+      "spec": {
+        "align": "provider",
+        "backend": "elevenlabs",
+        "format": "mp3_44100_192",
+        "kind": "speech",
+        "lines": [{"text": "[all shouting together, eager] Which decree shall we ship today, Sire?!", "voice": "sB8R53mkw4P98mniCNmZ"}],
+        "model": "eleven_v4",
+        "post": "loudnorm=I=-16:TP=-1.5:LRA=11|mp3=48000:mono:160k",
+        "route": "speech",
+        "settings": {"similarity": 0.75, "stability": 0.3}
+      },
+      "requests": [
+        "V3bXOW9Fh1XGqdRhXW6H"
+      ],
+      "credits": 9,
+      "words": [
+        ["Which", 0.16, 0.4],
+        ["decree", 0.48, 0.88],
+        ["shall", 0.96, 1.12],
+        ["we", 1.16, 1.2],
+        ["ship", 1.36, 1.52],
+        ["today,", 1.6, 2.08],
+        ["Sire?!", 2.16, 2.959]
+      ]
+    },
+    "all-close-performance.tempo(1.1)": {
+      "key": "924a6ac18d9c5c35",
+      "file": "media/924a6ac18d9c5c35.mp3",
+      "durationNanos": 2698270833,
+      "spec": {
+        "effect": {"tempo": {"factor": 1.1}},
+        "kind": "derive",
+        "post": "ffmpeg-effect/1",
+        "source": "8051c3a99b2d4c51"
+      },
+      "words": [
+        ["Which", 0.145455, 0.363636],
+        ["decree", 0.436364, 0.8],
+        ["shall", 0.872727, 1.018182],
+        ["we", 1.054545, 1.090909],
+        ["ship", 1.236364, 1.381818],
+        ["today,", 1.454545, 1.890909],
+        ["Sire?!", 1.963636, 2.69]
+      ]
+    },
+    "all-close-simplifier": {
+      "key": "3a7e44e09ea725cf",
+      "file": "media/3a7e44e09ea725cf.mp3",
+      "durationNanos": 2879000000,
+      "spec": {
+        "align": "provider",
+        "backend": "elevenlabs",
+        "format": "mp3_44100_192",
+        "kind": "speech",
+        "lines": [{"text": "[all shouting together, eager] Which decree shall we ship today, Sire?!", "voice": "N2sjObx5IV1hFpNoMpdx"}],
+        "model": "eleven_v4",
+        "post": "loudnorm=I=-16:TP=-1.5:LRA=11|mp3=48000:mono:160k",
+        "route": "speech",
+        "settings": {"similarity": 0.75, "stability": 0.3}
+      },
+      "requests": [
+        "8k0FrzfuAjXSiF50j7uZ"
+      ],
+      "credits": 9,
+      "words": [
+        ["Which", 0.16, 0.4],
+        ["decree", 0.48, 0.88],
+        ["shall", 0.96, 1.12],
+        ["we", 1.2, 1.28],
+        ["ship", 1.4, 1.52],
+        ["today,", 1.76, 2.08],
+        ["Sire?!", 2.16, 2.879]
+      ]
+    },
+    "all-close-simplifier.tempo(1.1)": {
+      "key": "ffcfe746d51b8b31",
+      "file": "media/ffcfe746d51b8b31.mp3",
+      "durationNanos": 2623937500,
+      "spec": {
+        "effect": {"tempo": {"factor": 1.1}},
+        "kind": "derive",
+        "post": "ffmpeg-effect/1",
+        "source": "3a7e44e09ea725cf"
+      },
+      "words": [
+        ["Which", 0.145455, 0.363636],
+        ["decree", 0.436364, 0.8],
+        ["shall", 0.872727, 1.018182],
+        ["we", 1.090909, 1.163636],
+        ["ship", 1.272727, 1.381818],
+        ["today,", 1.6, 1.890909],
+        ["Sire?!", 1.963636, 2.617273]
+      ]
+    },
+    "all-close-user-voice": {
+      "key": "391465547e85fef9",
+      "file": "media/391465547e85fef9.mp3",
+      "durationNanos": 3039000000,
+      "spec": {
+        "align": "provider",
+        "backend": "elevenlabs",
+        "format": "mp3_44100_192",
+        "kind": "speech",
+        "lines": [{"text": "[all shouting together, eager] Which decree shall we ship today, Sire?!", "voice": "4DjbuiCZ4Nt9Bgg0aSvi"}],
+        "model": "eleven_v4",
+        "post": "loudnorm=I=-16:TP=-1.5:LRA=11|mp3=48000:mono:160k",
+        "route": "speech",
+        "settings": {"similarity": 0.75, "stability": 0.3}
+      },
+      "requests": [
+        "kZq5ipaiHtFg8oWY7C9n"
+      ],
+      "credits": 9,
+      "words": [
+        ["Which", 0.24, 0.48],
+        ["decree", 0.56, 0.96],
+        ["shall", 1.04, 1.2],
+        ["we", 1.28, 1.36],
+        ["ship", 1.48, 1.6],
+        ["today,", 1.84, 2.16],
+        ["Sire?!", 2.24, 3.039]
+      ]
+    },
+    "all-close-user-voice.tempo(1.1)": {
+      "key": "932ee7aa1bb45ac9",
+      "file": "media/932ee7aa1bb45ac9.mp3",
+      "durationNanos": 2764604166,
+      "spec": {
+        "effect": {"tempo": {"factor": 1.1}},
+        "kind": "derive",
+        "post": "ffmpeg-effect/1",
+        "source": "391465547e85fef9"
+      },
+      "words": [
+        ["Which", 0.218182, 0.436364],
+        ["decree", 0.509091, 0.872727],
+        ["shall", 0.945455, 1.090909],
+        ["we", 1.163636, 1.236364],
+        ["ship", 1.345455, 1.454545],
+        ["today,", 1.672727, 1.963636],
+        ["Sire?!", 2.036364, 2.762727]
+      ]
+    },
+    "all-hello-architect": {
+      "key": "3b1371e1870805cd",
+      "file": "media/3b1371e1870805cd.mp3",
+      "durationNanos": 4959000000,
+      "spec": {
+        "align": "provider",
+        "backend": "elevenlabs",
+        "format": "mp3_44100_192",
+        "kind": "speech",
+        "lines": [{"text": "[booming, theatrical, shouting together] GOOD MORNING, SIRE! The High Council demands an audience!", "voice": "HadaW6eYTMBiTIg99Igv"}],
+        "model": "eleven_v4",
+        "post": "loudnorm=I=-16:TP=-1.5:LRA=11|mp3=48000:mono:160k",
+        "route": "speech",
+        "settings": {"similarity": 0.75, "stability": 0.3}
+      },
+      "requests": [
+        "IfB7PzyRgXFHM5I2q6Ab"
+      ],
+      "credits": 12,
+      "words": [
+        ["GOOD", 0.162, 0.402],
+        ["MORNING,", 0.562, 1.122],
+        ["SIRE!", 1.202, 1.922],
+        ["The", 2.162, 2.242],
+        ["High", 2.322, 2.482],
+        ["Council", 2.642, 3.122],
+        ["demands", 3.202, 3.762],
+        ["an", 3.842, 4.002],
+        ["audience!", 4.082, 4.959]
+      ]
+    },
+    "all-hello-architect.tempo(1.1)": {
+      "key": "0ac24f86ccc30c34",
+      "file": "media/0ac24f86ccc30c34.mp3",
+      "durationNanos": 4510333333,
+      "spec": {
+        "effect": {"tempo": {"factor": 1.1}},
+        "kind": "derive",
+        "post": "ffmpeg-effect/1",
+        "source": "3b1371e1870805cd"
+      },
+      "words": [
+        ["GOOD", 0.147273, 0.365455],
+        ["MORNING,", 0.510909, 1.02],
+        ["SIRE!", 1.092727, 1.747273],
+        ["The", 1.965455, 2.038182],
+        ["High", 2.110909, 2.256364],
+        ["Council", 2.401818, 2.838182],
+        ["demands", 2.910909, 3.42],
+        ["an", 3.492727, 3.638182],
+        ["audience!", 3.710909, 4.508182]
+      ]
+    },
+    "all-hello-bug-hunter": {
+      "key": "73916b00f82f3386",
+      "file": "media/73916b00f82f3386.mp3",
+      "durationNanos": 4879000000,
+      "spec": {
+        "align": "provider",
+        "backend": "elevenlabs",
+        "format": "mp3_44100_192",
+        "kind": "speech",
+        "lines": [{"text": "[booming, theatrical, shouting together] GOOD MORNING, SIRE! The High Council demands an audience!", "voice": "eOnlXxWwbTeZ7SGoAHTL"}],
+        "model": "eleven_v4",
+        "post": "loudnorm=I=-16:TP=-1.5:LRA=11|mp3=48000:mono:160k",
+        "route": "speech",
+        "settings": {"similarity": 0.75, "stability": 0.3}
+      },
+      "requests": [
+        "OSjwooqtnvZ2Ix0Er9cz"
+      ],
+      "credits": 12,
+      "words": [
+        ["GOOD", 0.24, 0.4],
+        ["MORNING,", 0.56, 1.12],
+        ["SIRE!", 1.2, 1.92],
+        ["The", 2.16, 2.32],
+        ["High", 2.44, 2.56],
+        ["Council", 2.72, 3.12],
+        ["demands", 3.2, 3.84],
+        ["an", 3.92, 4.0],
+        ["audience!", 4.08, 4.879]
+      ]
+    },
+    "all-hello-bug-hunter.tempo(1.1)": {
+      "key": "00d59b057c71a28d",
+      "file": "media/00d59b057c71a28d.mp3",
+      "durationNanos": 4439979166,
+      "spec": {
+        "effect": {"tempo": {"factor": 1.1}},
+        "kind": "derive",
+        "post": "ffmpeg-effect/1",
+        "source": "73916b00f82f3386"
+      },
+      "words": [
+        ["GOOD", 0.218182, 0.363636],
+        ["MORNING,", 0.509091, 1.018182],
+        ["SIRE!", 1.090909, 1.745455],
+        ["The", 1.963636, 2.109091],
+        ["High", 2.218182, 2.327273],
+        ["Council", 2.472727, 2.836364],
+        ["demands", 2.909091, 3.490909],
+        ["an", 3.563636, 3.636364],
+        ["audience!", 3.709091, 4.435455]
+      ]
+    },
+    "all-hello-performance": {
+      "key": "197f400c4e6644ee",
+      "file": "media/197f400c4e6644ee.mp3",
+      "durationNanos": 4959000000,
+      "spec": {
+        "align": "provider",
+        "backend": "elevenlabs",
+        "format": "mp3_44100_192",
+        "kind": "speech",
+        "lines": [{"text": "[booming, theatrical, shouting together] GOOD MORNING, SIRE! The High Council demands an audience!", "voice": "sB8R53mkw4P98mniCNmZ"}],
+        "model": "eleven_v4",
+        "post": "loudnorm=I=-16:TP=-1.5:LRA=11|mp3=48000:mono:160k",
+        "route": "speech",
+        "settings": {"similarity": 0.75, "stability": 0.3}
+      },
+      "requests": [
+        "UbS1R7rqhRJ2fUAd9owx"
+      ],
+      "credits": 12,
+      "words": [
+        ["GOOD", 0.24, 0.48],
+        ["MORNING,", 0.64, 1.2],
+        ["SIRE!", 1.28, 1.96],
+        ["The", 2.16, 2.24],
+        ["High", 2.32, 2.56],
+        ["Council", 2.64, 3.12],
+        ["demands", 3.2, 3.84],
+        ["an", 3.88, 3.92],
+        ["audience!", 4.0, 4.959]
+      ]
+    },
+    "all-hello-performance.tempo(1.1)": {
+      "key": "9e5fd44de7d4ad33",
+      "file": "media/9e5fd44de7d4ad33.mp3",
+      "durationNanos": 4512250000,
+      "spec": {
+        "effect": {"tempo": {"factor": 1.1}},
+        "kind": "derive",
+        "post": "ffmpeg-effect/1",
+        "source": "197f400c4e6644ee"
+      },
+      "words": [
+        ["GOOD", 0.218182, 0.436364],
+        ["MORNING,", 0.581818, 1.090909],
+        ["SIRE!", 1.163636, 1.781818],
+        ["The", 1.963636, 2.036364],
+        ["High", 2.109091, 2.327273],
+        ["Council", 2.4, 2.836364],
+        ["demands", 2.909091, 3.490909],
+        ["an", 3.527273, 3.563636],
+        ["audience!", 3.636364, 4.508182]
+      ]
+    },
+    "all-hello-simplifier": {
+      "key": "9e45d424c8ce762f",
+      "file": "media/9e45d424c8ce762f.mp3",
+      "durationNanos": 4959000000,
+      "spec": {
+        "align": "provider",
+        "backend": "elevenlabs",
+        "format": "mp3_44100_192",
+        "kind": "speech",
+        "lines": [{"text": "[booming, theatrical, shouting together] GOOD MORNING, SIRE! The High Council demands an audience!", "voice": "N2sjObx5IV1hFpNoMpdx"}],
+        "model": "eleven_v4",
+        "post": "loudnorm=I=-16:TP=-1.5:LRA=11|mp3=48000:mono:160k",
+        "route": "speech",
+        "settings": {"similarity": 0.75, "stability": 0.3}
+      },
+      "requests": [
+        "auIWXyvrwsgxYTmeG8wl"
+      ],
+      "credits": 12,
+      "words": [
+        ["GOOD", 0.461, 0.48],
+        ["MORNING,", 0.64, 1.2],
+        ["SIRE!", 1.28, 2.0],
+        ["The", 2.24, 2.32],
+        ["High", 2.4, 2.64],
+        ["Council", 2.72, 3.2],
+        ["demands", 3.28, 3.92],
+        ["an", 4.0, 4.08],
+        ["audience!", 4.16, 4.959]
+      ]
+    },
+    "all-hello-simplifier.tempo(1.1)": {
+      "key": "79efeb9d250ad203",
+      "file": "media/79efeb9d250ad203.mp3",
+      "durationNanos": 4508145833,
+      "spec": {
+        "effect": {"tempo": {"factor": 1.1}},
+        "kind": "derive",
+        "post": "ffmpeg-effect/1",
+        "source": "9e45d424c8ce762f"
+      },
+      "words": [
+        ["GOOD", 0.419091, 0.436364],
+        ["MORNING,", 0.581818, 1.090909],
+        ["SIRE!", 1.163636, 1.818182],
+        ["The", 2.036364, 2.109091],
+        ["High", 2.181818, 2.4],
+        ["Council", 2.472727, 2.909091],
+        ["demands", 2.981818, 3.563636],
+        ["an", 3.636364, 3.709091],
+        ["audience!", 3.781818, 4.508146]
+      ]
+    },
+    "all-hello-user-voice": {
+      "key": "e43894747ed306e5",
+      "file": "media/e43894747ed306e5.mp3",
+      "durationNanos": 4638999999,
+      "spec": {
+        "align": "provider",
+        "backend": "elevenlabs",
+        "format": "mp3_44100_192",
+        "kind": "speech",
+        "lines": [{"text": "[booming, theatrical, shouting together] GOOD MORNING, SIRE! The High Council demands an audience!", "voice": "4DjbuiCZ4Nt9Bgg0aSvi"}],
+        "model": "eleven_v4",
+        "post": "loudnorm=I=-16:TP=-1.5:LRA=11|mp3=48000:mono:160k",
+        "route": "speech",
+        "settings": {"similarity": 0.75, "stability": 0.3}
+      },
+      "requests": [
+        "idhq0esZPcihGm40mPJx"
+      ],
+      "credits": 12,
+      "words": [
+        ["GOOD", 0.24, 0.4],
+        ["MORNING,", 0.56, 1.12],
+        ["SIRE!", 1.2, 1.88],
+        ["The", 2.08, 2.16],
+        ["High", 2.24, 2.4],
+        ["Council", 2.56, 2.96],
+        ["demands", 3.04, 3.6],
+        ["an", 3.68, 3.84],
+        ["audience!", 3.92, 4.639]
+      ]
+    },
+    "all-hello-user-voice.tempo(1.1)": {
+      "key": "7c448d6c8fe5a313",
+      "file": "media/7c448d6c8fe5a313.mp3",
+      "durationNanos": 4229375000,
+      "spec": {
+        "effect": {"tempo": {"factor": 1.1}},
+        "kind": "derive",
+        "post": "ffmpeg-effect/1",
+        "source": "e43894747ed306e5"
+      },
+      "words": [
+        ["GOOD", 0.218182, 0.363636],
+        ["MORNING,", 0.509091, 1.018182],
+        ["SIRE!", 1.090909, 1.709091],
+        ["The", 1.890909, 1.963636],
+        ["High", 2.036364, 2.181818],
+        ["Council", 2.327273, 2.690909],
+        ["demands", 2.763636, 3.272727],
+        ["an", 3.345455, 3.490909],
+        ["audience!", 3.563636, 4.217273]
+      ]
+    },
+    "architect-1": {
+      "key": "460559b73f04728f",
+      "file": "media/460559b73f04728f.mp3",
+      "durationNanos": 8639000000,
+      "spec": {
+        "align": "provider",
+        "backend": "elevenlabs",
+        "format": "mp3_44100_192",
+        "kind": "speech",
+        "lines": [{"text": "[pompous, delighted] Hear her, Noble Sovereign! One native pipeline for every Copilot route, instead of translating every prompt twice!", "voice": "HadaW6eYTMBiTIg99Igv"}],
+        "model": "eleven_v4",
+        "post": "loudnorm=I=-16:TP=-1.5:LRA=11|mp3=48000:mono:160k",
+        "route": "speech",
+        "settings": {"similarity": 0.75, "stability": 0.3}
+      },
+      "requests": [
+        "Rr2wj6T3O7pbkXSkngY5"
+      ],
+      "credits": 16,
+      "words": [
+        ["Hear", 0.352, 0.4],
+        ["her,", 0.48, 0.8],
+        ["Noble", 0.88, 1.28],
+        ["Sovereign!", 1.36, 2.16],
+        ["One", 2.48, 2.64],
+        ["native", 2.72, 3.12],
+        ["pipeline", 3.2, 3.68],
+        ["for", 3.76, 4.0],
+        ["every", 4.08, 4.48],
+        ["Copilot", 4.68, 5.12],
+        ["route,", 5.2, 5.68],
+        ["instead", 5.88, 6.08],
+        ["of", 6.16, 6.24],
+        ["translating", 6.4, 6.96],
+        ["every", 7.04, 7.36],
+        ["prompt", 7.56, 7.76],
+        ["twice!", 7.84, 8.639]
+      ]
+    },
+    "architect-1.tempo(1.1)": {
+      "key": "53f5dd024c7cbf9e",
+      "file": "media/53f5dd024c7cbf9e.mp3",
+      "durationNanos": 7856020833,
+      "spec": {
+        "effect": {"tempo": {"factor": 1.1}},
+        "kind": "derive",
+        "post": "ffmpeg-effect/1",
+        "source": "460559b73f04728f"
+      },
+      "words": [
+        ["Hear", 0.32, 0.363636],
+        ["her,", 0.436364, 0.727273],
+        ["Noble", 0.8, 1.163636],
+        ["Sovereign!", 1.236364, 1.963636],
+        ["One", 2.254545, 2.4],
+        ["native", 2.472727, 2.836364],
+        ["pipeline", 2.909091, 3.345455],
+        ["for", 3.418182, 3.636364],
+        ["every", 3.709091, 4.072727],
+        ["Copilot", 4.254545, 4.654545],
+        ["route,", 4.727273, 5.163636],
+        ["instead", 5.345455, 5.527273],
+        ["of", 5.6, 5.672727],
+        ["translating", 5.818182, 6.327273],
+        ["every", 6.4, 6.690909],
+        ["prompt", 6.872727, 7.054545],
+        ["twice!", 7.127273, 7.853636]
+      ]
+    },
+    "architect-close": {
+      "key": "601fd28ff5178563",
+      "file": "media/601fd28ff5178563.mp3",
+      "durationNanos": 3839000000,
+      "spec": {
+        "align": "provider",
+        "backend": "elevenlabs",
+        "format": "mp3_44100_192",
+        "kind": "speech",
+        "lines": [{"text": "[grand, ceremonial] Three royal decrees await your seal, Sire.", "voice": "HadaW6eYTMBiTIg99Igv"}],
+        "model": "eleven_v4",
+        "post": "loudnorm=I=-16:TP=-1.5:LRA=11|mp3=48000:mono:160k",
+        "route": "speech",
+        "settings": {"similarity": 0.75, "stability": 0.3}
+      },
+      "requests": [
+        "g5o2w1Y3q5E0RolO4sV8"
+      ],
+      "credits": 8,
+      "words": [
+        ["Three", 0.16, 0.56],
+        ["royal", 0.72, 1.04],
+        ["decrees", 1.12, 1.76],
+        ["await", 1.84, 2.24],
+        ["your", 2.4, 2.56],
+        ["seal,", 2.64, 3.04],
+        ["Sire.", 3.12, 3.839]
+      ]
+    },
+    "architect-close.tempo(1.1)": {
+      "key": "e50f30d139507fa1",
+      "file": "media/e50f30d139507fa1.mp3",
+      "durationNanos": 3499854166,
+      "spec": {
+        "effect": {"tempo": {"factor": 1.1}},
+        "kind": "derive",
+        "post": "ffmpeg-effect/1",
+        "source": "601fd28ff5178563"
+      },
+      "words": [
+        ["Three", 0.145455, 0.509091],
+        ["royal", 0.654545, 0.945455],
+        ["decrees", 1.018182, 1.6],
+        ["await", 1.672727, 2.036364],
+        ["your", 2.181818, 2.327273],
+        ["seal,", 2.4, 2.763636],
+        ["Sire.", 2.836364, 3.49]
+      ]
+    },
+    "bed": {
+      "key": "eb64c0b934e3f9d8",
+      "file": "media/eb64c0b934e3f9d8.wav",
+      "durationNanos": 20000000000,
+      "spec": {
+        "backend": "elevenlabs",
+        "durationNanos": 20000000000,
+        "format": "mp3_44100_192",
+        "kind": "sound",
+        "loop": true,
+        "model": "eleven_text_to_sound_v2",
+        "post": "trim-onset=0.02:-0.003|peak=0.5|fade-out=0.06|wav=48000:mono:s16",
+        "prompt": "Lo-fi 1990s General MIDI background music for a medieval strategy game throne room: gentle harpsichord, soft synth strings and recorder, calm and regal, seamless loop. No vocals, no percussion hits."
+      },
+      "credits": 220
+    },
+    "boot": {
+      "key": "64c1661ad894a245",
+      "file": "media/64c1661ad894a245.wav",
+      "durationNanos": 2480000000,
+      "spec": {
+        "backend": "elevenlabs",
+        "durationNanos": 2500000000,
+        "format": "mp3_44100_192",
+        "influence": 0.6,
+        "kind": "sound",
+        "model": "eleven_text_to_sound_v2",
+        "post": "trim-onset=0.02:-0.003|peak=0.5|fade-out=0.06|wav=48000:mono:s16",
+        "prompt": "A 1990s PC CD-ROM drive spinning up: motor whir rising, a mechanical click and seek chatter, then a soft hum. No music, no speech."
+      },
+      "credits": 28
+    },
+    "bug-hunter-2": {
+      "key": "bbf7425820d7e86e",
+      "file": "media/bbf7425820d7e86e.mp3",
+      "durationNanos": 16718999999,
+      "spec": {
+        "align": "provider",
+        "backend": "elevenlabs",
+        "format": "mp3_44100_192",
+        "kind": "speech",
+        "lines": [{"text": "[gravelly, grim relish] Three prize beetles, Sire, caught alive in the compaction chamber! [barking, intense] Beetle the First! We ask the model for a summary, but hand it every tool. So it calls a tool instead, and compaction dies screaming: no summary!", "voice": "eOnlXxWwbTeZ7SGoAHTL"}],
+        "model": "eleven_v4",
+        "post": "loudnorm=I=-16:TP=-1.5:LRA=11|mp3=48000:mono:160k",
+        "route": "speech",
+        "settings": {"similarity": 0.75, "stability": 0.3}
+      },
+      "requests": [
+        "y0JxG2hiNiZFQIpVtFQt"
+      ],
+      "credits": 31,
+      "words": [
+        ["Three", 0.24, 0.56],
+        ["prize", 0.72, 1.2],
+        ["beetles,", 1.28, 1.8],
+        ["Sire,", 1.84, 2.44],
+        ["caught", 2.64, 2.88],
+        ["alive", 3.04, 3.44],
+        ["in", 3.48, 3.52],
+        ["the", 3.6, 3.68],
+        ["compaction", 3.84, 4.32],
+        ["chamber!", 4.48, 5.12],
+        ["Beetle", 5.92, 6.24],
+        ["the", 6.32, 6.4],
+        ["First!", 6.48, 7.12],
+        ["We", 7.36, 7.44],
+        ["ask", 7.52, 7.76],
+        ["the", 7.84, 7.92],
+        ["model", 8.08, 8.24],
+        ["for", 8.32, 8.4],
+        ["a", 8.56, 8.6],
+        ["summary,", 8.64, 9.28],
+        ["but", 9.4, 9.52],
+        ["hand", 9.6, 9.76],
+        ["it", 9.88, 10.0],
+        ["every", 10.08, 10.4],
+        ["tool.", 10.48, 11.28],
+        ["So", 11.36, 11.44],
+        ["it", 11.52, 11.6],
+        ["calls", 11.72, 11.84],
+        ["a", 11.92, 12.08],
+        ["tool", 12.24, 12.4],
+        ["instead,", 12.72, 13.28],
+        ["and", 13.36, 13.44],
+        ["compaction", 13.52, 14.16],
+        ["dies", 14.24, 14.56],
+        ["screaming:", 14.64, 15.52],
+        ["no", 15.6, 15.76],
+        ["summary!", 16.0, 16.719]
+      ]
+    },
+    "bug-hunter-2.tempo(1.1)": {
+      "key": "09dfe14c4a4059a6",
+      "file": "media/09dfe14c4a4059a6.mp3",
+      "durationNanos": 15201562500,
+      "spec": {
+        "effect": {"tempo": {"factor": 1.1}},
+        "kind": "derive",
+        "post": "ffmpeg-effect/1",
+        "source": "bbf7425820d7e86e"
+      },
+      "words": [
+        ["Three", 0.218182, 0.509091],
+        ["prize", 0.654545, 1.090909],
+        ["beetles,", 1.163636, 1.636364],
+        ["Sire,", 1.672727, 2.218182],
+        ["caught", 2.4, 2.618182],
+        ["alive", 2.763636, 3.127273],
+        ["in", 3.163636, 3.2],
+        ["the", 3.272727, 3.345455],
+        ["compaction", 3.490909, 3.927273],
+        ["chamber!", 4.072727, 4.654545],
+        ["Beetle", 5.381818, 5.672727],
+        ["the", 5.745455, 5.818182],
+        ["First!", 5.890909, 6.472727],
+        ["We", 6.690909, 6.763636],
+        ["ask", 6.836364, 7.054545],
+        ["the", 7.127273, 7.2],
+        ["model", 7.345455, 7.490909],
+        ["for", 7.563636, 7.636364],
+        ["a", 7.781818, 7.818182],
+        ["summary,", 7.854545, 8.436364],
+        ["but", 8.545455, 8.654545],
+        ["hand", 8.727273, 8.872727],
+        ["it", 8.981818, 9.090909],
+        ["every", 9.163636, 9.454545],
+        ["tool.", 9.527273, 10.254545],
+        ["So", 10.327273, 10.4],
+        ["it", 10.472727, 10.545455],
+        ["calls", 10.654545, 10.763636],
+        ["a", 10.836364, 10.981818],
+        ["tool", 11.127273, 11.272727],
+        ["instead,", 11.563636, 12.072727],
+        ["and", 12.145455, 12.218182],
+        ["compaction", 12.290909, 12.872727],
+        ["dies", 12.945455, 13.236364],
+        ["screaming:", 13.309091, 14.109091],
+        ["no", 14.181818, 14.327273],
+        ["summary!", 14.545455, 15.199091]
+      ]
+    },
+    "bug-hunter-3": {
+      "key": "8794854214d1537f",
+      "file": "media/8794854214d1537f.mp3",
+      "durationNanos": 10239000000,
+      "spec": {
+        "align": "provider",
+        "backend": "elevenlabs",
+        "format": "mp3_44100_192",
+        "kind": "speech",
+        "lines": [{"text": "[urgent, gravelly] Beetle the Second drags two hundred thousand tokens past the keep budget! Beetle the Third stuffs the model's reasoning into the recap! Let me crush all three today!", "voice": "eOnlXxWwbTeZ7SGoAHTL"}],
+        "model": "eleven_v4",
+        "post": "loudnorm=I=-16:TP=-1.5:LRA=11|mp3=48000:mono:160k",
+        "route": "speech",
+        "settings": {"similarity": 0.75, "stability": 0.3}
+      },
+      "requests": [
+        "cHtguQD5ipoIxfAjn3nj"
+      ],
+      "credits": 22,
+      "words": [
+        ["Beetle", 0.16, 0.4],
+        ["the", 0.48, 0.56],
+        ["Second", 0.64, 0.96],
+        ["drags", 1.04, 1.36],
+        ["two", 1.44, 1.6],
+        ["hundred", 1.68, 1.92],
+        ["thousand", 2.08, 2.48],
+        ["tokens", 2.56, 2.96],
+        ["past", 3.04, 3.28],
+        ["the", 3.32, 3.36],
+        ["keep", 3.44, 3.68],
+        ["budget!", 3.76, 4.32],
+        ["Beetle", 4.56, 4.8],
+        ["the", 4.88, 4.96],
+        ["Third", 5.04, 5.36],
+        ["stuffs", 5.44, 5.68],
+        ["the", 5.76, 5.84],
+        ["model's", 5.96, 6.24],
+        ["reasoning", 6.4, 6.64],
+        ["into", 6.76, 6.88],
+        ["the", 6.92, 6.96],
+        ["recap!", 7.04, 7.72],
+        ["Let", 7.92, 8.08],
+        ["me", 8.2, 8.32],
+        ["crush", 8.4, 8.72],
+        ["all", 8.88, 9.12],
+        ["three", 9.2, 9.52],
+        ["today!", 9.8, 10.239]
+      ]
+    },
+    "bug-hunter-3.tempo(1.1)": {
+      "key": "5662682b50b04b34",
+      "file": "media/5662682b50b04b34.mp3",
+      "durationNanos": 9309416666,
+      "spec": {
+        "effect": {"tempo": {"factor": 1.1}},
+        "kind": "derive",
+        "post": "ffmpeg-effect/1",
+        "source": "8794854214d1537f"
+      },
+      "words": [
+        ["Beetle", 0.145455, 0.363636],
+        ["the", 0.436364, 0.509091],
+        ["Second", 0.581818, 0.872727],
+        ["drags", 0.945455, 1.236364],
+        ["two", 1.309091, 1.454545],
+        ["hundred", 1.527273, 1.745455],
+        ["thousand", 1.890909, 2.254545],
+        ["tokens", 2.327273, 2.690909],
+        ["past", 2.763636, 2.981818],
+        ["the", 3.018182, 3.054545],
+        ["keep", 3.127273, 3.345455],
+        ["budget!", 3.418182, 3.927273],
+        ["Beetle", 4.145455, 4.363636],
+        ["the", 4.436364, 4.509091],
+        ["Third", 4.581818, 4.872727],
+        ["stuffs", 4.945455, 5.163636],
+        ["the", 5.236364, 5.309091],
+        ["model's", 5.418182, 5.672727],
+        ["reasoning", 5.818182, 6.036364],
+        ["into", 6.145455, 6.254545],
+        ["the", 6.290909, 6.327273],
+        ["recap!", 6.4, 7.018182],
+        ["Let", 7.2, 7.345455],
+        ["me", 7.454545, 7.563636],
+        ["crush", 7.636364, 7.927273],
+        ["all", 8.072727, 8.290909],
+        ["three", 8.363636, 8.654545],
+        ["today!", 8.909091, 9.308182]
+      ]
+    },
+    "contrarian-1": {
+      "key": "f7f1ec314c5f8078",
+      "file": "media/f7f1ec314c5f8078.mp3",
+      "durationNanos": 11919000000,
+      "spec": {
+        "align": "provider",
+        "backend": "elevenlabs",
+        "format": "mp3_44100_192",
+        "kind": "speech",
+        "lines": [{"text": "[interrupting, quick and sneering] I DISAGREE, SIRE! That ugly fork round-trips Copilot's reasoning token across tool turns! Teach the native path that trick first, or the cleaver lobotomizes every session!", "voice": "MHyBf3BATJbc21zTBo1j"}],
+        "model": "eleven_v4",
+        "post": "loudnorm=I=-16:TP=-1.5:LRA=11|mp3=48000:mono:160k",
+        "route": "speech",
+        "settings": {"similarity": 0.75, "stability": 0.3}
+      },
+      "requests": [
+        "RTFIWbj30UuiI60MHmsq"
+      ],
+      "credits": 25,
+      "words": [
+        ["I", 0.229, 0.24],
+        ["DISAGREE,", 0.36, 1.04],
+        ["SIRE!", 1.12, 1.72],
+        ["That", 1.92, 2.16],
+        ["ugly", 2.24, 2.48],
+        ["fork", 2.64, 2.96],
+        ["round-trips", 3.04, 3.6],
+        ["Copilot's", 3.68, 4.32],
+        ["reasoning", 4.48, 4.72],
+        ["token", 4.8, 5.04],
+        ["across", 5.2, 5.52],
+        ["tool", 5.6, 5.84],
+        ["turns!", 5.92, 6.76],
+        ["Teach", 6.8, 7.04],
+        ["the", 7.12, 7.2],
+        ["native", 7.4, 7.6],
+        ["path", 7.72, 7.84],
+        ["that", 7.92, 8.08],
+        ["trick", 8.12, 8.4],
+        ["first,", 8.48, 9.067],
+        ["or", 9.093, 9.12],
+        ["the", 9.2, 9.28],
+        ["cleaver", 9.36, 9.76],
+        ["lobotomizes", 9.92, 10.72],
+        ["every", 10.8, 11.12],
+        ["session!", 11.36, 11.919]
+      ]
+    },
+    "contrarian-1.tempo(1.1)": {
+      "key": "e3bf598487d9ec75",
+      "file": "media/e3bf598487d9ec75.mp3",
+      "durationNanos": 10836270833,
+      "spec": {
+        "effect": {"tempo": {"factor": 1.1}},
+        "kind": "derive",
+        "post": "ffmpeg-effect/1",
+        "source": "f7f1ec314c5f8078"
+      },
+      "words": [
+        ["I", 0.208182, 0.218182],
+        ["DISAGREE,", 0.327273, 0.945455],
+        ["SIRE!", 1.018182, 1.563636],
+        ["That", 1.745455, 1.963636],
+        ["ugly", 2.036364, 2.254545],
+        ["fork", 2.4, 2.690909],
+        ["round-trips", 2.763636, 3.272727],
+        ["Copilot's", 3.345455, 3.927273],
+        ["reasoning", 4.072727, 4.290909],
+        ["token", 4.363636, 4.581818],
+        ["across", 4.727273, 5.018182],
+        ["tool", 5.090909, 5.309091],
+        ["turns!", 5.381818, 6.145455],
+        ["Teach", 6.181818, 6.4],
+        ["the", 6.472727, 6.545455],
+        ["native", 6.727273, 6.909091],
+        ["path", 7.018182, 7.127273],
+        ["that", 7.2, 7.345455],
+        ["trick", 7.381818, 7.636364],
+        ["first,", 7.709091, 8.242727],
+        ["or", 8.266364, 8.290909],
+        ["the", 8.363636, 8.436364],
+        ["cleaver", 8.509091, 8.872727],
+        ["lobotomizes", 9.018182, 9.745455],
+        ["every", 9.818182, 10.109091],
+        ["session!", 10.327273, 10.835455]
+      ]
+    },
+    "contrarian-2": {
+      "key": "06bf8505d7cd4479",
+      "file": "media/06bf8505d7cd4479.mp3",
+      "durationNanos": 9119000000,
+      "spec": {
+        "align": "provider",
+        "backend": "elevenlabs",
+        "format": "mp3_44100_192",
+        "kind": "speech",
+        "lines": [{"text": "[quick, dismissive, dry] Calm your stopwatch, Baron! Cache the decoded rows, fine. But buffer durable tool calls in RAM, and crash recovery goes blind!", "voice": "MHyBf3BATJbc21zTBo1j"}],
+        "model": "eleven_v4",
+        "post": "loudnorm=I=-16:TP=-1.5:LRA=11|mp3=48000:mono:160k",
+        "route": "speech",
+        "settings": {"similarity": 0.75, "stability": 0.3}
+      },
+      "requests": [
+        "Ax8862BbHhN7vvMCRfwB"
+      ],
+      "credits": 18,
+      "words": [
+        ["Calm", 0.08, 0.32],
+        ["your", 0.44, 0.56],
+        ["stopwatch,", 0.64, 1.24],
+        ["Baron!", 1.28, 1.92],
+        ["Cache", 2.16, 2.4],
+        ["the", 2.48, 2.56],
+        ["decoded", 2.8, 3.04],
+        ["rows,", 3.12, 3.56],
+        ["fine.", 3.68, 4.28],
+        ["But", 4.48, 4.64],
+        ["buffer", 4.72, 4.96],
+        ["durable", 5.12, 5.52],
+        ["tool", 5.6, 5.84],
+        ["calls", 5.92, 6.16],
+        ["in", 6.24, 6.4],
+        ["RAM,", 6.56, 6.84],
+        ["and", 6.96, 7.12],
+        ["crash", 7.2, 7.44],
+        ["recovery", 7.52, 8.0],
+        ["goes", 8.08, 8.4],
+        ["blind!", 8.68, 9.119]
+      ]
+    },
+    "contrarian-2.tempo(1.1)": {
+      "key": "03f8062673174f4d",
+      "file": "media/03f8062673174f4d.mp3",
+      "durationNanos": 8295041666,
+      "spec": {
+        "effect": {"tempo": {"factor": 1.1}},
+        "kind": "derive",
+        "post": "ffmpeg-effect/1",
+        "source": "06bf8505d7cd4479"
+      },
+      "words": [
+        ["Calm", 0.072727, 0.290909],
+        ["your", 0.4, 0.509091],
+        ["stopwatch,", 0.581818, 1.127273],
+        ["Baron!", 1.163636, 1.745455],
+        ["Cache", 1.963636, 2.181818],
+        ["the", 2.254545, 2.327273],
+        ["decoded", 2.545455, 2.763636],
+        ["rows,", 2.836364, 3.236364],
+        ["fine.", 3.345455, 3.890909],
+        ["But", 4.072727, 4.218182],
+        ["buffer", 4.290909, 4.509091],
+        ["durable", 4.654545, 5.018182],
+        ["tool", 5.090909, 5.309091],
+        ["calls", 5.381818, 5.6],
+        ["in", 5.672727, 5.818182],
+        ["RAM,", 5.963636, 6.218182],
+        ["and", 6.327273, 6.472727],
+        ["crash", 6.545455, 6.763636],
+        ["recovery", 6.836364, 7.272727],
+        ["goes", 7.345455, 7.636364],
+        ["blind!", 7.890909, 8.29]
+      ]
+    },
+    "contrarian-3": {
+      "key": "aaa5267ee8534e53",
+      "file": "media/aaa5267ee8534e53.mp3",
+      "durationNanos": 8399000000,
+      "spec": {
+        "align": "provider",
+        "backend": "elevenlabs",
+        "format": "mp3_44100_192",
+        "kind": "speech",
+        "lines": [{"text": "[quick, silky, condescending] Hold your magnifying glass, Mandible! Set tool choice to none first. Rip out the tools, and you torch the prompt cache!", "voice": "MHyBf3BATJbc21zTBo1j"}],
+        "model": "eleven_v4",
+        "post": "loudnorm=I=-16:TP=-1.5:LRA=11|mp3=48000:mono:160k",
+        "route": "speech",
+        "settings": {"similarity": 0.75, "stability": 0.3}
+      },
+      "requests": [
+        "r9nly5qV8n44DLRtKuul"
+      ],
+      "credits": 18,
+      "words": [
+        ["Hold", 0.08, 0.32],
+        ["your", 0.4, 0.56],
+        ["magnifying", 0.64, 1.28],
+        ["glass,", 1.36, 1.68],
+        ["Mandible!", 1.76, 2.48],
+        ["Set", 2.72, 2.96],
+        ["tool", 3.04, 3.2],
+        ["choice", 3.36, 3.6],
+        ["to", 3.68, 3.76],
+        ["none", 3.92, 4.24],
+        ["first.", 4.32, 4.92],
+        ["Rip", 5.12, 5.36],
+        ["out", 5.44, 5.52],
+        ["the", 5.6, 5.68],
+        ["tools,", 5.76, 6.28],
+        ["and", 6.4, 6.48],
+        ["you", 6.56, 6.8],
+        ["torch", 7.0, 7.2],
+        ["the", 7.28, 7.36],
+        ["prompt", 7.44, 7.68],
+        ["cache!", 7.84, 8.399]
+      ]
+    },
+    "contrarian-3.tempo(1.1)": {
+      "key": "aff4b3fe89b4c471",
+      "file": "media/aff4b3fe89b4c471.mp3",
+      "durationNanos": 7637729166,
+      "spec": {
+        "effect": {"tempo": {"factor": 1.1}},
+        "kind": "derive",
+        "post": "ffmpeg-effect/1",
+        "source": "aaa5267ee8534e53"
+      },
+      "words": [
+        ["Hold", 0.072727, 0.290909],
+        ["your", 0.363636, 0.509091],
+        ["magnifying", 0.581818, 1.163636],
+        ["glass,", 1.236364, 1.527273],
+        ["Mandible!", 1.6, 2.254545],
+        ["Set", 2.472727, 2.690909],
+        ["tool", 2.763636, 2.909091],
+        ["choice", 3.054545, 3.272727],
+        ["to", 3.345455, 3.418182],
+        ["none", 3.563636, 3.854545],
+        ["first.", 3.927273, 4.472727],
+        ["Rip", 4.654545, 4.872727],
+        ["out", 4.945455, 5.018182],
+        ["the", 5.090909, 5.163636],
+        ["tools,", 5.236364, 5.709091],
+        ["and", 5.818182, 5.890909],
+        ["you", 5.963636, 6.181818],
+        ["torch", 6.363636, 6.545455],
+        ["the", 6.618182, 6.690909],
+        ["prompt", 6.763636, 6.981818],
+        ["cache!", 7.127273, 7.635455]
+      ]
+    },
+    "contrarian-close": {
+      "key": "138f7228e3cd5df8",
+      "file": "media/138f7228e3cd5df8.mp3",
+      "durationNanos": 6718999999,
+      "spec": {
+        "align": "provider",
+        "backend": "elevenlabs",
+        "format": "mp3_44100_192",
+        "kind": "speech",
+        "lines": [{"text": "[smirking, theatrical] Or press Anarchy, and let the issue tracker burn. I'm paid either way.", "voice": "MHyBf3BATJbc21zTBo1j"}],
+        "model": "eleven_v4",
+        "post": "loudnorm=I=-16:TP=-1.5:LRA=11|mp3=48000:mono:160k",
+        "route": "speech",
+        "settings": {"similarity": 0.75, "stability": 0.3}
+      },
+      "requests": [
+        "PuXTuQB4uNWHilPNaUMx"
+      ],
+      "credits": 11,
+      "words": [
+        ["Or", 0.8, 1.04],
+        ["press", 1.12, 1.44],
+        ["Anarchy,", 1.68, 2.48],
+        ["and", 2.64, 2.8],
+        ["let", 2.88, 2.96],
+        ["the", 3.08, 3.2],
+        ["issue", 3.28, 3.6],
+        ["tracker", 3.68, 4.16],
+        ["burn.", 4.24, 5.2],
+        ["I'm", 5.28, 5.44],
+        ["paid", 5.6, 5.76],
+        ["either", 5.84, 6.08],
+        ["way.", 6.16, 6.719]
+      ]
+    },
+    "contrarian-close.tempo(1.1)": {
+      "key": "3bec110c9d7663fa",
+      "file": "media/3bec110c9d7663fa.mp3",
+      "durationNanos": 6111000000,
+      "spec": {
+        "effect": {"tempo": {"factor": 1.1}},
+        "kind": "derive",
+        "post": "ffmpeg-effect/1",
+        "source": "138f7228e3cd5df8"
+      },
+      "words": [
+        ["Or", 0.727273, 0.945455],
+        ["press", 1.018182, 1.309091],
+        ["Anarchy,", 1.527273, 2.254545],
+        ["and", 2.4, 2.545455],
+        ["let", 2.618182, 2.690909],
+        ["the", 2.8, 2.909091],
+        ["issue", 2.981818, 3.272727],
+        ["tracker", 3.345455, 3.781818],
+        ["burn.", 3.854545, 4.727273],
+        ["I'm", 4.8, 4.945455],
+        ["paid", 5.090909, 5.236364],
+        ["either", 5.309091, 5.527273],
+        ["way.", 5.6, 6.108182]
+      ]
+    },
+    "contrarian-hello": {
+      "key": "537a447af875cf7f",
+      "file": "media/537a447af875cf7f.mp3",
+      "durationNanos": 8479000000,
+      "spec": {
+        "align": "provider",
+        "backend": "elevenlabs",
+        "format": "mp3_44100_192",
+        "kind": "speech",
+        "lines": [{"text": "[sly, drawling, unimpressed] Sip your coffee slowly, Sire. Let these maniacs loose without me, and we'll be in Anarchy before breakfast.", "voice": "MHyBf3BATJbc21zTBo1j"}],
+        "model": "eleven_v4",
+        "post": "loudnorm=I=-16:TP=-1.5:LRA=11|mp3=48000:mono:160k",
+        "route": "speech",
+        "settings": {"similarity": 0.75, "stability": 0.3}
+      },
+      "requests": [
+        "k8nLnQkX3KbxvA87whow"
+      ],
+      "credits": 16,
+      "words": [
+        ["Sip", 0.32, 0.56],
+        ["your", 0.68, 0.8],
+        ["coffee", 1.0, 1.2],
+        ["slowly,", 1.44, 2.12],
+        ["Sire.", 2.24, 3.0],
+        ["Let", 3.28, 3.44],
+        ["these", 3.56, 3.68],
+        ["maniacs", 3.84, 4.4],
+        ["loose", 4.48, 4.72],
+        ["without", 4.92, 5.12],
+        ["me,", 5.2, 5.52],
+        ["and", 5.68, 5.84],
+        ["we'll", 5.88, 6.08],
+        ["be", 6.12, 6.16],
+        ["in", 6.24, 6.48],
+        ["Anarchy", 6.56, 7.12],
+        ["before", 7.28, 7.44],
+        ["breakfast.", 7.6, 8.479]
+      ]
+    },
+    "contrarian-hello.tempo(1.1)": {
+      "key": "41724d7b4a8ba7be",
+      "file": "media/41724d7b4a8ba7be.mp3",
+      "durationNanos": 7714395833,
+      "spec": {
+        "effect": {"tempo": {"factor": 1.1}},
+        "kind": "derive",
+        "post": "ffmpeg-effect/1",
+        "source": "537a447af875cf7f"
+      },
+      "words": [
+        ["Sip", 0.290909, 0.509091],
+        ["your", 0.618182, 0.727273],
+        ["coffee", 0.909091, 1.090909],
+        ["slowly,", 1.309091, 1.927273],
+        ["Sire.", 2.036364, 2.727273],
+        ["Let", 2.981818, 3.127273],
+        ["these", 3.236364, 3.345455],
+        ["maniacs", 3.490909, 4.0],
+        ["loose", 4.072727, 4.290909],
+        ["without", 4.472727, 4.654545],
+        ["me,", 4.727273, 5.018182],
+        ["and", 5.163636, 5.309091],
+        ["we'll", 5.345455, 5.527273],
+        ["be", 5.563636, 5.6],
+        ["in", 5.672727, 5.890909],
+        ["Anarchy", 5.963636, 6.472727],
+        ["before", 6.618182, 6.763636],
+        ["breakfast.", 6.909091, 7.708182]
+      ]
+    },
+    "fanfare": {
+      "key": "e37ab74411a572ff",
+      "file": "media/e37ab74411a572ff.wav",
+      "durationNanos": 3000000000,
+      "spec": {
+        "backend": "elevenlabs",
+        "durationNanos": 3000000000,
+        "format": "mp3_44100_192",
+        "influence": 0.6,
+        "kind": "sound",
+        "model": "eleven_text_to_sound_v2",
+        "post": "trim-onset=0.02:-0.003|peak=0.5|fade-out=0.06|wav=48000:mono:s16",
+        "prompt": "A short regal fanfare played on a 1990s General MIDI sound card: cheesy synth trumpets and timpani, triumphant medieval court flourish, lo-fi FM synthesis. No vocals."
+      },
+      "credits": 33
+    },
+    "n-hook": {
+      "key": "aa01b298d4c0e1f2",
+      "file": "media/aa01b298d4c0e1f2.mp3",
+      "durationNanos": 2319000000,
+      "spec": {
+        "align": "provider",
+        "backend": "elevenlabs",
+        "format": "mp3_44100_192",
+        "kind": "speech",
+        "lines": [{"text": "[warm, amused, conversational] Imagine waking up to this.", "voice": "zQHTVdFHM5uu4s8sgSdv"}],
+        "model": "eleven_v4",
+        "post": "loudnorm=I=-16:TP=-1.5:LRA=11|mp3=48000:mono:160k",
+        "route": "speech",
+        "settings": {"similarity": 0.75, "stability": 0.5}
+      },
+      "requests": [
+        "tews97kTBzFuY2uqrjRe"
+      ],
+      "credits": 7,
+      "words": [
+        ["Imagine", 0.16, 0.8],
+        ["waking", 0.88, 1.2],
+        ["up", 1.28, 1.36],
+        ["to", 1.44, 1.52],
+        ["this.", 1.6, 2.319]
+      ]
+    },
+    "n-how": {
+      "key": "4832689ba9120496",
+      "file": "media/4832689ba9120496.mp3",
+      "durationNanos": 12719000000,
+      "spec": {
+        "align": "provider",
+        "backend": "elevenlabs",
+        "format": "mp3_44100_192",
+        "kind": "speech",
+        "lines": [{"text": "[clear, friendly, explaining] Here's how it works. Every morning, a schedule wakes the council. Each advisor is a sub-agent with one job. It researches the OpenCode repo and its open issues, and comes back with one pitch, evidence attached.", "voice": "zQHTVdFHM5uu4s8sgSdv"}],
+        "model": "eleven_v4",
+        "post": "loudnorm=I=-16:TP=-1.5:LRA=11|mp3=48000:mono:160k",
+        "route": "speech",
+        "settings": {"similarity": 0.75, "stability": 0.5}
+      },
+      "requests": [
+        "lfnyIIcoP9bSyKfW44B8"
+      ],
+      "credits": 29,
+      "words": [
+        ["Here's", 0.16, 0.32],
+        ["how", 0.4, 0.48],
+        ["it", 0.56, 0.64],
+        ["works.", 0.84, 1.44],
+        ["Every", 1.52, 1.68],
+        ["morning,", 1.76, 2.28],
+        ["a", 2.32, 2.4],
+        ["schedule", 2.64, 2.88],
+        ["wakes", 2.92, 3.12],
+        ["the", 3.2, 3.28],
+        ["council.", 3.32, 4.12],
+        ["Each", 4.16, 4.24],
+        ["advisor", 4.32, 4.8],
+        ["is", 4.88, 4.96],
+        ["a", 5.12, 5.2],
+        ["sub-agent", 5.28, 5.68],
+        ["with", 5.8, 5.92],
+        ["one", 6.0, 6.16],
+        ["job.", 6.24, 6.933],
+        ["It", 6.987, 7.04],
+        ["researches", 7.12, 7.6],
+        ["the", 7.68, 7.76],
+        ["OpenCode", 7.84, 8.24],
+        ["repo", 8.32, 8.72],
+        ["and", 8.8, 8.88],
+        ["its", 8.96, 9.12],
+        ["open", 9.2, 9.36],
+        ["issues,", 9.44, 9.973],
+        ["and", 10.027, 10.08],
+        ["comes", 10.2, 10.32],
+        ["back", 10.4, 10.56],
+        ["with", 10.68, 10.8],
+        ["one", 10.88, 11.04],
+        ["pitch,", 11.12, 11.64],
+        ["evidence", 11.68, 12.0],
+        ["attached.", 12.08, 12.719]
+      ]
+    },
+    "n-outro": {
+      "key": "1ccc5d5bba4b76ff",
+      "file": "media/1ccc5d5bba4b76ff.mp3",
+      "durationNanos": 2399000000,
+      "spec": {
+        "align": "provider",
+        "backend": "elevenlabs",
+        "format": "mp3_44100_192",
+        "kind": "speech",
+        "lines": [{"text": "[warm, wry] High Council. Good morning.", "voice": "zQHTVdFHM5uu4s8sgSdv"}],
+        "model": "eleven_v4",
+        "post": "loudnorm=I=-16:TP=-1.5:LRA=11|mp3=48000:mono:160k",
+        "route": "speech",
+        "settings": {"similarity": 0.75, "stability": 0.5}
+      },
+      "requests": [
+        "iJWyZAPc5ucaOnnXzQeW"
+      ],
+      "credits": 5,
+      "words": [
+        ["High", 0.37, 0.4],
+        ["Council.", 0.48, 1.36],
+        ["Good", 1.6, 1.68],
+        ["morning.", 1.76, 2.399]
+      ]
+    },
+    "n-setup": {
+      "key": "387a0b49c4bf5d6d",
+      "file": "media/387a0b49c4bf5d6d.mp3",
+      "durationNanos": 9439000000,
+      "spec": {
+        "align": "provider",
+        "backend": "elevenlabs",
+        "format": "mp3_44100_192",
+        "kind": "speech",
+        "lines": [{"text": "[warm, conversational] Every morning, six AI advisors read the OpenCode repo and its issues while you sleep. Each one pitches a single idea... [amused] and then they argue about it.", "voice": "zQHTVdFHM5uu4s8sgSdv"}],
+        "model": "eleven_v4",
+        "post": "loudnorm=I=-16:TP=-1.5:LRA=11|mp3=48000:mono:160k",
+        "route": "speech",
+        "settings": {"similarity": 0.75, "stability": 0.5}
+      },
+      "requests": [
+        "peSYf65zk5gkkojDanO0"
+      ],
+      "credits": 22,
+      "words": [
+        ["Every", 0.293, 0.32],
+        ["morning,", 0.4, 0.88],
+        ["six", 1.04, 1.28],
+        ["AI", 1.36, 1.6],
+        ["advisors", 1.68, 2.16],
+        ["read", 2.24, 2.4],
+        ["the", 2.48, 2.56],
+        ["OpenCode", 2.64, 3.04],
+        ["repo", 3.12, 3.52],
+        ["and", 3.6, 3.76],
+        ["its", 3.88, 4.0],
+        ["issues", 4.2, 4.4],
+        ["while", 4.48, 4.56],
+        ["you", 4.64, 4.72],
+        ["sleep.", 5.08, 5.48],
+        ["Each", 5.52, 5.76],
+        ["one", 5.84, 6.0],
+        ["pitches", 6.107, 6.32],
+        ["a", 6.56, 6.667],
+        ["single", 6.773, 6.88],
+        ["idea...", 6.96, 7.72],
+        ["and", 7.84, 8.0],
+        ["then", 8.08, 8.16],
+        ["they", 8.24, 8.4],
+        ["argue", 8.48, 8.8],
+        ["about", 8.88, 9.12],
+        ["it.", 9.2, 9.439]
+      ]
+    },
+    "n-voices": {
+      "key": "6e806595bb2651cb",
+      "file": "media/6e806595bb2651cb.mp3",
+      "durationNanos": 13439000000,
+      "spec": {
+        "align": "provider",
+        "backend": "elevenlabs",
+        "format": "mp3_44100_192",
+        "kind": "speech",
+        "lines": [{"text": "[amused, warm] Then every pitch gets its own designed voice. The speech comes back with timestamps, which pick a mouth shape on pre-generated portraits. No AI video. Just sprites, swapped on the audio clock, like it's nineteen ninety-six.", "voice": "zQHTVdFHM5uu4s8sgSdv"}],
+        "model": "eleven_v4",
+        "post": "loudnorm=I=-16:TP=-1.5:LRA=11|mp3=48000:mono:160k",
+        "route": "speech",
+        "settings": {"similarity": 0.75, "stability": 0.5}
+      },
+      "requests": [
+        "B2crffXBMp3l1wNhV237"
+      ],
+      "credits": 29,
+      "words": [
+        ["Then", 0.32, 0.56],
+        ["every", 0.72, 0.96],
+        ["pitch", 1.12, 1.36],
+        ["gets", 1.44, 1.52],
+        ["its", 1.64, 1.76],
+        ["own", 1.84, 2.0],
+        ["designed", 2.12, 2.48],
+        ["voice.", 2.92, 3.413],
+        ["The", 3.467, 3.52],
+        ["speech", 3.64, 3.76],
+        ["comes", 3.84, 4.08],
+        ["back", 4.16, 4.24],
+        ["with", 4.32, 4.48],
+        ["timestamps,", 4.84, 5.36],
+        ["which", 5.44, 5.52],
+        ["pick", 5.6, 5.68],
+        ["a", 5.76, 5.84],
+        ["mouth", 5.96, 6.08],
+        ["shape", 6.16, 6.4],
+        ["on", 6.48, 6.56],
+        ["pre-generated", 6.64, 7.28],
+        ["portraits.", 7.4, 8.24],
+        ["No", 8.32, 8.56],
+        ["AI", 8.64, 8.96],
+        ["video.", 9.32, 9.72],
+        ["Just", 9.76, 9.92],
+        ["sprites,", 10.24, 10.6],
+        ["swapped", 10.64, 10.88],
+        ["on", 10.92, 10.96],
+        ["the", 11.04, 11.12],
+        ["audio", 11.28, 11.44],
+        ["clock,", 11.64, 11.88],
+        ["like", 11.92, 12.08],
+        ["it's", 12.12, 12.24],
+        ["nineteen", 12.32, 12.56],
+        ["ninety-six.", 12.64, 13.439]
+      ]
+    },
+    "performance-1": {
+      "key": "ec6bc97309dfad4b",
+      "file": "media/ec6bc97309dfad4b.mp3",
+      "durationNanos": 6399000000,
+      "spec": {
+        "align": "provider",
+        "backend": "elevenlabs",
+        "format": "mp3_44100_192",
+        "kind": "speech",
+        "lines": [{"text": "[frantic, breathless, very fast] My Liege! Put your ear to the motherboard! One agent step with ten tool calls fires forty-seven durable events!", "voice": "sB8R53mkw4P98mniCNmZ"}],
+        "model": "eleven_v4",
+        "post": "loudnorm=I=-16:TP=-1.5:LRA=11|mp3=48000:mono:160k",
+        "route": "speech",
+        "settings": {"similarity": 0.75, "stability": 0.3}
+      },
+      "requests": [
+        "OghkTkgwJo7CROmkZyaI"
+      ],
+      "credits": 17,
+      "words": [
+        ["My", 0.08, 0.24],
+        ["Liege!", 0.36, 0.72],
+        ["Put", 0.88, 0.96],
+        ["your", 1.04, 1.2],
+        ["ear", 1.28, 1.36],
+        ["to", 1.44, 1.52],
+        ["the", 1.56, 1.6],
+        ["motherboard!", 1.68, 2.32],
+        ["One", 2.48, 2.64],
+        ["agent", 2.72, 2.96],
+        ["step", 3.04, 3.28],
+        ["with", 3.36, 3.44],
+        ["ten", 3.52, 3.68],
+        ["tool", 3.76, 3.92],
+        ["calls", 4.0, 4.24],
+        ["fires", 4.32, 4.64],
+        ["forty-seven", 4.76, 5.28],
+        ["durable", 5.36, 5.68],
+        ["events!", 5.76, 6.399]
+      ]
+    },
+    "performance-1.tempo(1.1)": {
+      "key": "6004d0044ad78e3f",
+      "file": "media/6004d0044ad78e3f.mp3",
+      "durationNanos": 5822708333,
+      "spec": {
+        "effect": {"tempo": {"factor": 1.1}},
+        "kind": "derive",
+        "post": "ffmpeg-effect/1",
+        "source": "ec6bc97309dfad4b"
+      },
+      "words": [
+        ["My", 0.072727, 0.218182],
+        ["Liege!", 0.327273, 0.654545],
+        ["Put", 0.8, 0.872727],
+        ["your", 0.945455, 1.090909],
+        ["ear", 1.163636, 1.236364],
+        ["to", 1.309091, 1.381818],
+        ["the", 1.418182, 1.454545],
+        ["motherboard!", 1.527273, 2.109091],
+        ["One", 2.254545, 2.4],
+        ["agent", 2.472727, 2.690909],
+        ["step", 2.763636, 2.981818],
+        ["with", 3.054545, 3.127273],
+        ["ten", 3.2, 3.345455],
+        ["tool", 3.418182, 3.563636],
+        ["calls", 3.636364, 3.854545],
+        ["fires", 3.927273, 4.218182],
+        ["forty-seven", 4.327273, 4.8],
+        ["durable", 4.872727, 5.163636],
+        ["events!", 5.236364, 5.817273]
+      ]
+    },
+    "performance-2": {
+      "key": "9929831f943ef2f5",
+      "file": "media/9929831f943ef2f5.mp3",
+      "durationNanos": 9599000000,
+      "spec": {
+        "align": "provider",
+        "backend": "elevenlabs",
+        "format": "mp3_44100_192",
+        "kind": "speech",
+        "lines": [{"text": "[manic, rapid-fire] And every single one opens its own SQLite transaction, reads the whole message, decodes it, and rewrites the entire row! Keep the hot message in memory, Sire!", "voice": "sB8R53mkw4P98mniCNmZ"}],
+        "model": "eleven_v4",
+        "post": "loudnorm=I=-16:TP=-1.5:LRA=11|mp3=48000:mono:160k",
+        "route": "speech",
+        "settings": {"similarity": 0.75, "stability": 0.3}
+      },
+      "requests": [
+        "CIlv3hqaqOuNYca54eDg"
+      ],
+      "credits": 22,
+      "words": [
+        ["And", 0.08, 0.24],
+        ["every", 0.32, 0.64],
+        ["single", 0.8, 0.96],
+        ["one", 1.04, 1.28],
+        ["opens", 1.44, 1.6],
+        ["its", 1.72, 1.84],
+        ["own", 1.92, 2.08],
+        ["SQLite", 2.16, 2.64],
+        ["transaction,", 2.96, 3.4],
+        ["reads", 3.52, 3.76],
+        ["the", 3.84, 3.92],
+        ["whole", 4.04, 4.16],
+        ["message,", 4.36, 4.64],
+        ["decodes", 4.72, 5.2],
+        ["it,", 5.32, 5.493],
+        ["and", 5.547, 5.6],
+        ["rewrites", 5.68, 6.08],
+        ["the", 6.16, 6.24],
+        ["entire", 6.4, 6.8],
+        ["row!", 6.96, 7.32],
+        ["Keep", 7.52, 7.68],
+        ["the", 7.72, 7.76],
+        ["hot", 7.84, 8.0],
+        ["message", 8.16, 8.32],
+        ["in", 8.4, 8.48],
+        ["memory,", 8.64, 8.88],
+        ["Sire!", 8.92, 9.599]
+      ]
+    },
+    "performance-2.tempo(1.1)": {
+      "key": "69a86bf8b2b36ad2",
+      "file": "media/69a86bf8b2b36ad2.mp3",
+      "durationNanos": 8730041666,
+      "spec": {
+        "effect": {"tempo": {"factor": 1.1}},
+        "kind": "derive",
+        "post": "ffmpeg-effect/1",
+        "source": "9929831f943ef2f5"
+      },
+      "words": [
+        ["And", 0.072727, 0.218182],
+        ["every", 0.290909, 0.581818],
+        ["single", 0.727273, 0.872727],
+        ["one", 0.945455, 1.163636],
+        ["opens", 1.309091, 1.454545],
+        ["its", 1.563636, 1.672727],
+        ["own", 1.745455, 1.890909],
+        ["SQLite", 1.963636, 2.4],
+        ["transaction,", 2.690909, 3.090909],
+        ["reads", 3.2, 3.418182],
+        ["the", 3.490909, 3.563636],
+        ["whole", 3.672727, 3.781818],
+        ["message,", 3.963636, 4.218182],
+        ["decodes", 4.290909, 4.727273],
+        ["it,", 4.836364, 4.993636],
+        ["and", 5.042727, 5.090909],
+        ["rewrites", 5.163636, 5.527273],
+        ["the", 5.6, 5.672727],
+        ["entire", 5.818182, 6.181818],
+        ["row!", 6.327273, 6.654545],
+        ["Keep", 6.836364, 6.981818],
+        ["the", 7.018182, 7.054545],
+        ["hot", 7.127273, 7.272727],
+        ["message", 7.418182, 7.563636],
+        ["in", 7.636364, 7.709091],
+        ["memory,", 7.854545, 8.072727],
+        ["Sire!", 8.109091, 8.726364]
+      ]
+    },
+    "simplifier-1": {
+      "key": "e322e597b997b352",
+      "file": "media/e322e597b997b352.mp3",
+      "durationNanos": 13039000000,
+      "spec": {
+        "align": "provider",
+        "backend": "elevenlabs",
+        "format": "mp3_44100_192",
+        "kind": "speech",
+        "lines": [{"text": "[imperious, thrilled] SIRE! Deep in the GitHub Copilot dungeon sits a twenty-five-file, four-thousand-line mummy! A vendored fork of the Vercel AI SDK, just to speak chat and responses!", "voice": "N2sjObx5IV1hFpNoMpdx"}],
+        "model": "eleven_v4",
+        "post": "loudnorm=I=-16:TP=-1.5:LRA=11|mp3=48000:mono:160k",
+        "route": "speech",
+        "settings": {"similarity": 0.75, "stability": 0.3}
+      },
+      "requests": [
+        "f4WprcgN0KbCEN0GuTDx"
+      ],
+      "credits": 22,
+      "words": [
+        ["SIRE!", 0.32, 1.16],
+        ["Deep", 1.44, 1.68],
+        ["in", 1.76, 1.84],
+        ["the", 1.92, 2.0],
+        ["GitHub", 2.08, 2.48],
+        ["Copilot", 2.56, 3.04],
+        ["dungeon", 3.12, 3.52],
+        ["sits", 3.6, 3.76],
+        ["a", 3.84, 3.92],
+        ["twenty-five-file,", 4.0, 5.24],
+        ["four-thousand-line", 5.36, 6.56],
+        ["mummy!", 6.72, 7.4],
+        ["A", 7.68, 7.76],
+        ["vendored", 7.84, 8.32],
+        ["fork", 8.48, 8.64],
+        ["of", 8.68, 8.72],
+        ["the", 8.8, 8.88],
+        ["Vercel", 8.92, 9.36],
+        ["AI", 9.44, 9.68],
+        ["SDK,", 9.76, 10.72],
+        ["just", 10.8, 10.96],
+        ["to", 11.04, 11.12],
+        ["speak", 11.2, 11.44],
+        ["chat", 11.52, 11.76],
+        ["and", 11.84, 11.92],
+        ["responses!", 12.32, 12.88]
+      ]
+    },
+    "simplifier-1.tempo(1.1)": {
+      "key": "6e9f7aa6ff3315d7",
+      "file": "media/6e9f7aa6ff3315d7.mp3",
+      "durationNanos": 11863000000,
+      "spec": {
+        "effect": {"tempo": {"factor": 1.1}},
+        "kind": "derive",
+        "post": "ffmpeg-effect/1",
+        "source": "e322e597b997b352"
+      },
+      "words": [
+        ["SIRE!", 0.290909, 1.054545],
+        ["Deep", 1.309091, 1.527273],
+        ["in", 1.6, 1.672727],
+        ["the", 1.745455, 1.818182],
+        ["GitHub", 1.890909, 2.254545],
+        ["Copilot", 2.327273, 2.763636],
+        ["dungeon", 2.836364, 3.2],
+        ["sits", 3.272727, 3.418182],
+        ["a", 3.490909, 3.563636],
+        ["twenty-five-file,", 3.636364, 4.763636],
+        ["four-thousand-line", 4.872727, 5.963636],
+        ["mummy!", 6.109091, 6.727273],
+        ["A", 6.981818, 7.054545],
+        ["vendored", 7.127273, 7.563636],
+        ["fork", 7.709091, 7.854545],
+        ["of", 7.890909, 7.927273],
+        ["the", 8.0, 8.072727],
+        ["Vercel", 8.109091, 8.509091],
+        ["AI", 8.581818, 8.8],
+        ["SDK,", 8.872727, 9.745455],
+        ["just", 9.818182, 9.963636],
+        ["to", 10.036364, 10.109091],
+        ["speak", 10.181818, 10.4],
+        ["chat", 10.472727, 10.690909],
+        ["and", 10.763636, 10.836364],
+        ["responses!", 11.2, 11.709091]
+      ]
+    },
+    "simplifier-2": {
+      "key": "ff5874452e8415c6",
+      "file": "media/ff5874452e8415c6.mp3",
+      "durationNanos": 9599000000,
+      "spec": {
+        "align": "provider",
+        "backend": "elevenlabs",
+        "format": "mp3_44100_192",
+        "kind": "speech",
+        "lines": [{"text": "[gleeful, savoring every word] Our own native AI package already speaks both. Give me the cleaver, and I shall lop off four thousand lines before noon!", "voice": "N2sjObx5IV1hFpNoMpdx"}],
+        "model": "eleven_v4",
+        "post": "loudnorm=I=-16:TP=-1.5:LRA=11|mp3=48000:mono:160k",
+        "route": "speech",
+        "settings": {"similarity": 0.75, "stability": 0.3}
+      },
+      "requests": [
+        "a9b0MMLLTt4ZVumtlgrc"
+      ],
+      "credits": 18,
+      "words": [
+        ["Our", 0.24, 0.56],
+        ["own", 0.64, 0.96],
+        ["native", 1.04, 1.52],
+        ["AI", 1.6, 1.92],
+        ["package", 2.0, 2.48],
+        ["already", 2.56, 3.12],
+        ["speaks", 3.2, 3.6],
+        ["both.", 3.68, 4.64],
+        ["Give", 4.72, 4.8],
+        ["me", 4.88, 4.96],
+        ["the", 5.0, 5.04],
+        ["cleaver,", 5.12, 5.76],
+        ["and", 5.84, 5.92],
+        ["I", 6.08, 6.187],
+        ["shall", 6.293, 6.4],
+        ["lop", 6.52, 6.64],
+        ["off", 6.72, 6.96],
+        ["four", 7.08, 7.2],
+        ["thousand", 7.44, 7.92],
+        ["lines", 8.12, 8.32],
+        ["before", 8.4, 8.72],
+        ["noon!", 8.88, 9.599]
+      ]
+    },
+    "simplifier-2.tempo(1.1)": {
+      "key": "1753be33dca42ca8",
+      "file": "media/1753be33dca42ca8.mp3",
+      "durationNanos": 8732416666,
+      "spec": {
+        "effect": {"tempo": {"factor": 1.1}},
+        "kind": "derive",
+        "post": "ffmpeg-effect/1",
+        "source": "ff5874452e8415c6"
+      },
+      "words": [
+        ["Our", 0.218182, 0.509091],
+        ["own", 0.581818, 0.872727],
+        ["native", 0.945455, 1.381818],
+        ["AI", 1.454545, 1.745455],
+        ["package", 1.818182, 2.254545],
+        ["already", 2.327273, 2.836364],
+        ["speaks", 2.909091, 3.272727],
+        ["both.", 3.345455, 4.218182],
+        ["Give", 4.290909, 4.363636],
+        ["me", 4.436364, 4.509091],
+        ["the", 4.545455, 4.581818],
+        ["cleaver,", 4.654545, 5.236364],
+        ["and", 5.309091, 5.381818],
+        ["I", 5.527273, 5.624545],
+        ["shall", 5.720909, 5.818182],
+        ["lop", 5.927273, 6.036364],
+        ["off", 6.109091, 6.327273],
+        ["four", 6.436364, 6.545455],
+        ["thousand", 6.763636, 7.2],
+        ["lines", 7.381818, 7.563636],
+        ["before", 7.636364, 7.927273],
+        ["noon!", 8.072727, 8.726364]
+      ]
+    },
+    "sting": {
+      "key": "f835c3bf59333cbd",
+      "file": "media/f835c3bf59333cbd.wav",
+      "durationNanos": 1000000000,
+      "spec": {
+        "backend": "elevenlabs",
+        "durationNanos": 1000000000,
+        "format": "mp3_44100_192",
+        "influence": 0.7,
+        "kind": "sound",
+        "model": "eleven_text_to_sound_v2",
+        "post": "trim-onset=0.02:-0.003|peak=0.5|fade-out=0.06|wav=48000:mono:s16",
+        "prompt": "A single dramatic orchestra hit stab from a 1990s MIDI sound card, cheesy and abrupt, short decay. No vocals."
+      },
+      "credits": 11
+    },
+    "user-voice-1": {
+      "key": "5960524cc1a8069b",
+      "file": "media/5960524cc1a8069b.mp3",
+      "durationNanos": 8159000000,
+      "spec": {
+        "align": "provider",
+        "backend": "elevenlabs",
+        "format": "mp3_44100_192",
+        "kind": "speech",
+        "lines": [{"text": "[alarmed, projecting to a crowd] The citizens are revolting, Sire! In issue thirty-three three fifty-six, their database has swollen past thirteen gigabytes!", "voice": "4DjbuiCZ4Nt9Bgg0aSvi"}],
+        "model": "eleven_v4",
+        "post": "loudnorm=I=-16:TP=-1.5:LRA=11|mp3=48000:mono:160k",
+        "route": "speech",
+        "settings": {"similarity": 0.75, "stability": 0.3}
+      },
+      "requests": [
+        "ZK90Ls37jxb5WhGJXKDd"
+      ],
+      "credits": 19,
+      "words": [
+        ["The", 0.151, 0.16],
+        ["citizens", 0.24, 0.72],
+        ["are", 0.8, 0.88],
+        ["revolting,", 1.0, 1.6],
+        ["Sire!", 1.68, 2.28],
+        ["In", 2.48, 2.56],
+        ["issue", 2.64, 2.96],
+        ["thirty-three", 3.04, 3.68],
+        ["three", 3.76, 4.0],
+        ["fifty-six,", 4.107, 4.8],
+        ["their", 4.96, 5.12],
+        ["database", 5.2, 5.68],
+        ["has", 5.76, 5.92],
+        ["swollen", 6.0, 6.32],
+        ["past", 6.4, 6.64],
+        ["thirteen", 6.72, 7.2],
+        ["gigabytes!", 7.28, 8.159]
+      ]
+    },
+    "user-voice-1.tempo(1.1)": {
+      "key": "ef643e85a457f100",
+      "file": "media/ef643e85a457f100.mp3",
+      "durationNanos": 7415979166,
+      "spec": {
+        "effect": {"tempo": {"factor": 1.1}},
+        "kind": "derive",
+        "post": "ffmpeg-effect/1",
+        "source": "5960524cc1a8069b"
+      },
+      "words": [
+        ["The", 0.137273, 0.145455],
+        ["citizens", 0.218182, 0.654545],
+        ["are", 0.727273, 0.8],
+        ["revolting,", 0.909091, 1.454545],
+        ["Sire!", 1.527273, 2.072727],
+        ["In", 2.254545, 2.327273],
+        ["issue", 2.4, 2.690909],
+        ["thirty-three", 2.763636, 3.345455],
+        ["three", 3.418182, 3.636364],
+        ["fifty-six,", 3.733636, 4.363636],
+        ["their", 4.509091, 4.654545],
+        ["database", 4.727273, 5.163636],
+        ["has", 5.236364, 5.381818],
+        ["swollen", 5.454545, 5.745455],
+        ["past", 5.818182, 6.036364],
+        ["thirteen", 6.109091, 6.545455],
+        ["gigabytes!", 6.618182, 7.415979]
+      ]
+    },
+    "user-voice-2": {
+      "key": "19a0b4eae41f47d1",
+      "file": "media/19a0b4eae41f47d1.mp3",
+      "durationNanos": 4638999999,
+      "spec": {
+        "align": "provider",
+        "backend": "elevenlabs",
+        "format": "mp3_44100_192",
+        "kind": "speech",
+        "lines": [{"text": "[pleading, passionate] Two hundred and sixty-eight open issues mention compaction, Sire!", "voice": "4DjbuiCZ4Nt9Bgg0aSvi"}],
+        "model": "eleven_v4",
+        "post": "loudnorm=I=-16:TP=-1.5:LRA=11|mp3=48000:mono:160k",
+        "route": "speech",
+        "settings": {"similarity": 0.75, "stability": 0.3}
+      },
+      "requests": [
+        "B4xewmkppYTU90QruFHz"
+      ],
+      "credits": 11,
+      "words": [
+        ["Two", 0.08, 0.32],
+        ["hundred", 0.48, 0.8],
+        ["and", 0.88, 1.12],
+        ["sixty-eight", 1.2, 1.84],
+        ["open", 1.92, 2.16],
+        ["issues", 2.24, 2.64],
+        ["mention", 2.8, 2.96],
+        ["compaction,", 3.04, 3.84],
+        ["Sire!", 3.92, 4.639]
+      ]
+    },
+    "user-voice-2.tempo(1.1)": {
+      "key": "10cb023c0a6c7ded",
+      "file": "media/10cb023c0a6c7ded.mp3",
+      "durationNanos": 4221500000,
+      "spec": {
+        "effect": {"tempo": {"factor": 1.1}},
+        "kind": "derive",
+        "post": "ffmpeg-effect/1",
+        "source": "19a0b4eae41f47d1"
+      },
+      "words": [
+        ["Two", 0.072727, 0.290909],
+        ["hundred", 0.436364, 0.727273],
+        ["and", 0.8, 1.018182],
+        ["sixty-eight", 1.090909, 1.672727],
+        ["open", 1.745455, 1.963636],
+        ["issues", 2.036364, 2.4],
+        ["mention", 2.545455, 2.690909],
+        ["compaction,", 2.763636, 3.490909],
+        ["Sire!", 3.563636, 4.217273]
+      ]
+    }
+  }
+}

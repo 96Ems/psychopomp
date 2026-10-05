@@ -1,0 +1,37 @@
+{
+  "simplifier": {
+    "voiceId": "N2sjObx5IV1hFpNoMpdx",
+    "name": "High Council - Simplifier",
+    "preview": "previews/simplifier-0.mp3"
+  },
+  "performance": {
+    "voiceId": "sB8R53mkw4P98mniCNmZ",
+    "name": "High Council - Baron Von Blitz (Performance)",
+    "preview": "previews/performance-0.mp3"
+  },
+  "bug-hunter": {
+    "voiceId": "eOnlXxWwbTeZ7SGoAHTL",
+    "name": "High Council - Inspector Mandible (Bug Hunter)",
+    "preview": "previews/bug-hunter-0.mp3"
+  },
+  "architect": {
+    "voiceId": "HadaW6eYTMBiTIg99Igv",
+    "name": "High Council - Architect",
+    "preview": "previews/architect-0.mp3"
+  },
+  "user-voice": {
+    "voiceId": "4DjbuiCZ4Nt9Bgg0aSvi",
+    "name": "High Council - Tribune Vox (User Voice)",
+    "preview": "previews/user-voice-0.mp3"
+  },
+  "contrarian": {
+    "voiceId": "MHyBf3BATJbc21zTBo1j",
+    "name": "High Council - Malakor (Contrarian)",
+    "preview": "previews/contrarian-0.mp3"
+  },
+  "narrator": {
+    "voiceId": "zQHTVdFHM5uu4s8sgSdv",
+    "name": "High Council - Narrator",
+    "preview": "previews/narrator-0.mp3"
+  }
+}

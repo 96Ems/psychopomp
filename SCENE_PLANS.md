@@ -27,6 +27,7 @@ machinery:
 | Magnifying a code range or a card's status | `scenes/loupe` | `lens::LensActor` (`show`, `move_to`, `slide`, `resize`, `focus`) |
 | Real product behavior from a screen recording | `scenes/video`, `scenes/opencode-session-tool` | `video::VideoActor` (`fly_in`, `focus`, `unfocus`) |
 | Collages of stills and clips; footage frozen, ramped, or placed in a Stage | `scenes/footage` | `footage::FootageActor` (`toss_in`, `treat`, `freeze`, `ramp`, `stutter`, `drift`), `footage::layout`, Stage `footage`, `StageActor::footage_playhead` |
+| Talking-head portraits lip-synced to narration; image swaps on the narration clock | `scenes/high-council` | `lipsync::visemes`, `blinks`, `frames`, `SpriteSheet`, `Sprite` (`show`, `perform`) over a frame-cut `footage` image sequence |
 | Before and after, side by side | `scenes/compare` | `ReelSegmentPlan::wiped` with `ReelWipePlan` holds and labels |
 | Changing scenes: pushes, irises, matched zooms, flips, cuts | `scenes/transitions` | `ReelPlan::new` with `ReelSegmentPlan::pushed`, `matched`, `irised`, `flipped`, ... |
 | A version or count changing | `scenes/rolling-number` | `rolling::RollingNumberActor::roll` |
@@ -890,6 +891,17 @@ their fuller documentation elsewhere.
   under `target/psychopomp-cache/footage` (safe to delete);
   `PSYCHOPOMP_FOOTAGE_CACHE_MB` bounds frames in memory (384) and
   `PSYCHOPOMP_FOOTAGE_STATS=1` reports the store after a render.
+- Lip sync (`psychopomp::lipsync`) plays a **Sprite Sheet** (an image
+  sequence of expressions × mouth shapes, `SpriteSheet::SLOTS` frames each:
+  `Mouth::ALL`, then a blink) through a `footage` overlay decoded at
+  `SPRITE_FPS` frames a second, cutting its `time` channel with `Set` events
+  instead of playing it. `visemes(words, TICK)` turns placed word timings into
+  mouth cues on a fixed 110 ms sprite tick (closed in pauses of at least
+  `PAUSE`, at rest after the last word); `blinks(from, until, salt)` scatters
+  deterministic blinks; `frames(sheet, expressions, mouths, blinks)` layers them
+  into frame cuts; `Sprite::perform` writes them. The same frame-cut trick
+  swaps any image layer on the narration clock (the council's speech box,
+  agenda, and banners). `scenes/high-council` is the worked example.
 - `callout`: `anchors` (one to eight; the first is where it starts), `lines` (one
   to three lines of `{ text, tone }` spans), `size` (24), `side` (where the label
   sits: `top`, `bottom`, `left`, `right`, `top-left`, `top-right` (default),

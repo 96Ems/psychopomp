@@ -65,6 +65,7 @@ Lightweight crate (`crates/psychopomp/src`):
 - `crates/psychopomp/src/text.rs`: typed `text` recipe values in the hand-built JSON shape and the `TextActor` handle (`show`, `hide`, `show_during`, `swap`, `move_to`)
 - `crates/psychopomp/src/image.rs`: Image recipe values (bare or framed, title, radius, anchors), the image placement helper, and the `ImageActor` handle (`fly_in`, `hide`, `move_to`)
 - `crates/psychopomp/src/footage.rs`: Footage: the `Clip` (trim, rate, hold/loop/bounce, reverse, freeze, decode rate and width) and its exact nanosecond playhead mapping, `Fit` and focus windows, `Mask`, color `Treatment`, the `footage` overlay recipe (`FootagePlan`), placement and audio helpers, the `Playhead` handle on a `time` channel (`freeze`, `play`, `ramp`, `retime`, `seek`, `stutter`), the `FootageActor` handle (`fly_in`, `toss_in`, `glide`, `move_to`, `focus`, `drift`, `treat`, `hide`, `audio`), and `probe` (ffprobe at authoring time)
+- `crates/psychopomp/src/lipsync.rs`: Sprite Sheet lip sync: letters and pauses to `Mouth` visemes on a fixed sprite tick, deterministic blinks, the expression × mouth frame layout, and the `Sprite` handle that cuts a footage playhead to frames
 - `crates/psychopomp/src/footage/layout.rs`: GPU-free collage layouts returning `Tile`s: `grid`, `masonry`, `scatter`, `pile`, `filmstrip`, and `by_distance` for ripple staggers
 - `crates/psychopomp/src/math.rs` and `math/`: shared motion and geometry math (glam vectors, lerp/remap/smoothstep, easing, closed-form dynamics such as the settling spring, arc-length curves, shape ports and connectors, rounded-box distance fields, thin-surface glass optics, deterministic hash)
 
@@ -187,6 +188,7 @@ Scene Programs (`scenes/`), each emitting a Scene Plan, Deck, or Reel:
 - `scenes/anchors/`: Anchor showroom reel: a caption, a Rolling Number, text labels, a callout, and a framed image riding Stage cards through a dolly, a jolt, and glides between anchors; then a caption and a Rolling Number on code ranges while lines insert and the panel zooms; then a cursor caption, a counter, and a callout on Sequence Diagram rows and headers as the diagram slides
 - `scenes/loupe/`: Lens showroom reel: a loupe reads code ranges (glide, capsule scan, floating focus), then follows a Stage card's changing status through a dolly
 - `scenes/transitions/`: transitions showroom: every reel transition between Stage, code, and title frames, each named in a chip
+- `scenes/high-council/`: High Council demo reel: a Civilization II-style FMV council screen whose six portraits lip-sync to designed ElevenLabs voices as Sprite Sheets, with chrome, speech box, agenda, and banners drawn by `scripts/frames.py` as frame-cut image sequences, and a Stage segment explaining the pipeline
 - `scenes/footage/`: Footage showroom reel: a masonry wall of stills and clips tossed in, one clip freezing, ramping, and stuttering while the rest recede to reference footage; footage at Stage depths under an orbiting camera with a circular clip pinned to a card; a pile of prints drawn into a filmstrip (`--bench` writes a twenty-clip measuring wall)
 
 ## Scene Programs And Rendering Compile Separately
