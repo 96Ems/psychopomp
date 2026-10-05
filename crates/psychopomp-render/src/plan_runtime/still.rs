@@ -52,6 +52,34 @@ impl Loaded {
         }
     }
 
+    /// Load onto an existing renderer, as `verify` does for many plans with
+    /// one GPU device and font system.
+    pub(super) fn load_on(
+        path: &Path,
+        theme: Theme,
+        renderer: &mut HeadlessRenderer,
+    ) -> Result<Self> {
+        let base = path.parent().unwrap_or_else(|| Path::new("."));
+        match PlanFile::read(path)? {
+            PlanFile::Reel(plan) => {
+                renderer.set_theme(theme);
+                renderer.set_file_name(&plan.id);
+                Ok(Self::Reel(reel::PreparedReel::prepare(
+                    plan, base, renderer,
+                )?))
+            }
+            PlanFile::Plan(plan) => {
+                let input = preflight::Plan::new(plan)?;
+                renderer.set_theme(theme);
+                renderer.set_file_name(&input.plan.id);
+                let prepared = PreparedPlan::prepare_preflight(input, base, renderer)?;
+                renderer.set_file_name(prepared.file_name());
+                Ok(Self::Plan(Box::new(prepared)))
+            }
+            PlanFile::Deck(_) => bail!(DECK_UNSUPPORTED),
+        }
+    }
+
     /// Encode `window` of the global clock to `output`.
     pub(super) fn render_video(
         &self,
@@ -65,7 +93,7 @@ impl Loaded {
         }
     }
 
-    fn duration_seconds(&self) -> f64 {
+    pub(super) fn duration_seconds(&self) -> f64 {
         match self {
             Self::Plan(plan) => plan.duration().as_seconds(),
             Self::Reel(reel) => reel.duration().as_seconds(),
@@ -125,7 +153,7 @@ pub(super) fn parse_times(value: &str) -> Result<Vec<f64>> {
 }
 
 /// A stable file name for a frame time.
-fn frame_name(at: f64) -> String {
+pub(super) fn frame_name(at: f64) -> String {
     format!("{at:09.3}.png")
 }
 
@@ -179,15 +207,15 @@ pub(super) fn snapshot(
 }
 
 /// How two RGBA frames differ in color.
-struct Change {
-    pixels: usize,
-    max: u8,
+pub(super) struct Change {
+    pub(super) pixels: usize,
+    pub(super) max: u8,
     /// x0, y0, x1, y1 of the changed pixels, inclusive.
-    bounds: Option<[usize; 4]>,
+    pub(super) bounds: Option<[usize; 4]>,
 }
 
 impl Change {
-    fn between(before: &[u8], after: &[u8]) -> Self {
+    pub(super) fn between(before: &[u8], after: &[u8]) -> Self {
         let mut change = Self {
             pixels: 0,
             max: 0,
@@ -226,7 +254,7 @@ impl Change {
     }
 }
 
-fn read_png(path: &Path) -> Result<Vec<u8>> {
+pub(super) fn read_png(path: &Path) -> Result<Vec<u8>> {
     let file = fs::File::open(path).with_context(|| format!("open baseline {}", path.display()))?;
     let mut reader = png::Decoder::new(std::io::BufReader::new(file))
         .read_info()

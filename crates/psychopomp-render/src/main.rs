@@ -17,10 +17,18 @@ fn main() -> Result<()> {
     {
         return plan_runtime::command(rest);
     }
+    if let [command, rest @ ..] = arguments.as_slice()
+        && command == "verify"
+    {
+        return plan_runtime::verify::command(rest);
+    }
     let output = match arguments.as_slice() {
         [] => PathBuf::from("output/psychopomp-prototype.mp4"),
         [output] => PathBuf::from(output),
-        _ => bail!("usage: psychopomp [output] | psychopomp plan <command>"),
+        _ => bail!(
+            "usage: psychopomp [output] | psychopomp plan <command> | {}",
+            plan_runtime::verify::USAGE
+        ),
     };
 
     if let Some(parent) = output.parent() {

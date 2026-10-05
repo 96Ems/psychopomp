@@ -60,6 +60,7 @@ mod terminal;
 mod tree;
 mod value;
 mod venn;
+pub(crate) mod verify;
 mod video;
 mod viz;
 
