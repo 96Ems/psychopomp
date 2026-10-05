@@ -5871,4 +5871,98 @@ mod tests {
             "negative age restores the intact orb"
         );
     }
+
+    #[test]
+    #[ignore = "requires a headless GPU; Stage footage draws its frame, cut and treated"]
+    fn stage_footage_draws_its_frame_masked_defocused_and_treated() {
+        let mut renderer = pollster::block_on(HeadlessRenderer::new(crate::render::RenderSpec {
+            width: 1920,
+            height: 1080,
+            file_name: "stage-footage-proof".into(),
+        }))
+        .unwrap();
+        let plan: StagePlan = serde_json::from_value(serde_json::json!({
+            "post": { "bloom": 0.0, "grain": 0.0, "vignette": 0.0, "backdrop": 0.0 },
+            "elements": [
+                { "kind": "footage", "id": "tv", "at": [960, 540, 0], "size": [400, 400],
+                  "clip": { "media": "clip" }, "mask": { "shape": "circle" } }
+            ]
+        }))
+        .unwrap();
+        let sizes = super::HashMap::from([("tv".to_owned(), [8, 8])]);
+        let gpu = renderer.prepare_stage_with(&plan, &sizes).unwrap();
+        // Left half red, right half blue.
+        let pixels: crate::footage::Frame = (0..64)
+            .flat_map(|i| {
+                if i % 8 < 4 {
+                    [230, 20, 20, 255]
+                } else {
+                    [20, 20, 230, 255]
+                }
+            })
+            .collect::<Vec<u8>>()
+            .into();
+        let frame = |identity| {
+            Ok(vec![super::StageFootageFrame {
+                element: "tv".into(),
+                identity,
+                pixels: pixels.clone(),
+                size: [8, 8],
+            }])
+        };
+        let draw = |renderer: &mut HeadlessRenderer, overrides: &[(&str, f32)]| {
+            renderer
+                .render_stage_exposure(
+                    &plan,
+                    &gpu,
+                    &[(1.0, 1.0)],
+                    |_, property, default| {
+                        overrides
+                            .iter()
+                            .find(|(name, _)| *name == property)
+                            .map_or(default, |(_, value)| *value)
+                    },
+                    |_| frame(7),
+                )
+                .unwrap()
+        };
+        let pixel = |pixels: &[u8], x: usize, y: usize| {
+            let i = (y * 1920 + x) * 4;
+            [pixels[i], pixels[i + 1], pixels[i + 2]]
+        };
+        let plain = draw(&mut renderer, &[]);
+        let left = pixel(&plain, 860, 540);
+        let right = pixel(&plain, 1060, 540);
+        assert!(
+            left[0] > 180 && left[2] < 80,
+            "the left half is red: {left:?}"
+        );
+        assert!(
+            right[2] > 180 && right[0] < 80,
+            "the right half is blue: {right:?}"
+        );
+        let corner = pixel(&plain, 960 - 190, 540 - 190);
+        assert!(
+            corner.iter().all(|v| *v < 40),
+            "the circle leaves the corner dark: {corner:?}"
+        );
+        let gray = draw(&mut renderer, &[("tv.saturation", 0.0)]);
+        let [r, g, b] = pixel(&gray, 860, 540);
+        assert!(
+            r.abs_diff(g) <= 2 && g.abs_diff(b) <= 2,
+            "desaturated: {r} {g} {b}"
+        );
+        let soft = draw(&mut renderer, &[("tv.blur", 40.0)]);
+        let middle = pixel(&soft, 960, 540);
+        assert!(
+            middle[0] > 60 && middle[2] > 60,
+            "defocus mixes the halves: {middle:?}"
+        );
+        let hidden = draw(&mut renderer, &[("tv.opacity", 0.0)]);
+        assert!(pixel(&hidden, 860, 540).iter().all(|v| *v < 40));
+        assert!(
+            draw(&mut renderer, &[]) == plain,
+            "the same frame draws the same pixels"
+        );
+    }
 }
