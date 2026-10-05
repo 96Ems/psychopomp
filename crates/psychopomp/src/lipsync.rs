@@ -25,7 +25,7 @@ pub enum Mouth {
     Mbp,
     /// A, E: jaw dropped.
     Open,
-    /// I, Y and most consonants: teeth showing.
+    /// I, Y, and sibilants: teeth showing.
     Wide,
     /// O, U, W: lips rounded.
     Round,
@@ -71,7 +71,10 @@ pub fn viseme(letter: char) -> Option<Mouth> {
         'f' | 'v' => Mouth::Fv,
         'o' | 'u' | 'w' | 'q' => Mouth::Round,
         'a' | 'e' | 'h' => Mouth::Open,
-        c if c.is_ascii_alphanumeric() => Mouth::Wide,
+        'i' | 'y' | 's' | 'z' | 'c' | 'x' | 'j' => Mouth::Wide,
+        // Tongue and throat consonants barely move the lips: the jaw closes
+        // between vowels, the flap that sells speech at a low frame rate.
+        c if c.is_ascii_alphanumeric() => Mouth::Closed,
         _ => return None,
     })
 }
@@ -166,15 +169,16 @@ pub fn blinks(from: u64, until: u64, salt: u32) -> Vec<u64> {
 }
 
 /// The layout of a Sprite Sheet image sequence: for each expression in
-/// order, one frame per [`Mouth`] in [`Mouth::ALL`] order, then a blink.
+/// order, one frame per [`Mouth`] in [`Mouth::ALL`] order with the eyes open,
+/// then the same mouths with the eyes closed, so a portrait blinks mid-word.
 #[derive(Clone, Debug, PartialEq)]
 pub struct SpriteSheet {
     expressions: Vec<String>,
 }
 
 impl SpriteSheet {
-    /// Frames per expression: every mouth, then the blink.
-    pub const SLOTS: u32 = Mouth::ALL.len() as u32 + 1;
+    /// Frames per expression: every mouth with the eyes open, then closed.
+    pub const SLOTS: u32 = 2 * Mouth::ALL.len() as u32;
 
     pub fn new<S: Into<String>>(expressions: impl IntoIterator<Item = S>) -> Result<Self> {
         let expressions: Vec<String> = expressions.into_iter().map(Into::into).collect();
@@ -216,9 +220,9 @@ impl SpriteSheet {
         expression * Self::SLOTS + mouth.slot()
     }
 
-    /// The frame showing `expression` (an index) blinking at rest.
-    pub fn blink(&self, expression: u32) -> u32 {
-        expression * Self::SLOTS + Self::SLOTS - 1
+    /// The frame showing `expression` (an index) with `mouth`, blinking.
+    pub fn blink(&self, expression: u32, mouth: Mouth) -> u32 {
+        self.frame(expression, mouth) + Mouth::ALL.len() as u32
     }
 }
 
@@ -227,8 +231,8 @@ pub const BLINK: u64 = 120 * MILLISECOND;
 
 /// One portrait's whole performance as frame cuts: `expressions` (time,
 /// sheet index) change the face, `mouths` the mouth, and `blinks` close the
-/// eyes for [`BLINK`] whenever the mouth is resting or closed. Before the
-/// first expression the sheet's first is shown. Repeats are dropped.
+/// eyes for [`BLINK`], mid-word or not. Before the first expression the
+/// sheet's first is shown. Repeats are dropped.
 pub fn frames(
     sheet: &SpriteSheet,
     expressions: &[(u64, u32)],
@@ -257,8 +261,8 @@ pub fn frames(
             .last()
             .map_or(Mouth::Rest, |(_, mouth)| *mouth);
         let blinking = blinks.iter().any(|&b| b <= at && at < b + BLINK);
-        let frame = if blinking && matches!(mouth, Mouth::Rest | Mouth::Closed) {
-            sheet.blink(expression)
+        let frame = if blinking {
+            sheet.blink(expression, mouth)
         } else {
             sheet.frame(expression, mouth)
         };
@@ -336,7 +340,8 @@ mod tests {
         assert_eq!(viseme('v'), Some(Mouth::Fv));
         assert_eq!(viseme('o'), Some(Mouth::Round));
         assert_eq!(viseme('a'), Some(Mouth::Open));
-        assert_eq!(viseme('t'), Some(Mouth::Wide));
+        assert_eq!(viseme('s'), Some(Mouth::Wide));
+        assert_eq!(viseme('t'), Some(Mouth::Closed));
         assert_eq!(viseme('!'), None);
     }
 
@@ -352,9 +357,9 @@ mod tests {
 
     #[test]
     fn pauses_close_the_mouth_and_short_gaps_do_not() {
-        let paused = visemes([("go", 0, 220 * MS), ("on", 660 * MS, 880 * MS)], TICK);
+        let paused = visemes([("oh", 0, 220 * MS), ("ah", 660 * MS, 880 * MS)], TICK);
         assert!(paused.contains(&(220 * MS, Mouth::Closed)));
-        let joined = visemes([("go", 0, 220 * MS), ("on", 260 * MS, 480 * MS)], TICK);
+        let joined = visemes([("oh", 0, 220 * MS), ("ah", 260 * MS, 480 * MS)], TICK);
         assert!(!joined.iter().any(|(_, mouth)| *mouth == Mouth::Closed));
     }
 
@@ -378,10 +383,11 @@ mod tests {
     #[test]
     fn sheet_frames_follow_the_slot_layout() {
         let sheet = SpriteSheet::new(["neutral", "smug"]).unwrap();
-        assert_eq!(sheet.len(), 16);
+        assert_eq!(sheet.len(), 28);
         assert_eq!(sheet.frame(0, Mouth::Rest), 0);
-        assert_eq!(sheet.frame(1, Mouth::Open), 11);
-        assert_eq!(sheet.blink(1), 15);
+        assert_eq!(sheet.frame(1, Mouth::Open), 17);
+        assert_eq!(sheet.blink(1, Mouth::Open), 24);
+        assert_eq!(sheet.blink(0, Mouth::Rest), 7);
         assert_eq!(sheet.expression("smug").unwrap(), 1);
         assert!(sheet.expression("sad").is_err());
         assert!(SpriteSheet::new(["a", "a"]).is_err());
@@ -400,12 +406,14 @@ mod tests {
             cuts,
             vec![
                 (0, sheet.frame(0, Mouth::Rest)),
-                (500 * MS, sheet.blink(0)),
+                (500 * MS, sheet.blink(0, Mouth::Rest)),
                 (620 * MS, sheet.frame(0, Mouth::Rest)),
-                // Speaking suppresses the blink at 1.1 s.
                 (SECOND, sheet.frame(1, Mouth::Open)),
+                // A blink mid-word keeps the mouth.
+                (1_100 * MS, sheet.blink(1, Mouth::Open)),
+                (1_100 * MS + BLINK, sheet.frame(1, Mouth::Open)),
                 (2 * SECOND, sheet.frame(1, Mouth::Rest)),
-                (3 * SECOND, sheet.blink(1)),
+                (3 * SECOND, sheet.blink(1, Mouth::Rest)),
                 (3 * SECOND + BLINK, sheet.frame(1, Mouth::Rest)),
             ]
         );
