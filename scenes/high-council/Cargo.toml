@@ -1,0 +1,10 @@
+[package]
+name = "psychopomp-high-council"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+anyhow = "1.0"
+psychopomp = { path = "../../crates/psychopomp" }
+psychopomp-media = { path = "../../crates/psychopomp-media" }
+serde_json = "1.0"

@@ -51,6 +51,14 @@ impl Sfx {
     pub fn play(self, scene: &mut PlanBuilder, id: impl Into<String>, at: u64, gain_db: f32) {
         scene.media(self.media(id, at, gain_db));
     }
+
+    /// Return a composable [`crate::score::Beat`] that plays this sound at its cue time.
+    pub fn beat(self, id: impl Into<String>, gain_db: f32) -> impl crate::score::Beat {
+        let id = id.into();
+        crate::score::impulse(move |scene, at| {
+            self.play(scene, id, at, gain_db);
+        })
+    }
 }
 
 /// The length of `samples` at 48 kHz, to the nearest nanosecond.

@@ -1,0 +1,124 @@
+{
+  "clips": [
+    {
+      "id": "hush",
+      "file": "hush.mp3",
+      "words": "hush.words.json",
+      "durationNanos": 7598999999,
+      "textHash": "fc5e8ad749990c5f",
+      "engine": "elevenlabs",
+      "model": "eleven_v4",
+      "requestId": "m9BiO4iXANnpjnNGyL54"
+    },
+    {
+      "id": "another",
+      "file": "another.mp3",
+      "words": "another.words.json",
+      "durationNanos": 5279000000,
+      "textHash": "bdcf55705dc436eb",
+      "engine": "elevenlabs",
+      "model": "eleven_v4",
+      "requestId": "q1FVUPWyScRX82WRFzJX"
+    },
+    {
+      "id": "chant",
+      "file": "chant.mp3",
+      "words": "chant.words.json",
+      "durationNanos": 6879000000,
+      "textHash": "c46836ee5d50e6cc",
+      "engine": "elevenlabs",
+      "model": "eleven_v4",
+      "requestId": "prFHpazMbFHK2bKqpBx9"
+    },
+    {
+      "id": "theory",
+      "file": "theory.mp3",
+      "words": "theory.words.json",
+      "durationNanos": 9199000000,
+      "textHash": "8ed30bd6c347fe8c",
+      "engine": "elevenlabs",
+      "model": "eleven_v4",
+      "requestId": "Q58Tk2ki9CDu5IBKXOJw"
+    },
+    {
+      "id": "andy",
+      "file": "andy.mp3",
+      "words": "andy.words.json",
+      "durationNanos": 7439000000,
+      "textHash": "54e16e111a105e20",
+      "engine": "elevenlabs",
+      "model": "eleven_v4",
+      "requestId": "UqODvYqDVd7nXmQgk0bA"
+    },
+    {
+      "id": "spaghetti",
+      "file": "spaghetti.mp3",
+      "words": "spaghetti.words.json",
+      "durationNanos": 8479000000,
+      "textHash": "1aa549f1278b3130",
+      "engine": "elevenlabs",
+      "model": "eleven_v4",
+      "requestId": "l2C6KgdCnHSKHbZw7PFD"
+    },
+    {
+      "id": "chaos-yowl",
+      "file": "chaos-yowl.mp3",
+      "words": "chaos-yowl.words.json",
+      "durationNanos": 5039000000,
+      "textHash": "8472c9082c11f182",
+      "engine": "elevenlabs",
+      "model": "eleven_v4",
+      "requestId": "rVBTZ44uc8eo3GVOkyxR"
+    },
+    {
+      "id": "chaos-howl",
+      "file": "chaos-howl.mp3",
+      "words": "chaos-howl.words.json",
+      "durationNanos": 4879000000,
+      "textHash": "b2d585423eb43f8c",
+      "engine": "elevenlabs",
+      "model": "eleven_v4",
+      "requestId": "qho2s3lGSDpoOtG5EkLd"
+    },
+    {
+      "id": "chaos-laugh",
+      "file": "chaos-laugh.mp3",
+      "words": "chaos-laugh.words.json",
+      "durationNanos": 7839000000,
+      "textHash": "81b17b7d6d2d029c",
+      "engine": "elevenlabs",
+      "model": "eleven_v4",
+      "requestId": "0KUv3CXo6JMWtwHZXTTI"
+    },
+    {
+      "id": "chaos-babble",
+      "file": "chaos-babble.mp3",
+      "words": "chaos-babble.words.json",
+      "durationNanos": 7598999999,
+      "textHash": "3008f05938453433",
+      "engine": "elevenlabs",
+      "model": "eleven_v4",
+      "requestId": "HnCARNFT4fyzHcIEmItt"
+    },
+    {
+      "id": "chaos-chimp",
+      "file": "chaos-chimp.mp3",
+      "words": "chaos-chimp.words.json",
+      "durationNanos": 6319000000,
+      "textHash": "1beeaf72b67e3d9a",
+      "engine": "elevenlabs",
+      "model": "eleven_v4",
+      "requestId": "4im5Nb3rrblG9CF5cAOh"
+    },
+    {
+      "id": "after",
+      "file": "after.mp3",
+      "words": "after.words.json",
+      "durationNanos": 3439000000,
+      "textHash": "e8f6ca75d6ab4bff",
+      "engine": "elevenlabs",
+      "model": "eleven_v4",
+      "requestId": "o29LpUz7Lrqkk6ceQJr4"
+    }
+  ]
+}

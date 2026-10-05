@@ -93,17 +93,18 @@ fn main() -> Result<()> {
             );
         }
     }
-    // The store arrives as a flat dot matrix over its slab.
-    for (id, at) in [("slab", 0.5), ("store", 0.7), ("cache", 0.9)] {
-        s.channel(sc, &format!("{id}.opacity"), 0.0);
-        s.ease(
-            sc,
-            &format!("{id}.opacity"),
-            seconds(at),
-            1.0,
-            0.8,
-            Ease::Smootherstep,
-        );
+    // The store arrives as a flat dot matrix over its slab, settling in with
+    // scale, vertical drift, and deblur rather than a bare fade.
+    for (id, at) in [("slab", 0.5), ("store", 0.65), ("cache", 0.8)] {
+        let at = seconds(at);
+        let opacity = s.channel(sc, &format!("{id}.opacity"), 0.0);
+        sc.ease(&opacity, at, 1.0, 0.25, Ease::GLIDE);
+        let scale = s.channel(sc, &format!("{id}.scale"), 0.94);
+        sc.spring_with(&scale, at, 1.0, psychopomp::plan::SpringPlan::PANEL);
+        let y = s.channel(sc, &format!("{id}.y"), 16.0);
+        sc.spring_with(&y, at, 0.0, psychopomp::plan::SpringPlan::ENTER);
+        let blur = s.channel(sc, &format!("{id}.blur"), 4.0);
+        sc.ease(&blur, at, 0.0, 0.32, Ease::GLIDE);
     }
     for (id, at) in [("store-name", 1.1), ("cache-name", 1.2)] {
         s.channel(sc, &format!("{id}.opacity"), 0.0);
@@ -152,13 +153,15 @@ fn main() -> Result<()> {
     let landed = hops[hops.len() - 1];
     let sphere = s.morph(sc, "store", landed + seconds(0.25), 2, 1.8);
 
-    // The bypassed cache bursts; the scene takes the blow.
+    // The bypassed cache bursts; the gateway above it takes the pressure wave.
     let burst = sphere + seconds(0.6);
     s.clock_for(sc, "cache.burst", burst, 5.2);
     s.jolt(sc, burst + seconds(0.12), [0.0, 1.0], 0.5);
+    let passes = s.shock_kick(sc, "cache", burst, "gateway", 10.0, None);
+    s.land(sc, "gateway", passes);
     s.channel(sc, "fill.opacity", 1.0);
-    s.to(sc, "fill.opacity", burst + seconds(0.3), 0.0, 0.8);
-    s.to(sc, "cache-name.opacity", burst + seconds(0.3), 0.0, 0.8);
+    s.to(sc, "fill.opacity", burst + seconds(0.08), 0.0, 0.24);
+    s.to(sc, "cache-name.opacity", burst + seconds(0.08), 0.0, 0.22);
     s.to(sc, "camera.z", burst + seconds(1.4), 110.0, 1.8);
     s.to(sc, "camera.x", burst + seconds(1.4), 220.0, 1.8);
 

@@ -1,0 +1,32 @@
+{
+  "clips": [
+    {
+      "id": "chant",
+      "file": "audio/tempo/chant.flac",
+      "tempo": 1.15,
+      "textHash": "c46836ee5d50e6cc",
+      "durationNanos": 5991166666
+    },
+    {
+      "id": "theory",
+      "file": "audio/tempo/theory.flac",
+      "tempo": 1.3,
+      "textHash": "8ed30bd6c347fe8c",
+      "durationNanos": 7082416666
+    },
+    {
+      "id": "andy",
+      "file": "audio/tempo/andy.flac",
+      "tempo": 1.35,
+      "textHash": "54e16e111a105e20",
+      "durationNanos": 5515895833
+    },
+    {
+      "id": "spaghetti",
+      "file": "audio/tempo/spaghetti.flac",
+      "tempo": 1.4,
+      "textHash": "1aa549f1278b3130",
+      "durationNanos": 6058666666
+    }
+  ]
+}

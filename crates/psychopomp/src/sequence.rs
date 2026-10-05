@@ -481,6 +481,7 @@ fn single_line(what: &str, text: &str, max_chars: usize) -> Result<()> {
 
 /// Authoring handle that declares each sequence channel once, with the recipe's
 /// default as its initial value, and writes eased reveals by row identity.
+#[derive(Clone, Debug)]
 pub struct SequenceActor {
     actor: ActorHandle,
 }
@@ -497,6 +498,14 @@ impl SequenceActor {
         plan.validate()?;
         let actor = scene.actor(id, SEQUENCE_RECIPE, plan)?;
         Ok(Self { actor })
+    }
+
+    pub fn actor(&self) -> &ActorHandle {
+        &self.actor
+    }
+
+    pub fn id(&self) -> &str {
+        self.actor.id()
     }
 
     /// The channel for `property`, declared on first use with `initial`.
@@ -533,6 +542,49 @@ impl SequenceActor {
             &format!("participant.{participant}.{property}"),
             initial,
         )
+    }
+
+    /// Default resting value for `property` when undeclared (`opacity`, `lifelines`,
+    /// `row.*.opacity`, and `participant.*.opacity` rest at `1.0`; others at `0.0`).
+    pub fn channel_default(property: &str) -> f32 {
+        if matches!(property, "opacity" | "lifelines")
+            || (property.starts_with("row.") && property.ends_with(".opacity"))
+            || (property.starts_with("participant.") && property.ends_with(".opacity"))
+        {
+            1.0
+        } else {
+            0.0
+        }
+    }
+
+    /// Spring `property` to `target` over `seconds`, starting from its recipe default
+    /// if undeclared.
+    pub fn to(
+        &mut self,
+        scene: &mut PlanBuilder,
+        property: &str,
+        at_nanos: u64,
+        target: f32,
+        seconds: f32,
+    ) {
+        self.animate(
+            scene,
+            property,
+            Self::channel_default(property),
+            at_nanos,
+            target,
+            seconds,
+        );
+    }
+
+    /// Fade the diagram and lifelines in.
+    pub fn show(&mut self, scene: &mut PlanBuilder, at_nanos: u64) {
+        self.animate(scene, "opacity", 0.0, at_nanos, 1.0, 0.35);
+    }
+
+    /// Fade the diagram out.
+    pub fn hide(&mut self, scene: &mut PlanBuilder, at_nanos: u64) {
+        self.animate(scene, "opacity", 1.0, at_nanos, 0.0, 0.3);
     }
 
     /// Ease a whole-diagram property (`opacity`, `x`, `y`, `lifelines`).

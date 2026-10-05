@@ -14,6 +14,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     author::{ActorHandle, ContinuousHandle, PlanBuilder},
+    face::Face,
     math::{easing::smootherstep, lerp, smoothstep},
     narration::Spoken,
     tone::Tone,
@@ -31,6 +32,10 @@ const PAUSE: f64 = 0.55;
 const MAX_PAGE: f64 = 6.0;
 const FADE_IN: f64 = 0.16;
 const FADE_OUT: f64 = 0.12;
+/// Faster sequential text handoff during a direct page swap: outgoing text
+/// clears quickly without colliding with the incoming sentence.
+const SWAP_OUT: f64 = 0.08;
+const SWAP_IN: f64 = 0.11;
 /// A word becomes spoken over this long from its start.
 const SPEAK: f64 = 0.08;
 /// The highlight leaves a final word this long after it ends, over `RELEASE`.
@@ -57,6 +62,13 @@ pub struct SubtitlesPlan {
     /// A dark rounded surface behind each page, for legibility over footage.
     #[serde(default = "yes", skip_serializing_if = "is_yes")]
     pub backing: bool,
+    /// How much ink a word not yet spoken shows (0.5); 0 reveals the page
+    /// word by word as it is said.
+    #[serde(default = "half", skip_serializing_if = "is_half")]
+    pub upcoming: f32,
+    /// The words' typeface: bundled CommitMono by default.
+    #[serde(default, skip_serializing_if = "Face::is_mono")]
+    pub face: Face,
     pub words: Vec<SubtitleWordPlan>,
 }
 
@@ -96,6 +108,14 @@ fn yes() -> bool {
     true
 }
 
+fn half() -> f32 {
+    0.5
+}
+
+fn is_half(value: &f32) -> bool {
+    *value == 0.5
+}
+
 fn is_yes(value: &bool) -> bool {
     *value
 }
@@ -109,6 +129,8 @@ impl SubtitlesPlan {
             max_lines: default_lines(),
             highlight: Tone::Accent,
             backing: true,
+            upcoming: half(),
+            face: Face::Mono,
             words: Vec::new(),
         }
     }
@@ -158,6 +180,18 @@ impl SubtitlesPlan {
         self
     }
 
+    /// Show each word only as it is said.
+    pub fn word_by_word(mut self) -> Self {
+        self.upcoming = 0.0;
+        self
+    }
+
+    /// Set the words in `face` rather than CommitMono.
+    pub fn face(mut self, face: Face) -> Self {
+        self.face = face;
+        self
+    }
+
     pub fn line_height(&self) -> f32 {
         (self.size * 1.35).round()
     }
@@ -178,6 +212,10 @@ impl SubtitlesPlan {
         ensure!(
             (1..=3).contains(&self.max_lines),
             "subtitles show one to three lines"
+        );
+        ensure!(
+            (0.0..=1.0).contains(&self.upcoming),
+            "subtitles upcoming ink must be between 0 and 1"
         );
         ensure!(
             (1..=4000).contains(&self.words.len()),
@@ -453,8 +491,9 @@ impl SubtitleLayout {
     pub fn sample(&self, seconds: f64) -> Vec<PageFrame<'_>> {
         self.pages
             .iter()
-            .filter(|page| seconds >= page.show && seconds < page.hide)
-            .map(|page| self.page_frame(page, seconds))
+            .enumerate()
+            .filter(|&(_, page)| seconds >= page.show && seconds < page.hide)
+            .map(|(index, page)| self.page_frame(index, page, seconds))
             .collect()
     }
 
@@ -462,9 +501,19 @@ impl SubtitleLayout {
         smoothstep(((seconds - self.starts[index]) / SPEAK) as f32)
     }
 
-    fn page_frame<'a>(&'a self, page: &'a SubtitlePage, seconds: f64) -> PageFrame<'a> {
-        let entering = smoothstep(((seconds - page.show) / FADE_IN) as f32);
-        let leaving = smoothstep(((seconds - (page.hide - FADE_OUT)) / FADE_OUT) as f32);
+    fn page_frame<'a>(
+        &'a self,
+        page_index: usize,
+        page: &'a SubtitlePage,
+        seconds: f64,
+    ) -> PageFrame<'a> {
+        let inherited = page_index > 0
+            && self.pages[page_index - 1].swaps
+            && (self.pages[page_index - 1].hide - page.show).abs() < 1e-9;
+        let fade_in = if inherited { SWAP_IN } else { FADE_IN };
+        let fade_out = if page.swaps { SWAP_OUT } else { FADE_OUT };
+        let entering = smoothstep(((seconds - page.show) / fade_in) as f32);
+        let leaving = smoothstep(((seconds - (page.hide - fade_out)) / fade_out) as f32);
         let current = |index: usize| {
             let spoken = self.spoken(index, seconds);
             let next = if index + 1 < page.words.end {
@@ -503,11 +552,13 @@ impl SubtitleLayout {
         if let Some(latest) = words.iter().rposition(|ink| ink.upcoming < 1.0) {
             let ink = words[latest];
             let glide = 1.0 - ink.upcoming;
+            let raw_glide =
+                ((seconds - self.starts[ink.word.index]) / SPEAK).clamp(0.0, 1.0) as f32;
             let previous = latest.checked_sub(1).map(|i| words[i]);
             match previous {
                 Some(before) if glide < 1.0 && before.current > 0.0 => {
                     if before.line == ink.line {
-                        let k = smootherstep(glide);
+                        let k = smootherstep(raw_glide);
                         pills.push(Pill {
                             line: ink.line,
                             x: lerp(before.word.x, ink.word.x, k),
@@ -557,16 +608,21 @@ impl SubtitleLayout {
             )
         };
         let (width, lines) = size(page);
-        let entering = smoothstep(((seconds - page.show) / FADE_IN) as f32);
-        let leaving = smoothstep(((seconds - (page.hide - FADE_OUT)) / FADE_OUT) as f32);
-        // A page replacing its predecessor keeps the surface and morphs it.
         let inherited = index > 0
             && self.pages[index - 1].swaps
             && (self.pages[index - 1].hide - page.show).abs() < 1e-9;
-        if page.swaps && leaving > 0.0 {
+        let fade_in = if inherited { SWAP_IN } else { FADE_IN };
+        let fade_out = if page.swaps { SWAP_OUT } else { FADE_OUT };
+        let in_t = ((seconds - page.show) / fade_in).clamp(0.0, 1.0) as f32;
+        let out_t = ((seconds - (page.hide - fade_out)) / fade_out).clamp(0.0, 1.0) as f32;
+        let entering = smoothstep(in_t);
+        let leaving = smoothstep(out_t);
+        // A page replacing its predecessor keeps the surface and morphs it
+        // on one unbroken minimum-jerk curve without stalling at the midpoint.
+        if page.swaps && out_t > 0.0 {
             let next = &self.pages[index + 1];
             let (next_width, next_lines) = size(next);
-            let k = smootherstep(leaving * 0.5);
+            let k = smootherstep(out_t * 0.5);
             return Some(Backing {
                 width: lerp(width, next_width, k),
                 lines: lerp(lines, next_lines, k),
@@ -574,9 +630,9 @@ impl SubtitleLayout {
                 rise: 0.0,
             });
         }
-        if inherited && entering < 1.0 {
+        if inherited && in_t < 1.0 {
             let (before_width, before_lines) = size(&self.pages[index - 1]);
-            let k = smootherstep(0.5 + entering * 0.5);
+            let k = smootherstep(0.5 + in_t * 0.5);
             return Some(Backing {
                 width: lerp(before_width, width, k),
                 lines: lerp(before_lines, lines, k),
@@ -594,6 +650,7 @@ impl SubtitleLayout {
 }
 
 /// Authoring handle for one subtitles actor.
+#[derive(Clone, Debug)]
 pub struct SubtitlesActor {
     actor: ActorHandle,
 }
@@ -609,6 +666,10 @@ impl SubtitlesActor {
         Ok(Self { actor })
     }
 
+    pub fn actor(&self) -> &ActorHandle {
+        &self.actor
+    }
+
     pub fn id(&self) -> &str {
         self.actor.id()
     }
@@ -620,6 +681,11 @@ impl SubtitlesActor {
         initial: f32,
     ) -> ContinuousHandle {
         scene.channel(&self.actor, property, initial)
+    }
+
+    /// Fade every subtitle in from `at_nanos`.
+    pub fn show(&mut self, scene: &mut PlanBuilder, at_nanos: u64) {
+        crate::caption::show(scene, &self.actor, at_nanos);
     }
 
     /// Fade every subtitle out from `at_nanos`, as before a scene change.
@@ -736,12 +802,20 @@ mod tests {
         assert!((second.hide - (last + HOLD)).abs() < 1e-9);
         let begin = plan.words[third.words.start].start_nanos as f64 * 1e-9;
         assert!((third.show - (begin - LEAD)).abs() < 1e-9);
-        // At most two pages at any time, and never two fully opaque.
+        // At most two pages at any time, never two fully opaque, and the
+        // backing morphs continuously through the midpoint without stalling.
         for step in 0..1200 {
             let frames = layout.sample(step as f64 * 0.01);
             assert!(frames.len() <= 2);
             assert!(frames.iter().filter(|f| f.opacity > 0.999).count() <= 1);
         }
+        let w_before = layout.backing(first.hide - 0.01).unwrap().width;
+        let w_at = layout.backing(first.hide).unwrap().width;
+        let w_after = layout.backing(first.hide + 0.01).unwrap().width;
+        assert!(
+            (w_at - w_before).abs() > 1.0 && (w_after - w_at).abs() > 1.0,
+            "backing morphs through the midpoint without stalling"
+        );
     }
 
     #[test]

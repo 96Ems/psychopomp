@@ -149,6 +149,7 @@ pub fn media(
 }
 
 /// Authoring handle for one image actor.
+#[derive(Clone, Debug)]
 pub struct ImageActor {
     actor: ActorHandle,
     anchors: Vec<String>,
@@ -174,6 +175,10 @@ impl ImageActor {
             actor,
             anchors: anchor::ids(&plan.anchors),
         })
+    }
+
+    pub fn actor(&self) -> &ActorHandle {
+        &self.actor
     }
 
     pub fn id(&self) -> &str {
@@ -207,7 +212,7 @@ impl ImageActor {
     /// Fade out in place.
     pub fn hide(&mut self, scene: &mut PlanBuilder, at_nanos: u64) {
         let opacity = self.channel(scene, "opacity", 1.0);
-        scene.spring(&opacity, at_nanos, 0.0, 0.3, 0.0);
+        scene.spring_with(&opacity, at_nanos, 0.0, crate::plan::SpringPlan::EXIT);
     }
 
     /// Glide to the anchor `to`, carrying velocity through interruptions.

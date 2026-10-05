@@ -7,11 +7,11 @@ use super::{
     chat::ChatInput,
     component_prototype::{self, ComponentInput},
     editor::{EditorSelection, PreparedEditor},
+    footage::FootageInputs,
     generated,
     grid::PreparedGrid,
     header,
     ide::PreparedAnnotation,
-    image::ImageInput,
     lanes::PreparedLanes,
     lens::PreparedLens,
     lower_third::PreparedLowerThird,
@@ -22,7 +22,6 @@ use super::{
     tree::PreparedTree,
     value::PreparedValueToken,
     venn::PreparedVenn,
-    video::VideoInput,
 };
 use crate::render::{RichTextSource, VerticalMask};
 use anyhow::{Context, Result, bail};
@@ -36,6 +35,7 @@ use psychopomp::{
         COLLECTION, CONNECTOR, HEADER, HeaderPlan, RICH_TEXT, TYPESET, VENN, WIDTH_TEXT,
     },
     editor::{EDITOR_RECIPE, EditorTargetSelector, POINTER_RECIPE, PointerRecipePlan},
+    footage::FOOTAGE_RECIPE,
     grid::GRID_RECIPE,
     image::IMAGE_RECIPE,
     lanes::LANES_RECIPE,
@@ -74,14 +74,14 @@ pub(super) struct Plan {
     pub trees: Vec<PreparedTree>,
     pub plots: Vec<PreparedPlot>,
     pub lanes: Vec<PreparedLanes>,
-    pub videos: Vec<VideoInput>,
+    /// Video Cards, images, footage overlays, and Stage footage.
+    pub footage: FootageInputs,
     pub callouts: Vec<PreparedCallout>,
     pub terminals: Vec<PreparedTerminal>,
     pub chats: Vec<ChatInput>,
     pub changed_files: Vec<ChangedFilesInput>,
     pub lower_thirds: Vec<PreparedLowerThird>,
     pub viz: super::viz::VizInputs,
-    pub images: Vec<ImageInput>,
     pub lenses: Vec<PreparedLens>,
 }
 pub(super) enum RootPlan {
@@ -384,7 +384,7 @@ impl Plan {
         let mut trees = Vec::new();
         let mut plots = Vec::new();
         let mut lanes = Vec::new();
-        let mut videos = Vec::new();
+        let mut footage = FootageInputs::default();
         let mut callouts = Vec::new();
         let mut annotations = Vec::new();
         let mut terminals = Vec::new();
@@ -392,7 +392,6 @@ impl Plan {
         let mut changed_files = Vec::new();
         let mut lower_thirds = Vec::new();
         let mut viz = super::viz::VizInputs::default();
-        let mut images = Vec::new();
         let mut lenses = Vec::new();
         for actor in &plan.actors {
             if let Some(annotation) = PreparedAnnotation::parse(actor, &plan.continuous_channels)? {
@@ -464,11 +463,7 @@ impl Plan {
                 TREE_RECIPE => trees.push(PreparedTree::new(actor, &plan.continuous_channels)?),
                 PLOT_RECIPE => plots.push(PreparedPlot::new(actor, &plan.continuous_channels)?),
                 LANES_RECIPE => lanes.push(PreparedLanes::new(actor, &plan.continuous_channels)?),
-                VIDEO_RECIPE => videos.push(VideoInput::new(
-                    actor,
-                    &plan.media,
-                    &plan.continuous_channels,
-                )?),
+                VIDEO_RECIPE => footage.video(actor, &plan.media, &plan.continuous_channels)?,
                 CALLOUT_RECIPE => {
                     callouts.push(PreparedCallout::new(actor, &plan.continuous_channels)?)
                 }
@@ -487,11 +482,8 @@ impl Plan {
                 recipe if super::viz::accepts(recipe) => {
                     viz.parse(actor, &plan.continuous_channels)?
                 }
-                IMAGE_RECIPE => images.push(ImageInput::new(
-                    actor,
-                    &plan.media,
-                    &plan.continuous_channels,
-                )?),
+                IMAGE_RECIPE => footage.image(actor, &plan.media, &plan.continuous_channels)?,
+                FOOTAGE_RECIPE => footage.footage(actor, &plan.media, &plan.continuous_channels)?,
                 LENS_RECIPE => lenses.push(PreparedLens::new(actor, &plan.continuous_channels)?),
                 recipe => bail!("unsupported actor recipe '{recipe}'"),
             }
@@ -539,14 +531,10 @@ impl Plan {
             };
             editor.attach(annotation, &plan.semantic_targets)?;
         }
-        let consumed = videos
-            .iter()
-            .map(VideoInput::media_id)
-            .collect::<HashSet<_>>();
-        let drawn = images
-            .iter()
-            .map(ImageInput::media_id)
-            .collect::<HashSet<_>>();
+        if let RootPlan::Stage { id, recipe } = &root {
+            footage.stage(id, recipe, &plan.media, &plan.continuous_channels)?;
+        }
+        let consumed = footage.media_ids().collect::<HashSet<_>>();
         let placeable = super::anchor::Placeable {
             root: &root,
             targets: &plan.semantic_targets,
@@ -569,9 +557,9 @@ impl Plan {
                     .map(|text| ("text", text.id.as_str(), text.anchors.as_slice())),
             )
             .chain(
-                images
-                    .iter()
-                    .map(|image| ("image", image.id(), image.anchors())),
+                footage
+                    .anchored()
+                    .map(|(owner, anchors)| ("footage", owner, anchors)),
             );
         for (kind, owner, anchors) in pinned {
             super::anchor::validate_plans(kind, owner, anchors, &placeable)?;
@@ -580,11 +568,7 @@ impl Plan {
             lens.validate_anchors(&placeable)?;
         }
         for media in &plan.media {
-            if matches!(media.kind, MediaKindPlan::Audio)
-                || (matches!(media.kind, MediaKindPlan::Video)
-                    && consumed.contains(media.id.as_str()))
-                || (matches!(media.kind, MediaKindPlan::Image) && drawn.contains(media.id.as_str()))
-            {
+            if matches!(media.kind, MediaKindPlan::Audio) || consumed.contains(media.id.as_str()) {
                 continue;
             }
             bail!(
@@ -610,14 +594,13 @@ impl Plan {
             trees,
             plots,
             lanes,
-            videos,
+            footage,
             callouts,
             terminals,
             chats,
             changed_files,
             lower_thirds,
             viz,
-            images,
             lenses,
         };
         match &result.root {

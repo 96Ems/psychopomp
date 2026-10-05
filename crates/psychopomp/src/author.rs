@@ -27,6 +27,15 @@ pub const fn millis(millis: u64) -> u64 {
     millis * MILLISECOND
 }
 
+/// Canonical `120 ms` stagger gap between rows or cards (`TECHNIQUES.md`).
+pub const STAGGER: u64 = millis(120);
+
+/// Canonical `65 ms` lead between a rigid panel's body and its content.
+pub const CONTENT_LAG: u64 = millis(65);
+
+/// Standard leader and accent-bar draw-on duration (`0.42 s`).
+pub const DRAW_SECONDS: f32 = 0.42;
+
 /// Readable clamps for plan times, such as a beat keyed to a phrase that must
 /// still wait for what causes it: `f("injected").not_before(contact)`.
 pub trait PlanTime {
@@ -72,14 +81,34 @@ pub fn spread(count: u64, from: u64, to: u64) -> impl Iterator<Item = u64> {
 impl SpringPlan {
     /// A rigid panel settling into place: 0.6 s, bounce 0.12.
     pub const PANEL: Self = Self::feel(0.6, 0.12);
-    /// Ink following its panel, or a label fading: 0.36 s, no bounce.
+    /// Ink following its panel, or an overlay fading in: 0.36 s, no bounce.
     pub const CONTENT: Self = Self::feel(0.36, 0.0);
-    /// A quick state change, such as a status cross-fade: 0.3 s, no bounce.
+    /// Spatial entrance and persistent layout room opening (caption/text rise,
+    /// tree fold/scroll, code line motion, chat message slot): 0.45 s, no bounce.
+    pub const ENTER: Self = Self::feel(0.45, 0.0);
+    /// Clean exit fade in place, faster and simpler than entry: 0.24 s, no bounce.
+    pub const EXIT: Self = Self::feel(0.24, 0.0);
+    /// Point-to-point spatial translation or anchor weight glide: 0.6 s, no bounce.
+    pub const MOVE: Self = Self::feel(0.6, 0.0);
+    /// A quick state change, focus shift, or status cross-fade: 0.3 s, no bounce.
     pub const SNAP: Self = Self::feel(0.3, 0.0);
+    /// A small floating UI pop with restrained overshoot (hover card, reaction
+    /// pill, delta chip): 0.32 s, bounce 0.18.
+    pub const POP: Self = Self::feel(0.32, 0.18);
     /// A camera move with weight and a natural tail: 1.6 s, critically damped.
     pub const CAMERA: Self = Self::feel(1.6, 0.0);
     /// A hero landing with a little overshoot: 0.85 s, bounce 0.2.
     pub const LIVELY: Self = Self::feel(0.85, 0.2);
+
+    /// Override settling thresholds, as when a dimensionless weight needs
+    /// tighter bounds than a pixel channel.
+    pub const fn with_thresholds(self, position_threshold: f32, velocity_threshold: f32) -> Self {
+        Self {
+            position_threshold,
+            velocity_threshold,
+            ..self
+        }
+    }
 
     /// [`SpringPlan::visual`] in a constant: the same arithmetic, so a named
     /// feel and its literal duration and bounce emit identical plans.
@@ -200,6 +229,46 @@ impl PlanBuilder {
         Ok(())
     }
 
+    /// Deserialize a declared actor's current recipe data from the builder.
+    pub fn actor_data<T: serde::de::DeserializeOwned>(
+        &self,
+        actor: &ActorHandle,
+    ) -> Result<T, serde_json::Error> {
+        let data = self
+            .plan
+            .actors
+            .iter()
+            .find(|candidate| candidate.id == actor.id)
+            .expect("actor handle belongs to this plan builder")
+            .data
+            .clone();
+        serde_json::from_value(data)
+    }
+
+    /// Latest literal target written to `actor.property` (or its initial value
+    /// if no events have been written yet). Returns `None` if the channel has
+    /// not been declared.
+    pub fn latest_literal(&self, actor: &ActorHandle, property: &str) -> Option<f32> {
+        let id = format!("{}.{}", actor.id, property);
+        let channel = self
+            .plan
+            .continuous_channels
+            .iter()
+            .find(|candidate| candidate.id == id)?;
+        let scalar = match channel.events.last() {
+            Some(
+                TrackEventPlan::Set { value: s, .. }
+                | TrackEventPlan::Spring { target: s, .. }
+                | TrackEventPlan::Ease { target: s, .. },
+            ) => s,
+            None => &channel.initial,
+        };
+        match scalar {
+            ScalarPlan::Literal(value) => Some(*value),
+            ScalarPlan::Target(_) => None,
+        }
+    }
+
     /// The `actor.property` channel: the existing one, or a new one starting at
     /// `initial`. An already declared channel keeps its initial value.
     pub fn channel(
@@ -280,6 +349,16 @@ impl PlanBuilder {
 
     pub fn duration_nanos(&self) -> u64 {
         self.plan.duration_nanos
+    }
+
+    /// Every continuous channel's ID, in declaration order: the index a
+    /// validation diagnostic's `continuousChannels[n]` path names.
+    pub fn channel_ids(&self) -> Vec<String> {
+        self.plan
+            .continuous_channels
+            .iter()
+            .map(|channel| channel.id.clone())
+            .collect()
     }
 
     pub fn set(&mut self, channel: &ContinuousHandle, at_nanos: u64, value: f32) {
@@ -512,7 +591,33 @@ impl PlanBuilder {
         }
     }
 
-    pub fn finish(self) -> Result<ScenePlan, crate::plan::PlanValidationError> {
+    /// Order every continuous channel's events by time, keeping the source
+    /// order of events at the same instant. Beats authored independently may
+    /// write one channel out of order (a jolt inside a kick's rebound, say);
+    /// the timeline samples sorted events the same way.
+    pub fn sort_events(&mut self) {
+        for channel in &mut self.plan.continuous_channels {
+            channel.events.sort_by_key(|event| event.at_nanos());
+        }
+    }
+
+    /// Drop continuous events that start after the scene ends; they can
+    /// never be sampled. A segment cut from a longer gesture (a bounce that
+    /// would settle after the cut) keeps everything before its end.
+    pub fn drop_events_after_end(&mut self) {
+        let end = self.plan.duration_nanos;
+        for channel in &mut self.plan.continuous_channels {
+            channel.events.retain(|event| event.at_nanos() <= end);
+        }
+    }
+
+    pub fn finish(mut self) -> Result<ScenePlan, crate::plan::PlanValidationError> {
+        for channel in &mut self.plan.continuous_channels {
+            channel.events.sort_by_key(TrackEventPlan::at_nanos);
+        }
+        for channel in &mut self.plan.state_channels {
+            channel.events.sort_by_key(|event| event.at_nanos);
+        }
         self.plan.validate()?;
         Ok(self.plan)
     }
@@ -766,12 +871,20 @@ mod timing_tests {
         for (feel, duration, bounce) in [
             (SpringPlan::PANEL, 0.6, 0.12),
             (SpringPlan::CONTENT, 0.36, 0.0),
+            (SpringPlan::ENTER, 0.45, 0.0),
+            (SpringPlan::EXIT, 0.24, 0.0),
+            (SpringPlan::MOVE, 0.6, 0.0),
             (SpringPlan::SNAP, 0.3, 0.0),
+            (SpringPlan::POP, 0.32, 0.18),
             (SpringPlan::CAMERA, 1.6, 0.0),
             (SpringPlan::LIVELY, 0.85, 0.2),
         ] {
             assert_eq!(feel, SpringPlan::visual(duration, bounce));
         }
+        let tight = SpringPlan::MOVE.with_thresholds(1e-5, 1e-5);
+        assert_eq!(tight.position_threshold, 1e-5);
+        assert_eq!(tight.velocity_threshold, 1e-5);
+        assert_eq!(tight.response_seconds, SpringPlan::MOVE.response_seconds);
     }
 }
 

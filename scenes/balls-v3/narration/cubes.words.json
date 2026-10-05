@@ -1,0 +1,19 @@
+{
+ "wordTimings": [
+  {
+   "word": "Cubes",
+   "start": 0,
+   "end": 0.72
+  },
+  {
+   "word": "are",
+   "start": 0.72,
+   "end": 1.16
+  },
+  {
+   "word": "balls!",
+   "start": 1.16,
+   "end": 2.18
+  }
+ ]
+}

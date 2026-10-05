@@ -407,6 +407,7 @@ const PANE_DIM: f32 = 0.35;
 const PANE_SHADOW: f32 = 0.35;
 
 /// Authoring handle for one lens. Channels are declared on first use.
+#[derive(Clone, Debug)]
 pub struct LensActor {
     actor: ActorHandle,
     anchors: Vec<String>,
@@ -430,6 +431,10 @@ impl LensActor {
         })
     }
 
+    pub fn actor(&self) -> &ActorHandle {
+        &self.actor
+    }
+
     pub fn id(&self) -> &str {
         self.actor.id()
     }
@@ -449,13 +454,13 @@ impl LensActor {
     /// with a `show` starts absent.
     pub fn show(&mut self, scene: &mut PlanBuilder, at_nanos: u64) {
         let presence = self.channel(scene, "presence", 0.0);
-        scene.spring(&presence, at_nanos, 1.0, 0.55, 0.18);
+        scene.spring(&presence, at_nanos, 1.0, 0.5, 0.14);
     }
 
     /// The glass thins and shrinks away.
     pub fn hide(&mut self, scene: &mut PlanBuilder, at_nanos: u64) {
-        let presence = self.channel(scene, "presence", 0.0);
-        scene.spring(&presence, at_nanos, 0.0, 0.35, 0.0);
+        let presence = self.channel(scene, "presence", 1.0);
+        scene.spring_with(&presence, at_nanos, 0.0, SpringPlan::EXIT);
     }
 
     /// Glide to `anchor` like a puck of glass: every weight springs on one
@@ -468,11 +473,7 @@ impl LensActor {
             "lens '{}' has no anchor '{anchor}'",
             self.actor.id()
         );
-        let spring = SpringPlan {
-            position_threshold: 1e-5,
-            velocity_threshold: 1e-5,
-            ..SpringPlan::visual(0.75, 0.0)
-        };
+        let spring = SpringPlan::MOVE.with_thresholds(1e-5, 1e-5);
         for (index, id) in self.anchors.clone().iter().enumerate() {
             let initial = if index == 0 { 1.0 } else { 0.0 };
             let weight = self.channel(scene, &LensPlan::weight_property(id), initial);
@@ -485,7 +486,7 @@ impl LensActor {
     pub fn slide(&mut self, scene: &mut PlanBuilder, offset: [f32; 2], at_nanos: u64) {
         for (property, target) in [("x", offset[0]), ("y", offset[1])] {
             let channel = self.channel(scene, property, 0.0);
-            scene.spring(&channel, at_nanos, target, 0.75, 0.0);
+            scene.spring_with(&channel, at_nanos, target, SpringPlan::MOVE);
         }
     }
 
@@ -493,7 +494,7 @@ impl LensActor {
     pub fn magnify(&mut self, scene: &mut PlanBuilder, magnification: f32, at_nanos: u64) {
         let initial = self.magnification;
         let channel = self.channel(scene, "magnification", initial);
-        scene.spring(&channel, at_nanos, magnification, 0.5, 0.1);
+        scene.spring_with(&channel, at_nanos, magnification, SpringPlan::MOVE);
     }
 
     /// Reshape the glass, as from a round loupe into a capsule along a line.
@@ -504,7 +505,7 @@ impl LensActor {
             ("height", self.size[1], size[1]),
         ] {
             let channel = self.channel(scene, property, initial);
-            scene.spring(&channel, at_nanos, target, 0.55, 0.12);
+            scene.spring_with(&channel, at_nanos, target, SpringPlan::MOVE);
         }
     }
 
@@ -513,7 +514,7 @@ impl LensActor {
     pub fn focus(&mut self, scene: &mut PlanBuilder, offset: [f32; 2], at_nanos: u64) {
         for (property, target) in [("focus-x", offset[0]), ("focus-y", offset[1])] {
             let channel = self.channel(scene, property, 0.0);
-            scene.spring(&channel, at_nanos, target, 0.6, 0.0);
+            scene.spring_with(&channel, at_nanos, target, SpringPlan::MOVE);
         }
     }
 }

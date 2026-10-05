@@ -1,0 +1,4762 @@
+{
+  "version": 1,
+  "id": "amdahl",
+  "segments": [
+    {
+      "transitionNanos": 0,
+      "transitionStyle": "dip",
+      "plan": {
+        "version": 2,
+        "id": "microbenchmark",
+        "durationNanos": 20578999999,
+        "actors": [
+          {
+            "id": "header",
+            "recipe": "caption",
+            "data": {
+              "lines": [
+                [
+                  {
+                    "text": "benchmarks",
+                    "tone": "accent"
+                  },
+                  {
+                    "text": "  "
+                  },
+                  {
+                    "text": "the multiplier illusion"
+                  }
+                ]
+              ],
+              "origin": [
+                140.0,
+                96.0
+              ],
+              "size": 30.0
+            }
+          },
+          {
+            "id": "chip-micro",
+            "recipe": "caption",
+            "data": {
+              "align": "right",
+              "chip": true,
+              "lines": [
+                [
+                  {
+                    "text": "● ",
+                    "tone": "accent"
+                  },
+                  {
+                    "text": "microbenchmark"
+                  }
+                ]
+              ],
+              "origin": [
+                1780.0,
+                96.0
+              ],
+              "size": 22.0
+            }
+          },
+          {
+            "id": "bench",
+            "recipe": "bars",
+            "data": {
+              "axis": {
+                "label": "milliseconds (0 – 1,000 ms)",
+                "range": [
+                  0.0,
+                  1050.0
+                ],
+                "ticks": [
+                  0.0,
+                  250.0,
+                  500.0,
+                  750.0,
+                  1000.0
+                ]
+              },
+              "delta": {
+                "format": "factor",
+                "from": "before",
+                "to": "after"
+              },
+              "origin": [
+                420.0,
+                310.0
+              ],
+              "readout": {
+                "grouping": true,
+                "unit": "ms"
+              },
+              "rowHeight": 132.0,
+              "rows": [
+                {
+                  "id": "launch",
+                  "label": "launch"
+                },
+                {
+                  "id": "shell",
+                  "label": "shell call"
+                },
+                {
+                  "id": "exit",
+                  "label": "exit"
+                }
+              ],
+              "series": [
+                {
+                  "id": "before",
+                  "label": "before",
+                  "tone": "muted"
+                },
+                {
+                  "id": "after",
+                  "label": "after",
+                  "tone": "accent"
+                }
+              ],
+              "size": 28.0,
+              "width": 1020.0
+            }
+          },
+          {
+            "id": "confetti",
+            "recipe": "confetti",
+            "data": {
+              "count": 110,
+              "origin": [
+                1420.0,
+                480.0
+              ],
+              "seed": 7
+            }
+          },
+          {
+            "id": "footer-micro",
+            "recipe": "caption",
+            "data": {
+              "lines": [
+                [
+                  {
+                    "text": "huge multipliers on "
+                  },
+                  {
+                    "text": "milliseconds",
+                    "tone": "accent"
+                  },
+                  {
+                    "text": "  ·  inside a turn measured in "
+                  },
+                  {
+                    "text": "minutes",
+                    "tone": "warning"
+                  }
+                ]
+              ],
+              "origin": [
+                140.0,
+                1004.0
+              ],
+              "size": 28.0
+            }
+          }
+        ],
+        "semanticTargets": [],
+        "continuousChannels": [
+          {
+            "id": "header.opacity",
+            "actorId": "header",
+            "property": "opacity",
+            "initial": 0.0,
+            "events": [
+              {
+                "operation": "set",
+                "atNanos": 200000000,
+                "value": 1.0
+              }
+            ]
+          },
+          {
+            "id": "header.typed",
+            "actorId": "header",
+            "property": "typed",
+            "initial": 0.0,
+            "events": [
+              {
+                "operation": "set",
+                "atNanos": 220833333,
+                "value": 0.028571429
+              },
+              {
+                "operation": "set",
+                "atNanos": 241666666,
+                "value": 0.057142857
+              },
+              {
+                "operation": "set",
+                "atNanos": 262499999,
+                "value": 0.08571429
+              },
+              {
+                "operation": "set",
+                "atNanos": 283333332,
+                "value": 0.114285715
+              },
+              {
+                "operation": "set",
+                "atNanos": 304166665,
+                "value": 0.14285715
+              },
+              {
+                "operation": "set",
+                "atNanos": 324999998,
+                "value": 0.17142858
+              },
+              {
+                "operation": "set",
+                "atNanos": 345833331,
+                "value": 0.2
+              },
+              {
+                "operation": "set",
+                "atNanos": 366666664,
+                "value": 0.22857143
+              },
+              {
+                "operation": "set",
+                "atNanos": 387499997,
+                "value": 0.25714287
+              },
+              {
+                "operation": "set",
+                "atNanos": 408333330,
+                "value": 0.2857143
+              },
+              {
+                "operation": "set",
+                "atNanos": 429166663,
+                "value": 0.31428573
+              },
+              {
+                "operation": "set",
+                "atNanos": 449999996,
+                "value": 0.34285715
+              },
+              {
+                "operation": "set",
+                "atNanos": 470833329,
+                "value": 0.37142858
+              },
+              {
+                "operation": "set",
+                "atNanos": 491666662,
+                "value": 0.4
+              },
+              {
+                "operation": "set",
+                "atNanos": 512499995,
+                "value": 0.42857143
+              },
+              {
+                "operation": "set",
+                "atNanos": 533333328,
+                "value": 0.45714286
+              },
+              {
+                "operation": "set",
+                "atNanos": 554166661,
+                "value": 0.4857143
+              },
+              {
+                "operation": "set",
+                "atNanos": 574999994,
+                "value": 0.51428574
+              },
+              {
+                "operation": "set",
+                "atNanos": 595833327,
+                "value": 0.54285717
+              },
+              {
+                "operation": "set",
+                "atNanos": 616666660,
+                "value": 0.5714286
+              },
+              {
+                "operation": "set",
+                "atNanos": 637499993,
+                "value": 0.6
+              },
+              {
+                "operation": "set",
+                "atNanos": 658333326,
+                "value": 0.62857145
+              },
+              {
+                "operation": "set",
+                "atNanos": 679166659,
+                "value": 0.6571429
+              },
+              {
+                "operation": "set",
+                "atNanos": 699999992,
+                "value": 0.6857143
+              },
+              {
+                "operation": "set",
+                "atNanos": 720833325,
+                "value": 0.71428573
+              },
+              {
+                "operation": "set",
+                "atNanos": 741666658,
+                "value": 0.74285716
+              },
+              {
+                "operation": "set",
+                "atNanos": 762499991,
+                "value": 0.7714286
+              },
+              {
+                "operation": "set",
+                "atNanos": 783333324,
+                "value": 0.8
+              },
+              {
+                "operation": "set",
+                "atNanos": 804166657,
+                "value": 0.82857144
+              },
+              {
+                "operation": "set",
+                "atNanos": 824999990,
+                "value": 0.85714287
+              },
+              {
+                "operation": "set",
+                "atNanos": 845833323,
+                "value": 0.8857143
+              },
+              {
+                "operation": "set",
+                "atNanos": 866666656,
+                "value": 0.9142857
+              },
+              {
+                "operation": "set",
+                "atNanos": 887499989,
+                "value": 0.94285715
+              },
+              {
+                "operation": "set",
+                "atNanos": 908333322,
+                "value": 0.9714286
+              },
+              {
+                "operation": "set",
+                "atNanos": 929166655,
+                "value": 1.0
+              }
+            ]
+          },
+          {
+            "id": "header.caret",
+            "actorId": "header",
+            "property": "caret",
+            "initial": 0.0,
+            "events": [
+              {
+                "operation": "set",
+                "atNanos": 200000000,
+                "value": 1.0
+              },
+              {
+                "operation": "spring",
+                "atNanos": 1629166643,
+                "target": 0.0,
+                "responseSeconds": 0.24000001,
+                "dampingRatio": 1.0,
+                "positionThreshold": 0.001,
+                "velocityThreshold": 0.001
+              }
+            ]
+          },
+          {
+            "id": "chip-micro.opacity",
+            "actorId": "chip-micro",
+            "property": "opacity",
+            "initial": 0.0,
+            "events": [
+              {
+                "operation": "spring",
+                "atNanos": 500000000,
+                "target": 1.0,
+                "responseSeconds": 0.42000002,
+                "dampingRatio": 1.0,
+                "positionThreshold": 0.001,
+                "velocityThreshold": 0.001
+              }
+            ]
+          },
+          {
+            "id": "chip-micro.y",
+            "actorId": "chip-micro",
+            "property": "y",
+            "initial": 10.0,
+            "events": [
+              {
+                "operation": "spring",
+                "atNanos": 500000000,
+                "target": 0.0,
+                "responseSeconds": 0.54,
+                "dampingRatio": 1.0,
+                "positionThreshold": 0.001,
+                "velocityThreshold": 0.001
+              }
+            ]
+          },
+          {
+            "id": "bench.opacity",
+            "actorId": "bench",
+            "property": "opacity",
+            "initial": 0.0,
+            "events": [
+              {
+                "operation": "spring",
+                "atNanos": 350000000,
+                "target": 1.0,
+                "responseSeconds": 0.42000002,
+                "dampingRatio": 1.0,
+                "positionThreshold": 0.001,
+                "velocityThreshold": 0.001
+              }
+            ]
+          },
+          {
+            "id": "bench.y",
+            "actorId": "bench",
+            "property": "y",
+            "initial": 10.0,
+            "events": [
+              {
+                "operation": "spring",
+                "atNanos": 350000000,
+                "target": 0.0,
+                "responseSeconds": 0.54,
+                "dampingRatio": 1.0,
+                "positionThreshold": 0.001,
+                "velocityThreshold": 0.001
+              }
+            ]
+          },
+          {
+            "id": "bench.axes",
+            "actorId": "bench",
+            "property": "axes",
+            "initial": 0.0,
+            "events": [
+              {
+                "operation": "ease",
+                "atNanos": 350000000,
+                "target": 1.0,
+                "durationNanos": 900000000,
+                "curve": {
+                  "cubic-bezier": [
+                    0.45,
+                    0.0,
+                    0.2,
+                    1.0
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "id": "bench.bar.launch.before",
+            "actorId": "bench",
+            "property": "bar.launch.before",
+            "initial": 0.0,
+            "events": [
+              {
+                "operation": "spring",
+                "atNanos": 2600000000,
+                "target": 184.0,
+                "responseSeconds": 1.0200001,
+                "dampingRatio": 1.0,
+                "positionThreshold": 0.001,
+                "velocityThreshold": 0.001
+              }
+            ]
+          },
+          {
+            "id": "bench.bar.shell.before",
+            "actorId": "bench",
+            "property": "bar.shell.before",
+            "initial": 0.0,
+            "events": [
+              {
+                "operation": "spring",
+                "atNanos": 2690000000,
+                "target": 238.8,
+                "responseSeconds": 1.0200001,
+                "dampingRatio": 1.0,
+                "positionThreshold": 0.001,
+                "velocityThreshold": 0.001
+              }
+            ]
+          },
+          {
+            "id": "bench.bar.exit.before",
+            "actorId": "bench",
+            "property": "bar.exit.before",
+            "initial": 0.0,
+            "events": [
+              {
+                "operation": "spring",
+                "atNanos": 2780000000,
+                "target": 1003.0,
+                "responseSeconds": 1.0200001,
+                "dampingRatio": 1.0,
+                "positionThreshold": 0.001,
+                "velocityThreshold": 0.001
+              }
+            ]
+          },
+          {
+            "id": "bench.bar.launch.after",
+            "actorId": "bench",
+            "property": "bar.launch.after",
+            "initial": 0.0,
+            "events": [
+              {
+                "operation": "spring",
+                "atNanos": 3760000000,
+                "target": 8.0,
+                "responseSeconds": 1.0200001,
+                "dampingRatio": 1.0,
+                "positionThreshold": 0.001,
+                "velocityThreshold": 0.001
+              }
+            ]
+          },
+          {
+            "id": "bench.bar.shell.after",
+            "actorId": "bench",
+            "property": "bar.shell.after",
+            "initial": 0.0,
+            "events": [
+              {
+                "operation": "spring",
+                "atNanos": 3850000000,
+                "target": 27.9,
+                "responseSeconds": 1.0200001,
+                "dampingRatio": 1.0,
+                "positionThreshold": 0.001,
+                "velocityThreshold": 0.001
+              }
+            ]
+          },
+          {
+            "id": "bench.bar.exit.after",
+            "actorId": "bench",
+            "property": "bar.exit.after",
+            "initial": 0.0,
+            "events": [
+              {
+                "operation": "spring",
+                "atNanos": 3940000000,
+                "target": 23.0,
+                "responseSeconds": 1.0200001,
+                "dampingRatio": 1.0,
+                "positionThreshold": 0.001,
+                "velocityThreshold": 0.001
+              }
+            ]
+          },
+          {
+            "id": "bench.delta.launch",
+            "actorId": "bench",
+            "property": "delta.launch",
+            "initial": 0.0,
+            "events": [
+              {
+                "operation": "spring",
+                "atNanos": 13800000000,
+                "target": 1.0,
+                "responseSeconds": 0.384,
+                "dampingRatio": 0.82,
+                "positionThreshold": 0.001,
+                "velocityThreshold": 0.001
+              }
+            ]
+          },
+          {
+            "id": "bench.delta.shell",
+            "actorId": "bench",
+            "property": "delta.shell",
+            "initial": 0.0,
+            "events": [
+              {
+                "operation": "spring",
+                "atNanos": 13890000000,
+                "target": 1.0,
+                "responseSeconds": 0.384,
+                "dampingRatio": 0.82,
+                "positionThreshold": 0.001,
+                "velocityThreshold": 0.001
+              }
+            ]
+          },
+          {
+            "id": "bench.delta.exit",
+            "actorId": "bench",
+            "property": "delta.exit",
+            "initial": 0.0,
+            "events": [
+              {
+                "operation": "spring",
+                "atNanos": 13980000000,
+                "target": 1.0,
+                "responseSeconds": 0.384,
+                "dampingRatio": 0.82,
+                "positionThreshold": 0.001,
+                "velocityThreshold": 0.001
+              }
+            ]
+          },
+          {
+            "id": "confetti.burst",
+            "actorId": "confetti",
+            "property": "burst",
+            "initial": -1.0,
+            "events": [
+              {
+                "operation": "set",
+                "atNanos": 13900000000,
+                "value": 0.0
+              },
+              {
+                "operation": "ease",
+                "atNanos": 13900000000,
+                "target": 3.6,
+                "durationNanos": 3600000000,
+                "curve": "linear"
+              }
+            ]
+          },
+          {
+            "id": "footer-micro.opacity",
+            "actorId": "footer-micro",
+            "property": "opacity",
+            "initial": 0.0,
+            "events": [
+              {
+                "operation": "set",
+                "atNanos": 15620000000,
+                "value": 1.0
+              }
+            ]
+          },
+          {
+            "id": "footer-micro.typed",
+            "actorId": "footer-micro",
+            "property": "typed",
+            "initial": 0.0,
+            "events": [
+              {
+                "operation": "set",
+                "atNanos": 15641739130,
+                "value": 0.014285714
+              },
+              {
+                "operation": "set",
+                "atNanos": 15663478260,
+                "value": 0.028571429
+              },
+              {
+                "operation": "set",
+                "atNanos": 15685217390,
+                "value": 0.042857144
+              },
+              {
+                "operation": "set",
+                "atNanos": 15706956520,
+                "value": 0.057142857
+              },
+              {
+                "operation": "set",
+                "atNanos": 15728695650,
+                "value": 0.071428575
+              },
+              {
+                "operation": "set",
+                "atNanos": 15750434780,
+                "value": 0.08571429
+              },
+              {
+                "operation": "set",
+                "atNanos": 15772173910,
+                "value": 0.1
+              },
+              {
+                "operation": "set",
+                "atNanos": 15793913040,
+                "value": 0.114285715
+              },
+              {
+                "operation": "set",
+                "atNanos": 15815652170,
+                "value": 0.12857144
+              },
+              {
+                "operation": "set",
+                "atNanos": 15837391300,
+                "value": 0.14285715
+              },
+              {
+                "operation": "set",
+                "atNanos": 15859130430,
+                "value": 0.15714286
+              },
+              {
+                "operation": "set",
+                "atNanos": 15880869560,
+                "value": 0.17142858
+              },
+              {
+                "operation": "set",
+                "atNanos": 15902608690,
+                "value": 0.18571429
+              },
+              {
+                "operation": "set",
+                "atNanos": 15924347820,
+                "value": 0.2
+              },
+              {
+                "operation": "set",
+                "atNanos": 15946086950,
+                "value": 0.21428572
+              },
+              {
+                "operation": "set",
+                "atNanos": 15967826080,
+                "value": 0.22857143
+              },
+              {
+                "operation": "set",
+                "atNanos": 15989565210,
+                "value": 0.24285714
+              },
+              {
+                "operation": "set",
+                "atNanos": 16011304340,
+                "value": 0.25714287
+              },
+              {
+                "operation": "set",
+                "atNanos": 16033043470,
+                "value": 0.27142859
+              },
+              {
+                "operation": "set",
+                "atNanos": 16054782600,
+                "value": 0.2857143
+              },
+              {
+                "operation": "set",
+                "atNanos": 16076521730,
+                "value": 0.3
+              },
+              {
+                "operation": "set",
+                "atNanos": 16098260860,
+                "value": 0.31428573
+              },
+              {
+                "operation": "set",
+                "atNanos": 16119999990,
+                "value": 0.32857144
+              },
+              {
+                "operation": "set",
+                "atNanos": 16141739120,
+                "value": 0.34285715
+              },
+              {
+                "operation": "set",
+                "atNanos": 16163478250,
+                "value": 0.35714287
+              },
+              {
+                "operation": "set",
+                "atNanos": 16185217380,
+                "value": 0.37142858
+              },
+              {
+                "operation": "set",
+                "atNanos": 16206956510,
+                "value": 0.3857143
+              },
+              {
+                "operation": "set",
+                "atNanos": 16228695640,
+                "value": 0.4
+              },
+              {
+                "operation": "set",
+                "atNanos": 16250434770,
+                "value": 0.41428572
+              },
+              {
+                "operation": "set",
+                "atNanos": 16272173900,
+                "value": 0.42857143
+              },
+              {
+                "operation": "set",
+                "atNanos": 16293913030,
+                "value": 0.44285715
+              },
+              {
+                "operation": "set",
+                "atNanos": 16315652160,
+                "value": 0.45714286
+              },
+              {
+                "operation": "set",
+                "atNanos": 16337391290,
+                "value": 0.47142857
+              },
+              {
+                "operation": "set",
+                "atNanos": 16359130420,
+                "value": 0.4857143
+              },
+              {
+                "operation": "set",
+                "atNanos": 16380869550,
+                "value": 0.5
+              },
+              {
+                "operation": "set",
+                "atNanos": 16402608680,
+                "value": 0.51428574
+              },
+              {
+                "operation": "set",
+                "atNanos": 16424347810,
+                "value": 0.5285714
+              },
+              {
+                "operation": "set",
+                "atNanos": 16446086940,
+                "value": 0.54285717
+              },
+              {
+                "operation": "set",
+                "atNanos": 16467826070,
+                "value": 0.55714285
+              },
+              {
+                "operation": "set",
+                "atNanos": 16489565200,
+                "value": 0.5714286
+              },
+              {
+                "operation": "set",
+                "atNanos": 16511304330,
+                "value": 0.5857143
+              },
+              {
+                "operation": "set",
+                "atNanos": 16533043460,
+                "value": 0.6
+              },
+              {
+                "operation": "set",
+                "atNanos": 16554782590,
+                "value": 0.6142857
+              },
+              {
+                "operation": "set",
+                "atNanos": 16576521720,
+                "value": 0.62857145
+              },
+              {
+                "operation": "set",
+                "atNanos": 16598260850,
+                "value": 0.64285713
+              },
+              {
+                "operation": "set",
+                "atNanos": 16619999980,
+                "value": 0.6571429
+              },
+              {
+                "operation": "set",
+                "atNanos": 16641739110,
+                "value": 0.67142856
+              },
+              {
+                "operation": "set",
+                "atNanos": 16663478240,
+                "value": 0.6857143
+              },
+              {
+                "operation": "set",
+                "atNanos": 16685217370,
+                "value": 0.7
+              },
+              {
+                "operation": "set",
+                "atNanos": 16706956500,
+                "value": 0.71428573
+              },
+              {
+                "operation": "set",
+                "atNanos": 16728695630,
+                "value": 0.7285714
+              },
+              {
+                "operation": "set",
+                "atNanos": 16750434760,
+                "value": 0.74285716
+              },
+              {
+                "operation": "set",
+                "atNanos": 16772173890,
+                "value": 0.75714284
+              },
+              {
+                "operation": "set",
+                "atNanos": 16793913020,
+                "value": 0.7714286
+              },
+              {
+                "operation": "set",
+                "atNanos": 16815652150,
+                "value": 0.78571427
+              },
+              {
+                "operation": "set",
+                "atNanos": 16837391280,
+                "value": 0.8
+              },
+              {
+                "operation": "set",
+                "atNanos": 16859130410,
+                "value": 0.8142857
+              },
+              {
+                "operation": "set",
+                "atNanos": 16880869540,
+                "value": 0.82857144
+              },
+              {
+                "operation": "set",
+                "atNanos": 16902608670,
+                "value": 0.8428571
+              },
+              {
+                "operation": "set",
+                "atNanos": 16924347800,
+                "value": 0.85714287
+              },
+              {
+                "operation": "set",
+                "atNanos": 16946086930,
+                "value": 0.87142855
+              },
+              {
+                "operation": "set",
+                "atNanos": 16967826060,
+                "value": 0.8857143
+              },
+              {
+                "operation": "set",
+                "atNanos": 16989565190,
+                "value": 0.9
+              },
+              {
+                "operation": "set",
+                "atNanos": 17011304320,
+                "value": 0.9142857
+              },
+              {
+                "operation": "set",
+                "atNanos": 17033043450,
+                "value": 0.9285714
+              },
+              {
+                "operation": "set",
+                "atNanos": 17054782580,
+                "value": 0.94285715
+              },
+              {
+                "operation": "set",
+                "atNanos": 17076521710,
+                "value": 0.95714283
+              },
+              {
+                "operation": "set",
+                "atNanos": 17098260840,
+                "value": 0.9714286
+              },
+              {
+                "operation": "set",
+                "atNanos": 17119999970,
+                "value": 0.98571426
+              },
+              {
+                "operation": "set",
+                "atNanos": 17141739100,
+                "value": 1.0
+              }
+            ]
+          },
+          {
+            "id": "footer-micro.caret",
+            "actorId": "footer-micro",
+            "property": "caret",
+            "initial": 0.0,
+            "events": [
+              {
+                "operation": "set",
+                "atNanos": 15620000000,
+                "value": 1.0
+              },
+              {
+                "operation": "spring",
+                "atNanos": 17941739111,
+                "target": 0.0,
+                "responseSeconds": 0.24000001,
+                "dampingRatio": 1.0,
+                "positionThreshold": 0.001,
+                "velocityThreshold": 0.001
+              }
+            ]
+          }
+        ],
+        "stateChannels": [],
+        "cues": [
+          {
+            "id": "microbenchmark",
+            "startNanos": 0,
+            "endNanos": 20578999999
+          }
+        ],
+        "media": [
+          {
+            "id": "narration-micro",
+            "path": "media/f7f810fd30b9577f.mp3",
+            "kind": "audio",
+            "role": "script",
+            "sourceStartNanos": 0,
+            "sourceEndNanos": 18078999999,
+            "timelineStartNanos": 900000000,
+            "timelineEndNanos": 18978999999,
+            "gainDb": 0.0
+          },
+          {
+            "id": "before-grow",
+            "path": "../../assets/opencode-hot-reload/save.wav",
+            "kind": "audio",
+            "role": "layer",
+            "sourceStartNanos": 0,
+            "sourceEndNanos": 160000000,
+            "timelineStartNanos": 2600000000,
+            "timelineEndNanos": 2760000000,
+            "gainDb": -14.0
+          },
+          {
+            "id": "after-grow",
+            "path": "../../assets/visual-effects/task-running.wav",
+            "kind": "audio",
+            "role": "layer",
+            "sourceStartNanos": 0,
+            "sourceEndNanos": 140000000,
+            "timelineStartNanos": 3760000000,
+            "timelineEndNanos": 3900000000,
+            "gainDb": -12.0
+          },
+          {
+            "id": "deltas",
+            "path": "../../assets/visual-effects/task-success.wav",
+            "kind": "audio",
+            "role": "layer",
+            "sourceStartNanos": 0,
+            "sourceEndNanos": 420000000,
+            "timelineStartNanos": 13800000000,
+            "timelineEndNanos": 14220000000,
+            "gainDb": -9.0
+          }
+        ]
+      }
+    },
+    {
+      "transitionNanos": 650000000,
+      "transitionStyle": "dip",
+      "plan": {
+        "version": 2,
+        "id": "turn-and-scale",
+        "durationNanos": 69198000000,
+        "actors": [
+          {
+            "id": "stage",
+            "recipe": "stage",
+            "data": {
+              "elements": [
+                {
+                  "at": [
+                    1520.0,
+                    380.0,
+                    0.0
+                  ],
+                  "id": "model",
+                  "kind": "orb",
+                  "points": 900,
+                  "radius": 128.0,
+                  "tone": "request"
+                },
+                {
+                  "at": [
+                    1520.0,
+                    542.0,
+                    0.0
+                  ],
+                  "id": "model-name",
+                  "kind": "label",
+                  "size": 24.0,
+                  "spans": [
+                    {
+                      "text": "remote LLM"
+                    }
+                  ]
+                },
+                {
+                  "at": [
+                    1520.0,
+                    574.0,
+                    0.0
+                  ],
+                  "id": "model-sub",
+                  "kind": "label",
+                  "size": 19.0,
+                  "spans": [
+                    {
+                      "text": "● ",
+                      "tone": "request"
+                    },
+                    {
+                      "text": "51.5 s  network + token stream",
+                      "tone": "muted"
+                    }
+                  ]
+                },
+                {
+                  "at": [
+                    380.0,
+                    380.0,
+                    0.0
+                  ],
+                  "id": "harness",
+                  "kind": "card",
+                  "size": [
+                    340.0,
+                    124.0
+                  ],
+                  "status": [
+                    {
+                      "text": "format JSON · 2 ms"
+                    },
+                    {
+                      "text": "epoll_wait · 0% CPU",
+                      "tone": "muted"
+                    },
+                    {
+                      "text": "spawn shell · 8 ms"
+                    },
+                    {
+                      "text": "44× faster exit!",
+                      "tone": "accent"
+                    }
+                  ],
+                  "title": "agent harness",
+                  "tone": "accent"
+                },
+                {
+                  "at": [
+                    940.0,
+                    500.0,
+                    -20.0
+                  ],
+                  "id": "tools",
+                  "kind": "card",
+                  "size": [
+                    330.0,
+                    114.0
+                  ],
+                  "status": [
+                    {
+                      "text": "idle",
+                      "tone": "muted"
+                    },
+                    {
+                      "text": "cargo test · 8.2 s",
+                      "tone": "warning"
+                    },
+                    {
+                      "text": "passed · 8.2 s",
+                      "tone": "success"
+                    }
+                  ],
+                  "title": "local tools",
+                  "tone": "warning"
+                },
+                {
+                  "bend": -42.0,
+                  "from": "harness",
+                  "id": "net",
+                  "kind": "beam",
+                  "to": "model",
+                  "tone": "request"
+                },
+                {
+                  "bend": -48.0,
+                  "from": "model",
+                  "id": "stream",
+                  "kind": "beam",
+                  "to": "harness",
+                  "tone": "request"
+                },
+                {
+                  "bend": 28.0,
+                  "from": "harness",
+                  "id": "exec",
+                  "kind": "beam",
+                  "to": "tools",
+                  "tone": "warning"
+                },
+                {
+                  "beam": "net",
+                  "id": "req",
+                  "kind": "packet",
+                  "label": "POST /v1/responses (2 ms)",
+                  "tone": "request"
+                },
+                {
+                  "beam": "stream",
+                  "id": "tok-1",
+                  "kind": "packet",
+                  "label": "thinking…",
+                  "tone": "request"
+                },
+                {
+                  "beam": "stream",
+                  "id": "tok-2",
+                  "kind": "packet",
+                  "label": "tool_call: cargo test",
+                  "tone": "request"
+                },
+                {
+                  "beam": "stream",
+                  "id": "tok-3",
+                  "kind": "packet",
+                  "label": "final answer",
+                  "tone": "success"
+                },
+                {
+                  "beam": "exec",
+                  "id": "run-test",
+                  "kind": "packet",
+                  "label": "cargo test",
+                  "tone": "warning"
+                },
+                {
+                  "beam": "exec",
+                  "id": "test-ok",
+                  "kind": "packet",
+                  "label": "ok (8.2 s)",
+                  "reverse": true,
+                  "tone": "success"
+                },
+                {
+                  "at": [
+                    960.0,
+                    248.0,
+                    0.0
+                  ],
+                  "id": "door-metaphor",
+                  "kind": "label",
+                  "size": 23.0,
+                  "spans": [
+                    {
+                      "text": "40-hour road trip"
+                    },
+                    {
+                      "text": "  vs.  ",
+                      "tone": "muted"
+                    },
+                    {
+                      "text": "44× faster gas-station door slam (9 ms)",
+                      "tone": "accent"
+                    }
+                  ]
+                },
+                {
+                  "align": "left",
+                  "at": [
+                    214.0,
+                    472.0,
+                    0.0
+                  ],
+                  "id": "wait-note",
+                  "kind": "label",
+                  "size": 20.0,
+                  "spans": [
+                    {
+                      "text": "waiting speed: ",
+                      "tone": "muted"
+                    },
+                    {
+                      "text": "Zig = Rust = TS = 1.0 s/s",
+                      "tone": "accent"
+                    }
+                  ]
+                },
+                {
+                  "at": [
+                    1520.0,
+                    380.0,
+                    0.0
+                  ],
+                  "id": "model-ring",
+                  "kind": "ring",
+                  "radius": 142.0,
+                  "thickness": 1.399999976158142,
+                  "tone": "request"
+                },
+                {
+                  "at": [
+                    1520.0,
+                    380.0,
+                    0.0
+                  ],
+                  "id": "model-ring-outer",
+                  "kind": "ring",
+                  "radius": 150.0,
+                  "thickness": 1.2999999523162842,
+                  "tone": "request"
+                },
+                {
+                  "at": [
+                    960.0,
+                    760.0,
+                    0.0
+                  ],
+                  "corner": 10.0,
+                  "fill": "surface",
+                  "fillOpacity": 0.8999999761581421,
+                  "id": "bar-track",
+                  "kind": "shape",
+                  "shape": {
+                    "rect": [
+                      1412.0,
+                      62.0
+                    ]
+                  }
+                },
+                {
+                  "at": [
+                    860.5,
+                    760.0,
+                    0.0
+                  ],
+                  "corner": 8.0,
+                  "fill": "request",
+                  "fillOpacity": 0.3199999928474426,
+                  "id": "bar-llm",
+                  "kind": "shape",
+                  "shape": {
+                    "rect": [
+                      1201.0,
+                      52.0
+                    ]
+                  },
+                  "stroke": "request",
+                  "width": 1.7999999523162842
+                },
+                {
+                  "at": [
+                    1556.5,
+                    760.0,
+                    0.0
+                  ],
+                  "corner": 8.0,
+                  "fill": "warning",
+                  "fillOpacity": 0.3400000035762787,
+                  "id": "bar-tools",
+                  "kind": "shape",
+                  "shape": {
+                    "rect": [
+                      191.0,
+                      52.0
+                    ]
+                  },
+                  "stroke": "warning",
+                  "width": 1.7999999523162842
+                },
+                {
+                  "at": [
+                    1656.5,
+                    760.0,
+                    0.0
+                  ],
+                  "corner": 8.0,
+                  "fill": "accent",
+                  "fillOpacity": 0.8500000238418579,
+                  "id": "bar-harness",
+                  "kind": "shape",
+                  "shape": {
+                    "rect": [
+                      7.0,
+                      52.0
+                    ]
+                  },
+                  "stroke": "accent",
+                  "width": 1.7999999523162842
+                },
+                {
+                  "align": "left",
+                  "at": [
+                    260.0,
+                    708.0,
+                    0.0
+                  ],
+                  "id": "bar-title",
+                  "kind": "label",
+                  "size": 21.0,
+                  "spans": [
+                    {
+                      "text": "true wall-clock scale  "
+                    },
+                    {
+                      "text": "60,000 ms (100%)",
+                      "tone": "muted"
+                    }
+                  ]
+                },
+                {
+                  "at": [
+                    860.5,
+                    760.0,
+                    0.0
+                  ],
+                  "id": "label-llm",
+                  "kind": "label",
+                  "size": 22.0,
+                  "spans": [
+                    {
+                      "text": "remote LLM I/O  "
+                    },
+                    {
+                      "text": "51.5 s  (85.8%)",
+                      "tone": "request"
+                    }
+                  ]
+                },
+                {
+                  "at": [
+                    1556.5,
+                    812.0,
+                    0.0
+                  ],
+                  "id": "label-tools",
+                  "kind": "label",
+                  "size": 20.0,
+                  "spans": [
+                    {
+                      "text": "tools  "
+                    },
+                    {
+                      "text": "8.2 s (13.7%)",
+                      "tone": "warning"
+                    }
+                  ]
+                },
+                {
+                  "align": "right",
+                  "at": [
+                    1660.0,
+                    708.0,
+                    0.0
+                  ],
+                  "id": "label-harness",
+                  "kind": "label",
+                  "size": 21.0,
+                  "spans": [
+                    {
+                      "text": "harness  "
+                    },
+                    {
+                      "text": "0.3 s (0.5%) ▾",
+                      "tone": "accent"
+                    }
+                  ]
+                },
+                {
+                  "at": [
+                    960.0,
+                    856.0,
+                    0.0
+                  ],
+                  "id": "label-speedup",
+                  "kind": "label",
+                  "size": 25.0,
+                  "spans": [
+                    {
+                      "text": "44× faster on 0.5%  →  ",
+                      "tone": "muted"
+                    },
+                    {
+                      "text": "60.0 s becomes 59.7 s"
+                    },
+                    {
+                      "text": "  (1.005× total)",
+                      "tone": "accent"
+                    }
+                  ]
+                },
+                {
+                  "arrow": "end",
+                  "id": "sliver-pointer",
+                  "kind": "path",
+                  "through": [
+                    [
+                      1656.5,
+                      726.0,
+                      0.0
+                    ],
+                    [
+                      1656.5,
+                      732.0,
+                      0.0
+                    ]
+                  ],
+                  "tone": "accent",
+                  "width": 2.0
+                }
+              ],
+              "post": {
+                "backdrop": 0.11999999731779099,
+                "bloom": 0.18000000715255737,
+                "grain": 0.012000000104308128,
+                "vignette": 0.2199999988079071
+              }
+            }
+          },
+          {
+            "id": "header",
+            "recipe": "caption",
+            "data": {
+              "lines": [
+                [
+                  {
+                    "text": "amdahl's law",
+                    "tone": "accent"
+                  },
+                  {
+                    "text": "  "
+                  },
+                  {
+                    "text": "where an agent turn actually goes"
+                  }
+                ]
+              ],
+              "origin": [
+                140.0,
+                96.0
+              ],
+              "size": 30.0
+            }
+          },
+          {
+            "id": "chip-turn",
+            "recipe": "caption",
+            "data": {
+              "align": "right",
+              "chip": true,
+              "lines": [
+                [
+                  {
+                    "text": "● ",
+                    "tone": "request"
+                  },
+                  {
+                    "text": "I/O-bound loop"
+                  }
+                ]
+              ],
+              "origin": [
+                1780.0,
+                96.0
+              ],
+              "size": 22.0
+            }
+          },
+          {
+            "id": "turn-clock",
+            "recipe": "rolling-number",
+            "data": {
+              "align": "center",
+              "chip": true,
+              "origin": [
+                960.0,
+                175.0
+              ],
+              "prefix": [
+                {
+                  "text": "turn elapsed  ",
+                  "tone": "muted"
+                }
+              ],
+              "rolls": [
+                {
+                  "atNanos": 18030000000,
+                  "value": "0.2"
+                },
+                {
+                  "atNanos": 23340000000,
+                  "value": "24.8"
+                },
+                {
+                  "atNanos": 24890000000,
+                  "value": "51.5"
+                },
+                {
+                  "atNanos": 29980000000,
+                  "value": "60.0"
+                },
+                {
+                  "atNanos": 54239000000,
+                  "value": "59.7"
+                }
+              ],
+              "size": 36.0,
+              "suffix": [
+                {
+                  "text": " s",
+                  "tone": "muted"
+                }
+              ],
+              "value": "0.0"
+            }
+          },
+          {
+            "id": "chip-law",
+            "recipe": "caption",
+            "data": {
+              "align": "right",
+              "chip": true,
+              "lines": [
+                [
+                  {
+                    "text": "● ",
+                    "tone": "accent"
+                  },
+                  {
+                    "text": "amdahl's law"
+                  }
+                ]
+              ],
+              "origin": [
+                1780.0,
+                96.0
+              ],
+              "size": 22.0
+            }
+          },
+          {
+            "id": "footer-scale",
+            "recipe": "caption",
+            "data": {
+              "lines": [
+                [
+                  {
+                    "text": "fix the local bugs  ·  "
+                  },
+                  {
+                    "text": "benchmark the whole turn",
+                    "tone": "accent"
+                  }
+                ]
+              ],
+              "origin": [
+                140.0,
+                1004.0
+              ],
+              "size": 28.0
+            }
+          }
+        ],
+        "semanticTargets": [],
+        "continuousChannels": [
+          {
+            "id": "stage.bar-track.opacity",
+            "actorId": "stage",
+            "property": "bar-track.opacity",
+            "initial": 0.0,
+            "events": [
+              {
+                "operation": "spring",
+                "atNanos": 37619000000,
+                "target": 1.0,
+                "responseSeconds": 0.54,
+                "dampingRatio": 1.0,
+                "positionThreshold": 0.001,
+                "velocityThreshold": 0.001
+              }
+            ]
+          },
+          {
+            "id": "stage.bar-track.draw",
+            "actorId": "stage",
+            "property": "bar-track.draw",
+            "initial": 0.0,
+            "events": [
+              {
+                "operation": "ease",
+                "atNanos": 37619000000,
+                "target": 1.0,
+                "durationNanos": 650000000,
+                "curve": "cubic-out"
+              }
+            ]
+          },
+          {
+            "id": "stage.bar-track.fill",
+            "actorId": "stage",
+            "property": "bar-track.fill",
+            "initial": 0.0,
+            "events": [
+              {
+                "operation": "spring",
+                "atNanos": 37769000000,
+                "target": 1.0,
+                "responseSeconds": 0.6,
+                "dampingRatio": 1.0,
+                "positionThreshold": 0.001,
+                "velocityThreshold": 0.001
+              }
+            ]
+          },
+          {
+            "id": "stage.bar-llm.opacity",
+            "actorId": "stage",
+            "property": "bar-llm.opacity",
+            "initial": 0.0,
+            "events": [
+              {
+                "operation": "spring",
+                "atNanos": 41439000000,
+                "target": 1.0,
+                "responseSeconds": 0.42000002,
+                "dampingRatio": 1.0,
+                "positionThreshold": 0.001,
+                "velocityThreshold": 0.001
+              }
+            ]
+          },
+          {
+            "id": "stage.bar-llm.draw",
+            "actorId": "stage",
+            "property": "bar-llm.draw",
+            "initial": 0.0,
+            "events": [
+              {
+                "operation": "ease",
+                "atNanos": 41439000000,
+                "target": 1.0,
+                "durationNanos": 600000000,
+                "curve": "cubic-out"
+              }
+            ]
+          },
+          {
+            "id": "stage.bar-llm.fill",
+            "actorId": "stage",
+            "property": "bar-llm.fill",
+            "initial": 0.0,
+            "events": [
+              {
+                "operation": "spring",
+                "atNanos": 41589000000,
+                "target": 1.0,
+                "responseSeconds": 0.6,
+                "dampingRatio": 1.0,
+                "positionThreshold": 0.001,
+                "velocityThreshold": 0.001
+              }
+            ]
+          },
+          {
+            "id": "stage.bar-tools.opacity",
+            "actorId": "stage",
+            "property": "bar-tools.opacity",
+            "initial": 0.0,
+            "events": [
+              {
+                "operation": "spring",
+                "atNanos": 43499000000,
+                "target": 1.0,
+                "responseSeconds": 0.42000002,
+                "dampingRatio": 1.0,
+                "positionThreshold": 0.001,
+                "velocityThreshold": 0.001
+              }
+            ]
+          },
+          {
+            "id": "stage.bar-tools.draw",
+            "actorId": "stage",
+            "property": "bar-tools.draw",
+            "initial": 0.0,
+            "events": [
+              {
+                "operation": "ease",
+                "atNanos": 43499000000,
+                "target": 1.0,
+                "durationNanos": 500000000,
+                "curve": "cubic-out"
+              }
+            ]
+          },
+          {
+            "id": "stage.bar-tools.fill",
+            "actorId": "stage",
+            "property": "bar-tools.fill",
+            "initial": 0.0,
+            "events": [
+              {
+                "operation": "spring",
+                "atNanos": 43619000000,
+                "target": 1.0,
+                "responseSeconds": 0.54,
+                "dampingRatio": 1.0,
+                "positionThreshold": 0.001,
+                "velocityThreshold": 0.001
+              }
+            ]
+          },
+          {
+            "id": "stage.bar-harness.opacity",
+            "actorId": "stage",
+            "property": "bar-harness.opacity",
+            "initial": 0.0,
+            "events": [
+              {
+                "operation": "spring",
+                "atNanos": 46439000000,
+                "target": 1.0,
+                "responseSeconds": 0.3,
+                "dampingRatio": 1.0,
+                "positionThreshold": 0.001,
+                "velocityThreshold": 0.001
+              }
+            ]
+          },
+          {
+            "id": "stage.bar-harness.draw",
+            "actorId": "stage",
+            "property": "bar-harness.draw",
+            "initial": 0.0,
+            "events": [
+              {
+                "operation": "spring",
+                "atNanos": 46439000000,
+                "target": 1.0,
+                "responseSeconds": 0.36,
+                "dampingRatio": 1.0,
+                "positionThreshold": 0.001,
+                "velocityThreshold": 0.001
+              }
+            ]
+          },
+          {
+            "id": "stage.bar-harness.fill",
+            "actorId": "stage",
+            "property": "bar-harness.fill",
+            "initial": 0.0,
+            "events": [
+              {
+                "operation": "spring",
+                "atNanos": 46439000000,
+                "target": 1.0,
+                "responseSeconds": 0.36,
+                "dampingRatio": 1.0,
+                "positionThreshold": 0.001,
+                "velocityThreshold": 0.001
+              }
+            ]
+          },
+          {
+            "id": "stage.sliver-pointer.opacity",
+            "actorId": "stage",
+            "property": "sliver-pointer.opacity",
+            "initial": 0.0,
+            "events": [
+              {
+                "operation": "spring",
+                "atNanos": 46439000000,
+                "target": 1.0,
+                "responseSeconds": 0.36,
+                "dampingRatio": 1.0,
+                "positionThreshold": 0.001,
+                "velocityThreshold": 0.001
+              }
+            ]
+          },
+          {
+            "id": "stage.camera.z",
+            "actorId": "stage",
+            "property": "camera.z",
+            "initial": -140.0,
+            "events": [
+              {
+                "operation": "spring",
+                "atNanos": 0,
+                "target": 0.0,
+                "responseSeconds": 2.4,
+                "dampingRatio": 1.0,
+                "positionThreshold": 0.001,
+                "velocityThreshold": 0.001
+              },
+              {
+                "operation": "spring",
+                "atNanos": 37419000000,
+                "target": -50.0,
+                "responseSeconds": 1.9200001,
+                "dampingRatio": 1.0,
+                "positionThreshold": 0.001,
+                "velocityThreshold": 0.001
+              }
+            ]
+          },
+          {
+            "id": "stage.camera.y",
+            "actorId": "stage",
+            "property": "camera.y",
+            "initial": -40.0,
+            "events": [
+              {
+                "operation": "spring",
+                "atNanos": 37419000000,
+                "target": 0.0,
+                "responseSeconds": 1.8000001,
+                "dampingRatio": 1.0,
+                "positionThreshold": 0.001,
+                "velocityThreshold": 0.001
+              }
+            ]
+          },
+          {
+            "id": "stage.camera.dof",
+            "actorId": "stage",
+            "property": "camera.dof",
+            "initial": 0.35,
+            "events": []
+          },
+          {
+            "id": "header.opacity",
+            "actorId": "header",
+            "property": "opacity",
+            "initial": 0.0,
+            "events": [
+              {
+                "operation": "spring",
+                "atNanos": 200000000,
+                "target": 1.0,
+                "responseSeconds": 0.42000002,
+                "dampingRatio": 1.0,
+                "positionThreshold": 0.001,
+                "velocityThreshold": 0.001
+              }
+            ]
+          },
+          {
+            "id": "header.y",
+            "actorId": "header",
+            "property": "y",
+            "initial": 10.0,
+            "events": [
+              {
+                "operation": "spring",
+                "atNanos": 200000000,
+                "target": 0.0,
+                "responseSeconds": 0.54,
+                "dampingRatio": 1.0,
+                "positionThreshold": 0.001,
+                "velocityThreshold": 0.001
+              }
+            ]
+          },
+          {
+            "id": "chip-turn.opacity",
+            "actorId": "chip-turn",
+            "property": "opacity",
+            "initial": 0.0,
+            "events": [
+              {
+                "operation": "spring",
+                "atNanos": 400000000,
+                "target": 1.0,
+                "responseSeconds": 0.42000002,
+                "dampingRatio": 1.0,
+                "positionThreshold": 0.001,
+                "velocityThreshold": 0.001
+              },
+              {
+                "operation": "spring",
+                "atNanos": 37419000000,
+                "target": 0.0,
+                "responseSeconds": 0.28800002,
+                "dampingRatio": 1.0,
+                "positionThreshold": 0.001,
+                "velocityThreshold": 0.001
+              }
+            ]
+          },
+          {
+            "id": "chip-turn.y",
+            "actorId": "chip-turn",
+            "property": "y",
+            "initial": 10.0,
+            "events": [
+              {
+                "operation": "spring",
+                "atNanos": 400000000,
+                "target": 0.0,
+                "responseSeconds": 0.54,
+                "dampingRatio": 1.0,
+                "positionThreshold": 0.001,
+                "velocityThreshold": 0.001
+              }
+            ]
+          },
+          {
+            "id": "stage.harness.scale",
+            "actorId": "stage",
+            "property": "harness.scale",
+            "initial": 1.035,
+            "events": [
+              {
+                "operation": "set",
+                "atNanos": 300000000,
+                "value": 1.035
+              },
+              {
+                "operation": "spring",
+                "atNanos": 300000000,
+                "target": 1.0,
+                "responseSeconds": 0.72,
+                "dampingRatio": 0.88,
+                "positionThreshold": 0.001,
+                "velocityThreshold": 0.001
+              }
+            ]
+          },
+          {
+            "id": "stage.harness.y",
+            "actorId": "stage",
+            "property": "harness.y",
+            "initial": 16.0,
+            "events": [
+              {
+                "operation": "set",
+                "atNanos": 300000000,
+                "value": 16.0
+              },
+              {
+                "operation": "spring",
+                "atNanos": 300000000,
+                "target": 0.0,
+                "responseSeconds": 0.66,
+                "dampingRatio": 0.84000003,
+                "positionThreshold": 0.001,
+                "velocityThreshold": 0.001
+              }
+            ]
+          },
+          {
+            "id": "stage.harness.content",
+            "actorId": "stage",
+            "property": "harness.content",
+            "initial": 0.0,
+            "events": [
+              {
+                "operation": "set",
+                "atNanos": 300000000,
+                "value": 0.0
+              },
+              {
+                "operation": "spring",
+                "atNanos": 365000000,
+                "target": 1.0,
+                "responseSeconds": 0.43200004,
+                "dampingRatio": 1.0,
+                "positionThreshold": 0.001,
+                "velocityThreshold": 0.001
+              }
+            ]
+          },
+          {
+            "id": "stage.harness.opacity",
+            "actorId": "stage",
+            "property": "harness.opacity",
+            "initial": 0.0,
+            "events": [
+              {
+                "operation": "set",
+                "atNanos": 300000000,
+                "value": 0.0
+              },
+              {
+                "operation": "ease",
+                "atNanos": 300000000,
+                "target": 1.0,
+                "durationNanos": 180000000,
+                "curve": "smootherstep"
+              }
+            ]
+          },
+          {
+            "id": "stage.harness.blur",
+            "actorId": "stage",
+            "property": "harness.blur",
+            "initial": 3.0,
+            "events": [
+              {
+                "operation": "set",
+                "atNanos": 300000000,
+                "value": 3.0
+              },
+              {
+                "operation": "ease",
+                "atNanos": 300000000,
+                "target": 0.0,
+                "durationNanos": 300000000,
+                "curve": "smootherstep"
+              }
+            ]
+          },
+          {
+            "id": "stage.tools.scale",
+            "actorId": "stage",
+            "property": "tools.scale",
+            "initial": 1.035,
+            "events": [
+              {
+                "operation": "set",
+                "atNanos": 480000000,
+                "value": 1.035
+              },
+              {
+                "operation": "spring",
+                "atNanos": 480000000,
+                "target": 1.0,
+                "responseSeconds": 0.72,
+                "dampingRatio": 0.88,
+                "positionThreshold": 0.001,
+                "velocityThreshold": 0.001
+              }
+            ]
+          },
+          {
+            "id": "stage.tools.y",
+            "actorId": "stage",
+            "property": "tools.y",
+            "initial": 16.0,
+            "events": [
+              {
+                "operation": "set",
+                "atNanos": 480000000,
+                "value": 16.0
+              },
+              {
+                "operation": "spring",
+                "atNanos": 480000000,
+                "target": 0.0,
+                "responseSeconds": 0.66,
+                "dampingRatio": 0.84000003,
+                "positionThreshold": 0.001,
+                "velocityThreshold": 0.001
+              }
+            ]
+          },
+          {
+            "id": "stage.tools.content",
+            "actorId": "stage",
+            "property": "tools.content",
+            "initial": 0.0,
+            "events": [
+              {
+                "operation": "set",
+                "atNanos": 480000000,
+                "value": 0.0
+              },
+              {
+                "operation": "spring",
+                "atNanos": 545000000,
+                "target": 1.0,
+                "responseSeconds": 0.43200004,
+                "dampingRatio": 1.0,
+                "positionThreshold": 0.001,
+                "velocityThreshold": 0.001
+              }
+            ]
+          },
+          {
+            "id": "stage.tools.opacity",
+            "actorId": "stage",
+            "property": "tools.opacity",
+            "initial": 0.0,
+            "events": [
+              {
+                "operation": "set",
+                "atNanos": 480000000,
+                "value": 0.0
+              },
+              {
+                "operation": "ease",
+                "atNanos": 480000000,
+                "target": 1.0,
+                "durationNanos": 180000000,
+                "curve": "smootherstep"
+              }
+            ]
+          },
+          {
+            "id": "stage.tools.blur",
+            "actorId": "stage",
+            "property": "tools.blur",
+            "initial": 3.0,
+            "events": [
+              {
+                "operation": "set",
+                "atNanos": 480000000,
+                "value": 3.0
+              },
+              {
+                "operation": "ease",
+                "atNanos": 480000000,
+                "target": 0.0,
+                "durationNanos": 300000000,
+                "curve": "smootherstep"
+              }
+            ]
+          },
+          {
+            "id": "stage.model.scale",
+            "actorId": "stage",
+            "property": "model.scale",
+            "initial": 0.58,
+            "events": [
+              {
+                "operation": "spring",
+                "atNanos": 200000000,
+                "target": 1.0,
+                "responseSeconds": 1.0200001,
+                "dampingRatio": 0.8,
+                "positionThreshold": 0.001,
+                "velocityThreshold": 0.001
+              }
+            ]
+          },
+          {
+            "id": "stage.model.blur",
+            "actorId": "stage",
+            "property": "model.blur",
+            "initial": 11.0,
+            "events": [
+              {
+                "operation": "spring",
+                "atNanos": 200000000,
+                "target": 0.0,
+                "responseSeconds": 0.84000003,
+                "dampingRatio": 1.0,
+                "positionThreshold": 0.001,
+                "velocityThreshold": 0.001
+              }
+            ]
+          },
+          {
+            "id": "stage.model.rotation",
+            "actorId": "stage",
+            "property": "model.rotation",
+            "initial": -1.8,
+            "events": [
+              {
+                "operation": "ease",
+                "atNanos": 200000000,
+                "target": 0.0,
+                "durationNanos": 1250000000,
+                "curve": "cubic-out"
+              }
+            ]
+          },
+          {
+            "id": "stage.model.opacity",
+            "actorId": "stage",
+            "property": "model.opacity",
+            "initial": 0.0,
+            "events": [
+              {
+                "operation": "spring",
+                "atNanos": 200000000,
+                "target": 1.0,
+                "responseSeconds": 0.72,
+                "dampingRatio": 1.0,
+                "positionThreshold": 0.001,
+                "velocityThreshold": 0.001
+              }
+            ]
+          },
+          {
+            "id": "stage.model-name.opacity",
+            "actorId": "stage",
+            "property": "model-name.opacity",
+            "initial": 0.0,
+            "events": [
+              {
+                "operation": "spring",
+                "atNanos": 850000000,
+                "target": 1.0,
+                "responseSeconds": 0.54,
+                "dampingRatio": 1.0,
+                "positionThreshold": 0.001,
+                "velocityThreshold": 0.001
+              }
+            ]
+          },
+          {
+            "id": "stage.model-sub.opacity",
+            "actorId": "stage",
+            "property": "model-sub.opacity",
+            "initial": 0.0,
+            "events": [
+              {
+                "operation": "spring",
+                "atNanos": 990000000,
+                "target": 1.0,
+                "responseSeconds": 0.54,
+                "dampingRatio": 1.0,
+                "positionThreshold": 0.001,
+                "velocityThreshold": 0.001
+              }
+            ]
+          },
+          {
+            "id": "stage.net.port",
+            "actorId": "stage",
+            "property": "net.port",
+            "initial": 0.0,
+            "events": [
+              {
+                "operation": "ease",
+                "atNanos": 980000000,
+                "target": 1.0,
+                "durationNanos": 300000000,
+                "curve": "smootherstep"
+              }
+            ]
+          },
+          {
+            "id": "stage.net.draw",
+            "actorId": "stage",
+            "property": "net.draw",
+            "initial": 0.0,
+            "events": [
+              {
+                "operation": "set",
+                "atNanos": 1280000000,
+                "value": 0.0
+              },
+              {
+                "operation": "ease",
+                "atNanos": 1280000000,
+                "target": 1.0,
+                "durationNanos": 650000000,
+                "curve": {
+                  "cubic-bezier": [
+                    0.45,
+                    0.0,
+                    0.2,
+                    1.0
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "id": "stage.stream.port",
+            "actorId": "stage",
+            "property": "stream.port",
+            "initial": 0.0,
+            "events": [
+              {
+                "operation": "ease",
+                "atNanos": 1120000000,
+                "target": 1.0,
+                "durationNanos": 300000000,
+                "curve": "smootherstep"
+              }
+            ]
+          },
+          {
+            "id": "stage.stream.draw",
+            "actorId": "stage",
+            "property": "stream.draw",
+            "initial": 0.0,
+            "events": [
+              {
+                "operation": "set",
+                "atNanos": 1420000000,
+                "value": 0.0
+              },
+              {
+                "operation": "ease",
+                "atNanos": 1420000000,
+                "target": 1.0,
+                "durationNanos": 650000000,
+                "curve": {
+                  "cubic-bezier": [
+                    0.45,
+                    0.0,
+                    0.2,
+                    1.0
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "id": "stage.exec.port",
+            "actorId": "stage",
+            "property": "exec.port",
+            "initial": 0.0,
+            "events": [
+              {
+                "operation": "ease",
+                "atNanos": 1160000000,
+                "target": 1.0,
+                "durationNanos": 300000000,
+                "curve": "smootherstep"
+              }
+            ]
+          },
+          {
+            "id": "stage.exec.draw",
+            "actorId": "stage",
+            "property": "exec.draw",
+            "initial": 0.0,
+            "events": [
+              {
+                "operation": "set",
+                "atNanos": 1460000000,
+                "value": 0.0
+              },
+              {
+                "operation": "ease",
+                "atNanos": 1460000000,
+                "target": 1.0,
+                "durationNanos": 550000000,
+                "curve": {
+                  "cubic-bezier": [
+                    0.45,
+                    0.0,
+                    0.2,
+                    1.0
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "id": "stage.net.flow",
+            "actorId": "stage",
+            "property": "net.flow",
+            "initial": 0.0,
+            "events": [
+              {
+                "operation": "spring",
+                "atNanos": 2680000000,
+                "target": 0.0,
+                "responseSeconds": 0.48000002,
+                "dampingRatio": 1.0,
+                "positionThreshold": 0.001,
+                "velocityThreshold": 0.001
+              }
+            ]
+          },
+          {
+            "id": "stage.stream.flow",
+            "actorId": "stage",
+            "property": "stream.flow",
+            "initial": 0.0,
+            "events": [
+              {
+                "operation": "spring",
+                "atNanos": 2820000000,
+                "target": 0.0,
+                "responseSeconds": 0.48000002,
+                "dampingRatio": 1.0,
+                "positionThreshold": 0.001,
+                "velocityThreshold": 0.001
+              },
+              {
+                "operation": "spring",
+                "atNanos": 22940000000,
+                "target": 0.55,
+                "responseSeconds": 0.6,
+                "dampingRatio": 1.0,
+                "positionThreshold": 0.001,
+                "velocityThreshold": 0.001
+              },
+              {
+                "operation": "spring",
+                "atNanos": 24890000000,
+                "target": 0.0,
+                "responseSeconds": 0.54,
+                "dampingRatio": 1.0,
+                "positionThreshold": 0.001,
+                "velocityThreshold": 0.001
+              }
+            ]
+          },
+          {
+            "id": "stage.exec.flow",
+            "actorId": "stage",
+            "property": "exec.flow",
+            "initial": 0.0,
+            "events": [
+              {
+                "operation": "spring",
+                "atNanos": 2760000000,
+                "target": 0.0,
+                "responseSeconds": 0.48000002,
+                "dampingRatio": 1.0,
+                "positionThreshold": 0.001,
+                "velocityThreshold": 0.001
+              }
+            ]
+          },
+          {
+            "id": "stage.door-metaphor.opacity",
+            "actorId": "stage",
+            "property": "door-metaphor.opacity",
+            "initial": 0.0,
+            "events": [
+              {
+                "operation": "set",
+                "atNanos": 1480000000,
+                "value": 1.0
+              },
+              {
+                "operation": "spring",
+                "atNanos": 13000000000,
+                "target": 0.0,
+                "responseSeconds": 0.48000002,
+                "dampingRatio": 1.0,
+                "positionThreshold": 0.001,
+                "velocityThreshold": 0.001
+              }
+            ]
+          },
+          {
+            "id": "stage.door-metaphor.typed",
+            "actorId": "stage",
+            "property": "door-metaphor.typed",
+            "initial": 0.0,
+            "events": [
+              {
+                "operation": "set",
+                "atNanos": 1493888888,
+                "value": 0.015873017
+              },
+              {
+                "operation": "set",
+                "atNanos": 1507777776,
+                "value": 0.031746034
+              },
+              {
+                "operation": "set",
+                "atNanos": 1521666664,
+                "value": 0.04761905
+              },
+              {
+                "operation": "set",
+                "atNanos": 1535555552,
+                "value": 0.06349207
+              },
+              {
+                "operation": "set",
+                "atNanos": 1549444440,
+                "value": 0.07936508
+              },
+              {
+                "operation": "set",
+                "atNanos": 1563333328,
+                "value": 0.0952381
+              },
+              {
+                "operation": "set",
+                "atNanos": 1577222216,
+                "value": 0.11111111
+              },
+              {
+                "operation": "set",
+                "atNanos": 1591111104,
+                "value": 0.12698413
+              },
+              {
+                "operation": "set",
+                "atNanos": 1604999992,
+                "value": 0.14285715
+              },
+              {
+                "operation": "set",
+                "atNanos": 1618888880,
+                "value": 0.15873016
+              },
+              {
+                "operation": "set",
+                "atNanos": 1632777768,
+                "value": 0.17460318
+              },
+              {
+                "operation": "set",
+                "atNanos": 1646666656,
+                "value": 0.1904762
+              },
+              {
+                "operation": "set",
+                "atNanos": 1660555544,
+                "value": 0.20634921
+              },
+              {
+                "operation": "set",
+                "atNanos": 1674444432,
+                "value": 0.22222222
+              },
+              {
+                "operation": "set",
+                "atNanos": 1688333320,
+                "value": 0.23809524
+              },
+              {
+                "operation": "set",
+                "atNanos": 1702222208,
+                "value": 0.25396827
+              },
+              {
+                "operation": "set",
+                "atNanos": 1716111096,
+                "value": 0.26984128
+              },
+              {
+                "operation": "set",
+                "atNanos": 1729999984,
+                "value": 0.2857143
+              },
+              {
+                "operation": "set",
+                "atNanos": 1743888872,
+                "value": 0.3015873
+              },
+              {
+                "operation": "set",
+                "atNanos": 1757777760,
+                "value": 0.31746033
+              },
+              {
+                "operation": "set",
+                "atNanos": 1771666648,
+                "value": 0.33333334
+              },
+              {
+                "operation": "set",
+                "atNanos": 1785555536,
+                "value": 0.34920636
+              },
+              {
+                "operation": "set",
+                "atNanos": 1799444424,
+                "value": 0.36507937
+              },
+              {
+                "operation": "set",
+                "atNanos": 1813333312,
+                "value": 0.3809524
+              },
+              {
+                "operation": "set",
+                "atNanos": 1827222200,
+                "value": 0.3968254
+              },
+              {
+                "operation": "set",
+                "atNanos": 1841111088,
+                "value": 0.41269842
+              },
+              {
+                "operation": "set",
+                "atNanos": 1854999976,
+                "value": 0.42857143
+              },
+              {
+                "operation": "set",
+                "atNanos": 1868888864,
+                "value": 0.44444445
+              },
+              {
+                "operation": "set",
+                "atNanos": 1882777752,
+                "value": 0.46031746
+              },
+              {
+                "operation": "set",
+                "atNanos": 1896666640,
+                "value": 0.47619048
+              },
+              {
+                "operation": "set",
+                "atNanos": 1910555528,
+                "value": 0.4920635
+              },
+              {
+                "operation": "set",
+                "atNanos": 1924444416,
+                "value": 0.50793654
+              },
+              {
+                "operation": "set",
+                "atNanos": 1938333304,
+                "value": 0.52380955
+              },
+              {
+                "operation": "set",
+                "atNanos": 1952222192,
+                "value": 0.53968257
+              },
+              {
+                "operation": "set",
+                "atNanos": 1966111080,
+                "value": 0.5555556
+              },
+              {
+                "operation": "set",
+                "atNanos": 1979999968,
+                "value": 0.5714286
+              },
+              {
+                "operation": "set",
+                "atNanos": 1993888856,
+                "value": 0.5873016
+              },
+              {
+                "operation": "set",
+                "atNanos": 2007777744,
+                "value": 0.6031746
+              },
+              {
+                "operation": "set",
+                "atNanos": 2021666632,
+                "value": 0.61904764
+              },
+              {
+                "operation": "set",
+                "atNanos": 2035555520,
+                "value": 0.63492066
+              },
+              {
+                "operation": "set",
+                "atNanos": 2049444408,
+                "value": 0.6507937
+              },
+              {
+                "operation": "set",
+                "atNanos": 2063333296,
+                "value": 0.6666667
+              },
+              {
+                "operation": "set",
+                "atNanos": 2077222184,
+                "value": 0.6825397
+              },
+              {
+                "operation": "set",
+                "atNanos": 2091111072,
+                "value": 0.6984127
+              },
+              {
+                "operation": "set",
+                "atNanos": 2104999960,
+                "value": 0.71428573
+              },
+              {
+                "operation": "set",
+                "atNanos": 2118888848,
+                "value": 0.73015875
+              },
+              {
+                "operation": "set",
+                "atNanos": 2132777736,
+                "value": 0.74603176
+              },
+              {
+                "operation": "set",
+                "atNanos": 2146666624,
+                "value": 0.7619048
+              },
+              {
+                "operation": "set",
+                "atNanos": 2160555512,
+                "value": 0.7777778
+              },
+              {
+                "operation": "set",
+                "atNanos": 2174444400,
+                "value": 0.7936508
+              },
+              {
+                "operation": "set",
+                "atNanos": 2188333288,
+                "value": 0.8095238
+              },
+              {
+                "operation": "set",
+                "atNanos": 2202222176,
+                "value": 0.82539684
+              },
+              {
+                "operation": "set",
+                "atNanos": 2216111064,
+                "value": 0.84126985
+              },
+              {
+                "operation": "set",
+                "atNanos": 2229999952,
+                "value": 0.85714287
+              },
+              {
+                "operation": "set",
+                "atNanos": 2243888840,
+                "value": 0.8730159
+              },
+              {
+                "operation": "set",
+                "atNanos": 2257777728,
+                "value": 0.8888889
+              },
+              {
+                "operation": "set",
+                "atNanos": 2271666616,
+                "value": 0.9047619
+              },
+              {
+                "operation": "set",
+                "atNanos": 2285555504,
+                "value": 0.9206349
+              },
+              {
+                "operation": "set",
+                "atNanos": 2299444392,
+                "value": 0.93650794
+              },
+              {
+                "operation": "set",
+                "atNanos": 2313333280,
+                "value": 0.95238096
+              },
+              {
+                "operation": "set",
+                "atNanos": 2327222168,
+                "value": 0.96825397
+              },
+              {
+                "operation": "set",
+                "atNanos": 2341111056,
+                "value": 0.984127
+              },
+              {
+                "operation": "set",
+                "atNanos": 2354999944,
+                "value": 1.0
+              }
+            ]
+          },
+          {
+            "id": "stage.harness.flash",
+            "actorId": "stage",
+            "property": "harness.flash",
+            "initial": 0.0,
+            "events": [
+              {
+                "operation": "set",
+                "atNanos": 8300000000,
+                "value": 0.45
+              },
+              {
+                "operation": "ease",
+                "atNanos": 8300000000,
+                "target": 0.0,
+                "durationNanos": 800000000,
+                "curve": "cubic-out"
+              },
+              {
+                "operation": "set",
+                "atNanos": 14720000000,
+                "value": 0.5
+              },
+              {
+                "operation": "ease",
+                "atNanos": 14720000000,
+                "target": 0.0,
+                "durationNanos": 800000000,
+                "curve": "cubic-out"
+              },
+              {
+                "operation": "set",
+                "atNanos": 23940000000,
+                "value": 0.6
+              },
+              {
+                "operation": "ease",
+                "atNanos": 23940000000,
+                "target": 0.0,
+                "durationNanos": 800000000,
+                "curve": "cubic-out"
+              },
+              {
+                "operation": "set",
+                "atNanos": 24890000000,
+                "value": 0.6
+              },
+              {
+                "operation": "ease",
+                "atNanos": 24890000000,
+                "target": 0.0,
+                "durationNanos": 800000000,
+                "curve": "cubic-out"
+              },
+              {
+                "operation": "set",
+                "atNanos": 28910000000,
+                "value": 0.6
+              },
+              {
+                "operation": "ease",
+                "atNanos": 28910000000,
+                "target": 0.0,
+                "durationNanos": 800000000,
+                "curve": "cubic-out"
+              },
+              {
+                "operation": "set",
+                "atNanos": 29980000000,
+                "value": 0.6
+              },
+              {
+                "operation": "ease",
+                "atNanos": 29980000000,
+                "target": 0.0,
+                "durationNanos": 800000000,
+                "curve": "cubic-out"
+              },
+              {
+                "operation": "set",
+                "atNanos": 51099000000,
+                "value": 0.7
+              },
+              {
+                "operation": "ease",
+                "atNanos": 51099000000,
+                "target": 0.0,
+                "durationNanos": 800000000,
+                "curve": "cubic-out"
+              }
+            ]
+          },
+          {
+            "id": "turn-clock.opacity",
+            "actorId": "turn-clock",
+            "property": "opacity",
+            "initial": 0.0,
+            "events": [
+              {
+                "operation": "spring",
+                "atNanos": 13000000000,
+                "target": 1.0,
+                "responseSeconds": 0.42000002,
+                "dampingRatio": 1.0,
+                "positionThreshold": 0.001,
+                "velocityThreshold": 0.001
+              }
+            ]
+          },
+          {
+            "id": "turn-clock.y",
+            "actorId": "turn-clock",
+            "property": "y",
+            "initial": 10.0,
+            "events": [
+              {
+                "operation": "spring",
+                "atNanos": 13000000000,
+                "target": 0.0,
+                "responseSeconds": 0.54,
+                "dampingRatio": 1.0,
+                "positionThreshold": 0.001,
+                "velocityThreshold": 0.001
+              }
+            ]
+          },
+          {
+            "id": "stage.harness.glow",
+            "actorId": "stage",
+            "property": "harness.glow",
+            "initial": 0.0,
+            "events": [
+              {
+                "operation": "spring",
+                "atNanos": 14720000000,
+                "target": 0.45,
+                "responseSeconds": 0.42000002,
+                "dampingRatio": 1.0,
+                "positionThreshold": 0.001,
+                "velocityThreshold": 0.001
+              },
+              {
+                "operation": "spring",
+                "atNanos": 20300000000,
+                "target": 0.0,
+                "responseSeconds": 0.48000002,
+                "dampingRatio": 1.0,
+                "positionThreshold": 0.001,
+                "velocityThreshold": 0.001
+              }
+            ]
+          },
+          {
+            "id": "stage.req.age",
+            "actorId": "stage",
+            "property": "req.age",
+            "initial": -1.0,
+            "events": [
+              {
+                "operation": "set",
+                "atNanos": 16940000000,
+                "value": 0.0
+              },
+              {
+                "operation": "ease",
+                "atNanos": 16940000000,
+                "target": 4.0,
+                "durationNanos": 4000000000,
+                "curve": "linear"
+              }
+            ]
+          },
+          {
+            "id": "stage.req.flight",
+            "actorId": "stage",
+            "property": "req.flight",
+            "initial": 0.75,
+            "events": [
+              {
+                "operation": "set",
+                "atNanos": 16940000000,
+                "value": 0.75
+              }
+            ]
+          },
+          {
+            "id": "stage.harness.status",
+            "actorId": "stage",
+            "property": "harness.status",
+            "initial": 0.0,
+            "events": [
+              {
+                "operation": "spring",
+                "atNanos": 20300000000,
+                "target": 1.0,
+                "responseSeconds": 0.42000002,
+                "dampingRatio": 1.0,
+                "positionThreshold": 0.001,
+                "velocityThreshold": 0.001
+              },
+              {
+                "operation": "set",
+                "atNanos": 26840000000,
+                "value": 2.0
+              },
+              {
+                "operation": "set",
+                "atNanos": 27490000000,
+                "value": 1.0
+              },
+              {
+                "operation": "set",
+                "atNanos": 51099000000,
+                "value": 3.0
+              }
+            ]
+          },
+          {
+            "id": "stage.harness.dim",
+            "actorId": "stage",
+            "property": "harness.dim",
+            "initial": 0.0,
+            "events": [
+              {
+                "operation": "spring",
+                "atNanos": 20300000000,
+                "target": 0.38,
+                "responseSeconds": 0.6,
+                "dampingRatio": 1.0,
+                "positionThreshold": 0.001,
+                "velocityThreshold": 0.001
+              },
+              {
+                "operation": "spring",
+                "atNanos": 26840000000,
+                "target": 0.0,
+                "responseSeconds": 0.3,
+                "dampingRatio": 1.0,
+                "positionThreshold": 0.001,
+                "velocityThreshold": 0.001
+              },
+              {
+                "operation": "spring",
+                "atNanos": 27490000000,
+                "target": 0.38,
+                "responseSeconds": 0.48000002,
+                "dampingRatio": 1.0,
+                "positionThreshold": 0.001,
+                "velocityThreshold": 0.001
+              },
+              {
+                "operation": "spring",
+                "atNanos": 37419000000,
+                "target": 0.0,
+                "responseSeconds": 0.6,
+                "dampingRatio": 1.0,
+                "positionThreshold": 0.001,
+                "velocityThreshold": 0.001
+              }
+            ]
+          },
+          {
+            "id": "stage.camera.x",
+            "actorId": "stage",
+            "property": "camera.x",
+            "initial": 0.0,
+            "events": [
+              {
+                "operation": "spring",
+                "atNanos": 22640000000,
+                "target": 110.0,
+                "responseSeconds": 1.8000001,
+                "dampingRatio": 1.0,
+                "positionThreshold": 0.001,
+                "velocityThreshold": 0.001
+              },
+              {
+                "operation": "spring",
+                "atNanos": 26640000000,
+                "target": 0.0,
+                "responseSeconds": 1.6800001,
+                "dampingRatio": 1.0,
+                "positionThreshold": 0.001,
+                "velocityThreshold": 0.001
+              },
+              {
+                "operation": "spring",
+                "atNanos": 30840000000,
+                "target": -90.0,
+                "responseSeconds": 1.6800001,
+                "dampingRatio": 1.0,
+                "positionThreshold": 0.001,
+                "velocityThreshold": 0.001
+              },
+              {
+                "operation": "spring",
+                "atNanos": 37419000000,
+                "target": 0.0,
+                "responseSeconds": 1.8000001,
+                "dampingRatio": 1.0,
+                "positionThreshold": 0.001,
+                "velocityThreshold": 0.001
+              }
+            ]
+          },
+          {
+            "id": "stage.model.charge",
+            "actorId": "stage",
+            "property": "model.charge",
+            "initial": 0.0,
+            "events": [
+              {
+                "operation": "spring",
+                "atNanos": 22940000000,
+                "target": 0.75,
+                "responseSeconds": 0.72,
+                "dampingRatio": 1.0,
+                "positionThreshold": 0.001,
+                "velocityThreshold": 0.001
+              },
+              {
+                "operation": "spring",
+                "atNanos": 24890000000,
+                "target": 0.15,
+                "responseSeconds": 0.6,
+                "dampingRatio": 1.0,
+                "positionThreshold": 0.001,
+                "velocityThreshold": 0.001
+              }
+            ]
+          },
+          {
+            "id": "stage.model-ring.opacity",
+            "actorId": "stage",
+            "property": "model-ring.opacity",
+            "initial": 0.0,
+            "events": [
+              {
+                "operation": "spring",
+                "atNanos": 23090000000,
+                "target": 0.35,
+                "responseSeconds": 0.3,
+                "dampingRatio": 1.0,
+                "positionThreshold": 0.001,
+                "velocityThreshold": 0.001
+              },
+              {
+                "operation": "spring",
+                "atNanos": 24970000000,
+                "target": 0.0,
+                "responseSeconds": 0.6,
+                "dampingRatio": 1.0,
+                "positionThreshold": 0.001,
+                "velocityThreshold": 0.001
+              }
+            ]
+          },
+          {
+            "id": "stage.model-ring-outer.opacity",
+            "actorId": "stage",
+            "property": "model-ring-outer.opacity",
+            "initial": 0.0,
+            "events": [
+              {
+                "operation": "spring",
+                "atNanos": 23150000000,
+                "target": 0.5,
+                "responseSeconds": 0.3,
+                "dampingRatio": 1.0,
+                "positionThreshold": 0.001,
+                "velocityThreshold": 0.001
+              },
+              {
+                "operation": "spring",
+                "atNanos": 24890000000,
+                "target": 0.0,
+                "responseSeconds": 0.6,
+                "dampingRatio": 1.0,
+                "positionThreshold": 0.001,
+                "velocityThreshold": 0.001
+              }
+            ]
+          },
+          {
+            "id": "stage.tok-1.age",
+            "actorId": "stage",
+            "property": "tok-1.age",
+            "initial": -1.0,
+            "events": [
+              {
+                "operation": "set",
+                "atNanos": 22850000000,
+                "value": 0.0
+              },
+              {
+                "operation": "ease",
+                "atNanos": 22850000000,
+                "target": 4.0,
+                "durationNanos": 4000000000,
+                "curve": "linear"
+              }
+            ]
+          },
+          {
+            "id": "stage.tok-1.flight",
+            "actorId": "stage",
+            "property": "tok-1.flight",
+            "initial": 0.75,
+            "events": [
+              {
+                "operation": "set",
+                "atNanos": 22850000000,
+                "value": 0.75
+              }
+            ]
+          },
+          {
+            "id": "stage.tok-2.age",
+            "actorId": "stage",
+            "property": "tok-2.age",
+            "initial": -1.0,
+            "events": [
+              {
+                "operation": "set",
+                "atNanos": 23800000000,
+                "value": 0.0
+              },
+              {
+                "operation": "ease",
+                "atNanos": 23800000000,
+                "target": 4.0,
+                "durationNanos": 4000000000,
+                "curve": "linear"
+              }
+            ]
+          },
+          {
+            "id": "stage.tok-2.flight",
+            "actorId": "stage",
+            "property": "tok-2.flight",
+            "initial": 0.75,
+            "events": [
+              {
+                "operation": "set",
+                "atNanos": 23800000000,
+                "value": 0.75
+              }
+            ]
+          },
+          {
+            "id": "stage.harness.status-from",
+            "actorId": "stage",
+            "property": "harness.status-from",
+            "initial": -1.0,
+            "events": [
+              {
+                "operation": "set",
+                "atNanos": 26840000000,
+                "value": 1.0
+              },
+              {
+                "operation": "set",
+                "atNanos": 27090000000,
+                "value": -1.0
+              },
+              {
+                "operation": "set",
+                "atNanos": 27490000000,
+                "value": 2.0
+              },
+              {
+                "operation": "set",
+                "atNanos": 27790000000,
+                "value": -1.0
+              },
+              {
+                "operation": "set",
+                "atNanos": 51099000000,
+                "value": 1.0
+              },
+              {
+                "operation": "set",
+                "atNanos": 51399000000,
+                "value": -1.0
+              }
+            ]
+          },
+          {
+            "id": "stage.harness.swap",
+            "actorId": "stage",
+            "property": "harness.swap",
+            "initial": 1.0,
+            "events": [
+              {
+                "operation": "set",
+                "atNanos": 26840000000,
+                "value": 0.0
+              },
+              {
+                "operation": "ease",
+                "atNanos": 26840000000,
+                "target": 1.0,
+                "durationNanos": 250000000,
+                "curve": "smootherstep"
+              },
+              {
+                "operation": "set",
+                "atNanos": 27490000000,
+                "value": 0.0
+              },
+              {
+                "operation": "ease",
+                "atNanos": 27490000000,
+                "target": 1.0,
+                "durationNanos": 300000000,
+                "curve": "smootherstep"
+              },
+              {
+                "operation": "set",
+                "atNanos": 51099000000,
+                "value": 0.0
+              },
+              {
+                "operation": "ease",
+                "atNanos": 51099000000,
+                "target": 1.0,
+                "durationNanos": 300000000,
+                "curve": "smootherstep"
+              }
+            ]
+          },
+          {
+            "id": "stage.run-test.age",
+            "actorId": "stage",
+            "property": "run-test.age",
+            "initial": -1.0,
+            "events": [
+              {
+                "operation": "set",
+                "atNanos": 26500000000,
+                "value": 0.0
+              },
+              {
+                "operation": "ease",
+                "atNanos": 26500000000,
+                "target": 4.0,
+                "durationNanos": 4000000000,
+                "curve": "linear"
+              }
+            ]
+          },
+          {
+            "id": "stage.run-test.flight",
+            "actorId": "stage",
+            "property": "run-test.flight",
+            "initial": 0.55,
+            "events": [
+              {
+                "operation": "set",
+                "atNanos": 26500000000,
+                "value": 0.55
+              }
+            ]
+          },
+          {
+            "id": "stage.tools.flash",
+            "actorId": "stage",
+            "property": "tools.flash",
+            "initial": 0.0,
+            "events": [
+              {
+                "operation": "set",
+                "atNanos": 27390000000,
+                "value": 0.6
+              },
+              {
+                "operation": "ease",
+                "atNanos": 27390000000,
+                "target": 0.0,
+                "durationNanos": 800000000,
+                "curve": "cubic-out"
+              }
+            ]
+          },
+          {
+            "id": "stage.tools.status",
+            "actorId": "stage",
+            "property": "tools.status",
+            "initial": 0.0,
+            "events": [
+              {
+                "operation": "spring",
+                "atNanos": 27390000000,
+                "target": 1.0,
+                "responseSeconds": 0.36,
+                "dampingRatio": 1.0,
+                "positionThreshold": 0.001,
+                "velocityThreshold": 0.001
+              },
+              {
+                "operation": "set",
+                "atNanos": 28360000000,
+                "value": 2.0
+              }
+            ]
+          },
+          {
+            "id": "stage.tools.spinner",
+            "actorId": "stage",
+            "property": "tools.spinner",
+            "initial": -1.0,
+            "events": [
+              {
+                "operation": "set",
+                "atNanos": 27390000000,
+                "value": 0.0
+              },
+              {
+                "operation": "ease",
+                "atNanos": 27390000000,
+                "target": 41.808,
+                "durationNanos": 41808000000,
+                "curve": "linear"
+              }
+            ]
+          },
+          {
+            "id": "stage.test-ok.age",
+            "actorId": "stage",
+            "property": "test-ok.age",
+            "initial": -1.0,
+            "events": [
+              {
+                "operation": "set",
+                "atNanos": 28020000000,
+                "value": 0.0
+              },
+              {
+                "operation": "ease",
+                "atNanos": 28020000000,
+                "target": 4.0,
+                "durationNanos": 4000000000,
+                "curve": "linear"
+              }
+            ]
+          },
+          {
+            "id": "stage.test-ok.flight",
+            "actorId": "stage",
+            "property": "test-ok.flight",
+            "initial": 0.55,
+            "events": [
+              {
+                "operation": "set",
+                "atNanos": 28020000000,
+                "value": 0.55
+              }
+            ]
+          },
+          {
+            "id": "stage.tools.mark",
+            "actorId": "stage",
+            "property": "tools.mark",
+            "initial": -1.0,
+            "events": [
+              {
+                "operation": "set",
+                "atNanos": 28483264341,
+                "value": 0.0
+              },
+              {
+                "operation": "ease",
+                "atNanos": 28483264341,
+                "target": 40.714,
+                "durationNanos": 40714000000,
+                "curve": "linear"
+              }
+            ]
+          },
+          {
+            "id": "stage.tools.status-from",
+            "actorId": "stage",
+            "property": "tools.status-from",
+            "initial": -1.0,
+            "events": [
+              {
+                "operation": "set",
+                "atNanos": 28360000000,
+                "value": 1.0
+              },
+              {
+                "operation": "set",
+                "atNanos": 28660000000,
+                "value": -1.0
+              }
+            ]
+          },
+          {
+            "id": "stage.tools.swap",
+            "actorId": "stage",
+            "property": "tools.swap",
+            "initial": 1.0,
+            "events": [
+              {
+                "operation": "set",
+                "atNanos": 28360000000,
+                "value": 0.0
+              },
+              {
+                "operation": "ease",
+                "atNanos": 28360000000,
+                "target": 1.0,
+                "durationNanos": 300000000,
+                "curve": "smootherstep"
+              }
+            ]
+          },
+          {
+            "id": "stage.tok-3.age",
+            "actorId": "stage",
+            "property": "tok-3.age",
+            "initial": -1.0,
+            "events": [
+              {
+                "operation": "set",
+                "atNanos": 28990000000,
+                "value": 0.0
+              },
+              {
+                "operation": "ease",
+                "atNanos": 28990000000,
+                "target": 4.0,
+                "durationNanos": 4000000000,
+                "curve": "linear"
+              }
+            ]
+          },
+          {
+            "id": "stage.tok-3.flight",
+            "actorId": "stage",
+            "property": "tok-3.flight",
+            "initial": 0.65,
+            "events": [
+              {
+                "operation": "set",
+                "atNanos": 28990000000,
+                "value": 0.65
+              }
+            ]
+          },
+          {
+            "id": "stage.wait-note.opacity",
+            "actorId": "stage",
+            "property": "wait-note.opacity",
+            "initial": 0.0,
+            "events": [
+              {
+                "operation": "set",
+                "atNanos": 31140000000,
+                "value": 1.0
+              }
+            ]
+          },
+          {
+            "id": "stage.wait-note.typed",
+            "actorId": "stage",
+            "property": "wait-note.typed",
+            "initial": 0.0,
+            "events": [
+              {
+                "operation": "set",
+                "atNanos": 31161739130,
+                "value": 0.025
+              },
+              {
+                "operation": "set",
+                "atNanos": 31183478260,
+                "value": 0.05
+              },
+              {
+                "operation": "set",
+                "atNanos": 31205217390,
+                "value": 0.075
+              },
+              {
+                "operation": "set",
+                "atNanos": 31226956520,
+                "value": 0.1
+              },
+              {
+                "operation": "set",
+                "atNanos": 31248695650,
+                "value": 0.125
+              },
+              {
+                "operation": "set",
+                "atNanos": 31270434780,
+                "value": 0.15
+              },
+              {
+                "operation": "set",
+                "atNanos": 31292173910,
+                "value": 0.175
+              },
+              {
+                "operation": "set",
+                "atNanos": 31313913040,
+                "value": 0.2
+              },
+              {
+                "operation": "set",
+                "atNanos": 31335652170,
+                "value": 0.225
+              },
+              {
+                "operation": "set",
+                "atNanos": 31357391300,
+                "value": 0.25
+              },
+              {
+                "operation": "set",
+                "atNanos": 31379130430,
+                "value": 0.275
+              },
+              {
+                "operation": "set",
+                "atNanos": 31400869560,
+                "value": 0.3
+              },
+              {
+                "operation": "set",
+                "atNanos": 31422608690,
+                "value": 0.325
+              },
+              {
+                "operation": "set",
+                "atNanos": 31444347820,
+                "value": 0.35
+              },
+              {
+                "operation": "set",
+                "atNanos": 31466086950,
+                "value": 0.375
+              },
+              {
+                "operation": "set",
+                "atNanos": 31487826080,
+                "value": 0.4
+              },
+              {
+                "operation": "set",
+                "atNanos": 31509565210,
+                "value": 0.425
+              },
+              {
+                "operation": "set",
+                "atNanos": 31531304340,
+                "value": 0.45
+              },
+              {
+                "operation": "set",
+                "atNanos": 31553043470,
+                "value": 0.475
+              },
+              {
+                "operation": "set",
+                "atNanos": 31574782600,
+                "value": 0.5
+              },
+              {
+                "operation": "set",
+                "atNanos": 31596521730,
+                "value": 0.525
+              },
+              {
+                "operation": "set",
+                "atNanos": 31618260860,
+                "value": 0.55
+              },
+              {
+                "operation": "set",
+                "atNanos": 31639999990,
+                "value": 0.575
+              },
+              {
+                "operation": "set",
+                "atNanos": 31661739120,
+                "value": 0.6
+              },
+              {
+                "operation": "set",
+                "atNanos": 31683478250,
+                "value": 0.625
+              },
+              {
+                "operation": "set",
+                "atNanos": 31705217380,
+                "value": 0.65
+              },
+              {
+                "operation": "set",
+                "atNanos": 31726956510,
+                "value": 0.675
+              },
+              {
+                "operation": "set",
+                "atNanos": 31748695640,
+                "value": 0.7
+              },
+              {
+                "operation": "set",
+                "atNanos": 31770434770,
+                "value": 0.725
+              },
+              {
+                "operation": "set",
+                "atNanos": 31792173900,
+                "value": 0.75
+              },
+              {
+                "operation": "set",
+                "atNanos": 31813913030,
+                "value": 0.775
+              },
+              {
+                "operation": "set",
+                "atNanos": 31835652160,
+                "value": 0.8
+              },
+              {
+                "operation": "set",
+                "atNanos": 31857391290,
+                "value": 0.825
+              },
+              {
+                "operation": "set",
+                "atNanos": 31879130420,
+                "value": 0.85
+              },
+              {
+                "operation": "set",
+                "atNanos": 31900869550,
+                "value": 0.875
+              },
+              {
+                "operation": "set",
+                "atNanos": 31922608680,
+                "value": 0.9
+              },
+              {
+                "operation": "set",
+                "atNanos": 31944347810,
+                "value": 0.925
+              },
+              {
+                "operation": "set",
+                "atNanos": 31966086940,
+                "value": 0.95
+              },
+              {
+                "operation": "set",
+                "atNanos": 31987826070,
+                "value": 0.975
+              },
+              {
+                "operation": "set",
+                "atNanos": 32009565200,
+                "value": 1.0
+              }
+            ]
+          },
+          {
+            "id": "chip-law.opacity",
+            "actorId": "chip-law",
+            "property": "opacity",
+            "initial": 0.0,
+            "events": [
+              {
+                "operation": "spring",
+                "atNanos": 37669000000,
+                "target": 1.0,
+                "responseSeconds": 0.42000002,
+                "dampingRatio": 1.0,
+                "positionThreshold": 0.001,
+                "velocityThreshold": 0.001
+              }
+            ]
+          },
+          {
+            "id": "chip-law.y",
+            "actorId": "chip-law",
+            "property": "y",
+            "initial": 10.0,
+            "events": [
+              {
+                "operation": "spring",
+                "atNanos": 37669000000,
+                "target": 0.0,
+                "responseSeconds": 0.54,
+                "dampingRatio": 1.0,
+                "positionThreshold": 0.001,
+                "velocityThreshold": 0.001
+              }
+            ]
+          },
+          {
+            "id": "stage.bar-title.opacity",
+            "actorId": "stage",
+            "property": "bar-title.opacity",
+            "initial": 0.0,
+            "events": [
+              {
+                "operation": "spring",
+                "atNanos": 37769000000,
+                "target": 1.0,
+                "responseSeconds": 0.54,
+                "dampingRatio": 1.0,
+                "positionThreshold": 0.001,
+                "velocityThreshold": 0.001
+              }
+            ]
+          },
+          {
+            "id": "stage.label-llm.opacity",
+            "actorId": "stage",
+            "property": "label-llm.opacity",
+            "initial": 0.0,
+            "events": [
+              {
+                "operation": "spring",
+                "atNanos": 41639000000,
+                "target": 1.0,
+                "responseSeconds": 0.54,
+                "dampingRatio": 1.0,
+                "positionThreshold": 0.001,
+                "velocityThreshold": 0.001
+              }
+            ]
+          },
+          {
+            "id": "stage.label-tools.opacity",
+            "actorId": "stage",
+            "property": "label-tools.opacity",
+            "initial": 0.0,
+            "events": [
+              {
+                "operation": "spring",
+                "atNanos": 43679000000,
+                "target": 1.0,
+                "responseSeconds": 0.54,
+                "dampingRatio": 1.0,
+                "positionThreshold": 0.001,
+                "velocityThreshold": 0.001
+              }
+            ]
+          },
+          {
+            "id": "stage.bar-harness.flash",
+            "actorId": "stage",
+            "property": "bar-harness.flash",
+            "initial": 0.0,
+            "events": [
+              {
+                "operation": "set",
+                "atNanos": 46439000000,
+                "value": 0.85
+              },
+              {
+                "operation": "ease",
+                "atNanos": 46439000000,
+                "target": 0.0,
+                "durationNanos": 800000000,
+                "curve": "cubic-out"
+              },
+              {
+                "operation": "set",
+                "atNanos": 51099000000,
+                "value": 1.0
+              },
+              {
+                "operation": "ease",
+                "atNanos": 51099000000,
+                "target": 0.0,
+                "durationNanos": 800000000,
+                "curve": "cubic-out"
+              }
+            ]
+          },
+          {
+            "id": "stage.label-harness.opacity",
+            "actorId": "stage",
+            "property": "label-harness.opacity",
+            "initial": 0.0,
+            "events": [
+              {
+                "operation": "spring",
+                "atNanos": 46539000000,
+                "target": 1.0,
+                "responseSeconds": 0.48000002,
+                "dampingRatio": 1.0,
+                "positionThreshold": 0.001,
+                "velocityThreshold": 0.001
+              }
+            ]
+          },
+          {
+            "id": "stage.label-speedup.opacity",
+            "actorId": "stage",
+            "property": "label-speedup.opacity",
+            "initial": 0.0,
+            "events": [
+              {
+                "operation": "set",
+                "atNanos": 54239000000,
+                "value": 1.0
+              }
+            ]
+          },
+          {
+            "id": "stage.label-speedup.typed",
+            "actorId": "stage",
+            "property": "label-speedup.typed",
+            "initial": 0.0,
+            "events": [
+              {
+                "operation": "set",
+                "atNanos": 54259833333,
+                "value": 0.016666668
+              },
+              {
+                "operation": "set",
+                "atNanos": 54280666666,
+                "value": 0.033333335
+              },
+              {
+                "operation": "set",
+                "atNanos": 54301499999,
+                "value": 0.05
+              },
+              {
+                "operation": "set",
+                "atNanos": 54322333332,
+                "value": 0.06666667
+              },
+              {
+                "operation": "set",
+                "atNanos": 54343166665,
+                "value": 0.083333336
+              },
+              {
+                "operation": "set",
+                "atNanos": 54363999998,
+                "value": 0.1
+              },
+              {
+                "operation": "set",
+                "atNanos": 54384833331,
+                "value": 0.11666667
+              },
+              {
+                "operation": "set",
+                "atNanos": 54405666664,
+                "value": 0.13333334
+              },
+              {
+                "operation": "set",
+                "atNanos": 54426499997,
+                "value": 0.15
+              },
+              {
+                "operation": "set",
+                "atNanos": 54447333330,
+                "value": 0.16666667
+              },
+              {
+                "operation": "set",
+                "atNanos": 54468166663,
+                "value": 0.18333334
+              },
+              {
+                "operation": "set",
+                "atNanos": 54488999996,
+                "value": 0.2
+              },
+              {
+                "operation": "set",
+                "atNanos": 54509833329,
+                "value": 0.21666667
+              },
+              {
+                "operation": "set",
+                "atNanos": 54530666662,
+                "value": 0.23333333
+              },
+              {
+                "operation": "set",
+                "atNanos": 54551499995,
+                "value": 0.25
+              },
+              {
+                "operation": "set",
+                "atNanos": 54572333328,
+                "value": 0.26666668
+              },
+              {
+                "operation": "set",
+                "atNanos": 54593166661,
+                "value": 0.28333333
+              },
+              {
+                "operation": "set",
+                "atNanos": 54613999994,
+                "value": 0.3
+              },
+              {
+                "operation": "set",
+                "atNanos": 54634833327,
+                "value": 0.31666666
+              },
+              {
+                "operation": "set",
+                "atNanos": 54655666660,
+                "value": 0.33333334
+              },
+              {
+                "operation": "set",
+                "atNanos": 54676499993,
+                "value": 0.35
+              },
+              {
+                "operation": "set",
+                "atNanos": 54697333326,
+                "value": 0.36666667
+              },
+              {
+                "operation": "set",
+                "atNanos": 54718166659,
+                "value": 0.38333333
+              },
+              {
+                "operation": "set",
+                "atNanos": 54738999992,
+                "value": 0.4
+              },
+              {
+                "operation": "set",
+                "atNanos": 54759833325,
+                "value": 0.41666666
+              },
+              {
+                "operation": "set",
+                "atNanos": 54780666658,
+                "value": 0.43333334
+              },
+              {
+                "operation": "set",
+                "atNanos": 54801499991,
+                "value": 0.45
+              },
+              {
+                "operation": "set",
+                "atNanos": 54822333324,
+                "value": 0.46666667
+              },
+              {
+                "operation": "set",
+                "atNanos": 54843166657,
+                "value": 0.48333332
+              },
+              {
+                "operation": "set",
+                "atNanos": 54863999990,
+                "value": 0.5
+              },
+              {
+                "operation": "set",
+                "atNanos": 54884833323,
+                "value": 0.51666665
+              },
+              {
+                "operation": "set",
+                "atNanos": 54905666656,
+                "value": 0.53333336
+              },
+              {
+                "operation": "set",
+                "atNanos": 54926499989,
+                "value": 0.55
+              },
+              {
+                "operation": "set",
+                "atNanos": 54947333322,
+                "value": 0.56666666
+              },
+              {
+                "operation": "set",
+                "atNanos": 54968166655,
+                "value": 0.5833333
+              },
+              {
+                "operation": "set",
+                "atNanos": 54988999988,
+                "value": 0.6
+              },
+              {
+                "operation": "set",
+                "atNanos": 55009833321,
+                "value": 0.6166667
+              },
+              {
+                "operation": "set",
+                "atNanos": 55030666654,
+                "value": 0.6333333
+              },
+              {
+                "operation": "set",
+                "atNanos": 55051499987,
+                "value": 0.65
+              },
+              {
+                "operation": "set",
+                "atNanos": 55072333320,
+                "value": 0.6666667
+              },
+              {
+                "operation": "set",
+                "atNanos": 55093166653,
+                "value": 0.68333334
+              },
+              {
+                "operation": "set",
+                "atNanos": 55113999986,
+                "value": 0.7
+              },
+              {
+                "operation": "set",
+                "atNanos": 55134833319,
+                "value": 0.71666664
+              },
+              {
+                "operation": "set",
+                "atNanos": 55155666652,
+                "value": 0.73333335
+              },
+              {
+                "operation": "set",
+                "atNanos": 55176499985,
+                "value": 0.75
+              },
+              {
+                "operation": "set",
+                "atNanos": 55197333318,
+                "value": 0.76666665
+              },
+              {
+                "operation": "set",
+                "atNanos": 55218166651,
+                "value": 0.78333336
+              },
+              {
+                "operation": "set",
+                "atNanos": 55238999984,
+                "value": 0.8
+              },
+              {
+                "operation": "set",
+                "atNanos": 55259833317,
+                "value": 0.81666666
+              },
+              {
+                "operation": "set",
+                "atNanos": 55280666650,
+                "value": 0.8333333
+              },
+              {
+                "operation": "set",
+                "atNanos": 55301499983,
+                "value": 0.85
+              },
+              {
+                "operation": "set",
+                "atNanos": 55322333316,
+                "value": 0.8666667
+              },
+              {
+                "operation": "set",
+                "atNanos": 55343166649,
+                "value": 0.8833333
+              },
+              {
+                "operation": "set",
+                "atNanos": 55363999982,
+                "value": 0.9
+              },
+              {
+                "operation": "set",
+                "atNanos": 55384833315,
+                "value": 0.9166667
+              },
+              {
+                "operation": "set",
+                "atNanos": 55405666648,
+                "value": 0.93333334
+              },
+              {
+                "operation": "set",
+                "atNanos": 55426499981,
+                "value": 0.95
+              },
+              {
+                "operation": "set",
+                "atNanos": 55447333314,
+                "value": 0.96666664
+              },
+              {
+                "operation": "set",
+                "atNanos": 55468166647,
+                "value": 0.98333335
+              },
+              {
+                "operation": "set",
+                "atNanos": 55488999980,
+                "value": 1.0
+              }
+            ]
+          },
+          {
+            "id": "footer-scale.opacity",
+            "actorId": "footer-scale",
+            "property": "opacity",
+            "initial": 0.0,
+            "events": [
+              {
+                "operation": "set",
+                "atNanos": 65359000000,
+                "value": 1.0
+              }
+            ]
+          },
+          {
+            "id": "footer-scale.typed",
+            "actorId": "footer-scale",
+            "property": "typed",
+            "initial": 0.0,
+            "events": [
+              {
+                "operation": "set",
+                "atNanos": 65381727272,
+                "value": 0.021276595
+              },
+              {
+                "operation": "set",
+                "atNanos": 65404454544,
+                "value": 0.04255319
+              },
+              {
+                "operation": "set",
+                "atNanos": 65427181816,
+                "value": 0.06382979
+              },
+              {
+                "operation": "set",
+                "atNanos": 65449909088,
+                "value": 0.08510638
+              },
+              {
+                "operation": "set",
+                "atNanos": 65472636360,
+                "value": 0.10638298
+              },
+              {
+                "operation": "set",
+                "atNanos": 65495363632,
+                "value": 0.12765957
+              },
+              {
+                "operation": "set",
+                "atNanos": 65518090904,
+                "value": 0.14893617
+              },
+              {
+                "operation": "set",
+                "atNanos": 65540818176,
+                "value": 0.17021276
+              },
+              {
+                "operation": "set",
+                "atNanos": 65563545448,
+                "value": 0.19148937
+              },
+              {
+                "operation": "set",
+                "atNanos": 65586272720,
+                "value": 0.21276596
+              },
+              {
+                "operation": "set",
+                "atNanos": 65608999992,
+                "value": 0.23404256
+              },
+              {
+                "operation": "set",
+                "atNanos": 65631727264,
+                "value": 0.25531915
+              },
+              {
+                "operation": "set",
+                "atNanos": 65654454536,
+                "value": 0.27659574
+              },
+              {
+                "operation": "set",
+                "atNanos": 65677181808,
+                "value": 0.29787233
+              },
+              {
+                "operation": "set",
+                "atNanos": 65699909080,
+                "value": 0.31914893
+              },
+              {
+                "operation": "set",
+                "atNanos": 65722636352,
+                "value": 0.34042552
+              },
+              {
+                "operation": "set",
+                "atNanos": 65745363624,
+                "value": 0.3617021
+              },
+              {
+                "operation": "set",
+                "atNanos": 65768090896,
+                "value": 0.38297874
+              },
+              {
+                "operation": "set",
+                "atNanos": 65790818168,
+                "value": 0.40425533
+              },
+              {
+                "operation": "set",
+                "atNanos": 65813545440,
+                "value": 0.42553192
+              },
+              {
+                "operation": "set",
+                "atNanos": 65836272712,
+                "value": 0.44680852
+              },
+              {
+                "operation": "set",
+                "atNanos": 65858999984,
+                "value": 0.4680851
+              },
+              {
+                "operation": "set",
+                "atNanos": 65881727256,
+                "value": 0.4893617
+              },
+              {
+                "operation": "set",
+                "atNanos": 65904454528,
+                "value": 0.5106383
+              },
+              {
+                "operation": "set",
+                "atNanos": 65927181800,
+                "value": 0.5319149
+              },
+              {
+                "operation": "set",
+                "atNanos": 65949909072,
+                "value": 0.5531915
+              },
+              {
+                "operation": "set",
+                "atNanos": 65972636344,
+                "value": 0.5744681
+              },
+              {
+                "operation": "set",
+                "atNanos": 65995363616,
+                "value": 0.59574467
+              },
+              {
+                "operation": "set",
+                "atNanos": 66018090888,
+                "value": 0.61702126
+              },
+              {
+                "operation": "set",
+                "atNanos": 66040818160,
+                "value": 0.63829786
+              },
+              {
+                "operation": "set",
+                "atNanos": 66063545432,
+                "value": 0.65957445
+              },
+              {
+                "operation": "set",
+                "atNanos": 66086272704,
+                "value": 0.68085104
+              },
+              {
+                "operation": "set",
+                "atNanos": 66108999976,
+                "value": 0.70212764
+              },
+              {
+                "operation": "set",
+                "atNanos": 66131727248,
+                "value": 0.7234042
+              },
+              {
+                "operation": "set",
+                "atNanos": 66154454520,
+                "value": 0.7446808
+              },
+              {
+                "operation": "set",
+                "atNanos": 66177181792,
+                "value": 0.7659575
+              },
+              {
+                "operation": "set",
+                "atNanos": 66199909064,
+                "value": 0.78723407
+              },
+              {
+                "operation": "set",
+                "atNanos": 66222636336,
+                "value": 0.80851066
+              },
+              {
+                "operation": "set",
+                "atNanos": 66245363608,
+                "value": 0.82978725
+              },
+              {
+                "operation": "set",
+                "atNanos": 66268090880,
+                "value": 0.85106385
+              },
+              {
+                "operation": "set",
+                "atNanos": 66290818152,
+                "value": 0.87234044
+              },
+              {
+                "operation": "set",
+                "atNanos": 66313545424,
+                "value": 0.89361703
+              },
+              {
+                "operation": "set",
+                "atNanos": 66336272696,
+                "value": 0.9148936
+              },
+              {
+                "operation": "set",
+                "atNanos": 66358999968,
+                "value": 0.9361702
+              },
+              {
+                "operation": "set",
+                "atNanos": 66381727240,
+                "value": 0.9574468
+              },
+              {
+                "operation": "set",
+                "atNanos": 66404454512,
+                "value": 0.9787234
+              },
+              {
+                "operation": "set",
+                "atNanos": 66427181784,
+                "value": 1.0
+              }
+            ]
+          },
+          {
+            "id": "footer-scale.caret",
+            "actorId": "footer-scale",
+            "property": "caret",
+            "initial": 0.0,
+            "events": [
+              {
+                "operation": "set",
+                "atNanos": 65359000000,
+                "value": 1.0
+              },
+              {
+                "operation": "spring",
+                "atNanos": 67227181795,
+                "target": 0.0,
+                "responseSeconds": 0.24000001,
+                "dampingRatio": 1.0,
+                "positionThreshold": 0.001,
+                "velocityThreshold": 0.001
+              }
+            ]
+          }
+        ],
+        "stateChannels": [],
+        "cues": [
+          {
+            "id": "turn-and-scale",
+            "startNanos": 0,
+            "endNanos": 69198000000
+          }
+        ],
+        "media": [
+          {
+            "id": "narration-turn",
+            "path": "media/5e25aab3bcde56c9.mp3",
+            "kind": "audio",
+            "role": "script",
+            "sourceStartNanos": 0,
+            "sourceEndNanos": 35279000000,
+            "timelineStartNanos": 1200000000,
+            "timelineEndNanos": 36479000000,
+            "gainDb": 0.0
+          },
+          {
+            "id": "narration-scale",
+            "path": "media/a9b0a929370edee7.mp3",
+            "kind": "audio",
+            "role": "script",
+            "sourceStartNanos": 0,
+            "sourceEndNanos": 29519000000,
+            "timelineStartNanos": 37279000000,
+            "timelineEndNanos": 66798000000,
+            "gainDb": 0.0
+          },
+          {
+            "id": "wire-0",
+            "path": "../../assets/visual-effects/task-running.wav",
+            "kind": "audio",
+            "role": "layer",
+            "sourceStartNanos": 0,
+            "sourceEndNanos": 140000000,
+            "timelineStartNanos": 1930000000,
+            "timelineEndNanos": 2070000000,
+            "gainDb": -20.0
+          },
+          {
+            "id": "wire-1",
+            "path": "../../assets/visual-effects/task-running.wav",
+            "kind": "audio",
+            "role": "layer",
+            "sourceStartNanos": 0,
+            "sourceEndNanos": 140000000,
+            "timelineStartNanos": 2070000000,
+            "timelineEndNanos": 2210000000,
+            "gainDb": -20.0
+          },
+          {
+            "id": "wire-2",
+            "path": "../../assets/visual-effects/task-running.wav",
+            "kind": "audio",
+            "role": "layer",
+            "sourceStartNanos": 0,
+            "sourceEndNanos": 140000000,
+            "timelineStartNanos": 2010000000,
+            "timelineEndNanos": 2150000000,
+            "gainDb": -20.0
+          },
+          {
+            "id": "req-send",
+            "path": "../../assets/opencode-hot-reload/save.wav",
+            "kind": "audio",
+            "role": "layer",
+            "sourceStartNanos": 0,
+            "sourceEndNanos": 160000000,
+            "timelineStartNanos": 17280000000,
+            "timelineEndNanos": 17440000000,
+            "gainDb": -9.0
+          },
+          {
+            "id": "test-send",
+            "path": "../../assets/opencode-hot-reload/save.wav",
+            "kind": "audio",
+            "role": "layer",
+            "sourceStartNanos": 0,
+            "sourceEndNanos": 160000000,
+            "timelineStartNanos": 26840000000,
+            "timelineEndNanos": 27000000000,
+            "gainDb": -11.0
+          },
+          {
+            "id": "test-mark",
+            "path": "../../assets/pr-walkthrough/mark.wav",
+            "kind": "audio",
+            "role": "layer",
+            "sourceStartNanos": 0,
+            "sourceEndNanos": 300000000,
+            "timelineStartNanos": 28943264349,
+            "timelineEndNanos": 29243264349,
+            "gainDb": -16.0
+          },
+          {
+            "id": "bar-llm-in",
+            "path": "../../assets/opencode-hot-reload/save.wav",
+            "kind": "audio",
+            "role": "layer",
+            "sourceStartNanos": 0,
+            "sourceEndNanos": 160000000,
+            "timelineStartNanos": 41439000000,
+            "timelineEndNanos": 41599000000,
+            "gainDb": -14.0
+          },
+          {
+            "id": "bar-tools-in",
+            "path": "../../assets/visual-effects/task-running.wav",
+            "kind": "audio",
+            "role": "layer",
+            "sourceStartNanos": 0,
+            "sourceEndNanos": 140000000,
+            "timelineStartNanos": 43499000000,
+            "timelineEndNanos": 43639000000,
+            "gainDb": -14.0
+          },
+          {
+            "id": "sliver-in",
+            "path": "../../assets/visual-effects/task-running.wav",
+            "kind": "audio",
+            "role": "layer",
+            "sourceStartNanos": 0,
+            "sourceEndNanos": 140000000,
+            "timelineStartNanos": 46439000000,
+            "timelineEndNanos": 46579000000,
+            "gainDb": -11.0
+          },
+          {
+            "id": "fast-sparkle",
+            "path": "../../assets/psychopomp-intro/sparkle.wav",
+            "kind": "audio",
+            "role": "layer",
+            "sourceStartNanos": 0,
+            "sourceEndNanos": 1480000000,
+            "timelineStartNanos": 51099000000,
+            "timelineEndNanos": 52579000000,
+            "gainDb": -12.0
+          },
+          {
+            "id": "tiny-roll",
+            "path": "../../assets/visual-effects/task-reset.wav",
+            "kind": "audio",
+            "role": "layer",
+            "sourceStartNanos": 0,
+            "sourceEndNanos": 340000000,
+            "timelineStartNanos": 54239000000,
+            "timelineEndNanos": 54579000000,
+            "gainDb": -13.0
+          }
+        ]
+      }
+    }
+  ]
+}

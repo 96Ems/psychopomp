@@ -34,11 +34,11 @@ mod chat;
 mod component_prototype;
 pub(crate) mod delivery;
 mod editor;
+mod footage;
 mod generated;
 mod grid;
 mod header;
 mod ide;
-mod image;
 mod lanes;
 mod lens;
 mod lower_third;
@@ -61,7 +61,6 @@ mod tree;
 mod value;
 mod venn;
 pub(crate) mod verify;
-mod video;
 mod viz;
 
 use editor::PreparedEditor;
@@ -461,13 +460,14 @@ struct PreparedPlan {
     callouts: Vec<callout::PreparedCallout>,
     lenses: Vec<lens::PreparedLens>,
     headers: Vec<header::PreparedHeader>,
-    videos: Vec<video::PreparedVideo>,
+    /// Video Cards, images, footage overlays, and Stage footage, with the
+    /// store their frames come from.
+    footage: footage::Footage,
     terminals: Vec<terminal::PreparedTerminal>,
     chats: Vec<chat::PreparedChat>,
     changed_files: Vec<changed_files::PreparedChangedFiles>,
     lower_thirds: Vec<lower_third::PreparedLowerThird>,
     viz: viz::PreparedViz,
-    images: Vec<image::PreparedImage>,
 }
 
 // A prepared scene exposes a read-only view of its compiled data. There is no
@@ -538,14 +538,13 @@ impl PreparedPlan {
             trees,
             plots,
             lanes,
-            videos,
+            footage,
             callouts,
             terminals,
             chats,
             changed_files,
             lower_thirds,
             viz,
-            images,
             lenses,
         } = input;
         let components = component_prototype::PreparedComponents::prepare_inputs(
@@ -594,10 +593,7 @@ impl PreparedPlan {
             .into_iter()
             .map(|input| input.prepare(renderer))
             .collect();
-        let videos = videos
-            .into_iter()
-            .map(|input| input.open(base))
-            .collect::<Result<Vec<_>>>()?;
+        let footage = footage.open(base)?;
         let chats = chats
             .into_iter()
             .map(|input| input.prepare(renderer))
@@ -607,10 +603,6 @@ impl PreparedPlan {
             .map(|input| input.prepare(renderer))
             .collect();
         let viz = viz.prepare(renderer);
-        let images = images
-            .into_iter()
-            .map(|input| input.open(base))
-            .collect::<Result<Vec<_>>>()?;
         let root = match root {
             preflight::RootPlan::Blank => PreparedRoot::Blank,
             preflight::RootPlan::Title(title) => PreparedRoot::Title(title),
@@ -619,7 +611,7 @@ impl PreparedPlan {
             } => PreparedRoot::Editor { editor, pointer },
             preflight::RootPlan::Grid(grid) => PreparedRoot::Grid(grid),
             preflight::RootPlan::Stage { id, recipe } => PreparedRoot::Stage(Box::new(
-                stage::PreparedStage::from_recipe(id, *recipe, renderer)?,
+                stage::PreparedStage::from_recipe(id, *recipe, &footage.stage_sizes(), renderer)?,
             )),
         };
         Ok(Self {
@@ -642,13 +634,12 @@ impl PreparedPlan {
             callouts,
             lenses,
             headers,
-            videos,
+            footage,
             terminals,
             chats,
             changed_files,
             lower_thirds,
             viz,
-            images,
         })
     }
 }
@@ -813,7 +804,8 @@ impl PreparedPlan {
     }
     fn visual_sample_key_using(&self, time: f64, timeline: &Timeline) -> Result<VisualSampleKey> {
         let mut key = self.compiled.visual_sample_key_using(time, timeline)?;
-        key.video_frames = self.video_frames(time);
+        key.video_frames = self.video_frames(time, timeline);
+        self.key_footage_playheads(&mut key);
         // A stage always moves (spin, flow, grain), so every temporal sample renders.
         let stage = matches!(&self.root, PreparedRoot::Stage(_));
         key.ambient_time = (stage
@@ -892,10 +884,18 @@ impl PreparedPlan {
             });
         };
         let timeline = &self.timeline;
-        let base =
-            stage.render_exposure(renderer, exposure, |actor, property, time, default| {
+        let base = stage.render_exposure(
+            renderer,
+            exposure,
+            |actor, property, time, default| {
                 self.property_value(timeline, actor, property, time, default)
-            })?;
+            },
+            |time| {
+                self.footage.stage_frames(time, |property, default| {
+                    self.property_value(timeline, stage.id(), property, time, default)
+                })
+            },
+        )?;
         let size = renderer.size();
         let overlays = crate::exposure::merge_equal_samples(exposure.iter().copied(), |time| {
             self.overlay_key(time, stage.id(), size)
@@ -1026,9 +1026,10 @@ impl PreparedPlan {
                     .map(|text| (text.id.as_str(), text.anchors.as_slice())),
             )
             .chain(
-                self.images
+                self.footage
+                    .overlays()
                     .iter()
-                    .map(|image| (image.id(), image.anchors())),
+                    .map(|footage| (footage.id(), footage.anchors())),
             )
     }
 
@@ -1107,19 +1108,67 @@ impl PreparedPlan {
                 *motion = [0; 4];
             }
         }
-        key.video_frames = self.video_frames(time);
+        key.video_frames = self.video_frames(time, &self.timeline);
+        self.key_footage_playheads(&mut key);
         key.ambient_time =
             (self.rolling_moves(time) || self.viz.moving(time)).then_some(time.to_bits());
         Ok(key)
     }
 
-    /// The source frame each video card shows: footage changes pixels
+    /// The source frame each footage overlay shows: footage changes pixels
     /// without any channel moving.
-    fn video_frames(&self, time: f64) -> Vec<u64> {
-        self.videos
+    fn video_frames(&self, time: f64, timeline: &Timeline) -> Vec<u64> {
+        self.footage
+            .overlays()
             .iter()
-            .map(|video| video.frame_index_at(time))
+            .map(|footage| {
+                self.footage
+                    .identity(footage, time, self.playhead(footage, time, timeline))
+            })
             .collect()
+    }
+
+    /// With `PSYCHOPOMP_FOOTAGE_STATS` set, how the footage store fared:
+    /// frames read from disk, shared hits, evictions, and peak memory.
+    fn report_footage(&self) {
+        if std::env::var_os("PSYCHOPOMP_FOOTAGE_STATS").is_none() {
+            return;
+        }
+        let stats = self.footage.stats();
+        eprintln!(
+            "footage: {} frames read, {} shared hits, {} evicted, peak {:.1} MiB resident",
+            stats.reads,
+            stats.hits,
+            stats.evictions,
+            stats.peak_bytes as f64 / (1 << 20) as f64
+        );
+    }
+
+    /// A footage overlay's written playhead, if its `time` channel exists.
+    fn playhead(
+        &self,
+        footage: &footage::PreparedFootage,
+        time: f64,
+        timeline: &Timeline,
+    ) -> Option<f32> {
+        self.motion_value(timeline, footage.id(), "time", time)
+            .map(|state| state.position)
+    }
+
+    /// A playing `time` channel moves every sample, but its pixels change
+    /// only when the source frame does, which `video_frames` already keys:
+    /// blank its motion, so samples within one source frame merge.
+    fn key_footage_playheads(&self, key: &mut VisualSampleKey) {
+        for footage in self.footage.overlays() {
+            if let Some(index) = self
+                .plan
+                .continuous_channels
+                .iter()
+                .position(|c| c.actor_id == footage.id() && c.property == "time")
+            {
+                key.motion[index] = [0; 4];
+            }
+        }
     }
 
     fn callout_pose(
@@ -1223,7 +1272,11 @@ impl PreparedPlan {
             self.property_value(timeline, actor, property, time, default)
         };
         Ok(match &self.root {
-            PreparedRoot::Stage(stage) => stage.render(renderer, time, value)?,
+            PreparedRoot::Stage(stage) => stage.render(renderer, time, value, |time| {
+                self.footage.stage_frames(time, |property, default| {
+                    self.property_value(timeline, stage.id(), property, time, default)
+                })
+            })?,
             PreparedRoot::Editor { editor, pointer } => {
                 editor.render(renderer, time, pointer.as_deref(), |actor, property, at| {
                     self.motion_value(timeline, actor, property, at)
@@ -1269,25 +1322,27 @@ impl PreparedPlan {
         let value = |actor: &str, property: &str, default: f32| {
             self.property_value(timeline, actor, property, time, default)
         };
-        // Video cards and images are the bottom media surface. Value tiles
-        // are diagram surfaces; ordinary text is their foreground annotation
-        // layer, regardless of declaration order.
+        // Video cards, images, and footage are the bottom media surface.
+        // Value tiles are diagram surfaces; ordinary text is their foreground
+        // annotation layer, regardless of declaration order.
         let size = renderer.size();
-        for video in &self.videos {
-            video.render(pixels, renderer, time, value)?;
-        }
-        for image in &self.images {
-            if let Some(center) = self.pin(
-                image.id(),
-                image.anchors(),
-                image.center(),
-                time,
-                timeline,
-                size,
-            ) {
-                image.render(pixels, renderer, center, value)?;
-            }
-        }
+        self.footage.render(
+            pixels,
+            renderer,
+            time,
+            |footage| {
+                let center = self.pin(
+                    footage.id(),
+                    footage.anchors(),
+                    footage.center(),
+                    time,
+                    timeline,
+                    size,
+                )?;
+                Some((center, self.playhead(footage, time, timeline)))
+            },
+            value,
+        )?;
         // Text-surface windows sit just above recordings, beneath diagrams and text.
         for terminal in &self.terminals {
             terminal.render(pixels, renderer, value)?;

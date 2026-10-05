@@ -1,0 +1,19 @@
+{
+ "wordTimings": [
+  {
+   "word": "Meow!",
+   "start": 0,
+   "end": 0.52
+  },
+  {
+   "word": "Meow!",
+   "start": 0.98,
+   "end": 1.7
+  },
+  {
+   "word": "Meow!",
+   "start": 2.72,
+   "end": 3.4
+  }
+ ]
+}

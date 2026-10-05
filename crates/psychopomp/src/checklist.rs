@@ -397,6 +397,7 @@ pub(crate) fn clock(
 
 /// Authoring handle for one checklist actor. It remembers when each item
 /// started, so a resolution waits for the spinner's next handoff crossing.
+#[derive(Clone, Debug)]
 pub struct ChecklistActor {
     actor: ActorHandle,
     plan: ChecklistPlan,
@@ -416,6 +417,10 @@ impl ChecklistActor {
             plan: plan.clone(),
             started: HashMap::new(),
         })
+    }
+
+    pub fn actor(&self) -> &ActorHandle {
+        &self.actor
     }
 
     pub fn id(&self) -> &str {

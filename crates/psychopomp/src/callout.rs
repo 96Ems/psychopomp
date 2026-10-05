@@ -384,14 +384,15 @@ impl CalloutPlan {
 }
 
 /// Authoring handle for one callout. Channels are declared on first use.
+#[derive(Clone, Debug)]
 pub struct CalloutActor {
     actor: ActorHandle,
     anchors: Vec<String>,
 }
 
 /// How long the leader takes to draw on, and when the label follows it.
-const DRAW_SECONDS: f32 = 0.42;
-const LABEL_DELAY: u64 = 280_000_000;
+const DRAW_SECONDS: f32 = crate::author::DRAW_SECONDS;
+const LABEL_DELAY: u64 = 180_000_000;
 
 impl CalloutActor {
     pub fn declare(
@@ -405,6 +406,10 @@ impl CalloutActor {
             actor,
             anchors: plan.anchors.iter().map(|a| a.id().to_owned()).collect(),
         })
+    }
+
+    pub fn actor(&self) -> &ActorHandle {
+        &self.actor
     }
 
     pub fn id(&self) -> &str {
@@ -434,10 +439,10 @@ impl CalloutActor {
 
     /// The label fades, then the leader retracts into its anchor.
     pub fn hide(&mut self, scene: &mut PlanBuilder, at_nanos: u64) {
-        let draw = self.channel(scene, "draw", 0.0);
-        let label = self.channel(scene, "label", 0.0);
+        let draw = self.channel(scene, "draw", 1.0);
+        let label = self.channel(scene, "label", 1.0);
         scene.spring(&label, at_nanos, 0.0, 0.2, 0.0);
-        scene.ease(&draw, at_nanos + 100_000_000, 0.0, 0.32, DRAW_CURVE);
+        scene.ease(&draw, at_nanos + 80_000_000, 0.0, 0.28, Ease::GLIDE);
     }
 
     /// Glide to `anchor`. Every weight springs on one critically damped

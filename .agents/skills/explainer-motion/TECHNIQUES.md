@@ -136,11 +136,25 @@ One clock per packet: `age` in seconds since dispatch, and its flight time.
 | Press | `e^(−t / 0.25)·(1 − (t / 0.9)²)` |
 | Inner rule, then outer border 0.14 s later | rise `sin(age / 0.18 · π/2)`, decay `(1 − (age − 0.18) / 1.1)²` |
 
-## Pacing
+## Pacing and motion tokens
 
 React 0.3 s, step 0.8 s, settle 1.2 s, read 1 s. Rows ripple 0.12 s apart
-(`author::stagger(rows, at, millis(120), ..)`). A reply launches no earlier than
-`stage::reply_after(arrival)`: its 340 ms gather waits for the request, plus an
-80 ms reaction.
+(`author::stagger(rows, at, author::STAGGER, ..)`). A reply launches no earlier
+than `stage::reply_after(arrival)`: its 340 ms gather waits for the request,
+plus an 80 ms reaction.
 Rewind: hold 0.15 s, then 1.25 s on `cubic-bezier(.65, 0, .25, 1)`, blurred by
 its speed.
+
+| Token (`SpringPlan` / `score::Feel`) | Parameters | Use |
+|---|---|---|
+| `PANEL` | `0.6 s`, bounce `0.12` | Rigid panel body settling into place (`StageActor::settle_in`, `window::settle_in`) |
+| `CONTENT` | `0.36 s`, bounce `0.0` | Ink following its container (`author::CONTENT_LAG` = `65 ms` behind), or overlay opacity entrance |
+| `ENTER` | `0.45 s`, bounce `0.0` | Spatial entrance and persistent layout room opening (caption/text rise, tree fold/scroll, code line motion, chat message slot) |
+| `EXIT` | `0.24 s`, bounce `0.0` | Clean exit fade in place — simpler and faster than entry |
+| `MOVE` | `0.6 s`, bounce `0.0` | Point-to-point spatial translation and anchor weight glide (`.with_thresholds(1e-5, 1e-5)`) |
+| `SNAP` | `0.3 s`, bounce `0.0` | Quick state change, focus shift, or status cross-fade |
+| `POP` | `0.32 s`, bounce `0.18` | Small floating UI pop (hover card, reaction pill, delta chip) |
+| `CAMERA` | `1.6 s`, bounce `0.0` | Camera move with weight and a natural tail |
+| `LIVELY` | `0.85 s`, bounce `0.2` | Hero orb landing with deliberate overshoot |
+| `Ease::DRAW` | `cubic-bezier(0.45, 0, 0.2, 1)` | Wire, leader, accent bar, and axis draw-on (`author::DRAW_SECONDS` = `0.42 s`) |
+| `Ease::GLIDE` | `smootherstep` | Minimum-jerk travel between resting holds |

@@ -116,6 +116,14 @@ pub enum Ease {
 }
 
 impl Ease {
+    /// Wire, leader, bar, and axis draw-on (`cubic-bezier(0.45, 0, 0.2, 1)`):
+    /// neither jumps off the start nor parks at the end.
+    pub const DRAW: Self = Self::CubicBezier([0.45, 0.0, 0.2, 1.0]);
+
+    /// Minimum-jerk travel between resting holds (`smootherstep`): velocity and
+    /// acceleration meet the holds continuously at both ends.
+    pub const GLIDE: Self = Self::Smootherstep;
+
     pub fn sample(self, t: f32) -> f32 {
         let t = t.clamp(0.0, 1.0);
         match self {

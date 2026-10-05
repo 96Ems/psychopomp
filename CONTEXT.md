@@ -28,6 +28,18 @@ The position and velocity of one animated scalar at a specific time. Carrying bo
 
 A lightweight Rust executable that may perform arbitrary calculations, imports, data loading, and control flow before emitting one Scene Plan. A Scene Program is durable authoring source; its emitted plan is compiled output.
 
+## Score
+
+The authoring surface (`psychopomp::score`) that schedules composable **Beats** onto a `PlanBuilder`. `PlanBuilder` is the sole mutable target; actor handles (`Stage`, `Camera`, `Caption`, `Callout`, `RollingNumber`, `Tree`, `Plot`, `Lanes`, `Sequence`, `Video`, `Terminal`, `Chat`, `ChangedFiles`, `LowerThird`, `Checklist`, `Meter`, `Bars`, `Subtitles`, `Confetti`, `Text`, `Image`, `Lens`, `Diagnostic`, `Hover`, `Cursor`) are cloneable values whose methods take `&self` and return Beats.
+
+## Beat
+
+A composable unit of choreography with denotation `Time (start_nanos) → (Span, Writes)`. Beats combine via `.then` / `chain!` (sequential), `.also` / `all!` / `at!` (parallel), `.with` (accompaniment at start), `.on_end` (reaction at completion), `.after` / `.early` (time offsets), and `stagger` / `each`, lowering directly to ordinary `PlanBuilder` events without changing the Scene Plan format.
+
+## Span
+
+The choreographic interval `[start, end]` in integer nanoseconds occupied by a Beat's primary action (for example when a panel is ready to wire, when a beam makes contact, or when a packet arrives), distinct from how long its physical springs or trails continue settling afterward. A `Span` implements `CueTime` (`.after`, `.early`, `.not_before`, `.reply`) so later beats can chain from or guard against it.
+
 ## Scene Plan
 
 A versioned, renderer-independent value containing stable actor declarations, continuous channels, state channels, exact cues, and media placements. Agents may inspect, validate, diff, and render a Scene Plan without recompiling or restarting the renderer.
@@ -114,7 +126,9 @@ posed by a pure function of the transition's progress: a push, slide, or whip
 moves both frames along a direction, smeared by their speed; an iris or ink
 reveals the incoming frame through a growing circle or blot; a **Match** flies
 one camera so a rectangle of the outgoing frame lands on a rectangle of the
-incoming one, and the element visibly becomes its counterpart; a flip or cube
+incoming one, and the element visibly becomes its counterpart (a **Round Match**
+carries the ellipse inside each rectangle rather than a card, so a dot opens as a
+circle onto the ball it becomes); a flip or cube
 turns the frames in perspective; a glitch, flash, or light leak hides a cut
 under corruption or light. A **J-cut** and an **L-cut** overlap two segments'
 sound but cut their pictures at the end or the start of the overlap.
@@ -195,6 +209,9 @@ to another; a fractional `status` instead passes through every entry between.
 Every Stage channel has one **Channel Default**, its resting value, which both
 authoring and rendering read when nothing writes it: an element is visible and
 whole at rest.
+A label may be set in a **Face** other than bundled CommitMono: a display serif
+for quiet titles, a light sans, or a condensed black for shouting. These are
+faces macOS installs, so another machine substitutes its own.
 An orb's **Burst** is a reversible destruction clock: gravitational collapse,
 hot combustion, an expanding refractive pressure wave, cooling smoke, and
 ballistic embers. Its procedural volume and trajectories need no simulation
@@ -237,7 +254,9 @@ slab), a dot-matrix plane, a lattice, a cylinder, or a torus. A form turns in 3D
 (ambient spin, an authored `rotation`, and `pitch` and `roll` for tumbling),
 pulses, shatters, and bursts like an orb. Wires attach to its sampled, turned
 silhouette (a convex hull), not a fixed circle. The orb's surface ripple is
-spherical and stays the orb's alone.
+spherical and stays the orb's alone. A form is solid at rest, its dark body
+hiding what passes behind it; a **Hollow** form (`solid` 0), such as a ring of
+dots, hides nothing.
 
 A **Morph** carries every point of a form from one of its shapes to the next.
 Point identity is stable: point `i` of every shape is the same particle, and each
@@ -276,6 +295,14 @@ again; the new dispatch restarts its clock.
 A monochrome SVG drawn on the Stage through the camera: a bundled Phosphor icon
 by name, or SVG path data. It is rasterized once into the Stage's text atlas and
 tinted by its Tone, so it sizes in world pixels and defocuses like text.
+
+## Sprite Sheet
+
+An image sequence of one portrait's expressions crossed with mouth shapes and a
+blink, laid out in `lipsync::SpriteSheet` slot order. A **Sprite** plays it by
+cutting a footage playhead to one frame at a time, so lip sync, blinks, and
+expression changes are pure functions of plan time. A **Viseme** is the mouth
+shape (`lipsync::Mouth`) a letter or pause shows on the sprite tick.
 
 ## Caption
 
@@ -411,8 +438,10 @@ Burned-in captions driven by narration word timings. Words chunk into pages of
 balanced lines no wider than a maximum, breaking at sentence ends, pauses, and
 width; each page replaces the last with a short fade and rise, its backing
 surface morphing rather than blinking. The spoken word takes the highlight
-tone with a pill that glides from word to word. Everything after measuring is a
-pure function of time and the word list.
+tone with a pill that glides from word to word. Revealed **word by word**, a
+page shows only what has been said, each line centered on it; a tilted page
+steps its words up or down while each stays upright. Everything after measuring
+is a pure function of time and the word list.
 ## Confetti
 A success burst: seeded paper pieces and sparkles launched in a cone under
 gravity and drag, fluttering and tumbling as they fall, all closed-form from
@@ -438,6 +467,31 @@ One planned image media placement (PNG, JPEG, or WebP) drawn bare or inside a
 framed card, through the same projected card as a Video Card, so it can move,
 scale, rotate, tilt, defocus, and pin to an Anchor. The file is decoded once;
 its width at rest is authored and its height follows the image.
+## Footage
+Any image, video, or image sequence used as scene material, drawn as a
+screen-space overlay (through the projected card, with anchors) or as a Stage
+element seen through the camera (with depth, parallax, and depth of field).
+Images and Video Cards are footage too. Footage is cut to a **Mask** (a
+rounded box, a circle, or a polygon), fills its box by a **Fit** (cover,
+contain, or fill), can sit on a card's frame, and takes a color **Treatment**
+(desaturate, tint toward a Tone, dim) that marks it as reference material.
+Its focus window zooms into a region; easing it between regions is a Ken
+Burns move.
+
+A **Clip** is how a source plays: the part of the file it trims to, a rate,
+whether it holds, loops, or bounces at the trim's ends, whether it runs in
+reverse, or one frame it freezes on. Its placement names the file and the span
+it is available in, and its timeline start is where the **Playhead** starts.
+The playhead is a channel of seconds into the trim: unwritten, the clip plays
+naturally; written, it freezes, ramps between speeds, stutters, or scrubs,
+each a pure function of plan time. A clip's own audio is an ordinary audio
+placement of the same file that follows its trim and start (and its loops),
+not its rate or retimes.
+
+A **Collage** is footage laid out by a layout (a grid, masonry columns, a
+scatter, a pile with seeded turns and overlaps, or a filmstrip) whose tiles a
+Scene Program staggers in. Layouts are values, not containers: each piece is
+its own actor.
 ## Lens
 A loupe of thick glass laid over the frame: a circle, or a capsule for reading
 along a line. Its flat top enlarges a focus point evenly, so what it shows stays

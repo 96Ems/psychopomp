@@ -122,14 +122,14 @@ fn stage_plan() -> StagePlan {
         ),
         StageElement::label(
             "shout-frame",
-            [960.0, 330.0, 160.0],
-            150.0,
+            [960.0, 276.0, 160.0],
+            132.0,
             &[("ANY FRAME!", Tone::Plain)],
         ),
         StageElement::label(
             "shout-order",
-            [960.0, 690.0, 160.0],
-            150.0,
+            [960.0, 730.0, 160.0],
+            132.0,
             &[("ANY ORDER!", Tone::Accent)],
         ),
         StageElement::label(

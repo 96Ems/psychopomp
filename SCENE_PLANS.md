@@ -26,6 +26,8 @@ machinery:
 | Labels, counters, or images riding a card or code range | `scenes/anchors` | `anchor::AnchorPlan` on captions, Rolling Numbers, `text::TextActor`, `image::ImageActor` (`move_to`) |
 | Magnifying a code range or a card's status | `scenes/loupe` | `lens::LensActor` (`show`, `move_to`, `slide`, `resize`, `focus`) |
 | Real product behavior from a screen recording | `scenes/video`, `scenes/opencode-session-tool` | `video::VideoActor` (`fly_in`, `focus`, `unfocus`) |
+| Collages of stills and clips; footage frozen, ramped, or placed in a Stage | `scenes/footage` | `footage::FootageActor` (`toss_in`, `treat`, `freeze`, `ramp`, `stutter`, `drift`), `footage::layout`, Stage `footage`, `StageActor::footage_playhead` |
+| Talking-head portraits lip-synced to narration; image swaps on the narration clock | `scenes/high-council` | `lipsync::visemes`, `blinks`, `frames`, `SpriteSheet`, `Sprite` (`show`, `perform`) over a frame-cut `footage` image sequence |
 | Before and after, side by side | `scenes/compare` | `ReelSegmentPlan::wiped` with `ReelWipePlan` holds and labels |
 | Changing scenes: pushes, irises, matched zooms, flips, cuts | `scenes/transitions` | `ReelPlan::new` with `ReelSegmentPlan::pushed`, `matched`, `irised`, `flipped`, ... |
 | A version or count changing | `scenes/rolling-number` | `rolling::RollingNumberActor::roll` |
@@ -552,7 +554,10 @@ For ElevenLabs v4, use `"engine": "elevenlabs"`, `"model": "eleven_v4"`, the
 voice ID, and optional `"settings": { "stability": 0.5, "similarity": 0.7 }` in
 the script. Inject `ELEVENLABS_API_KEY`; `speed` is unsupported. Directions in
 square brackets guide performance; Whisper timestamps the resulting speech.
-The script records model/request IDs and checkpoints completed clips. The
+The script records model/request IDs and checkpoints completed clips. Clips are
+normalized to -16 LUFS; the default evens the level within each clip, while
+`"loudness": "linear"` applies one gain per clip and limits peaks, so a whisper
+that builds to a scream keeps its swell (`scenes/balls-with-dots`). The
 flagship's directed example is `scenes/pr-walkthrough/narration-v4/script.json`.
 Copy it under `output/` before generating to keep alternate audio there:
 
@@ -617,7 +622,8 @@ plan and the overlap in nanoseconds; at most two segments are ever visible.
 | `slid(plan, ns, direction)` | `{ "slide": "up" }` | The segment slides over the dimming outgoing frame and settles |
 | `whipped(plan, ns, direction)` | `{ "whip": "right" }` | A whip pan: lean in, tear across in a streak, catch |
 | `irised(plan, ns, ring)` | `{ "iris": { "ring": true } }` | A soft circle opens from the focus center or the frame's |
-| `matched(plan, ns, from, to)` | `{ "match": [x, y, w, h] }` | `from` (the focus) in the outgoing frame flies onto `to` in this one |
+| `matched(plan, ns, from, to)` | `{ "match": [x, y, w, h] }` | `from` (the focus) in the outgoing frame flies onto `to` in this one, carried as a card with rounded corners |
+| `matched_round(plan, ns, from, to)` | `{ "match-round": [x, y, w, h] }` | A match whose element is round (a ball, an orb, a dot): the ellipse inside each rectangle is carried, so a square opens as a circle |
 | `flipped(plan, ns, direction)` | `{ "flip": "left" }` | The frame turns over like a card, this segment on its back |
 | `cubed(plan, ns, direction)` | `{ "cube": "up" }` | The frames are faces of a turning cube |
 | `inked(plan, ns)` | `"ink"` | The segment spreads in like ink, from the focus if set |
@@ -836,6 +842,66 @@ their fuller documentation elsewhere.
       image::media("trace", "../assets/anchors/trace.png", 0, scene.duration_nanos()))?;
   trace.fly_in(&mut scene, at);
   ```
+- `footage`: any image, video, or image sequence as an overlay. `clip` is how
+  the source plays: `media` (a planned `video` or `image` placement, made with
+  `footage::media(id, path, from, until)` or `footage::still`; an image
+  sequence is a printf pattern such as `frames/%03d.png`), `trim` (`[from, to]`
+  seconds into the source; the whole file by default), `rate` (1, up to 16),
+  `repeat` (`hold`, `loop`, or `bounce` at the trim's ends), `reverse`,
+  `freeze` (seconds into the trim, shown throughout), `fps` (decode rate: the
+  video's own up to 60, an image sequence's playback rate, 24), and
+  `resolution` (decoded width; by default about twice the widest it is shown).
+  The playhead starts at the placement's timeline start; the placement is the
+  span the file is available in, not the trim. Then `center`, `size` (the box at
+  scale 1), `rotation` (rest angle), `fit` (`cover`, `contain`, `fill`),
+  `mask` (`{ "shape": "rect", "radius": r }`, `{ "shape": "circle" }`, or
+  `{ "shape": "polygon", "points": [[x, y], ...] }` as fractions of the box),
+  `framed` (the Video Card's card), `title` (framed rectangles), `tint` (the
+  tone the `tint` channel moves toward, accent), and
+  [`anchors`](#pin-overlays-to-anchors). Channels: `x`, `y` (offsets),
+  `scale`, `opacity`, `rotation` (from rest), `tilt-x`, `tilt-y`, `blur`
+  (near-edge), `defocus` (whole surface), `focus-x`, `focus-y`, `focus-size`
+  (the Ken Burns window, fractions of the fitted frame), `time` (the playhead,
+  seconds into the trim; unwritten it plays naturally), `saturation` (1),
+  `tint` (0), `dim` (0), and `anchor.<id>`. `FootageActor` writes `fly_in`,
+  `toss_in(at, from, spin)`, `glide`, `to`, `move_to`, `focus`, `unfocus`,
+  `drift(at, until, from, to)`, `treat(at, Treatment::REFERENCE, seconds)`,
+  `hide`, the playhead beats `freeze`, `play(at, rate)`, `ramp(at, seconds,
+  rate)`, `retime(at, target, seconds, curve)`, `stutter(at, seconds, times)`
+  (each returns when it settles), and `audio(gain)`: the video's own audio as
+  placements that follow its trim and start, and its loops (not a rate, a
+  reverse, or retimes). `footage::layout` arranges collages as `Tile`s:
+  `grid`, `masonry`, `scatter`, `pile`, `filmstrip`, and `by_distance` (a ripple
+  order to stagger in); `FootagePlan::in_tile` places a clip in one.
+  `footage::probe(path, fps)` reads a source's size, rate, alpha, and audio
+  with ffprobe. Footage draws with the Video Cards and images, beneath other
+  overlays; plans using it are export-only.
+  ```rust
+  let tiles = layout::masonry([150.0, 90.0, 1620.0, 880.0], &aspects, 4, 22.0);
+  let wall = FootageActor::declare(&mut scene, "wall-3",
+      &FootagePlan::in_tile(Clip::new("countdown").looping(), tiles[3]).framed(),
+      footage::media("countdown", "../assets/footage/countdown.mp4", 0, scene.duration_nanos()))?;
+  wall.toss_in(&mut scene, at, [0.0, 900.0], 0.4);
+  wall.freeze(&mut scene, seconds(3.7));
+  wall.ramp(&mut scene, seconds(5.1), 1.2, 3.0); // from a standstill to 3x
+  ```
+  The showroom is `cargo run -p psychopomp-footage` (writes the reel
+  `target/footage.json` and its segments beside it); `-- --bench` writes a
+  twenty-clip wall to `target/footage-bench.json`. Decoded videos are cached
+  under `target/psychopomp-cache/footage` (safe to delete);
+  `PSYCHOPOMP_FOOTAGE_CACHE_MB` bounds frames in memory (384) and
+  `PSYCHOPOMP_FOOTAGE_STATS=1` reports the store after a render.
+- Lip sync (`psychopomp::lipsync`) plays a **Sprite Sheet** (an image
+  sequence of expressions × mouth shapes, `SpriteSheet::SLOTS` frames each:
+  `Mouth::ALL`, then a blink) through a `footage` overlay decoded at
+  `SPRITE_FPS` frames a second, cutting its `time` channel with `Set` events
+  instead of playing it. `visemes(words, TICK)` turns placed word timings into
+  mouth cues on a fixed 110 ms sprite tick (closed in pauses of at least
+  `PAUSE`, at rest after the last word); `blinks(from, until, salt)` scatters
+  deterministic blinks; `frames(sheet, expressions, mouths, blinks)` layers them
+  into frame cuts; `Sprite::perform` writes them. The same frame-cut trick
+  swaps any image layer on the narration clock (the council's speech box,
+  agenda, and banners). `scenes/high-council` is the worked example.
 - `callout`: `anchors` (one to eight; the first is where it starts), `lines` (one
   to three lines of `{ text, tone }` spans), `size` (24), `side` (where the label
   sits: `top`, `bottom`, `left`, `right`, `top-left`, `top-right` (default),
@@ -1053,8 +1119,13 @@ their fuller documentation elsewhere.
   bench.sort(&mut scene, later + 2 * SECOND, "after", SortOrder::Ascending)?;
 - `subtitles`: `origin` (lines' center x, the bottom line's center y),
   `maxWidth`, `size` (40), `maxLines` (2), `highlight` (accent), `backing`
-  (true), and `words` of `{ text, startNanos, endNanos }` on the plan clock.
-  Channels: `opacity`, `x`, `y`. Pages break at sentence ends, pauses, and
+  (true), `upcoming` (ink of words not yet said, 0.5; 0, or `.word_by_word()`,
+  reveals each word as it is said, the line centered on what has been said),
+  `face` (any Stage label face, `mono` by default; `.face(face)`), and `words`
+  of `{ text, startNanos, endNanos }` on the plan clock.
+  Channels: `opacity`, `x`, `y`, and `tilt` (radians, 0; each word steps up or
+  down by its distance from the center and stays upright, and the backing grows
+  to hold them). Pages break at sentence ends, pauses, and
   width, with balanced lines; the spoken word takes the highlight with a
   gliding pill. `SubtitlesPlan::from_spoken(&spoken, origin, max_width)` takes a
   placed narration clip's words (`.spoken(&other)` appends another). Plans
@@ -1105,9 +1176,15 @@ their fuller documentation elsewhere.
 - Editor Line Marks: `"mark": "added" | "removed"` on a line, with presence
   channel `mark.<line-id>`; `panel-x`, `panel-y`, and `panel-opacity` move and fade the card (the Stepped Diff
   enters on `panel-y`).
-- `stage` (root): `elements` of `kind` `card` (`at`, `size`, `title`, `status`,
+- `stage` (root): up to 128 `elements` of `kind` `card` (`at`, `size`, `title`, `status`,
   `tone`), `orb` (`at`, `radius`, `points`), `beam` (`from`, `to`, `bend`),
-  `packet` (`beam`, `reverse`, `label`), `label` (`at`, `size`, `spans`), `ring`
+  `packet` (`beam`, `reverse`, `label`), `label` (`at`, `size`, `spans`, and an
+  optional `face`: `mono` (bundled CommitMono, the default), `serif` and
+  `serif-italic` (Didot), `light` (Helvetica Neue Light), or `shout`
+  (Helvetica Neue Condensed Black), set with `StageElement::label(..).face(Face::Serif)`;
+  the last four are faces macOS installs, and a machine without them shapes the
+  text in whatever face its font database substitutes, so the same plan renders
+  in another typeface there), `ring`
   (`at`, `radius`, `thickness`), `bolt` and `shield` (see Effects below), and the
   diagram vocabulary below (`form`, `shape`, `path`, `icon`), plus `post` (`bloom`,
   `grain`, `vignette`,
@@ -1242,8 +1319,10 @@ their fuller documentation elsewhere.
     their defaults: `opacity` 1, `x`/`y`/`z` 0, `scale` 1, `blur` 0, `rotation` 0
     (about the vertical axis, plus ambient `spin` 1), `pitch` 0 and `roll` 0
     (radians; ease them to tumble), `morph` 0 (a fractional index into `shapes`),
-    `burst` -1, `shatter` 0, `pulse` 0, `hurt` 0. `StageActor::morph(form, at,
-    index, seconds)` eases to a shape on a minimum-jerk curve; `land` pulses a form.
+    `burst` -1, `shatter` 0, `pulse` 0, `hurt` 0, and `solid` 1 (the dark silhouette
+    that hides what passes behind; 0 leaves a ring of dots see-through).
+    `StageActor::morph(form, at, index, seconds)` eases to a shape on a minimum-jerk
+    curve; `land` pulses a form.
   - `shape`: `shape` is `{ "rect": [w, h] }`, `{ "circle": r }`, `{ "arc": { radius,
     start, sweep } }` (turns clockwise from twelve o'clock), or `{ "polygon": [[x,
     y], ...] }` relative to `at`. `corner` rounds a rectangle or polygon; `fill` is a
@@ -1272,6 +1351,16 @@ their fuller documentation elsewhere.
     `stage::ICONS`, from `assets/icons`, MIT) or `path` (SVG path data, filled, in a
     `view`-unit square, 256), and `tone` (plain draws in the text color).
     Channels: `opacity` 1, `x`/`y`/`z` 0, `scale` 1, `blur` 0, `flash` 0.
+  - `footage`: `size` (world pixels), `clip`, `fit`, and `mask` as for the
+    [`footage`](#recipe-payloads-and-channels) overlay, `framed` (a card's mat
+    and rim), and `tint` (a tone, accent). A camera-facing quad, like a card,
+    so it takes depth, parallax, draw order, depth of field, follows, and
+    anchors. Channels: `opacity` 1, `x`/`y`/`z` 0, `scale` 1, `blur` 0,
+    `rotation` 0, `focus-x`/`focus-y` 0.5, `focus-size` 1, `time` (the
+    playhead; unwritten it plays naturally), `saturation` 1, `tint` 0, `dim` 0.
+    Its clip's media is a plan placement (`scene.media(footage::media(..))`);
+    `StageActor::footage_playhead(element, &placement)` returns a `Playhead`
+    for `freeze`, `play`, `ramp`, `retime`, `seek`, and `stutter`.
 - Orb `rotation` is an angular offset in radians; animate it for a spin entrance
   rather than changing the ambient `spin` multiplier. `blur` adds defocus in world
   pixels. `burst` defaults to -1 (intact): set 0 on impact and ease linearly to
@@ -1311,6 +1400,13 @@ Continuous channel events are `set`, `spring`, and `ease`
 `curve` one of `linear`, `smoothstep`, `smootherstep`, `cubic-out`, `cubic-in-out`,
 `{ "decelerate": s }`, or `{ "cubic-bezier": [x1, y1, x2, y2] }`). Use `ease` for
 timed curves; never approximate one with stepped `set` events, which stutter.
+Beats authored independently may write one channel out of time order, and a
+segment cut from a longer gesture may write past its end:
+`scene.sort_events()` orders each channel's events by time (keeping the source
+order at one instant), and `scene.drop_events_after_end()` drops events that
+start after the plan's duration, before `finish` (`scenes/balls-v3`).
+`scene.channel_ids()` lists continuous channels in declaration order, the index a
+`continuousChannels[n]` validation path names.
 Reusable math is `psychopomp::math` (`lerp`, `remap_clamp`, `smoothstep`, `easing`,
 `dynamics::settle`, `curve::Polyline`, `shapes::connect`, glam vectors); use it in
 Scene Programs too. `--theme opencode` renders with the OpenCode TUI's tokens;
@@ -1418,47 +1514,64 @@ let plan = scene.finish()?;
 
 Renderer Recipe payloads remain adapter-owned. The lightweight core validates stable IDs, channel references, event ordering, finite values, cue ranges, exact media ranges, and Scene Plan versioning without knowing what a Task, editor, Video Card, or title card looks like.
 
-### Author With Timing Helpers
+### Author With The Score DSL
 
-Authoring helpers emit ordinary events; none changes the plan format.
+`psychopomp::score` is the primary way to author choreography. `PlanBuilder` is the only mutable binding; actor handles (`Stage`, `Camera`, `Caption`, `Callout`, `RollingNumber`, `Tree`, `Plot`, `Lanes`, `Sequence`, `Video`, `Terminal`, `Chat`, `ChangedFiles`, `LowerThird`, `Checklist`, `Meter`, `Bars`, `Subtitles`, `Confetti`, `Text`, `Image`, `Lens`, `Diagnostic`, `Hover`, `Cursor`) and sounds (`sfx::*.beat(id, gain_db)`, `audio.beat(gain_db)`) are immutable `Clone` values whose methods take `&self` and return composable `Beat`s (`Time -> (Span, Writes)`). Every combinator compiles directly to ordinary `PlanBuilder` events—none changes the Scene Plan format:
 
 ```rust
-use psychopomp::author::{PlanTime, millis, seconds, spread, stagger};
-use psychopomp::stage::reply_after;
+use psychopomp::{
+    all, at,
+    author::{PlanBuilder, millis, seconds, spread},
+    plan::SpringPlan,
+    score::{Beat, Caption, CueTime, Stage, each, stagger},
+    sfx,
+    stage::Move,
+};
 
 // Narration: a lead, then each clip and the gap after it.
 let reading = narration.reading(seconds(1.6), [("before", seconds(2.4)), ("after", seconds(2.4))])?;
 let mut scene = PlanBuilder::new("film", reading.duration());
 let [before, after] = reading.place(&mut scene);
 
-// Rows ripple 120 ms apart; `stagger` returns the latest end.
-let settled = stagger(["api", "db", "cache"], before.at("three services"), millis(120), |card, at| {
-    s.settle_in(sc, card, at)
-});
-// Six packets spread evenly between two words, both included.
-for (packet, launch) in VOLLEY.iter().zip(spread(6, before.at("packets"), before.at("wires"))) { .. }
+// Value actor handles: `scene` is the only `mut`.
+let s = Stage::declare(&mut scene, "stage", &stage_plan)?;
+let cam = s.camera();
+let hdr = Caption::header(&mut scene, "#50825", "await compaction")?;
 
-// A beat keyed to a word that must still wait for its cause.
-let lookup = s.send(sc, "lookup", after.at("just once").not_before(reply_after(find)), 0.55);
+// Rows ripple 120 ms apart; `scene.at` / `at!` returns the occupied `Span`.
+let settled = scene.at(
+    before.at("three services"),
+    stagger(millis(120), ["api", "db", "cache"], |card| s.settle_in(card)),
+);
+
+// Sequence (`.then`), accompaniment (`.with`), arrival reactions (`.on_end`), and camera shots:
+let find = at!(scene, before.at("asks") =>
+    hdr.type_in(55.0, 0.6),
+    s.send("find", 0.6)
+        .with(sfx::SEND.beat("find", -11.0))
+        .with(cam.follow("find", Move::Spring(0.5)))
+        .then(s.land("api").also(cam.release(Move::Spring(0.8)))),
+);
+
+// A beat keyed to a word that must still wait for its cause (`Span::reply` = 340 ms gather + 80 ms reaction).
+scene.at(
+    after.at("just once").not_before(find.reply()),
+    s.send("lookup", 0.55)
+        .with(sfx::SEND.beat("lookup", -11.0))
+        .then(s.land("db")),
+);
+
 // Time a beat by where it lands rather than where it starts.
-s.send_arriving(sc, "kill", before.at("sigterm"), 0.55);   // the packet arrives on the word
-s.connect_contacting(sc, "link", before.at("plugs in"), 0.4); // port pop + draw end on the word
-s.spring(sc, "camera.x", at, -110.0, SpringPlan::CAMERA);
+scene.at(before.at("sigterm"), s.send_arriving("kill", 0.55).then(s.land("api")));
+scene.at(before.at("plugs in"), s.connect_contacting("link", 0.4));
+scene.at(at, s.spring("camera.x", -110.0, SpringPlan::CAMERA));
 ```
 
-- Sound effects come from `psychopomp::sfx` (`TICK`, `SEND`, `FAILURE`,
-  `LAUNCH`, `IMPACT`, `DEATH`, `GLITCH`, `MARK`, `BLOOM`, `SEVER`, `RESET`,
-  `SUCCESS`, `CONFIRM`, `RISER`, `BOOM`, `WHOOSH`, `SPARKLE`) with exact lengths:
-  `sfx::IMPACT.play(sc, "kill-impact", arrival, -5.0)`. Their paths assume the
-  plan is written beside its Scene Program in `scenes/<name>/`; a scene's own
-  files use `Sfx::new(path, length_nanos)`.
-- `reply_after(arrival)`: a reply's gather may only begin once its request has
-  landed: 340 ms of gather plus an 80 ms reaction (`REACT_SECONDS`).
-- Named spring feels on `SpringPlan`, for `StageActor::spring` and
-  `PlanBuilder::spring_with`: `PANEL` (0.6 s, bounce 0.12, a rigid panel
-  settling), `CONTENT` (0.36 s, ink following its panel), `SNAP` (0.3 s, a
-  status or fade), `CAMERA` (1.6 s critically damped move), and `LIVELY`
-  (0.85 s, bounce 0.2, a hero landing).
+- **Combinators (`psychopomp::score`)**: `.then(b)` / `chain![...]` (sequence), `.then_after(gap, b)`, `.also(b)` / `all![...]` / `at!(scene, time => ...)` (parallel), `.with(b)` (accompany at start, preserving primary span), `.on_end(b)` (trigger at end, preserving primary span), `.after(d)` / `.early(d)` (time shift), `stagger(gap, items, f)`, and `each(items, f)`.
+- **Spatial envelopes (`psychopomp::layout::Placement`)**: `Placement::card(at, size)`, `Placement::orb(at, radius)`, `Placement::of(&stage_plan, id)`, with relative anchors `.below(gap)`, `.above(gap)`, `.beside_right(gap, size)`, `.beside_left(gap, size)`, `.stack_below(gap, size)`, `.align_left(inset, y_offset)`, and distributions `layout::row`, `layout::column`, `layout::spread_x`.
+- **Sound effects (`psychopomp::sfx`)**: `TICK`, `SEND`, `FAILURE`, `LAUNCH`, `IMPACT`, `DEATH`, `GLITCH`, `MARK`, `BLOOM`, `SEVER`, `RESET`, `SUCCESS`, `CONFIRM`, `RISER`, `BOOM`, `WHOOSH`, `SPARKLE` with exact 48 kHz sample lengths. Use `sfx::IMPACT.beat("kill-impact", -5.0)` inside a score (or `sfx::IMPACT.play(&mut scene, "kill-impact", arrival, -5.0)` imperatively). Generated `psychopomp_media::Audio` resources also expose `audio.beat(gain_db)`.
+- **`CueTime::reply()` / `reply_after(arrival)`**: a reply's gather begins once its request has landed (`340 ms` gather + `80 ms` reaction).
+- **Named spring feels (`SpringPlan` / `score::Feel`) and timing tokens (`author`)**: `PANEL` (0.6 s, bounce 0.12), `CONTENT` (0.36 s, no bounce), `ENTER` (0.45 s, no bounce), `EXIT` (0.24 s, no bounce), `MOVE` (0.6 s, no bounce; `.with_thresholds(1e-5, 1e-5)` for weights), `SNAP` (0.3 s, no bounce), `POP` (0.32 s, bounce 0.18), `CAMERA` (1.6 s, critically damped), `LIVELY` (0.85 s, bounce 0.2), `Ease::DRAW` (`cubic-bezier(0.45, 0, 0.2, 1)`), `Ease::GLIDE` (`smootherstep`), `author::STAGGER` (120 ms), `author::CONTENT_LAG` (65 ms), and `author::DRAW_SECONDS` (0.42 s).
 
 Scene Plan v2 scalar values may reference a component of a stable Semantic Target. The target's selector remains recipe-owned; for the hero, the editor recipe resolves logical code range IDs through `cosmic-text` before compiling highlight and pointer channels into the shared Timeline.
 

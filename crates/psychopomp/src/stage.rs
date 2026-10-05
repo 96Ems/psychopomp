@@ -6,13 +6,15 @@
 //! of the sample time, so any frame renders identically in any order.
 use std::collections::HashSet;
 
-use anyhow::{Result, bail, ensure};
+use anyhow::{Context, Result, bail, ensure};
 use serde::{Deserialize, Serialize};
 
 use crate::{
     author::{ActorHandle, ContinuousHandle, PlanBuilder, whole_millis},
     caption::{self, CaptionAlign, CaptionSpanPlan},
     effects::{dissolve, lightning, shield, spinner::Mark},
+    face::Face,
+    footage::{Clip, Fit, Mask, Playhead, STAGE_FOOTAGE_CHANNELS},
     math::{
         Vec2, Vec3,
         easing::{Ease, smootherstep},
@@ -23,6 +25,7 @@ use crate::{
         },
         vec3,
     },
+    plan::MediaPlan,
     plan::SpringPlan,
     tone::Tone,
 };
@@ -158,6 +161,8 @@ pub enum StageElement {
         #[serde(default = "center", skip_serializing_if = "is_center")]
         align: CaptionAlign,
         spans: Vec<CaptionSpanPlan>,
+        #[serde(default, skip_serializing_if = "Face::is_mono")]
+        face: Face,
     },
     /// A circle or arc: a timer when its sweep grows, a ripple when it expands.
     #[serde(rename_all = "camelCase")]
@@ -282,6 +287,29 @@ pub enum StageElement {
         #[serde(default = "accent")]
         tone: Tone,
     },
+    /// Footage in the scene: an image, a video, or an image sequence on a
+    /// camera-facing quad `size` world pixels, cut to its mask, optionally
+    /// framed. Its `time` channel is the clip's playhead (see
+    /// [`crate::footage`]); `tint` is the tone its `tint` channel moves toward.
+    #[serde(rename_all = "camelCase")]
+    Footage {
+        id: String,
+        at: [f32; 3],
+        size: [f32; 2],
+        clip: Clip,
+        #[serde(default, skip_serializing_if = "Fit::is_cover")]
+        fit: Fit,
+        #[serde(default, skip_serializing_if = "Mask::is_square")]
+        mask: Mask,
+        #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+        framed: bool,
+        #[serde(default = "accent", skip_serializing_if = "is_accent")]
+        tint: Tone,
+    },
+}
+
+fn is_accent(tone: &Tone) -> bool {
+    *tone == Tone::Accent
 }
 
 /// One end of a bolt: a positioned element or shield by ID, or a world point.
@@ -724,6 +752,7 @@ impl StageElement {
                 .iter()
                 .map(|&(text, tone)| CaptionSpanPlan::new(text, tone))
                 .collect(),
+            face: Face::Mono,
         }
     }
 
@@ -814,6 +843,15 @@ impl StageElement {
         self
     }
 
+    /// Set a label in `face` rather than CommitMono.
+    pub fn face(mut self, face: Face) -> Self {
+        let Self::Label { face: own, .. } = &mut self else {
+            panic!("only labels have a face, not '{}'", self.id());
+        };
+        *own = face;
+        self
+    }
+
     /// A ring's stroke, in pixels.
     pub fn thickness(mut self, thickness: f32) -> Self {
         let Self::Ring { thickness: own, .. } = &mut self else {
@@ -838,7 +876,8 @@ impl StageElement {
             | Self::Form { id, .. }
             | Self::Shape { id, .. }
             | Self::Path { id, .. }
-            | Self::Icon { id, .. } => id,
+            | Self::Icon { id, .. }
+            | Self::Footage { id, .. } => id,
         }
     }
 
@@ -852,7 +891,8 @@ impl StageElement {
             | Self::Ring { at, .. }
             | Self::Form { at, .. }
             | Self::Shape { at, .. }
-            | Self::Icon { at, .. } => Some(*at),
+            | Self::Icon { at, .. }
+            | Self::Footage { at, .. } => Some(*at),
             Self::Beam { .. }
             | Self::Packet { .. }
             | Self::Path { .. }
@@ -896,6 +936,17 @@ impl StageElement {
             Self::Shape { shape, .. } => shape.outline(center, scale),
             Self::Icon { size, .. } => {
                 Shape::Box(Box2::from_center_size(center, Vec2::splat(size * scale)))
+            }
+            Self::Footage {
+                size,
+                mask: Mask::Circle,
+                ..
+            } => Shape::Circle(Circle {
+                center,
+                radius: size[0].min(size[1]) * 0.5 * scale,
+            }),
+            Self::Footage { size, .. } => {
+                Shape::Box(Box2::from_center_size(center, Vec2::from(*size) * scale))
             }
         }
     }
@@ -944,7 +995,7 @@ impl StageElement {
             Self::Shield { .. } => &["opacity", "up", "scale"],
             Self::Form { .. } => &[
                 "opacity", "x", "y", "z", "scale", "blur", "rotation", "spin", "pitch", "roll",
-                "morph", "burst", "shatter", "pulse", "hurt",
+                "morph", "burst", "shatter", "pulse", "hurt", "solid",
             ],
             Self::Shape { .. } => &[
                 "opacity", "x", "y", "z", "scale", "rotation", "blur", "draw", "fill", "emphasis",
@@ -952,6 +1003,7 @@ impl StageElement {
             ],
             Self::Path { .. } => &["opacity", "draw", "trim", "flow", "emphasis", "surge"],
             Self::Icon { .. } => &["opacity", "x", "y", "z", "scale", "blur", "flash"],
+            Self::Footage { .. } => &STAGE_FOOTAGE_CHANNELS,
         }
     }
 
@@ -1062,6 +1114,7 @@ impl StageElement {
                 ("shatter", 0.0),
                 ("pulse", 0.0),
                 ("hurt", 0.0),
+                ("solid", 1.0),
             ],
             Self::Shape { .. } => &[
                 ("opacity", 1.0),
@@ -1092,6 +1145,25 @@ impl StageElement {
                 ("scale", 1.0),
                 ("blur", 0.0),
                 ("flash", 0.0),
+            ],
+            // An unwritten `time` plays the clip naturally: the renderer reads
+            // its placement, not this 0, until something writes the channel
+            // (declare it through `StageActor::footage_playhead`).
+            Self::Footage { .. } => &[
+                ("opacity", 1.0),
+                ("x", 0.0),
+                ("y", 0.0),
+                ("z", 0.0),
+                ("scale", 1.0),
+                ("blur", 0.0),
+                ("rotation", 0.0),
+                ("focus-x", 0.5),
+                ("focus-y", 0.5),
+                ("focus-size", 1.0),
+                ("time", 0.0),
+                ("saturation", 1.0),
+                ("tint", 0.0),
+                ("dim", 0.0),
             ],
         }
     }
@@ -1230,8 +1302,8 @@ impl StagePlan {
             "stage post values are out of range"
         );
         ensure!(
-            !self.elements.is_empty() && self.elements.len() <= 64,
-            "a stage has one to 64 elements"
+            !self.elements.is_empty() && self.elements.len() <= 128,
+            "a stage has one to 128 elements"
         );
         let mut ids = HashSet::new();
         for element in &self.elements {
@@ -1432,6 +1504,17 @@ impl StagePlan {
                         path.len() <= 20_000 && !path.contains(['"', '<', '>', '&']),
                         "icon '{id}' path data must be at most 20000 characters of SVG path commands"
                     );
+                }
+                StageElement::Footage {
+                    size, clip, mask, ..
+                } => {
+                    ensure!(
+                        size.iter().all(|v| (8.0..=4096.0).contains(v)),
+                        "footage '{id}' size is out of range"
+                    );
+                    clip.validate()
+                        .and_then(|()| mask.validate())
+                        .with_context(|| format!("stage footage '{id}'"))?;
                 }
                 StageElement::Label { size, spans, .. } => {
                     ensure!(
@@ -1635,7 +1718,7 @@ pub mod packet {
 /// Wire draw-on, after the blog diagrams: the port pops, then the wire draws
 /// with a gentle start and stop. (A frame `sweep` before it is opt-in.)
 pub const PORT_POP_SECONDS: f32 = 0.3;
-pub const DRAW_CURVE: Ease = Ease::CubicBezier([0.45, 0.0, 0.2, 1.0]);
+pub const DRAW_CURVE: Ease = Ease::DRAW;
 
 /// How long a receiver takes to react once a request has landed, before its
 /// reply starts to gather.
@@ -1649,6 +1732,7 @@ pub fn reply_after(arrival: u64) -> u64 {
 }
 
 /// Authoring handle: declares each stage channel once, on first use.
+#[derive(Clone, Debug)]
 pub struct StageActor {
     actor: ActorHandle,
     /// The declared recipe, for helpers that follow a beam to its ends.
@@ -1667,6 +1751,18 @@ impl StageActor {
             actor,
             plan: plan.clone(),
         })
+    }
+
+    pub fn actor(&self) -> &ActorHandle {
+        &self.actor
+    }
+
+    pub fn id(&self) -> &str {
+        self.actor.id()
+    }
+
+    pub fn plan(&self) -> &StagePlan {
+        &self.plan
     }
 
     /// The channel for `property`, declared on first use with `initial`.
@@ -2155,7 +2251,7 @@ impl StageActor {
         seconds: f32,
     ) {
         if seconds > 0.0 {
-            self.ease(scene, property, at_nanos, target, seconds, Ease::Smoothstep);
+            self.ease(scene, property, at_nanos, target, seconds, Ease::GLIDE);
         } else {
             self.set(scene, property, at_nanos, target);
         }
@@ -2203,7 +2299,7 @@ impl StageActor {
     ) -> u64 {
         let channel = self.channel(scene, &format!("{card}.scan"), 0.0);
         scene.set(&channel, at_nanos, 0.0);
-        scene.ease(&channel, at_nanos, 1.0, seconds, Ease::Linear);
+        scene.ease(&channel, at_nanos, 1.0, seconds, Ease::GLIDE);
         at_nanos + whole_millis(seconds)
     }
 
@@ -2211,13 +2307,35 @@ impl StageActor {
     /// A shield is up by default; raising one first declares it down.
     pub fn raise(&mut self, scene: &mut PlanBuilder, shield: &str, at_nanos: u64, seconds: f32) {
         let channel = self.channel(scene, &format!("{shield}.up"), 0.0);
-        scene.ease(&channel, at_nanos, 1.0, seconds, Ease::Smoothstep);
+        scene.ease(&channel, at_nanos, 1.0, seconds, Ease::GLIDE);
     }
 
     /// Lower `shield` over `seconds`: its cells switch off in reverse order.
     pub fn lower(&mut self, scene: &mut PlanBuilder, shield: &str, at_nanos: u64, seconds: f32) {
         let channel = self.channel(scene, &format!("{shield}.up"), 1.0);
-        scene.ease(&channel, at_nanos, 0.0, seconds, Ease::Smoothstep);
+        scene.ease(&channel, at_nanos, 0.0, seconds, Ease::GLIDE);
+    }
+}
+
+impl StageActor {
+    /// The playhead of footage element `element`, whose clip `media`
+    /// places: freeze, ramp, stutter, or scrub it on its `<id>.time` channel.
+    pub fn footage_playhead(&self, element: &str, media: &MediaPlan) -> Result<Playhead> {
+        let Some(StageElement::Footage { clip, .. }) = self.plan.element(element) else {
+            bail!("the stage has no footage element '{element}'");
+        };
+        ensure!(
+            media.id == clip.media,
+            "footage '{element}' plays media '{}', not '{}'",
+            clip.media,
+            media.id
+        );
+        Ok(Playhead::new(
+            self.actor.clone(),
+            format!("{element}.time"),
+            clip,
+            media,
+        ))
     }
 }
 
@@ -2611,14 +2729,16 @@ mod tests {
                   "shapes": [{ "shape": "box", "size": [120, 120, 120] }] },
                 { "kind": "shape", "id": "frame", "at": [960, 900, 0], "shape": { "rect": [200, 80] } },
                 { "kind": "path", "id": "route", "through": ["client", [960, 900, 0]] },
-                { "kind": "icon", "id": "glyph", "at": [200, 900, 0], "size": 48, "icon": "cloud" }
+                { "kind": "icon", "id": "glyph", "at": [200, 900, 0], "size": 48, "icon": "cloud" },
+                { "kind": "footage", "id": "clip", "at": [1600, 900, -200], "size": [320, 180],
+                  "clip": { "media": "clip" }, "mask": { "shape": "circle" } }
             ]))
             .unwrap(),
         );
         plan.validate().unwrap();
         let kinds = [
             "card", "orb", "beam", "packet", "label", "ring", "bolt", "shield", "form", "shape",
-            "path", "icon",
+            "path", "icon", "footage",
         ];
         for kind in kinds {
             assert!(
@@ -2783,6 +2903,7 @@ mod tests {
                 size: 24.0,
                 align,
                 spans: vec![CaptionSpanPlan::new("service", Tone::Plain)],
+                face: Default::default(),
             };
             let json = serde_json::to_value(&label).unwrap();
             assert_eq!(serde_json::from_value::<StageElement>(json).unwrap(), label);

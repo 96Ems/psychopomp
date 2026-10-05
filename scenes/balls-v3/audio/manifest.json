@@ -1,0 +1,174 @@
+{
+  "stems": [
+    {
+      "id": "beep",
+      "file": "audio/sfx/beep.flac",
+      "durationNanos": 479000000,
+      "source": "One clean digital recording beep, like a camera starting to record. No voice, no music.",
+      "requestId": "7f82cfc24056e88b7c8c635ba039f07e"
+    },
+    {
+      "id": "boom",
+      "file": "audio/sfx/boom.flac",
+      "durationNanos": 1599000000,
+      "source": "One comedic, deep cinematic boom with heavy reverb, like a famous meme sound effect. One hit. No voice, no music.",
+      "requestId": "76f6a4aac7b0c422cceed4c219f55d55"
+    },
+    {
+      "id": "boom-low",
+      "file": "audio/sfx/boom-low.flac",
+      "durationNanos": 2284729166,
+      "source": "boom down (resampled)"
+    },
+    {
+      "id": "bounce",
+      "file": "audio/sfx/bounce.flac",
+      "durationNanos": 599000000,
+      "source": "One single basketball bounce on a hardwood court, in an echoing gym. Only one bounce. No voice, no music.",
+      "requestId": "636e06b52b9df3144be5dda61df57fbe"
+    },
+    {
+      "id": "braam",
+      "file": "audio/sfx/braam.flac",
+      "durationNanos": 2999000000,
+      "source": "A massive cinematic brass braam: an enormous distorted low horn blast like a blockbuster movie trailer, one long hit with a dark tail. No voice.",
+      "requestId": "f873038c3ce2e1c8cceed4c219f55c37"
+    },
+    {
+      "id": "chime",
+      "file": "audio/sfx/chime.flac",
+      "durationNanos": 1479000000,
+      "source": "One single tiny, clear, delicate glass chime, soft and pure. No voice, no music.",
+      "requestId": "6b4b53c07b03bf55cceed4c219f5515e"
+    },
+    {
+      "id": "choir",
+      "file": "audio/sfx/choir.flac",
+      "durationNanos": 7999000000,
+      "source": "An epic dark choir chanting ominous syllables in a huge cathedral, swelling to a terrifying climax, like a blockbuster movie trailer. No drums.",
+      "requestId": "162289b2de186935cceed4c219f556e5"
+    },
+    {
+      "id": "chomp",
+      "file": "audio/sfx/chomp.flac",
+      "durationNanos": 679250000,
+      "source": "A huge cartoonish chomp: a giant mouth biting down hard with a wet crunch. No voice, no music.",
+      "requestId": "7edc3a08e06a83f47c8c635ba039fa28"
+    },
+    {
+      "id": "crowd",
+      "file": "audio/sfx/crowd.flac",
+      "durationNanos": 3999000000,
+      "source": "A stadium crowd roaring and cheering wildly, screaming and stomping.",
+      "requestId": "0ca5e9f4abcf51fe7c8c635ba039f33d"
+    },
+    {
+      "id": "ignite",
+      "file": "audio/sfx/ignite.flac",
+      "durationNanos": 2479000000,
+      "source": "A tiny magical spark igniting into a soft, warm glowing hum: delicate, intimate, with a faint glassy shimmer. No voice, no music.",
+      "requestId": "d5e7c5c7ff96bb8a4be5dda61df570fa"
+    },
+    {
+      "id": "impact-reversed",
+      "file": "audio/sfx/impact-reversed.flac",
+      "durationNanos": 2999000000,
+      "source": "balls-with-dots impact, reversed"
+    },
+    {
+      "id": "pad",
+      "file": "audio/sfx/pad.flac",
+      "durationNanos": 11999000000,
+      "source": "A soft, warm, slowly evolving ambient synth pad, intimate and full of wonder, like the opening of a nature documentary about the cosmos. No percussion, no voice.",
+      "requestId": "3117fb8377b90e7d7c8c635ba039f537"
+    },
+    {
+      "id": "slam-cut",
+      "file": "audio/sfx/slam-cut.flac",
+      "durationNanos": 299000000,
+      "source": "colossal drum + sub drop -4 dB + braam -9 dB, 0.3 s with a 25 ms fade"
+    },
+    {
+      "id": "slap",
+      "file": "audio/sfx/slap.flac",
+      "durationNanos": 479000000,
+      "source": "One single sharp djembe slap, bright and cracking, very short. Only one hit. No voice, no music.",
+      "requestId": "38dddba5e2483b2ecceed4c219f55389"
+    },
+    {
+      "id": "sub-drop",
+      "file": "audio/sfx/sub-drop.flac",
+      "durationNanos": 2479000000,
+      "source": "A deep cinematic sub-bass drop: one huge 808 boom whose pitch falls away, felt more than heard, with a long tail. No voice, no music.",
+      "requestId": "3be54003b2fab3634be5dda61df57f95"
+    },
+    {
+      "id": "suck",
+      "file": "audio/sfx/suck.flac",
+      "durationNanos": 999000000,
+      "source": "A powerful reverse suction whoosh: everything sucked into a single point, rising fast and ending abruptly. No voice, no music.",
+      "requestId": "37bb72ca859bac0ecceed4c219f55a47"
+    },
+    {
+      "id": "swell",
+      "file": "audio/sfx/swell.flac",
+      "durationNanos": 704833333,
+      "source": "A reverse cymbal swell rising quickly and ending abruptly at its loudest peak, airy and tense. No voice, no music.",
+      "requestId": "6261d49fe842249dcceed4c219f55325"
+    },
+    {
+      "id": "swish",
+      "file": "audio/sfx/swish.flac",
+      "durationNanos": 1199000000,
+      "source": "A basketball swishing cleanly through a net. No voice, no music.",
+      "requestId": "cb4be0a8942de215cceed4c219f55d1b"
+    },
+    {
+      "id": "taiko",
+      "file": "audio/sfx/taiko.flac",
+      "durationNanos": 1199000000,
+      "source": "One single enormous taiko drum hit, deep and booming, with a short dry room tail. Only one hit. No voice, no music.",
+      "requestId": "77b50fb676f0d503cceed4c219f555ca"
+    },
+    {
+      "id": "taiko-high",
+      "file": "audio/sfx/taiko-high.flac",
+      "durationNanos": 897895833,
+      "source": "taiko up a fourth (resampled)"
+    },
+    {
+      "id": "taiko-low",
+      "file": "audio/sfx/taiko-low.flac",
+      "durationNanos": 1599000000,
+      "source": "taiko down a fourth (resampled)"
+    },
+    {
+      "id": "thunder",
+      "file": "audio/sfx/thunder.flac",
+      "durationNanos": 1991333333,
+      "source": "A close, violent thunder crack with electric sizzle. No voice, no music.",
+      "requestId": "5a03ea033c189e637c8c635ba039f913"
+    },
+    {
+      "id": "tom",
+      "file": "audio/sfx/tom.flac",
+      "durationNanos": 679250000,
+      "source": "One single tribal floor tom drum hit, punchy, deep and dry. Only one hit. No voice, no music.",
+      "requestId": "52c16c69942bd7c04be5dda61df57f3f"
+    },
+    {
+      "id": "whoosh-cut",
+      "file": "audio/sfx/whoosh-cut.flac",
+      "durationNanos": 479000000,
+      "source": "A very fast, sharp cinematic whoosh: air ripping past the microphone, short and punchy. No voice, no music.",
+      "requestId": "feb6b7c4d38dc40f4be5dda61df5754f"
+    },
+    {
+      "id": "zap-short",
+      "file": "audio/sfx/zap-short.flac",
+      "durationNanos": 479000000,
+      "source": "A short electric zap, a crisp high-voltage snap. No voice, no music.",
+      "requestId": "340e5cd93e8ed12dede55a8500950b29"
+    }
+  ]
+}

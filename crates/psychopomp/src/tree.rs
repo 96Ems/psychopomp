@@ -28,11 +28,12 @@ const MAX_NODES: usize = 4000;
 /// A fold below this is treated as fully closed.
 const CLOSED: f32 = 1e-4;
 
-/// Fold and value springs: the 0.45 s zero-bounce line motion of Effect
-/// Institute code, so a tree moves like the code beside it.
+/// Fold, scroll, and value springs: the 0.45 s zero-bounce line motion of
+/// Effect Institute code (`SpringPlan::ENTER`), so opening a node and
+/// scrolling to reveal it move in locked sync.
 const OPEN_SECONDS: f32 = 0.45;
-const VALUE_SECONDS: f32 = 0.5;
-const SCROLL_SECONDS: f32 = 0.55;
+const VALUE_SECONDS: f32 = 0.45;
+const SCROLL_SECONDS: f32 = 0.45;
 const HIGHLIGHT_IN_SECONDS: f32 = 0.18;
 const HIGHLIGHT_OUT_SECONDS: f32 = 0.35;
 
@@ -514,33 +515,28 @@ pub fn scalar_text(value: &Value) -> String {
     value.to_string()
 }
 
-/// Authoring handle for one tree actor. Calls are applied in authored order:
-/// the handle tracks which nodes are open so `reveal` can scroll to a path.
+/// Authoring handle for one tree actor. Calls are applied in authored order;
+/// the [`PlanBuilder`] owns the tree's changes, fold channels, and scroll state.
+#[derive(Clone, Debug)]
 pub struct TreeActor {
     actor: ActorHandle,
-    plan: TreePlan,
     model: TreeModel,
-    open: Vec<bool>,
-    scroll: f32,
 }
 
 impl TreeActor {
     pub fn declare(scene: &mut PlanBuilder, id: impl Into<String>, plan: TreePlan) -> Result<Self> {
         plan.validate()?;
         let model = plan.model()?;
-        let open = model
-            .nodes
-            .iter()
-            .map(|node| plan.expanded.contains(&node.path))
-            .collect();
         let actor = scene.actor(id, TREE_RECIPE, &plan)?;
-        Ok(Self {
-            actor,
-            plan,
-            model,
-            open,
-            scroll: 0.0,
-        })
+        Ok(Self { actor, model })
+    }
+
+    pub fn actor(&self) -> &ActorHandle {
+        &self.actor
+    }
+
+    pub fn id(&self) -> &str {
+        self.actor.id()
     }
 
     pub fn model(&self) -> &TreeModel {
@@ -568,16 +564,21 @@ impl TreeActor {
         Ok(node)
     }
 
-    fn fold(
-        &mut self,
+    pub(crate) fn fold_at(
+        &self,
         scene: &mut PlanBuilder,
         path: &str,
         at_nanos: u64,
         open: bool,
     ) -> Result<()> {
-        let node = self.foldable(path)?;
-        let initial = f32::from(u8::from(self.plan.expanded.iter().any(|p| p == path)));
-        let channel = self.channel(scene, &node_property(path, TreeChannel::Open), initial);
+        let _ = self.foldable(path)?;
+        let plan: TreePlan = scene.actor_data(&self.actor)?;
+        let initial = f32::from(u8::from(plan.expanded.iter().any(|p| p == path)));
+        let channel = scene.channel(
+            &self.actor,
+            &node_property(path, TreeChannel::Open),
+            initial,
+        );
         scene.spring(
             &channel,
             at_nanos,
@@ -585,18 +586,17 @@ impl TreeActor {
             OPEN_SECONDS,
             0.0,
         );
-        self.open[node] = open;
         Ok(())
     }
 
     /// Open a container: rows below slide down as its children are revealed.
     pub fn open(&mut self, scene: &mut PlanBuilder, path: &str, at_nanos: u64) -> Result<()> {
-        self.fold(scene, path, at_nanos, true)
+        self.fold_at(scene, path, at_nanos, true)
     }
 
     /// Fold a container back to its summary. Open descendants stay open.
     pub fn close(&mut self, scene: &mut PlanBuilder, path: &str, at_nanos: u64) -> Result<()> {
-        self.fold(scene, path, at_nanos, false)
+        self.fold_at(scene, path, at_nanos, false)
     }
 
     /// Light a row's highlight bar at `at_nanos` and let it go `seconds` later.
@@ -607,10 +607,24 @@ impl TreeActor {
         at_nanos: u64,
         seconds: f32,
     ) -> Result<()> {
+        self.highlight_at(scene, path, at_nanos, seconds)
+    }
+
+    pub(crate) fn highlight_at(
+        &self,
+        scene: &mut PlanBuilder,
+        path: &str,
+        at_nanos: u64,
+        seconds: f32,
+    ) -> Result<()> {
         self.model
             .find(path)
             .with_context(|| format!("path '{path}' is not in the tree"))?;
-        let channel = self.channel(scene, &node_property(path, TreeChannel::Highlight), 0.0);
+        let channel = scene.channel(
+            &self.actor,
+            &node_property(path, TreeChannel::Highlight),
+            0.0,
+        );
         scene.spring(&channel, at_nanos, 1.0, HIGHLIGHT_IN_SECONDS, 0.0);
         let off = at_nanos + crate::author::seconds(f64::from(seconds.max(0.0)));
         scene.spring(&channel, off, 0.0, HIGHLIGHT_OUT_SECONDS, 0.0);
@@ -626,7 +640,17 @@ impl TreeActor {
         value: impl Into<Value>,
         at_nanos: u64,
     ) -> Result<()> {
-        let mut next = self.plan.clone();
+        self.set_at(scene, path, value, at_nanos)
+    }
+
+    pub(crate) fn set_at(
+        &self,
+        scene: &mut PlanBuilder,
+        path: &str,
+        value: impl Into<Value>,
+        at_nanos: u64,
+    ) -> Result<()> {
+        let mut next: TreePlan = scene.actor_data(&self.actor)?;
         next.changes.push(TreeChangePlan {
             path: path.to_owned(),
             value: value.into(),
@@ -635,18 +659,19 @@ impl TreeActor {
         let node = model.find(path).expect("validated by the model");
         let variant = model.nodes[node].variants() - 1;
         scene.replace_actor_data(&self.actor, &next)?;
-        let channel = self.channel(scene, &node_property(path, TreeChannel::Value), 0.0);
+        let channel = scene.channel(&self.actor, &node_property(path, TreeChannel::Value), 0.0);
         scene.spring(&channel, at_nanos, variant as f32, VALUE_SECONDS, 0.0);
-        self.plan = next;
-        self.model = model;
         Ok(())
     }
 
     /// Scroll so `row` (fractional, from the top of the tree) is the first visible.
     pub fn scroll_to(&mut self, scene: &mut PlanBuilder, row: f32, at_nanos: u64) {
-        let channel = self.channel(scene, "scroll", 0.0);
+        self.scroll_to_at(scene, row, at_nanos);
+    }
+
+    pub(crate) fn scroll_to_at(&self, scene: &mut PlanBuilder, row: f32, at_nanos: u64) {
+        let channel = scene.channel(&self.actor, "scroll", 0.0);
         scene.spring(&channel, at_nanos, row, SCROLL_SECONDS, 0.0);
-        self.scroll = row;
     }
 
     /// Scroll the least distance that shows `path`'s whole block (its row
@@ -654,14 +679,35 @@ impl TreeActor {
     /// first rows if the block is taller than the window. Without `maxRows`
     /// nothing scrolls.
     pub fn reveal(&mut self, scene: &mut PlanBuilder, path: &str, at_nanos: u64) -> Result<()> {
-        let Some(rows) = self.plan.max_rows.map(|rows| rows as f32) else {
+        self.reveal_at(scene, path, at_nanos)
+    }
+
+    pub(crate) fn reveal_at(
+        &self,
+        scene: &mut PlanBuilder,
+        path: &str,
+        at_nanos: u64,
+    ) -> Result<()> {
+        let plan: TreePlan = scene.actor_data(&self.actor)?;
+        let Some(rows) = plan.max_rows.map(|rows| rows as f32) else {
             return Ok(());
         };
         let node = self
             .model
             .find(path)
             .with_context(|| format!("path '{path}' is not in the tree"))?;
-        let lines = self.model.settled(&self.open);
+        let open: Vec<bool> = self
+            .model
+            .nodes
+            .iter()
+            .map(|n| {
+                scene
+                    .latest_literal(&self.actor, &node_property(&n.path, TreeChannel::Open))
+                    .map_or_else(|| plan.expanded.contains(&n.path), |v| v > 0.5)
+            })
+            .collect();
+        let current_scroll = scene.latest_literal(&self.actor, "scroll").unwrap_or(0.0);
+        let lines = self.model.settled(&open);
         let first = lines
             .iter()
             .position(|line| line.node == node && !line.closing)
@@ -671,15 +717,15 @@ impl TreeActor {
             .iter()
             .position(|line| line.node == node && line.closing)
             .map_or(first, |index| index as f32);
-        let mut scroll = self.scroll;
+        let mut scroll = current_scroll;
         if last + 1.0 - first > rows || first < scroll {
             scroll = first;
         } else if last + 1.0 > scroll + rows {
             scroll = last + 1.0 - rows;
         }
         scroll = scroll.clamp(0.0, (lines.len() as f32 - rows).max(0.0));
-        if scroll != self.scroll {
-            self.scroll_to(scene, scroll, at_nanos);
+        if scroll != current_scroll {
+            self.scroll_to_at(scene, scroll, at_nanos);
         }
         Ok(())
     }

@@ -407,6 +407,7 @@ pub const MOVING_SLOT_SPEED: f32 = 0.05;
 
 /// Authoring handle for one bars actor. It remembers each bar's latest
 /// target, so `sort` orders rows by where their bars are going.
+#[derive(Clone, Debug)]
 pub struct BarsActor {
     actor: ActorHandle,
     plan: BarsPlan,
@@ -428,6 +429,10 @@ impl BarsActor {
             targets: HashMap::new(),
             slots: (0..plan.rows.len()).map(|index| index as f32).collect(),
         })
+    }
+
+    pub fn actor(&self) -> &ActorHandle {
+        &self.actor
     }
 
     pub fn id(&self) -> &str {
@@ -477,7 +482,7 @@ impl BarsActor {
     ) -> Result<()> {
         let key = self.key(row, series)?;
         let bar = self.channel(scene, &format!("bar.{row}.{series}"), 0.0);
-        scene.spring(&bar, at_nanos, value, 0.9, 0.08);
+        scene.spring(&bar, at_nanos, value, 0.85, 0.0);
         self.targets.insert(key, value);
         Ok(())
     }
@@ -533,7 +538,7 @@ impl BarsActor {
             let id = self.plan.rows[row].id.clone();
             let channel = self.channel(scene, &format!("row.{id}.slot"), row as f32);
             if self.slots[row] != slot as f32 {
-                scene.spring(&channel, at_nanos, slot as f32, 0.7, 0.1);
+                scene.spring(&channel, at_nanos, slot as f32, 0.65, 0.0);
                 self.slots[row] = slot as f32;
             }
         }
@@ -555,7 +560,7 @@ impl BarsActor {
             at = at_nanos + ROW_STAGGER_NANOS * rank as u64;
             let id = self.plan.rows[row].id.clone();
             let chip = self.channel(scene, &format!("delta.{id}"), 0.0);
-            scene.spring(&chip, at, 1.0, 0.45, 0.25);
+            scene.spring_with(&chip, at, 1.0, crate::plan::SpringPlan::POP);
         }
         Ok(at)
     }

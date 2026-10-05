@@ -1,0 +1,124 @@
+{
+ "wordTimings": [
+  {
+   "word": "He",
+   "start": 0,
+   "end": 0.14
+  },
+  {
+   "word": "could",
+   "start": 0.14,
+   "end": 0.24
+  },
+  {
+   "word": "become",
+   "start": 0.24,
+   "end": 0.54
+  },
+  {
+   "word": "lasagna!",
+   "start": 0.54,
+   "end": 1.12
+  },
+  {
+   "word": "He",
+   "start": 1.28,
+   "end": 1.6
+  },
+  {
+   "word": "could",
+   "start": 1.6,
+   "end": 1.76
+  },
+  {
+   "word": "become",
+   "start": 1.76,
+   "end": 2.02
+  },
+  {
+   "word": "spaghetti!",
+   "start": 2.02,
+   "end": 2.4
+  },
+  {
+   "word": "Woo!",
+   "start": 2.82,
+   "end": 3.1
+  },
+  {
+   "word": "Andy",
+   "start": 3.52,
+   "end": 4.08
+  },
+  {
+   "word": "Serkis",
+   "start": 4.08,
+   "end": 4.64
+  },
+  {
+   "word": "is",
+   "start": 4.64,
+   "end": 4.74
+  },
+  {
+   "word": "a",
+   "start": 4.74,
+   "end": 4.84
+  },
+  {
+   "word": "spaghetti",
+   "start": 4.84,
+   "end": 5.22
+  },
+  {
+   "word": "kid!",
+   "start": 5.22,
+   "end": 5.6
+  },
+  {
+   "word": "And",
+   "start": 5.8,
+   "end": 6.12
+  },
+  {
+   "word": "he's",
+   "start": 6.12,
+   "end": 6.3
+  },
+  {
+   "word": "going",
+   "start": 6.3,
+   "end": 6.46
+  },
+  {
+   "word": "to",
+   "start": 6.46,
+   "end": 6.6
+  },
+  {
+   "word": "be",
+   "start": 6.6,
+   "end": 6.68
+  },
+  {
+   "word": "eaten",
+   "start": 6.68,
+   "end": 7.02
+  },
+  {
+   "word": "by",
+   "start": 7.02,
+   "end": 7.3
+  },
+  {
+   "word": "Will",
+   "start": 7.3,
+   "end": 7.58
+  },
+  {
+   "word": "Smith!",
+   "start": 7.58,
+   "end": 7.9
+  }
+ ]
+}

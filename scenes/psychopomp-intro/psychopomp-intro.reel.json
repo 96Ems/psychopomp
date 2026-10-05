@@ -146,12 +146,12 @@
                 {
                   "at": [
                     960.0,
-                    330.0,
+                    276.0,
                     160.0
                   ],
                   "id": "shout-frame",
                   "kind": "label",
-                  "size": 150.0,
+                  "size": 132.0,
                   "spans": [
                     {
                       "text": "ANY FRAME!"
@@ -161,12 +161,12 @@
                 {
                   "at": [
                     960.0,
-                    690.0,
+                    730.0,
                     160.0
                   ],
                   "id": "shout-order",
                   "kind": "label",
-                  "size": 150.0,
+                  "size": 132.0,
                   "spans": [
                     {
                       "text": "ANY ORDER!",
@@ -1379,7 +1379,7 @@
                 "operation": "spring",
                 "atNanos": 13649000000,
                 "target": 0.0,
-                "responseSeconds": 0.36,
+                "responseSeconds": 0.28800002,
                 "dampingRatio": 1.0,
                 "positionThreshold": 0.001,
                 "velocityThreshold": 0.001
@@ -3605,7 +3605,7 @@
                 "operation": "spring",
                 "atNanos": 35258000000,
                 "target": 0.0,
-                "responseSeconds": 0.36,
+                "responseSeconds": 0.28800002,
                 "dampingRatio": 1.0,
                 "positionThreshold": 0.001,
                 "velocityThreshold": 0.001
@@ -3651,17 +3651,10 @@
               },
               {
                 "operation": "ease",
-                "atNanos": 35358000000,
+                "atNanos": 35338000000,
                 "target": 0.0,
-                "durationNanos": 320000000,
-                "curve": {
-                  "cubic-bezier": [
-                    0.45,
-                    0.0,
-                    0.2,
-                    1.0
-                  ]
-                }
+                "durationNanos": 280000000,
+                "curve": "smootherstep"
               }
             ]
           },
@@ -3673,7 +3666,7 @@
             "events": [
               {
                 "operation": "spring",
-                "atNanos": 29738000000,
+                "atNanos": 29638000000,
                 "target": 1.0,
                 "responseSeconds": 0.36,
                 "dampingRatio": 1.0,
@@ -3713,17 +3706,10 @@
               },
               {
                 "operation": "ease",
-                "atNanos": 35358000000,
+                "atNanos": 35338000000,
                 "target": 0.0,
-                "durationNanos": 320000000,
-                "curve": {
-                  "cubic-bezier": [
-                    0.45,
-                    0.0,
-                    0.2,
-                    1.0
-                  ]
-                }
+                "durationNanos": 280000000,
+                "curve": "smootherstep"
               }
             ]
           },
@@ -3735,7 +3721,7 @@
             "events": [
               {
                 "operation": "spring",
-                "atNanos": 29918000000,
+                "atNanos": 29818000000,
                 "target": 1.0,
                 "responseSeconds": 0.36,
                 "dampingRatio": 1.0,

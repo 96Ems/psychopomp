@@ -73,31 +73,25 @@ impl HeadlessRenderer {
                 opacity,
             );
         }
-        // Text emerges from behind the bar: its edge is stationary, and
-        // nothing left of it is drawn.
-        let edge = plan.text_left() + offset[0] - plan.size * 0.12;
+        // Text emerges from behind the bar: its clip edge sits flush with the
+        // bar's right side, and each line slides by its full measured advance
+        // plus the gap so nothing is ever clipped in open air.
+        let edge = plan.origin[0] + offset[0] + plan.bar_width();
+        let gap = plan.text_left() - plan.origin[0] - plan.bar_width();
         let lines = [
-            (
-                Some(&sprites.0),
-                sample("name", 1.0),
-                plan.origin[1],
-                plan.size * 1.4,
-            ),
-            (
-                sprites.1.as_ref(),
-                sample("role", 1.0),
-                plan.role_center(),
-                plan.size * 0.9,
-            ),
+            (Some(&sprites.0), sample("name", 1.0), plan.origin[1]),
+            (sprites.1.as_ref(), sample("role", 1.0), plan.role_center()),
         ];
-        for (sprite, phase, center, slide) in lines {
+        for (sprite, phase, center) in lines {
             let Some(sprite) = sprite else {
                 continue;
             };
-            let alpha = opacity * smoothstep(remap_clamp(phase, [0.0, 0.55], [0.0, 1.0]));
+            let phase = phase.clamp(0.0, 1.0);
+            let alpha = opacity * smoothstep(remap_clamp(phase, [0.0, 0.35], [0.0, 1.0]));
             if alpha <= 0.001 {
                 continue;
             }
+            let slide = sprite.advance + gap;
             let x = plan.text_left() + offset[0] - (1.0 - phase) * slide;
             let source_left = (edge - x).max(0.0);
             let width = sprite.advance + 4.0 - source_left;

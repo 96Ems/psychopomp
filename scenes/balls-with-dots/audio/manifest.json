@@ -1,0 +1,452 @@
+{
+  "stems": [
+    {
+      "id": "drum-colossal",
+      "file": "audio/sfx/drum-colossal.flac",
+      "kind": "drum",
+      "durationNanos": 3999000000,
+      "source": "One single colossal drum hit: an enormous taiko and bass drum struck once together, a huge low boom with a long echoing tail. No melody, no voice, no music other than percussion.",
+      "requestId": "37208c997e0f753f03e2ee1ae2320599"
+    },
+    {
+      "id": "drum-frenzy",
+      "file": "audio/sfx/drum-frenzy.flac",
+      "kind": "drum",
+      "durationNanos": 5999000000,
+      "source": "A full-frenzy tribal drum climax: a thunderous rapid drum roll on many taiko and tom drums at once, chaotic, relentless, at maximum intensity. No melody, no voice, no music other than percussion.",
+      "requestId": "388d412d3931991c03e2ee1ae2320507"
+    },
+    {
+      "id": "drum-pulse",
+      "file": "audio/sfx/drum-pulse.flac",
+      "kind": "drum",
+      "durationNanos": 7999000000,
+      "source": "A sparse, low ritual drum pulse: one deep tribal frame drum struck slowly and steadily, about 100 beats per minute, ominous, cavernous. No melody, no voice, no music other than percussion.",
+      "requestId": "eaa88ea4179f4d1103e2ee1ae232016b"
+    },
+    {
+      "id": "drum-soft",
+      "file": "audio/sfx/drum-soft.flac",
+      "kind": "drum",
+      "durationNanos": 2999000000,
+      "source": "One single soft, deep, warm drum hit, gently struck, intimate and quiet, with a short natural decay. No melody, no voice, no music other than percussion.",
+      "requestId": "68aead2bf8e9904c03e2ee1ae2320328"
+    },
+    {
+      "id": "drum-war",
+      "file": "audio/sfx/drum-war.flac",
+      "kind": "drum",
+      "durationNanos": 11999000000,
+      "source": "Building tribal war drums: taiko, djembe, and floor toms in an aggressive pounding rhythm that steadily accelerates and grows louder and more frantic. No melody, no voice, no music other than percussion.",
+      "requestId": "7301e37c9bba196903e2ee1ae2320d73"
+    },
+    {
+      "id": "hit-slap",
+      "file": "audio/sfx/hit-slap.flac",
+      "kind": "drum",
+      "durationNanos": 599000000,
+      "source": "One single sharp djembe slap, a high cracking hand drum hit, very short. No melody, no voice, no music other than percussion.",
+      "requestId": "0949de3eccd6007527b359cad55a30ff"
+    },
+    {
+      "id": "hit-taiko",
+      "file": "audio/sfx/hit-taiko.flac",
+      "kind": "drum",
+      "durationNanos": 1479000000,
+      "source": "One single huge taiko drum hit, deep and booming, dry and punchy with a short tail. No melody, no voice, no music other than percussion.",
+      "requestId": "77b3705400faebc327b359cad55a3038"
+    },
+    {
+      "id": "hit-tom",
+      "file": "audio/sfx/hit-tom.flac",
+      "kind": "drum",
+      "durationNanos": 999000000,
+      "source": "One single low floor tom drum hit, tight and punchy, tribal. No melody, no voice, no music other than percussion.",
+      "requestId": "3f477af2c4399e7527b359cad55a3e30"
+    },
+    {
+      "id": "ignite",
+      "file": "audio/sfx/ignite.flac",
+      "kind": "drum",
+      "durationNanos": 2479000000,
+      "source": "A soft magical ignition: a tiny spark that blooms into a warm glowing hum with a gentle airy whoosh, delicate and beautiful. No voice, no drums.",
+      "requestId": "188127159945a6209746d9603ceae097"
+    },
+    {
+      "id": "riser-short",
+      "file": "audio/sfx/riser-short.flac",
+      "kind": "drum",
+      "durationNanos": 2479000000,
+      "source": "A short intense cinematic riser: noise and tension rising quickly in pitch, ending abruptly at its peak. No voice, no drums.",
+      "requestId": "e76ae24f3572c29d9746d9603ceae70b"
+    },
+    {
+      "id": "shimmer",
+      "file": "audio/sfx/shimmer.flac",
+      "kind": "drum",
+      "durationNanos": 4873854166,
+      "source": "A soft rising shimmer: delicate airy chimes and a gentle swelling glow that slowly rises in pitch, calm, weightless, magical. No voice, no drums.",
+      "requestId": "267eb8a7711f6c9703e2ee1ae23204d7"
+    },
+    {
+      "id": "sub-drop",
+      "file": "audio/sfx/sub-drop.flac",
+      "kind": "drum",
+      "durationNanos": 1999000000,
+      "source": "A cinematic sub-bass drop: a deep booming low-frequency hit that falls in pitch, felt more than heard. No voice, no music.",
+      "requestId": "0b22ce768b06816c27b359cad55a33f2"
+    },
+    {
+      "id": "suck",
+      "file": "audio/sfx/suck.flac",
+      "kind": "drum",
+      "durationNanos": 1199000000,
+      "source": "A reversed whoosh that rises and gets sucked in fast, ending abruptly at its loudest point, like diving into something. No voice, no music.",
+      "requestId": "2fa307132ef045c727b359cad55a35f3"
+    },
+    {
+      "id": "swish",
+      "file": "audio/sfx/swish.flac",
+      "kind": "drum",
+      "durationNanos": 422729166,
+      "source": "One very fast whoosh swish, like a camera whip pan, short and airy. No voice, no music.",
+      "requestId": "713d31bd2f988fb127b359cad55a38e3"
+    },
+    {
+      "id": "drone",
+      "file": "audio/sfx/drone.flac",
+      "kind": "sfx",
+      "durationNanos": 14999000000,
+      "source": "A low, unsettling dark ambient drone: deep sub-bass hum with slowly beating, detuned, dissonant tones that swell louder and more menacing over time. No voice, no drums, no melody."
+    },
+    {
+      "id": "drone-swell",
+      "file": "audio/sfx/drone-swell.flac",
+      "kind": "sfx",
+      "durationNanos": 14999000000,
+      "source": "drone with a 13 s exponential fade-in"
+    },
+    {
+      "id": "flyby",
+      "file": "audio/sfx/flyby.flac",
+      "kind": "sfx",
+      "durationNanos": 786312500,
+      "source": "A small object zipping past the microphone very fast: a quick whistling whoosh flyby. No voice, no music."
+    },
+    {
+      "id": "glitch",
+      "file": "audio/sfx/glitch.flac",
+      "kind": "sfx",
+      "durationNanos": 1199000000,
+      "source": "Short harsh digital glitch bursts: stuttering data corruption, bit-crushed buzz, rapid clicks and dropouts. No voice, no music."
+    },
+    {
+      "id": "heartbeat",
+      "file": "audio/sfx/heartbeat.flac",
+      "kind": "sfx",
+      "durationNanos": 999000000,
+      "source": "A single human heartbeat: one deep, muffled lub-dub thump, close and intimate. No voice, no music."
+    },
+    {
+      "id": "heartbeat-race",
+      "file": "audio/sfx/heartbeat-race.flac",
+      "kind": "sfx",
+      "durationNanos": 9999000000,
+      "source": "A human heartbeat that starts slow and calm and steadily accelerates into a frantic racing pulse, deep muffled thumps. No voice, no music."
+    },
+    {
+      "id": "impact",
+      "file": "audio/sfx/impact.flac",
+      "kind": "sfx",
+      "durationNanos": 2999000000,
+      "source": "A huge cinematic impact: a massive deep slam with a sub-bass hit, a metallic crunch, and a long dark rumbling tail. No voice, no music."
+    },
+    {
+      "id": "intro-boom",
+      "file": "../../assets/psychopomp-intro/boom.wav",
+      "kind": "sfx",
+      "durationNanos": 2999000000,
+      "source": "reused from the psychopomp intro"
+    },
+    {
+      "id": "intro-riser",
+      "file": "../../assets/psychopomp-intro/riser.wav",
+      "kind": "sfx",
+      "durationNanos": 5668958333,
+      "source": "reused from the psychopomp intro"
+    },
+    {
+      "id": "intro-sparkle",
+      "file": "../../assets/psychopomp-intro/sparkle.wav",
+      "kind": "sfx",
+      "durationNanos": 1479000000,
+      "source": "reused from the psychopomp intro"
+    },
+    {
+      "id": "intro-whoosh",
+      "file": "../../assets/psychopomp-intro/whoosh.wav",
+      "kind": "sfx",
+      "durationNanos": 611208333,
+      "source": "reused from the psychopomp intro"
+    },
+    {
+      "id": "mic-rustle",
+      "file": "audio/sfx/mic-rustle.flac",
+      "kind": "sfx",
+      "durationNanos": 1479000000,
+      "source": "Close-up ASMR microphone rustle: fingertips softly brushing and tapping a foam microphone windscreen, a gentle crinkle. No voice, no music."
+    },
+    {
+      "id": "pop",
+      "file": "audio/sfx/pop.flac",
+      "kind": "sfx",
+      "durationNanos": 479000000,
+      "source": "One single soft, round, satisfying bubble pop, short and clean, like a small glowing ball appearing out of thin air. No voice, no music."
+    },
+    {
+      "id": "pop-00",
+      "file": "audio/sfx/pop-00.flac",
+      "kind": "sfx",
+      "durationNanos": 479000000,
+      "source": "pop +0 semitones (resampled)"
+    },
+    {
+      "id": "pop-01",
+      "file": "audio/sfx/pop-01.flac",
+      "kind": "sfx",
+      "durationNanos": 452062500,
+      "source": "pop +1 semitones (resampled)"
+    },
+    {
+      "id": "pop-02",
+      "file": "audio/sfx/pop-02.flac",
+      "kind": "sfx",
+      "durationNanos": 426645833,
+      "source": "pop +2 semitones (resampled)"
+    },
+    {
+      "id": "pop-03",
+      "file": "audio/sfx/pop-03.flac",
+      "kind": "sfx",
+      "durationNanos": 402645833,
+      "source": "pop +3 semitones (resampled)"
+    },
+    {
+      "id": "pop-04",
+      "file": "audio/sfx/pop-04.flac",
+      "kind": "sfx",
+      "durationNanos": 379979166,
+      "source": "pop +4 semitones (resampled)"
+    },
+    {
+      "id": "pop-05",
+      "file": "audio/sfx/pop-05.flac",
+      "kind": "sfx",
+      "durationNanos": 358604166,
+      "source": "pop +5 semitones (resampled)"
+    },
+    {
+      "id": "pop-06",
+      "file": "audio/sfx/pop-06.flac",
+      "kind": "sfx",
+      "durationNanos": 338416666,
+      "source": "pop +6 semitones (resampled)"
+    },
+    {
+      "id": "pop-07",
+      "file": "audio/sfx/pop-07.flac",
+      "kind": "sfx",
+      "durationNanos": 319375000,
+      "source": "pop +7 semitones (resampled)"
+    },
+    {
+      "id": "pop-08",
+      "file": "audio/sfx/pop-08.flac",
+      "kind": "sfx",
+      "durationNanos": 301375000,
+      "source": "pop +8 semitones (resampled)"
+    },
+    {
+      "id": "pop-09",
+      "file": "audio/sfx/pop-09.flac",
+      "kind": "sfx",
+      "durationNanos": 284416666,
+      "source": "pop +9 semitones (resampled)"
+    },
+    {
+      "id": "pop-10",
+      "file": "audio/sfx/pop-10.flac",
+      "kind": "sfx",
+      "durationNanos": 268395833,
+      "source": "pop +10 semitones (resampled)"
+    },
+    {
+      "id": "pop-11",
+      "file": "audio/sfx/pop-11.flac",
+      "kind": "sfx",
+      "durationNanos": 253270833,
+      "source": "pop +11 semitones (resampled)"
+    },
+    {
+      "id": "pop-12",
+      "file": "audio/sfx/pop-12.flac",
+      "kind": "sfx",
+      "durationNanos": 239000000,
+      "source": "pop +12 semitones (resampled)"
+    },
+    {
+      "id": "pop-13",
+      "file": "audio/sfx/pop-13.flac",
+      "kind": "sfx",
+      "durationNanos": 225541666,
+      "source": "pop +13 semitones (resampled)"
+    },
+    {
+      "id": "pop-14",
+      "file": "audio/sfx/pop-14.flac",
+      "kind": "sfx",
+      "durationNanos": 212812500,
+      "source": "pop +14 semitones (resampled)"
+    },
+    {
+      "id": "pop-15",
+      "file": "audio/sfx/pop-15.flac",
+      "kind": "sfx",
+      "durationNanos": 200812500,
+      "source": "pop +15 semitones (resampled)"
+    },
+    {
+      "id": "riser",
+      "file": "audio/sfx/riser.flac",
+      "kind": "sfx",
+      "durationNanos": 4641999999,
+      "source": "A terrifying horror riser: screeching dissonant strings and noise climbing in pitch and intensity, faster and faster, ending abruptly at its loudest peak. No voice, no drums."
+    },
+    {
+      "id": "room-tone",
+      "file": "audio/sfx/room-tone.flac",
+      "kind": "sfx",
+      "durationNanos": 9999000000,
+      "source": "Intimate ASMR room tone recorded with a sensitive microphone in a quiet bedroom: very soft warm hiss, faint air, an occasional tiny fabric rustle. No voice, no music."
+    },
+    {
+      "id": "slurp",
+      "file": "audio/sfx/slurp.flac",
+      "kind": "sfx",
+      "durationNanos": 1479000000,
+      "source": "A loud, wet, comically exaggerated slurp of spaghetti noodles being sucked up, ending with a little lip smack. No voice, no music."
+    },
+    {
+      "id": "tinnitus",
+      "file": "audio/sfx/tinnitus.flac",
+      "kind": "sfx",
+      "durationNanos": 3999000000,
+      "source": "A high-pitched tinnitus ear ring: a pure sustained electronic whine, like ringing ears after an explosion, slowly fading out. No voice, no music."
+    },
+    {
+      "id": "zap",
+      "file": "audio/sfx/zap.flac",
+      "kind": "sfx",
+      "durationNanos": 999000000,
+      "source": "An electric crackle and zap: a sharp high-voltage arc snapping with buzzing sparks, short decay. No voice, no music."
+    },
+    {
+      "id": "andy-double",
+      "file": "audio/voices/andy-double.mp3",
+      "kind": "voice",
+      "durationNanos": 7455291666,
+      "source": "narration/andy.mp3: -0.35 semitones, same tempo"
+    },
+    {
+      "id": "babble-chipmunk",
+      "file": "audio/voices/babble-chipmunk.mp3",
+      "kind": "voice",
+      "durationNanos": 7572187500,
+      "source": "narration/chaos-babble.mp3: +8 semitones, same tempo"
+    },
+    {
+      "id": "babble-demon",
+      "file": "audio/voices/babble-demon.mp3",
+      "kind": "voice",
+      "durationNanos": 7604749999,
+      "source": "narration/chaos-babble.mp3: -5 semitones, same tempo"
+    },
+    {
+      "id": "babble-reversed",
+      "file": "audio/voices/babble-reversed.mp3",
+      "kind": "voice",
+      "durationNanos": 7598999999,
+      "source": "narration/chaos-babble.mp3: reversed"
+    },
+    {
+      "id": "chant-demon",
+      "file": "audio/voices/chant-demon.mp3",
+      "kind": "voice",
+      "durationNanos": 6879562500,
+      "source": "narration/chant.mp3: -7 semitones, same tempo"
+    },
+    {
+      "id": "chant-reversed",
+      "file": "audio/voices/chant-reversed.mp3",
+      "kind": "voice",
+      "durationNanos": 6879000000,
+      "source": "narration/chant.mp3: reversed"
+    },
+    {
+      "id": "howl-low",
+      "file": "audio/voices/howl-low.mp3",
+      "kind": "voice",
+      "durationNanos": 4883979166,
+      "source": "narration/chaos-howl.mp3: -5 semitones, same tempo"
+    },
+    {
+      "id": "laugh-chipmunk",
+      "file": "audio/voices/laugh-chipmunk.mp3",
+      "kind": "voice",
+      "durationNanos": 7824937500,
+      "source": "narration/chaos-laugh.mp3: +7 semitones, same tempo"
+    },
+    {
+      "id": "laugh-demon",
+      "file": "audio/voices/laugh-demon.mp3",
+      "kind": "voice",
+      "durationNanos": 7838750000,
+      "source": "narration/chaos-laugh.mp3: -6 semitones, same tempo"
+    },
+    {
+      "id": "spaghetti-chipmunk",
+      "file": "audio/voices/spaghetti-chipmunk.mp3",
+      "kind": "voice",
+      "durationNanos": 8462333333,
+      "source": "narration/spaghetti.mp3: +7 semitones, same tempo"
+    },
+    {
+      "id": "spaghetti-demon",
+      "file": "audio/voices/spaghetti-demon.mp3",
+      "kind": "voice",
+      "durationNanos": 8475979166,
+      "source": "narration/spaghetti.mp3: -6 semitones, same tempo"
+    },
+    {
+      "id": "spaghetti-double",
+      "file": "audio/voices/spaghetti-double.mp3",
+      "kind": "voice",
+      "durationNanos": 8463833333,
+      "source": "narration/spaghetti.mp3: +0.35 semitones, same tempo"
+    },
+    {
+      "id": "theory-reversed",
+      "file": "audio/voices/theory-reversed.mp3",
+      "kind": "voice",
+      "durationNanos": 9199000000,
+      "source": "narration/theory.mp3: reversed"
+    },
+    {
+      "id": "yowl-demon",
+      "file": "audio/voices/yowl-demon.mp3",
+      "kind": "voice",
+      "durationNanos": 5039979166,
+      "source": "narration/chaos-yowl.mp3: -7 semitones, same tempo"
+    }
+  ]
+}

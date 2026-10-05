@@ -300,6 +300,7 @@ impl MeterPlan {
 }
 
 /// Authoring handle for one meter actor.
+#[derive(Clone, Debug)]
 pub struct MeterActor {
     actor: ActorHandle,
     plan: MeterPlan,
@@ -323,6 +324,10 @@ impl MeterActor {
             plan: plan.clone(),
             value,
         })
+    }
+
+    pub fn actor(&self) -> &ActorHandle {
+        &self.actor
     }
 
     pub fn id(&self) -> &str {
@@ -351,7 +356,7 @@ impl MeterActor {
 
     /// Spring to `value`, keeping the current velocity.
     pub fn set(&mut self, scene: &mut PlanBuilder, at_nanos: u64, value: f32) {
-        scene.spring(&self.value, at_nanos, value, 0.7, 0.12);
+        scene.spring(&self.value, at_nanos, value, 0.7, 0.0);
     }
 
     /// Sweep linearly to `value` over `seconds`, as a timer runs; returns

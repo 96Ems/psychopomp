@@ -77,22 +77,28 @@ authoring. Engineering rules are in `AGENTS.md`.
    `cargo run -p psychopomp-media -- adopt scenes/<name>/narration` (no
    regeneration). Done when a plain run reports every resource `=`.
 
-4. **Author the Scene Program** in `scenes/<name>` (add it to the workspace). Behavior
-   stories are Stage films built with `StageActor` (see `flagship.rs` and
-   `stop_stage.rs`). Schedule the clips with `Narration::reading`, build elements
-   with `StageElement::card|orb|beam|packet|label|ring` on `StagePost::RESTRAINED`,
-   frame the film with `psychopomp::chrome` (header, chips, footer), and play
-   sounds from `psychopomp::sfx`. Load the `explainer-motion` skill and apply it
-   to every beat: cards `settle_in`, beams `connect`, messages `send`, impacts
-   `hit`, the hero `orb_in`, the fix's `rewind`; use
-   `CalloutActor` to pin annotations to Stage elements or Editor code ranges and
-   `RollingNumberActor` for live counters/timers; then camera moves, rewind,
-   resolution, and a `zoom` into the code. Reach for the visualization overlays
-   instead of hand-building them from Stage labels and rings: `ChecklistActor`
-   for checks that run and resolve, `MeterActor::countdown` for a timeout ring,
-   `BarsActor` for before/after numbers, `ConfettiActor` for a success beat, and
-   `SubtitlesPlan::from_spoken` to burn in word-timed captions
-   (`scenes/viz-components` shows all five).
+4. **Author the Scene Program** in `scenes/<name>` (add it to the workspace).
+   Use `psychopomp::score` (`SCENE_PLANS.md`, "Author With The Score DSL") so
+   `PlanBuilder` is the only `mut` binding and every actor (`Stage`, `Camera`,
+   `Caption`, `Callout`, `RollingNumber`, `Checklist`, `Meter`, `Bars`,
+   `Subtitles`, `Confetti`, `Terminal`, `Chat`, `ChangedFiles`, `LowerThird`,
+   `Lens`) is an immutable value whose methods return composable `Beat`s
+   (`.then`, `.also`, `.with`, `.on_end`, `.after`, `.early`, `stagger`, `each`,
+   `at!(scene, time => ...)`). Schedule clips with `Narration::reading`, build
+   elements with `StageElement::card|orb|beam|packet|label|ring` and relative
+   `psychopomp::layout::Placement` envelopes on `StagePost::RESTRAINED`, frame
+   with `Caption::header|chip|footer`, and play sounds with `sfx::*.beat(id, gain_db)`
+   (or `audio.beat(gain_db)` for `psychopomp-media`). Load the `explainer-motion`
+   skill and apply it to every beat: cards `settle_in`, beams `connect`,
+   messages `send`, replies wait for `.reply()`, impacts `hit`, the hero `orb_in`,
+   the fix's `rewind`; use `Callout` to pin annotations to Stage elements or
+   Editor code ranges and `RollingNumber` for live counters/timers; drive camera
+   moves through `stage.camera()` (`establish`, `frame`, `follow`, `release`,
+   `orbit`, `whip`, `dolly_zoom`). Reach for the visualization and text overlays
+   instead of hand-building them from Stage labels and rings: `Checklist` for
+   checks that run and resolve, `Meter` (`MeterPlan::countdown`) for a timeout
+   ring, `Bars` for before/after numbers, `Confetti` for a success beat, and
+   `Subtitles` (`SubtitlesPlan::from_spoken`) to burn in word-timed captions.
    Changes are `Diff`s of `keep`, `add(step)`, and `remove(step)` lines, each step
    keyed to a phrase. Done when `cargo run -p <crate>` writes the reel and
    `cargo run --release -- plan validate <reel>` reports valid. A missing phrase panics

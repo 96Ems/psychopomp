@@ -780,6 +780,14 @@ impl Audio {
         });
     }
 
+    /// Return a composable [`psychopomp::score::Beat`] that plays this audio resource
+    /// as a Layer Clip at its cue time.
+    pub fn beat(&self, gain_db: f32) -> impl psychopomp::score::Beat + '_ {
+        psychopomp::score::impulse(move |scene, at| {
+            self.play(scene, at, gain_db);
+        })
+    }
+
     /// A new resource, `<id>.<effect>`, made from this one with ffmpeg. Its
     /// key follows this one's, so regenerating the source regenerates it.
     pub fn derive(&self, effect: Effect) -> Result<Audio> {

@@ -37,11 +37,18 @@ pub fn push_travel(progress: f32) -> Travel {
     }
 }
 
-/// A slide arrives fast and settles like a critically damped spring, resting
-/// exactly at the end.
+/// A slide arrives fast and settles like a critically damped spring, with a
+/// cushioned tail so it glides through its second half instead of stalling.
 pub fn slide_travel(progress: f32) -> Travel {
-    let (position, rate) = settle(0.0, 1.0, 0.0, 1.0, progress.clamp(0.0, 1.0));
-    Travel { position, rate }
+    let t = progress.clamp(0.0, 1.0);
+    let (fast, fast_rate) = settle(0.0, 1.0, 0.0, 1.0, t);
+    let u = 1.0 - t;
+    let cushion = 1.0 - u * u * u * (1.0 + 3.0 * t);
+    let cushion_rate = 12.0 * t * u * u;
+    Travel {
+        position: lerp(fast, cushion, 0.21),
+        rate: lerp(fast_rate, cushion_rate, 0.21),
+    }
 }
 
 /// A whip pan leans in, tears across at three and a half times the average
@@ -159,7 +166,7 @@ pub fn match_mix(progress: f32) -> (f32, f32) {
 /// The ink threshold at `progress`: ink has covered every point whose field
 /// value (0..1) is below it, with `edge` of softness on each side.
 pub fn ink_threshold(progress: f32, edge: f32) -> f32 {
-    lerp(-edge, 1.0 + edge, smoothstep(progress))
+    lerp(-edge, 1.0 + edge, smootherstep(progress.clamp(0.0, 1.0)))
 }
 
 /// Where in a glitch or flash the picture cuts.
@@ -185,23 +192,23 @@ pub fn glitch_frame(progress: f32, seconds: f32) -> u32 {
 /// Where a flash peaks and the picture cuts beneath it.
 pub const FLASH_PEAK: f32 = 0.24;
 
-/// A flash's brightness: it swells into a white-out that hides the cut, then
-/// decays convexly, fast and then with a long tail.
+/// A flash's brightness: it swells smoothly into a white-out that hides the
+/// cut, then decays convexly, fast and then with a long tail.
 pub fn flash_intensity(progress: f32) -> f32 {
     let t = progress.clamp(0.0, 1.0);
     if t <= FLASH_PEAK {
-        let rise = t / FLASH_PEAK;
-        rise * rise * rise
+        smoothstep(t / FLASH_PEAK)
     } else {
         (1.0 - (t - FLASH_PEAK) / (1.0 - FLASH_PEAK)).powi(3)
     }
 }
 
-/// A light leak's strength, swelling and fading around the middle, and how
-/// far its glow has drifted across the frame.
+/// A light leak's strength, swelling and fading smoothly around the middle,
+/// and how far its glow has drifted across the frame.
 pub fn leak_strength(progress: f32) -> (f32, f32) {
     let t = progress.clamp(0.0, 1.0);
-    ((PI * t).sin().powf(1.5), smootherstep(t))
+    let bell = (PI * t).sin();
+    (bell * bell, smootherstep(t))
 }
 
 /// How much of the incoming frame shows under a light leak: the swap happens

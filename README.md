@@ -17,7 +17,7 @@ vibe-coded prototype, tested on macOS (Metal).
   packets, racks focus, orbits, dolly-zooms, whips, and sways handheld.
 - **Code**: an editor that animates diffs while every line keeps its identity.
 - **Overlays**: callouts pinned to anything, rolling numbers, captions, sequence
-  diagrams, charts, trees, video cards, checklists, meters, benchmark bars,
+  diagrams, charts, trees, video cards, footage, checklists, meters, benchmark bars,
   word-timed subtitles, and confetti.
 - **Text surfaces**: a terminal, a Slack or iMessage thread, and a pull request's
   changed files, drawn natively so they follow the theme and re-time with the
@@ -70,11 +70,13 @@ bun scripts/sheet.ts target/hello.json 0.5,1.5,2.7 --theme neutral --shutter
 | [`psychopomp-intro`](scenes/psychopomp-intro) | This library introducing itself, loudly |
 | [`2password`](scenes/2password) | A narrated product explainer on the Stage |
 | [`pr-walkthrough`](scenes/pr-walkthrough) | Pull requests as Stage films that zoom into their diffs |
+| [`balls-with-dots`](scenes/balls-with-dots), [`balls-v3`](scenes/balls-v3) | One reply film in two cuts: a whisper about a ball with dots that builds through a chant and a theory into a drum-cut montage of every effect, then one small ball |
 | [`camera`](scenes/camera) | A Stage diagram shot like a film: every camera move |
 | [`generated-media`](scenes/generated-media) | Speech, a chant, sound effects, and a derived voice, generated once and timed to their words |
 | [`callouts`](scenes/callouts), [`rolling-number`](scenes/rolling-number), [`charts`](scenes/charts), [`tree`](scenes/tree), [`diagnostics`](scenes/diagnostics), [`text-surfaces`](scenes/text-surfaces), [`viz-components`](scenes/viz-components), [`transitions`](scenes/transitions) | Component showrooms |
 | [`effects-showroom`](scenes/effects-showroom) | Lightning, charge, shields, dissolve, and scans on the Stage |
 | [`loupe`](scenes/loupe) | A glass loupe reading code and a Stage card's status |
+| [`footage`](scenes/footage) | Collages of stills and clips, retimed footage, and footage inside a Stage |
 | [`interactive-showcase`](scenes/interactive-showcase) | A native, steppable presentation (`plan present`) |
 | [`stage-forms`](scenes/stage-forms) | Stage diagram vocabulary: particle forms that morph and tumble, shapes, icons, arrows, a relaying packet |
 
