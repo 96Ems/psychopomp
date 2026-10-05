@@ -31,6 +31,10 @@ const PAUSE: f64 = 0.55;
 const MAX_PAGE: f64 = 6.0;
 const FADE_IN: f64 = 0.16;
 const FADE_OUT: f64 = 0.12;
+/// Faster sequential text handoff during a direct page swap: outgoing text
+/// clears quickly without colliding with the incoming sentence.
+const SWAP_OUT: f64 = 0.08;
+const SWAP_IN: f64 = 0.11;
 /// A word becomes spoken over this long from its start.
 const SPEAK: f64 = 0.08;
 /// The highlight leaves a final word this long after it ends, over `RELEASE`.
@@ -453,8 +457,9 @@ impl SubtitleLayout {
     pub fn sample(&self, seconds: f64) -> Vec<PageFrame<'_>> {
         self.pages
             .iter()
-            .filter(|page| seconds >= page.show && seconds < page.hide)
-            .map(|page| self.page_frame(page, seconds))
+            .enumerate()
+            .filter(|&(_, page)| seconds >= page.show && seconds < page.hide)
+            .map(|(index, page)| self.page_frame(index, page, seconds))
             .collect()
     }
 
@@ -462,9 +467,19 @@ impl SubtitleLayout {
         smoothstep(((seconds - self.starts[index]) / SPEAK) as f32)
     }
 
-    fn page_frame<'a>(&'a self, page: &'a SubtitlePage, seconds: f64) -> PageFrame<'a> {
-        let entering = smoothstep(((seconds - page.show) / FADE_IN) as f32);
-        let leaving = smoothstep(((seconds - (page.hide - FADE_OUT)) / FADE_OUT) as f32);
+    fn page_frame<'a>(
+        &'a self,
+        page_index: usize,
+        page: &'a SubtitlePage,
+        seconds: f64,
+    ) -> PageFrame<'a> {
+        let inherited = page_index > 0
+            && self.pages[page_index - 1].swaps
+            && (self.pages[page_index - 1].hide - page.show).abs() < 1e-9;
+        let fade_in = if inherited { SWAP_IN } else { FADE_IN };
+        let fade_out = if page.swaps { SWAP_OUT } else { FADE_OUT };
+        let entering = smoothstep(((seconds - page.show) / fade_in) as f32);
+        let leaving = smoothstep(((seconds - (page.hide - fade_out)) / fade_out) as f32);
         let current = |index: usize| {
             let spoken = self.spoken(index, seconds);
             let next = if index + 1 < page.words.end {
@@ -503,11 +518,12 @@ impl SubtitleLayout {
         if let Some(latest) = words.iter().rposition(|ink| ink.upcoming < 1.0) {
             let ink = words[latest];
             let glide = 1.0 - ink.upcoming;
+            let raw_glide = ((seconds - self.starts[ink.word.index]) / SPEAK).clamp(0.0, 1.0) as f32;
             let previous = latest.checked_sub(1).map(|i| words[i]);
             match previous {
                 Some(before) if glide < 1.0 && before.current > 0.0 => {
                     if before.line == ink.line {
-                        let k = smootherstep(glide);
+                        let k = smootherstep(raw_glide);
                         pills.push(Pill {
                             line: ink.line,
                             x: lerp(before.word.x, ink.word.x, k),
@@ -557,16 +573,21 @@ impl SubtitleLayout {
             )
         };
         let (width, lines) = size(page);
-        let entering = smoothstep(((seconds - page.show) / FADE_IN) as f32);
-        let leaving = smoothstep(((seconds - (page.hide - FADE_OUT)) / FADE_OUT) as f32);
-        // A page replacing its predecessor keeps the surface and morphs it.
         let inherited = index > 0
             && self.pages[index - 1].swaps
             && (self.pages[index - 1].hide - page.show).abs() < 1e-9;
-        if page.swaps && leaving > 0.0 {
+        let fade_in = if inherited { SWAP_IN } else { FADE_IN };
+        let fade_out = if page.swaps { SWAP_OUT } else { FADE_OUT };
+        let in_t = ((seconds - page.show) / fade_in).clamp(0.0, 1.0) as f32;
+        let out_t = ((seconds - (page.hide - fade_out)) / fade_out).clamp(0.0, 1.0) as f32;
+        let entering = smoothstep(in_t);
+        let leaving = smoothstep(out_t);
+        // A page replacing its predecessor keeps the surface and morphs it
+        // on one unbroken minimum-jerk curve without stalling at the midpoint.
+        if page.swaps && out_t > 0.0 {
             let next = &self.pages[index + 1];
             let (next_width, next_lines) = size(next);
-            let k = smootherstep(leaving * 0.5);
+            let k = smootherstep(out_t * 0.5);
             return Some(Backing {
                 width: lerp(width, next_width, k),
                 lines: lerp(lines, next_lines, k),
@@ -574,9 +595,9 @@ impl SubtitleLayout {
                 rise: 0.0,
             });
         }
-        if inherited && entering < 1.0 {
+        if inherited && in_t < 1.0 {
             let (before_width, before_lines) = size(&self.pages[index - 1]);
-            let k = smootherstep(0.5 + entering * 0.5);
+            let k = smootherstep(0.5 + in_t * 0.5);
             return Some(Backing {
                 width: lerp(before_width, width, k),
                 lines: lerp(before_lines, lines, k),
@@ -746,12 +767,20 @@ mod tests {
         assert!((second.hide - (last + HOLD)).abs() < 1e-9);
         let begin = plan.words[third.words.start].start_nanos as f64 * 1e-9;
         assert!((third.show - (begin - LEAD)).abs() < 1e-9);
-        // At most two pages at any time, and never two fully opaque.
+        // At most two pages at any time, never two fully opaque, and the
+        // backing morphs continuously through the midpoint without stalling.
         for step in 0..1200 {
             let frames = layout.sample(step as f64 * 0.01);
             assert!(frames.len() <= 2);
             assert!(frames.iter().filter(|f| f.opacity > 0.999).count() <= 1);
         }
+        let w_before = layout.backing(first.hide - 0.01).unwrap().width;
+        let w_at = layout.backing(first.hide).unwrap().width;
+        let w_after = layout.backing(first.hide + 0.01).unwrap().width;
+        assert!(
+            (w_at - w_before).abs() > 1.0 && (w_after - w_at).abs() > 1.0,
+            "backing morphs through the midpoint without stalling"
+        );
     }
 
     #[test]
