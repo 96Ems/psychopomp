@@ -1704,7 +1704,7 @@ pub mod packet {
 /// Wire draw-on, after the blog diagrams: the port pops, then the wire draws
 /// with a gentle start and stop. (A frame `sweep` before it is opt-in.)
 pub const PORT_POP_SECONDS: f32 = 0.3;
-pub const DRAW_CURVE: Ease = Ease::CubicBezier([0.45, 0.0, 0.2, 1.0]);
+pub const DRAW_CURVE: Ease = Ease::DRAW;
 
 /// How long a receiver takes to react once a request has landed, before its
 /// reply starts to gather.
@@ -2237,7 +2237,7 @@ impl StageActor {
         seconds: f32,
     ) {
         if seconds > 0.0 {
-            self.ease(scene, property, at_nanos, target, seconds, Ease::Smoothstep);
+            self.ease(scene, property, at_nanos, target, seconds, Ease::GLIDE);
         } else {
             self.set(scene, property, at_nanos, target);
         }
@@ -2285,7 +2285,7 @@ impl StageActor {
     ) -> u64 {
         let channel = self.channel(scene, &format!("{card}.scan"), 0.0);
         scene.set(&channel, at_nanos, 0.0);
-        scene.ease(&channel, at_nanos, 1.0, seconds, Ease::Linear);
+        scene.ease(&channel, at_nanos, 1.0, seconds, Ease::GLIDE);
         at_nanos + whole_millis(seconds)
     }
 
@@ -2293,13 +2293,13 @@ impl StageActor {
     /// A shield is up by default; raising one first declares it down.
     pub fn raise(&mut self, scene: &mut PlanBuilder, shield: &str, at_nanos: u64, seconds: f32) {
         let channel = self.channel(scene, &format!("{shield}.up"), 0.0);
-        scene.ease(&channel, at_nanos, 1.0, seconds, Ease::Smoothstep);
+        scene.ease(&channel, at_nanos, 1.0, seconds, Ease::GLIDE);
     }
 
     /// Lower `shield` over `seconds`: its cells switch off in reverse order.
     pub fn lower(&mut self, scene: &mut PlanBuilder, shield: &str, at_nanos: u64, seconds: f32) {
         let channel = self.channel(scene, &format!("{shield}.up"), 1.0);
-        scene.ease(&channel, at_nanos, 0.0, seconds, Ease::Smoothstep);
+        scene.ease(&channel, at_nanos, 0.0, seconds, Ease::GLIDE);
     }
 }
 

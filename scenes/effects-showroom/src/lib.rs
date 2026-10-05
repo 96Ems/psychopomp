@@ -48,7 +48,8 @@ fn orb_in(stage: &mut StageActor, scene: &mut PlanBuilder, orb: &str, at: u64) {
     scene.ease(&opacity, at, 1.0, 0.3, Ease::Smootherstep);
 }
 
-/// Type a caption in at `at`; fade it out at `out`, if given.
+/// Type a caption in at `at`; fade it out crisply at `out`, if given, so the
+/// next caption never types over a lingering predecessor.
 fn say(stage: &mut StageActor, scene: &mut PlanBuilder, label: &str, at: u64, out: Option<u64>) {
     stage.type_in(scene, label, at, 46.0);
     if let Some(out) = out {
@@ -57,8 +58,8 @@ fn say(stage: &mut StageActor, scene: &mut PlanBuilder, label: &str, at: u64, ou
             &format!("{label}.opacity"),
             out,
             0.0,
-            0.25,
-            Ease::Smoothstep,
+            0.15,
+            Ease::GLIDE,
         );
     }
 }
@@ -180,24 +181,24 @@ fn replace() -> Result<ScenePlan> {
         &mut scene,
         "dissolve",
         seconds(0.8),
-        Some(seconds(2.7)),
+        Some(seconds(2.1)),
     );
     let gone = stage.dissolve(&mut scene, "old", seconds(1.4));
-    // The new card waits as cold ash until it forms.
+    // The new card waits as cold ash until it forms right as the old front clears.
     stage.channel(
         &mut scene,
         "new.dissolve",
         psychopomp::effects::dissolve::DURATION,
     );
-    let formed = gone + seconds(0.8);
+    let formed = gone + seconds(0.35);
     say(
         &mut stage,
         &mut scene,
         "materialize",
         formed - seconds(0.5),
-        Some(formed + seconds(1.45)),
+        Some(formed + seconds(1.35)),
     );
-    let whole = stage.materialize(&mut scene, "new", formed, 1.6);
+    let whole = stage.materialize(&mut scene, "new", formed, 1.35);
     say(&mut stage, &mut scene, "scan", whole + seconds(0.25), None);
     let scanned = stage.scan(&mut scene, "new", whole + seconds(0.75), 1.1);
     stage.to(&mut scene, "new.status", scanned - seconds(0.15), 1.0, 0.4);

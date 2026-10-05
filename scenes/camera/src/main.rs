@@ -278,7 +278,7 @@ fn main() -> anyhow::Result<()> {
     camera.focus_on(sc, "queue", whip, Move::Glide(0.6))?;
     let landed_b = camera.whip(sc, &["queue", "drain"], 170.0, whip, 0.6)?;
     for (index, card) in ["queue", "drain"].into_iter().enumerate() {
-        s.settle_in(sc, card, whip + seconds(0.25 + 0.14 * index as f64));
+        s.settle_in(sc, card, whip + seconds(0.08 + 0.12 * index as f64));
     }
     slate(
         sc,
