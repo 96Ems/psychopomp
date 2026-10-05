@@ -594,6 +594,7 @@ impl SubtitleLayout {
 }
 
 /// Authoring handle for one subtitles actor.
+#[derive(Clone, Debug)]
 pub struct SubtitlesActor {
     actor: ActorHandle,
 }
@@ -609,6 +610,10 @@ impl SubtitlesActor {
         Ok(Self { actor })
     }
 
+    pub fn actor(&self) -> &ActorHandle {
+        &self.actor
+    }
+
     pub fn id(&self) -> &str {
         self.actor.id()
     }
@@ -620,6 +625,11 @@ impl SubtitlesActor {
         initial: f32,
     ) -> ContinuousHandle {
         scene.channel(&self.actor, property, initial)
+    }
+
+    /// Fade every subtitle in from `at_nanos`.
+    pub fn show(&mut self, scene: &mut PlanBuilder, at_nanos: u64) {
+        crate::caption::show(scene, &self.actor, at_nanos);
     }
 
     /// Fade every subtitle out from `at_nanos`, as before a scene change.

@@ -167,6 +167,7 @@ pub fn media(
 }
 
 /// Authoring handle for one video actor.
+#[derive(Clone, Debug)]
 pub struct VideoActor {
     actor: ActorHandle,
     plan: VideoPlan,
@@ -193,6 +194,10 @@ impl VideoActor {
 
     pub fn actor(&self) -> &ActorHandle {
         &self.actor
+    }
+
+    pub fn id(&self) -> &str {
+        self.actor.id()
     }
 
     pub fn plan(&self) -> &VideoPlan {

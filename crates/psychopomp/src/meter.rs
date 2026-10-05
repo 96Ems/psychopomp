@@ -300,6 +300,7 @@ impl MeterPlan {
 }
 
 /// Authoring handle for one meter actor.
+#[derive(Clone, Debug)]
 pub struct MeterActor {
     actor: ActorHandle,
     plan: MeterPlan,
@@ -323,6 +324,10 @@ impl MeterActor {
             plan: plan.clone(),
             value,
         })
+    }
+
+    pub fn actor(&self) -> &ActorHandle {
+        &self.actor
     }
 
     pub fn id(&self) -> &str {

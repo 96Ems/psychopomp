@@ -407,6 +407,7 @@ const PANE_DIM: f32 = 0.35;
 const PANE_SHADOW: f32 = 0.35;
 
 /// Authoring handle for one lens. Channels are declared on first use.
+#[derive(Clone, Debug)]
 pub struct LensActor {
     actor: ActorHandle,
     anchors: Vec<String>,
@@ -428,6 +429,10 @@ impl LensActor {
             size: plan.size,
             magnification: plan.magnification,
         })
+    }
+
+    pub fn actor(&self) -> &ActorHandle {
+        &self.actor
     }
 
     pub fn id(&self) -> &str {

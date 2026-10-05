@@ -521,6 +521,7 @@ impl EditorRecipePlan {
 }
 
 /// Authoring handle for one Inlay Hint's reveal channel on its editor.
+#[derive(Clone, Debug)]
 pub struct InlayHint {
     channel: ContinuousHandle,
 }
@@ -530,6 +531,10 @@ impl InlayHint {
         Self {
             channel: scene.channel(editor, &inlay_channel(id), 0.0),
         }
+    }
+
+    pub fn channel(&self) -> &ContinuousHandle {
+        &self.channel
     }
 
     /// The hint opens its room inline and its ghost text resolves.
@@ -543,6 +548,7 @@ impl InlayHint {
 }
 
 /// Authoring handle for one Diagnostic.
+#[derive(Clone, Debug)]
 pub struct DiagnosticActor {
     actor: ActorHandle,
 }
@@ -559,6 +565,10 @@ impl DiagnosticActor {
         Ok(Self {
             actor: scene.actor(id, DIAGNOSTIC_RECIPE, plan)?,
         })
+    }
+
+    pub fn actor(&self) -> &ActorHandle {
+        &self.actor
     }
 
     pub fn id(&self) -> &str {
@@ -592,6 +602,7 @@ impl DiagnosticActor {
 }
 
 /// Authoring handle for one Hover Card.
+#[derive(Clone, Debug)]
 pub struct HoverActor {
     actor: ActorHandle,
 }
@@ -606,6 +617,10 @@ impl HoverActor {
         Ok(Self {
             actor: scene.actor(id, HOVER_RECIPE, plan)?,
         })
+    }
+
+    pub fn actor(&self) -> &ActorHandle {
+        &self.actor
     }
 
     pub fn id(&self) -> &str {
@@ -626,6 +641,7 @@ impl HoverActor {
 }
 
 /// Authoring handle for one Cursor. Channels are declared on first use.
+#[derive(Clone, Debug)]
 pub struct CursorActor {
     actor: ActorHandle,
     anchors: Vec<String>,
@@ -646,6 +662,10 @@ impl CursorActor {
                 .map(|anchor| anchor.id.clone())
                 .collect(),
         })
+    }
+
+    pub fn actor(&self) -> &ActorHandle {
+        &self.actor
     }
 
     pub fn id(&self) -> &str {

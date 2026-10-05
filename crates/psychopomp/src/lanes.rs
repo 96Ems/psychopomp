@@ -289,6 +289,7 @@ impl LanesPlan {
 }
 
 /// Authoring handle for one lanes actor. Channels are declared on first use.
+#[derive(Clone, Debug)]
 pub struct LanesActor {
     actor: ActorHandle,
 }
@@ -302,6 +303,14 @@ impl LanesActor {
         plan.validate()?;
         let actor = scene.actor(id, LANES_RECIPE, plan)?;
         Ok(Self { actor })
+    }
+
+    pub fn actor(&self) -> &ActorHandle {
+        &self.actor
+    }
+
+    pub fn id(&self) -> &str {
+        self.actor.id()
     }
 
     pub fn channel(

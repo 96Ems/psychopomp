@@ -1718,6 +1718,7 @@ pub fn reply_after(arrival: u64) -> u64 {
 }
 
 /// Authoring handle: declares each stage channel once, on first use.
+#[derive(Clone, Debug)]
 pub struct StageActor {
     actor: ActorHandle,
     /// The declared recipe, for helpers that follow a beam to its ends.
@@ -1736,6 +1737,18 @@ impl StageActor {
             actor,
             plan: plan.clone(),
         })
+    }
+
+    pub fn actor(&self) -> &ActorHandle {
+        &self.actor
+    }
+
+    pub fn id(&self) -> &str {
+        self.actor.id()
+    }
+
+    pub fn plan(&self) -> &StagePlan {
+        &self.plan
     }
 
     /// The channel for `property`, declared on first use with `initial`.

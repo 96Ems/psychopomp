@@ -169,6 +169,7 @@ impl ConfettiPlan {
 }
 
 /// Authoring handle for one confetti actor.
+#[derive(Clone, Debug)]
 pub struct ConfettiActor {
     actor: ActorHandle,
 }
@@ -182,6 +183,10 @@ impl ConfettiActor {
         plan.validate()?;
         let actor = scene.actor(id, CONFETTI_RECIPE, plan)?;
         Ok(Self { actor })
+    }
+
+    pub fn actor(&self) -> &ActorHandle {
+        &self.actor
     }
 
     pub fn id(&self) -> &str {

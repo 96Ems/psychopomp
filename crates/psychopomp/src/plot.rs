@@ -317,6 +317,7 @@ pub(crate) fn valid_id(id: &str, kind: &str) -> Result<()> {
 }
 
 /// Authoring handle for one plot actor. Channels are declared on first use.
+#[derive(Clone, Debug)]
 pub struct PlotActor {
     actor: ActorHandle,
 }
@@ -330,6 +331,10 @@ impl PlotActor {
         plan.validate()?;
         let actor = scene.actor(id, PLOT_RECIPE, plan)?;
         Ok(Self { actor })
+    }
+
+    pub fn actor(&self) -> &ActorHandle {
+        &self.actor
     }
 
     pub fn id(&self) -> &str {
