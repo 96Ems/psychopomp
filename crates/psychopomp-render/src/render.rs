@@ -19,6 +19,7 @@ mod chat;
 mod component_prototype;
 mod debug;
 mod fonts;
+mod footage;
 mod grid;
 mod header;
 mod ide;
@@ -39,7 +40,6 @@ mod tree;
 mod ui;
 mod value;
 mod venn;
-mod video;
 mod viz;
 mod window;
 mod wipe;
@@ -49,6 +49,7 @@ pub(crate) use callout::CalloutPose;
 pub(crate) use changed_files::ChangedFilesLayout;
 pub(crate) use chat::ChatGlyphs;
 pub(crate) use component_prototype::PrototypeGlyphs;
+pub(crate) use footage::{FootageLayer, FootagePose};
 pub use grid::{
     GridFrame, GridItemFrame, GridLabelStyle, GridLinePalette, GridTextClip, GridTextDisclosure,
 };
@@ -56,7 +57,7 @@ pub(crate) use header::{HeaderGlyphs, header_words};
 pub use ide::{
     CaretFrame, DiagnosticFrame, EditorAnnotations, HoverFrame, InlayFrame, SelectionFrame,
 };
-pub(crate) use image::{DecodedImage, ImagePose, decode_image};
+pub(crate) use image::decode_image;
 pub(crate) use lower_third::LowerThirdGlyphs;
 pub(crate) use rich_text::{RichTextGlyphs, RichTextSource, parse as parse_rich_text};
 #[cfg(test)]
@@ -67,7 +68,6 @@ pub(crate) use terminal::TerminalNames;
 pub use theme::Theme;
 pub(crate) use tree::TreeNames;
 pub(crate) use venn::validate as validate_venn;
-pub(crate) use video::VideoPose;
 
 const FORMAT: wgpu::TextureFormat = wgpu::TextureFormat::Rgba8UnormSrgb;
 const BYTES_PER_PIXEL: u32 = 4;
@@ -465,6 +465,10 @@ impl HeadlessRenderer {
         self.interactive_preview = enabled;
     }
 
+    pub(crate) fn theme(&self) -> Theme {
+        self.theme
+    }
+
     pub fn set_theme(&mut self, theme: Theme) {
         if self.theme == theme {
             return;
@@ -488,15 +492,21 @@ impl HeadlessRenderer {
         pixels: &mut [u8],
         draw: impl FnOnce(&mut ui::card::FrameUi<'_>) -> Result<R>,
     ) -> Result<R> {
+        self.composite_ui_in(pixels, [self.spec.width, self.spec.height], draw)
+    }
+
+    /// `composite_ui` into `pixels` of `size`, such as one overlay's layer.
+    pub(crate) fn composite_ui_in<R>(
+        &mut self,
+        pixels: &mut [u8],
+        size: [u32; 2],
+        draw: impl FnOnce(&mut ui::card::FrameUi<'_>) -> Result<R>,
+    ) -> Result<R> {
         let mut card_pixels = std::mem::take(&mut self.ui_card_pixels);
         let mut overlay_pixels = std::mem::take(&mut self.ui_overlay_pixels);
         let result = {
-            let mut frame = ui::card::FrameUi::new(
-                pixels,
-                [self.spec.width, self.spec.height],
-                &mut card_pixels,
-                &mut overlay_pixels,
-            )?;
+            let mut frame =
+                ui::card::FrameUi::new(pixels, size, &mut card_pixels, &mut overlay_pixels)?;
             draw(&mut frame)
         };
         self.ui_card_pixels = card_pixels;

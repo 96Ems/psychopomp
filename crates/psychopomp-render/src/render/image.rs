@@ -1,37 +1,15 @@
-//! Image pixels: a PNG, JPEG, or WebP decoded once (recognized by its
-//! signature, not its name), halved down to at most twice the width it is
-//! shown at so minification never aliases, then drawn bare or framed through
-//! the shared projected card, as a Video Card draws footage.
+//! Image decoding: a PNG, JPEG, or WebP decoded once (recognized by its
+//! signature, not its name) and halved down to at most twice the width it is
+//! shown at, so minification never aliases. Footage draws it.
 use std::io::Cursor;
 
 use anyhow::{Context, Result, bail};
-use psychopomp::image::ImagePlan;
-
-use super::{
-    HeadlessRenderer,
-    ui::{
-        Bounds,
-        card::{CardFrame, CardProjection, CardStyle, ContentFit, Fill, RgbaSource, UiColor},
-    },
-};
 
 /// Decoded straight-alpha RGBA8 pixels.
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct DecodedImage {
     pub pixels: Vec<u8>,
     pub size: [u32; 2],
-}
-
-/// One sample of an image's channels: its center on the canvas (literal or
-/// anchored, plus `x`/`y`) and its card pose.
-#[derive(Clone, Copy, Debug)]
-pub(crate) struct ImagePose {
-    pub center: [f32; 2],
-    pub scale: f32,
-    pub opacity: f32,
-    pub rotation: f32,
-    pub tilt: [f32; 2],
-    pub blur: f32,
 }
 
 /// Decode PNG, JPEG, or WebP `bytes` into straight-alpha RGBA8.
@@ -167,88 +145,6 @@ impl DecodedImage {
     }
 }
 
-impl HeadlessRenderer {
-    pub(crate) fn composite_image(
-        &mut self,
-        pixels: &mut [u8],
-        plan: &ImagePlan,
-        image: &DecodedImage,
-        pose: ImagePose,
-    ) -> Result<()> {
-        if pose.opacity <= 0.001 {
-            return Ok(());
-        }
-        let card_size = plan.card_size(image.size);
-        let style = if plan.framed {
-            let palette = self.theme.palette();
-            let [r, g, b] = palette.surface;
-            let [br, bg, bb] = palette.raised;
-            CardStyle {
-                material: Fill::Solid(UiColor::srgb8(r, g, b, 255)),
-                corner_radius: 18.0,
-                border_width: 1.25,
-                border_color: UiColor::srgb8(br, bg, bb, 255),
-                shadow_offset: [0.0, 18.0],
-                shadow_blur: 30.0,
-                shadow_opacity: 0.55,
-            }
-        } else {
-            CardStyle {
-                material: Fill::Solid(UiColor::srgb8(0, 0, 0, 0)),
-                corner_radius: plan.radius,
-                border_width: 0.0,
-                border_color: UiColor::srgb8(0, 0, 0, 0),
-                shadow_offset: [0.0, 0.0],
-                shadow_blur: 0.0,
-                shadow_opacity: 0.0,
-            }
-        };
-        let card = CardFrame {
-            bounds: Bounds::from_center(pose.center, card_size),
-            style,
-            projection: CardProjection {
-                scale: pose.scale.max(0.01),
-                rotation_z: pose.rotation,
-                tilt_x: pose.tilt[0],
-                tilt_y: pose.tilt[1],
-                surface_blur: 0.0,
-                near_edge_blur: pose.blur.max(0.0),
-            },
-            opacity: pose.opacity.clamp(0.0, 1.0),
-        };
-        let bar = plan.title_bar();
-        let fit = ContentFit::Region {
-            source: Bounds {
-                origin: [0.0, 0.0],
-                size: [image.size[0] as f32, image.size[1] as f32],
-            },
-            content: Bounds {
-                origin: [0.0, bar],
-                size: [card_size[0], card_size[1] - bar],
-            },
-        };
-        let title = plan
-            .title
-            .as_deref()
-            .map(|title| self.video_title_bar(title, card_size[0]));
-        let source = RgbaSource::packed(&image.pixels, image.size)?;
-        self.composite_ui(pixels, |ui| {
-            ui.card_source(card, source, fit)?;
-            if let Some((strip, strip_size)) = &title {
-                ui.card_layer(
-                    card,
-                    RgbaSource::packed(strip, *strip_size)?,
-                    Bounds {
-                        origin: [0.0, 0.0],
-                        size: [card_size[0], bar],
-                    },
-                )?;
-            }
-            Ok(())
-        })
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use std::io::Cursor;
@@ -321,82 +217,5 @@ mod tests {
         let reduced = wide.reduced_for(120.0);
         assert_eq!(reduced.size, [125, 2]);
         assert!(reduced.pixels.iter().all(|&v| v == 255));
-    }
-}
-
-#[cfg(test)]
-mod gpu_tests {
-    use psychopomp::image::ImagePlan;
-
-    use super::{DecodedImage, ImagePose};
-    use crate::render::{HeadlessRenderer, RenderSpec};
-
-    #[test]
-    #[ignore = "requires a headless GPU; bare and framed images draw where posed and hide cleanly"]
-    fn images_draw_bare_or_framed_and_hidden_images_leave_no_ink() {
-        let mut renderer = pollster::block_on(HeadlessRenderer::new(RenderSpec {
-            width: 1920,
-            height: 1080,
-            file_name: "image-proof".into(),
-        }))
-        .unwrap();
-        let image = DecodedImage {
-            pixels: (0..32 * 16)
-                .flat_map(|i| {
-                    if i % 32 < 16 {
-                        [255, 0, 0, 255]
-                    } else {
-                        [0, 0, 255, 255]
-                    }
-                })
-                .collect(),
-            size: [32, 16],
-        };
-        let background = renderer.render_title_card("", None, 0.0);
-        let pose = ImagePose {
-            center: [960.0, 540.0],
-            scale: 1.0,
-            opacity: 1.0,
-            rotation: 0.0,
-            tilt: [0.0, 0.0],
-            blur: 0.0,
-        };
-        let draw = |renderer: &mut HeadlessRenderer, plan: &ImagePlan, pose: ImagePose| {
-            let mut pixels = background.clone();
-            renderer
-                .composite_image(&mut pixels, plan, &image, pose)
-                .unwrap();
-            pixels
-        };
-        let bare = ImagePlan::new("swatch", [0.0, 0.0], 400.0);
-        let pixel = |pixels: &[u8], x: usize, y: usize| {
-            let i = (y * 1920 + x) * 4;
-            [pixels[i], pixels[i + 1], pixels[i + 2]]
-        };
-        let drawn = draw(&mut renderer, &bare, pose);
-        assert_eq!(pixel(&drawn, 860, 540), [255, 0, 0]);
-        assert_eq!(pixel(&drawn, 1060, 540), [0, 0, 255]);
-        let corner = |pixels: &[u8]| pixel(pixels, 760, 340);
-        assert_eq!(
-            corner(&drawn),
-            corner(&background),
-            "bare images have no shadow"
-        );
-        let framed = draw(&mut renderer, &bare.clone().titled("swatch.png"), pose);
-        assert_eq!(pixel(&framed, 860, 560), [255, 0, 0]);
-        assert_ne!(
-            pixel(&framed, 960, 446),
-            [255, 0, 0],
-            "the title bar sits above"
-        );
-        let hidden = draw(
-            &mut renderer,
-            &bare,
-            ImagePose {
-                opacity: 0.0,
-                ..pose
-            },
-        );
-        assert!(hidden == background);
     }
 }

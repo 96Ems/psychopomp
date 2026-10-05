@@ -2,10 +2,12 @@
 //! camera, and emits depth-sorted signed-distance primitives; the GPU draws them
 //! into an HDR target, blooms the bright light, and composites with highlight
 //! rolloff, chroma, vignette, and grain (stage.wgsl, stage_post.wgsl).
+use std::cell::Cell;
 use std::collections::HashMap;
 use std::f32::consts::{FRAC_PI_2, PI, TAU};
 
 use super::*;
+use crate::footage::StageFootageFrame;
 use psychopomp::{
     callout::CalloutSide,
     caption::{CaptionAlign, CaptionSpanPlan},
@@ -15,6 +17,7 @@ use psychopomp::{
     effects::spinner::{self, Mark},
     effects::surface,
     effects::{dissolve, shield},
+    footage::{Fit, Mask, focus_window},
     math::{
         Quat, Vec2, Vec3,
         curve::{CubicBezier, Polyline},
@@ -124,6 +127,68 @@ pub(crate) struct StageGpu {
     texts: HashMap<String, AtlasText>,
     orbs: HashMap<String, Vec<OrbPoint>>,
     forms: HashMap<String, FormGeometry>,
+    /// Every footage element's frames share one sRGB atlas; each sample
+    /// uploads only the slots whose frame changed.
+    footage: wgpu::Texture,
+    slots: HashMap<String, FootageSlot>,
+}
+
+/// Where one footage element's frame lives in the footage atlas, and which
+/// frame it holds.
+pub(crate) struct FootageSlot {
+    origin: [u32; 2],
+    size: [u32; 2],
+    shown: Cell<Option<u64>>,
+}
+
+/// Shelf-pack each footage element's frame into one atlas: its size and
+/// every slot, by element.
+fn footage_slots(
+    sizes: &HashMap<String, [u32; 2]>,
+    limit: u32,
+) -> Result<([u32; 2], HashMap<String, FootageSlot>)> {
+    let mut order = sizes.iter().collect::<Vec<_>>();
+    // Tallest first packs shelves tightly; IDs break ties deterministically.
+    order.sort_by(|a, b| b.1[1].cmp(&a.1[1]).then(a.0.cmp(b.0)));
+    let width = order
+        .iter()
+        .map(|(_, size)| size[0] + 2)
+        .max()
+        .unwrap_or(1)
+        .max(2048)
+        .min(limit);
+    let (mut x, mut y, mut row) = (0_u32, 0_u32, 0_u32);
+    let mut slots = HashMap::new();
+    for (id, size) in order {
+        if size[0] > width {
+            bail!(
+                "footage '{id}' decodes {} pixels wide; the Stage atlas holds {width}",
+                size[0]
+            );
+        }
+        if x + size[0] > width {
+            x = 0;
+            y += row + 2;
+            row = 0;
+        }
+        slots.insert(
+            id.clone(),
+            FootageSlot {
+                origin: [x, y],
+                size: *size,
+                shown: Cell::new(None),
+            },
+        );
+        x += size[0] + 2;
+        row = row.max(size[1]);
+    }
+    let height = (y + row).max(1);
+    if height > limit {
+        bail!(
+            "stage footage needs a {width}x{height} atlas, past the device's {limit}; lower the clips' resolution"
+        );
+    }
+    Ok(([width, height], slots))
 }
 
 /// A form's shapes as matched point sets, prepared once: point `i` of every
@@ -284,7 +349,17 @@ fn text_key(element: &str, part: &str) -> String {
 }
 
 impl HeadlessRenderer {
+    #[cfg(test)]
     pub(crate) fn prepare_stage(&mut self, plan: &StagePlan) -> Result<StageGpu> {
+        self.prepare_stage_with(plan, &HashMap::new())
+    }
+
+    /// Prepare a Stage whose footage elements decode at `footage` sizes.
+    pub(crate) fn prepare_stage_with(
+        &mut self,
+        plan: &StagePlan,
+        footage: &HashMap<String, [u32; 2]>,
+    ) -> Result<StageGpu> {
         let texts = self.stage_atlas(plan)?;
         let (atlas_view, atlas_size, rects) = texts;
         let device = &self.device;
@@ -317,6 +392,23 @@ impl HeadlessRenderer {
             .iter()
             .map(|size| texture("stage bloom level", *size, HDR_FORMAT))
             .collect::<Vec<_>>();
+        let limit = device.limits().max_texture_dimension_2d;
+        let (atlas_extent, slots) = footage_slots(footage, limit)?;
+        let footage = device.create_texture(&wgpu::TextureDescriptor {
+            label: Some("stage footage atlas"),
+            size: wgpu::Extent3d {
+                width: atlas_extent[0],
+                height: atlas_extent[1],
+                depth_or_array_layers: 1,
+            },
+            mip_level_count: 1,
+            sample_count: 1,
+            dimension: wgpu::TextureDimension::D2,
+            format: wgpu::TextureFormat::Rgba8UnormSrgb,
+            usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
+            view_formats: &[],
+        });
+        let footage_view = footage.create_view(&Default::default());
         let sampler = device.create_sampler(&wgpu::SamplerDescriptor {
             label: Some("stage linear clamp"),
             mag_filter: wgpu::FilterMode::Linear,
@@ -380,6 +472,7 @@ impl HeadlessRenderer {
                 entry(2, fragment, storage_ty),
                 entry(3, fragment, texture_ty),
                 entry(4, fragment, sampler_ty),
+                entry(5, fragment, texture_ty),
             ],
         });
         let primitive_binding = device.create_bind_group(&wgpu::BindGroupDescriptor {
@@ -405,6 +498,10 @@ impl HeadlessRenderer {
                 wgpu::BindGroupEntry {
                     binding: 4,
                     resource: wgpu::BindingResource::Sampler(&sampler),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 5,
+                    resource: wgpu::BindingResource::TextureView(&footage_view),
                 },
             ],
         });
@@ -651,6 +748,8 @@ impl HeadlessRenderer {
             texts: rects,
             orbs,
             forms,
+            footage,
+            slots,
         })
     }
 
@@ -786,6 +885,7 @@ impl HeadlessRenderer {
         Ok((atlas, [atlas_width as f32, atlas_height as f32], rects))
     }
 
+    #[cfg(test)]
     pub(crate) fn render_stage(
         &mut self,
         plan: &StagePlan,
@@ -793,9 +893,49 @@ impl HeadlessRenderer {
         time: f64,
         value: impl Fn(&str, f32) -> f32,
     ) -> Result<Vec<u8>> {
-        self.render_stage_exposure(plan, gpu, &[(time, 1.0)], |_, property, default| {
-            value(property, default)
-        })
+        self.render_stage_exposure(
+            plan,
+            gpu,
+            &[(time, 1.0)],
+            |_, property, default| value(property, default),
+            |_| Ok(Vec::new()),
+        )
+    }
+
+    /// Upload each footage frame whose slot holds another.
+    fn upload_footage(&mut self, gpu: &StageGpu, frames: &[StageFootageFrame]) {
+        for frame in frames {
+            let Some(slot) = gpu.slots.get(&frame.element) else {
+                continue;
+            };
+            if slot.shown.get() == Some(frame.identity) || frame.size != slot.size {
+                continue;
+            }
+            self.queue.write_texture(
+                wgpu::TexelCopyTextureInfo {
+                    texture: &gpu.footage,
+                    mip_level: 0,
+                    origin: wgpu::Origin3d {
+                        x: slot.origin[0],
+                        y: slot.origin[1],
+                        z: 0,
+                    },
+                    aspect: wgpu::TextureAspect::All,
+                },
+                &frame.pixels,
+                wgpu::TexelCopyBufferLayout {
+                    offset: 0,
+                    bytes_per_row: Some(slot.size[0] * 4),
+                    rows_per_image: Some(slot.size[1]),
+                },
+                wgpu::Extent3d {
+                    width: slot.size[0],
+                    height: slot.size[1],
+                    depth_or_array_layers: 1,
+                },
+            );
+            slot.shown.set(Some(frame.identity));
+        }
     }
 
     /// One frame exposed through weighted shutter samples. Each sample's
@@ -808,6 +948,7 @@ impl HeadlessRenderer {
         gpu: &StageGpu,
         exposure: &[(f64, f32)],
         value: impl Fn(f64, &str, f32) -> f32,
+        footage: impl Fn(f64) -> Result<Vec<StageFootageFrame>>,
     ) -> Result<Vec<u8>> {
         let look = Look::new(self.theme);
         let size = vec2(self.spec.width as f32, self.spec.height as f32);
@@ -828,11 +969,18 @@ impl HeadlessRenderer {
         let mut post = [[0.0; 4]; 5];
         for (index, &(time, weight)) in exposure.iter().enumerate() {
             let value = |property: &str, default: f32| value(time, property, default);
+            // Writes land before the next submission, so each sample's
+            // frames are in the atlas when its primitives draw.
+            if !gpu.slots.is_empty() {
+                let frames = footage(time)?;
+                self.upload_footage(gpu, &frames);
+            }
             let scene = Scene::sample_with(plan, &value, time as f32, size, Some(&gpu.forms));
             let mut painter = Painter {
                 scene: &scene,
                 look,
                 orbs: &gpu.orbs,
+                footage: &gpu.slots,
                 frame: StageFrame::new(&gpu.texts, look.background),
             };
             painter.backdrop(plan.post.backdrop);
@@ -2445,6 +2593,7 @@ struct Painter<'a> {
     scene: &'a Scene<'a>,
     look: Look,
     orbs: &'a HashMap<String, Vec<OrbPoint>>,
+    footage: &'a HashMap<String, FootageSlot>,
     frame: StageFrame<'a>,
 }
 
@@ -2576,6 +2725,26 @@ impl<'a> Painter<'a> {
             (StageElement::Icon { size, tone, .. }, Some(place)) => {
                 self.icon(order, id, *size, *tone, place)
             }
+            (
+                StageElement::Footage {
+                    size,
+                    fit,
+                    mask,
+                    framed,
+                    tint,
+                    ..
+                },
+                Some(place),
+            ) => self.footage(
+                order,
+                id,
+                Vec2::from(*size),
+                *fit,
+                mask,
+                *framed,
+                *tint,
+                place,
+            ),
             // A positioned element behind the camera.
             _ => {}
         }
@@ -4283,6 +4452,136 @@ impl Painter<'_> {
             );
         }
         self.frame.close(place.depth - 0.5, order);
+    }
+
+    /// Footage on a camera-facing quad: the current frame's fit and focus
+    /// window, cut to its mask, defocused with depth, color-treated, and
+    /// optionally on a card's mat with a rim.
+    #[allow(clippy::too_many_arguments)]
+    fn footage(
+        &mut self,
+        order: usize,
+        id: &str,
+        size: Vec2,
+        fit: Fit,
+        mask: &Mask,
+        framed: bool,
+        tint: Tone,
+        place: Placement,
+    ) {
+        let (scene, look) = (self.scene, self.look);
+        let opacity = scene.unit(id, "opacity", 1.0);
+        let Some(slot) = self.footage.get(id) else {
+            return;
+        };
+        if opacity <= 0.001 || slot.shown.get().is_none() {
+            self.frame.close(place.depth, order);
+            return;
+        }
+        let scale = place.scale;
+        let blur = scene.blur_at(place.depth) + scene.v(id, "blur", 0.0).max(0.0) * scale;
+        let turn = Vec2::from_angle(scene.v(id, "rotation", 0.0));
+        let source = [slot.size[0] as f32, slot.size[1] as f32];
+        let (window, content) = fit.frame(source, size.to_array());
+        let [wx, wy, ww, wh] = focus_window(
+            window,
+            [scene.v(id, "focus-x", 0.5), scene.v(id, "focus-y", 0.5)],
+            scene.v(id, "focus-size", 1.0),
+        );
+        // A contained source letterboxes: the quad is just its content.
+        let offset = vec2(
+            content[0] + content[2] * 0.5 - size.x * 0.5,
+            content[1] + content[3] * 0.5 - size.y * 0.5,
+        );
+        let center = place.center + turn.rotate(offset * scale);
+        let box_size = vec2(content[2], content[3]);
+        let half = box_size * 0.5 * scale;
+        let corner = match mask {
+            Mask::Rect { radius } => radius * scale,
+            _ => 0.0,
+        };
+        let (mask_kind, first, count) = match mask {
+            Mask::Rect { .. } => (0.0, 0.0, 0.0),
+            Mask::Circle => (1.0, 0.0, 0.0),
+            Mask::Polygon { .. } => {
+                let first = self.frame.points.len();
+                self.frame.points.extend(
+                    mask.corners(box_size.to_array())
+                        .into_iter()
+                        .map(|corner| center + turn.rotate(Vec2::from(corner) * scale))
+                        .map(|point| [point.x, point.y, 0.0, 0.0]),
+                );
+                (2.0, first as f32, (self.frame.points.len() - first) as f32)
+            }
+        };
+        let rim = look.raised.lerp(look.muted, 0.22);
+        if framed {
+            // A card's mat behind the footage, its rim catching the overhead key.
+            let mat = 7.0 * scale;
+            let backing = match mask {
+                Mask::Circle => half.min_element() + mat,
+                _ => 0.0,
+            };
+            if backing > 0.0 {
+                self.frame.circle(
+                    center,
+                    [backing, 1.0 * scale.max(0.5)],
+                    blur,
+                    Paint {
+                        fill: rgba(look.surface, 0.97 * opacity),
+                        stroke: rgba(rim, opacity),
+                        ..Default::default()
+                    },
+                );
+            } else if !matches!(mask, Mask::Polygon { .. }) {
+                self.frame.rounded_rect(
+                    center,
+                    half + mat,
+                    [corner + mat, 1.0 * scale.max(0.5)],
+                    blur,
+                    Paint {
+                        fill: rgba(look.surface, 0.97 * opacity),
+                        stroke: rgba(rim, opacity),
+                        ..Default::default()
+                    },
+                );
+            }
+        }
+        let tone = look.tone(tint);
+        let reach = half.length() + blur + 2.0;
+        self.frame.prims.push(Prim {
+            bbox: around(center, Vec2::splat(reach)),
+            a: [13.0, center.x, center.y, corner],
+            b: [half.x, half.y, blur, turn.to_angle()],
+            fill: [
+                opacity,
+                scene.v(id, "saturation", 1.0).max(0.0),
+                scene.unit(id, "dim", 0.0),
+                scene.unit(id, "tint", 0.0),
+            ],
+            stroke: rgba(rim, if framed { 0.9 } else { 0.0 }),
+            glow: [
+                tone.x,
+                tone.y,
+                tone.z,
+                if framed { scale.max(0.5) } else { 0.0 },
+            ],
+            uv: [
+                slot.origin[0] as f32 + wx,
+                slot.origin[1] as f32 + wy,
+                slot.origin[0] as f32 + wx + ww,
+                slot.origin[1] as f32 + wy + wh,
+            ],
+            light: [
+                slot.origin[0] as f32,
+                slot.origin[1] as f32,
+                (slot.origin[0] + slot.size[0]) as f32,
+                (slot.origin[1] + slot.size[1]) as f32,
+            ],
+            light_color: [mask_kind, first, count, 0.0],
+            ..Default::default()
+        });
+        self.frame.close(place.depth, order);
     }
 }
 

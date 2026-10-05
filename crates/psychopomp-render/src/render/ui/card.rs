@@ -1,4 +1,8 @@
 use anyhow::{Result, bail};
+use psychopomp::{
+    footage::Treatment,
+    math::{Vec2, shapes::polygon_distance},
+};
 
 use super::{super::blend_pixel, super::theme::mix, Bounds, rounded_rect_distance};
 
@@ -120,6 +124,51 @@ pub(crate) struct CardFrame {
     pub style: CardStyle,
     pub projection: CardProjection,
     pub opacity: f32,
+}
+
+/// The outline a card is cut to, about its center. Every card is
+/// `Rounded` by its style's corner radius; footage may also be a circle or a
+/// polygon (card-local pixels about the center), and its border and shadow
+/// follow that outline.
+#[derive(Clone, Copy, Debug)]
+pub(crate) enum CardShape<'a> {
+    Rounded,
+    Circle,
+    Polygon(&'a [Vec2]),
+}
+
+impl CardShape<'_> {
+    /// Signed distance (negative inside) from a card-local point.
+    fn distance(self, local: [f32; 2], size: [f32; 2], radius: f32) -> f32 {
+        match self {
+            Self::Rounded => rounded_rect_distance(local, size, radius),
+            Self::Circle => Vec2::from(local).length() - size[0].min(size[1]) * 0.5,
+            Self::Polygon(points) => polygon_distance(Vec2::from(local), points),
+        }
+    }
+}
+
+/// A color treatment applied to source pixels before they meet the card's
+/// material: the treatment and its tint color (sRGB, 0..1).
+#[derive(Clone, Copy, Debug)]
+pub(crate) struct SourceTreatment {
+    pub treatment: Treatment,
+    pub tint: [f32; 3],
+}
+
+impl SourceTreatment {
+    fn apply(self, color: [u8; 4]) -> [u8; 4] {
+        let rgb = self.treatment.apply(
+            std::array::from_fn(|i| f32::from(color[i]) / 255.0),
+            self.tint,
+        );
+        [
+            (rgb[0] * 255.0).round() as u8,
+            (rgb[1] * 255.0).round() as u8,
+            (rgb[2] * 255.0).round() as u8,
+            color[3],
+        ]
+    }
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -627,7 +676,37 @@ impl<'a> FrameUi<'a> {
         fit: ContentFit,
     ) -> Result<()> {
         validate_card(frame)?;
-        composite_card_source(self.canvas.pixels, self.canvas.size, source, fit, frame);
+        composite_card_source(
+            self.canvas.pixels,
+            self.canvas.size,
+            source,
+            fit,
+            frame,
+            CardShape::Rounded,
+            None,
+        );
+        Ok(())
+    }
+
+    /// `card_source` cut to `shape`, its source pixels color-treated.
+    pub fn card_source_shaped(
+        &mut self,
+        frame: CardFrame,
+        shape: CardShape<'_>,
+        treatment: Option<SourceTreatment>,
+        source: RgbaSource<'_>,
+        fit: ContentFit,
+    ) -> Result<()> {
+        validate_card(frame)?;
+        composite_card_source(
+            self.canvas.pixels,
+            self.canvas.size,
+            source,
+            fit,
+            frame,
+            shape,
+            treatment,
+        );
         Ok(())
     }
 
@@ -844,7 +923,7 @@ fn composite_card_layer(
                     rounded_rect_distance(local, frame.bounds.size, frame.style.corner_radius);
                 let target = target_x as usize * BYTES_PER_PIXEL;
                 if shell && distance > 0.0 {
-                    composite_card_shadow(row, target, transform, point, frame);
+                    composite_card_shadow(row, target, transform, point, frame, CardShape::Rounded);
                     continue;
                 }
                 let outside = if shell {
@@ -899,6 +978,8 @@ fn composite_card_source(
     source: RgbaSource<'_>,
     fit: ContentFit,
     frame: CardFrame,
+    shape: CardShape<'_>,
+    treatment: Option<SourceTreatment>,
 ) {
     let center = frame.bounds.center();
     let half_size = [frame.bounds.size[0] * 0.5, frame.bounds.size[1] * 0.5];
@@ -948,11 +1029,10 @@ fn composite_card_source(
                     target_y as f32 + 0.5 - center[1],
                 ];
                 let local = transform.unproject(point);
-                let distance =
-                    rounded_rect_distance(local, frame.bounds.size, frame.style.corner_radius);
+                let distance = shape.distance(local, frame.bounds.size, frame.style.corner_radius);
                 let target = target_x as usize * BYTES_PER_PIXEL;
                 if distance > 0.0 {
-                    composite_card_shadow(row, target, transform, point, frame);
+                    composite_card_shadow(row, target, transform, point, frame, shape);
                     continue;
                 }
                 let depth = transform.depth[0] * local[0] + transform.depth[1] * local[1];
@@ -965,7 +1045,8 @@ fn composite_card_source(
                     + frame.projection.near_edge_blur.max(0.0) * proximity;
                 let source_color = source_coordinates(local, frame.bounds.size, source.size, fit)
                     .map(|[source_x, source_y]| {
-                        sample_source_blurred(source, source_x, source_y, blur)
+                        let color = sample_source_blurred(source, source_x, source_y, blur);
+                        treatment.map_or(color, |treatment| treatment.apply(color))
                     });
                 let color = match source_color {
                     Some(color) if color[3] == 255 => color,
@@ -1124,13 +1205,14 @@ fn composite_card_shadow(
     transform: CardTransform,
     point: [f32; 2],
     frame: CardFrame,
+    shape: CardShape<'_>,
 ) {
     let shadow_local = transform.unproject([
         point[0] - frame.style.shadow_offset[0],
         point[1] - frame.style.shadow_offset[1],
     ]);
     let shadow_distance =
-        rounded_rect_distance(shadow_local, frame.bounds.size, frame.style.corner_radius);
+        shape.distance(shadow_local, frame.bounds.size, frame.style.corner_radius);
     if shadow_distance >= frame.style.shadow_blur * 3.0 {
         return;
     }
