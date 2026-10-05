@@ -4,21 +4,20 @@
 //! weight channels. Where an anchor is at a given time is layout only the
 //! renderer knows (Stage projection, editor glyph geometry), so the renderer
 //! resolves every anchor at every sample and the leader never lags its target.
+//! The anchor model is shared with other overlays in [`crate::anchor`].
 use std::collections::HashSet;
 
 use anyhow::{Result, bail, ensure};
 use serde::{Deserialize, Serialize};
 
+/// A compass direction: as an anchor `edge`, a point on an outline; as a label
+/// `side`, the direction from the anchor to the label (never `center`).
+pub use crate::anchor::Edge as CalloutSide;
 use crate::{
+    anchor::{self, AnchorTarget},
     author::{ActorHandle, ContinuousHandle, PlanBuilder},
     caption::CaptionSpanPlan,
-    math::{
-        Vec2,
-        easing::Ease,
-        shapes::{Box2, Shape},
-        vec2,
-    },
-    plan::SpringPlan,
+    math::{Vec2, easing::Ease, shapes::Box2, vec2},
     stage::DRAW_CURVE,
     tone::Tone,
 };
@@ -87,23 +86,28 @@ pub enum CalloutAnchorPlan {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         side: Option<CalloutSide>,
     },
-}
-
-/// A compass direction: as an anchor `edge`, a point on an outline; as a label
-/// `side`, the direction from the anchor to the label (never `center`).
-#[derive(Clone, Copy, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
-#[serde(rename_all = "kebab-case")]
-pub enum CalloutSide {
-    #[default]
-    Center,
-    Top,
-    Bottom,
-    Left,
-    Right,
-    TopLeft,
-    TopRight,
-    BottomLeft,
-    BottomRight,
+    /// A participant's header in a Sequence Diagram actor.
+    #[serde(rename_all = "camelCase")]
+    Participant {
+        id: String,
+        sequence: String,
+        participant: String,
+        #[serde(default, skip_serializing_if = "CalloutSide::is_center")]
+        edge: CalloutSide,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        side: Option<CalloutSide>,
+    },
+    /// A row of a Sequence Diagram actor: its arrow, note, or End mark.
+    #[serde(rename_all = "camelCase")]
+    Row {
+        id: String,
+        sequence: String,
+        row: String,
+        #[serde(default, skip_serializing_if = "CalloutSide::is_center")]
+        edge: CalloutSide,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        side: Option<CalloutSide>,
+    },
 }
 
 fn default_size() -> f32 {
@@ -122,54 +126,59 @@ fn is_accent(tone: &Tone) -> bool {
     *tone == Tone::Accent
 }
 
-impl CalloutSide {
-    pub fn is_center(&self) -> bool {
-        *self == Self::Center
-    }
-
-    /// Unit direction on screen (y down); zero for `center`.
-    pub fn unit(self) -> Vec2 {
-        let [x, y] = self.signs();
-        vec2(x, y).normalize_or_zero()
-    }
-
-    fn signs(self) -> [f32; 2] {
-        match self {
-            Self::Center => [0.0, 0.0],
-            Self::Top => [0.0, -1.0],
-            Self::Bottom => [0.0, 1.0],
-            Self::Left => [-1.0, 0.0],
-            Self::Right => [1.0, 0.0],
-            Self::TopLeft => [-1.0, -1.0],
-            Self::TopRight => [1.0, -1.0],
-            Self::BottomLeft => [-1.0, 1.0],
-            Self::BottomRight => [1.0, 1.0],
-        }
-    }
-
-    /// This edge of `shape`: a box's side midpoint or corner, the circle's
-    /// surface in this direction, or the point itself.
-    pub fn on(self, shape: Shape) -> Vec2 {
-        match shape {
-            Shape::Box(bounds) => bounds.center() + Vec2::from(self.signs()) * bounds.extents(),
-            Shape::Circle(circle) => circle.center + self.unit() * circle.radius,
-            Shape::Point(point) => point,
-        }
-    }
-}
-
 impl CalloutAnchorPlan {
     pub fn id(&self) -> &str {
         match self {
-            Self::Point { id, .. } | Self::Stage { id, .. } | Self::Editor { id, .. } => id,
+            Self::Point { id, .. }
+            | Self::Stage { id, .. }
+            | Self::Editor { id, .. }
+            | Self::Participant { id, .. }
+            | Self::Row { id, .. } => id,
         }
     }
 
     fn side(&self) -> Option<CalloutSide> {
         match self {
-            Self::Point { side, .. } | Self::Stage { side, .. } | Self::Editor { side, .. } => {
-                *side
-            }
+            Self::Point { side, .. }
+            | Self::Stage { side, .. }
+            | Self::Editor { side, .. }
+            | Self::Participant { side, .. }
+            | Self::Row { side, .. } => *side,
+        }
+    }
+
+    /// What this anchor points at, for the shared anchor resolution.
+    pub fn target(&self) -> AnchorTarget<'_> {
+        match self {
+            Self::Point { at, .. } => AnchorTarget::Point(Vec2::from(*at)),
+            Self::Stage { element, edge, .. } => AnchorTarget::Stage {
+                element,
+                edge: *edge,
+            },
+            Self::Editor { target, edge, .. } => AnchorTarget::Editor {
+                target,
+                edge: *edge,
+            },
+            Self::Participant {
+                sequence,
+                participant,
+                edge,
+                ..
+            } => AnchorTarget::Participant {
+                sequence,
+                participant,
+                edge: *edge,
+            },
+            Self::Row {
+                sequence,
+                row,
+                edge,
+                ..
+            } => AnchorTarget::Row {
+                sequence,
+                row,
+                edge: *edge,
+            },
         }
     }
 }
@@ -316,15 +325,13 @@ impl CalloutPlan {
 
     /// The weight channel that pins the callout to `anchor`.
     pub fn weight_property(anchor: &str) -> String {
-        format!("anchor.{anchor}")
+        anchor::weight_property(anchor)
     }
 
     /// True when `property` names one of this callout's channels.
     pub fn accepts(&self, property: &str) -> bool {
         matches!(property, "opacity" | "draw" | "label" | "emphasis")
-            || property
-                .strip_prefix("anchor.")
-                .is_some_and(|id| self.anchors.iter().any(|anchor| anchor.id() == id))
+            || anchor::accepts_weight(property, self.anchors.iter().map(CalloutAnchorPlan::id))
     }
 
     pub fn validate(&self) -> Result<()> {
@@ -335,29 +342,12 @@ impl CalloutPlan {
         let mut ids = HashSet::new();
         for anchor in &self.anchors {
             let id = anchor.id();
-            ensure!(
-                !id.is_empty() && !id.chars().any(|c| c.is_whitespace() || c == '.'),
-                "callout anchor ID '{id}' must be non-empty, without whitespace or dots"
-            );
-            ensure!(ids.insert(id), "callout anchor '{id}' is declared twice");
+            anchor::validate_id("callout", id, &mut ids)?;
             ensure!(
                 anchor.side() != Some(CalloutSide::Center),
                 "callout anchor '{id}' cannot put its label at the center"
             );
-            match anchor {
-                CalloutAnchorPlan::Point { at, .. } => ensure!(
-                    at.iter().all(|v| v.is_finite()),
-                    "callout anchor '{id}' must be finite"
-                ),
-                CalloutAnchorPlan::Stage { element, .. } => ensure!(
-                    !element.is_empty(),
-                    "callout anchor '{id}' needs a stage element"
-                ),
-                CalloutAnchorPlan::Editor { target, .. } => ensure!(
-                    !target.is_empty(),
-                    "callout anchor '{id}' needs a semantic target"
-                ),
-            }
+            anchor::validate_target("callout", id, anchor.target())?;
         }
         ensure!(
             self.side != CalloutSide::Center,
@@ -459,22 +449,7 @@ impl CalloutActor {
     /// profile, so they keep summing to one, an interrupted move carries its
     /// velocity into the next, and the blended anchor follows both targets.
     pub fn move_to(&mut self, scene: &mut PlanBuilder, anchor: &str, at_nanos: u64) -> Result<()> {
-        ensure!(
-            self.anchors.iter().any(|id| id == anchor),
-            "callout '{}' has no anchor '{anchor}'",
-            self.actor.id()
-        );
-        let spring = SpringPlan {
-            position_threshold: 1e-5,
-            velocity_threshold: 1e-5,
-            ..SpringPlan::visual(0.6, 0.0)
-        };
-        for (index, id) in self.anchors.clone().iter().enumerate() {
-            let initial = if index == 0 { 1.0 } else { 0.0 };
-            let weight = self.channel(scene, &CalloutPlan::weight_property(id), initial);
-            scene.spring_with(&weight, at_nanos, f32::from(id == anchor), spring);
-        }
-        Ok(())
+        anchor::move_to(scene, &self.actor, &self.anchors, anchor, at_nanos)
     }
 
     /// Strike the callout: the anchor ring flares and the leader brightens at
@@ -489,7 +464,7 @@ impl CalloutActor {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{math::shapes::Circle, plan::ScalarPlan};
+    use crate::plan::ScalarPlan;
 
     fn plan() -> CalloutPlan {
         CalloutPlan::new(
@@ -532,26 +507,6 @@ mod tests {
         empty.lines = vec![vec![CaptionSpanPlan::new("", Tone::Plain)]];
         assert!(empty.validate().is_err());
         assert!(plan().accepts("anchor.corner") && !plan().accepts("anchor.nowhere"));
-    }
-
-    #[test]
-    fn edges_sit_on_outlines() {
-        let card = Shape::Box(Box2::from_center_size(
-            vec2(300.0, 200.0),
-            vec2(200.0, 100.0),
-        ));
-        assert_eq!(CalloutSide::Top.on(card), vec2(300.0, 150.0));
-        assert_eq!(CalloutSide::BottomLeft.on(card), vec2(200.0, 250.0));
-        assert_eq!(CalloutSide::Center.on(card), vec2(300.0, 200.0));
-        let orb = Shape::Circle(Circle {
-            center: Vec2::ZERO,
-            radius: 10.0,
-        });
-        assert!(
-            CalloutSide::TopRight
-                .on(orb)
-                .abs_diff_eq(vec2(7.071_068, -7.071_068), 1e-4)
-        );
     }
 
     #[test]

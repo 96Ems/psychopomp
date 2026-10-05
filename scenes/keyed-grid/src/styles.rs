@@ -216,15 +216,12 @@ fn table(id: &str, title: &str, fill: GridFillPlan, rules: GridRules) -> Result<
         18.,
         [143, 150, 165],
     )?;
-    for (i, (title, _, _)) in steps.iter().enumerate() {
-        let at = i as u64 * 3 * SECOND;
-        scene.presentation_step(
-            format!("step-{i}"),
-            *title,
-            at,
-            if i == 0 { 0 } else { at + 2 * SECOND },
-        );
-        scene.cue(format!("step-{i}"), at, at + 3 * SECOND);
-    }
+    scene.steps(
+        "step",
+        steps.iter().map(|step| step.0),
+        3 * SECOND,
+        2 * SECOND,
+    );
+    scene.cue_steps(3 * SECOND);
     Ok(scene.finish()?)
 }

@@ -32,49 +32,28 @@ use crate::{
     plot::{PlotActor, PlotPlan},
     rolling::{RollingNumberActor, RollingNumberPlan},
     sequence::{SequenceActor, SequencePlan},
-    stage::{PORT_POP_SECONDS, StageActor, StageElement, StagePlan, StagePost, StatusText, packet},
-    tone::Tone,
+    stage::{PORT_POP_SECONDS, StageActor, StagePlan, packet},
     tree::{TreeActor, TreeModel, TreePlan},
     video::{VideoActor, VideoPlan},
 };
-use crate::{
-    caption::{CaptionAlign, CaptionSpanPlan},
-    effects::spinner::Mark,
-    narration::{Narration, NarrationClip, Spoken},
-};
 
-/// One millisecond on the plan clock, in nanoseconds.
-pub const MILLISECOND: u64 = 1_000_000;
+pub use crate::author::{MILLISECOND, millis, spread};
 
-/// `millis` whole milliseconds on the plan clock, in nanoseconds.
-pub const fn millis(millis: u64) -> u64 {
-    millis * MILLISECOND
-}
-
-/// Calibrated spring motion profiles from `explainer-motion/TECHNIQUES.md`.
+/// Calibrated spring motion profiles from `explainer-motion/TECHNIQUES.md`
+/// (re-exposing [`SpringPlan`] constants).
 pub struct Feel;
 
 impl Feel {
     /// A rigid panel settling into place: 0.6 s, bounce 0.12.
-    pub const PANEL: SpringPlan = Self::visual(0.6, 0.12);
+    pub const PANEL: SpringPlan = SpringPlan::PANEL;
     /// Ink following its panel, or a label fading: 0.36 s, no bounce.
-    pub const CONTENT: SpringPlan = Self::visual(0.36, 0.0);
+    pub const CONTENT: SpringPlan = SpringPlan::CONTENT;
     /// A quick state change, such as a status cross-fade: 0.3 s, no bounce.
-    pub const SNAP: SpringPlan = Self::visual(0.3, 0.0);
+    pub const SNAP: SpringPlan = SpringPlan::SNAP;
     /// A camera move with weight and a natural tail: 1.6 s, critically damped.
-    pub const CAMERA: SpringPlan = Self::visual(1.6, 0.0);
+    pub const CAMERA: SpringPlan = SpringPlan::CAMERA;
     /// A hero landing with a little overshoot: 0.85 s, bounce 0.2.
-    pub const LIVELY: SpringPlan = Self::visual(0.85, 0.2);
-
-    /// Const-evaluatable equivalent of [`SpringPlan::visual`].
-    pub const fn visual(duration: f32, bounce: f32) -> SpringPlan {
-        SpringPlan {
-            response_seconds: duration * 1.2,
-            damping_ratio: 1.0 - bounce,
-            position_threshold: 0.001,
-            velocity_threshold: 0.001,
-        }
-    }
+    pub const LIVELY: SpringPlan = SpringPlan::LIVELY;
 }
 
 /// The choreographic interval `[start, end]` occupied by a [`Beat`] on the
@@ -610,206 +589,6 @@ impl PlanBuilder {
         let span = self.at(time, beat);
         self.cue(id, span.start, span.end);
         span
-    }
-}
-
-/// Narration clips scheduled back to back with gaps; see [`Narration::reading`].
-pub struct Reading<'a, const N: usize> {
-    clips: [(&'a NarrationClip, u64); N],
-    duration: u64,
-}
-
-impl<'a, const N: usize> Reading<'a, N> {
-    pub fn duration(&self) -> u64 {
-        self.duration
-    }
-
-    pub fn place(&self, scene: &mut PlanBuilder) -> [Spoken<'a>; N] {
-        self.clips.map(|(clip, start)| clip.place(scene, start))
-    }
-}
-
-impl Narration {
-    pub fn reading<const N: usize>(
-        &self,
-        lead: u64,
-        clips: [(&str, u64); N],
-    ) -> Result<Reading<'_, N>> {
-        let mut at = lead;
-        let mut placed = Vec::with_capacity(N);
-        for (id, gap) in clips {
-            let clip = self.clip(id)?;
-            placed.push((clip, at));
-            at += clip.duration() + gap;
-        }
-        Ok(Reading {
-            clips: placed.try_into().unwrap_or_else(|_| unreachable!()),
-            duration: at,
-        })
-    }
-}
-
-impl StagePost {
-    pub const RESTRAINED: Self = Self {
-        bloom: 0.18,
-        grain: 0.012,
-        vignette: 0.22,
-        backdrop: 0.12,
-    };
-}
-
-impl StatusText {
-    pub fn new(text: impl Into<String>, tone: Tone) -> Self {
-        Self {
-            text: text.into(),
-            tone,
-        }
-    }
-}
-
-impl StageElement {
-    pub fn card(id: &str, at: [f32; 3], size: [f32; 2], title: &str) -> Self {
-        Self::Card {
-            id: id.into(),
-            at,
-            size,
-            title: title.into(),
-            status: Vec::new(),
-            tone: Tone::default(),
-            mark: Mark::default(),
-        }
-    }
-
-    pub fn orb(id: &str, at: [f32; 3], radius: f32) -> Self {
-        Self::Orb {
-            id: id.into(),
-            at,
-            radius,
-            points: 720,
-            tone: Tone::Accent,
-        }
-    }
-
-    pub fn beam(id: &str, from: &str, to: &str) -> Self {
-        Self::Beam {
-            id: id.into(),
-            from: from.into(),
-            to: to.into(),
-            bend: 0.0,
-            tone: Tone::default(),
-        }
-    }
-
-    pub fn packet(id: &str, beam: &str) -> Self {
-        Self::Packet {
-            id: id.into(),
-            beam: beam.into(),
-            reverse: false,
-            label: String::new(),
-            tone: Tone::default(),
-        }
-    }
-
-    pub fn label(id: &str, at: [f32; 3], size: f32, spans: &[(&str, Tone)]) -> Self {
-        Self::Label {
-            id: id.into(),
-            at,
-            size,
-            align: CaptionAlign::Center,
-            spans: spans
-                .iter()
-                .map(|&(text, tone)| CaptionSpanPlan::new(text, tone))
-                .collect(),
-        }
-    }
-
-    pub fn ring(id: &str, at: [f32; 3], radius: f32) -> Self {
-        Self::Ring {
-            id: id.into(),
-            at,
-            radius,
-            thickness: 3.0,
-            tone: Tone::default(),
-        }
-    }
-
-    pub fn tone(mut self, tone: Tone) -> Self {
-        match &mut self {
-            Self::Card { tone: own, .. }
-            | Self::Orb { tone: own, .. }
-            | Self::Beam { tone: own, .. }
-            | Self::Packet { tone: own, .. }
-            | Self::Ring { tone: own, .. } => *own = tone,
-            other => panic!("stage element '{}' has no tone", other.id()),
-        }
-        self
-    }
-
-    pub fn statuses(mut self, statuses: &[(&str, Tone)]) -> Self {
-        let Self::Card { status, .. } = &mut self else {
-            panic!("only cards have statuses, not '{}'", self.id());
-        };
-        *status = statuses
-            .iter()
-            .map(|&(text, tone)| StatusText::new(text, tone))
-            .collect();
-        self
-    }
-
-    pub fn mark(mut self, mark: Mark) -> Self {
-        let Self::Card { mark: own, .. } = &mut self else {
-            panic!("only cards have marks, not '{}'", self.id());
-        };
-        *own = mark;
-        self
-    }
-
-    pub fn points(mut self, points: u32) -> Self {
-        let Self::Orb { points: own, .. } = &mut self else {
-            panic!("only orbs have points, not '{}'", self.id());
-        };
-        *own = points;
-        self
-    }
-
-    pub fn bend(mut self, bend: f32) -> Self {
-        let Self::Beam { bend: own, .. } = &mut self else {
-            panic!("only beams bend, not '{}'", self.id());
-        };
-        *own = bend;
-        self
-    }
-
-    pub fn reversed(mut self) -> Self {
-        let Self::Packet { reverse, .. } = &mut self else {
-            panic!("only packets reverse, not '{}'", self.id());
-        };
-        *reverse = true;
-        self
-    }
-
-    pub fn labeled(mut self, text: &str) -> Self {
-        let Self::Packet { label, .. } = &mut self else {
-            panic!("only packets carry labels, not '{}'", self.id());
-        };
-        *label = text.into();
-        self
-    }
-
-    pub fn align(mut self, align: CaptionAlign) -> Self {
-        let Self::Label { align: own, .. } = &mut self else {
-            panic!("only labels align, not '{}'", self.id());
-        };
-        *own = align;
-        self
-    }
-
-    pub fn thickness(mut self, thickness: f32) -> Self {
-        let Self::Ring { thickness: own, .. } = &mut self else {
-            panic!("only rings have a thickness, not '{}'", self.id());
-        };
-        *own = thickness;
-        self
     }
 }
 

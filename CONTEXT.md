@@ -109,6 +109,16 @@ its own running clock, before the sweep goes on. At most two segments are
 visible at any instant. Segment media is retimed onto the reel clock for one audio
 mix. Unlike a Presentation Deck, a reel is delivered rather than navigated.
 
+A **Composited Transition** is one the renderer draws from both frames at once,
+posed by a pure function of the transition's progress: a push, slide, or whip
+moves both frames along a direction, smeared by their speed; an iris or ink
+reveals the incoming frame through a growing circle or blot; a **Match** flies
+one camera so a rectangle of the outgoing frame lands on a rectangle of the
+incoming one, and the element visibly becomes its counterpart; a flip or cube
+turns the frames in perspective; a glitch, flash, or light leak hides a cut
+under corruption or light. A **J-cut** and an **L-cut** overlap two segments'
+sound but cut their pictures at the end or the start of the overlap.
+
 ## Playback
 
 Interactive navigation among Presentation Steps. Next and Previous retarget continuous channels from their sampled position and velocity through the same Property Track compiler used for video. Unchanged channel destinations retain their trajectories. Pause freezes the local clock without losing motion state; Replay deliberately restarts from an entry pose. Playback retains an immutable compiled timeline for each navigation revision, so late rendered frames cannot change the current destination. It is not reverse playback of a movie.
@@ -180,10 +190,92 @@ is a pure function of time, so any frame renders identically in any order.
 An orb pulse is an illumination response, independent of its scale and attached
 ports. A card's content can settle after its body; its `content` channel controls
 the ink's presence, small vertical offset, and sharpening together.
+A card's **Status Swap** cross-fades its status line straight from one entry
+to another; a fractional `status` instead passes through every entry between.
+Every Stage channel has one **Channel Default**, its resting value, which both
+authoring and rendering read when nothing writes it: an element is visible and
+whole at rest.
 An orb's **Burst** is a reversible destruction clock: gravitational collapse,
 hot combustion, an expanding refractive pressure wave, cooling smoke, and
 ballistic embers. Its procedural volume and trajectories need no simulation
 history. Wires and arrivals pass beneath the intact orb's occluding shell.
+A **Bolt** is lightning between two elements or points, run by one **Discharge**
+clock: a stepped leader, then return strokes that strobe a few frames apart,
+each re-rolling the path's detail around a persisting channel, flashing both
+contacts, and throwing sparks, then a cooling afterglow. A bolt can also
+**hum**, a sustained arc. **Charge** is crackle crawling an outline; it lights
+the rim it crawls. A **Shield** is a forcefield bubble around an element that
+ripples where packets cross it or bolts strike it. A card's **Dissolve** is a
+reversible burn clock: a noisy front with a hot rim and ash; played backwards it
+materializes the card. A **Scan** sweeps a line down a card.
+
+## Stage Camera
+
+The Stage's viewpoint at one Temporal Sample. Its **pose** pans (`camera.x|y`),
+dollies along its view axis (`camera.z`), swings around a **pivot** on that
+axis (`camera.yaw|pitch`, about world depth `camera.pivot`), magnifies
+(`camera.zoom`, a multiple of the focal length), and rolls the delivered image
+(`camera.roll`). At the default pose the projection is the original
+translation-only one, pixel for pixel. Cards, labels, and rings are
+**billboards**: their centers move in 3D but they keep facing the lens, so text
+stays legible from any angle. Orb particles, embers, surface rings, and wires
+are projected point by point, so an orbit shows their true depth. Draw order and
+depth of field follow view depth. A **Follow** blends the authored pan toward
+the pan that centers a packet or element, by `camera.track.<id>` weights the
+renderer resolves at every sample, so a followed packet stays exactly centered.
+**Handheld** sway and a jolt's kick and rumble add on top of the authored and
+followed pose; neither fights a shot. A **Shot** is one `CameraRig` move (frame,
+push in, drift, whip, orbit, dolly zoom, focus pull, follow) written as ordinary
+channels from the pose authored so far; a **Dolly Zoom** trades zoom against
+dolly so its subject holds still while the depth around it stretches.
+
+## Particle Form
+
+The orb's material, glowing points over a dark occluding body, on any of a few
+deterministic shapes: a sphere, a box (a cube with emphasized edges, or a flat
+slab), a dot-matrix plane, a lattice, a cylinder, or a torus. A form turns in 3D
+(ambient spin, an authored `rotation`, and `pitch` and `roll` for tumbling),
+pulses, shatters, and bursts like an orb. Wires attach to its sampled, turned
+silhouette (a convex hull), not a fixed circle. The orb's surface ripple is
+spherical and stays the orb's alone.
+
+A **Morph** carries every point of a form from one of its shapes to the next.
+Point identity is stable: point `i` of every shape is the same particle, and each
+shape's points are paired with the previous shape's so each point travels a short
+way. The `morph` channel is a fractional index into the shapes; each point leaves
+at a seed-staggered moment, bows slightly outward, and lands exactly on the next
+shape at the next whole value.
+
+## Stage Shape
+
+A flat Stage element with no card chrome, drawn as a **Figure**: a rectangle,
+circle, arc, or polygon
+with an optional fill (a tone, or the card `surface` for an opaque panel) and a
+stroke that draws on along its outline from twelve o'clock. Figures turn about
+their center; an arc may carry arrowheads. Like a card, a figure's outline catches
+a passing packet's reflection and its fill takes an arrival's flood; a flash lifts
+its stroke, not the whole fill.
+
+## Path
+
+A drawn Stage connection through **Waypoints**: world points and positioned
+elements. Hops that leave or enter an element attach like a beam; runs between
+points are straight with rounded corners, a Catmull-Rom curve, or an authored
+cubic Bézier chain. A path draws on and can be trimmed from its start; its
+**Arrowheads** ride the drawn tip, so an arrow grows as it draws. An element
+waypoint between a path's ends is a **Stop**: it splits the path into legs.
+
+A packet rides a beam or a path. On a path it **Relays**: each leg is a whole
+packet life (gather, flight, landing) on the one packet clock, and the next leg
+gathers at the stop's far side a moment after the previous leg lands, so one
+packet element crosses a whole chain. A packet whose life has ended can be sent
+again; the new dispatch restarts its clock.
+
+## Icon
+
+A monochrome SVG drawn on the Stage through the camera: a bundled Phosphor icon
+by name, or SVG path data. It is rasterized once into the Stage's text atlas and
+tinted by its Tone, so it sizes in world pixels and defocuses like text.
 
 ## Caption
 
@@ -239,12 +331,126 @@ vocabulary (range, ticks, label, unit).
 A short label on a crisp leader line pinned to something on screen: a dot and
 ring mark the Callout Anchor, the leader draws out from it, and the label rises
 in at its end. A **Callout Anchor** is a fixed canvas point, an edge of a
-positioned Stage element seen through the camera, or an edge of an editor
-Semantic Target. Anchors are resolved by the root recipe at every Temporal
+positioned Stage element seen through the camera, an edge of an editor
+Semantic Target, or a Sequence Diagram participant header or row. Anchors are resolved by the root recipe at every Temporal
 Sample, so the callout follows its target with no lag; moving to another
 anchor springs weight channels that blend the two resolved positions. Labels
 slide back inside the frame rather than leave it, and the leader follows.
 
+## Text Surface
+
+A natively drawn stand-in for a familiar interface (a terminal, a chat app, a
+pull request's file list) inside a floating **Window**: a themed panel whose
+body settles in like a Stage card while its content follows about 65 ms later.
+Unlike a Video Card, a text surface follows the Presentation Theme and re-times
+with the scene; it depicts a session rather than recording one.
+
+## Terminal
+
+A text surface of CommitMono rows: commands typed after a prompt at a natural,
+deterministic keystroke cadence, output printed or streamed line by line, and
+task lines led by a spinner that resolves into a check or a cross. Every line has
+a stable ID and opens its own row, so once the window is full a new line slides
+every older one up by exactly its room; `clear` lifts everything through a
+scroll floor. A line is never re-laid out or replaced.
+
+## Chat Thread
+
+A conversation in a Slack-like or iMessage-like window. Messages have stable IDs
+and authors with avatars; a run by one author shows its name once. A typing
+indicator holds the next message's slot with dots on their own clock and grows
+into the message when it is said, so the slot keeps its identity. The thread is
+anchored to its composer: a new message pushes every older one up by exactly the
+room it opens. Reactions pop in beneath a message and open their own row.
+
+## Changed Files
+
+The opener of a pull-request film: file paths with added, modified, deleted, or
+renamed badges, `+N −M` counts, and GitHub's five-block **Diffstat**. Rows hold
+fixed slots, so revealing one never moves another; focus lights one row while the
+rest recede. The header's totals are Rolling Numbers that roll as rows land.
+
+## Lower Third
+
+A name and an optional role beside an accent bar, introducing a speaker or
+subject. The bar draws up, the name slides out from behind it, and the role
+follows; leaving reverses the order. Text never shows beyond the bar.
+
+## Readout
+A number whose digit wheels follow one channel's continuous value, like an
+odometer: each displayed unit holds still for most of its interval and rolls
+to the next near the rounding boundary, a place turns only while every place
+below it rolls over from 9, and a new leading place rolls in as it opens its
+room. A wheel turning too fast to read smears instead of strobing. Unlike a
+Rolling Number, which plays authored changes on its own schedule, a Readout is
+a pure function of the value, so a bar's label counts with the bar and a timer
+counts with its ring.
+## Checklist
+Rows of items that wait, run, and resolve, like CI checks. Each item has four
+channels: `reveal`, the status spinner's `spinner` and `mark` clocks, and an
+`outcome` (pending, done, failed, skipped). A resolution waits for the
+spinner's next handoff crossing, then the same tip draws the ✓ or ✕; a skip
+coasts the spinner out, draws a dash, and strikes the label through. An
+optional rail fills below each resolved item, and a title counts what passed.
+Starting a resolved item again clears its mark, as for a retry.
+## Meter
+A circular gauge, a closed countdown ring, or a linear bar driven by one
+`value` channel: the arc, its head, the lit ticks, the tone, and a centered
+Readout all follow it. Thresholds hand the value to another Tone, whole at the
+threshold itself; a countdown sweeps the ring closed on a clock and flashes as
+it crosses each threshold and runs out.
+## Benchmark Bars
+A horizontal bar chart comparing one or more series per row (before and
+after) on one shared Axis. Bars grow on springs with Readouts at their ends; a
+delta chip compares two series (`−34%`, tone by whether lower or higher is
+better); and rows re-sort by springing their own `slot` channels, so a row
+keeps its identity while it races to its new place, passing over the rows it
+overtakes.
+## Subtitles
+Burned-in captions driven by narration word timings. Words chunk into pages of
+balanced lines no wider than a maximum, breaking at sentence ends, pauses, and
+width; each page replaces the last with a short fade and rise, its backing
+surface morphing rather than blinking. The spoken word takes the highlight
+tone with a pill that glides from word to word. Everything after measuring is a
+pure function of time and the word list.
+## Confetti
+A success burst: seeded paper pieces and sparkles launched in a cone under
+gravity and drag, fluttering and tumbling as they fall, all closed-form from
+one `burst` clock, so the burst samples in any order and is the same for its
+seed every time.
+## Anchor
+A place an overlay pins to whose position only the renderer knows: a fixed
+canvas point, an edge of a positioned Stage element seen through the camera
+(including a jolt's roll and punch-in), an edge of an editor Semantic Target
+after line motion and the panel's projection, or an edge of a Sequence Diagram
+participant's measured header or a row's span (a message's arrow, a note, an
+End mark) as the diagram moves. An overlay lists its anchors, each
+with an optional pixel offset, and `anchor.<id>` weight channels choose among
+them; the first holds the overlay until a weight moves. The renderer resolves
+every weighted anchor at every Temporal Sample and the overlay draws at the blended
+point, so it never lags its target. Moving between anchors springs the weights,
+so an interrupted move keeps its velocity. Callouts, captions, Rolling Numbers,
+text, and images share this model. An anchor names a target; it does not parent
+one actor to another, so there is no hierarchy, and a pinned overlay follows its
+target's position, not its scale.
+## Image
+One planned image media placement (PNG, JPEG, or WebP) drawn bare or inside a
+framed card, through the same projected card as a Video Card, so it can move,
+scale, rotate, tilt, defocus, and pin to an Anchor. The file is decoded once;
+its width at rest is authored and its height follows the image.
+## Lens
+A loupe of thick glass laid over the frame: a circle, or a capsule for reading
+along a line. Its flat top enlarges a focus point evenly, so what it shows stays
+legible; its rounded rim bends sight inward by Snell's law, strongest at the
+edge, splits color slightly there, catches a specular light, and casts a soft
+contact shadow. A lens refracts whatever is composed beneath it (any root and
+the overlays drawn before it) at every Temporal Sample. It pins to the same
+anchors as a Callout and glides between them like a puck of glass, following
+its card or code range as they move. A lens **condenses** rather than fades:
+its presence grows its size, rim, and magnification together. Its focus can
+sit away from its center, so the glass can float beside what it reads. The
+same glass, frosted and unmagnified, is a material for chips: a glass caption
+refracts the scene behind its text instead of covering it.
 ## Tone
 
 A semantic color role shared by explainer recipes: plain, request, success,
@@ -264,6 +470,40 @@ One code change told as ordered steps over Stable Lines: each line is kept,
 added in a step, or removed in a step. Added lines carry an added Line Mark;
 removed lines turn red just before their step. A pure insertion or removal first
 holds blank rows so moving code never crosses entering or leaving code.
+
+A Stepped Diff line may name ranges of its text and carry Inlay Hints; its
+declared editor then pins Semantic Targets to those ranges like any editor.
+
+## Diagnostic
+
+A severity-toned wave (error, warning, info) under one Semantic Target, with a
+gutter icon beside its line. The wave draws on along the range's length, keeps
+its shape as the range moves, and follows line motion and Inline Reveals because
+the editor measures its target at every Temporal Sample. Clearing it relaxes the
+wave flat as it fades. It depicts a compiler's report; it does not type-check.
+
+## Hover Card
+
+An IDE tooltip pinned to a Semantic Target: highlighted code lines (a type
+signature) and toned prose (a diagnostic message) in sections divided by rules,
+with a small pointer aimed at the range. It pops in by fading up and rising into
+place, sits above or below its range as authored, and slides to stay inside the
+editor rather than flip sides, so a moving range moves it continuously.
+
+## Inlay Hint
+
+Ghost text, such as an inferred `: Effect<User, NotFound, Database>`, that opens
+room inline after a range. It is an Inline Reveal of its own inline part (part ID
+`inlay:<id>`) drawn dim on a faint chip, so the line keeps its identity, every
+other part keeps its own, and code after it moves aside rather than being replaced.
+
+## Cursor
+
+A text caret and its selection over Semantic Targets. The caret sits at a fraction
+(`head`) of a weighted target and the selection spans `tail` to `head`; moving
+between targets springs anchor weights like a Callout's. Its blink is a pure
+function of a `blink` clock that restarts whenever the caret moves, so the caret
+holds solid while it moves and for a moment after, then blinks.
 
 ## Asset
 
@@ -292,6 +532,42 @@ An ordered set of words with source start and end times. Looking up a word occur
 ## Media Placement
 
 A compiled relationship between a clip's immutable source range and its scheduled timeline range. Media placement time uses integer nanoseconds so edit boundaries remain exact across repeated edits.
+
+## Generated Resource
+
+Audio a Scene Program declares rather than supplies: a spoken line, a
+dialogue, a sound effect, or a resource derived from another by an effect
+such as a pitch shift. It has an author-chosen id that names its role in the
+scene, and a Resource Key that names its content. Once reconciled it is an
+Asset with an exact duration and, for speech, a Transcript, so choreography is
+timed to what was actually generated.
+
+## Resource Key
+
+The hash of everything that affects a Generated Resource's audio: backend,
+model, voice, the exact text with its direction tags, settings, seed, the
+lines it is stitched after, output format, post-processing, and how its words
+were timed. Equal keys mean interchangeable audio; a derived resource's key
+includes its source's, so regenerating a source regenerates what derives from
+it. A key identifies a recipe, not the bytes: providers are not deterministic.
+
+## Media Lock
+
+The recorded state of a scene's Generated Resources (`media.lock.json`): for
+each id, the key it was generated for, its file, exact duration, words, and
+provenance such as request IDs and billed credits. Files live in a
+content-addressed store beside it. Narration made before the lock existed can
+be adopted into it, keyed by the recipe that made it, without regenerating.
+
+## Reconcile
+
+Comparing declared Generated Resources with the Media Lock and acting on the
+delta: `=` up to date (the lock holds this key and its file), `+` create (no
+entry for the id), `~` replace (the entry was made for another key), and `-`
+orphan (an entry nothing declares). A run generates what is missing; a plan
+reports the delta and its cost and calls nothing; a draft stands in free local
+audio; a prune deletes orphans. Only declarations, never elapsed time or
+file dates, decide what is generated.
 
 ## Property Track
 

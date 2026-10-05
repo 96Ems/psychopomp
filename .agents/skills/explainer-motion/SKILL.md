@@ -54,7 +54,8 @@ When a beat feels flat or noisy, ask where its energy comes from and where it go
   dropped error falls, a timeout is a ring sweeping closed, data flows along wires.
 - **Camera.** Dolly in to open, drift toward the actor that is speaking, pull
   focus to the plane that matters, pull back to show consequences, push in on the
-  resolution. Shake only on impact.
+  resolution. Shake only on impact. Follow a message only when its journey is
+  the story; orbit to reveal depth, not to decorate.
 - **Rhythm.** Stagger entrances about 120 ms apart; land impacts on the spoken
   word, with a quiet sound. To show a fix, rewind visibly (reassemble, reconnect),
   then replay the same moment resolving differently.
@@ -91,8 +92,11 @@ Constants and formulas for each are in [TECHNIQUES.md](TECHNIQUES.md).
    than copying source alpha or bounce blindly. Done when the focal action reads
    at thumbnail size and all retained actors fit every camera composition.
 3. Build it as clock-derived, deterministic motion. In Psychopomp, use the
-   `StageActor` helpers (`send`, `connect`, `settle_in`, `hit`, `twang`, `land`)
-   and `psychopomp::math`; the `psychopomp` skill covers the reel workflow.
+   `StageActor` beats (`send`, `send_arriving`, `connect`, `connect_contacting`,
+   `settle_in`, `hit`, `twang`, `land`, `orb_in`, `glitch`, `rewind`,
+   `swap_status`, `halo`, `ring_timer`, `disconnect`), `stage::reply_after` for
+   a reply's earliest launch, `author::stagger` for ripples, and
+   `psychopomp::math`; the `psychopomp` skill covers the reel workflow.
 4. Render short normal-speed studies before the full film. Compare against the
    previous treatment, then inspect contact frames at 40 ms or less. Check body,
    content, ports, and camera separately. Done when the result reads in motion,

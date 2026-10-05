@@ -45,16 +45,23 @@ impl Placement {
     }
 
     /// Derive the bounding placement of a [`StageElement`], if it is a
-    /// positioned element (`Card`, `Orb`, `Label`, or `Ring`).
+    /// positioned element (`Card`, `Orb`, `Label`, `Ring`, `Form`, `Shape`, or `Icon`).
     pub fn from_element(element: &StageElement) -> Option<Self> {
-        match *element {
-            StageElement::Card { at, size, .. } => Some(Self::card(at, size)),
-            StageElement::Orb { at, radius, .. } | StageElement::Ring { at, radius, .. } => {
-                Some(Self::orb(at, radius))
-            }
-            StageElement::Label { at, size, .. } => Some(Self::new(at, [0.0, size])),
-            StageElement::Beam { .. } | StageElement::Packet { .. } => None,
-        }
+        use crate::math::shapes::Shape;
+        let at = element.anchor()?;
+        let size = match *element {
+            StageElement::Label { size, .. } => [0.0, size],
+            _ => match element.outline(crate::math::Vec2::ZERO, 1.0) {
+                Shape::Box(bounds) => (bounds.max - bounds.min).into(),
+                Shape::Circle(circle) => [circle.radius * 2.0, circle.radius * 2.0],
+                Shape::Point(_) => [0.0, 0.0],
+                Shape::Polygon(poly) => {
+                    let bounds = poly.bounds();
+                    (bounds.max - bounds.min).into()
+                }
+            },
+        };
+        Some(Self::new(at, size))
     }
 
     /// Look up the bounding placement of `id` in `plan`.

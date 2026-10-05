@@ -245,15 +245,14 @@ fn slide(id: &str, title: &str, steps: &[Step]) -> Result<ScenePlan> {
             steps,
             |s| s.title == step.title,
         )?;
-        let start = index as u64 * 3 * SECOND;
-        scene.presentation_step(
-            format!("step-{index}"),
-            step.title,
-            start,
-            if index == 0 { 0 } else { start + 2 * SECOND },
-        );
-        scene.cue(format!("step-{index}"), start, start + 3 * SECOND);
     }
+    scene.steps(
+        "step",
+        steps.iter().map(|step| step.title),
+        3 * SECOND,
+        2 * SECOND,
+    );
+    scene.cue_steps(3 * SECOND);
     scene.actor("hint", "text", json!({"text":"← / →  step     ⌘← / ⌘→  slide     R  replay     C  line color     M  reduced motion", "center":[960,1020], "fontSize":16, "color":[108,120,144]}))?;
     Ok(scene.finish()?)
 }

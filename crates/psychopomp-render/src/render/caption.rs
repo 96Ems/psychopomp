@@ -1,10 +1,15 @@
-//! Caption pixels: styled CommitMono lines, an optional chip surface, a typing
+//! Caption pixels: styled CommitMono lines, an optional chip surface (solid, or
+//! a liquid-glass pane that refracts what is behind it), a typing
 //! reveal by character, and the accent block caret. Alignment uses each line's
 //! full width, so typed text never slides while it appears.
-use psychopomp::caption::{CaptionAlign, CaptionPlan};
+use psychopomp::{
+    caption::{CaptionAlign, CaptionPlan},
+    lens::Glass,
+    math::{shapes::RoundedBox, vec2},
+};
 
 use super::{
-    HeadlessRenderer, PlainTextSpec, TextDraw, composite_text,
+    HeadlessRenderer, PlainTextSpec, TextDraw, composite_lens, composite_text,
     ui::{
         Bounds,
         card::{Fill, SurfaceStyle, UiCanvas, UiColor},
@@ -18,14 +23,23 @@ impl HeadlessRenderer {
         plan: &CaptionPlan,
         sample: impl Fn(&str, f32) -> f32,
     ) {
+        self.composite_caption_at(pixels, plan, plan.origin, sample);
+    }
+
+    /// `composite_caption` with its origin at `origin` (as when anchored)
+    /// rather than the plan's.
+    pub(crate) fn composite_caption_at(
+        &mut self,
+        pixels: &mut [u8],
+        plan: &CaptionPlan,
+        origin: [f32; 2],
+        sample: impl Fn(&str, f32) -> f32,
+    ) {
         let opacity = sample("opacity", 1.0).clamp(0.0, 1.0);
         if opacity <= 0.001 {
             return;
         }
-        let origin = [
-            plan.origin[0] + sample("x", 0.0),
-            plan.origin[1] + sample("y", 0.0),
-        ];
+        let origin = [origin[0] + sample("x", 0.0), origin[1] + sample("y", 0.0)];
         let typed = sample("typed", 1.0).clamp(0.0, 1.0);
         let caret = sample("caret", 0.0).clamp(0.0, 1.0);
         let canvas = [self.spec.width, self.spec.height];
@@ -80,17 +94,30 @@ impl HeadlessRenderer {
                 origin: [left - plan.size * 0.7, top],
                 size: [right - left + plan.size * 1.4, bottom - top],
             };
-            let [r, g, b] = palette.surface;
-            let [br, bg, bb] = palette.raised;
-            UiCanvas::new(pixels, canvas).surface(
-                bounds,
-                SurfaceStyle::new(
-                    Fill::Solid(UiColor::srgb8(r, g, b, 255)),
-                    (bottom - top) * 0.5,
-                )
-                .border(1.2, UiColor::srgb8(br, bg, bb, 255), 1.0),
-                opacity,
-            );
+            if plan.glass {
+                let [x, y] = bounds.origin;
+                let [width, height] = bounds.size;
+                let outline = RoundedBox::new(
+                    vec2(x + width * 0.5, y + height * 0.5),
+                    vec2(width, height) * 0.5,
+                    height * 0.5,
+                );
+                if let Some(pane) = Glass::pane(outline, opacity) {
+                    composite_lens(pixels, canvas, &pane);
+                }
+            } else {
+                let [r, g, b] = palette.surface;
+                let [br, bg, bb] = palette.raised;
+                UiCanvas::new(pixels, canvas).surface(
+                    bounds,
+                    SurfaceStyle::new(
+                        Fill::Solid(UiColor::srgb8(r, g, b, 255)),
+                        (bottom - top) * 0.5,
+                    )
+                    .border(1.2, UiColor::srgb8(br, bg, bb, 255), 1.0),
+                    opacity,
+                );
+            }
         }
         let total = plan.char_count();
         let mut remaining = if typed >= 1.0 {

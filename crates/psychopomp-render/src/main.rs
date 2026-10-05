@@ -30,3 +30,106 @@ fn main() -> Result<()> {
 
     pollster::block_on(plan_runtime::render_builtin_hero(&output))
 }
+
+#[cfg(test)]
+mod wgsl_tests {
+    use wgpu::naga::{
+        front::wgsl,
+        valid::{Capabilities, ValidationFlags, Validator},
+    };
+
+    fn validate_wgsl(
+        label: &str,
+        source: &str,
+        expected_entries: &[&str],
+        expected_structs: &[(&str, u32)],
+    ) {
+        let module = wgsl::parse_str(source).unwrap_or_else(|err| {
+            panic!("{label}: WGSL parse error:\n{}", err.emit_to_string(source))
+        });
+        let mut validator = Validator::new(ValidationFlags::all(), Capabilities::default());
+        validator
+            .validate(&module)
+            .unwrap_or_else(|err| panic!("{label}: WGSL validation error: {err:?}"));
+        for &entry in expected_entries {
+            assert!(
+                module.entry_points.iter().any(|ep| ep.name == entry),
+                "{label}: missing entry point '{entry}'"
+            );
+        }
+        for &(struct_name, expected_span) in expected_structs {
+            let (_, ty) = module
+                .types
+                .iter()
+                .find(|(_, ty)| ty.name.as_deref() == Some(struct_name))
+                .unwrap_or_else(|| panic!("{label}: missing struct '{struct_name}'"));
+            let wgpu::naga::TypeInner::Struct { span, .. } = ty.inner else {
+                panic!("{label}: '{struct_name}' is not a struct");
+            };
+            assert_eq!(
+                span, expected_span,
+                "{label}: struct '{struct_name}' byte size mismatch with Rust #[repr(C)] layout"
+            );
+        }
+    }
+
+    #[test]
+    fn all_shader_modules_and_composed_effect_pipelines_validate_without_a_gpu() {
+        validate_wgsl(
+            "scene.wgsl",
+            include_str!("scene.wgsl"),
+            &["vertex_main", "fragment_main"],
+            &[("SceneUniforms", 80)],
+        );
+        validate_wgsl(
+            "present.wgsl",
+            include_str!("plan_runtime/presentation/present.wgsl"),
+            &["vertex_main", "fragment_main"],
+            &[],
+        );
+        validate_wgsl(
+            "grid.wgsl",
+            include_str!("render/grid.wgsl"),
+            &["vertex_main", "fragment_main", "fragment_heading"],
+            &[("Camera", 80)],
+        );
+        validate_wgsl(
+            "grid/edges.wgsl",
+            include_str!("render/grid/edges.wgsl"),
+            &["vertex_main", "fragment_depth", "fragment_ink"],
+            &[("Camera", 80)],
+        );
+        validate_wgsl(
+            "grid/edges_composite.wgsl",
+            include_str!("render/grid/edges_composite.wgsl"),
+            &["vertex_main", "fragment_main"],
+            &[],
+        );
+        let joined = |modules: &[(&str, &str)]| {
+            modules
+                .iter()
+                .map(|(_, source)| *source)
+                .collect::<Vec<_>>()
+                .join("\n")
+        };
+        let size = |name: &str| {
+            crate::render::SHADER_STRUCTS
+                .iter()
+                .find(|(struct_name, _)| *struct_name == name)
+                .map(|&(_, bytes)| bytes as u32)
+                .unwrap()
+        };
+        validate_wgsl(
+            "stage primitives",
+            &joined(&crate::render::PRIMITIVE_SHADER),
+            &["vs", "fs"],
+            &[("Globals", size("Globals")), ("Prim", size("Prim"))],
+        );
+        validate_wgsl(
+            "stage post",
+            &joined(&crate::render::POST_SHADER),
+            &["vs", "accumulate", "prefilter", "down", "up", "composite"],
+            &[("Post", size("Post"))],
+        );
+    }
+}

@@ -183,6 +183,48 @@ impl EditorSemanticRangePlan {
     }
 }
 
+/// A line with one part per span, named `span-0`, `span-1`, …, for code
+/// whose inline parts need no identity of their own.
+pub fn line(id: &str, spans: Vec<StyledSpan>) -> EditorLinePlan {
+    let parts = spans
+        .into_iter()
+        .enumerate()
+        .map(|(index, span)| part(&format!("span-{index}"), vec![span]))
+        .collect();
+    semantic_line(id, parts, Vec::new())
+}
+
+/// A line of named parts with Semantic Targets ranging over them.
+pub fn semantic_line(
+    id: &str,
+    parts: Vec<EditorPartPlan>,
+    semantic_ranges: Vec<EditorSemanticRangePlan>,
+) -> EditorLinePlan {
+    EditorLinePlan {
+        id: id.to_owned(),
+        parts,
+        semantic_ranges,
+        mark: None,
+    }
+}
+
+/// A named inline part: its identity survives between snapshots.
+pub fn part(id: &str, spans: Vec<StyledSpan>) -> EditorPartPlan {
+    EditorPartPlan {
+        id: id.to_owned(),
+        spans,
+    }
+}
+
+/// A logical range from part `first` through part `last`.
+pub fn semantic_range(id: &str, first: &str, last: &str) -> EditorSemanticRangePlan {
+    EditorSemanticRangePlan {
+        id: id.to_owned(),
+        first_part_id: first.to_owned(),
+        last_part_id: last.to_owned(),
+    }
+}
+
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct EditorInlineRevealPlan {
@@ -400,5 +442,35 @@ mod tests {
         recipe.snapshots[1].at_nanos = 2_000_000_000;
         recipe.snapshots[1].line_ids.push("missing".into());
         assert!(channels(&recipe).is_err());
+    }
+
+    #[test]
+    fn line_builders_name_parts_and_ranges() {
+        use super::{line, part, semantic_line, semantic_range};
+        use crate::code::SyntaxStyle::{Keyword, Plain};
+        let spans = line(
+            "plain",
+            vec![
+                StyledSpan::new("let", Keyword),
+                StyledSpan::new(" x", Plain),
+            ],
+        );
+        let ids = spans
+            .parts
+            .iter()
+            .map(|part| part.id.as_str())
+            .collect::<Vec<_>>();
+        assert_eq!(ids, ["span-0", "span-1"]);
+        let named = semantic_line(
+            "named",
+            vec![
+                part("keyword", vec![StyledSpan::new("let", Keyword)]),
+                part("name", vec![StyledSpan::new(" x", Plain)]),
+            ],
+            vec![semantic_range("binding", "keyword", "name")],
+        );
+        assert_eq!(named.semantic_ranges[0].last_part_id, "name");
+        assert!(named.code_line().is_ok());
+        assert!(named.mark.is_none());
     }
 }

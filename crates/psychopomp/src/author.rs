@@ -3,8 +3,8 @@ use serde::Serialize;
 use crate::math::easing::Ease;
 use crate::plan::{
     ActorPlan, ContinuousChannelPlan, CuePlan, MediaPlan, PresentationStepPlan, ScalarPlan,
-    ScenePlan, SemanticTargetPlan, StateChannelPlan, StateEventPlan, TargetComponentPlan,
-    TargetScalarPlan, TrackEventPlan,
+    ScenePlan, SemanticTargetPlan, SpringPlan, StateChannelPlan, StateEventPlan,
+    TargetComponentPlan, TargetScalarPlan, TrackEventPlan,
 };
 
 pub struct PlanBuilder {
@@ -14,9 +14,83 @@ pub struct PlanBuilder {
 /// One second on the plan clock, in nanoseconds.
 pub const SECOND: u64 = 1_000_000_000;
 
+/// One millisecond on the plan clock, in nanoseconds.
+pub const MILLISECOND: u64 = 1_000_000;
+
 /// `seconds` on the plan clock, rounded to the nearest nanosecond.
 pub fn seconds(seconds: f64) -> u64 {
     (seconds * 1e9).round() as u64
+}
+
+/// `millis` whole milliseconds on the plan clock.
+pub const fn millis(millis: u64) -> u64 {
+    millis * MILLISECOND
+}
+
+/// Readable clamps for plan times, such as a beat keyed to a phrase that must
+/// still wait for what causes it: `f("injected").not_before(contact)`.
+pub trait PlanTime {
+    /// This time, or `earliest` if that is later.
+    fn not_before(self, earliest: u64) -> u64;
+}
+
+impl PlanTime for u64 {
+    fn not_before(self, earliest: u64) -> u64 {
+        self.max(earliest)
+    }
+}
+
+/// Start one beat per item, `gap` apart from `start` (rows ripple about 120 ms
+/// apart). `beat` receives each item and its start, and returns when that
+/// beat ends; `stagger` returns the latest end, or `start` with no items.
+pub fn stagger<T>(
+    items: impl IntoIterator<Item = T>,
+    start: u64,
+    gap: u64,
+    mut beat: impl FnMut(T, u64) -> u64,
+) -> u64 {
+    items
+        .into_iter()
+        .zip(0..)
+        .map(|(item, index)| beat(item, start + gap * index))
+        .fold(start, u64::max)
+}
+
+/// `count` times spread evenly from `from` to `to`, both included (one time
+/// is `from`), in whole nanoseconds.
+pub fn spread(count: u64, from: u64, to: u64) -> impl Iterator<Item = u64> {
+    let span = u128::from(to.saturating_sub(from));
+    (0..count).map(move |index| {
+        let step = span * u128::from(index) / u128::from(count.saturating_sub(1).max(1));
+        from + step as u64
+    })
+}
+
+/// Named spring feels from the explainer-motion calibrations
+/// (`.agents/skills/explainer-motion/TECHNIQUES.md`), for
+/// [`PlanBuilder::spring_with`] and `StageActor::spring`.
+impl SpringPlan {
+    /// A rigid panel settling into place: 0.6 s, bounce 0.12.
+    pub const PANEL: Self = Self::feel(0.6, 0.12);
+    /// Ink following its panel, or a label fading: 0.36 s, no bounce.
+    pub const CONTENT: Self = Self::feel(0.36, 0.0);
+    /// A quick state change, such as a status cross-fade: 0.3 s, no bounce.
+    pub const SNAP: Self = Self::feel(0.3, 0.0);
+    /// A camera move with weight and a natural tail: 1.6 s, critically damped.
+    pub const CAMERA: Self = Self::feel(1.6, 0.0);
+    /// A hero landing with a little overshoot: 0.85 s, bounce 0.2.
+    pub const LIVELY: Self = Self::feel(0.85, 0.2);
+
+    /// [`SpringPlan::visual`] in a constant: the same arithmetic, so a named
+    /// feel and its literal duration and bounce emit identical plans.
+    const fn feel(duration: f32, bounce: f32) -> Self {
+        Self {
+            response_seconds: duration * 1.2,
+            damping_ratio: 1. - bounce,
+            position_threshold: 0.001,
+            velocity_threshold: 0.001,
+        }
+    }
 }
 
 /// Whole milliseconds in nanoseconds: an f32 duration such as 0.8 is not exact
@@ -390,6 +464,94 @@ impl PlanBuilder {
         });
     }
 
+    /// The motion state of `actor.property` at `at_nanos` under the events
+    /// written so far, or `None` when the channel is undeclared or refers to
+    /// Semantic Targets. Helpers read the pose they move from this way; an
+    /// event written later cannot change a value already read.
+    pub fn sample(
+        &self,
+        actor: &ActorHandle,
+        property: &str,
+        at_nanos: u64,
+    ) -> Option<crate::motion::MotionState> {
+        let id = format!("{}.{}", actor.id, property);
+        let channel = self
+            .plan
+            .continuous_channels
+            .iter()
+            .find(|channel| channel.id == id)?;
+        let key = crate::timeline::PropertyId::new(&id);
+        let timeline = crate::plan::compile_channels(
+            [(channel, key.clone())],
+            self.plan.duration_nanos,
+            |scalar| match scalar {
+                ScalarPlan::Literal(value) => Ok(*value),
+                ScalarPlan::Target(_) => anyhow::bail!("a semantic scalar has no authored value"),
+            },
+        )
+        .ok()?;
+        timeline.sample_at(&key, at_nanos as f64 / 1e9)
+    }
+
+    /// Where `actor.property` is headed at `at_nanos`: the target of its
+    /// latest event at or before then (equal times in written order), else
+    /// its initial value. `None` when undeclared or semantic.
+    pub fn destination(&self, actor: &ActorHandle, property: &str, at_nanos: u64) -> Option<f32> {
+        let id = format!("{}.{}", actor.id, property);
+        let channel = self
+            .plan
+            .continuous_channels
+            .iter()
+            .find(|channel| channel.id == id)?;
+        let latest = channel
+            .events
+            .iter()
+            .enumerate()
+            .filter(|(_, event)| event.at_nanos() <= at_nanos)
+            .max_by_key(|(index, event)| (event.at_nanos(), *index))
+            .map_or(&channel.initial, |(_, event)| event.scalar());
+        match latest {
+            ScalarPlan::Literal(value) => Some(*value),
+            ScalarPlan::Target(_) => None,
+        }
+    }
+
+    /// One Presentation Step per title, `beat` apart from time zero, with IDs
+    /// `{prefix}-0`, `{prefix}-1`, …: each enters at its beat and holds
+    /// `settle` later, once its motion rests; the first is a still at zero.
+    /// Returns each step's entry time.
+    pub fn steps<T: Into<String>>(
+        &mut self,
+        prefix: &str,
+        titles: impl IntoIterator<Item = T>,
+        beat: u64,
+        settle: u64,
+    ) -> Vec<u64> {
+        (0..)
+            .zip(titles)
+            .map(|(index, title)| {
+                let at = index * beat;
+                let hold = if index == 0 { 0 } else { at + settle };
+                self.presentation_step(format!("{prefix}-{index}"), title, at, hold);
+                at
+            })
+            .collect()
+    }
+
+    /// A Cue for every Presentation Step declared so far, named like the step
+    /// and spanning `beat` from its entry, so one step can be rendered alone.
+    pub fn cue_steps(&mut self, beat: u64) {
+        let steps = self
+            .plan
+            .presentation_steps
+            .iter()
+            .map(|step| (step.id.clone(), step.start_nanos))
+            .collect::<Vec<_>>();
+        for (id, start) in steps {
+            self.cue(id, start, start + beat);
+        }
+    }
+
     pub fn finish(mut self) -> Result<ScenePlan, crate::plan::PlanValidationError> {
         for channel in &mut self.plan.continuous_channels {
             channel.events.sort_by_key(TrackEventPlan::at_nanos);
@@ -418,6 +580,77 @@ impl PlanBuilder {
     }
 }
 
+/// Declare a recipe's canonical ID, strict continuous channel table,
+/// typed sampled channel struct (with renderer rest defaults), and typed
+/// [`ContinuousHandle`] accessors on its authoring actor handle from one
+/// single source of truth.
+#[macro_export]
+macro_rules! recipe_channels {
+    (
+        $(#[$recipe_meta:meta])*
+        recipe: $recipe_const:ident = $recipe_str:literal,
+        plan: $plan_ty:ty,
+        actor: $actor_ty:ty,
+        $(#[$sampled_meta:meta])*
+        sampled: $sampled_vis:vis struct $sampled_ty:ident {
+            $(
+                $(#[$field_meta:meta])*
+                $field:ident : $prop:literal, default = $default:expr, initial = $initial:expr
+            ),+ $(,)?
+        }
+    ) => {
+        $(#[$recipe_meta])*
+        pub const $recipe_const: &str = $recipe_str;
+
+        $(#[$sampled_meta])*
+        #[derive(Clone, Copy, Debug, PartialEq)]
+        $sampled_vis struct $sampled_ty {
+            $(
+                $(#[$field_meta])*
+                pub $field: f32,
+            )+
+        }
+
+        impl $sampled_ty {
+            /// Rest values sampled when a channel is undeclared in the plan.
+            pub const REST: Self = Self {
+                $( $field: $default, )+
+            };
+
+            /// Sample every channel of this recipe from `sample(property, default)`.
+            #[inline]
+            pub fn sample(mut sample: impl FnMut(&str, f32) -> f32) -> Self {
+                Self {
+                    $( $field: sample($prop, $default), )+
+                }
+            }
+        }
+
+        impl $plan_ty {
+            /// Canonical continuous channel property names accepted by this recipe.
+            pub const CHANNELS: &'static [&'static str] = &[ $( $prop ),+ ];
+
+            /// True when `property` is a valid continuous channel on this recipe.
+            #[inline]
+            pub fn accepts(property: &str) -> bool {
+                matches!(property, $( $prop )|+ )
+            }
+        }
+
+        impl $actor_ty {
+            $(
+                $(#[$field_meta])*
+                #[inline]
+                pub fn $field(&mut self, scene: &mut $crate::author::PlanBuilder) -> $crate::author::ContinuousHandle {
+                    self.channel(scene, $prop, $initial)
+                }
+            )+
+        }
+    };
+}
+
+pub use recipe_channels;
+
 #[cfg(test)]
 mod tests {
     use serde_json::json;
@@ -445,6 +678,30 @@ mod tests {
             plan.continuous_channels[0].events[0].at_nanos(),
             2_000_000_000
         );
+    }
+
+    #[test]
+    fn authored_values_and_destinations_read_the_events_written_so_far() {
+        let mut scene = PlanBuilder::new("reads", 4_000_000_000);
+        let actor = scene.actor("a", "title-card", json!({})).unwrap();
+        assert_eq!(scene.sample(&actor, "x", 0), None, "undeclared");
+        let x = scene.channel(&actor, "x", 10.0);
+        scene.spring(&x, 1_000_000_000, 50.0, 0.8, 0.0);
+        scene.set(&x, 3_000_000_000, -5.0);
+        assert_eq!(
+            scene.sample(&actor, "x", 500_000_000).unwrap().position,
+            10.0
+        );
+        let moving = scene.sample(&actor, "x", 1_300_000_000).unwrap();
+        assert!(moving.position > 10.0 && moving.position < 50.0 && moving.velocity > 0.0);
+        assert_eq!(
+            scene.sample(&actor, "x", 3_500_000_000).unwrap().position,
+            -5.0
+        );
+        // Where it is headed, not where it is.
+        assert_eq!(scene.destination(&actor, "x", 500_000_000), Some(10.0));
+        assert_eq!(scene.destination(&actor, "x", 1_300_000_000), Some(50.0));
+        assert_eq!(scene.destination(&actor, "x", 3_000_000_000), Some(-5.0));
     }
 
     #[test]
@@ -501,5 +758,94 @@ mod tests {
         assert_eq!(plan.semantic_targets[0].id, "title-text");
         assert_eq!(plan.cues[0].id, "change");
         assert_eq!(plan.presentation_steps[0].title, "Change the title");
+    }
+}
+
+#[cfg(test)]
+mod timing_tests {
+    use super::*;
+
+    #[test]
+    fn stagger_starts_beats_a_gap_apart_and_returns_the_latest_end() {
+        let mut starts = Vec::new();
+        let end = stagger(["a", "b", "c"], SECOND, millis(120), |item, at| {
+            starts.push((item, at));
+            at + if item == "b" { 2 * SECOND } else { SECOND }
+        });
+        assert_eq!(
+            starts,
+            [
+                ("a", SECOND),
+                ("b", SECOND + millis(120)),
+                ("c", SECOND + millis(240))
+            ]
+        );
+        assert_eq!(end, 3 * SECOND + millis(120), "b ends last");
+        assert_eq!(stagger(Vec::<u8>::new(), SECOND, 1, |_, at| at), SECOND);
+    }
+
+    #[test]
+    fn spread_includes_both_ends() {
+        assert_eq!(
+            spread(3, 0, SECOND).collect::<Vec<_>>(),
+            [0, SECOND / 2, SECOND]
+        );
+        assert_eq!(spread(1, 7, 99).collect::<Vec<_>>(), [7]);
+        assert_eq!(spread(0, 7, 99).count(), 0);
+        assert_eq!(spread(4, 10, 10).collect::<Vec<_>>(), [10; 4]);
+        assert_eq!(
+            spread(3, 0, 10).last(),
+            Some(10),
+            "whole nanoseconds, exact end"
+        );
+    }
+
+    #[test]
+    fn times_read_as_clamps_and_milliseconds() {
+        assert_eq!(millis(420), seconds(0.42));
+        assert_eq!(5.not_before(9), 9);
+        assert_eq!(12.not_before(9), 12);
+    }
+
+    #[test]
+    fn named_feels_match_their_literal_springs() {
+        for (feel, duration, bounce) in [
+            (SpringPlan::PANEL, 0.6, 0.12),
+            (SpringPlan::CONTENT, 0.36, 0.0),
+            (SpringPlan::SNAP, 0.3, 0.0),
+            (SpringPlan::CAMERA, 1.6, 0.0),
+            (SpringPlan::LIVELY, 0.85, 0.2),
+        ] {
+            assert_eq!(feel, SpringPlan::visual(duration, bounce));
+        }
+    }
+}
+
+#[cfg(test)]
+mod step_tests {
+    use super::*;
+
+    #[test]
+    fn a_step_deck_holds_each_beat_once_it_settles() {
+        let mut scene = PlanBuilder::new("deck", 9 * SECOND);
+        let entries = scene.steps("step", ["one", "two", "three"], 3 * SECOND, 2 * SECOND);
+        assert_eq!(entries, [0, 3 * SECOND, 6 * SECOND]);
+        scene.cue_steps(3 * SECOND);
+        let plan = scene.finish().unwrap();
+        let holds = plan
+            .presentation_steps
+            .iter()
+            .map(|step| (step.id.as_str(), step.start_nanos, step.hold_nanos))
+            .collect::<Vec<_>>();
+        assert_eq!(
+            holds,
+            [
+                ("step-0", 0, 0),
+                ("step-1", 3 * SECOND, 5 * SECOND),
+                ("step-2", 6 * SECOND, 8 * SECOND)
+            ]
+        );
+        assert_eq!(plan.cues[2].id, "step-2");
+        assert_eq!(plan.cues[2].end_nanos, 9 * SECOND);
     }
 }

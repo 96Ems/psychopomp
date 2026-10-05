@@ -117,6 +117,7 @@ impl PreparedReel {
                         .zoom
                         .map(|phase| phase.progress)
                         .or(layer.wipe.map(|phase| phase.position))
+                        .or(layer.transition.map(|phase| phase.progress))
                         .map(f32::to_bits),
                     self.segments[layer.segment].visual_sample_key(layer.local_seconds)?,
                 ))
@@ -138,6 +139,7 @@ impl PreparedReel {
             if layer.weight < 1.0
                 || layer.zoom.is_some()
                 || layer.wipe.is_some()
+                || layer.transition.is_some()
                 || *segment.get_or_insert(layer.segment) != layer.segment
             {
                 return None;
@@ -150,12 +152,14 @@ impl PreparedReel {
     pub(super) fn temporal_samples(&self, center: f64) -> u32 {
         match self.sole_segment(&[(center, 1.0)]) {
             Some((segment, local)) => self.segments[segment].temporal_samples(local[0].0),
-            None => crate::exposure::plan_temporal_samples(center).max(16),
+            None => crate::exposure::plan_temporal_samples(center)
+                .max(crate::exposure::TRANSITION_TEMPORAL_SAMPLES),
         }
     }
 
     /// One exposed frame. A segment shown alone renders its own exposure (a
-    /// Stage accumulates on the GPU); mixes, zooms, and wipes average on the CPU.
+    /// Stage accumulates on the GPU); mixes, zooms, wipes, and composited
+    /// transitions average on the CPU.
     pub(super) fn render_exposure(
         &self,
         renderer: &mut HeadlessRenderer,
@@ -196,6 +200,10 @@ impl PreparedReel {
                     .as_ref()
                     .and_then(|wipe| wipe.labels.as_ref());
                 renderer.composite_wipe(below, &pixels, wipe, labels);
+                continue;
+            }
+            if let (Some(phase), Some(below)) = (layer.transition, blended.as_mut()) {
+                renderer.composite_transition(below, &pixels, phase);
                 continue;
             }
             let (pixels, coverage) = match layer.zoom {

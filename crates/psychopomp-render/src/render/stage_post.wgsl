@@ -33,10 +33,25 @@ fn vs(@builtin(vertex_index) vertex: u32) -> VOut {
     return out;
 }
 
-// One shutter sample, weighted by `params.x`, added into the exposure.
+// One shutter sample, weighted by `params.x`, added into the exposure. A
+// camera roll (`params.y`, radians) turns the sample about the frame center,
+// magnified by `params.z` to keep the corners covered, so a roll blurs.
 @fragment
 fn accumulate(in: VOut) -> @location(0) vec4<f32> {
-    let light = textureLoad(source, vec2<i32>(in.position.xy), 0).rgb;
+    var light = vec3<f32>(0.0);
+    if post.params.y == 0.0 {
+        light = textureLoad(source, vec2<i32>(in.position.xy), 0).rgb;
+    } else {
+        let size = vec2<f32>(textureDimensions(source));
+        let roll = post.params.y;
+        let from_center = in.position.xy - size * 0.5;
+        let turned = vec2<f32>(
+            from_center.x * cos(roll) + from_center.y * sin(roll),
+            -from_center.x * sin(roll) + from_center.y * cos(roll),
+        );
+        let uv = (turned / post.params.z + size * 0.5) / size;
+        light = textureSampleLevel(source, linear_sampler, uv, 0.0).rgb;
+    }
     return vec4<f32>(light * post.params.x, 1.0);
 }
 

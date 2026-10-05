@@ -5,8 +5,8 @@ use psychopomp::{
     author::{PlanBuilder, SECOND},
     code::{StyledSpan, SyntaxStyle},
     editor::{
-        EDITOR_RECIPE, EditorInlineRevealPlan, EditorLinePlan, EditorPartPlan, EditorRecipePlan,
-        EditorSemanticRangePlan,
+        self, EDITOR_RECIPE, EditorInlineRevealPlan, EditorLinePlan, EditorPartPlan,
+        EditorRecipePlan, semantic_line, semantic_range,
     },
     plan::ScenePlan,
 };
@@ -155,30 +155,19 @@ fn part(id: &str, text: &str, style: SyntaxStyle) -> EditorPartPlan {
 }
 
 fn tokens(id: &str, spans: &[(&str, SyntaxStyle)]) -> EditorPartPlan {
-    EditorPartPlan {
-        id: id.into(),
-        spans: spans
-            .iter()
-            .map(|(text, style)| StyledSpan::new(*text, *style))
-            .collect(),
-    }
+    let spans = spans
+        .iter()
+        .map(|(text, style)| StyledSpan::new(*text, *style));
+    editor::part(id, spans.collect())
 }
 
+/// Every part is also a Semantic Target of its own name.
 fn line(id: &str, parts: Vec<EditorPartPlan>) -> EditorLinePlan {
-    let semantic_ranges = parts
+    let ranges = parts
         .iter()
-        .map(|part| EditorSemanticRangePlan {
-            id: part.id.clone(),
-            first_part_id: part.id.clone(),
-            last_part_id: part.id.clone(),
-        })
+        .map(|part| semantic_range(&part.id, &part.id, &part.id))
         .collect();
-    EditorLinePlan {
-        id: id.into(),
-        parts,
-        semantic_ranges,
-        mark: None,
-    }
+    semantic_line(id, parts, ranges)
 }
 
 fn reveal(line: &str, range: &str, channel: &str, reversed: bool) -> EditorInlineRevealPlan {

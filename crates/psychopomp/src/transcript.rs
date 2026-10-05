@@ -11,7 +11,7 @@ struct TranscriptFile {
     word_timings: Vec<WordTiming>,
 }
 
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize, PartialEq)]
 pub struct WordTiming {
     pub word: String,
     pub start: f64,
@@ -50,6 +50,11 @@ impl Transcript {
         Ok(Self { words })
     }
 
+    /// Every word with its source times, in spoken order.
+    pub fn words(&self) -> &[WordTiming] {
+        &self.words
+    }
+
     pub fn word(&self, word: &str) -> Result<Cue> {
         self.word_occurrence(word, 0)
     }
@@ -79,34 +84,71 @@ impl Transcript {
     /// Matching compares whole words, ignoring case and punctuation, so narration
     /// timing like `"404,"` matches the phrase `"404"`.
     pub fn phrase_after(&self, phrase: &str, after_seconds: f64) -> Result<Cue> {
-        let wanted = phrase
-            .split_whitespace()
-            .map(normalize)
-            .filter(|word| !word.is_empty())
-            .collect::<Vec<_>>();
-        if wanted.is_empty() {
-            bail!("transcript phrase must contain a word");
-        }
-        let spoken = self
-            .words
-            .iter()
-            .map(|timing| normalize(&timing.word))
-            .collect::<Vec<_>>();
+        let wanted = wanted(phrase)?;
+        let spoken = self.normalized();
         let start = (0..spoken.len().saturating_sub(wanted.len() - 1))
             .filter(|&index| self.words[index].start >= after_seconds)
             .find(|&index| spoken[index..index + wanted.len()] == wanted[..])
             .with_context(|| {
                 format!("transcript does not contain '{phrase}' after {after_seconds:.2}s")
             })?;
-        let end = &self.words[start + wanted.len() - 1];
-        Ok(Cue::new(
-            wanted.join("-"),
+        Ok(self.phrase_cue(wanted.join("-"), start, wanted.len()))
+    }
+
+    /// Every occurrence of `phrase`, in order and without overlap, matched as
+    /// [`phrase_after`](Self::phrase_after) matches: a chant of "balls, balls,
+    /// BALLS!" has three. Later occurrences are named `phrase#1`, `phrase#2`.
+    pub fn phrases(&self, phrase: &str) -> Result<Vec<Cue>> {
+        let wanted = wanted(phrase)?;
+        let spoken = self.normalized();
+        let mut cues = Vec::new();
+        let mut index = 0;
+        while index + wanted.len() <= spoken.len() {
+            if spoken[index..index + wanted.len()] == wanted[..] {
+                let id = match cues.len() {
+                    0 => wanted.join("-"),
+                    n => format!("{}#{n}", wanted.join("-")),
+                };
+                cues.push(self.phrase_cue(id, index, wanted.len()));
+                index += wanted.len();
+            } else {
+                index += 1;
+            }
+        }
+        if cues.is_empty() {
+            bail!("transcript does not contain '{phrase}'");
+        }
+        Ok(cues)
+    }
+
+    fn normalized(&self) -> Vec<String> {
+        self.words
+            .iter()
+            .map(|timing| normalize(&timing.word))
+            .collect()
+    }
+
+    fn phrase_cue(&self, id: String, start: usize, len: usize) -> Cue {
+        Cue::new(
+            id,
             TimeRange::new(
                 Time::seconds(self.words[start].start),
-                Time::seconds(end.end),
+                Time::seconds(self.words[start + len - 1].end),
             ),
-        ))
+        )
     }
+}
+
+fn wanted(phrase: &str) -> Result<Vec<String>> {
+    let wanted = phrase
+        .split_whitespace()
+        .map(normalize)
+        .filter(|word| !word.is_empty())
+        .collect::<Vec<_>>();
+    if wanted.is_empty() {
+        bail!("transcript phrase must contain a word");
+    }
+    Ok(wanted)
 }
 
 /// Lowercase alphanumerics, with number words as digits: speech recognition
@@ -227,6 +269,26 @@ mod tests {
             0.2
         );
         assert!(transcript.phrase_after("  ", 0.0).is_err());
+    }
+
+    #[test]
+    fn every_occurrence_of_a_phrase_is_found_in_order() {
+        let chant = words(&[
+            ("Balls,", 0.0),
+            ("balls!", 0.5),
+            ("Big", 1.0),
+            ("BALLS.", 1.5),
+        ]);
+        let cues = chant.phrases("balls").unwrap();
+        let starts = cues
+            .iter()
+            .map(|cue| (cue.id().as_str(), cue.start().as_seconds()))
+            .collect::<Vec<_>>();
+        assert_eq!(starts, [("balls", 0.0), ("balls#1", 0.5), ("balls#2", 1.5)]);
+        assert_eq!(chant.phrases("big balls").unwrap().len(), 1);
+        let echo = words(&[("la", 0.0), ("la", 0.2), ("la", 0.4)]);
+        assert_eq!(echo.phrases("la la").unwrap().len(), 1, "no overlap");
+        assert!(chant.phrases("cubes").is_err());
     }
 
     #[test]

@@ -3084,7 +3084,7 @@
             "id": "stage.check-link.opacity",
             "actorId": "stage",
             "property": "check-link.opacity",
-            "initial": 0.0,
+            "initial": 1.0,
             "events": [
               {
                 "operation": "spring",
@@ -3101,7 +3101,7 @@
             "id": "stage.bind-link.opacity",
             "actorId": "stage",
             "property": "bind-link.opacity",
-            "initial": 0.0,
+            "initial": 1.0,
             "events": [
               {
                 "operation": "spring",
@@ -3127,7 +3127,7 @@
             "id": "stage.new.mark",
             "actorId": "stage",
             "property": "new.mark",
-            "initial": 0.0,
+            "initial": -1.0,
             "events": [
               {
                 "operation": "set",
@@ -3152,7 +3152,7 @@
             "id": "stage.client.mark",
             "actorId": "stage",
             "property": "client.mark",
-            "initial": 0.0,
+            "initial": -1.0,
             "events": [
               {
                 "operation": "set",
@@ -3814,9 +3814,9 @@
             "kind": "audio",
             "role": "layer",
             "sourceStartNanos": 0,
-            "sourceEndNanos": 130000000,
+            "sourceEndNanos": 140000000,
             "timelineStartNanos": 1870000000,
-            "timelineEndNanos": 2000000000,
+            "timelineEndNanos": 2010000000,
             "gainDb": -20.0
           },
           {
@@ -3825,9 +3825,9 @@
             "kind": "audio",
             "role": "layer",
             "sourceStartNanos": 0,
-            "sourceEndNanos": 150000000,
+            "sourceEndNanos": 160000000,
             "timelineStartNanos": 6040000000,
-            "timelineEndNanos": 6190000000,
+            "timelineEndNanos": 6200000000,
             "gainDb": -9.0
           },
           {
@@ -3836,9 +3836,9 @@
             "kind": "audio",
             "role": "layer",
             "sourceStartNanos": 0,
-            "sourceEndNanos": 510000000,
+            "sourceEndNanos": 520000000,
             "timelineStartNanos": 6620000000,
-            "timelineEndNanos": 7130000000,
+            "timelineEndNanos": 7140000000,
             "gainDb": -11.0
           },
           {
@@ -3847,9 +3847,9 @@
             "kind": "audio",
             "role": "layer",
             "sourceStartNanos": 0,
-            "sourceEndNanos": 150000000,
+            "sourceEndNanos": 160000000,
             "timelineStartNanos": 24050000000,
-            "timelineEndNanos": 24200000000,
+            "timelineEndNanos": 24210000000,
             "gainDb": -10.0
           },
           {
@@ -3858,9 +3858,9 @@
             "kind": "audio",
             "role": "layer",
             "sourceStartNanos": 0,
-            "sourceEndNanos": 470000000,
+            "sourceEndNanos": 480000000,
             "timelineStartNanos": 25250000000,
-            "timelineEndNanos": 25720000000,
+            "timelineEndNanos": 25730000000,
             "gainDb": -8.0
           },
           {
@@ -3880,9 +3880,9 @@
             "kind": "audio",
             "role": "layer",
             "sourceStartNanos": 0,
-            "sourceEndNanos": 1360000000,
+            "sourceEndNanos": 1370000000,
             "timelineStartNanos": 26428604166,
-            "timelineEndNanos": 27788604166,
+            "timelineEndNanos": 27798604166,
             "gainDb": -13.0
           },
           {
@@ -3891,9 +3891,9 @@
             "kind": "audio",
             "role": "layer",
             "sourceStartNanos": 0,
-            "sourceEndNanos": 1360000000,
+            "sourceEndNanos": 1370000000,
             "timelineStartNanos": 35428604166,
-            "timelineEndNanos": 36788604166,
+            "timelineEndNanos": 36798604166,
             "gainDb": -15.0
           },
           {
@@ -3902,9 +3902,9 @@
             "kind": "audio",
             "role": "layer",
             "sourceStartNanos": 0,
-            "sourceEndNanos": 510000000,
+            "sourceEndNanos": 520000000,
             "timelineStartNanos": 36248604166,
-            "timelineEndNanos": 36758604166,
+            "timelineEndNanos": 36768604166,
             "gainDb": -5.0
           },
           {
@@ -3913,9 +3913,9 @@
             "kind": "audio",
             "role": "layer",
             "sourceStartNanos": 0,
-            "sourceEndNanos": 1090000000,
+            "sourceEndNanos": 1100000000,
             "timelineStartNanos": 36298604166,
-            "timelineEndNanos": 37388604166,
+            "timelineEndNanos": 37398604166,
             "gainDb": -7.0
           },
           {
@@ -3924,9 +3924,9 @@
             "kind": "audio",
             "role": "layer",
             "sourceStartNanos": 0,
-            "sourceEndNanos": 150000000,
+            "sourceEndNanos": 160000000,
             "timelineStartNanos": 40378604166,
-            "timelineEndNanos": 40528604166,
+            "timelineEndNanos": 40538604166,
             "gainDb": -9.0
           },
           {
@@ -3946,9 +3946,9 @@
             "kind": "audio",
             "role": "layer",
             "sourceStartNanos": 0,
-            "sourceEndNanos": 785000000,
+            "sourceEndNanos": 795000000,
             "timelineStartNanos": 40958604166,
-            "timelineEndNanos": 41743604166,
+            "timelineEndNanos": 41753604166,
             "gainDb": -10.0
           }
         ]
@@ -4342,7 +4342,7 @@
                   "mark": "added",
                   "parts": [
                     {
-                      "id": "indent",
+                      "id": "code",
                       "spans": [
                         {
                           "style": "plain",

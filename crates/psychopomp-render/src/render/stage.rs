@@ -10,21 +10,24 @@ use psychopomp::{
     callout::CalloutSide,
     caption::{CaptionAlign, CaptionSpanPlan},
     effects::combustion::{self, Burst},
+    effects::lightning::{self, Discharge},
     effects::shake,
     effects::spinner::{self, Mark},
     effects::surface,
+    effects::{dissolve, shield},
     math::{
         Quat, Vec2, Vec3,
-        curve::Polyline,
+        curve::{CubicBezier, Polyline},
         easing::{cubic_out, quad_out},
         lerp,
         random::hash,
         remap_clamp,
-        shapes::{Box2, Port, Shape, connect, fit_between_ports, sphere_ring},
+        shapes::{Box2, Polygon, Port, Shape, connect, fit_between_ports, sphere_ring},
         smoothstep, stops, vec2, vec3,
     },
     stage::{
-        Camera, OrbPoint, StageElement, StagePlan, StatusText, orb_points, packet, shatter_offset,
+        Arrow, BoltEnd, Camera, Curve, Figure, Fill, Material, OrbPoint, StageElement, StagePlan,
+        StatusText, TRACK, Waypoint, form_points, morph_point, orb_points, packet, shatter_offset,
     },
     tone::Tone,
 };
@@ -53,6 +56,12 @@ struct Prim {
     light_color: [f32; 4],
     pool: [f32; 4],
     pool_color: [f32; 4],
+    /// A dissolve over any primitive: age (0 for none), the card's center
+    /// x and y, and its scale; its half size in world pixels and field seed;
+    /// and the rim's tone.
+    mask: [f32; 4],
+    mask_shape: [f32; 4],
+    mask_color: [f32; 4],
 }
 
 #[repr(C)]
@@ -114,6 +123,100 @@ pub(crate) struct StageGpu {
     passes: Vec<PostPass>,
     texts: HashMap<String, AtlasText>,
     orbs: HashMap<String, Vec<OrbPoint>>,
+    forms: HashMap<String, FormGeometry>,
+}
+
+/// A form's shapes as matched point sets, prepared once: point `i` of every
+/// shape is the same particle.
+pub(crate) struct FormGeometry {
+    shapes: Vec<Vec<Vec3>>,
+    seeds: Vec<Vec3>,
+    radii: Vec<f32>,
+    tilt: f32,
+}
+
+impl FormGeometry {
+    fn new(shapes: &[psychopomp::stage::FormShape], points: u32, tilt: f32) -> Self {
+        Self {
+            shapes: form_points(shapes, points),
+            seeds: (0..points)
+                .map(|i| vec3(hash(i, 3), hash(i, 7), hash(i, 11)))
+                .collect(),
+            radii: shapes.iter().map(|shape| shape.radius()).collect(),
+            tilt,
+        }
+    }
+}
+
+/// The SVG source of a bundled icon (`psychopomp::stage::ICONS`).
+fn bundled_icon(name: &str) -> Option<&'static str> {
+    macro_rules! icons {
+        ($($name:literal),* $(,)?) => {
+            match name {
+                $($name => Some(include_str!(concat!("../../../../assets/icons/", $name, ".svg"))),)*
+                _ => None,
+            }
+        };
+    }
+    icons!(
+        "arrows-clockwise",
+        "bell",
+        "brain",
+        "broadcast",
+        "chart-line-up",
+        "check-circle",
+        "clock",
+        "cloud",
+        "code",
+        "cpu",
+        "cube",
+        "database",
+        "desktop",
+        "device-mobile",
+        "envelope",
+        "file",
+        "fingerprint",
+        "folder",
+        "gear",
+        "git-branch",
+        "globe",
+        "hard-drives",
+        "hourglass",
+        "key",
+        "lightning",
+        "lock",
+        "lock-open",
+        "magnifying-glass",
+        "package",
+        "plug",
+        "queue",
+        "robot",
+        "shield-check",
+        "sparkle",
+        "stack",
+        "terminal",
+        "user",
+        "users",
+        "warning",
+        "x-circle",
+    )
+}
+
+/// An icon element's SVG document: a bundled icon, or its path data filled
+/// in a `view`-unit square.
+pub(crate) fn icon_svg(icon: &str, path: &str, view: f32) -> Option<String> {
+    if icon.is_empty() {
+        Some(format!(
+            r#"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {view} {view}"><path d="{path}"/></svg>"#
+        ))
+    } else {
+        bundled_icon(icon).map(str::to_owned)
+    }
+}
+
+/// Rasterize an icon's coverage at `pixels` square, for the atlas.
+fn icon_sprite(svg: &str, pixels: u32) -> Result<TextSprite> {
+    rasterize_svg(svg, pixels, pixels)
 }
 
 /// A shader source: the file under `PSYCHOPOMP_SHADER_DIR` when set (live
@@ -125,6 +228,55 @@ fn shader(file: &str, builtin: &'static str) -> std::borrow::Cow<'static, str> {
         return source.into();
     }
     builtin.into()
+}
+
+/// The modules joined, in order, into the Stage primitive shader: binding-free
+/// effect modules first, then the shader that calls them.
+pub(crate) const PRIMITIVE_SHADER: [(&str, &str); 7] = [
+    ("effects/noise.wgsl", include_str!("effects/noise.wgsl")),
+    (
+        "effects/combustion.wgsl",
+        include_str!("effects/combustion.wgsl"),
+    ),
+    (
+        "effects/lightning.wgsl",
+        include_str!("effects/lightning.wgsl"),
+    ),
+    (
+        "effects/dissolve.wgsl",
+        include_str!("effects/dissolve.wgsl"),
+    ),
+    ("effects/shield.wgsl", include_str!("effects/shield.wgsl")),
+    ("effects/scan.wgsl", include_str!("effects/scan.wgsl")),
+    ("stage.wgsl", include_str!("stage.wgsl")),
+];
+
+/// The modules joined, in order, into the Stage post-processing shader.
+pub(crate) const POST_SHADER: [(&str, &str); 4] = [
+    ("effects/noise.wgsl", include_str!("effects/noise.wgsl")),
+    (
+        "effects/pressure.wgsl",
+        include_str!("effects/pressure.wgsl"),
+    ),
+    ("effects/rewind.wgsl", include_str!("effects/rewind.wgsl")),
+    ("stage_post.wgsl", include_str!("stage_post.wgsl")),
+];
+
+/// Byte sizes of the Rust structs the Stage shaders read, by WGSL name.
+#[cfg(test)]
+pub(crate) const SHADER_STRUCTS: [(&str, usize); 3] = [
+    ("Prim", std::mem::size_of::<Prim>()),
+    ("Globals", std::mem::size_of::<Globals>()),
+    ("Post", std::mem::size_of::<PostUniform>()),
+];
+
+/// One shader from its modules, each read live under `PSYCHOPOMP_SHADER_DIR`.
+fn compose(modules: &[(&str, &'static str)]) -> String {
+    modules
+        .iter()
+        .map(|(file, builtin)| shader(file, builtin))
+        .collect::<Vec<_>>()
+        .join("\n")
 }
 
 fn text_key(element: &str, part: &str) -> String {
@@ -258,18 +410,7 @@ impl HeadlessRenderer {
         });
         let primitive_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("stage primitives"),
-            source: wgpu::ShaderSource::Wgsl(
-                format!(
-                    "{}\n{}\n{}",
-                    shader("effects/noise.wgsl", include_str!("effects/noise.wgsl")),
-                    shader(
-                        "effects/combustion.wgsl",
-                        include_str!("effects/combustion.wgsl")
-                    ),
-                    shader("stage.wgsl", include_str!("stage.wgsl")),
-                )
-                .into(),
-            ),
+            source: wgpu::ShaderSource::Wgsl(compose(&PRIMITIVE_SHADER).into()),
         });
         let premultiplied = wgpu::BlendState {
             color: wgpu::BlendComponent {
@@ -329,19 +470,7 @@ impl HeadlessRenderer {
         });
         let post_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("stage post"),
-            source: wgpu::ShaderSource::Wgsl(
-                format!(
-                    "{}\n{}\n{}\n{}",
-                    shader("effects/noise.wgsl", include_str!("effects/noise.wgsl")),
-                    shader(
-                        "effects/pressure.wgsl",
-                        include_str!("effects/pressure.wgsl")
-                    ),
-                    shader("effects/rewind.wgsl", include_str!("effects/rewind.wgsl")),
-                    shader("stage_post.wgsl", include_str!("stage_post.wgsl")),
-                )
-                .into(),
-            ),
+            source: wgpu::ShaderSource::Wgsl(compose(&POST_SHADER).into()),
         });
         let post_pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: None,
@@ -490,6 +619,20 @@ impl HeadlessRenderer {
                 _ => None,
             })
             .collect();
+        let forms = plan
+            .elements
+            .iter()
+            .filter_map(|element| match element {
+                StageElement::Form {
+                    id,
+                    shapes,
+                    points,
+                    tilt,
+                    ..
+                } => Some((id.clone(), FormGeometry::new(shapes, *points, *tilt))),
+                _ => None,
+            })
+            .collect();
         Ok(StageGpu {
             primitives,
             primitive_binding,
@@ -507,6 +650,7 @@ impl HeadlessRenderer {
             passes,
             texts: rects,
             orbs,
+            forms,
         })
     }
 
@@ -549,7 +693,7 @@ impl HeadlessRenderer {
                 _ => {}
             }
         }
-        let sprites = strings
+        let mut sprites = strings
             .iter()
             .map(|(_, text, size)| {
                 let raster = size * TEXT_RASTER;
@@ -569,6 +713,29 @@ impl HeadlessRenderer {
                 )
             })
             .collect::<Vec<_>>();
+        // Icons follow the text, rasterized at the same density.
+        let mut keys = strings
+            .into_iter()
+            .map(|(key, _, _)| key)
+            .collect::<Vec<_>>();
+        for element in &plan.elements {
+            if let StageElement::Icon {
+                id,
+                size,
+                icon,
+                path,
+                view,
+                ..
+            } = element
+            {
+                let svg = icon_svg(icon, path, *view)
+                    .with_context(|| format!("icon '{id}' names no bundled icon"))?;
+                let pixels = ((size * TEXT_RASTER).ceil() as u32).clamp(4, 2048);
+                sprites
+                    .push(icon_sprite(&svg, pixels).with_context(|| format!("icon '{id}' SVG"))?);
+                keys.push(text_key(id, "icon"));
+            }
+        }
         // Shelf packing, rows of the tallest sprite.
         let atlas_width = 4096_u32;
         let mut placements = Vec::with_capacity(sprites.len());
@@ -604,10 +771,10 @@ impl HeadlessRenderer {
             [atlas_width, atlas_height],
             &pixels,
         );
-        let rects = strings
+        let rects = keys
             .into_iter()
             .zip(placements)
-            .map(|((key, _, _), (x, y, w, h))| {
+            .map(|(key, (x, y, w, h))| {
                 (
                     key,
                     AtlasText {
@@ -661,7 +828,7 @@ impl HeadlessRenderer {
         let mut post = [[0.0; 4]; 5];
         for (index, &(time, weight)) in exposure.iter().enumerate() {
             let value = |property: &str, default: f32| value(time, property, default);
-            let scene = Scene::sample(plan, &value, time as f32, size);
+            let scene = Scene::sample_with(plan, &value, time as f32, size, Some(&gpu.forms));
             let mut painter = Painter {
                 scene: &scene,
                 look,
@@ -676,20 +843,23 @@ impl HeadlessRenderer {
             if time == central {
                 post = post_settings(plan, &scene, &value, look, time);
             }
-            self.draw_sample(gpu, &prims, &points, look.background, weight, index == 0);
+            let exposure = [weight, scene.camera.roll, scene.camera.cover()];
+            self.draw_sample(gpu, &prims, &points, look.background, exposure, index == 0);
         }
         self.develop(gpu, post)
     }
 
     /// Draw one sample's primitives into the HDR target and add it, weighted,
-    /// into the exposure (cleared by the first sample).
+    /// into the exposure (cleared by the first sample). `exposure` is the
+    /// weight, then the camera roll and its covering magnification, which turn
+    /// this sample's image as it is added so a rolling camera blurs too.
     fn draw_sample(
         &mut self,
         gpu: &StageGpu,
         prims: &[Prim],
         points: &[[f32; 4]],
         clear: Vec3,
-        weight: f32,
+        [weight, roll, cover]: [f32; 3],
         first: bool,
     ) {
         self.queue
@@ -703,7 +873,7 @@ impl HeadlessRenderer {
             0,
             bytemuck::bytes_of(&PostUniform {
                 texel: [0.0; 4],
-                params: [weight, 0.0, 0.0, 0.0],
+                params: [weight, roll, cover, 0.0],
                 look: [0.0; 4],
                 shock: [0.0; 4],
                 rewind: [0.0; 4],
@@ -829,9 +999,10 @@ fn fullscreen(
 }
 
 /// Where `edge` of a positioned element lands on the delivered frame at
-/// `time`: its outline as beams see it, then the develop pass's roll and
-/// punch-in about the frame center, so an overlay pinned there moves with the
-/// element through camera moves, jolts, and settles. The develop pass uses its
+/// `time`: its outline as beams see it, the camera's authored roll, then the
+/// develop pass's shake roll and punch-in about the frame center, so an
+/// overlay pinned there moves with the element through camera moves, jolts,
+/// and settles. The develop pass uses its
 /// exposure's central sample; an overlay uses its own sample, which differs by
 /// far less than a pixel within one shutter.
 pub(crate) fn stage_anchor(
@@ -843,19 +1014,30 @@ pub(crate) fn stage_anchor(
     edge: CalloutSide,
 ) -> Option<Vec2> {
     let element = plan.element(element)?;
-    let point = edge.on(Scene::camera(plan, value, time as f32, size)
-        .place(element)?
-        .outline);
-    let roll = shake::rumble(time as f32, trauma(value)).roll;
+    let scene = Scene::camera(plan, value, time as f32, size);
+    // The authored roll turns each sample as it is exposed.
+    let point = scene.camera.rolled(edge.on(scene.place(element)?.outline));
+    let roll = shake::rumble(time as f32, trauma(plan, value)).roll;
     // Mirrors `composite` in stage_post.wgsl, which samples the inverse.
-    let zoom = 1.0 + value("camera.punch", 0.0).max(0.0) + roll.abs() * 0.6;
+    let zoom = 1.0 + read(plan, value, "camera.punch").max(0.0) + roll.abs() * 0.6;
     let center = size * 0.5;
     Some(center + Vec2::from_angle(roll).rotate(point - center) * zoom)
 }
 
 /// Camera trauma: a jolt's decaying `shake` plus a scene's sustained `quake`.
-fn trauma(value: &dyn Fn(&str, f32) -> f32) -> f32 {
-    value("camera.shake", 0.0).max(0.0) + value("camera.quake", 0.0).max(0.0)
+fn trauma(plan: &StagePlan, value: &dyn Fn(&str, f32) -> f32) -> f32 {
+    read(plan, value, "camera.shake").max(0.0) + read(plan, value, "camera.quake").max(0.0)
+}
+
+/// A Stage channel's value, or its default from the one Stage channel
+/// defaults table when nothing writes it, so authoring and pixels agree.
+fn read(plan: &StagePlan, value: &dyn Fn(&str, f32) -> f32, property: &str) -> f32 {
+    let default = plan.channel_default(property);
+    debug_assert!(
+        default.is_some(),
+        "the Stage reads '{property}' without a channel default"
+    );
+    value(property, default.unwrap_or(0.0))
 }
 
 /// Bloom, look, pressure wave, rewind, zoom-streak, and flash settings at one sample.
@@ -867,14 +1049,14 @@ fn post_settings(
     time: f64,
 ) -> [[f32; 4]; 5] {
     let params = [
-        value("post.bloom", plan.post.bloom).max(0.0),
+        read(plan, value, "post.bloom").max(0.0),
         0.95,
         0.25,
-        value("post.exposure", 1.0).max(0.0),
+        read(plan, value, "post.exposure").max(0.0),
     ];
     let grade = [
-        value("post.chroma", 0.0).max(0.0),
-        value("post.vignette", plan.post.vignette).clamp(0.0, 1.0),
+        read(plan, value, "post.chroma").max(0.0),
+        read(plan, value, "post.vignette").clamp(0.0, 1.0),
         plan.post.grain,
         ((time * 60.0).floor() % 997.0) as f32,
     ];
@@ -882,26 +1064,27 @@ fn post_settings(
         .elements
         .iter()
         .find_map(|element| {
-            let StageElement::Orb { id, .. } = element else {
+            let (StageElement::Orb { id, .. } | StageElement::Form { id, .. }) = element else {
                 return None;
             };
-            let age = scene.v(id, "burst", -1.0);
+            let age = scene.v(id, "burst");
             let place = scene.placements.get(id.as_str())?;
+            let center = scene.camera.rolled(place.center);
             (0.0..2.4)
                 .contains(&age)
-                .then_some([place.center.x, place.center.y, age, place.scale])
+                .then_some([center.x, center.y, age, place.scale])
         })
         .unwrap_or([0.0, 0.0, -1.0, 0.0]);
     // Roll and the punch-in transform the whole developed frame.
     let rewind = [
-        value("post.rewind", -1.0),
+        read(plan, value, "post.rewind"),
         look.background.dot(Vec3::new(0.2126, 0.7152, 0.0722)),
-        shake::rumble(time as f32, trauma(value)).roll,
-        value("camera.punch", 0.0).max(0.0),
+        shake::rumble(time as f32, trauma(plan, value)).roll,
+        read(plan, value, "camera.punch").max(0.0),
     ];
     let motion = [
-        value("post.zoom", 0.0).clamp(0.0, 0.5),
-        value("post.flash", 0.0).clamp(0.0, 1.0),
+        read(plan, value, "post.zoom").clamp(0.0, 0.5),
+        read(plan, value, "post.flash").clamp(0.0, 1.0),
         0.0,
         0.0,
     ];
@@ -945,6 +1128,9 @@ fn linear3(rgb: [u8; 3]) -> Vec3 {
 #[derive(Clone, Copy)]
 struct Placement {
     world: Vec3,
+    /// Depth for draw order and depth of field (`Camera::depth`): its world z
+    /// unless the camera is turned.
+    depth: f32,
     /// Projected center on screen.
     center: Vec2,
     /// Perspective times the element's own scale (and an orb's breath).
@@ -958,11 +1144,18 @@ struct Link {
     path: Polyline,
     /// Full visible body boundaries, not an orb's submerged wire endpoints.
     label_ports: [Port; 2],
-    /// World depth and on-screen scale at the `from` and `to` ends.
+    /// Depth (`Camera::depth`) and on-screen scale at the `from` and `to` ends.
     depth: [f32; 2],
     scale: [f32; 2],
     /// Ends that plug into a card side and show a socket there.
     socket: [bool; 2],
+    /// Open ends, where an arriving packet's landing ring shows and its label
+    /// holds until arrival: card sides, shapes, icons, and a path's free ends.
+    /// A body's submerged end absorbs arrivals out of sight.
+    landing: [bool; 2],
+    /// Fractions of the path where its visible line meets each end's outline:
+    /// arrowheads sit there, not at a body's submerged endpoint.
+    tips: [f32; 2],
     /// The source card's frame, for the light that sweeps it before drawing.
     source: Option<Box2>,
 }
@@ -990,10 +1183,109 @@ impl Link {
             depth: ends(self.depth, reverse),
             scale: ends(self.scale, reverse),
             socket: ends(self.socket, reverse),
+            landing: ends(self.landing, reverse),
+            tips: if reverse {
+                [1.0 - self.tips[1], 1.0 - self.tips[0]]
+            } else {
+                self.tips
+            },
             label_ports: ends(self.label_ports, reverse),
             source: if reverse { None } else { self.source },
         }
     }
+}
+
+/// Where a bolt's ends are this sample.
+#[derive(Clone, Copy)]
+struct BoltEnds {
+    from: Port,
+    to: Port,
+    scale: [f32; 2],
+    depth: [f32; 2],
+}
+
+impl BoltEnds {
+    fn scale(&self) -> f32 {
+        (self.scale[0] + self.scale[1]) * 0.5
+    }
+
+    fn near(&self) -> f32 {
+        self.depth[0].min(self.depth[1])
+    }
+}
+
+/// Something touching a shield's surface: where, its direction on the
+/// sphere (toward the viewer is -z), seconds since contact, and strength.
+#[derive(Clone, Copy)]
+struct Contact {
+    point: Vec2,
+    direction: Vec3,
+    age: f32,
+    strength: f32,
+}
+
+/// A closed card or orb outline, sampled by fraction of its perimeter.
+enum Perimeter {
+    Path(Polyline),
+    Round(psychopomp::math::shapes::Circle),
+}
+
+impl Perimeter {
+    fn of(outline: Shape, scale: f32) -> Option<Self> {
+        match outline {
+            Shape::Box(frame) => Some(Self::Path(
+                frame.perimeter_from(vec2(frame.center().x, frame.min.y), 14.0 * scale),
+            )),
+            Shape::Circle(circle) => Some(Self::Round(circle)),
+            Shape::Polygon(polygon) => {
+                let vertices = polygon.vertices();
+                let closed = vertices.iter().chain(vertices.first()).copied().collect();
+                Some(Self::Path(Polyline::new(closed)))
+            }
+            Shape::Point(_) => None,
+        }
+    }
+
+    fn at(&self, fraction: f32) -> Vec2 {
+        match self {
+            Self::Path(path) => path.at(fraction.rem_euclid(1.0)),
+            Self::Round(circle) => lightning::on_circle(circle.center, circle.radius, fraction),
+        }
+    }
+
+    fn length(&self) -> f32 {
+        match self {
+            Self::Path(path) => path.length(),
+            Self::Round(circle) => TAU * circle.radius,
+        }
+    }
+}
+
+/// A stable 32-bit salt for an element ID (FNV-1a).
+fn salt(id: &str) -> u32 {
+    id.bytes().fold(0x811C_9DC5_u32, |h, byte| {
+        (h ^ u32::from(byte)).wrapping_mul(0x0100_0193)
+    })
+}
+
+/// Electricity and scans on a plain card take the request tone.
+fn spark_tone(tone: Tone) -> Tone {
+    if tone == Tone::Plain {
+        Tone::Request
+    } else {
+        tone
+    }
+}
+
+/// A sampled particle form: every point's offset from the center (turned
+/// and scaled, before shatter or collapse) and the silhouette wires attach to.
+struct SampledForm {
+    /// Offset in world pixels, nearness to the camera (0..1), and seeds.
+    dots: Vec<(Vec3, f32, Vec3)>,
+    /// Bounding radius of the current shape, in world pixels.
+    radius: f32,
+    /// The projected silhouette at rest.
+    hull: Polygon,
 }
 
 /// Light cast by something that moves. A reflection lights only the edges it
@@ -1060,6 +1352,9 @@ struct Scene<'a> {
     dof: f32,
     placements: HashMap<&'a str, Placement>,
     links: HashMap<&'a str, Link>,
+    /// Each path's legs, split at its stops.
+    routes: HashMap<&'a str, Vec<Link>>,
+    forms: HashMap<&'a str, SampledForm>,
     lights: Vec<Light>,
 }
 
@@ -1071,32 +1366,137 @@ impl<'a> Scene<'a> {
         time: f32,
         size: Vec2,
     ) -> Self {
-        // A jolt's spring-loaded shove plus its trauma rumble, sampled per
-        // shutter sample so the shake itself motion-blurs.
-        let rumble = shake::rumble(time, trauma(value));
-        let position = vec3(
-            value("camera.x", 0.0) + value("camera.kick-x", 0.0) + rumble.offset.x,
-            value("camera.y", 0.0) + value("camera.kick-y", 0.0) + rumble.offset.y,
-            value("camera.z", 0.0),
-        );
-        Self {
+        // A held camera sways slowly; a jolt's spring-loaded shove and trauma
+        // rumble add on top. All are sampled per shutter sample, so they blur.
+        let sway = shake::handheld(time, read(plan, value, "camera.handheld"));
+        let authored = Camera {
+            position: vec3(
+                read(plan, value, "camera.x"),
+                read(plan, value, "camera.y"),
+                read(plan, value, "camera.z"),
+            ),
+            yaw: read(plan, value, "camera.yaw") + sway.yaw,
+            pitch: (read(plan, value, "camera.pitch") + sway.pitch).clamp(-1.45, 1.45),
+            roll: read(plan, value, "camera.roll"),
+            zoom: read(plan, value, "camera.zoom").max(0.05),
+            pivot: read(plan, value, "camera.pivot"),
+            size,
+        };
+        let mut scene = Self {
             plan,
             value,
             time,
-            camera: Camera { position, size },
-            focus: value("camera.focus", 0.0),
-            dof: value("camera.dof", 0.0).max(0.0),
+            camera: authored,
+            focus: read(plan, value, "camera.focus"),
+            dof: read(plan, value, "camera.dof").max(0.0),
             placements: HashMap::new(),
             links: HashMap::new(),
+            routes: HashMap::new(),
+            forms: HashMap::new(),
             lights: Vec::new(),
+        };
+        let pan = scene.tracked();
+        let rumble = shake::rumble(time, trauma(plan, value));
+        scene.camera.position = vec3(
+            pan.x + read(plan, value, "camera.kick-x") + rumble.offset.x,
+            pan.y + read(plan, value, "camera.kick-y") + rumble.offset.y,
+            authored.position.z,
+        );
+        if sway.offset != Vec2::ZERO {
+            scene.camera.position += sway.offset.extend(0.0);
+        }
+        scene
+    }
+
+    /// The authored pan, blended toward the pans that center each followed
+    /// element or packet by its `camera.track.<id>` weight. Weights summing
+    /// past 1 share the frame. A packet is found where this very sample draws
+    /// it, so following is exact: a few passes settle the parallax between
+    /// ends at different depths.
+    fn tracked(&self) -> Vec2 {
+        let base = self.camera.position.truncate();
+        let tracks = self
+            .plan
+            .elements
+            .iter()
+            .filter(|element| element.followable())
+            .filter_map(|element| {
+                let weight = read(self.plan, self.value, &format!("{TRACK}{}", element.id()));
+                (weight > 0.0).then_some((element, weight))
+            })
+            .collect::<Vec<_>>();
+        if tracks.is_empty() {
+            return base;
+        }
+        let total = tracks.iter().map(|(_, weight)| weight).sum::<f32>();
+        let share = total.max(1.0);
+        let mut pan = base;
+        for _ in 0..3 {
+            let mut probe = Scene {
+                camera: Camera {
+                    position: pan.extend(self.camera.position.z),
+                    ..self.camera
+                },
+                placements: HashMap::new(),
+                links: HashMap::new(),
+                routes: HashMap::new(),
+                forms: HashMap::new(),
+                lights: Vec::new(),
+                ..*self
+            };
+            probe.placements = self
+                .plan
+                .elements
+                .iter()
+                .filter_map(|element| Some((element.id(), probe.place(element)?)))
+                .collect();
+            let aims = tracks.iter().map(|(element, weight)| {
+                let aim = probe
+                    .followed(element)
+                    .map_or(pan, |point| probe.camera.aim(point));
+                aim * (weight / share)
+            });
+            pan = base * (1.0 - total / share) + aims.sum::<Vec2>();
+        }
+        pan
+    }
+
+    /// The world point the camera follows for `element`: a packet's head
+    /// where it is drawn along its beam, or a positioned element's center.
+    fn followed(&self, element: &StageElement) -> Option<Vec3> {
+        match element {
+            StageElement::Packet {
+                id, beam, reverse, ..
+            } => {
+                let StageElement::Beam { from, to, bend, .. } = self.plan.element(beam)? else {
+                    return None;
+                };
+                let link = self.link(beam, from, to, *bend)?.toward(*reverse);
+                let travel = packet::travel(self.v(id, "age"), self.v(id, "flight").max(0.05));
+                let depth = lerp(link.depth[0], link.depth[1], travel);
+                Some(self.camera.unproject(link.path.at(travel), depth))
+            }
+            element => self.placements.get(element.id()).map(|place| place.world),
         }
     }
 
+    #[cfg(test)]
     fn sample(
         plan: &'a StagePlan,
         value: &'a dyn Fn(&str, f32) -> f32,
         time: f32,
         size: Vec2,
+    ) -> Self {
+        Self::sample_with(plan, value, time, size, None)
+    }
+
+    /// Everything placed for one sample. Forms need their prepared geometry.
+    fn sample_with(
+        plan: &'a StagePlan,
+        value: &'a dyn Fn(&str, f32) -> f32,
+        time: f32,
+        size: Vec2,
+        geometry: Option<&HashMap<String, FormGeometry>>,
     ) -> Self {
         let mut scene = Self::camera(plan, value, time, size);
         scene.placements = plan
@@ -1104,6 +1504,43 @@ impl<'a> Scene<'a> {
             .iter()
             .filter_map(|element| Some((element.id(), scene.place(element)?)))
             .collect();
+        // A form attaches to its sampled, turned silhouette.
+        for (id, geometry) in geometry.into_iter().flatten() {
+            let Some(place) = scene.placements.get(id.as_str()).copied() else {
+                continue;
+            };
+            let Some(element) = plan.element(id) else {
+                continue;
+            };
+            let form = scene.form(element.id(), geometry, place);
+            if let Some(placement) = scene.placements.get_mut(element.id()) {
+                placement.outline = Shape::Polygon(form.hull);
+            }
+            scene.forms.insert(element.id(), form);
+        }
+        scene.routes = plan
+            .elements
+            .iter()
+            .filter_map(|element| match element {
+                StageElement::Path {
+                    id,
+                    through,
+                    curve,
+                    corner,
+                    bend,
+                    ..
+                } => Some((id.as_str(), scene.route(through, *curve, *corner, *bend)?)),
+                _ => None,
+            })
+            .collect();
+        // Shields wrap what they surround, so they are placed after it.
+        for element in &plan.elements {
+            if let StageElement::Shield { id, around, .. } = element
+                && let Some(place) = scene.shield_place(element, around)
+            {
+                scene.placements.insert(id.as_str(), place);
+            }
+        }
         scene.links = plan
             .elements
             .iter()
@@ -1122,26 +1559,25 @@ impl<'a> Scene<'a> {
         scene
     }
 
-    fn v(&self, id: &str, property: &str, default: f32) -> f32 {
-        (self.value)(&format!("{id}.{property}"), default)
+    /// An element's channel, or its Stage channel default when nothing writes it.
+    fn v(&self, id: &str, property: &str) -> f32 {
+        read(self.plan, self.value, &format!("{id}.{property}"))
     }
 
     /// A channel clamped to 0..1: opacities, progress, and amounts.
-    fn unit(&self, id: &str, property: &str, default: f32) -> f32 {
-        self.v(id, property, default).clamp(0.0, 1.0)
+    fn unit(&self, id: &str, property: &str) -> f32 {
+        self.v(id, property).clamp(0.0, 1.0)
     }
 
     /// An orb's spin: ambient drift plus its authored `rotation` offset.
     fn orb_rotation(&self, id: &str) -> Quat {
         Quat::from_rotation_x(0.42)
-            * Quat::from_rotation_y(
-                self.time * 0.14 * self.v(id, "spin", 1.0) + self.v(id, "rotation", 0.0),
-            )
+            * Quat::from_rotation_y(self.time * 0.14 * self.v(id, "spin") + self.v(id, "rotation"))
     }
 
     /// An orb's world radius before any collapse.
     fn orb_radius(&self, id: &str, radius: f32) -> f32 {
-        radius * self.v(id, "scale", 1.0).max(0.01) * self.breath()
+        radius * self.v(id, "scale").max(0.01) * self.breath()
     }
 
     /// Depth-of-field blur, in pixels, of something at depth `z`.
@@ -1157,24 +1593,124 @@ impl<'a> Scene<'a> {
 
     fn place(&self, element: &StageElement) -> Option<Placement> {
         let id = element.id();
-        let offset = vec3(
-            self.v(id, "x", 0.0),
-            self.v(id, "y", 0.0),
-            self.v(id, "z", 0.0),
-        );
-        let world = Vec3::from(element.anchor()?) + offset;
+        let anchor = Vec3::from(element.anchor()?);
+        let offset = vec3(self.v(id, "x"), self.v(id, "y"), self.v(id, "z"));
+        let world = anchor + offset;
         let (center, perspective) = self.camera.project(world)?;
         let breath = match element {
-            StageElement::Orb { .. } => self.breath(),
+            StageElement::Orb { .. } | StageElement::Form { .. } => self.breath(),
             _ => 1.0,
         };
-        let scale = perspective * self.v(id, "scale", 1.0).max(0.01) * breath;
+        let scale = perspective * self.v(id, "scale").max(0.01) * breath;
+        let outline = match element {
+            // A turned figure attaches to its turned corners.
+            StageElement::Shape {
+                shape: shape @ (Figure::Rect(_) | Figure::Polygon(_)),
+                ..
+            } if self.v(id, "rotation") != 0.0 => Shape::Polygon(Polygon::hull(
+                center,
+                figure_outline(shape, 0.0, self.v(id, "rotation"))
+                    .into_iter()
+                    .map(|point| center + point * scale),
+            )),
+            _ => element.outline(center, scale),
+        };
         Some(Placement {
             world,
+            depth: self.camera.depth(world),
             center,
             scale,
-            outline: element.outline(center, scale),
+            outline,
         })
+    }
+
+    /// A shield is centered on what it surrounds, at its own scale.
+    fn shield_place(&self, element: &StageElement, around: &str) -> Option<Placement> {
+        let host = self.placements.get(around)?;
+        let (_, perspective) = self.camera.project(host.world)?;
+        let scale = perspective * self.v(element.id(), "scale").max(0.01);
+        Some(Placement {
+            world: host.world,
+            depth: host.depth,
+            center: host.center,
+            scale,
+            outline: element.outline(host.center, scale),
+        })
+    }
+
+    /// One end of a bolt: an element's outline, or a projected world point,
+    /// with its scale and depth.
+    fn bolt_end(&self, end: &BoltEnd) -> Option<(Shape, f32, f32)> {
+        match end {
+            BoltEnd::Element(id) => {
+                let place = self.placements.get(id.as_str())?;
+                Some((place.outline, place.scale, place.depth))
+            }
+            BoltEnd::Point(at) => {
+                let world = Vec3::from(*at);
+                let (center, scale) = self.camera.project(world)?;
+                Some((Shape::Point(center), scale, self.camera.depth(world)))
+            }
+        }
+    }
+
+    /// Where a bolt leaves and strikes: each outline where the straight line
+    /// between them crosses it.
+    fn bolt_ends(&self, from: &BoltEnd, to: &BoltEnd) -> Option<BoltEnds> {
+        let (a, scale_a, depth_a) = self.bolt_end(from)?;
+        let (b, scale_b, depth_b) = self.bolt_end(to)?;
+        let start = a.boundary_toward(b.center());
+        Some(BoltEnds {
+            from: start,
+            to: b.boundary_toward(start.point),
+            scale: [scale_a, scale_b],
+            depth: [depth_a, depth_b],
+        })
+    }
+
+    /// A bolt's discharge seed: its latest zap's `seed`, mixed with its ID so
+    /// bolts zapped at the same moment still differ.
+    fn bolt_seed(&self, id: &str) -> u32 {
+        (self.v(id, "seed").max(0.0).round() as u32) ^ salt(id)
+    }
+
+    /// A form's points this sample: morphed between its shapes, turned by
+    /// its tilt, spin, pitch, and roll, and scaled; and the silhouette.
+    fn form(&self, id: &str, geometry: &FormGeometry, place: Placement) -> SampledForm {
+        let last = geometry.shapes.len() - 1;
+        let morph = self.v(id, "morph").clamp(0.0, last as f32);
+        let from = (morph.floor() as usize).min(last.saturating_sub(1));
+        let radius = if last == 0 {
+            geometry.radii[0]
+        } else {
+            lerp(
+                geometry.radii[from],
+                geometry.radii[from + 1],
+                morph - from as f32,
+            )
+        };
+        let turn = Quat::from_rotation_x(geometry.tilt)
+            * Quat::from_rotation_y(self.time * 0.14 * self.v(id, "spin") + self.v(id, "rotation"))
+            * Quat::from_rotation_x(self.v(id, "pitch"))
+            * Quat::from_rotation_z(self.v(id, "roll"));
+        let grow = self.v(id, "scale").max(0.01) * self.breath();
+        let dots = geometry
+            .seeds
+            .iter()
+            .enumerate()
+            .map(|(index, seed)| {
+                let point = turn * morph_point(&geometry.shapes, index, seed.x, morph);
+                let near = (0.5 * (1.0 - point.z / radius.max(1.0))).clamp(0.0, 1.0);
+                (point * grow, near, *seed)
+            })
+            .collect::<Vec<_>>();
+        let hull = Polygon::hull(
+            place.center,
+            dots.iter()
+                .filter_map(|(offset, ..)| self.camera.project(place.world + *offset))
+                .map(|(point, _)| point),
+        );
+        SampledForm { dots, radius, hull }
     }
 
     fn link(&self, id: &str, from: &str, to: &str, bend: f32) -> Option<Link> {
@@ -1186,19 +1722,10 @@ impl<'a> Scene<'a> {
         } else {
             -1.0
         };
-        let bend = bend + 10.0 * downward * self.v(id, "twang", 0.0);
-        // Circular ends continue beneath the shell. Occlusion hides the cap;
-        // the visible wire meets the silhouette rather than a floating socket.
-        let submerged = |shape| match shape {
-            Shape::Circle(mut circle) => {
-                circle.radius *= 0.68;
-                Shape::Circle(circle)
-            }
-            shape => shape,
-        };
+        let bend = bend + 10.0 * downward * self.v(id, "twang");
         let curve = connect(
-            submerged(a.outline),
-            submerged(b.outline),
+            self.submerged(from, a.outline),
+            self.submerged(to, b.outline),
             bend * (a.scale + b.scale) * 0.5,
         );
         let card = |id: &str| matches!(self.plan.element(id), Some(StageElement::Card { .. }));
@@ -1206,15 +1733,223 @@ impl<'a> Scene<'a> {
         Some(Link {
             path: curve.flatten(BEAM_SAMPLES),
             label_ports: [a.outline.port_toward(end.point), end],
-            depth: [a.world.z, b.world.z],
+            depth: [a.depth, b.depth],
             scale: [a.scale, b.scale],
             socket: [card(from), card(to)],
+            landing: [self.open(from), self.open(to)],
+            tips: [0.0, 1.0],
             source: match a.outline {
                 Shape::Box(frame) if card(from) => Some(frame),
                 _ => None,
             },
         })
     }
+
+    /// The outline a wire aims for. Circular and form ends continue beneath
+    /// the shell: occlusion hides the cap, and the visible wire meets the
+    /// silhouette rather than a floating socket. Flat shapes and icons have
+    /// no shell, so wires meet their outline.
+    fn submerged(&self, id: &str, outline: Shape) -> Shape {
+        match (self.plan.element(id), outline) {
+            (Some(StageElement::Shape { .. } | StageElement::Icon { .. }), outline) => outline,
+            (_, Shape::Circle(mut circle)) => {
+                circle.radius *= 0.68;
+                Shape::Circle(circle)
+            }
+            (_, Shape::Polygon(polygon)) => Shape::Polygon(polygon.scaled(0.68)),
+            (_, outline) => outline,
+        }
+    }
+
+    /// Whether an arrival at `id` shows its landing (see `Link::landing`).
+    fn open(&self, id: &str) -> bool {
+        matches!(
+            self.plan.element(id),
+            Some(
+                StageElement::Card { .. } | StageElement::Shape { .. } | StageElement::Icon { .. }
+            )
+        )
+    }
+
+    /// A path's legs on screen, split at its stops. Hops that leave or enter
+    /// an element connect like beams; runs between points are straight with
+    /// rounded corners, a Catmull-Rom curve, or an authored Bézier chain.
+    fn route(
+        &self,
+        through: &[Waypoint],
+        curve: Curve,
+        corner: f32,
+        bend: f32,
+    ) -> Option<Vec<Link>> {
+        // Each waypoint on screen: its outline (a point for a world point),
+        // depth from the camera, and perspective scale.
+        let stops = through
+            .iter()
+            .map(|waypoint| match waypoint {
+                Waypoint::Element(id) => {
+                    let place = self.placements.get(id.as_str())?;
+                    Some((Some(id.as_str()), place.outline, place.depth, place.scale))
+                }
+                Waypoint::Point(at) => {
+                    let world = Vec3::from(*at);
+                    let (point, scale) = self.camera.project(world)?;
+                    Some((None, Shape::Point(point), self.camera.depth(world), scale))
+                }
+            })
+            .collect::<Option<Vec<_>>>()?;
+        let last = stops.len() - 1;
+        let breaks = (0..=last)
+            .filter(|&index| index == 0 || index == last || stops[index].0.is_some())
+            .collect::<Vec<_>>();
+        let card = |id: Option<&str>| {
+            id.is_some_and(|id| matches!(self.plan.element(id), Some(StageElement::Card { .. })))
+        };
+        let legs = breaks
+            .windows(2)
+            .map(|pair| {
+                let leg = &stops[pair[0]..=pair[1]];
+                let scale = (leg[0].3 + leg[leg.len() - 1].3) * 0.5;
+                let path = match curve {
+                    Curve::Smooth => {
+                        catmull_rom(&leg.iter().map(|s| s.1.center()).collect::<Vec<_>>())
+                    }
+                    Curve::Bezier => {
+                        bezier_chain(&leg.iter().map(|s| s.1.center()).collect::<Vec<_>>())
+                    }
+                    Curve::Straight => {
+                        let pieces = leg
+                            .windows(2)
+                            .map(|hop| match (hop[0].0, hop[1].0) {
+                                (None, None) => {
+                                    Polyline::new(vec![hop[0].1.center(), hop[1].1.center()])
+                                }
+                                (a, b) => {
+                                    let outline = |id: Option<&str>, shape| match id {
+                                        Some(id) => self.submerged(id, shape),
+                                        None => shape,
+                                    };
+                                    connect(
+                                        outline(a, hop[0].1),
+                                        outline(b, hop[1].1),
+                                        bend * scale,
+                                    )
+                                    .flatten(BEAM_SAMPLES)
+                                }
+                            })
+                            .collect::<Vec<_>>();
+                        join_rounded(&pieces, corner * scale)
+                    }
+                };
+                let (start, end) = (leg[0], leg[leg.len() - 1]);
+                let first = path.at(0.0);
+                let toward = |shape: Shape, other: Vec2| match shape {
+                    Shape::Point(point) => Port {
+                        point,
+                        normal: (other - point).normalize_or(Vec2::X),
+                    },
+                    shape => shape.port_toward(other),
+                };
+                let end_port = toward(end.1, first);
+                // Where the visible line leaves or meets a body's silhouette.
+                let tip = |shape: Shape, id: Option<&str>, from_end: bool| {
+                    if !id
+                        .is_some_and(|id| self.plan.element(id).is_some_and(StageElement::is_body))
+                    {
+                        return if from_end { 1.0 } else { 0.0 };
+                    }
+                    let (mut inside, mut outside) = if from_end { (1.0, 0.0) } else { (0.0, 1.0) };
+                    for _ in 0..20 {
+                        let middle = (inside + outside) * 0.5;
+                        if shape.distance(path.at(middle)) < 0.0 {
+                            inside = middle;
+                        } else {
+                            outside = middle;
+                        }
+                    }
+                    outside
+                };
+                Link {
+                    label_ports: [toward(start.1, end_port.point), end_port],
+                    depth: [start.2, end.2],
+                    scale: [start.3, end.3],
+                    socket: [card(start.0), card(end.0)],
+                    landing: [
+                        start.0.is_none_or(|id| self.open(id)),
+                        end.0.is_none_or(|id| self.open(id)),
+                    ],
+                    tips: [tip(start.1, start.0, false), tip(end.1, end.0, true)],
+                    source: None,
+                    path,
+                }
+            })
+            .collect();
+        Some(legs)
+    }
+}
+
+/// Pieces of a path joined end to end, each corner between them rounded by a
+/// curve cut back `radius` pixels along both sides (at most half of each).
+fn join_rounded(pieces: &[Polyline], radius: f32) -> Polyline {
+    let mut pieces = pieces.to_vec();
+    let mut points: Vec<Vec2> = Vec::new();
+    for index in 0..pieces.len() {
+        if index + 1 < pieces.len() {
+            let (before, after) = (&pieces[index], &pieces[index + 1]);
+            let r = radius.min(before.length() * 0.5).min(after.length() * 0.5);
+            if r > 0.5 {
+                let corner = after.at(0.0);
+                let before = before.slice(0.0, 1.0 - r / before.length());
+                let after = after.slice(r / after.length(), 1.0);
+                let (a, b) = (before.at(1.0), after.at(0.0));
+                // A quadratic through the corner, as a cubic: tangent to both sides.
+                let round = CubicBezier {
+                    start: a,
+                    control_a: a + (corner - a) * (2.0 / 3.0),
+                    control_b: b + (corner - b) * (2.0 / 3.0),
+                    end: b,
+                }
+                .flatten(10);
+                points.extend(before.points());
+                points.extend(&round.points()[1..round.points().len() - 1]);
+                pieces[index + 1] = after;
+                continue;
+            }
+        }
+        points.extend(pieces[index].points());
+    }
+    points.dedup_by(|a, b| a.distance(*b) < 1e-3);
+    Polyline::new(points)
+}
+
+/// A Catmull-Rom curve through `points`, as cubic Béziers.
+fn catmull_rom(points: &[Vec2]) -> Polyline {
+    let at = |index: isize| points[index.clamp(0, points.len() as isize - 1) as usize];
+    let mut out = vec![points[0]];
+    for index in 0..points.len() as isize - 1 {
+        let curve = CubicBezier {
+            start: at(index),
+            control_a: at(index) + (at(index + 1) - at(index - 1)) / 6.0,
+            control_b: at(index + 1) - (at(index + 2) - at(index)) / 6.0,
+            end: at(index + 1),
+        };
+        out.extend(&curve.flatten(24).points()[1..]);
+    }
+    Polyline::new(out)
+}
+
+/// A chain of cubic Béziers: start, then two controls and an end per curve.
+fn bezier_chain(points: &[Vec2]) -> Polyline {
+    let mut out = vec![points[0]];
+    for curve in points.windows(4).step_by(3) {
+        let curve = CubicBezier {
+            start: curve[0],
+            control_a: curve[1],
+            control_b: curve[2],
+            end: curve[3],
+        };
+        out.extend(&curve.flatten(32).points()[1..]);
+    }
+    Polyline::new(out)
 }
 
 impl Scene<'_> {
@@ -1246,30 +1981,175 @@ impl Scene<'_> {
                 let path = self.links.get(beam.as_str())?.toward(*reverse).path;
                 let fraction = circle.entry_fraction(&path)?;
                 let since = packet::since_crossing(
-                    self.v(packet_id, "age", -1.0),
-                    self.v(packet_id, "flight", 0.8).max(0.05),
+                    self.v(packet_id, "age"),
+                    self.v(packet_id, "flight").max(0.05),
                     fraction,
                 )?;
                 if since >= 1.4 {
                     return None;
                 }
                 let normal = (path.at(fraction) - place.center).normalize_or(Vec2::X);
-                let direction = vec3(normal.x, normal.y, -0.34).normalize();
-                Some((
-                    direction,
-                    since,
-                    *tone,
-                    self.unit(packet_id, "opacity", 1.0),
-                ))
+                // Toward the lens from the screen-space contact, in the world.
+                let direction = self
+                    .camera
+                    .world_dir(vec3(normal.x, normal.y, -0.34).normalize());
+                Some((direction, since, *tone, self.unit(packet_id, "opacity")))
             })
+            .chain(
+                self.strikes_on(id)
+                    .into_iter()
+                    .map(|(point, since, tone, strength)| {
+                        let normal = (point - place.center).normalize_or(Vec2::X);
+                        (
+                            vec3(normal.x, normal.y, -0.34).normalize(),
+                            since,
+                            tone,
+                            strength,
+                        )
+                    }),
+            )
             .collect()
+    }
+
+    /// Return strokes of bolts striking `target` within a surface ripple's
+    /// life: contact point, seconds since the stroke, tone, and strength.
+    fn strikes_on(&self, target: &str) -> Vec<(Vec2, f32, Tone, f32)> {
+        let mut strikes = Vec::new();
+        for element in &self.plan.elements {
+            let StageElement::Bolt {
+                id,
+                from,
+                to: to @ BoltEnd::Element(end),
+                strikes: count,
+                tone,
+                ..
+            } = element
+            else {
+                continue;
+            };
+            let age = self.v(id, "age");
+            if end != target || age < 0.0 {
+                continue;
+            }
+            let Some(ends) = self.bolt_ends(from, to) else {
+                continue;
+            };
+            let discharge = Discharge::new(*count, self.bolt_seed(id));
+            let opacity = self.unit(id, "opacity");
+            for k in 0..discharge.strikes {
+                let since = age - discharge.strike_time(k);
+                if (0.0..shield::RIPPLE).contains(&since) {
+                    // Re-strikes ripple more softly than the first contact.
+                    let strength = 0.65 * discharge.strength(k).powi(2) * opacity;
+                    strikes.push((ends.to.point, since, *tone, strength));
+                }
+            }
+        }
+        strikes
+    }
+
+    /// What touches a shield: packets crossing into it on their way to what
+    /// it surrounds (softly), and bolts striking it. The four most recent.
+    fn shield_contacts(&self, id: &str, place: Placement) -> Vec<Contact> {
+        let (Shape::Circle(circle), Some(StageElement::Shield { around, .. })) =
+            (place.outline, self.plan.element(id))
+        else {
+            return Vec::new();
+        };
+        let toward = |point: Vec2| {
+            let normal = (point - circle.center) / circle.radius.max(1.0);
+            let z = -(1.0 - normal.length_squared()).max(0.0).sqrt();
+            vec3(normal.x, normal.y, z.min(-0.2)).normalize()
+        };
+        let mut contacts = self
+            .strikes_on(id)
+            .into_iter()
+            .map(|(point, age, _, strength)| Contact {
+                point,
+                direction: toward(point),
+                age,
+                strength,
+            })
+            .collect::<Vec<_>>();
+        for element in &self.plan.elements {
+            let StageElement::Packet {
+                id: packet,
+                beam,
+                reverse,
+                ..
+            } = element
+            else {
+                continue;
+            };
+            let Some(StageElement::Beam { from, to, .. }) = self.plan.element(beam) else {
+                continue;
+            };
+            if (if *reverse { from } else { to }) != around {
+                continue;
+            }
+            let Some(link) = self.links.get(beam.as_str()) else {
+                continue;
+            };
+            let path = link.toward(*reverse).path;
+            let Some(fraction) = circle.entry_fraction(&path).filter(|f| *f > 0.0) else {
+                continue;
+            };
+            let since = packet::since_crossing(
+                self.v(packet, "age"),
+                self.v(packet, "flight").max(0.05),
+                fraction,
+            );
+            if let Some(age) = since.filter(|age| *age < shield::RIPPLE) {
+                let point = path.at(fraction);
+                contacts.push(Contact {
+                    point,
+                    direction: toward(point),
+                    age,
+                    strength: 0.55 * self.unit(packet, "opacity"),
+                });
+            }
+        }
+        contacts.sort_by(|a, b| a.age.total_cmp(&b.age));
+        contacts.truncate(4);
+        contacts
+    }
+
+    /// A charged outline lights its own rim where its brightest arcs crawl.
+    fn charge_lights(&self, id: &str, tone: Tone, lights: &mut Vec<Light>) {
+        let charge = self.v(id, "charge");
+        if charge <= 0.0 {
+            return;
+        }
+        let Some(place) = self.placements.get(id) else {
+            return;
+        };
+        let Some(perimeter) = Perimeter::of(place.outline, place.scale) else {
+            return;
+        };
+        let opacity = self.unit(id, "opacity");
+        let mut creeps = lightning::crackle(self.time, charge, salt(id));
+        creeps.sort_by(|a, b| b.energy.total_cmp(&a.energy));
+        for creep in creeps.iter().take(3) {
+            lights.push(Light {
+                at: perimeter.at(creep.center),
+                tone: spark_tone(tone),
+                strength: 1.4 * creep.energy * opacity,
+                radius: REFLECTION_RADIUS * 0.8,
+                pool: false,
+                scale: place.scale,
+            });
+        }
     }
 
     /// The lights a beam, packet, or combusting orb casts this sample.
     fn lights_of(&self, element: &StageElement, lights: &mut Vec<Light>) {
         match element {
-            StageElement::Orb { id, radius, .. } => {
-                let age = self.v(id, "burst", -1.0);
+            StageElement::Card { id, tone, .. } => self.charge_lights(id, *tone, lights),
+            StageElement::Orb {
+                id, radius, tone, ..
+            } => {
+                self.charge_lights(id, *tone, lights);
+                let age = self.v(id, "burst");
                 let burst = Burst::sample(age);
                 if burst.rim_strength == 0.0 {
                     return;
@@ -1277,7 +2157,7 @@ impl Scene<'_> {
                 let Some(place) = self.placements.get(id.as_str()) else {
                     return;
                 };
-                let strength = burst.rim_strength * self.unit(id, "opacity", 1.0);
+                let strength = burst.rim_strength * self.unit(id, "opacity");
                 lights.push(Light {
                     at: place.center,
                     tone: Tone::Accent,
@@ -1291,12 +2171,12 @@ impl Scene<'_> {
                 let Some(link) = self.links.get(id.as_str()) else {
                     return;
                 };
-                let opacity = self.unit(id, "opacity", 1.0);
-                let draw = self.unit(id, "draw", 1.0);
+                let opacity = self.unit(id, "opacity");
+                let draw = self.unit(id, "draw");
                 // A plain draw-on emits no travelling bead or arrival light.
                 // An explicitly authored surge may still light the receiver.
                 let strength = if draw >= 0.999 {
-                    self.unit(id, "surge", 0.0) * 0.5
+                    self.unit(id, "surge") * 0.5
                 } else {
                     0.0
                 };
@@ -1311,6 +2191,27 @@ impl Scene<'_> {
                     });
                 }
             }
+            StageElement::Form { id, .. } => {
+                let age = self.v(id, "burst");
+                let burst = Burst::sample(age);
+                if burst.rim_strength == 0.0 {
+                    return;
+                }
+                let (Some(place), Some(form)) = (
+                    self.placements.get(id.as_str()),
+                    self.forms.get(id.as_str()),
+                ) else {
+                    return;
+                };
+                lights.push(Light {
+                    at: place.center,
+                    tone: Tone::Accent,
+                    strength: burst.rim_strength * self.unit(id, "opacity"),
+                    radius: form.radius * 4.4,
+                    pool: false,
+                    scale: place.scale,
+                });
+            }
             StageElement::Packet {
                 id,
                 beam,
@@ -1318,60 +2219,186 @@ impl Scene<'_> {
                 tone,
                 ..
             } => {
-                let Some(link) = self.links.get(beam.as_str()) else {
+                for (link, age, flight) in self.packet_legs(id, beam, *reverse) {
+                    self.packet_lights(id, *tone, &link, age, flight, lights);
+                }
+            }
+            StageElement::Bolt {
+                id,
+                from,
+                to,
+                strikes,
+                tone,
+                ..
+            } => {
+                let Some(ends) = self.bolt_ends(from, to) else {
                     return;
                 };
-                let age = self.v(id, "age", -1.0);
-                if !(0.0..packet::LIFETIME).contains(&age) {
-                    return;
-                }
-                let link = link.toward(*reverse);
-                let flight = self.v(id, "flight", 0.8).max(0.05);
-                let opacity = self.unit(id, "opacity", 1.0);
-                let mut cast = |fraction: f32, strength: f32, radius: f32, pool: bool| {
+                let opacity = self.unit(id, "opacity");
+                let seed = self.bolt_seed(id);
+                let discharge = Discharge::new(*strikes, seed);
+                let age = self.v(id, "age");
+                let hum = lightning::hum(self.time, self.v(id, "hum"), seed)
+                    .map_or(0.0, |(_, energy)| 0.6 * energy);
+                let mut cast = |at: Vec2, strength: f32, radius: f32, pool: bool, scale: f32| {
                     if strength * opacity > 0.01 {
                         lights.push(Light {
-                            at: link.path.at(fraction),
+                            at,
                             tone: *tone,
                             strength: strength * opacity,
                             radius,
                             pool,
-                            scale: link.scale_at(fraction),
+                            scale,
                         });
                     }
                 };
-                // The reflection rides the packet: it gathers at the port, flies,
-                // and fades as the packet is absorbed.
-                if let Some(g) = packet::gather(age) {
-                    cast(0.0, cubic_out(g).powf(1.5), REFLECTION_RADIUS, false);
+                // The leader's tip lights what it nears; a stroke lights both
+                // rims it touches and floods into the one it struck.
+                if let Some(progress) = discharge.leader(age) {
+                    let tip = ends.from.point.lerp(ends.to.point, progress);
+                    cast(
+                        tip,
+                        discharge.light(age),
+                        REFLECTION_RADIUS,
+                        false,
+                        ends.scale(),
+                    );
                 }
-                if packet::flight(age, flight).is_some() {
-                    cast(packet::travel(age, flight), 1.0, REFLECTION_RADIUS, false);
-                }
-                if let Some(q) = packet::landing(age, flight) {
-                    cast(1.0, (1.0 - q).powi(2), REFLECTION_RADIUS, false);
-                }
-                // An ember glows where it left, seeping outward as it cools.
-                let t = age / packet::EMBER;
-                if t < 1.0 {
-                    let spread = (0.1 + 0.7 * t.sqrt()) * 210.0 * DIAGRAM_SCALE;
-                    let core = 0.6 * (t / 0.04).min(1.0) * (1.0 - t).powf(0.9);
-                    cast(0.0, core, spread, true);
-                }
-                // Light floods into whatever it reached, spreading and fading.
-                if let Some(since) = packet::since_arrival(age, flight) {
-                    let t = since / packet::FLOOD;
-                    if t < 1.0 {
-                        let travel = 1.0 - (1.0 - t).powi(4);
-                        let width = 0.07 + 0.6 * travel.sqrt();
-                        let fade = (-0.9 * t).exp() * (1.0 - smoothstep((t - 0.65) / 0.35));
-                        let strength =
-                            1.4 * smoothstep(t / 0.07) * (0.12 / (0.12 + width)).sqrt() * fade;
-                        cast(1.0, strength, width * 300.0 * DIAGRAM_SCALE, true);
+                let strength = if discharge.leader(age).is_some() {
+                    hum
+                } else {
+                    discharge.light(age).max(hum)
+                };
+                // A bolt outshines a packet: its rims blaze, then cool with it.
+                cast(
+                    ends.to.point,
+                    1.8 * strength,
+                    REFLECTION_RADIUS * 1.5,
+                    false,
+                    ends.scale[1],
+                );
+                cast(
+                    ends.from.point,
+                    1.4 * strength,
+                    REFLECTION_RADIUS * 1.3,
+                    false,
+                    ends.scale[0],
+                );
+                let flood = discharge
+                    .glowing(age)
+                    .map(|(k, since)| discharge.core(k, since))
+                    .fold(0.5 * hum, f32::max);
+                cast(ends.to.point, 0.8 * flood, 150.0, true, ends.scale[1]);
+            }
+            StageElement::Shield { id, tone, .. } => {
+                let Some(place) = self.placements.get(id.as_str()) else {
+                    return;
+                };
+                let opacity = self.unit(id, "opacity");
+                for contact in self.shield_contacts(id, *place) {
+                    let strength = 0.9 * shield::flare(contact.age) * contact.strength * opacity;
+                    if strength > 0.01 {
+                        lights.push(Light {
+                            at: contact.point,
+                            tone: *tone,
+                            strength,
+                            radius: REFLECTION_RADIUS,
+                            pool: false,
+                            scale: place.scale,
+                        });
                     }
                 }
             }
             _ => {}
+        }
+    }
+
+    /// The legs a packet flies this sample, each oriented the way it travels,
+    /// with its own clock and flight time. A beam is one leg on the packet's
+    /// clock; a path's legs start one after another (`packet::leg_start`).
+    fn packet_legs(&self, id: &str, wire: &str, reverse: bool) -> Vec<(Link, f32, f32)> {
+        let age = self.v(id, "age");
+        let flight = self.v(id, "flight").max(0.05);
+        if let Some(link) = self.links.get(wire) {
+            return vec![(link.toward(reverse), age, flight)];
+        }
+        let Some(legs) = self.routes.get(wire) else {
+            return Vec::new();
+        };
+        let count = legs.len();
+        let ordered: Vec<&Link> = if reverse {
+            legs.iter().rev().collect()
+        } else {
+            legs.iter().collect()
+        };
+        ordered
+            .into_iter()
+            .enumerate()
+            .map(|(leg, link)| {
+                (
+                    link.toward(reverse),
+                    age - packet::leg_start(leg, count, flight),
+                    flight / count as f32,
+                )
+            })
+            .collect()
+    }
+
+    /// The light one packet leg casts: its reflection gathering, flying, and
+    /// landing, the ember where it left, and the flood where it arrived.
+    fn packet_lights(
+        &self,
+        id: &str,
+        tone: Tone,
+        link: &Link,
+        age: f32,
+        flight: f32,
+        lights: &mut Vec<Light>,
+    ) {
+        if !(0.0..packet::LIFETIME).contains(&age) {
+            return;
+        }
+        let opacity = self.unit(id, "opacity");
+        let mut cast = |fraction: f32, strength: f32, radius: f32, pool: bool| {
+            if strength * opacity > 0.01 {
+                lights.push(Light {
+                    at: link.path.at(fraction),
+                    tone,
+                    strength: strength * opacity,
+                    radius,
+                    pool,
+                    scale: link.scale_at(fraction),
+                });
+            }
+        };
+        // The reflection rides the packet: it gathers at the port, flies,
+        // and fades as the packet is absorbed.
+        if let Some(g) = packet::gather(age) {
+            cast(0.0, cubic_out(g).powf(1.5), REFLECTION_RADIUS, false);
+        }
+        if packet::flight(age, flight).is_some() {
+            cast(packet::travel(age, flight), 1.0, REFLECTION_RADIUS, false);
+        }
+        if let Some(q) = packet::landing(age, flight) {
+            cast(1.0, (1.0 - q).powi(2), REFLECTION_RADIUS, false);
+        }
+        // An ember glows where it left, seeping outward as it cools.
+        let t = age / packet::EMBER;
+        if t < 1.0 {
+            let spread = (0.1 + 0.7 * t.sqrt()) * 210.0 * DIAGRAM_SCALE;
+            let core = 0.6 * (t / 0.04).min(1.0) * (1.0 - t).powf(0.9);
+            cast(0.0, core, spread, true);
+        }
+        // Light floods into whatever it reached, spreading and fading.
+        if let Some(since) = packet::since_arrival(age, flight) {
+            let t = since / packet::FLOOD;
+            if t < 1.0 {
+                let travel = 1.0 - (1.0 - t).powi(4);
+                let width = 0.07 + 0.6 * travel.sqrt();
+                let fade = (-0.9 * t).exp() * (1.0 - smoothstep((t - 0.65) / 0.35));
+                let strength = 1.4 * smoothstep(t / 0.07) * (0.12 / (0.12 + width)).sqrt() * fade;
+                cast(1.0, strength, width * 300.0 * DIAGRAM_SCALE, true);
+            }
         }
     }
 
@@ -1481,9 +2508,73 @@ impl<'a> Painter<'a> {
                 },
                 _,
             ) => {
-                if let Some(link) = scene.links.get(beam.as_str()) {
-                    self.packet(order, id, *reverse, *tone, link);
+                for (link, age, flight) in scene.packet_legs(id, beam, *reverse) {
+                    self.packet(order, id, *tone, age, flight, &link);
                 }
+            }
+            (
+                StageElement::Bolt {
+                    from,
+                    to,
+                    strikes,
+                    branching,
+                    tone,
+                    ..
+                },
+                _,
+            ) => {
+                if let Some(ends) = scene.bolt_ends(from, to) {
+                    self.bolt(order, id, ends, *strikes, *branching, *tone);
+                }
+            }
+            (StageElement::Shield { tone, .. }, Some(place)) => {
+                self.shield(order, id, *tone, place)
+            }
+            (StageElement::Form { tone, .. }, Some(place)) => self.form(order, id, *tone, place),
+            (
+                StageElement::Shape {
+                    shape,
+                    corner,
+                    fill,
+                    fill_opacity,
+                    stroke,
+                    width,
+                    dash,
+                    arrow,
+                    ..
+                },
+                Some(place),
+            ) => self.shape(
+                order,
+                id,
+                FigureStyle {
+                    figure: shape,
+                    corner: *corner,
+                    fill: *fill,
+                    fill_opacity: *fill_opacity,
+                    stroke: *stroke,
+                    width: *width,
+                    dash: *dash,
+                    arrow: *arrow,
+                },
+                place,
+            ),
+            (
+                StageElement::Path {
+                    tone,
+                    width,
+                    dash,
+                    arrow,
+                    ..
+                },
+                _,
+            ) => {
+                if let Some(legs) = scene.routes.get(id) {
+                    self.path(order, id, *tone, *width, *dash, *arrow, legs);
+                }
+            }
+            (StageElement::Icon { size, tone, .. }, Some(place)) => {
+                self.icon(order, id, *size, *tone, place)
             }
             // A positioned element behind the camera.
             _ => {}
@@ -1502,13 +2593,13 @@ impl<'a> Painter<'a> {
         place: Placement,
     ) {
         let (scene, look) = (self.scene, self.look);
-        let opacity = scene.unit(id, "opacity", 1.0);
+        let opacity = scene.unit(id, "opacity");
         let scale = place.scale;
         let half = size * 0.5 * scale;
-        let blur = scene.blur_at(place.world.z) + scene.v(id, "blur", 0.0).max(0.0) * scale;
+        let blur = scene.blur_at(place.depth) + scene.v(id, "blur").max(0.0) * scale;
         let red = look.tone(Tone::Error);
         // The afterimage: the slot a deleted card leaves, drawn beneath it.
-        let ghost = scene.unit(id, "ghost", 0.0);
+        let ghost = scene.unit(id, "ghost");
         if ghost > 0.001 {
             for (inset, strength) in [(0.0, 0.55), (3.0 * scale, 0.33)] {
                 self.frame.rounded_rect(
@@ -1524,16 +2615,16 @@ impl<'a> Painter<'a> {
             }
         }
         if opacity <= 0.001 {
-            self.frame.close(place.world.z, order);
+            self.frame.close(place.depth, order);
             return;
         }
         let first = self.frame.prims.len();
-        let glow = scene.v(id, "glow", 0.0).clamp(0.0, 1.5);
-        let flash = scene.v(id, "flash", 0.0).clamp(0.0, 1.5);
-        let alarm = scene.v(id, "alarm", 0.0).clamp(0.0, 1.5);
-        let dim = scene.unit(id, "dim", 0.0);
+        let glow = scene.v(id, "glow").clamp(0.0, 1.5);
+        let flash = scene.v(id, "flash").clamp(0.0, 1.5);
+        let alarm = scene.v(id, "alarm").clamp(0.0, 1.5);
+        let dim = scene.unit(id, "dim");
         // Deletion: inks cool toward the frame gray, then snap to red at once.
-        let content = scene.unit(id, "content", 1.0);
+        let content = scene.unit(id, "content");
         let pen = CardInk {
             center: place.center + vec2(0.0, 7.0 * (1.0 - content) * scale),
             scale,
@@ -1541,8 +2632,8 @@ impl<'a> Painter<'a> {
             opacity,
             blur: blur + 1.5 * (1.0 - content) * scale,
             edge_blur: blur,
-            cool: scene.unit(id, "cool", 0.0),
-            damage: scene.unit(id, "damage", 0.0),
+            cool: scene.unit(id, "cool"),
+            damage: scene.unit(id, "damage"),
             gray: look.raised.lerp(look.muted, 0.22),
             red,
         };
@@ -1610,19 +2701,165 @@ impl<'a> Painter<'a> {
         }
         self.glitch(first, id, place, half);
         self.cut(first, id, place, half, &pen);
-        self.frame.close(place.world.z, order);
+        self.dissolve(first, id, tone, size, place, opacity);
+        self.crackle(id, place.outline, tone, place.scale, opacity, blur);
+        self.scan(id, tone, half, place, opacity, blur);
+        self.frame.close(place.depth, order);
+    }
+
+    /// Burn the card's primitives away along its dissolve field, glowing at
+    /// the front, and shed ash from wherever it has passed.
+    fn dissolve(
+        &mut self,
+        first: usize,
+        id: &str,
+        tone: Tone,
+        size: Vec2,
+        place: Placement,
+        opacity: f32,
+    ) {
+        let age = self.scene.v(id, "dissolve");
+        if age <= 0.0 {
+            return;
+        }
+        let seed = salt(id) & 0xFFFF;
+        let rim = self.look.tone(spark_tone(tone));
+        let half = size * 0.5;
+        for prim in &mut self.frame.prims[first..] {
+            prim.mask = [age, place.center.x, place.center.y, place.scale];
+            prim.mask_shape = [half.x, half.y, seed as f32, 0.0];
+            prim.mask_color = rgba(rim, 1.0);
+        }
+        let hot = vec3(2.4, 2.1, 1.8);
+        for index in 0..dissolve::ASH {
+            let Some(ash) = dissolve::ash(index, seed, half, age) else {
+                continue;
+            };
+            let alpha = ash.opacity * opacity;
+            let color = rim.lerp(hot, ash.heat.powi(4)) * (0.15 + 0.65 * ash.heat);
+            self.frame.circle(
+                place.center + ash.local * place.scale,
+                [ash.radius * place.scale, 0.0],
+                0.0,
+                Paint {
+                    fill: rgba(color, alpha),
+                    glow: glow4(color * (0.06 * alpha * ash.heat), 2.5 * place.scale),
+                    ..Default::default()
+                },
+            );
+        }
+    }
+
+    /// Charge: short arcs crawl the outline, bowing off it, and strobe.
+    fn crackle(
+        &mut self,
+        id: &str,
+        outline: Shape,
+        tone: Tone,
+        scale: f32,
+        opacity: f32,
+        blur: f32,
+    ) {
+        let charge = self.scene.v(id, "charge");
+        if charge <= 0.0 || opacity <= 0.001 {
+            return;
+        }
+        let Some(perimeter) = Perimeter::of(outline, scale) else {
+            return;
+        };
+        let own = self.look.tone(spark_tone(tone));
+        let white = Vec3::ONE.lerp(own, 0.15);
+        let center = outline.center();
+        let length = perimeter.length();
+        for creep in lightning::crackle(self.scene.time, charge, salt(id)) {
+            let base = |t: f32| perimeter.at(creep.center + creep.span * (t - 0.5));
+            let reach = creep.span * length;
+            let points = lightning::jag(base, 4, creep.roll, 0.42)
+                .into_iter()
+                .enumerate()
+                .map(|(index, point)| {
+                    let bow = (PI * index as f32 / 16.0).sin() * reach * 0.18;
+                    point + (point - center).normalize_or_zero() * bow
+                })
+                .collect::<Vec<_>>();
+            let energy = creep.energy * opacity;
+            let arc = Plasma {
+                half: 0.45 * scale,
+                taper: 0.0,
+                blur,
+                core: white * (2.2 * energy),
+                corona: own * (0.9 * energy),
+                radius: 3.0 * scale,
+            };
+            self.frame.plasma(&points, 1.0, |_| 1.0, arc);
+            // Half the arcs throw a twig off the surface.
+            let fork = hash(creep.roll.strike, 1);
+            if fork < 0.5 {
+                let at = 4 + (fork * 16.0) as usize;
+                let out = (points[at] - center).normalize_or(Vec2::NEG_Y);
+                let turn = (hash(creep.roll.strike, 2) - 0.5) * 1.6;
+                let twig = lightning::twig(
+                    points[at],
+                    Vec2::from_angle(turn).rotate(out),
+                    reach * (0.25 + 0.3 * hash(creep.roll.strike, 3)),
+                    3,
+                    creep.roll,
+                );
+                self.frame
+                    .plasma(&twig, 1.0, |_| 0.7, Plasma { taper: 0.8, ..arc });
+            }
+        }
+    }
+
+    /// A scan line sweeps down the card, fading in and out at its ends,
+    /// with a wake behind it and light where it crosses the rim.
+    fn scan(
+        &mut self,
+        id: &str,
+        tone: Tone,
+        half: Vec2,
+        place: Placement,
+        opacity: f32,
+        blur: f32,
+    ) {
+        let scan = self.scene.v(id, "scan");
+        if scan <= 0.0 || scan >= 1.0 || opacity <= 0.001 {
+            return;
+        }
+        let strength = smoothstep(scan / 0.1) * (1.0 - smoothstep((scan - 0.9) / 0.1)) * opacity;
+        let scale = place.scale;
+        self.frame.prims.push(Prim {
+            bbox: around(place.center, half + Vec2::splat(30.0 * scale + blur)),
+            a: [12.0, place.center.x, place.center.y, 14.0 * scale],
+            b: [
+                half.x,
+                half.y,
+                (scan * 2.0 - 1.0) * (half.y + 4.0 * scale),
+                1.0,
+            ],
+            fill: rgba(self.look.tone(spark_tone(tone)), strength),
+            stroke: [half.y * 0.9, 1.0 * scale, blur, 0.0],
+            ..Default::default()
+        });
     }
 
     /// The status line: statuses cross-fade by the fractional `status`
     /// channel, led by the card's spinner while it waits.
     fn card_status(&mut self, id: &str, status: &[StatusText], mark: Mark, pen: &CardInk) {
         let (scene, look, scale) = (self.scene, self.look, pen.scale);
-        let index = scene
-            .v(id, "status", 0.0)
-            .clamp(0.0, (status.len() - 1) as f32);
-        let low = index.floor() as usize;
-        let high = (low + 1).min(status.len() - 1);
-        let entries = [(low, 1.0 - index.fract()), (high, index.fract())];
+        let last = (status.len() - 1) as f32;
+        let index = scene.v(id, "status").clamp(0.0, last);
+        // A swap cross-fades straight from `status-from` to `status`; otherwise
+        // the fractional `status` cross-fades between neighbouring entries.
+        let from = scene.v(id, "status-from");
+        let (low, high, fraction) = if from >= 0.0 {
+            let entry = |value: f32| value.round().clamp(0.0, last) as usize;
+            (entry(from), entry(index), scene.unit(id, "swap"))
+        } else {
+            let low = index.floor() as usize;
+            (low, (low + 1).min(status.len() - 1), index.fract())
+        };
+        let entries = [(low, 1.0 - fraction), (high, fraction)];
         let tone_of = |entry: usize| match status[entry].tone {
             Tone::Plain => look.muted,
             tone => look.tone(tone),
@@ -1638,9 +2875,9 @@ impl<'a> Painter<'a> {
         });
         // A status spinner leads the line; the pair stays centered.
         let spinner = spinner::sample(
-            scene.v(id, "spinner", -1.0),
-            scene.v(id, "release", -1.0),
-            scene.v(id, "mark", -1.0),
+            scene.v(id, "spinner"),
+            scene.v(id, "release"),
+            scene.v(id, "mark"),
             mark,
         );
         let unit = 18.0 / 16.0 * scale;
@@ -1670,8 +2907,8 @@ impl<'a> Painter<'a> {
         }
         // While the motor waits, a sheen sweeps the status: the blog's
         // ShimmerText, phased by the same clock so it never resets.
-        let shimmer = if scene.v(id, "mark", -1.0) < 0.0 {
-            [scene.v(id, "spinner", -1.0) / 1.6, spinner.opacity]
+        let shimmer = if scene.v(id, "mark") < 0.0 {
+            [scene.v(id, "spinner") / 1.6, spinner.opacity]
         } else {
             [0.0; 2]
         };
@@ -1704,7 +2941,7 @@ impl<'a> Painter<'a> {
     /// A few frames of horizontal band displacement, one layout per integer
     /// `glitch` seed; zero is off. Seeds step, then hold still: no noise loop.
     fn glitch(&mut self, first: usize, id: &str, place: Placement, half: Vec2) {
-        let seed = self.scene.v(id, "glitch", 0.0).round();
+        let seed = self.scene.v(id, "glitch").round();
         if seed < 1.0 {
             return;
         }
@@ -1741,7 +2978,7 @@ impl<'a> Painter<'a> {
     /// Deletion by a red hairline drawn left to right across the card, then
     /// the halves part 3 px in total and fade. `cut` runs 0..1.
     fn cut(&mut self, first: usize, id: &str, place: Placement, half: Vec2, pen: &CardInk) {
-        let cut = self.scene.unit(id, "cut", 0.0);
+        let cut = self.scene.unit(id, "cut");
         if cut <= 0.0 {
             return;
         }
@@ -1781,14 +3018,258 @@ impl<'a> Painter<'a> {
     }
 
     fn orb(&mut self, order: usize, id: &str, radius: f32, tone: Tone, place: Placement) {
-        let age = self.scene.v(id, "burst", -1.0);
+        let age = self.scene.v(id, "burst");
         self.orb_shell(order, id, radius, tone, place, age);
         if age >= combustion::COLLAPSE {
-            let opacity = self.scene.unit(id, "opacity", 1.0);
+            let opacity = self.scene.unit(id, "opacity");
             if opacity > 0.001 {
                 self.burst(order, id, radius, place, age, opacity);
             }
         }
+        if age < 0.0 && self.scene.v(id, "charge") > 0.0 {
+            let scene = self.scene;
+            let blur = scene.blur_at(place.depth) + scene.v(id, "blur").max(0.0) * place.scale;
+            let opacity = scene.unit(id, "opacity");
+            self.crackle(id, place.outline, tone, place.scale, opacity, blur);
+            self.frame.close(place.depth - 0.1, order);
+        }
+    }
+
+    /// Lightning from its discharge clock: a dim stepped leader, then
+    /// white-hot return strokes that re-roll the path a few frames apart,
+    /// each flashing both contacts and throwing sparks from the receiver,
+    /// then a cooling channel. A humming bolt re-strikes continuously.
+    /// Its light on nearby rims comes from `Scene::lights_of`.
+    fn bolt(
+        &mut self,
+        order: usize,
+        id: &str,
+        ends: BoltEnds,
+        strikes: u32,
+        branching: f32,
+        tone: Tone,
+    ) {
+        let scene = self.scene;
+        let opacity = scene.unit(id, "opacity");
+        if opacity <= 0.001 {
+            return;
+        }
+        let seed = scene.bolt_seed(id);
+        let discharge = Discharge::new(strikes, seed);
+        let age = scene.v(id, "age");
+        let own = self.look.tone(tone);
+        let white = Vec3::ONE.lerp(own, 0.1);
+        let scale = ends.scale();
+        let blur = scene.blur_at(ends.near());
+        let (a, b) = (ends.from.point, ends.to.point);
+        if let Some(progress) = discharge.leader(age) {
+            // The leader feels its way out along the first stroke's channel:
+            // dim, branching, brightest at its tip.
+            let bolt = lightning::bolt(a, b, discharge.roll(0), branching);
+            let glow = 0.5 * opacity;
+            let leader = Plasma {
+                half: 0.7 * scale,
+                taper: 0.0,
+                blur,
+                core: (white * 0.6 + own * 0.6) * glow,
+                corona: own * (0.7 * glow),
+                radius: 4.0 * scale,
+            };
+            self.frame.plasma(
+                &bolt.main,
+                progress,
+                |f| 0.35 + 0.65 * (f / progress).clamp(0.0, 1.0).powi(6),
+                leader,
+            );
+            for branch in bolt.branches.iter().filter(|branch| branch.fork < progress) {
+                let grown = ((progress - branch.fork) / 0.3).min(1.0);
+                self.frame.plasma(
+                    &branch.points,
+                    grown,
+                    |_| 0.5 * branch.energy,
+                    Plasma {
+                        half: 0.5 * scale,
+                        taper: 0.6,
+                        ..leader
+                    },
+                );
+            }
+            let tip = Polyline::new(bolt.main.clone()).at(progress);
+            self.flare(
+                tip,
+                2.5 * scale,
+                white * (2.5 * glow),
+                own * (0.5 * glow),
+                18.0 * scale,
+            );
+        }
+        for (k, since) in discharge.glowing(age) {
+            let core = discharge.core(k, since) * opacity;
+            let glow = discharge.afterglow(k, since) * opacity;
+            let bolt = lightning::bolt(a, b, discharge.roll(k), branching);
+            self.frame.plasma(
+                &bolt.main,
+                1.0,
+                |_| 1.0,
+                Plasma {
+                    half: 0.85 * scale,
+                    taper: 0.25,
+                    blur,
+                    core: white * (3.4 * core) + own * (1.2 * glow),
+                    corona: own * (1.3 * core + 0.6 * glow),
+                    radius: 4.5 * scale,
+                },
+            );
+            // Branches carry less current and cool first.
+            for branch in &bolt.branches {
+                let share = branch.energy * if branch.depth > 1 { 0.75 } else { 1.0 };
+                self.frame.plasma(
+                    &branch.points,
+                    1.0,
+                    |_| 1.0,
+                    Plasma {
+                        half: 0.65 * scale * share.sqrt(),
+                        taper: 0.85,
+                        blur,
+                        core: white * (3.4 * core * share) + own * (0.4 * glow * share),
+                        corona: own * (1.2 * core * share + 0.15 * glow * share),
+                        radius: 3.5 * scale,
+                    },
+                );
+            }
+            // The contact flashes; the source flickers with it.
+            self.flare(
+                b,
+                2.6 * scale,
+                white * (3.5 * core),
+                own * (1.0 * core + 0.25 * glow),
+                30.0 * scale,
+            );
+            self.flare(
+                a,
+                1.8 * scale,
+                white * (2.0 * core),
+                own * (0.5 * core),
+                18.0 * scale,
+            );
+            for index in 0..lightning::spark_count(k) {
+                if let Some(spark) = lightning::spark(seed, k, index, ends.to.normal, since) {
+                    let color =
+                        own.lerp(vec3(4.0, 3.6, 3.0), spark.heat) * (0.25 + 0.75 * spark.heat);
+                    let alpha = spark.opacity * opacity;
+                    let (head, tail) = (
+                        b + spark.offset * ends.scale[1],
+                        b + spark.tail * ends.scale[1],
+                    );
+                    self.frame.polyline(
+                        &Polyline::new(vec![tail, head]),
+                        1.0,
+                        [1.2 * ends.scale[1], 0.0],
+                        Paint {
+                            stroke: rgba(color, alpha),
+                            glow: glow4(color * (0.12 * alpha), 3.0 * ends.scale[1]),
+                            ..Default::default()
+                        },
+                        COMET,
+                    );
+                }
+            }
+        }
+        if let Some((roll, energy)) = lightning::hum(scene.time, scene.v(id, "hum"), seed) {
+            let energy = energy * opacity;
+            let bolt = lightning::bolt(a, b, roll, branching * 0.4);
+            let arc = Plasma {
+                half: 0.9 * scale,
+                taper: 0.0,
+                blur,
+                core: white * (3.5 * energy),
+                corona: own * (1.5 * energy),
+                radius: 4.5 * scale,
+            };
+            self.frame.plasma(&bolt.main, 1.0, |_| 1.0, arc);
+            for branch in &bolt.branches {
+                self.frame.plasma(
+                    &branch.points,
+                    1.0,
+                    |_| branch.energy,
+                    Plasma {
+                        half: 0.6 * scale,
+                        taper: 0.85,
+                        ..arc
+                    },
+                );
+            }
+            for end in [a, b] {
+                self.flare(
+                    end,
+                    2.2 * scale,
+                    white * (2.0 * energy),
+                    own * (0.6 * energy),
+                    16.0 * scale,
+                );
+            }
+        }
+        self.frame.close(ends.near() - 1.0, order);
+    }
+
+    /// A point of light: a hot disc of `radius` and a soft tone-colored bloom
+    /// of `reach`, both pure emission.
+    fn flare(&mut self, at: Vec2, radius: f32, hot: Vec3, tone: Vec3, reach: f32) {
+        if hot.max_element() + tone.max_element() <= 1e-4 {
+            return;
+        }
+        self.frame.circle(
+            at,
+            [radius, 0.0],
+            0.0,
+            Paint {
+                glow: glow4(hot, radius),
+                ..Default::default()
+            },
+        );
+        self.frame.circle(
+            at,
+            [0.0, 0.0],
+            0.0,
+            Paint {
+                glow: glow4(tone, reach * 0.3),
+                ..Default::default()
+            },
+        );
+    }
+
+    /// A forcefield bubble: faint cells, a Fresnel rim, and ripples from what
+    /// crosses or strikes it.
+    fn shield(&mut self, order: usize, id: &str, tone: Tone, place: Placement) {
+        let scene = self.scene;
+        let opacity = scene.unit(id, "opacity");
+        let up = scene.unit(id, "up");
+        let contacts = scene.shield_contacts(id, place);
+        let Shape::Circle(circle) = place.outline else {
+            return;
+        };
+        if opacity <= 0.001 || (up <= 0.001 && contacts.is_empty()) {
+            return;
+        }
+        // Each contact is its direction on the sphere scaled by its strength,
+        // and its age; a negative age is empty.
+        let mut slots = [[0.0, 0.0, 0.0, -1.0]; 4];
+        for (slot, contact) in slots.iter_mut().zip(&contacts) {
+            let d = contact.direction * contact.strength.max(1e-3);
+            *slot = [d.x, d.y, d.z, contact.age];
+        }
+        self.frame.prims.push(Prim {
+            bbox: around(circle.center, Vec2::splat(circle.radius + 14.0)),
+            a: [11.0, circle.center.x, circle.center.y, circle.radius],
+            b: [up, scene.time, opacity, scene.blur_at(place.depth)],
+            fill: rgba(self.look.tone(tone), 1.0),
+            light: slots[0],
+            pool: slots[1],
+            uv: slots[2],
+            light_color: slots[3],
+            ..Default::default()
+        });
+        self.frame.close(place.depth - 2.0, order);
     }
 
     fn orb_shell(
@@ -1803,7 +3284,7 @@ impl<'a> Painter<'a> {
         let (scene, look) = (self.scene, self.look);
         let bursting = age >= 0.0;
         let burst = Burst::sample(age);
-        let opacity = scene.unit(id, "opacity", 1.0) * burst.shell_opacity;
+        let opacity = scene.unit(id, "opacity") * burst.shell_opacity;
         if opacity <= 0.001 {
             return;
         }
@@ -1812,14 +3293,14 @@ impl<'a> Painter<'a> {
         let shatter = if bursting {
             0.0
         } else {
-            scene.unit(id, "shatter", 0.0)
+            scene.unit(id, "shatter")
         };
-        let pulse = scene.v(id, "pulse", 0.0);
-        let hurt = scene.unit(id, "hurt", 0.0);
+        let pulse = scene.v(id, "pulse");
+        let hurt = scene.unit(id, "hurt");
         let world_radius = scene.orb_radius(id, radius) * collapse;
         let own = look.tone(tone);
         let red = look.tone(Tone::Error);
-        let blur = scene.blur_at(place.world.z) + scene.v(id, "blur", 0.0).max(0.0) * place.scale;
+        let blur = scene.blur_at(place.depth) + scene.v(id, "blur").max(0.0) * place.scale;
         // A dark, softly feathered body occludes connections behind the shell.
         self.frame.circle(
             place.center,
@@ -1843,7 +3324,7 @@ impl<'a> Painter<'a> {
         );
         let rotation = scene.orb_rotation(id);
         let contacts = scene.orb_contacts(id, place);
-        let mut dots = self.orbs[id]
+        let dots = self.orbs[id]
             .iter()
             .map(|point| {
                 let unit = rotation * point.unit;
@@ -1871,15 +3352,74 @@ impl<'a> Painter<'a> {
                 ) + unit * (displacement * world_radius / 150.0);
                 (
                     place.world + offset,
-                    (1.0 - unit.z) * 0.5,
+                    (1.0 - scene.camera.view_dir(unit).z) * 0.5,
                     point.seed.z,
                     emission,
                 )
             })
             .collect::<Vec<_>>();
-        dots.sort_by(|a, b| b.0.z.total_cmp(&a.0.z));
+        self.particles(
+            dots,
+            place.outline,
+            Shell {
+                own,
+                red,
+                opacity,
+                shatter,
+                hurt,
+                pulse,
+                blur,
+            },
+        );
+        for (direction, age, tone, strength) in contacts {
+            let (angle, emission) = surface::wavefront(age);
+            if angle >= PI || emission * strength < 0.01 {
+                continue;
+            }
+            let points = sphere_ring(direction, angle, 72)
+                .into_iter()
+                .filter_map(|unit| {
+                    scene
+                        .camera
+                        .project(place.world + unit * world_radius)
+                        .map(|(point, _)| {
+                            (point, smoothstep(-scene.camera.view_dir(unit).z / 0.20))
+                        })
+                })
+                .collect::<Vec<_>>();
+            let ink = look.tone(tone).lerp(Vec3::ONE, 0.4);
+            let energy = emission * strength * opacity;
+            self.frame.trail(
+                &points,
+                [1.15 * place.scale, 0.0],
+                Paint {
+                    stroke: rgba(ink * 1.1, energy * 0.55),
+                    glow: glow4(ink * energy * 0.055, 4.0 * place.scale),
+                    ..Default::default()
+                },
+            );
+        }
+        self.frame.close(place.depth, order);
+    }
+
+    /// A particle body's points, far to near: each a soft dot whose size and
+    /// light grow toward the camera, lit by nearby packets, reddened by
+    /// shatter and hurt. A dot is world position, nearness, seed, and its own
+    /// emission.
+    fn particles(&mut self, mut dots: Vec<(Vec3, f32, f32, Vec3)>, outline: Shape, shell: Shell) {
+        let (scene, look) = (self.scene, self.look);
+        let Shell {
+            own,
+            red,
+            opacity,
+            shatter,
+            hurt,
+            pulse,
+            blur,
+        } = shell;
+        dots.sort_by(|a, b| scene.camera.depth(b.0).total_cmp(&scene.camera.depth(a.0)));
         let fade = (1.0 - shatter).powf(0.7);
-        let lights = scene.lights_on(place.outline).collect::<Vec<_>>();
+        let lights = scene.lights_on(outline).collect::<Vec<_>>();
         for (point, near, seed, emission) in dots {
             let Some((center, scale)) = scene.camera.project(point) else {
                 continue;
@@ -1914,33 +3454,101 @@ impl<'a> Painter<'a> {
                 },
             );
         }
-        for (direction, age, tone, strength) in contacts {
-            let (angle, emission) = surface::wavefront(age);
-            if angle >= PI || emission * strength < 0.01 {
-                continue;
-            }
-            let points = sphere_ring(direction, angle, 72)
-                .into_iter()
-                .filter_map(|unit| {
-                    scene
-                        .camera
-                        .project(place.world + unit * world_radius)
-                        .map(|(point, _)| (point, smoothstep(-unit.z / 0.20)))
-                })
-                .collect::<Vec<_>>();
-            let ink = look.tone(tone).lerp(Vec3::ONE, 0.4);
-            let energy = emission * strength * opacity;
-            self.frame.trail(
-                &points,
-                [1.15 * place.scale, 0.0],
+    }
+
+    /// A form: the orb's material on any shape. A dark silhouette occludes
+    /// what passes behind it, a faint core lights it, and its points turn,
+    /// morph, shatter, and burst. The surface ripple is the orb's alone.
+    fn form(&mut self, order: usize, id: &str, tone: Tone, place: Placement) {
+        let scene = self.scene;
+        let Some(form) = scene.forms.get(id) else {
+            return;
+        };
+        let age = scene.v(id, "burst");
+        let burst = Burst::sample(age);
+        let opacity = scene.unit(id, "opacity") * burst.shell_opacity;
+        if opacity > 0.001 {
+            let look = self.look;
+            let collapse = burst.shell_scale;
+            let shatter = if age >= 0.0 {
+                0.0
+            } else {
+                scene.unit(id, "shatter")
+            };
+            let pulse = scene.v(id, "pulse");
+            let hurt = scene.unit(id, "hurt");
+            let own = look.tone(tone);
+            let red = look.tone(Tone::Error);
+            let scale = place.scale * collapse;
+            let blur = scene.blur_at(place.depth) + scene.v(id, "blur").max(0.0) * scale;
+            self.frame.polygon(
+                form.hull.scaled(collapse).vertices(),
+                0.0,
+                5.0 * scale + blur,
                 Paint {
-                    stroke: rgba(ink * 1.1, energy * 0.55),
-                    glow: glow4(ink * energy * 0.055, 4.0 * place.scale),
+                    fill: rgba(look.background, opacity * (1.0 - shatter)),
                     ..Default::default()
                 },
             );
+            let core = (0.025 + 0.075 * pulse.max(0.0)) * (1.0 - shatter) * opacity;
+            self.frame.circle(
+                place.center,
+                [0.0, 0.0],
+                0.0,
+                Paint {
+                    glow: glow4(own.lerp(red, hurt) * core, form.radius * scale * 0.42),
+                    ..Default::default()
+                },
+            );
+            let dots = form
+                .dots
+                .iter()
+                .map(|(offset, near, seed)| {
+                    let offset = *offset * collapse;
+                    let burst = 1.0 + shatter * (0.6 + 2.4 * seed.x);
+                    let fall = shatter * shatter * (160.0 + 460.0 * seed.y);
+                    let drift = shatter * (seed.z - 0.5) * 120.0;
+                    (
+                        place.world + offset * burst + vec3(drift, fall, 0.0),
+                        *near,
+                        seed.z,
+                        Vec3::ZERO,
+                    )
+                })
+                .collect();
+            self.particles(
+                dots,
+                place.outline,
+                Shell {
+                    own,
+                    red,
+                    opacity,
+                    shatter,
+                    hurt,
+                    pulse,
+                    blur,
+                },
+            );
+            self.frame.close(place.depth, order);
         }
-        self.frame.close(place.world.z, order);
+        let opacity = scene.unit(id, "opacity");
+        if age >= combustion::COLLAPSE && opacity > 0.001 && age < combustion::DURATION {
+            let radius_px = form.radius * place.scale;
+            let points = form
+                .dots
+                .iter()
+                .enumerate()
+                .map(|(index, (offset, _, seed))| {
+                    (
+                        index,
+                        offset.normalize_or(Vec3::Y),
+                        place.world + *offset * burst.shell_scale,
+                        *seed,
+                    )
+                })
+                .collect::<Vec<_>>();
+            self.embers(order, place, radius_px, age, opacity, points);
+        }
     }
 
     /// One deterministic impact clock owns collapse, combustion, smoke, and
@@ -1957,8 +3565,37 @@ impl<'a> Painter<'a> {
         if age >= combustion::DURATION {
             return;
         }
-        let scale = place.scale;
-        let radius_px = radius * scale;
+        let radius_px = radius * place.scale;
+        let burst = Burst::sample(age);
+        let rotation = self.scene.orb_rotation(id);
+        let world_radius = self.scene.orb_radius(id, radius);
+        let points = self.orbs[id]
+            .iter()
+            .enumerate()
+            .map(|(index, point)| {
+                let unit = rotation * point.unit;
+                (
+                    index,
+                    unit,
+                    place.world + unit * (world_radius * burst.shell_scale),
+                    point.seed,
+                )
+            })
+            .collect();
+        self.embers(order, place, radius_px, age, opacity, points);
+    }
+
+    /// The burst's procedural fire volume and its ballistic embers, each
+    /// leaving its `anchor` on the compressed shell along unit `direction`.
+    fn embers(
+        &mut self,
+        order: usize,
+        place: Placement,
+        radius_px: f32,
+        age: f32,
+        opacity: f32,
+        points: Vec<(usize, Vec3, Vec3, Vec3)>,
+    ) {
         self.frame.prims.push(Prim {
             bbox: around(place.center, Vec2::splat(radius_px * 4.4)),
             a: [6.0, place.center.x, place.center.y, radius_px],
@@ -1966,12 +3603,8 @@ impl<'a> Painter<'a> {
             ..Default::default()
         });
         let burst = Burst::sample(age);
-        let rotation = self.scene.orb_rotation(id);
-        let world_radius = self.scene.orb_radius(id, radius);
-        for (index, point) in self.orbs[id].iter().enumerate() {
-            let unit = rotation * point.unit;
-            let ember = burst.ember(unit, point.seed);
-            let anchor = place.world + unit * (world_radius * burst.shell_scale);
+        for (index, unit, anchor, seed) in points {
+            let ember = burst.ember(unit, seed);
             let position = anchor + ember.offset;
             let Some((center, perspective)) = self.scene.camera.project(position) else {
                 continue;
@@ -2010,20 +3643,20 @@ impl<'a> Painter<'a> {
                 },
             );
         }
-        self.frame.close(place.world.z, order);
+        self.frame.close(place.depth, order);
     }
 
     fn beam(&mut self, order: usize, id: &str, tone: Tone, link: &Link) {
         let (scene, look) = (self.scene, self.look);
-        let opacity = scene.unit(id, "opacity", 1.0);
+        let opacity = scene.unit(id, "opacity");
         if opacity <= 0.001 {
             return;
         }
-        let draw = scene.unit(id, "draw", 1.0);
-        let broken = scene.unit(id, "break", 0.0);
-        let flow = scene.v(id, "flow", 0.0).clamp(0.0, 1.5);
-        let emphasis = scene.unit(id, "emphasis", 0.0);
-        let surge = scene.v(id, "surge", 0.0).clamp(0.0, 1.5);
+        let draw = scene.unit(id, "draw");
+        let broken = scene.unit(id, "break");
+        let flow = scene.v(id, "flow").clamp(0.0, 1.5);
+        let emphasis = scene.unit(id, "emphasis");
+        let surge = scene.v(id, "surge").clamp(0.0, 1.5);
         let own = look.tone(tone);
         let scale = link.scale_at(0.5);
         let blur = scene.blur_at(link.far());
@@ -2065,7 +3698,7 @@ impl<'a> Painter<'a> {
         self.frame.close(link.far() + 1.0, order);
         // Before drawing, light runs once around the source card's frame, from
         // its port back to it.
-        let sweep = scene.v(id, "sweep", 0.0);
+        let sweep = scene.v(id, "sweep");
         if sweep > 0.001
             && sweep < 0.999
             && let Some(frame) = link.source
@@ -2092,7 +3725,7 @@ impl<'a> Painter<'a> {
         let source = if draw > 0.001 {
             1.0
         } else {
-            scene.unit(id, "port", 0.0)
+            scene.unit(id, "port")
         };
         for end in [0, 1] {
             let shown = if end == 0 {
@@ -2121,15 +3754,14 @@ impl<'a> Painter<'a> {
     /// A packet's whole life from its clock: light gathers at the port, a solid
     /// dot flies with a cooling trail, then it opens into a small ring as it is
     /// absorbed. Its light on nearby edges comes from `Scene::lights_of`.
-    fn packet(&mut self, order: usize, id: &str, reverse: bool, tone: Tone, link: &Link) {
+    /// One leg of a packet, on its own clock (`age`, `flight`), along `link`
+    /// oriented the way it travels.
+    fn packet(&mut self, order: usize, id: &str, tone: Tone, age: f32, flight: f32, link: &Link) {
         let scene = self.scene;
-        let age = scene.v(id, "age", -1.0);
-        let opacity = scene.unit(id, "opacity", 1.0);
+        let opacity = scene.unit(id, "opacity");
         if !(0.0..packet::LIFETIME).contains(&age) || opacity <= 0.001 {
             return;
         }
-        let flight = scene.v(id, "flight", 0.8).max(0.05);
-        let link = link.toward(reverse);
         let (path, scale_at) = (&link.path, |fraction| link.scale_at(fraction));
         let own = self.look.tone(tone);
         // The dot is nearly white; its tone lives in the trail and its reflections.
@@ -2173,13 +3805,13 @@ impl<'a> Painter<'a> {
                 },
             );
             let label = remap_clamp(travel, [0.0, 0.1], [0.0, 1.0]);
-            if link.socket[1] {
+            if link.landing[1] {
                 label
             } else {
                 label * (1.0 - smoothstep((travel - 0.65) / 0.25))
             }
         } else {
-            if link.socket[1] {
+            if link.landing[1] {
                 packet::landing(age, flight).map_or(0.0, |q| 1.0 - smoothstep(q / 0.4))
             } else {
                 0.0
@@ -2206,7 +3838,7 @@ impl<'a> Painter<'a> {
             }
         }
         if let Some(q) = packet::landing(age, flight)
-            && link.socket[1]
+            && link.landing[1]
         {
             // The dot is the ring: a 2 px ring with a 4 px stroke looks like the
             // dot, then opens, grows a little, and fades out.
@@ -2273,12 +3905,12 @@ impl<'a> Painter<'a> {
         place: Placement,
     ) {
         let (scene, look) = (self.scene, self.look);
-        let opacity = scene.unit(id, "opacity", 1.0);
+        let opacity = scene.unit(id, "opacity");
         if opacity <= 0.001 {
             return;
         }
-        let typed = scene.unit(id, "typed", 1.0);
-        let blur = scene.blur_at(place.world.z);
+        let typed = scene.unit(id, "typed");
+        let blur = scene.blur_at(place.depth);
         let parts = spans
             .iter()
             .enumerate()
@@ -2327,14 +3959,14 @@ impl<'a> Painter<'a> {
             remaining -= shown;
             x += width;
         }
-        self.frame.close(place.world.z - 0.5, order);
+        self.frame.close(place.depth - 0.5, order);
     }
 
     /// `size` is the radius and thickness.
     fn ring(&mut self, order: usize, id: &str, size: [f32; 2], tone: Tone, place: Placement) {
         let scene = self.scene;
-        let opacity = scene.unit(id, "opacity", 1.0);
-        let expand = scene.unit(id, "expand", 0.0);
+        let opacity = scene.unit(id, "opacity");
+        let expand = scene.unit(id, "expand");
         let alpha = opacity * (1.0 - expand);
         if alpha <= 0.001 {
             return;
@@ -2346,16 +3978,394 @@ impl<'a> Painter<'a> {
                 size[0] * (1.0 + 1.3 * expand) * place.scale,
                 size[1] * place.scale,
             ],
-            scene.unit(id, "sweep", 1.0),
-            scene.blur_at(place.world.z),
+            scene.unit(id, "sweep"),
+            scene.blur_at(place.depth),
             Paint {
                 stroke: rgba(own, alpha),
                 glow: glow4(own * (0.035 * alpha), 5.0 * place.scale),
                 ..Default::default()
             },
         );
-        self.frame.close(place.world.z, order);
+        self.frame.close(place.depth, order);
     }
+}
+
+/// How a particle body's points are lit this sample.
+#[derive(Clone, Copy)]
+struct Shell {
+    own: Vec3,
+    red: Vec3,
+    opacity: f32,
+    shatter: f32,
+    hurt: f32,
+    pulse: f32,
+    blur: f32,
+}
+
+/// A shape element's figure and paint, from its payload.
+#[derive(Clone, Copy)]
+struct FigureStyle<'a> {
+    figure: &'a Figure,
+    corner: f32,
+    fill: Option<Fill>,
+    fill_opacity: f32,
+    stroke: Option<Tone>,
+    width: f32,
+    dash: Option<[f32; 2]>,
+    arrow: Arrow,
+}
+
+impl Painter<'_> {
+    /// A flat figure: an optional fill, then a stroke that draws on along its
+    /// outline from twelve o'clock, clockwise. It turns about its center. A
+    /// flash lifts the stroke, never the whole fill.
+    fn shape(&mut self, order: usize, id: &str, style: FigureStyle, place: Placement) {
+        let (scene, look) = (self.scene, self.look);
+        let opacity = scene.unit(id, "opacity");
+        if opacity <= 0.001 {
+            return;
+        }
+        let scale = place.scale;
+        let blur = scene.blur_at(place.depth) + scene.v(id, "blur").max(0.0) * scale;
+        let draw = scene.unit(id, "draw");
+        let emphasis = scene.unit(id, "emphasis");
+        let flash = scene.v(id, "flash").clamp(0.0, 1.5);
+        let outline = figure_outline(style.figure, style.corner, scene.v(id, "rotation"))
+            .into_iter()
+            .map(|point| place.center + point * scale)
+            .collect::<Vec<_>>();
+        let closed = !matches!(style.figure, Figure::Arc { .. });
+        // Like a card: the strongest reflection rides the outline, and the
+        // strongest pool floods the fill from where an arrival entered.
+        let strongest = |pool: bool| {
+            scene
+                .lights_on(place.outline)
+                .filter(|light| light.pool == pool)
+                .max_by(|a, b| a.strength.total_cmp(&b.strength))
+                .map_or(([0.0; 4], [0.0; 4]), |light| light.uniform(&look, opacity))
+        };
+        let (light, light_color) = strongest(false);
+        let (pool, pool_color) = strongest(true);
+        if let Some(fill) = style.fill
+            && closed
+        {
+            let color = match fill {
+                Fill::Tone(tone) => look.tone(tone),
+                Fill::Material(Material::Surface) => look.surface,
+                Fill::Material(Material::Background) => look.background,
+            };
+            let amount = scene.unit(id, "fill") * style.fill_opacity * opacity;
+            self.frame.polygon(
+                &outline,
+                0.0,
+                blur,
+                Paint {
+                    fill: rgba(color, amount),
+                    pool,
+                    pool_color,
+                    ..Default::default()
+                },
+            );
+        }
+        if let Some(tone) = style.stroke {
+            let own = look.tone(tone);
+            let color = own.lerp(Vec3::ONE, (0.18 * emphasis + 0.35 * flash).min(1.0));
+            let alpha = opacity * (0.85 + 0.15 * emphasis);
+            let paint = Paint {
+                stroke: rgba(color, alpha),
+                glow: glow4(own * ((0.04 * emphasis + 0.1 * flash) * alpha), 4.0 * scale),
+                light,
+                light_color,
+                ..Default::default()
+            };
+            let mut line = outline.clone();
+            if closed {
+                line.push(outline[0]);
+            }
+            let line = Polyline::new(line);
+            let width = style.width * scale;
+            let length = line.length().max(1e-3);
+            let drawn = draw * length;
+            let heads = [style.arrow.at_start(), style.arrow.at_end()];
+            let cut = self.arrowheads(&line, [0.0, drawn], heads, width, blur, paint);
+            let line = line.slice(cut[0] / length, (drawn - cut[1]) / length);
+            let dash = style
+                .dash
+                .map_or(SOLID, |[on, off]| [on * scale, off * scale, cut[0], 0.0]);
+            if draw > 0.0 {
+                self.frame.polyline(&line, 1.0, [width, blur], paint, dash);
+            }
+        }
+        self.frame.close(place.depth, order);
+    }
+
+    /// Arrowheads on `line` at the ends of its visible `span` (lengths along
+    /// it) that carry `heads`: the start's points back along the line, the
+    /// end's forward. A head shrinks when the visible line is shorter than
+    /// it, so a drawing arrow grows from nothing. Returns how far each head
+    /// cuts the line back.
+    fn arrowheads(
+        &mut self,
+        line: &Polyline,
+        span: [f32; 2],
+        heads: [bool; 2],
+        width: f32,
+        blur: f32,
+        paint: Paint,
+    ) -> [f32; 2] {
+        let mut cut = [0.0; 2];
+        let full = 7.0 + 4.2 * width;
+        let visible = (span[1] - span[0]).max(0.0);
+        for (end, tip) in span.into_iter().enumerate() {
+            if !heads[end] {
+                continue;
+            }
+            let size = full.min(visible * if heads[1 - end] { 0.5 } else { 1.0 });
+            if size <= 0.5 {
+                continue;
+            }
+            let back = if end == 0 { tip + size } else { tip - size };
+            let (point, base) = (line.at_length(tip), line.at_length(back));
+            let along = (point - base).normalize_or(Vec2::X);
+            let side = along.perp() * (size * 0.48);
+            let base = point - along * size;
+            self.frame.polygon(
+                &[
+                    point,
+                    base - side,
+                    point - along * (size * 0.74),
+                    base + side,
+                ],
+                0.0,
+                blur,
+                Paint {
+                    fill: paint.stroke,
+                    glow: paint.glow,
+                    ..Default::default()
+                },
+            );
+            cut[end] = size * 0.7;
+        }
+        cut
+    }
+
+    /// A path's legs: each the visible stretch between `trim` and `draw` of
+    /// the whole route, with arrowheads riding the drawn tip, sockets where
+    /// it plugs into cards, and flow when traffic is live.
+    #[allow(clippy::too_many_arguments)]
+    fn path(
+        &mut self,
+        order: usize,
+        id: &str,
+        tone: Tone,
+        width: f32,
+        dash: Option<[f32; 2]>,
+        arrow: Arrow,
+        legs: &[Link],
+    ) {
+        let (scene, look) = (self.scene, self.look);
+        let opacity = scene.unit(id, "opacity");
+        if opacity <= 0.001 || legs.is_empty() {
+            return;
+        }
+        let draw = scene.unit(id, "draw");
+        let trim = scene.unit(id, "trim");
+        let flow = scene.v(id, "flow").clamp(0.0, 1.5);
+        let emphasis = scene.unit(id, "emphasis");
+        let surge = scene.v(id, "surge").clamp(0.0, 1.5);
+        let own = look.tone(tone);
+        // Matte like a beam; emphasis and surge bring up its tone.
+        let color = (look.muted * 0.7)
+            .lerp(own, 0.12 + 0.45 * emphasis)
+            .lerp(own, 0.35 * surge.min(1.0));
+        let far = legs.iter().map(Link::far).fold(f32::MIN, f32::max);
+        let blur = scene.blur_at(far);
+        let lengths = legs.iter().map(|leg| leg.path.length()).collect::<Vec<_>>();
+        let total = lengths.iter().sum::<f32>().max(1e-3);
+        let (shown_from, shown_to) = (trim * total, draw * total);
+        let mut start = 0.0;
+        for (leg, length) in legs.iter().zip(&lengths) {
+            let scale = leg.scale_at(0.5);
+            let paint = Paint {
+                stroke: rgba(color, 0.75 * opacity * (1.0 + 0.3 * surge)),
+                glow: glow4(color * (0.05 * surge * opacity), 4.0 * scale),
+                ..Default::default()
+            };
+            let line_width = width * scale * (1.0 + 0.25 * surge);
+            // The visible stretch of this leg, inside its tips.
+            let low = (shown_from - start).max(leg.tips[0] * length);
+            let high = (shown_to - start).min(leg.tips[1] * length);
+            if high > low {
+                let heads = [arrow.at_start(), arrow.at_end()];
+                let cut = self.arrowheads(&leg.path, [low, high], heads, line_width, blur, paint);
+                let line = leg
+                    .path
+                    .slice((low + cut[0]) / length, (high - cut[1]) / length);
+                let style = dash.map_or(SOLID, |[on, off]| {
+                    [on * scale, off * scale, start + low + cut[0], 0.0]
+                });
+                self.frame
+                    .polyline(&line, 1.0, [line_width, blur], paint, style);
+                if flow > 0.001 && draw > 0.98 {
+                    let bead = Paint {
+                        stroke: rgba(own, (flow * opacity * 0.65).min(1.0)),
+                        ..Default::default()
+                    };
+                    let beads = [7.0 * scale, 190.0 * scale, -scene.time * 90.0 * scale, 0.0];
+                    self.frame
+                        .polyline(&line, 1.0, [1.8 * scale, blur], bead, beads);
+                }
+            }
+            // Sockets resolve where the line plugs into a card.
+            for end in [0, 1] {
+                if !leg.socket[end] {
+                    continue;
+                }
+                let at = start + end as f32 * length;
+                let shown = if end == 0 {
+                    smoothstep(remap_clamp(shown_to - at, [0.0, 8.0], [0.0, 1.0]))
+                } else {
+                    smoothstep(remap_clamp(shown_to - at, [-8.0, 0.0], [0.0, 1.0]))
+                } * smoothstep(remap_clamp(at - shown_from, [-8.0, 0.0], [0.0, 1.0]));
+                if shown <= 0.001 {
+                    continue;
+                }
+                let scale = leg.scale[end];
+                self.frame.circle(
+                    leg.path.at(end as f32),
+                    [4.4 * scale, 1.3 * scale],
+                    blur,
+                    Paint {
+                        fill: rgba(color, opacity * shown),
+                        stroke: rgba(look.background, opacity * shown),
+                        ..Default::default()
+                    },
+                );
+            }
+            start += length;
+        }
+        // Behind every element it connects.
+        self.frame.close(far + 1.0, order);
+    }
+
+    /// An icon: its atlas coverage tinted by its tone, `size` world pixels
+    /// square through the camera. A flash lifts its ink toward white.
+    fn icon(&mut self, order: usize, id: &str, size: f32, tone: Tone, place: Placement) {
+        let (scene, look) = (self.scene, self.look);
+        let opacity = scene.unit(id, "opacity");
+        let key = text_key(id, "icon");
+        let Some(rect) = self.frame.texts.get(&key).map(|text| text.rect) else {
+            return;
+        };
+        if opacity <= 0.001 {
+            return;
+        }
+        let flash = scene.v(id, "flash").clamp(0.0, 1.5);
+        let blur = scene.blur_at(place.depth) + scene.v(id, "blur").max(0.0) * place.scale;
+        let own = match tone {
+            Tone::Plain => look.text,
+            tone => look.tone(tone),
+        };
+        let color = own.lerp(Vec3::ONE, (0.4 * flash).min(1.0));
+        let side = size * place.scale;
+        let top_left = place.center - Vec2::splat(side * 0.5);
+        self.frame.prims.push(Prim {
+            bbox: around(place.center, Vec2::splat(side * 0.5 + 2.0)),
+            a: [4.0, top_left.x, top_left.y, blur * 0.5],
+            b: [side, side, f32::MAX, 0.0],
+            fill: rgba(color, opacity),
+            uv: [rect[0], rect[1], rect[0] + rect[2], rect[1] + rect[3]],
+            ..Default::default()
+        });
+        if flash > 0.001 {
+            // Light from the struck icon itself, under the bloom threshold.
+            self.frame.circle(
+                place.center,
+                [0.0, 0.0],
+                0.0,
+                Paint {
+                    glow: glow4(own * (0.05 * flash * opacity), side * 0.35),
+                    ..Default::default()
+                },
+            );
+        }
+        self.frame.close(place.depth - 0.5, order);
+    }
+}
+
+/// A figure's outline in world pixels about its center, turned `rotation`
+/// radians: a closed figure from twelve o'clock (a rectangle from the middle
+/// of its top) clockwise on screen, without repeating its first point; an arc
+/// from its start to its end. Corners round at `corner`.
+fn figure_outline(figure: &Figure, corner: f32, rotation: f32) -> Vec<Vec2> {
+    let turn = Vec2::from_angle(rotation);
+    let circle = |radius: f32, start: f32, sweep: f32, closed: bool| {
+        let segments = ((96.0 * sweep).ceil() as usize).max(8);
+        let count = if closed { segments } else { segments + 1 };
+        (0..count)
+            .map(|k| {
+                let angle = -FRAC_PI_2 + TAU * (start + sweep * k as f32 / segments as f32);
+                Vec2::from_angle(angle) * radius
+            })
+            .collect::<Vec<_>>()
+    };
+    let points = match figure {
+        Figure::Rect(size) => {
+            let half = Vec2::from(*size) * 0.5;
+            let corners = [
+                vec2(half.x, -half.y),
+                vec2(half.x, half.y),
+                vec2(-half.x, half.y),
+                vec2(-half.x, -half.y),
+            ];
+            let mut points = vec![vec2(0.0, -half.y)];
+            points.extend(round_corners(&corners, corner.min(half.min_element())));
+            points
+        }
+        Figure::Circle(radius) => circle(*radius, 0.0, 1.0, true),
+        Figure::Arc {
+            radius,
+            start,
+            sweep,
+        } => circle(*radius, *start, *sweep, false),
+        Figure::Polygon(points) => round_corners(
+            &points.iter().map(|p| Vec2::from(*p)).collect::<Vec<_>>(),
+            corner,
+        ),
+    };
+    points.into_iter().map(|point| turn.rotate(point)).collect()
+}
+
+/// A closed polygon's corners, each rounded by a curve cut back `radius`
+/// along both of its sides (at most half of each side).
+fn round_corners(corners: &[Vec2], radius: f32) -> Vec<Vec2> {
+    if radius <= 0.0 {
+        return corners.to_vec();
+    }
+    let n = corners.len();
+    let mut points = Vec::with_capacity(n * 9);
+    for (index, corner) in corners.iter().enumerate() {
+        let (previous, next) = (corners[(index + n - 1) % n], corners[(index + 1) % n]);
+        let r = radius
+            .min(corner.distance(previous) * 0.5)
+            .min(corner.distance(next) * 0.5);
+        let a = *corner + (previous - *corner).normalize_or_zero() * r;
+        let b = *corner + (next - *corner).normalize_or_zero() * r;
+        // A circular corner is a quarter turn; this cubic matches it to 0.03%
+        // for right angles and stays tangent to both sides for any angle.
+        let k = 0.552_284_8;
+        points.extend(
+            CubicBezier {
+                start: a,
+                control_a: a + (*corner - a) * k,
+                control_b: b + (*corner - b) * k,
+                end: b,
+            }
+            .flatten(8)
+            .points(),
+        );
+    }
+    points
 }
 
 /// Colors of one primitive: straight linear RGBA fill and stroke, and glow as
@@ -2370,6 +4380,18 @@ struct Paint {
     light_color: [f32; 4],
     pool: [f32; 4],
     pool_color: [f32; 4],
+}
+
+/// How a lightning channel shines: core half width and its taper toward the
+/// end, defocus, white-hot core and corona light, and the corona's radius.
+#[derive(Clone, Copy)]
+struct Plasma {
+    half: f32,
+    taper: f32,
+    blur: f32,
+    core: Vec3,
+    corona: Vec3,
+    radius: f32,
 }
 
 /// The primitives of one sample, grouped into depth-sorted layers.
@@ -2452,6 +4474,38 @@ impl<'a> StageFrame<'a> {
             fill: paint.fill,
             stroke: paint.stroke,
             glow: paint.glow,
+            ..Default::default()
+        });
+    }
+
+    /// Any simple polygon through `points` (in order, not repeating the
+    /// first), filled, with an optional `border` of that many pixels.
+    fn polygon(&mut self, points: &[Vec2], border: f32, blur: f32, paint: Paint) {
+        let visible = paint.fill[3] > 0.001
+            || (border > 0.0 && paint.stroke[3] > 0.001)
+            || paint.glow[..3].iter().any(|v| *v > 0.0);
+        if points.len() < 3 || !visible {
+            return;
+        }
+        let first = self.points.len();
+        self.points
+            .extend(points.iter().map(|point| [point.x, point.y, 0.0, 0.0]));
+        let (low, high) = points
+            .iter()
+            .fold((Vec2::MAX, Vec2::MIN), |(low, high), point| {
+                (low.min(*point), high.max(*point))
+            });
+        let pad = Vec2::splat(paint.glow[3] * 4.0 + blur + 2.0);
+        let (low, high) = (low - pad, high + pad);
+        self.prims.push(Prim {
+            bbox: [low.x, low.y, high.x, high.y],
+            a: [7.0, border, 0.0, blur],
+            fill: paint.fill,
+            stroke: paint.stroke,
+            glow: paint.glow,
+            uv: [first as f32, points.len() as f32, 0.0, 0.0],
+            pool: paint.pool,
+            pool_color: paint.pool_color,
             ..Default::default()
         });
     }
@@ -2540,6 +4594,43 @@ impl<'a> StageFrame<'a> {
             stroke: paint.stroke,
             glow: paint.glow,
             uv: [first as f32, points.len() as f32, 0.0, 0.0],
+            light: paint.light,
+            light_color: paint.light_color,
+            ..Default::default()
+        });
+    }
+
+    /// A lightning channel through `points`, drawn to `drawn` of its length,
+    /// whose points carry `energy` (of their fraction along it).
+    fn plasma(&mut self, points: &[Vec2], drawn: f32, energy: impl Fn(f32) -> f32, style: Plasma) {
+        if points.len() < 2
+            || drawn <= 0.0
+            || style.core.max_element() + style.corona.max_element() <= 1e-4
+        {
+            return;
+        }
+        let path = Polyline::new(points.to_vec());
+        let total = path.length().max(1e-3);
+        let first = self.points.len();
+        self.points.extend(
+            points
+                .iter()
+                .zip(path.lengths())
+                .map(|(point, along)| [point.x, point.y, *along, energy(*along / total)]),
+        );
+        let reach = style.radius * 5.0 + style.half + style.blur + 2.0;
+        let (low, high) = points
+            .iter()
+            .fold((Vec2::MAX, Vec2::MIN), |(low, high), point| {
+                (low.min(*point), high.max(*point))
+            });
+        self.prims.push(Prim {
+            bbox: [low.x - reach, low.y - reach, high.x + reach, high.y + reach],
+            a: [10.0, style.half, total * drawn.min(1.0), style.taper],
+            b: [style.blur, style.radius, reach, 0.0],
+            fill: style.core.extend(0.0).to_array(),
+            stroke: style.corona.extend(0.0).to_array(),
+            uv: [first as f32, points.len() as f32, 0.0, 0.0],
             ..Default::default()
         });
     }
@@ -2559,7 +4650,7 @@ impl<'a> StageFrame<'a> {
             if copy.bbox[0] >= copy.bbox[2] || copy.bbox[1] >= copy.bbox[3] {
                 continue;
             }
-            if prim.a[0] as u32 == 3 {
+            if matches!(prim.a[0] as u32, 3 | 7) {
                 let first = prim.uv[0] as usize;
                 let count = prim.uv[1] as usize;
                 copy.uv[0] = self.points.len() as f32;
@@ -2867,6 +4958,78 @@ mod tests {
     }
 
     #[test]
+    fn every_bundled_icon_rasterizes_to_visible_coverage() {
+        for name in psychopomp::stage::ICONS {
+            let svg = super::icon_svg(name, "", 256.0).unwrap_or_else(|| panic!("{name}"));
+            let sprite = super::icon_sprite(&svg, 48).unwrap();
+            let covered = sprite.pixels.chunks(4).filter(|p| p[3] > 128).count();
+            assert!(covered > 60, "{name} covers {covered} pixels");
+        }
+        assert!(super::icon_svg("nope", "", 256.0).is_none());
+        let square = super::icon_svg("", "M0 0 H24 V24 H0 Z", 24.0).unwrap();
+        let sprite = super::icon_sprite(&square, 16).unwrap();
+        assert!(
+            sprite.pixels.chunks(4).all(|p| p[3] == 255),
+            "path data fills its view"
+        );
+    }
+
+    #[test]
+    fn wires_attach_to_a_turning_form_silhouette_continuously() {
+        let plan: StagePlan = serde_json::from_value(serde_json::json!({
+            "elements": [
+                { "kind": "form", "id": "store", "at": [1500, 470, 0], "points": 720,
+                  "shapes": [{ "shape": "plane", "size": [340, 184] }] },
+                { "kind": "card", "id": "gateway", "at": [900, 500, 0], "size": [232, 132], "title": "g" },
+                { "kind": "path", "id": "write", "through": ["gateway", "store"], "arrow": "end" },
+                { "kind": "beam", "id": "link", "from": "gateway", "to": "store" }
+            ]
+        }))
+        .unwrap();
+        let geometry = std::collections::HashMap::from([(
+            "store".to_string(),
+            super::FormGeometry::new(
+                &[psychopomp::stage::FormShape::Plane {
+                    size: [340.0, 184.0],
+                }],
+                720,
+                0.42,
+            ),
+        )]);
+        let mut last: Option<(super::Vec2, super::Vec2)> = None;
+        for step in 0..200 {
+            let time = 4.0 + step as f32 * 0.004;
+            let value = |property: &str, default| match property {
+                "store.pitch" => time * 0.8,
+                _ => default,
+            };
+            let scene =
+                Scene::sample_with(&plan, &value, time, vec2(1920.0, 1080.0), Some(&geometry));
+            let super::Shape::Polygon(hull) = scene.placements["store"].outline else {
+                panic!("a form attaches to its sampled silhouette");
+            };
+            assert_eq!(
+                hull.vertices().len(),
+                4,
+                "a plane's silhouette is its corners"
+            );
+            let leg = &scene.routes["write"][0];
+            let ends = (leg.path.at(1.0), scene.links["link"].path.at(1.0));
+            assert!(
+                hull.distance(leg.path.at(leg.tips[1])).abs() < 1.0,
+                "the arrow tip sits on the silhouette"
+            );
+            if let Some((path, beam)) = last {
+                assert!(
+                    path.distance(ends.0) < 2.0 && beam.distance(ends.1) < 2.0,
+                    "{time}"
+                );
+            }
+            last = Some(ends);
+        }
+    }
+
+    #[test]
     fn stage_anchors_follow_the_camera_and_the_developed_punch() {
         let plan: StagePlan = serde_json::from_value(serde_json::json!({
             "elements": [
@@ -2900,6 +5063,138 @@ mod tests {
             super::CalloutSide::Top,
         );
         assert!(missing.is_none());
+    }
+
+    #[test]
+    fn stage_anchors_turn_with_the_authored_roll() {
+        let plan: StagePlan = serde_json::from_value(serde_json::json!({
+            "elements": [
+                { "kind": "card", "id": "api", "at": [1160, 540, 0], "size": [300, 100], "title": "api" }
+            ]
+        }))
+        .unwrap();
+        let size = vec2(1920.0, 1080.0);
+        let rolled = super::stage_anchor(
+            &plan,
+            &|property, default| {
+                if property == "camera.roll" {
+                    0.1
+                } else {
+                    default
+                }
+            },
+            1.0,
+            size,
+            "api",
+            super::CalloutSide::Center,
+        )
+        .unwrap();
+        let camera = psychopomp::stage::Camera {
+            roll: 0.1,
+            ..psychopomp::stage::Camera::new(size)
+        };
+        assert_eq!(rolled, camera.rolled(vec2(1160.0, 540.0)));
+        assert!(rolled.y > 560.0, "a clockwise roll lowers the right side");
+    }
+
+    /// A card-to-card wire with a packet in flight; ends at different depths
+    /// so following has parallax to resolve.
+    fn followed_plan() -> StagePlan {
+        serde_json::from_value(serde_json::json!({
+            "elements": [
+                { "kind": "card", "id": "client", "at": [420, 560, 0], "size": [300, 110], "title": "client" },
+                { "kind": "card", "id": "api", "at": [1700, 420, 260], "size": [300, 110], "title": "api" },
+                { "kind": "beam", "id": "link", "from": "client", "to": "api", "bend": 40 },
+                { "kind": "packet", "id": "request", "beam": "link" }
+            ]
+        }))
+        .unwrap()
+    }
+
+    #[test]
+    fn a_followed_packet_stays_centered_where_it_is_drawn() {
+        let plan = followed_plan();
+        let size = vec2(1920.0, 1080.0);
+        for (yaw, age) in [(0.0, 0.2), (0.0, 0.7), (0.0, 1.1), (0.3, 0.9), (0.0, 3.0)] {
+            let value = |property: &str, default| match property {
+                "camera.track.request" => 1.0,
+                "camera.yaw" => yaw,
+                "camera.z" => 120.0,
+                "request.age" => age,
+                "request.flight" => 1.2,
+                _ => default,
+            };
+            let scene = Scene::sample(&plan, &value, 1.0, size);
+            let link = &scene.links["link"];
+            let head = link.path.at(psychopomp::stage::packet::travel(age, 1.2));
+            assert!(
+                head.distance(size * 0.5) < 0.5,
+                "yaw {yaw}, age {age}: the packet is drawn at {head}"
+            );
+        }
+    }
+
+    #[test]
+    fn catching_a_followed_packet_is_continuous() {
+        let plan = followed_plan();
+        let size = vec2(1920.0, 1080.0);
+        // The weight eases in while the packet flies; sample at 240 Hz.
+        let pan = |time: f32| {
+            let value = |property: &str, default| match property {
+                "camera.track.request" => psychopomp::math::smoothstep(time / 0.6),
+                "camera.x" => -200.0,
+                "request.age" => time,
+                "request.flight" => 1.2,
+                _ => default,
+            };
+            Scene::camera(&plan, &value, time, size)
+                .camera
+                .position
+                .truncate()
+        };
+        assert_eq!(pan(0.0), vec2(-200.0, 0.0), "no weight, no follow");
+        let mut previous = pan(0.0);
+        for step in 1..480 {
+            let next = pan(step as f32 / 240.0);
+            assert!(
+                next.distance(previous) < 12.0,
+                "the camera jumped {} px at step {step}",
+                next.distance(previous)
+            );
+            previous = next;
+        }
+    }
+
+    #[test]
+    fn a_turned_camera_sorts_and_focuses_by_view_depth() {
+        let plan: StagePlan = serde_json::from_value(serde_json::json!({
+            "elements": [
+                { "kind": "card", "id": "left", "at": [560, 540, 400], "size": [200, 100], "title": "left" },
+                { "kind": "card", "id": "right", "at": [1360, 540, 0], "size": [200, 100], "title": "right" }
+            ]
+        }))
+        .unwrap();
+        let size = vec2(1920.0, 1080.0);
+        let depth = |yaw: f32| {
+            let value = |property: &str, default| {
+                if property == "camera.yaw" {
+                    yaw
+                } else {
+                    default
+                }
+            };
+            let scene = Scene::sample(&plan, &value, 1.0, size);
+            (
+                scene.placements["left"].depth,
+                scene.placements["right"].depth,
+            )
+        };
+        assert_eq!(depth(0.0), (400.0, 0.0), "unturned depth is world z");
+        let (left, right) = depth(-1.2);
+        assert!(
+            left < right,
+            "swung far left, the deep left card is nearer: {left} {right}"
+        );
     }
 
     #[test]
@@ -2966,6 +5261,153 @@ mod tests {
         }
         assert_eq!([strengths[0], strengths[1], strengths[4]], [0.0; 3]);
         assert!(strengths[2] > strengths[3] && strengths[3] > 0.0);
+    }
+
+    fn effects_plan() -> StagePlan {
+        serde_json::from_value(serde_json::json!({
+            "elements": [
+                { "kind": "card", "id": "build", "at": [420, 540, 0], "size": [300, 110], "title": "build" },
+                { "kind": "orb", "id": "api", "at": [1400, 540, 0], "radius": 110 },
+                { "kind": "shield", "id": "guard", "around": "api", "radius": 190 },
+                { "kind": "card", "id": "client", "at": [1400, 940, 0], "size": [240, 90], "title": "client" },
+                { "kind": "beam", "id": "link", "from": "client", "to": "api" },
+                { "kind": "packet", "id": "req", "beam": "link" },
+                { "kind": "bolt", "id": "zap", "from": "build", "to": "guard" }
+            ]
+        }))
+        .unwrap()
+    }
+
+    #[test]
+    fn bolt_light_is_local_strobes_with_strokes_and_reaches_rest() {
+        use psychopomp::effects::lightning::{Discharge, LEADER};
+        let plan = effects_plan();
+        let size = vec2(1920.0, 1080.0);
+        let at = |age: f32| {
+            move |property: &str, default: f32| match property {
+                "zap.age" => age,
+                _ => default,
+            }
+        };
+        let strength = |age: f32| {
+            let value = at(age);
+            let scene = Scene::sample(&plan, &value, 2.0, size);
+            scene
+                .lights
+                .iter()
+                .map(|light| light.strength)
+                .fold(0.0, f32::max)
+        };
+        let discharge = Discharge::new(3, super::salt("zap"));
+        assert_eq!(strength(-1.0), 0.0, "quiet before the zap");
+        assert!(
+            strength(LEADER) > strength(LEADER - 0.02),
+            "contact outshines the leader"
+        );
+        assert!(
+            strength(LEADER) > strength(LEADER + 0.04),
+            "a stroke flashes, then dims"
+        );
+        let restrike = discharge.strike_time(1);
+        assert!(
+            strength(restrike) > strength(restrike - 0.005),
+            "a re-strike flashes again"
+        );
+        let last = discharge.strike_time(discharge.strikes - 1);
+        let ripple = last + psychopomp::effects::shield::RIPPLE;
+        assert!(
+            strength(discharge.lifetime()) > 0.0,
+            "the struck shield still flares"
+        );
+        assert_eq!(
+            strength(ripple),
+            0.0,
+            "dark once the channel and ripple cool"
+        );
+        let value = at(LEADER);
+        let scene = Scene::sample(&plan, &value, 2.0, size);
+        for light in &scene.lights {
+            assert!(light.falloff(400.0) < 1e-3, "bolt light stays local");
+        }
+        // The struck shield ripples from its contact; the packet's crossing too.
+        let guard = scene.placements["guard"];
+        assert_eq!(scene.shield_contacts("guard", guard).len(), 1);
+        let crossing = |property: &str, default| match property {
+            "req.age" => 1.1,
+            "req.flight" => 0.8,
+            _ => default,
+        };
+        let packet = Scene::sample(&plan, &crossing, 2.0, size);
+        let contacts = packet.shield_contacts("guard", packet.placements["guard"]);
+        assert_eq!(contacts.len(), 1);
+        assert!(contacts[0].strength < 1.0, "packets ripple softly");
+        assert!(
+            (contacts[0].point.distance(guard.center) - 190.0).abs() < 1.0,
+            "on the bubble"
+        );
+    }
+
+    #[test]
+    #[ignore = "requires a headless GPU; effect frames are pure functions of their clocks"]
+    fn effect_frames_are_deterministic_quiet_at_rest_and_order_free() {
+        let plan = effects_plan();
+        let mut renderer = pollster::block_on(HeadlessRenderer::new(crate::render::RenderSpec {
+            width: 1920,
+            height: 1080,
+            file_name: "effects-proof".into(),
+        }))
+        .unwrap();
+        let gpu = renderer.prepare_stage(&plan).unwrap();
+        let quiet = |property: &str, default| match property {
+            "guard.up" => 0.0,
+            _ => default,
+        };
+        let without: StagePlan = serde_json::from_value(serde_json::json!({
+            "elements": [
+                { "kind": "card", "id": "build", "at": [420, 540, 0], "size": [300, 110], "title": "build" },
+                { "kind": "orb", "id": "api", "at": [1400, 540, 0], "radius": 110 },
+                { "kind": "card", "id": "client", "at": [1400, 940, 0], "size": [240, 90], "title": "client" },
+                { "kind": "beam", "id": "link", "from": "client", "to": "api" },
+                { "kind": "packet", "id": "req", "beam": "link" }
+            ]
+        }))
+        .unwrap();
+        let bare = renderer.prepare_stage(&without).unwrap();
+        let rest = renderer.render_stage(&plan, &gpu, 2.0, quiet).unwrap();
+        assert!(
+            renderer.render_stage(&without, &bare, 2.0, quiet).unwrap() == rest,
+            "an idle bolt and a lowered shield draw nothing"
+        );
+        let draw = |renderer: &mut HeadlessRenderer, values: &[(&str, f32)]| {
+            renderer
+                .render_stage(&plan, &gpu, 2.0, |property, default| {
+                    values
+                        .iter()
+                        .find(|(name, _)| *name == property)
+                        .map_or(quiet(property, default), |(_, value)| *value)
+                })
+                .unwrap()
+        };
+        assert!(
+            draw(&mut renderer, &[("build.dissolve", 0.0)]) == rest,
+            "dissolve starts intact"
+        );
+        assert!(draw(&mut renderer, &[("build.charge", 0.0)]) == rest);
+        let strike = draw(&mut renderer, &[("zap.age", 0.09)]);
+        let burning = draw(&mut renderer, &[("build.dissolve", 0.5)]);
+        let charged = draw(&mut renderer, &[("build.charge", 1.0)]);
+        let scanning = draw(&mut renderer, &[("build.scan", 0.4)]);
+        for frame in [&strike, &burning, &charged, &scanning] {
+            assert!(*frame != rest, "every effect reaches pixels");
+        }
+        // Any order, same pixels.
+        assert!(draw(&mut renderer, &[("build.charge", 1.0)]) == charged);
+        assert!(draw(&mut renderer, &[("zap.age", 0.09)]) == strike);
+        assert!(draw(&mut renderer, &[("build.dissolve", 0.5)]) == burning);
+        assert!(
+            draw(&mut renderer, &[("zap.age", 3.0)]) == rest,
+            "the strike leaves no trace"
+        );
     }
 
     #[test]
@@ -3072,6 +5514,24 @@ mod tests {
             post(&mut renderer, "camera.quake", 2.0) != intact,
             "a quake moves the camera"
         );
+        for (channel, rest, moved) in [
+            ("camera.yaw", 0.0, 0.3),
+            ("camera.pitch", 0.0, -0.2),
+            ("camera.roll", 0.0, 0.05),
+            ("camera.zoom", 1.0, 1.3),
+            ("camera.handheld", 0.0, 1.0),
+        ] {
+            assert!(
+                post(&mut renderer, channel, rest) == intact,
+                "{channel} at rest is the identity"
+            );
+            let turned = post(&mut renderer, channel, moved);
+            assert!(turned != intact, "{channel} reaches pixels");
+            assert!(
+                post(&mut renderer, channel, moved) == turned,
+                "{channel} is deterministic"
+            );
+        }
         assert!(
             rewind(&mut renderer, 0.0) == intact,
             "rewind starts without a cut"

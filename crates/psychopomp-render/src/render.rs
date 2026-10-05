@@ -13,39 +13,60 @@ use psychopomp::code::{CodeLine, LineId, PlacedLine, StyledSpan, SyntaxStyle};
 
 mod callout;
 mod caption;
+mod changed_files;
 mod chart;
+mod chat;
 mod component_prototype;
 mod debug;
 mod fonts;
 mod grid;
 mod header;
+mod ide;
+mod image;
 mod lanes;
+mod lens;
 mod line_marks;
+mod lower_third;
 mod plot;
 mod rich_text;
 mod rolling;
 mod sequence;
 mod stage;
 mod task;
+mod terminal;
 mod text;
 mod theme;
+mod transition;
 mod tree;
 mod ui;
 mod value;
 mod venn;
 mod video;
+mod viz;
+mod window;
 mod wipe;
 use text::{PlainTextSpec, TextSprite, blend_pixel, blend_pixel_at, make_sprite, paint_rect};
 
 pub(crate) use callout::CalloutPose;
+pub(crate) use changed_files::ChangedFilesLayout;
+pub(crate) use chat::ChatGlyphs;
 pub(crate) use component_prototype::PrototypeGlyphs;
 pub use grid::{
     GridFrame, GridItemFrame, GridLabelStyle, GridLinePalette, GridTextClip, GridTextDisclosure,
 };
 pub(crate) use header::{HeaderGlyphs, header_words};
+pub use ide::{
+    CaretFrame, DiagnosticFrame, EditorAnnotations, HoverFrame, InlayFrame, SelectionFrame,
+};
+pub(crate) use image::{DecodedImage, ImagePose, decode_image};
+pub(crate) use lens::composite_lens;
+pub(crate) use lower_third::LowerThirdGlyphs;
 pub(crate) use rich_text::{RichTextGlyphs, RichTextSource, parse as parse_rich_text};
-pub(crate) use stage::{StageGpu, stage_anchor};
+#[cfg(test)]
+pub(crate) use stage::{POST_SHADER, PRIMITIVE_SHADER, SHADER_STRUCTS};
+pub(crate) use stage::{StageGpu, icon_svg, stage_anchor};
 pub use task::{BubblePose, ContentPose, TaskContentFrame, TaskVisualFrame};
+pub(crate) use terminal::TerminalNames;
 pub use theme::Theme;
 pub(crate) use tree::TreeNames;
 pub(crate) use venn::validate as validate_venn;
@@ -81,6 +102,8 @@ pub struct EditorFrame<'a> {
     pub pointer: PointerFrame,
     pub inline_reveals: &'a [InlineRevealFrame<'a>],
     pub lines: &'a [PlacedLine<'a>],
+    /// Diagnostics, Hover Cards, Inlay Hints, and Cursors.
+    pub annotations: EditorAnnotations<'a>,
 }
 
 impl EditorFrame<'_> {
@@ -504,7 +527,7 @@ impl HeadlessRenderer {
         opacity: f32,
     ) -> Vec<u8> {
         let mut pixels = vec![0_u8; self.spec.width as usize * self.spec.height as usize * 4];
-        for pixel in pixels.chunks_exact_mut(4) {
+        for pixel in pixels.as_chunks_mut::<4>().0 {
             let [r, g, b] = self.theme.background([1, 2, 4]);
             pixel.copy_from_slice(&[r, g, b, 255]);
         }
@@ -717,6 +740,7 @@ impl HeadlessRenderer {
             } else {
                 let background_frame = EditorFrame {
                     lines: &[],
+                    annotations: EditorAnnotations::default(),
                     focus_intensity: 0.,
                     token_highlight: TokenHighlight {
                         opacity: 0.,
@@ -743,7 +767,12 @@ impl HeadlessRenderer {
                 // The same WGSL recipe draws dynamic overlays, without sending
                 // unchanged chrome through the expensive optical card compositor.
                 let overlay = self.render_shapes_pass(frame, false)?;
-                for (pixel, source) in pixels.chunks_exact_mut(4).zip(overlay.chunks_exact(4)) {
+                for (pixel, source) in pixels
+                    .as_chunks_mut::<4>()
+                    .0
+                    .iter_mut()
+                    .zip(overlay.as_chunks::<4>().0)
+                {
                     if source[3] > 0 {
                         blend_pixel(pixel, [source[0], source[1], source[2], source[3]], 1.);
                     }
@@ -773,6 +802,7 @@ impl HeadlessRenderer {
             pointer: frame.pointer,
             inline_reveals: frame.inline_reveals,
             lines: frame.lines,
+            annotations: frame.annotations,
         };
         let mut flat_pixels = self.render_shapes(&flat_frame)?;
         self.composite_editor_title(&mut flat_pixels, flat_frame.panel_offset_y);
@@ -1007,6 +1037,11 @@ impl HeadlessRenderer {
         let code_bottom = panel_top + self.spec.height as f32 * 0.70;
         let code_right = self.spec.width as f32 * 0.89 - 32.0;
         self.composite_line_marks(pixels, frame, [code_top, code_bottom]);
+        let area = ide::CodeArea {
+            origin: psychopomp::math::vec2(self.spec.width as f32 * 0.145, code_top),
+            clip_y: [code_top, code_bottom],
+        };
+        self.composite_selections(pixels, frame, area);
         for placed in frame.lines {
             if placed.opacity <= 0.001 {
                 continue;
@@ -1031,6 +1066,7 @@ impl HeadlessRenderer {
                     pixels,
                     placed,
                     &reveals,
+                    frame.annotations.inlays,
                     line_x,
                     line_y,
                     code_right,
@@ -1057,6 +1093,7 @@ impl HeadlessRenderer {
                 },
             );
         }
+        self.composite_annotations(pixels, frame, area, panel_top);
         composite_sprite_rotated(
             pixels,
             self.spec.width,
@@ -1079,6 +1116,7 @@ impl HeadlessRenderer {
         pixels: &mut [u8],
         placed: &PlacedLine<'_>,
         reveals: &[InlineRevealFrame],
+        inlays: &[InlayFrame],
         x: f32,
         y: f32,
         right: f32,
@@ -1110,6 +1148,18 @@ impl HeadlessRenderer {
             let available = (right - cursor_x).max(0.0);
             let progress = progress.unwrap_or(1.0).clamp(0.0, 1.0);
             let width = sprite.advance * progress;
+            if inlays.iter().any(|inlay| {
+                inlay.line_id == placed.line.id.as_str()
+                    && (inlay.start_span, inlay.end_span) == (start, end)
+            }) {
+                self.composite_inlay_chip(
+                    pixels,
+                    psychopomp::math::vec2(cursor_x, y),
+                    width.min(available),
+                    placed.opacity * progress,
+                    clip_y,
+                );
+            }
             composite_text(
                 pixels,
                 [self.spec.width, self.spec.height],
@@ -1321,7 +1371,7 @@ fn rasterize_svg(svg: &str, width: u32, height: u32) -> Result<TextSprite> {
     );
     resvg::render(&tree, transform, &mut pixmap.as_mut());
     let mut pixels = pixmap.data().to_vec();
-    for pixel in pixels.chunks_exact_mut(4) {
+    for pixel in pixels.as_chunks_mut::<4>().0 {
         let alpha = u32::from(pixel[3]);
         if alpha > 0 {
             for channel in &mut pixel[..3] {
@@ -2282,7 +2332,7 @@ mod tests {
         );
         let alpha = |y: usize| pixels[(y * 16 + 5) * 4 + 3];
         assert_eq!([alpha(3), alpha(4), alpha(5), alpha(6)], [0, 64, 191, 255]);
-        for pixel in pixels.chunks_exact(4).filter(|p| p[3] != 0) {
+        for pixel in pixels.as_chunks::<4>().0.iter().filter(|p| p[3] != 0) {
             assert_eq!(&pixel[..3], &[255; 3]);
         }
 
@@ -2334,8 +2384,10 @@ mod tests {
             (draw([10., 3.99], 12., 0.5), draw([10., 4.], 12., 0.5)),
         ] {
             assert!(
-                a.chunks_exact(4)
-                    .zip(b.chunks_exact(4))
+                a.as_chunks::<4>()
+                    .0
+                    .iter()
+                    .zip(b.as_chunks::<4>().0)
                     .map(|(a, b)| a[3].abs_diff(b[3]))
                     .max()
                     .unwrap()
@@ -2365,9 +2417,16 @@ mod tests {
             pixels
         };
         let centroid = |pixels: &[u8]| {
-            let total = pixels.chunks_exact(4).map(|p| f64::from(p[3])).sum::<f64>();
+            let total = pixels
+                .as_chunks::<4>()
+                .0
+                .iter()
+                .map(|p| f64::from(p[3]))
+                .sum::<f64>();
             pixels
-                .chunks_exact(4)
+                .as_chunks::<4>()
+                .0
+                .iter()
                 .enumerate()
                 .map(|(index, p)| (index % 32) as f64 * f64::from(p[3]))
                 .sum::<f64>()
@@ -2400,8 +2459,10 @@ mod tests {
         for (from, to) in [(0., 0.001), (0.49, 0.51), (3.49, 3.51), (5.99, 6.01)] {
             assert!(
                 draw(from)
-                    .chunks_exact(4)
-                    .zip(draw(to).chunks_exact(4))
+                    .as_chunks::<4>()
+                    .0
+                    .iter()
+                    .zip(draw(to).as_chunks::<4>().0)
                     .all(|(a, b)| a[3].abs_diff(b[3]) <= 3),
                 "blur {from} -> {to}"
             );
@@ -2427,11 +2488,18 @@ mod tests {
                 },
             );
             let alpha = pixels
-                .chunks_exact(4)
+                .as_chunks::<4>()
+                .0
+                .iter()
                 .map(|pixel| u32::from(pixel[3]))
                 .sum::<u32>();
             assert!(alpha.abs_diff(255) <= 1, "{origin:?}: alpha={alpha}");
-            for pixel in pixels.chunks_exact(4).filter(|pixel| pixel[3] > 0) {
+            for pixel in pixels
+                .as_chunks::<4>()
+                .0
+                .iter()
+                .filter(|pixel| pixel[3] > 0)
+            {
                 assert_eq!(&pixel[..3], &[255, 32, 0]);
             }
         }
@@ -2501,9 +2569,16 @@ mod tests {
             pixels
         };
         let centroid = |pixels: &[u8]| {
-            let total = pixels.chunks_exact(4).map(|p| f64::from(p[3])).sum::<f64>();
+            let total = pixels
+                .as_chunks::<4>()
+                .0
+                .iter()
+                .map(|p| f64::from(p[3]))
+                .sum::<f64>();
             pixels
-                .chunks_exact(4)
+                .as_chunks::<4>()
+                .0
+                .iter()
                 .enumerate()
                 .map(|(i, p)| (i % 40) as f64 * f64::from(p[3]))
                 .sum::<f64>()
@@ -2571,6 +2646,7 @@ mod tests {
             },
             inline_reveals: &[],
             lines: &[],
+            annotations: Default::default(),
         };
         let hidden = can_preview_editor(&frame, [1920, 1080]);
         frame.focus_line_y = 100.;

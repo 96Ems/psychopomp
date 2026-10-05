@@ -65,13 +65,34 @@ authoring. Engineering rules are in `AGENTS.md`.
    and writes `<id>.mp3`, `<id>.words.json`, and `narration.json`. When switching
    voices or engines, rebuild the Scene Plan against the new word timings.
 
+   **Or declare the narration in the Scene Program** with `psychopomp-media`
+   (SCENE_PLANS.md, "Declare Narration And Sound"): `media.say(id, &voice, text)`,
+   `media.dialogue`, `media.sfx`, and `audio.derive(Effect::pitch(..))`, then
+   `media.finish()?`. Each line is generated once and recorded in
+   `media.lock.json`; later runs call nothing unless a declaration changed, and
+   ElevenLabs words come from its character alignment with the script's spelling.
+   Check the cost first with `PSYCHOPOMP_MEDIA=plan cargo run -p <crate>` (zero
+   API calls), time with `PSYCHOPOMP_MEDIA=draft`, and clean up with
+   `PSYCHOPOMP_MEDIA=prune`. Move a narrate.ts scene with
+   `cargo run -p psychopomp-media -- adopt scenes/<name>/narration` (no
+   regeneration). Done when a plain run reports every resource `=`.
+
 4. **Author the Scene Program** in `scenes/<name>` (add it to the workspace). Behavior
    stories are Stage films built with `StageActor` (see `flagship.rs` and
-   `stop_stage.rs`). Load the `explainer-motion` skill and apply it to every beat:
-   cards `settle_in`, beams `connect`, messages `send`, impacts `hit`; use
+   `stop_stage.rs`). Schedule the clips with `Narration::reading`, build elements
+   with `StageElement::card|orb|beam|packet|label|ring` on `StagePost::RESTRAINED`,
+   frame the film with `psychopomp::chrome` (header, chips, footer), and play
+   sounds from `psychopomp::sfx`. Load the `explainer-motion` skill and apply it
+   to every beat: cards `settle_in`, beams `connect`, messages `send`, impacts
+   `hit`, the hero `orb_in`, the fix's `rewind`; use
    `CalloutActor` to pin annotations to Stage elements or Editor code ranges and
    `RollingNumberActor` for live counters/timers; then camera moves, rewind,
-   resolution, and a `zoom` into the code.
+   resolution, and a `zoom` into the code. Reach for the visualization overlays
+   instead of hand-building them from Stage labels and rings: `ChecklistActor`
+   for checks that run and resolve, `MeterActor::countdown` for a timeout ring,
+   `BarsActor` for before/after numbers, `ConfettiActor` for a success beat, and
+   `SubtitlesPlan::from_spoken` to burn in word-timed captions
+   (`scenes/viz-components` shows all five).
    Changes are `Diff`s of `keep`, `add(step)`, and `remove(step)` lines, each step
    keyed to a phrase. Done when `cargo run -p <crate>` writes the reel and
    `cargo run --release -- plan validate <reel>` reports valid. A missing phrase panics

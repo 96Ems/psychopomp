@@ -1,5 +1,6 @@
-//! Shapes that connectors attach to, the connector itself, and points on a
-//! sphere.
+//! Shapes that connectors attach to, the connector itself, and deterministic
+//! points on 3D forms (sphere, box, grid, cylinder, torus) with a matching
+//! that pairs the points of two forms for a morph.
 use std::f32::consts::{FRAC_PI_2, PI};
 
 use super::{
@@ -158,12 +159,230 @@ pub fn fit_between_ports(bounds: Box2, ports: [Port; 2], gap: f32) -> Option<Box
     })
 }
 
-/// An outline that connectors attach to.
+/// Most vertices a [`Polygon`] keeps; a longer hull is simplified.
+pub const POLYGON_VERTICES: usize = 32;
+
+/// A convex outline around a center inside it, such as the silhouette of a
+/// projected particle form or a rotated rectangle. Vertices wind with positive
+/// signed area, so each edge's outward normal is `(e.y, -e.x)`.
 #[derive(Clone, Copy, Debug, PartialEq)]
+pub struct Polygon {
+    pub center: Vec2,
+    count: usize,
+    vertices: [Vec2; POLYGON_VERTICES],
+}
+
+impl Polygon {
+    /// The convex hull of `points`, simplified to at most
+    /// [`POLYGON_VERTICES`] by dropping the corners that matter least.
+    /// Fewer than three distinct points make a degenerate outline that acts
+    /// like its center.
+    pub fn hull(center: Vec2, points: impl IntoIterator<Item = Vec2>) -> Self {
+        let mut points = points.into_iter().collect::<Vec<_>>();
+        points.sort_by(|a, b| a.x.total_cmp(&b.x).then(a.y.total_cmp(&b.y)));
+        points.dedup();
+        // Andrew's monotone chain; collinear points are dropped.
+        let mut hull: Vec<Vec2> = Vec::with_capacity(points.len() + 1);
+        for pass in 0..2 {
+            let start = hull.len();
+            let ordered: Box<dyn Iterator<Item = &Vec2>> = if pass == 0 {
+                Box::new(points.iter())
+            } else {
+                Box::new(points.iter().rev())
+            };
+            for &point in ordered {
+                while hull.len() >= start + 2
+                    && (hull[hull.len() - 1] - hull[hull.len() - 2])
+                        .perp_dot(point - hull[hull.len() - 2])
+                        <= 1e-4
+                {
+                    hull.pop();
+                }
+                hull.push(point);
+            }
+            hull.pop();
+        }
+        // Points along a straight side (projected grid rows, box edges) only
+        // add rounding noise: drop any vertex within a hair of the chord
+        // between its neighbors, so a box's silhouette is its corners.
+        let mut index = 0;
+        while hull.len() > 3 && index < hull.len() {
+            let n = hull.len();
+            let (prev, next) = (hull[(index + n - 1) % n], hull[(index + 1) % n]);
+            let chord = next - prev;
+            let off = chord.perp_dot(hull[index] - prev).abs() / chord.length().max(1e-6);
+            if off < 0.35 {
+                hull.remove(index);
+                index = index.saturating_sub(1);
+            } else {
+                index += 1;
+            }
+        }
+        // Visvalingam: drop the vertex spanning the smallest triangle.
+        while hull.len() > POLYGON_VERTICES {
+            let n = hull.len();
+            let smallest = (0..n)
+                .min_by(|&a, &b| {
+                    let area = |i: usize| {
+                        let (prev, next) = (hull[(i + n - 1) % n], hull[(i + 1) % n]);
+                        (hull[i] - prev).perp_dot(next - prev).abs()
+                    };
+                    area(a).total_cmp(&area(b))
+                })
+                .unwrap_or(0);
+            hull.remove(smallest);
+        }
+        let mut vertices = [Vec2::ZERO; POLYGON_VERTICES];
+        let count = if hull.len() >= 3 { hull.len() } else { 0 };
+        vertices[..count].copy_from_slice(&hull[..count]);
+        Self {
+            center,
+            count,
+            vertices,
+        }
+    }
+
+    pub fn vertices(&self) -> &[Vec2] {
+        &self.vertices[..self.count]
+    }
+
+    /// The same outline grown or shrunk about its center.
+    pub fn scaled(&self, factor: f32) -> Self {
+        let mut scaled = *self;
+        for vertex in &mut scaled.vertices[..self.count] {
+            *vertex = self.center + (*vertex - self.center) * factor;
+        }
+        scaled
+    }
+
+    pub fn bounds(&self) -> Box2 {
+        self.vertices()
+            .iter()
+            .fold(Box2::from_center_size(self.center, Vec2::ZERO), |b, v| {
+                Box2 {
+                    min: b.min.min(*v),
+                    max: b.max.max(*v),
+                }
+            })
+    }
+
+    fn edge(&self, index: usize) -> (Vec2, Vec2) {
+        (
+            self.vertices[index % self.count],
+            self.vertices[(index + 1) % self.count],
+        )
+    }
+
+    fn normal(&self, index: usize) -> Vec2 {
+        let (a, b) = self.edge(index);
+        let e = b - a;
+        Vec2::new(e.y, -e.x).normalize_or(Vec2::X)
+    }
+
+    /// Signed distance from `point` to the outline: negative inside.
+    pub fn distance(&self, point: Vec2) -> f32 {
+        if self.count < 3 {
+            return point.distance(self.center);
+        }
+        let mut inside = true;
+        let mut nearest = f32::MAX;
+        for index in 0..self.count {
+            let (a, b) = self.edge(index);
+            inside &= (point - a).dot(self.normal(index)) <= 0.0;
+            nearest = nearest.min(segment_distance(point, a, b));
+        }
+        if inside { -nearest } else { nearest }
+    }
+
+    /// Where a ray from the center along `direction` leaves the outline: the
+    /// edge index and the fraction along that edge.
+    fn exit(&self, direction: Vec2) -> Option<(usize, f32)> {
+        if self.count < 3 {
+            return None;
+        }
+        // The ray leaves through the edge whose own segment it crosses; of
+        // those (two only at a vertex, within rounding), the nearest.
+        let mut best: Option<(f32, f32, usize, f32)> = None;
+        for index in 0..self.count {
+            let (a, b) = self.edge(index);
+            let e = b - a;
+            let denominator = direction.perp_dot(e);
+            if denominator.abs() < 1e-9 {
+                continue;
+            }
+            let offset = a - self.center;
+            let t = offset.perp_dot(e) / denominator;
+            let s = offset.perp_dot(direction) / denominator;
+            // How far outside the segment the crossing falls, in pixels.
+            let miss = (-s).max(s - 1.0).max(0.0) * e.length();
+            let better = best.is_none_or(|(least, nearest, ..)| {
+                miss < least - 1e-3 || (miss <= least + 1e-3 && t < nearest)
+            });
+            if t > 0.0 && better {
+                best = Some((miss, t, index, s.clamp(0.0, 1.0)));
+            }
+        }
+        best.map(|(_, _, index, s)| (index, s))
+    }
+
+    /// The outline's point in `direction` from the center.
+    pub fn along(&self, direction: Vec2) -> Vec2 {
+        match self.exit(direction.normalize_or(Vec2::X)) {
+            Some((index, s)) => {
+                let (a, b) = self.edge(index);
+                a.lerp(b, s)
+            }
+            None => self.center,
+        }
+    }
+
+    /// The port facing `target`: where the ray toward it leaves the outline,
+    /// leaving along the edge's normal, rounded over the last few pixels
+    /// before each corner, so a port slides continuously while the outline
+    /// turns.
+    pub fn port_toward(&self, target: Vec2) -> Port {
+        let direction = (target - self.center).normalize_or(Vec2::X);
+        let Some((index, s)) = self.exit(direction) else {
+            return Port {
+                point: self.center,
+                normal: direction,
+            };
+        };
+        let (a, b) = self.edge(index);
+        let length = a.distance(b);
+        let zone = (length * 0.5).clamp(1e-3, 10.0);
+        let n = self.normal(index);
+        let previous = self.normal(index + self.count - 1);
+        let next = self.normal(index + 1);
+        let from_a = s * length;
+        let from_b = (1.0 - s) * length;
+        let normal = if from_a < zone {
+            ((previous + n) * 0.5)
+                .lerp(n, super::smoothstep(from_a / zone))
+                .normalize_or(n)
+        } else if from_b < zone {
+            ((next + n) * 0.5)
+                .lerp(n, super::smoothstep(from_b / zone))
+                .normalize_or(n)
+        } else {
+            n
+        };
+        Port {
+            point: a.lerp(b, s),
+            normal,
+        }
+    }
+}
+
+/// An outline that connectors attach to. A polygon keeps its few vertices
+/// inline so outlines stay `Copy` values; the larger variant is deliberate.
+#[derive(Clone, Copy, Debug, PartialEq)]
+#[allow(clippy::large_enum_variant)]
 pub enum Shape {
     Box(Box2),
     Circle(Circle),
     Point(Vec2),
+    Polygon(Polygon),
 }
 
 impl Shape {
@@ -172,6 +391,7 @@ impl Shape {
             Self::Box(bounds) => bounds.center(),
             Self::Circle(circle) => circle.center,
             Self::Point(point) => *point,
+            Self::Polygon(polygon) => polygon.center,
         }
     }
 
@@ -184,6 +404,7 @@ impl Shape {
             }
             Self::Circle(circle) => point.distance(circle.center) - circle.radius,
             Self::Point(center) => point.distance(*center),
+            Self::Polygon(polygon) => polygon.distance(point),
         }
     }
 
@@ -212,6 +433,37 @@ impl Shape {
                 point: *point,
                 normal: direction,
             },
+            Self::Polygon(polygon) => polygon.port_toward(target),
+        }
+    }
+
+    /// Where the ray from the center toward `target` leaves the outline, with
+    /// the outward normal there: the straight-line contact for something that
+    /// strikes the shape rather than plugging into a side's middle.
+    pub fn boundary_toward(&self, target: Vec2) -> Port {
+        let center = self.center();
+        let direction = (target - center).normalize_or(Vec2::X);
+        match self {
+            Self::Box(bounds) => {
+                let extents = bounds.extents();
+                let reach = |e: f32, d: f32| {
+                    if d.abs() > 1e-6 {
+                        e / d.abs()
+                    } else {
+                        f32::MAX
+                    }
+                };
+                let (tx, ty) = (reach(extents.x, direction.x), reach(extents.y, direction.y));
+                Port {
+                    point: center + direction * tx.min(ty),
+                    normal: if tx <= ty {
+                        Vec2::new(direction.x.signum(), 0.0)
+                    } else {
+                        Vec2::new(0.0, direction.y.signum())
+                    },
+                }
+            }
+            _ => self.port_toward(target),
         }
     }
 }
@@ -250,6 +502,255 @@ pub fn fibonacci_sphere(count: u32) -> Vec<Vec3> {
         .collect()
 }
 
+/// The `index`th point of the R2 low-discrepancy sequence in the unit square:
+/// evenly spread for any count, with no lattice to alias against.
+pub fn r2(index: u32) -> Vec2 {
+    // 1 / g and 1 / g² for the plastic number g.
+    const A: [f64; 2] = [0.754_877_666_246_692_7, 0.569_840_290_998_053_3];
+    let n = f64::from(index);
+    Vec2::new(
+        (0.5 + A[0] * n).fract() as f32,
+        (0.5 + A[1] * n).fract() as f32,
+    )
+}
+
+/// `total` split in proportion to `weights` by largest remainder: the parts
+/// always sum to `total`.
+fn apportion(total: usize, weights: &[f32]) -> Vec<usize> {
+    let sum = weights.iter().sum::<f32>().max(f32::MIN_POSITIVE);
+    let exact = weights
+        .iter()
+        .map(|w| w / sum * total as f32)
+        .collect::<Vec<_>>();
+    let mut parts = exact.iter().map(|e| e.floor() as usize).collect::<Vec<_>>();
+    let mut order = (0..weights.len()).collect::<Vec<_>>();
+    order.sort_by(|&a, &b| {
+        (exact[b] - exact[b].floor())
+            .total_cmp(&(exact[a] - exact[a].floor()))
+            .then(a.cmp(&b))
+    });
+    let short = total.saturating_sub(parts.iter().sum());
+    for &index in order.iter().cycle().take(short) {
+        parts[index] += 1;
+    }
+    parts
+}
+
+/// `count` points on the surface of a box with half-size `half`: a share
+/// `edges` (0..1) of them on its twelve edges, corners first and the rest
+/// evenly spaced by length, and the remainder spread over its faces by area,
+/// just inside the edges so those read as lines.
+pub fn box_points(count: u32, half: Vec3, edges: f32) -> Vec<Vec3> {
+    let count = count as usize;
+    let on_edges = if edges <= 0.0 {
+        0
+    } else {
+        ((count as f32 * edges.min(1.0)).round() as usize).clamp(8.min(count), count)
+    };
+    let corner = |x: f32, y: f32, z: f32| Vec3::new(x * half.x, y * half.y, z * half.z);
+    let mut points = Vec::with_capacity(count);
+    let signs = [-1.0, 1.0];
+    for x in signs {
+        for y in signs {
+            for z in signs {
+                if points.len() < on_edges {
+                    points.push(corner(x, y, z));
+                }
+            }
+        }
+    }
+    let mut segments = Vec::with_capacity(12);
+    for a in signs {
+        for b in signs {
+            segments.push((corner(-1.0, a, b), corner(1.0, a, b)));
+            segments.push((corner(a, -1.0, b), corner(a, 1.0, b)));
+            segments.push((corner(a, b, -1.0), corner(a, b, 1.0)));
+        }
+    }
+    let lengths = segments
+        .iter()
+        .map(|(a, b)| a.distance(*b))
+        .collect::<Vec<_>>();
+    for ((a, b), n) in segments
+        .iter()
+        .zip(apportion(on_edges - points.len(), &lengths))
+    {
+        points.extend((1..=n).map(|k| a.lerp(*b, k as f32 / (n + 1) as f32)));
+    }
+    // Faces: center, and the two half-axes spanning it.
+    let faces = [
+        (Vec3::X * half.x, Vec3::Y * half.y, Vec3::Z * half.z),
+        (-Vec3::X * half.x, Vec3::Z * half.z, Vec3::Y * half.y),
+        (Vec3::Y * half.y, Vec3::Z * half.z, Vec3::X * half.x),
+        (-Vec3::Y * half.y, Vec3::X * half.x, Vec3::Z * half.z),
+        (Vec3::Z * half.z, Vec3::X * half.x, Vec3::Y * half.y),
+        (-Vec3::Z * half.z, Vec3::Y * half.y, Vec3::X * half.x),
+    ];
+    let areas = faces
+        .iter()
+        .map(|(_, u, v)| u.length() * v.length())
+        .collect::<Vec<_>>();
+    let inset = if on_edges > 0 { 0.88 } else { 1.0 };
+    for (face, ((center, u, v), n)) in faces
+        .iter()
+        .zip(apportion(count - points.len(), &areas))
+        .enumerate()
+    {
+        points.extend((0..n).map(|k| {
+            let s = r2(k as u32 + face as u32 * 131) * 2.0 - Vec2::ONE;
+            *center + *u * (s.x * inset) + *v * (s.y * inset)
+        }));
+    }
+    points
+}
+
+/// The most even grid of exactly `count` cells over a box of `size`: one
+/// count per axis, at least two each, whose cells are closest to cubes.
+/// `None` when `count` has no such factorization (a prime, say).
+pub fn grid_dims<const N: usize>(count: u32, size: [f32; N]) -> Option<[u32; N]> {
+    fn search<const N: usize>(
+        axis: usize,
+        remaining: u32,
+        dims: &mut [u32; N],
+        size: &[f32; N],
+        best: &mut Option<(f32, [u32; N])>,
+    ) {
+        if axis == N - 1 {
+            if remaining < 2 {
+                return;
+            }
+            dims[axis] = remaining;
+            // Spacing per axis; a perfect grid has them all equal.
+            let spacing = (0..N)
+                .map(|a| (size[a].max(1e-3) / (dims[a] - 1) as f32).ln())
+                .collect::<Vec<_>>();
+            let mean = spacing.iter().sum::<f32>() / N as f32;
+            let error = spacing.iter().map(|s| (s - mean).powi(2)).sum::<f32>();
+            if best.is_none_or(|(e, _)| error < e - 1e-6) {
+                *best = Some((error, *dims));
+            }
+            return;
+        }
+        for d in 2..=remaining / 2 {
+            if remaining.is_multiple_of(d) {
+                dims[axis] = d;
+                search(axis + 1, remaining / d, dims, size, best);
+            }
+        }
+    }
+    let mut best = None;
+    search(0, count, &mut [0; N], &size, &mut best);
+    best.map(|(_, dims)| dims)
+}
+
+/// A grid of exactly `count` points filling a box of `size` (any axis may be
+/// zero for a flat plane), row-major from the top left. `None` when `count`
+/// does not factor into a grid with at least two points per axis.
+pub fn grid_points<const N: usize>(count: u32, size: [f32; N]) -> Option<Vec<Vec3>> {
+    let dims = grid_dims(count, size)?;
+    let mut points = Vec::with_capacity(count as usize);
+    for index in 0..count {
+        let mut rest = index;
+        let mut point = Vec3::ZERO;
+        for axis in 0..N {
+            let cell = rest % dims[axis];
+            rest /= dims[axis];
+            point[axis] = size[axis] * (cell as f32 / (dims[axis] - 1) as f32 - 0.5);
+        }
+        points.push(point);
+    }
+    Some(points)
+}
+
+/// `count` points on a capped-open cylinder about the y axis: a share on its
+/// two rims, the rest on its side in a golden-angle spiral.
+pub fn cylinder_points(count: u32, radius: f32, height: f32) -> Vec<Vec3> {
+    let count = count as usize;
+    let rim = (count / 6).min(count / 2);
+    let side = count - 2 * rim;
+    let mut points = Vec::with_capacity(count);
+    for y in [-0.5, 0.5] {
+        points.extend((0..rim).map(|k| {
+            let angle = std::f32::consts::TAU * (k as f32 + 0.25 * y) / rim as f32;
+            Vec3::new(angle.cos() * radius, y * height, angle.sin() * radius)
+        }));
+    }
+    points.extend((0..side).map(|i| {
+        let angle = i as f32 * 2.399_963_1;
+        let y = height * (0.5 - (i as f32 + 0.5) / side as f32);
+        Vec3::new(angle.cos() * radius, y, angle.sin() * radius)
+    }));
+    points
+}
+
+/// `count` points spread evenly by area over a torus lying in the x-z plane:
+/// `radius` to the middle of its tube, `tube` the tube's radius.
+pub fn torus_points(count: u32, radius: f32, tube: f32) -> Vec<Vec3> {
+    let tube = tube.min(radius * 0.95);
+    (0..count)
+        .map(|i| {
+            // Around the tube, by the inverse of the area's distribution
+            // (R + r cos v) dv, so the outside is not sparser than the inside.
+            let target = std::f32::consts::TAU * radius * (i as f32 + 0.5) / count as f32;
+            let mut v = target / radius;
+            for _ in 0..8 {
+                v -= (radius * v + tube * v.sin() - target) / (radius + tube * v.cos());
+            }
+            let u = std::f32::consts::TAU * (i as f32 * 0.618_034).fract();
+            let ring = radius + tube * v.cos();
+            Vec3::new(ring * u.cos(), tube * v.sin(), ring * u.sin())
+        })
+        .collect()
+}
+
+/// `points` reordered so that point `i` lies near `reference[i]`: each
+/// reference point, outermost first, claims its nearest unclaimed point, then
+/// pairwise swaps shorten the total squared travel. Morphing point `i` from
+/// the reference to the result then moves every point a short way.
+pub fn match_points(reference: &[Vec3], mut points: Vec<Vec3>) -> Vec<Vec3> {
+    let n = reference.len().min(points.len());
+    points.truncate(n);
+    let centroid = reference[..n].iter().sum::<Vec3>() / n.max(1) as f32;
+    let mut order = (0..n).collect::<Vec<_>>();
+    order.sort_by(|&a, &b| {
+        reference[b]
+            .distance_squared(centroid)
+            .total_cmp(&reference[a].distance_squared(centroid))
+            .then(a.cmp(&b))
+    });
+    let mut claimed = vec![false; n];
+    let mut assigned = vec![0; n];
+    for &i in &order {
+        let mut nearest = (f32::MAX, 0);
+        for (j, point) in points.iter().enumerate() {
+            let distance = reference[i].distance_squared(*point);
+            if !claimed[j] && distance < nearest.0 {
+                nearest = (distance, j);
+            }
+        }
+        claimed[nearest.1] = true;
+        assigned[i] = nearest.1;
+    }
+    for _ in 0..6 {
+        let mut improved = false;
+        for i in 0..n {
+            for j in i + 1..n {
+                let (a, b) = (points[assigned[i]], points[assigned[j]]);
+                let now = reference[i].distance_squared(a) + reference[j].distance_squared(b);
+                let swapped = reference[i].distance_squared(b) + reference[j].distance_squared(a);
+                if swapped < now - 1e-3 {
+                    assigned.swap(i, j);
+                    improved = true;
+                }
+            }
+        }
+        if !improved {
+            break;
+        }
+    }
+    assigned.into_iter().map(|j| points[j]).collect()
+}
+
 /// Distance from `point` to the segment from `a` to `b`: the field of a
 /// stroked line, such as a chevron, whose coverage is `width / 2 - distance`.
 pub fn segment_distance(point: Vec2, a: Vec2, b: Vec2) -> f32 {
@@ -258,10 +759,76 @@ pub fn segment_distance(point: Vec2, a: Vec2, b: Vec2) -> f32 {
     point.distance(a + along * t)
 }
 
+/// A box with rounded corners, as a signed-distance field: a circle when it is
+/// square with `corner` at half its side, a capsule when `corner` is half its
+/// shorter side.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct RoundedBox {
+    pub center: Vec2,
+    /// Half the size.
+    pub half: Vec2,
+    pub corner: f32,
+}
+
+impl RoundedBox {
+    /// `corner` held between square and fully round.
+    pub fn new(center: Vec2, half: Vec2, corner: f32) -> Self {
+        let half = half.max(Vec2::ZERO);
+        Self {
+            center,
+            half,
+            corner: corner.clamp(0.0, half.min_element()),
+        }
+    }
+
+    /// Signed distance from `point` to the outline: negative inside.
+    pub fn distance(&self, point: Vec2) -> f32 {
+        let q = (point - self.center).abs() - self.half + self.corner;
+        q.max(Vec2::ZERO).length() + q.x.max(q.y).min(0.0) - self.corner
+    }
+
+    /// The outward unit normal of the nearest outline point: the distance
+    /// field's gradient, radial around a rounded corner and straight out of a
+    /// side. Inside, the deepest side wins, so it is constant along each side.
+    pub fn normal(&self, point: Vec2) -> Vec2 {
+        let offset = point - self.center;
+        let q = offset.abs() - self.half + self.corner;
+        let sign = Vec2::new(
+            if offset.x < 0.0 { -1.0 } else { 1.0 },
+            if offset.y < 0.0 { -1.0 } else { 1.0 },
+        );
+        let local = if q.x > 0.0 && q.y > 0.0 {
+            q.normalize()
+        } else if q.x > q.y {
+            Vec2::X
+        } else {
+            Vec2::Y
+        };
+        local * sign
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::math::vec2;
+
+    #[test]
+    fn boundary_rays_leave_a_box_where_the_line_to_the_target_does() {
+        let card = Shape::Box(Box2::from_center_size(vec2(0.0, 0.0), vec2(200.0, 100.0)));
+        let side = card.boundary_toward(vec2(500.0, 100.0));
+        assert_eq!((side.point, side.normal), (vec2(100.0, 20.0), Vec2::X));
+        let top = card.boundary_toward(vec2(30.0, -400.0));
+        assert!(top.point.abs_diff_eq(vec2(3.75, -50.0), 1e-4) && top.normal == Vec2::NEG_Y);
+        let orb = Shape::Circle(Circle {
+            center: Vec2::ZERO,
+            radius: 50.0,
+        });
+        assert_eq!(
+            orb.boundary_toward(vec2(0.0, 90.0)),
+            orb.port_toward(vec2(0.0, 90.0))
+        );
+    }
 
     #[test]
     fn measured_boxes_stop_before_either_port_without_changing_size() {
@@ -466,11 +1033,190 @@ mod tests {
     }
 
     #[test]
+    fn box_points_put_corners_and_edges_first_and_stay_on_the_surface() {
+        let half = Vec3::new(120.0, 60.0, 90.0);
+        let points = box_points(500, half, 0.5);
+        assert_eq!(points.len(), 500);
+        assert_eq!(points, box_points(500, half, 0.5), "deterministic");
+        let on_surface = |p: &Vec3| {
+            let q = p.abs() / half;
+            (q.max_element() - 1.0).abs() < 1e-4 && q.cmple(Vec3::splat(1.0 + 1e-4)).all()
+        };
+        assert!(points.iter().all(on_surface));
+        // The first eight are the corners; edge points touch two faces.
+        assert!(points[..8].iter().all(|p| (p.abs() - half).length() < 1e-4));
+        let on_edge = |p: &&Vec3| {
+            let q = p.abs() / half;
+            [q.x, q.y, q.z]
+                .iter()
+                .filter(|v| (**v - 1.0).abs() < 1e-4)
+                .count()
+                >= 2
+        };
+        assert_eq!(points.iter().filter(on_edge).count(), 250);
+        assert_eq!(box_points(200, half, 0.0).iter().filter(on_edge).count(), 0);
+        assert_eq!(box_points(5, half, 1.0).len(), 5);
+    }
+
+    #[test]
+    fn grids_factor_the_count_exactly_and_prefer_square_cells() {
+        assert_eq!(grid_dims(720, [480.0, 300.0]), Some([36, 20]));
+        assert_eq!(grid_dims(1000, [200.0, 200.0, 200.0]), Some([10, 10, 10]));
+        assert_eq!(grid_dims(13, [100.0, 100.0]), None, "a prime has no grid");
+        let plane = grid_points(12, [300.0, 200.0]).unwrap();
+        assert_eq!(plane.len(), 12);
+        assert_eq!(
+            plane[0],
+            Vec3::new(-150.0, -100.0, 0.0),
+            "from the top left"
+        );
+        assert_eq!(plane[1].y, plane[0].y, "rows first");
+        assert_eq!(plane[11], Vec3::new(150.0, 100.0, 0.0));
+        let lattice = grid_points(27, [90.0, 90.0, 90.0]).unwrap();
+        assert!(lattice.iter().all(|p| p.abs().max_element() <= 45.0));
+        assert!(lattice.contains(&Vec3::ZERO));
+    }
+
+    #[test]
+    fn cylinders_and_tori_keep_their_counts_and_bounds() {
+        let can = cylinder_points(300, 80.0, 200.0);
+        assert_eq!(can.len(), 300);
+        assert!(
+            can.iter()
+                .all(|p| { (p.x.hypot(p.z) - 80.0).abs() < 1e-3 && p.y.abs() <= 100.0 + 1e-3 })
+        );
+        let ring = torus_points(400, 150.0, 40.0);
+        assert_eq!(ring.len(), 400);
+        assert_eq!(ring, torus_points(400, 150.0, 40.0));
+        for p in &ring {
+            let along = p.x.hypot(p.z) - 150.0;
+            assert!((along.hypot(p.y) - 40.0).abs() < 1e-2, "on the tube");
+        }
+        // Area-even: the outer half of the tube holds more points than the inner.
+        let outer = ring.iter().filter(|p| p.x.hypot(p.z) > 150.0).count();
+        assert!(outer > 200 && outer < 260, "{outer}");
+    }
+
+    #[test]
+    fn matching_pairs_nearby_points_and_keeps_every_point() {
+        let sphere = fibonacci_sphere(160)
+            .into_iter()
+            .map(|p| p * 100.0)
+            .collect::<Vec<_>>();
+        let cube = box_points(160, Vec3::splat(80.0), 0.5);
+        let matched = match_points(&sphere, cube.clone());
+        let sorted = |mut v: Vec<Vec3>| {
+            v.sort_by(|a, b| {
+                a.x.total_cmp(&b.x)
+                    .then(a.y.total_cmp(&b.y))
+                    .then(a.z.total_cmp(&b.z))
+            });
+            v
+        };
+        assert_eq!(
+            sorted(matched.clone()),
+            sorted(cube.clone()),
+            "a permutation"
+        );
+        let travel = |pairs: &[Vec3]| {
+            sphere
+                .iter()
+                .zip(pairs)
+                .map(|(a, b)| a.distance(*b))
+                .sum::<f32>()
+                / 160.0
+        };
+        assert!(
+            travel(&matched) < 0.5 * travel(&cube),
+            "{} vs {}",
+            travel(&matched),
+            travel(&cube)
+        );
+        assert_eq!(
+            match_points(&sphere, sphere.clone()),
+            sphere,
+            "identity stays"
+        );
+    }
+
+    #[test]
+    fn hulls_simplify_and_attach_ports_continuously() {
+        let square = Polygon::hull(
+            Vec2::ZERO,
+            (0..=10).flat_map(|i| {
+                let t = i as f32 * 20.0 - 100.0;
+                [
+                    vec2(t, -50.0),
+                    vec2(t, 50.0),
+                    vec2(-100.0, t * 0.5),
+                    vec2(100.0, t * 0.5),
+                ]
+            }),
+        );
+        assert_eq!(square.vertices().len(), 4, "collinear points merge");
+        assert_eq!(
+            square.bounds(),
+            Box2::from_center_size(Vec2::ZERO, vec2(200.0, 100.0))
+        );
+        let right = square.port_toward(vec2(900.0, 0.0));
+        assert_eq!((right.point, right.normal), (vec2(100.0, 0.0), Vec2::X));
+        assert_eq!(square.distance(vec2(150.0, 0.0)), 50.0);
+        assert_eq!(square.distance(Vec2::ZERO), -50.0);
+        assert_eq!(Shape::Polygon(square).center(), Vec2::ZERO);
+        // Sweeping the target around never makes the port jump.
+        let mut last = square.port_toward(vec2(500.0, 0.0));
+        for step in 1..=720 {
+            let angle = step as f32 / 720.0 * std::f32::consts::TAU;
+            let port = square.port_toward(vec2(angle.cos(), angle.sin()) * 500.0);
+            assert!(port.point.distance(last.point) < 3.0);
+            assert!(port.normal.dot(last.normal) > 0.9);
+            last = port;
+        }
+        let circle = Polygon::hull(
+            vec2(10.0, 10.0),
+            fibonacci_sphere(400)
+                .into_iter()
+                .map(|p| vec2(10.0, 10.0) + vec2(p.x, p.y) * 80.0),
+        );
+        assert_eq!(circle.vertices().len(), POLYGON_VERTICES);
+        assert!((circle.along(Vec2::X).x - 90.0).abs() < 1.0);
+        assert!(circle.scaled(0.5).along(Vec2::X).x < 51.0);
+        let degenerate = Polygon::hull(Vec2::ZERO, [vec2(-5.0, 0.0), vec2(5.0, 0.0)]);
+        assert_eq!(degenerate.port_toward(vec2(9.0, 0.0)).point, Vec2::ZERO);
+    }
+
+    #[test]
     fn sphere_points_are_unit_and_deterministic() {
         let points = fibonacci_sphere(64);
         assert_eq!(points.len(), 64);
         assert!(points.iter().all(|p| (p.length() - 1.0).abs() < 1e-4));
         assert_eq!(points[0].y, 1.0);
         assert_eq!(points, fibonacci_sphere(64));
+    }
+
+    #[test]
+    fn rounded_boxes_span_circles_capsules_and_boxes() {
+        let circle = RoundedBox::new(vec2(100.0, 100.0), vec2(50.0, 50.0), 80.0);
+        assert_eq!(circle.corner, 50.0, "the corner never exceeds round");
+        for angle in [0.0_f32, 0.7, 2.0, 4.0] {
+            let at = vec2(100.0, 100.0) + Vec2::from_angle(angle) * 60.0;
+            assert!((circle.distance(at) - 10.0).abs() < 1e-3);
+            assert!(circle.normal(at).abs_diff_eq(Vec2::from_angle(angle), 1e-4));
+        }
+        let capsule = RoundedBox::new(Vec2::ZERO, vec2(200.0, 40.0), 40.0);
+        assert_eq!(capsule.distance(vec2(0.0, -40.0)), 0.0);
+        assert_eq!(capsule.distance(vec2(0.0, -30.0)), -10.0);
+        assert_eq!(capsule.normal(vec2(30.0, -30.0)), -Vec2::Y);
+        assert!(
+            capsule
+                .normal(vec2(-170.0, 5.0))
+                .abs_diff_eq(vec2(-10.0, 5.0).normalize(), 1e-5),
+            "radial around the cap"
+        );
+        assert!((capsule.distance(vec2(240.0, 0.0)) - 40.0).abs() < 1e-4);
+        let card = RoundedBox::new(Vec2::ZERO, vec2(100.0, 40.0), 10.0);
+        assert_eq!(card.normal(vec2(-95.0, 0.0)), -Vec2::X);
+        let square = RoundedBox::new(Vec2::ZERO, vec2(10.0, 10.0), 0.0);
+        assert_eq!(square.distance(vec2(13.0, 14.0)), 5.0);
     }
 }

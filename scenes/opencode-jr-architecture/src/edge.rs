@@ -2,17 +2,16 @@
 //! mailbox, and only then does Slack get its 200. A redelivery dedupes.
 use anyhow::{Context, Result};
 use psychopomp::{
+    author::PlanTime,
     caption::CaptionAlign,
     math::{Vec2, Vec3, vec2},
     plan::ScenePlan,
-    stage::{Camera, StagePlan},
+    sfx,
+    stage::{Camera, StageElement, StagePlan, StagePost, reply_after},
     tone::Tone,
 };
 
-use crate::{
-    CONFIRM, Film, Narration, SUCCESS, arrive, beam, begin, card, chip, footer, header, label,
-    packet, post, seconds, send, sound, status,
-};
+use crate::{Film, Narration, arrive, begin, chip, footer, header, seconds, send, status};
 
 const SLACK: [f32; 3] = [330.0, 440.0, 0.0];
 const WORKER: [f32; 3] = [960.0, 440.0, 0.0];
@@ -24,57 +23,33 @@ const CHECKS_X: f32 = 830.0;
 
 fn stage() -> StagePlan {
     let check = |id: &str, y: f32, mark: (&str, Tone), text: &str| {
-        label(
-            id,
-            [CHECKS_X, y, 0.0],
-            21.0,
-            CaptionAlign::Left,
-            &[mark, (text, Tone::Muted)],
-        )
+        StageElement::label(id, [CHECKS_X, y, 0.0], 21.0, &[mark, (text, Tone::Muted)])
+            .align(CaptionAlign::Left)
     };
     StagePlan {
-        post: post(),
+        post: StagePost::RESTRAINED,
         elements: vec![
-            card(
-                "slack",
-                SLACK,
-                [280.0, 120.0],
-                "slack",
-                &[
-                    ("events api", Tone::Muted),
-                    ("waiting for 200", Tone::Plain),
-                    ("200 · done", Tone::Success),
-                    ("retrying", Tone::Warning),
-                ],
-                Tone::Plain,
-            ),
-            card(
-                "worker",
-                WORKER,
-                WORKER_SIZE,
-                "worker",
-                &[
+            StageElement::card("slack", SLACK, [280.0, 120.0], "slack").statuses(&[
+                ("events api", Tone::Muted),
+                ("waiting for 200", Tone::Plain),
+                ("200 · done", Tone::Success),
+                ("retrying", Tone::Warning),
+            ]),
+            StageElement::card("worker", WORKER, WORKER_SIZE, "worker")
+                .statuses(&[
                     ("POST /slack/events", Tone::Muted),
                     ("checking", Tone::Plain),
                     ("enqueueing", Tone::Plain),
                     ("200 sent", Tone::Success),
-                ],
-                Tone::Request,
-            ),
-            card(
-                "session",
-                SESSION,
-                [320.0, 124.0],
-                "SessionDO",
-                &[
-                    ("mailbox · empty", Tone::Muted),
-                    ("mailbox · 1 event", Tone::Plain),
-                    ("same ts · deduped", Tone::Warning),
-                ],
-                Tone::Plain,
-            ),
-            beam("in", "slack", "worker", Tone::Request),
-            beam("enq", "worker", "session", Tone::Plain),
+                ])
+                .tone(Tone::Request),
+            StageElement::card("session", SESSION, [320.0, 124.0], "SessionDO").statuses(&[
+                ("mailbox · empty", Tone::Muted),
+                ("mailbox · 1 event", Tone::Plain),
+                ("same ts · deduped", Tone::Warning),
+            ]),
+            StageElement::beam("in", "slack", "worker").tone(Tone::Request),
+            StageElement::beam("enq", "worker", "session"),
             check(
                 "signature",
                 570.0,
@@ -95,43 +70,51 @@ fn stage() -> StagePlan {
                 "top-level chatter ignored",
             ),
             check("actor", 730.0, ("✓ ", Tone::Success), "actor checked"),
-            label(
+            StageElement::label(
                 "sqlite",
                 [SESSION[0], 545.0, 0.0],
                 20.0,
-                CaptionAlign::Center,
                 &[("written to sqlite", Tone::Success)],
             ),
-            label(
+            StageElement::label(
                 "dedupe",
                 [SESSION[0], 585.0, 0.0],
                 20.0,
-                CaptionAlign::Center,
                 &[("keyed by message ts", Tone::Muted)],
             ),
-            packet("event", "in", false, "event", Tone::Request),
-            packet("enqueue", "enq", false, "enqueue", Tone::Request),
-            packet("commit", "enq", true, "committed", Tone::Success),
-            packet("ok", "in", true, "200", Tone::Success),
-            packet("again", "in", false, "same event", Tone::Warning),
-            packet("enqueue-2", "enq", false, "enqueue", Tone::Warning),
-            packet("ok-2", "in", true, "200", Tone::Success),
+            StageElement::packet("event", "in")
+                .labeled("event")
+                .tone(Tone::Request),
+            StageElement::packet("enqueue", "enq")
+                .labeled("enqueue")
+                .tone(Tone::Request),
+            StageElement::packet("commit", "enq")
+                .reversed()
+                .labeled("committed")
+                .tone(Tone::Success),
+            StageElement::packet("ok", "in")
+                .reversed()
+                .labeled("200")
+                .tone(Tone::Success),
+            StageElement::packet("again", "in")
+                .labeled("same event")
+                .tone(Tone::Warning),
+            StageElement::packet("enqueue-2", "enq")
+                .labeled("enqueue")
+                .tone(Tone::Warning),
+            StageElement::packet("ok-2", "in")
+                .reversed()
+                .labeled("200")
+                .tone(Tone::Success),
         ],
     }
 }
 
 /// The Worker card on screen once the closing camera settles.
 fn worker_rect() -> [f32; 4] {
-    let camera = Camera {
-        position: Vec3::from(CLOSING_CAMERA),
-        size: vec2(1920.0, 1080.0),
-    };
-    let (center, scale) = camera
-        .project(Vec3::from(WORKER))
-        .expect("the worker is in front of the camera");
-    let size = Vec2::from(WORKER_SIZE) * scale;
-    let corner = center - size * 0.5;
-    [corner.x, corner.y, size.x, size.y]
+    Camera::at(Vec3::from(CLOSING_CAMERA), vec2(1920.0, 1080.0))
+        .project_rect(Vec3::from(WORKER), Vec2::from(WORKER_SIZE))
+        .expect("the worker is in front of the camera")
 }
 
 pub fn film(narration: &Narration) -> Result<(ScenePlan, [f32; 4])> {
@@ -164,7 +147,7 @@ pub fn film(narration: &Narration) -> Result<(ScenePlan, [f32; 4])> {
     ];
     for (index, (id, at)) in checks.into_iter().enumerate() {
         s.type_in(sc, id, at, 48.0);
-        sc.media(sound(&format!("check-{id}"), crate::TICK, at, -24.0));
+        sfx::TICK.play(sc, format!("check-{id}"), at, -24.0);
         if index == 0 {
             s.to(sc, "camera.focus", at, 0.0, 0.8);
         }
@@ -185,11 +168,11 @@ pub fn film(narration: &Narration) -> Result<(ScenePlan, [f32; 4])> {
     let receipt_at = v.at("get its");
     status(s, sc, "worker", receipt_at, 3);
     s.to(sc, "camera.x", receipt_at, -40.0, 1.6);
-    let receipt = send(s, sc, "ok", receipt_at.max(back + seconds(0.4)), 0.8);
+    let receipt = send(s, sc, "ok", receipt_at.not_before(back + seconds(0.4)), 0.8);
     s.hit(sc, "slack.flash", receipt, 0.6, 0.0);
     s.clock(sc, "slack.mark", receipt);
     status(s, sc, "slack", receipt, 2);
-    sc.media(sound("receipt", SUCCESS, receipt, -12.0));
+    sfx::SUCCESS.play(sc, "receipt", receipt, -12.0);
     let mut receipt_footer = footer(
         sc,
         "footer-receipt",
@@ -218,11 +201,11 @@ pub fn film(narration: &Narration) -> Result<(ScenePlan, [f32; 4])> {
     }
     let again = send(s, sc, "again", retry, 0.75);
     s.land(sc, "worker", again);
-    let duplicate = send(s, sc, "enqueue-2", again + seconds(0.42), 0.75);
+    let duplicate = send(s, sc, "enqueue-2", reply_after(again), 0.75);
     status(s, sc, "session", duplicate, 2);
     s.hit(sc, "session.flash", duplicate, 0.4, 0.0);
-    sc.media(sound("dedupe", CONFIRM, duplicate, -16.0));
-    let dedupe = v.at("by message timestamp").max(duplicate);
+    sfx::CONFIRM.play(sc, "dedupe", duplicate, -16.0);
+    let dedupe = v.at("by message timestamp").not_before(duplicate);
     s.type_in(sc, "dedupe", dedupe, 40.0);
     let answered = send(s, sc, "ok-2", duplicate + seconds(0.5), 0.75);
     s.hit(sc, "slack.flash", answered, 0.5, 0.0);

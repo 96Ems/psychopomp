@@ -7,8 +7,9 @@ use std::{
 
 use anyhow::{Context, Result, bail};
 use psychopomp::{
+    anchor::{AnchorPlan, AnchorTarget},
     composition::{Asset, Duration, MediaPlacement, MediaRole, Time, TimeRange},
-    math::shapes::Box2,
+    math::{Vec2, shapes::Box2},
     plan::{
         DeckPlan, MediaKindPlan, MediaRolePlan, ReadPlanError, ReelPlan, ScalarPlan, ScenePlan,
         TargetComponentPlan,
@@ -24,16 +25,23 @@ use crate::{
     render::{HeadlessRenderer, RenderSpec, Theme},
 };
 
+mod anchor;
 mod attachments;
 mod callout;
 mod caption;
+mod changed_files;
+mod chat;
 mod component_prototype;
 pub(crate) mod delivery;
 mod editor;
 mod generated;
 mod grid;
 mod header;
+mod ide;
+mod image;
 mod lanes;
+mod lens;
+mod lower_third;
 mod plot;
 mod preflight;
 mod presentation;
@@ -48,10 +56,12 @@ mod stability_tests;
 mod stage;
 mod still;
 mod task;
+mod terminal;
 mod tree;
 mod value;
 mod venn;
 mod video;
+mod viz;
 
 use editor::PreparedEditor;
 
@@ -448,8 +458,15 @@ struct PreparedPlan {
     plots: Vec<plot::PreparedPlot>,
     lanes: Vec<lanes::PreparedLanes>,
     callouts: Vec<callout::PreparedCallout>,
+    lenses: Vec<lens::PreparedLens>,
     headers: Vec<header::PreparedHeader>,
     videos: Vec<video::PreparedVideo>,
+    terminals: Vec<terminal::PreparedTerminal>,
+    chats: Vec<chat::PreparedChat>,
+    changed_files: Vec<changed_files::PreparedChangedFiles>,
+    lower_thirds: Vec<lower_third::PreparedLowerThird>,
+    viz: viz::PreparedViz,
+    images: Vec<image::PreparedImage>,
 }
 
 // A prepared scene exposes a read-only view of its compiled data. There is no
@@ -467,7 +484,8 @@ struct VisualSampleKey {
     states: Vec<Value>,
     video_frames: Vec<u64>,
     ambient_time: Option<u64>,
-    /// Stage-pinned callout anchors, which move with the camera.
+    /// Stage-pinned callout and lens anchors and pinned overlay origins, which
+    /// move with the camera.
     anchors: Vec<[u32; 2]>,
 }
 
@@ -521,6 +539,13 @@ impl PreparedPlan {
             lanes,
             videos,
             callouts,
+            terminals,
+            chats,
+            changed_files,
+            lower_thirds,
+            viz,
+            images,
+            lenses,
         } = input;
         let components = component_prototype::PreparedComponents::prepare_inputs(
             &mut plan, components, renderer,
@@ -560,11 +585,28 @@ impl PreparedPlan {
             .into_iter()
             .map(|(id, recipe)| header::PreparedHeader::from_recipe(id, recipe, renderer))
             .collect::<Result<Vec<_>>>()?;
+        let mut sequences = sequences;
+        for sequence in &mut sequences {
+            sequence.measure(renderer);
+        }
         let rolling = rolling
             .into_iter()
             .map(|input| input.prepare(renderer))
             .collect();
         let videos = videos
+            .into_iter()
+            .map(|input| input.open(base))
+            .collect::<Result<Vec<_>>>()?;
+        let chats = chats
+            .into_iter()
+            .map(|input| input.prepare(renderer))
+            .collect();
+        let changed_files = changed_files
+            .into_iter()
+            .map(|input| input.prepare(renderer))
+            .collect();
+        let viz = viz.prepare(renderer);
+        let images = images
             .into_iter()
             .map(|input| input.open(base))
             .collect::<Result<Vec<_>>>()?;
@@ -597,8 +639,15 @@ impl PreparedPlan {
             plots,
             lanes,
             callouts,
+            lenses,
             headers,
             videos,
+            terminals,
+            chats,
+            changed_files,
+            lower_thirds,
+            viz,
+            images,
         })
     }
 }
@@ -768,13 +817,39 @@ impl PreparedPlan {
         let stage = matches!(&self.root, PreparedRoot::Stage(_));
         key.ambient_time = (stage
             || self.rolling_moves(time)
+            || self.viz.moving(time)
             || self.running_properties().iter().any(|property| {
                 timeline
                     .sample_at(property, time)
                     .is_some_and(|state| state.position > 0.001)
             }))
         .then_some(time.to_bits());
+        self.key_caret_blinks(&mut key, time, timeline);
         Ok(key)
+    }
+
+    /// A caret's blink clock always runs, but its pixels change only while the
+    /// blink fades: key the blink's opacity instead, so samples of a steady
+    /// caret merge.
+    fn key_caret_blinks(&self, key: &mut VisualSampleKey, time: f64, timeline: &Timeline) {
+        let Some(editor) = self.editor() else {
+            return;
+        };
+        for actor in editor.cursor_ids() {
+            let Some(index) = self
+                .plan
+                .continuous_channels
+                .iter()
+                .position(|c| c.actor_id == actor && c.property == "blink")
+            else {
+                continue;
+            };
+            let clock = self
+                .property(actor, "blink")
+                .and_then(|property| timeline.sample_at(property, time))
+                .map_or(-1.0, |state| state.position);
+            key.motion[index] = [psychopomp::ide::caret_blink(clock).to_bits(), 0, 0, 0];
+        }
     }
 
     fn running_properties(&self) -> Vec<PropertyId> {
@@ -808,6 +883,9 @@ impl PreparedPlan {
         exposure: &[(f64, f32)],
     ) -> Result<Vec<u8>> {
         let PreparedRoot::Stage(stage) = &self.root else {
+            if !self.lenses.is_empty() && self.texts.is_empty() && self.tasks.is_empty() {
+                return self.render_lensed_exposure(renderer, exposure);
+            }
             return crate::exposure::accumulate(renderer, exposure, |renderer, time| {
                 self.render_sample(renderer, time)
             });
@@ -821,7 +899,7 @@ impl PreparedPlan {
         let overlays = crate::exposure::merge_equal_samples(exposure.iter().copied(), |time| {
             self.overlay_key(time, stage.id(), size)
         })?;
-        if !self.only_callouts_differ(&overlays, stage.id())? {
+        if !self.only_callouts_differ(&overlays, stage.id(), size)? {
             return crate::exposure::accumulate(renderer, &overlays, |renderer, time| {
                 let mut pixels = base.clone();
                 self.render_overlays(&mut pixels, renderer, time, timeline)?;
@@ -863,16 +941,40 @@ impl PreparedPlan {
         self.render_overlays(&mut first, renderer, overlays[0].0, timeline)?;
         crate::exposure::accumulate_region(&overlays, &region, first, |frame, time| {
             region.copy(&base, frame);
-            self.render_overlays_drawing(frame, renderer, time, timeline, |callout| redraw[callout])
+            self.render_overlays_drawing(
+                frame,
+                renderer,
+                time,
+                timeline,
+                |callout| redraw[callout],
+                true,
+            )
         })
     }
 
-    /// Whether `samples` differ in nothing but their callouts.
-    fn only_callouts_differ(&self, samples: &[(f64, f32)], stage: &str) -> Result<bool> {
+    /// Whether `samples` differ in nothing but their callouts. An overlay
+    /// pinned to a Stage element differs while the camera moves it, and a
+    /// visible lens refracts the frame around it, so its samples always
+    /// compose whole.
+    fn only_callouts_differ(
+        &self,
+        samples: &[(f64, f32)],
+        stage: &str,
+        size: [u32; 2],
+    ) -> Result<bool> {
+        if self.lenses.iter().any(|lens| {
+            samples
+                .iter()
+                .any(|&(time, _)| self.lens_glass(lens, time, &self.timeline, size).is_some())
+        }) {
+            return Ok(false);
+        }
         let mut keys = samples.iter().map(|&(time, _)| {
-            self.overlay_key_ignoring(time, |actor| {
+            let mut key = self.overlay_key_ignoring(time, |actor| {
                 actor == stage || self.callouts.iter().any(|callout| callout.id() == actor)
-            })
+            })?;
+            key.anchors = self.stage_pins(time, size);
+            Ok::<_, anyhow::Error>(key)
         });
         let Some(first) = keys.next().transpose()? else {
             return Ok(true);
@@ -896,7 +998,94 @@ impl PreparedPlan {
             .filter_map(|callout| self.callout_pose(callout, time, &self.timeline, size))
             .map(|pose| pose.anchor.to_array().map(f32::to_bits))
             .collect();
+        key.anchors.extend(self.stage_pins(time, size));
+        key.anchors.extend(
+            self.lenses
+                .iter()
+                .filter(|lens| lens.on_stage())
+                .filter_map(|lens| self.lens_glass(lens, time, &self.timeline, size))
+                .map(|glass| glass.outline.center.to_array().map(f32::to_bits)),
+        );
         Ok(key)
+    }
+
+    /// Every overlay that can pin to anchors, callouts aside.
+    fn pinnable(&self) -> impl Iterator<Item = (&str, &[AnchorPlan])> {
+        self.captions
+            .iter()
+            .map(|caption| (caption.id(), caption.anchors()))
+            .chain(
+                self.rolling
+                    .iter()
+                    .map(|number| (number.id(), number.anchors())),
+            )
+            .chain(
+                self.texts
+                    .iter()
+                    .map(|text| (text.id.as_str(), text.anchors.as_slice())),
+            )
+            .chain(
+                self.images
+                    .iter()
+                    .map(|image| (image.id(), image.anchors())),
+            )
+    }
+
+    /// Where every overlay pinned to a Stage element lands at `time`: they
+    /// move with the camera while no channel of theirs does.
+    fn stage_pins(&self, time: f64, size: [u32; 2]) -> Vec<[u32; 2]> {
+        self.pinnable()
+            .filter(|(_, anchors)| anchor::on_stage(anchors))
+            .map(|(actor, anchors)| {
+                self.pin(actor, anchors, Vec2::ZERO, time, &self.timeline, size)
+                    .map_or([u32::MAX; 2], |origin| origin.to_array().map(f32::to_bits))
+            })
+            .collect()
+    }
+
+    /// Where `target` is on the frame at `time`, from the prepared root.
+    fn resolve_anchor(
+        &self,
+        target: AnchorTarget<'_>,
+        time: f64,
+        timeline: &Timeline,
+        size: [u32; 2],
+    ) -> Option<Vec2> {
+        anchor::resolve(
+            &self.root,
+            &self.sequences,
+            target,
+            size,
+            |actor, property, default| {
+                self.property_value(timeline, actor, property, time, default)
+            },
+            |actor, property| self.raw_motion_value(timeline, actor, property, time),
+            time,
+        )
+    }
+
+    /// An overlay's origin at `time`: `literal` while it has no anchors, else
+    /// its weighted anchors blended; `None` when none of them can be placed.
+    fn pin(
+        &self,
+        actor: &str,
+        anchors: &[AnchorPlan],
+        literal: Vec2,
+        time: f64,
+        timeline: &Timeline,
+        size: [u32; 2],
+    ) -> Option<Vec2> {
+        if anchors.is_empty() {
+            return Some(literal);
+        }
+        anchor::pin(
+            actor,
+            anchors,
+            |actor, property, default| {
+                self.property_value(timeline, actor, property, time, default)
+            },
+            |target| self.resolve_anchor(target, time, timeline, size),
+        )
     }
 
     /// The visual state of overlays, without the channels of `ignored` actors.
@@ -918,7 +1107,8 @@ impl PreparedPlan {
             }
         }
         key.video_frames = self.video_frames(time);
-        key.ambient_time = self.rolling_moves(time).then_some(time.to_bits());
+        key.ambient_time =
+            (self.rolling_moves(time) || self.viz.moving(time)).then_some(time.to_bits());
         Ok(key)
     }
 
@@ -941,21 +1131,74 @@ impl PreparedPlan {
         let value = |actor: &str, property: &str, default: f32| {
             self.property_value(timeline, actor, property, time, default)
         };
-        callout.pose(value, |anchor| {
-            callout::resolve(
-                &self.root,
-                anchor,
-                size,
-                value,
-                |actor, property| self.raw_motion_value(timeline, actor, property, time),
-                time,
-            )
+        callout.pose(value, |target| {
+            self.resolve_anchor(target, time, timeline, size)
+        })
+    }
+
+    /// A CPU exposure with lenses on top: the page beneath the glass renders
+    /// once per distinct state, and each sample refracts its own copy, so a
+    /// lens gliding over still code costs a lens per sample, not a page.
+    fn render_lensed_exposure(
+        &self,
+        renderer: &mut HeadlessRenderer,
+        exposure: &[(f64, f32)],
+    ) -> Result<Vec<u8>> {
+        let timeline = &self.timeline;
+        let mut pages: Vec<(VisualSampleKey, Vec<u8>)> = Vec::new();
+        crate::exposure::accumulate(renderer, exposure, |renderer, time| {
+            let key = self.overlay_key_ignoring(time, |actor| {
+                self.lenses.iter().any(|lens| lens.id() == actor)
+            })?;
+            let index = match pages.iter().position(|(seen, _)| *seen == key) {
+                Some(index) => index,
+                None => {
+                    let mut page = self.render_root(renderer, time, timeline)?;
+                    self.render_overlays_drawing(
+                        &mut page,
+                        renderer,
+                        time,
+                        timeline,
+                        |_| true,
+                        false,
+                    )?;
+                    pages.push((key, page));
+                    pages.len() - 1
+                }
+            };
+            let mut pixels = pages[index].1.clone();
+            self.render_lenses(&mut pixels, renderer.size(), time, timeline);
+            Ok(pixels)
+        })
+    }
+
+    fn render_lenses(&self, pixels: &mut [u8], size: [u32; 2], time: f64, timeline: &Timeline) {
+        for lens in &self.lenses {
+            if let Some(glass) = self.lens_glass(lens, time, timeline, size) {
+                crate::render::composite_lens(pixels, size, &glass);
+            }
+        }
+    }
+
+    fn lens_glass(
+        &self,
+        lens: &lens::PreparedLens,
+        time: f64,
+        timeline: &Timeline,
+        size: [u32; 2],
+    ) -> Option<psychopomp::lens::Glass> {
+        let value = |actor: &str, property: &str, default: f32| {
+            self.property_value(timeline, actor, property, time, default)
+        };
+        lens.glass(value, |anchor| {
+            self.resolve_anchor(anchor.target(), time, timeline, size)
         })
     }
 
     /// A settling Rolling Number changes every sample without a channel moving.
     fn rolling_moves(&self, time: f64) -> bool {
         self.rolling.iter().any(|number| number.moving(time))
+            || self.changed_files.iter().any(|files| files.moving(time))
     }
 
     fn render_sample_using(
@@ -964,10 +1207,21 @@ impl PreparedPlan {
         time: f64,
         timeline: &Timeline,
     ) -> Result<Vec<u8>> {
+        let mut pixels = self.render_root(renderer, time, timeline)?;
+        self.render_overlays(&mut pixels, renderer, time, timeline)?;
+        Ok(pixels)
+    }
+
+    fn render_root(
+        &self,
+        renderer: &mut HeadlessRenderer,
+        time: f64,
+        timeline: &Timeline,
+    ) -> Result<Vec<u8>> {
         let value = |actor: &str, property: &str, default: f32| {
             self.property_value(timeline, actor, property, time, default)
         };
-        let mut pixels = match &self.root {
+        Ok(match &self.root {
             PreparedRoot::Stage(stage) => stage.render(renderer, time, value)?,
             PreparedRoot::Editor { editor, pointer } => {
                 editor.render(renderer, time, pointer.as_deref(), |actor, property, at| {
@@ -986,9 +1240,7 @@ impl PreparedPlan {
                 value(&title.id, "opacity", 1.0).clamp(0.0, 1.0),
             ),
             PreparedRoot::Blank => renderer.render_title_card("", None, 0.0),
-        };
-        self.render_overlays(&mut pixels, renderer, time, timeline)?;
-        Ok(pixels)
+        })
     }
 
     /// Everything a plan draws over its root, in its fixed layer order.
@@ -999,10 +1251,11 @@ impl PreparedPlan {
         time: f64,
         timeline: &Timeline,
     ) -> Result<()> {
-        self.render_overlays_drawing(pixels, renderer, time, timeline, |_| true)
+        self.render_overlays_drawing(pixels, renderer, time, timeline, |_| true, true)
     }
 
-    /// `render_overlays`, drawing only the callouts whose index `callouts` accepts.
+    /// `render_overlays`, drawing only the callouts whose index `callouts`
+    /// accepts, and the lenses only when `lenses` is set.
     fn render_overlays_drawing(
         &self,
         pixels: &mut [u8],
@@ -1010,15 +1263,39 @@ impl PreparedPlan {
         time: f64,
         timeline: &Timeline,
         callouts: impl Fn(usize) -> bool,
+        lenses: bool,
     ) -> Result<()> {
         let value = |actor: &str, property: &str, default: f32| {
             self.property_value(timeline, actor, property, time, default)
         };
-        // Video cards are the bottom media surface. Value tiles are diagram
-        // surfaces; ordinary text is their foreground annotation layer,
-        // regardless of declaration order.
+        // Video cards and images are the bottom media surface. Value tiles
+        // are diagram surfaces; ordinary text is their foreground annotation
+        // layer, regardless of declaration order.
+        let size = renderer.size();
         for video in &self.videos {
             video.render(pixels, renderer, time, value)?;
+        }
+        for image in &self.images {
+            if let Some(center) = self.pin(
+                image.id(),
+                image.anchors(),
+                image.center(),
+                time,
+                timeline,
+                size,
+            ) {
+                image.render(pixels, renderer, center, value)?;
+            }
+        }
+        // Text-surface windows sit just above recordings, beneath diagrams and text.
+        for terminal in &self.terminals {
+            terminal.render(pixels, renderer, value)?;
+        }
+        for chat in &self.chats {
+            chat.render(pixels, renderer, value)?;
+        }
+        for files in &self.changed_files {
+            files.render(pixels, renderer, time, value)?;
         }
         for diagram in &self.venn {
             diagram.render(pixels, renderer, value);
@@ -1035,6 +1312,11 @@ impl PreparedPlan {
         for lanes in &self.lanes {
             lanes.render(pixels, renderer, value);
         }
+        self.viz
+            .render_diagrams(pixels, renderer, value, |actor, property| {
+                self.motion_value(timeline, actor, property, time)
+                    .map_or(0.0, |state| state.velocity)
+            });
         self.components.render(pixels, renderer, value)?;
         for header in &self.headers {
             header.render(pixels, renderer, value);
@@ -1046,27 +1328,67 @@ impl PreparedPlan {
             tree.render(pixels, renderer, value);
         }
         for caption in &self.captions {
-            caption.render(pixels, renderer, value);
+            if let Some(origin) = self.pin(
+                caption.id(),
+                caption.anchors(),
+                caption.origin(),
+                time,
+                timeline,
+                size,
+            ) {
+                caption.render(pixels, renderer, origin, value);
+            }
         }
         for number in &self.rolling {
-            number.render(pixels, renderer, time, value);
+            if let Some(origin) = self.pin(
+                number.id(),
+                number.anchors(),
+                number.origin(),
+                time,
+                timeline,
+                size,
+            ) {
+                number.render(pixels, renderer, time, origin, value);
+            }
+        }
+        for third in &self.lower_thirds {
+            third.render(pixels, renderer, value);
         }
         for (index, callout) in self.callouts.iter().enumerate() {
             if !callouts(index) {
                 continue;
             }
-            if let Some(pose) = self.callout_pose(callout, time, timeline, renderer.size()) {
+            if let Some(pose) = self.callout_pose(callout, time, timeline, size) {
                 callout.render(pixels, renderer, pose);
             }
         }
+        // Lenses refract everything composed so far; plain text and Tasks
+        // stay above the glass.
+        if lenses {
+            self.render_lenses(pixels, renderer.size(), time, timeline);
+        }
         for text in &self.texts {
+            let mut center = [
+                value(&text.id, "x", text.center[0]),
+                value(&text.id, "y", text.center[1]),
+            ];
+            if !text.anchors.is_empty() {
+                // Pinned text moves from its anchor by the channels'
+                // displacement from its declared center.
+                let Some(pinned) =
+                    self.pin(&text.id, &text.anchors, Vec2::ZERO, time, timeline, size)
+                else {
+                    continue;
+                };
+                center = [
+                    pinned.x + center[0] - text.center[0],
+                    pinned.y + center[1] - text.center[1],
+                ];
+            }
             renderer.composite_centered_text_masked(
                 pixels,
                 text.content.sample_at(time).current,
-                [
-                    value(&text.id, "x", text.center[0]),
-                    value(&text.id, "y", text.center[1]),
-                ],
+                center,
                 text.font_size,
                 text.color,
                 value(&text.id, "opacity", 1.).clamp(0., 1.),
@@ -1078,6 +1400,7 @@ impl PreparedPlan {
                 self.motion_value(timeline, actor, property, time)
             })?;
         }
+        self.viz.render_foreground(pixels, renderer, time, value);
         Ok(())
     }
 

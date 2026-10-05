@@ -358,24 +358,40 @@ impl<'a> UiCanvas<'a> {
         }
         let outer = bounds;
         let inner = bounds.inset(super::Edges::all(width));
+        let inner_radius = (corner_radius - width).max(0.0);
         let min_x = outer.origin[0].floor().max(0.0) as i32;
         let max_x = outer.right().ceil().min(self.size[0] as f32) as i32;
         let min_y = outer.origin[1].floor().max(0.0) as i32;
         let max_y = outer.bottom().ceil().min(self.size[1] as f32) as i32;
+        let hollow_x = (
+            (inner.origin[0] + inner_radius + 1.0).ceil() as i32,
+            (inner.right() - inner_radius - 1.0).floor() as i32,
+        );
+        let hollow_y = (
+            inner.origin[1] + inner_radius + 1.0,
+            inner.bottom() - inner_radius - 1.0,
+        );
         for y in min_y..max_y {
-            for x in min_x..max_x {
-                let point = [x as f32 + 0.5, y as f32 + 0.5];
+            let py = y as f32 + 0.5;
+            let skip_interior = hollow_x.0 < hollow_x.1 && py >= hollow_y.0 && py <= hollow_y.1;
+            let mut x = min_x;
+            while x < max_x {
+                if skip_interior && x >= hollow_x.0 && x < hollow_x.1 {
+                    x = hollow_x.1;
+                    continue;
+                }
+                let point = [x as f32 + 0.5, py];
                 let coverage = (rounded_coverage(point, outer, corner_radius)
-                    - rounded_coverage(point, inner, (corner_radius - width).max(0.0)))
+                    - rounded_coverage(point, inner, inner_radius))
                 .clamp(0.0, 1.0)
                     * self.clip_coverage(point)
                     * opacity.clamp(0.0, 1.0);
-                if coverage <= 0.0 {
-                    continue;
+                if coverage > 0.0 {
+                    let color = fill.sample(point, outer);
+                    let index = (y as usize * self.size[0] as usize + x as usize) * BYTES_PER_PIXEL;
+                    blend_pixel(&mut self.pixels[index..index + 4], color.0, coverage);
                 }
-                let color = fill.sample(point, outer);
-                let index = (y as usize * self.size[0] as usize + x as usize) * BYTES_PER_PIXEL;
-                blend_pixel(&mut self.pixels[index..index + 4], color.0, coverage);
+                x += 1;
             }
         }
     }
@@ -808,63 +824,73 @@ fn composite_card_layer(
         .map(|point| center[1] + point[1])
         .fold(f32::NEG_INFINITY, f32::max)
         + padding;
-    for target_y in
-        min_y.floor().max(0.0) as i32..=max_y.ceil().min(destination_size[1] as f32 - 1.0) as i32
-    {
-        for target_x in min_x.floor().max(0.0) as i32
-            ..=max_x.ceil().min(destination_size[0] as f32 - 1.0) as i32
-        {
-            let point = [
-                target_x as f32 + 0.5 - center[0],
-                target_y as f32 + 0.5 - center[1],
-            ];
-            let local = transform.unproject(point);
-            let distance =
-                rounded_rect_distance(local, frame.bounds.size, frame.style.corner_radius);
-            let target = (target_y as usize * destination_size[0] as usize + target_x as usize)
-                * BYTES_PER_PIXEL;
-            if shell && distance > 0.0 {
-                composite_card_shadow(destination, target, transform, point, frame);
-                continue;
+    let min_x = min_x.floor().max(0.0) as i32;
+    let max_x = max_x.ceil().min(destination_size[0] as f32 - 1.0) as i32;
+    let min_y = min_y.floor().max(0.0) as i32;
+    let max_y = max_y.ceil().min(destination_size[1] as f32 - 1.0) as i32;
+    for_each_card_row(
+        destination,
+        destination_size,
+        min_y,
+        max_y,
+        |target_y, row| {
+            for target_x in min_x..=max_x {
+                let point = [
+                    target_x as f32 + 0.5 - center[0],
+                    target_y as f32 + 0.5 - center[1],
+                ];
+                let local = transform.unproject(point);
+                let distance =
+                    rounded_rect_distance(local, frame.bounds.size, frame.style.corner_radius);
+                let target = target_x as usize * BYTES_PER_PIXEL;
+                if shell && distance > 0.0 {
+                    composite_card_shadow(row, target, transform, point, frame);
+                    continue;
+                }
+                let outside = if shell {
+                    distance > 0.0
+                } else {
+                    local[0].abs() > half_size[0] || local[1].abs() > half_size[1]
+                };
+                if outside {
+                    continue;
+                }
+                let source_x =
+                    (local[0] / frame.bounds.size[0] + 0.5) * source_size[0] as f32 - 0.5;
+                let source_y =
+                    (local[1] / frame.bounds.size[1] + 0.5) * source_size[1] as f32 - 0.5;
+                let depth = transform.depth[0] * local[0] + transform.depth[1] * local[1];
+                let proximity = if transform.max_near_depth > 0.001 {
+                    (depth / transform.max_near_depth).clamp(0.0, 1.0)
+                } else {
+                    0.0
+                };
+                let blur = frame.projection.surface_blur.max(0.0)
+                    + frame.projection.near_edge_blur.max(0.0) * proximity;
+                let color = sample_layer_blurred(source, source_size, source_x, source_y, blur);
+                if color[3] > 0 {
+                    let coverage = if shell {
+                        (-distance).clamp(0.0, 1.0)
+                    } else {
+                        1.0
+                    };
+                    blend_pixel(
+                        &mut row[target..target + 4],
+                        color,
+                        coverage * frame.opacity,
+                    );
+                }
+                if shell && frame.style.border_width > 0.0 && -distance <= frame.style.border_width
+                {
+                    blend_pixel(
+                        &mut row[target..target + 4],
+                        frame.style.border_color.0,
+                        frame.opacity,
+                    );
+                }
             }
-            let outside = if shell {
-                distance > 0.0
-            } else {
-                local[0].abs() > half_size[0] || local[1].abs() > half_size[1]
-            };
-            if outside {
-                continue;
-            }
-            let source_x = (local[0] / frame.bounds.size[0] + 0.5) * source_size[0] as f32 - 0.5;
-            let source_y = (local[1] / frame.bounds.size[1] + 0.5) * source_size[1] as f32 - 0.5;
-            let depth = transform.depth[0] * local[0] + transform.depth[1] * local[1];
-            let proximity = if transform.max_near_depth > 0.001 {
-                (depth / transform.max_near_depth).clamp(0.0, 1.0)
-            } else {
-                0.0
-            };
-            let blur = frame.projection.surface_blur.max(0.0)
-                + frame.projection.near_edge_blur.max(0.0) * proximity;
-            let color = sample_layer_blurred(source, source_size, source_x, source_y, blur);
-            let coverage = if shell {
-                (-distance).clamp(0.0, 1.0)
-            } else {
-                1.0
-            };
-            blend_pixel(
-                &mut destination[target..target + 4],
-                color,
-                coverage * frame.opacity,
-            );
-            if shell && frame.style.border_width > 0.0 && -distance <= frame.style.border_width {
-                blend_pixel(
-                    &mut destination[target..target + 4],
-                    frame.style.border_color.0,
-                    frame.opacity,
-                );
-            }
-        }
-    }
+        },
+    );
 }
 
 fn composite_card_source(
@@ -906,58 +932,103 @@ fn composite_card_source(
         origin: [0.0, 0.0],
         size: frame.bounds.size,
     };
-    for target_y in
-        min_y.floor().max(0.0) as i32..=max_y.ceil().min(destination_size[1] as f32 - 1.0) as i32
-    {
-        for target_x in min_x.floor().max(0.0) as i32
-            ..=max_x.ceil().min(destination_size[0] as f32 - 1.0) as i32
-        {
-            let point = [
-                target_x as f32 + 0.5 - center[0],
-                target_y as f32 + 0.5 - center[1],
-            ];
-            let local = transform.unproject(point);
-            let distance =
-                rounded_rect_distance(local, frame.bounds.size, frame.style.corner_radius);
-            let target = (target_y as usize * destination_size[0] as usize + target_x as usize)
-                * BYTES_PER_PIXEL;
-            if distance > 0.0 {
-                composite_card_shadow(destination, target, transform, point, frame);
-                continue;
-            }
-            let depth = transform.depth[0] * local[0] + transform.depth[1] * local[1];
-            let proximity = if transform.max_near_depth > 0.001 {
-                (depth / transform.max_near_depth).clamp(0.0, 1.0)
-            } else {
-                0.0
-            };
-            let blur = frame.projection.surface_blur.max(0.0)
-                + frame.projection.near_edge_blur.max(0.0) * proximity;
-            let source_color = source_coordinates(local, frame.bounds.size, source.size, fit).map(
-                |[source_x, source_y]| sample_source_blurred(source, source_x, source_y, blur),
-            );
-            let color = match source_color {
-                Some(color) if color[3] == 255 => color,
-                source_color => {
-                    let material_point = [local[0] + half_size[0], local[1] + half_size[1]];
-                    let material = frame.style.material.sample(material_point, local_bounds).0;
-                    source_color.map_or(material, |color| over_pixel(material, color))
+    let min_x = min_x.floor().max(0.0) as i32;
+    let max_x = max_x.ceil().min(destination_size[0] as f32 - 1.0) as i32;
+    let min_y = min_y.floor().max(0.0) as i32;
+    let max_y = max_y.ceil().min(destination_size[1] as f32 - 1.0) as i32;
+    for_each_card_row(
+        destination,
+        destination_size,
+        min_y,
+        max_y,
+        |target_y, row| {
+            for target_x in min_x..=max_x {
+                let point = [
+                    target_x as f32 + 0.5 - center[0],
+                    target_y as f32 + 0.5 - center[1],
+                ];
+                let local = transform.unproject(point);
+                let distance =
+                    rounded_rect_distance(local, frame.bounds.size, frame.style.corner_radius);
+                let target = target_x as usize * BYTES_PER_PIXEL;
+                if distance > 0.0 {
+                    composite_card_shadow(row, target, transform, point, frame);
+                    continue;
                 }
-            };
-            blend_pixel(
-                &mut destination[target..target + 4],
-                color,
-                (-distance).clamp(0.0, 1.0) * frame.opacity,
-            );
-            if frame.style.border_width > 0.0 && -distance <= frame.style.border_width {
+                let depth = transform.depth[0] * local[0] + transform.depth[1] * local[1];
+                let proximity = if transform.max_near_depth > 0.001 {
+                    (depth / transform.max_near_depth).clamp(0.0, 1.0)
+                } else {
+                    0.0
+                };
+                let blur = frame.projection.surface_blur.max(0.0)
+                    + frame.projection.near_edge_blur.max(0.0) * proximity;
+                let source_color = source_coordinates(local, frame.bounds.size, source.size, fit)
+                    .map(|[source_x, source_y]| {
+                        sample_source_blurred(source, source_x, source_y, blur)
+                    });
+                let color = match source_color {
+                    Some(color) if color[3] == 255 => color,
+                    source_color => {
+                        let material_point = [local[0] + half_size[0], local[1] + half_size[1]];
+                        let material = frame.style.material.sample(material_point, local_bounds).0;
+                        source_color.map_or(material, |color| over_pixel(material, color))
+                    }
+                };
                 blend_pixel(
-                    &mut destination[target..target + 4],
-                    frame.style.border_color.0,
-                    frame.opacity,
+                    &mut row[target..target + 4],
+                    color,
+                    (-distance).clamp(0.0, 1.0) * frame.opacity,
                 );
+                if frame.style.border_width > 0.0 && -distance <= frame.style.border_width {
+                    blend_pixel(
+                        &mut row[target..target + 4],
+                        frame.style.border_color.0,
+                        frame.opacity,
+                    );
+                }
             }
-        }
+        },
+    );
+}
+
+fn for_each_card_row(
+    destination: &mut [u8],
+    destination_size: [u32; 2],
+    min_y: i32,
+    max_y: i32,
+    paint_row: impl Fn(i32, &mut [u8]) + Sync,
+) {
+    let start_y = min_y.max(0) as usize;
+    let end_y = (max_y + 1).clamp(0, destination_size[1] as i32) as usize;
+    if start_y >= end_y {
+        return;
     }
+    let row_bytes = destination_size[0] as usize * BYTES_PER_PIXEL;
+    let rows = &mut destination[start_y * row_bytes..end_y * row_bytes];
+    let row_count = end_y - start_y;
+    let workers = std::thread::available_parallelism()
+        .map_or(1, usize::from)
+        .min(row_count / 32)
+        .max(1);
+    if workers <= 1 {
+        for (offset, row) in rows.chunks_exact_mut(row_bytes).enumerate() {
+            paint_row((start_y + offset) as i32, row);
+        }
+        return;
+    }
+    let rows_per_worker = row_count.div_ceil(workers);
+    let paint_row = &paint_row;
+    std::thread::scope(|scope| {
+        for (chunk_index, band) in rows.chunks_mut(rows_per_worker * row_bytes).enumerate() {
+            let band_start_y = start_y + chunk_index * rows_per_worker;
+            scope.spawn(move || {
+                for (offset, row) in band.chunks_exact_mut(row_bytes).enumerate() {
+                    paint_row((band_start_y + offset) as i32, row);
+                }
+            });
+        }
+    });
 }
 
 fn composite_card_region(
@@ -1126,8 +1197,11 @@ fn sample_source_blurred(source: RgbaSource<'_>, x: f32, y: f32, blur: f32) -> [
     let mut premultiplied = [0.0; 3];
     for (offset_y, weight_y) in axis.into_iter().zip(weights) {
         for (offset_x, weight_x) in axis.into_iter().zip(weights) {
-            let weight = weight_x * weight_y / 16.0;
             let sample = source.sample(x + offset_x, y + offset_y);
+            if sample[3] == 0 {
+                continue;
+            }
+            let weight = weight_x * weight_y / 16.0;
             let sample_alpha = f32::from(sample[3]) / 255.0 * weight;
             alpha += sample_alpha;
             for (channel, sum) in premultiplied.iter_mut().enumerate() {
@@ -1396,8 +1470,20 @@ mod tests {
             1.0,
         );
 
-        assert!(output.chunks_exact(4).any(|pixel| pixel[0] > pixel[1]));
-        assert!(output.chunks_exact(4).any(|pixel| pixel[1] > pixel[0]));
+        assert!(
+            output
+                .as_chunks::<4>()
+                .0
+                .iter()
+                .any(|pixel| pixel[0] > pixel[1])
+        );
+        assert!(
+            output
+                .as_chunks::<4>()
+                .0
+                .iter()
+                .any(|pixel| pixel[1] > pixel[0])
+        );
     }
 
     #[test]
@@ -1457,8 +1543,8 @@ mod tests {
             )
             .unwrap();
 
-        assert!(output.chunks_exact(4).any(|pixel| pixel[0] > 80));
-        assert!(output.chunks_exact(4).any(|pixel| pixel[3] > 0));
+        assert!(output.as_chunks::<4>().0.iter().any(|pixel| pixel[0] > 80));
+        assert!(output.as_chunks::<4>().0.iter().any(|pixel| pixel[3] > 0));
         let _ = UiColor::srgb8(1, 2, 3, 4);
     }
 

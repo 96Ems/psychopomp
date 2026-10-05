@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     author::{ActorHandle, ContinuousHandle, PlanBuilder},
+    math::{Vec2, shapes::Box2, vec2},
     tone::Tone,
 };
 
@@ -294,6 +295,73 @@ impl SequencePlan {
         self.participants.iter().position(|p| p.id == id)
     }
 
+    pub fn row_index(&self, id: &str) -> Option<usize> {
+        self.rows.iter().position(|row| row.id() == id)
+    }
+
+    /// A header's width for its measured label and detail advances.
+    pub fn header_width(&self, label: f32, detail: f32) -> f32 {
+        let column = self.width / self.participants.len() as f32;
+        (label.max(detail) + 60.0).clamp(150.0, column * 0.92)
+    }
+
+    /// A participant's header box for its measured `width`, before the
+    /// actor's `x`/`y` offset.
+    pub fn header_box(&self, index: usize, width: f32) -> Box2 {
+        let height = self.header_height();
+        Box2::from_center_size(
+            vec2(self.participant_x(index), self.origin[1] + height * 0.5),
+            vec2(width, height),
+        )
+    }
+
+    /// A note's width over lifelines `min..=max` for its measured text.
+    pub fn note_span(min: f32, max: f32, text: f32) -> f32 {
+        let natural = text + 56.0;
+        if (max - min).abs() < 1.0 {
+            natural
+        } else {
+            (max - min + 150.0).max(natural)
+        }
+    }
+
+    /// The box a row occupies once revealed, before the actor's offset: a
+    /// message's arrow between its lifelines (or its loop beside one), a note
+    /// for its measured text width `note`, or an End mark.
+    pub fn row_box(&self, index: usize, note: f32) -> Option<Box2> {
+        let row = self.rows.get(index)?;
+        let y = self.slot_y(row.explicit_slot().unwrap_or(index as u32));
+        let x = |id: &str| Some(self.participant_x(self.participant_index(id)?));
+        Some(match row {
+            SequenceRowPlan::Message { from, to, .. } => {
+                let (from, to) = (x(from)?, x(to)?);
+                if (to - from).abs() < 1.0 {
+                    Box2 {
+                        min: vec2(from + 6.0, y - 15.0),
+                        max: vec2(from + 50.0, y + 15.0),
+                    }
+                } else {
+                    Box2 {
+                        min: vec2(from.min(to), y - 15.0),
+                        max: vec2(from.max(to), y + 15.0),
+                    }
+                }
+            }
+            SequenceRowPlan::Note { over, .. } => {
+                let xs = over.iter().map(|id| x(id)).collect::<Option<Vec<_>>>()?;
+                let min = xs.iter().copied().fold(f32::INFINITY, f32::min);
+                let max = xs.iter().copied().fold(f32::NEG_INFINITY, f32::max);
+                Box2::from_center_size(
+                    vec2((min + max) * 0.5, y),
+                    vec2(Self::note_span(min, max, note), 46.0),
+                )
+            }
+            SequenceRowPlan::End { participant, .. } => {
+                Box2::from_center_size(vec2(x(participant)?, y), Vec2::splat(22.0))
+            }
+        })
+    }
+
     pub fn validate(&self) -> Result<()> {
         ensure!(
             self.origin.iter().all(|v| v.is_finite()),
@@ -547,6 +615,34 @@ mod tests {
             ]
         }))
         .unwrap()
+    }
+
+    #[test]
+    fn participants_and_rows_have_boxes_for_anchors() {
+        let plan = plan();
+        let header = plan.header_box(1, 200.0);
+        assert_eq!(
+            header.center(),
+            vec2(1320.0, 180.0 + HEADER_HEIGHT_WITH_DETAIL * 0.5)
+        );
+        assert_eq!(header.max.x - header.min.x, 200.0);
+        // A message spans its lifelines whichever way it points.
+        let probe = plan.row_box(0, 0.0).unwrap();
+        let missing = plan.row_box(1, 0.0).unwrap();
+        assert_eq!((probe.min.x, probe.max.x), (600.0, 1320.0));
+        assert_eq!((missing.min.x, missing.max.x), (600.0, 1320.0));
+        assert_eq!(probe.center().y, plan.slot_y(0));
+        assert_eq!(
+            plan.row_box(2, 0.0).unwrap().center(),
+            vec2(1320.0, plan.slot_y(2))
+        );
+        // A note over two lifelines reaches 75 px past each, or fits its text.
+        let note = plan.row_box(3, 120.0).unwrap();
+        assert_eq!((note.min.x, note.max.x), (525.0, 1395.0));
+        assert_eq!(SequencePlan::note_span(600.0, 600.0, 120.0), 176.0);
+        assert!(plan.row_box(9, 0.0).is_none());
+        assert_eq!(plan.header_width(500.0, 80.0), 560.0);
+        assert_eq!(plan.header_width(10.0, 0.0), 150.0);
     }
 
     #[test]

@@ -20,6 +20,10 @@ const FPS: u32 = 60;
 const TEMPORAL_SAMPLES: u32 = 8;
 const ENTRANCE_TEMPORAL_SAMPLES: u32 = 16;
 const SHUTTER_ANGLE: f32 = 180.0;
+/// How long a frame's shutter stays open.
+pub(crate) const SHUTTER_SECONDS: f64 = SHUTTER_ANGLE as f64 / 360.0 / FPS as f64;
+/// The fewest samples a reel frame takes while its segments mix or move.
+pub(crate) const TRANSITION_TEMPORAL_SAMPLES: u32 = 16;
 
 /// Samples per frame for Scene Plans: more in the first second, where
 /// entrances move fastest.
@@ -162,14 +166,17 @@ pub(crate) fn accumulate(
     for &(time, weight) in exposure {
         let pixels = render_sample(renderer, time)?;
         check_frame(&pixels)?;
-        for (sum, pixel) in sum.chunks_exact_mut(4).zip(pixels.chunks_exact(4)) {
-            add_linear(tables, sum, pixel, weight);
+        let weighted = WeightedLinear::new(tables, weight);
+        for (sum, pixel) in sum
+            .as_chunks_mut::<4>()
+            .0
+            .iter_mut()
+            .zip(pixels.as_chunks::<4>().0)
+        {
+            weighted.add(sum, pixel);
         }
     }
-    Ok(sum
-        .chunks_exact(4)
-        .flat_map(|sum| encode_linear(tables, sum))
-        .collect())
+    Ok(encode_frame(tables, &sum))
 }
 
 /// `accumulate` for samples that differ only inside `region`. `first` is the
@@ -194,9 +201,10 @@ pub(crate) fn accumulate_region(
         if index > 0 {
             render_sample(&mut frame, time)?;
         }
-        let pixels = region.rows().flat_map(|row| frame[row].chunks_exact(4));
-        for (sum, pixel) in sum.chunks_exact_mut(4).zip(pixels) {
-            add_linear(tables, sum, pixel, weight);
+        let weighted = WeightedLinear::new(tables, weight);
+        let pixels = region.rows().flat_map(|row| frame[row].as_chunks::<4>().0);
+        for (sum, pixel) in sum.as_chunks_mut::<4>().0.iter_mut().zip(pixels) {
+            weighted.add(sum, pixel);
         }
     }
     let constant: [[u8; 4]; 256] = std::array::from_fn(|value| {
@@ -207,15 +215,20 @@ pub(crate) fn accumulate_region(
         encode_linear(tables, &sum)
     });
     let mut exposed = first;
-    for pixel in exposed.chunks_exact_mut(4) {
+    for pixel in exposed.as_chunks_mut::<4>().0 {
         for (channel, value) in pixel.iter_mut().enumerate() {
             *value = constant[*value as usize][channel];
         }
     }
-    let mut sums = sum.chunks_exact(4);
+    let mut sums = sum.as_chunks::<4>().0.iter();
     for row in region.rows() {
-        for (pixel, sum) in exposed[row].chunks_exact_mut(4).zip(&mut sums) {
-            pixel.copy_from_slice(&encode_linear(tables, sum));
+        for (pixel, sum) in exposed[row]
+            .as_chunks_mut::<4>()
+            .0
+            .iter_mut()
+            .zip(&mut sums)
+        {
+            *pixel = encode_linear(tables, sum);
         }
     }
     Ok(exposed)
@@ -296,8 +309,35 @@ fn check_frame(pixels: &[u8]) -> Result<()> {
     Ok(())
 }
 
+/// Pre-multiplied per-byte lookup table for one shutter sample's `weight`.
+/// Replaces 3 float multiplications and 1 int-to-float + division + multiply
+/// per pixel with 4 table lookups and 4 additions, while preserving exact
+/// IEEE-754 `f32` bit identity with [`add_linear`].
+struct WeightedLinear {
+    rgb: [f32; 256],
+    alpha: [f32; 256],
+}
+
+impl WeightedLinear {
+    #[inline]
+    fn new(tables: &LinearTables, weight: f32) -> Self {
+        Self {
+            rgb: std::array::from_fn(|v| tables.to_linear[v] * weight),
+            alpha: std::array::from_fn(|v| f32::from(v as u8) / 255.0 * weight),
+        }
+    }
+
+    #[inline]
+    fn add(&self, sum: &mut [f32; 4], pixel: &[u8; 4]) {
+        sum[0] += self.rgb[pixel[0] as usize];
+        sum[1] += self.rgb[pixel[1] as usize];
+        sum[2] += self.rgb[pixel[2] as usize];
+        sum[3] += self.alpha[pixel[3] as usize];
+    }
+}
+
 #[inline]
-fn add_linear(tables: &LinearTables, sum: &mut [f32], pixel: &[u8], weight: f32) {
+fn add_linear(tables: &LinearTables, sum: &mut [f32; 4], pixel: &[u8; 4], weight: f32) {
     for channel in 0..3 {
         sum[channel] += tables.to_linear[pixel[channel] as usize] * weight;
     }
@@ -305,7 +345,7 @@ fn add_linear(tables: &LinearTables, sum: &mut [f32], pixel: &[u8], weight: f32)
 }
 
 #[inline]
-fn encode_linear(tables: &LinearTables, sum: &[f32]) -> [u8; 4] {
+fn encode_linear(tables: &LinearTables, sum: &[f32; 4]) -> [u8; 4] {
     let encode = |linear: f32| tables.to_srgb[(linear.clamp(0.0, 1.0) * 65535.0).round() as usize];
     [
         encode(sum[0]),
@@ -315,14 +355,33 @@ fn encode_linear(tables: &LinearTables, sum: &[f32]) -> [u8; 4] {
     ]
 }
 
-struct LinearTables {
-    to_linear: [f32; 256],
+fn encode_frame(tables: &LinearTables, sum: &[f32]) -> Vec<u8> {
+    let mut exposed = vec![0_u8; sum.len() / 4 * 4];
+    for (out, sum) in exposed
+        .as_chunks_mut::<4>()
+        .0
+        .iter_mut()
+        .zip(sum.as_chunks::<4>().0)
+    {
+        *out = encode_linear(tables, sum);
+    }
+    exposed
+}
+
+pub(crate) struct LinearTables {
+    pub(crate) to_linear: [f32; 256],
     to_srgb: Vec<u8>,
 }
 
-fn linear_tables() -> &'static LinearTables {
-    static TABLES: std::sync::OnceLock<LinearTables> = std::sync::OnceLock::new();
-    TABLES.get_or_init(|| LinearTables {
+impl LinearTables {
+    /// One linear-light value as an sRGB byte.
+    pub(crate) fn encode(&self, linear: f32) -> u8 {
+        self.to_srgb[(linear.clamp(0.0, 1.0) * 65535.0).round() as usize]
+    }
+}
+
+pub(crate) fn linear_tables() -> &'static LinearTables {
+    static TABLES: std::sync::LazyLock<LinearTables> = std::sync::LazyLock::new(|| LinearTables {
         to_linear: std::array::from_fn(|value| {
             let encoded = value as f32 / 255.0;
             if encoded <= 0.04045 {
@@ -342,7 +401,8 @@ fn linear_tables() -> &'static LinearTables {
                 (encoded * 255.0).round() as u8
             })
             .collect(),
-    })
+    });
+    &TABLES
 }
 
 #[cfg(test)]
@@ -350,8 +410,8 @@ mod tests {
     use psychopomp::math::{shapes::Box2, vec2};
 
     use super::{
-        FRAME_BYTES, Region, accumulate_region, add_linear, encode_linear, exposure, linear_tables,
-        merge_equal_samples,
+        FRAME_BYTES, Region, WeightedLinear, accumulate_region, add_linear, encode_frame,
+        encode_linear, exposure, linear_tables, merge_equal_samples,
     };
 
     #[test]
@@ -408,12 +468,19 @@ mod tests {
         let tables = linear_tables();
         let mut sum = vec![0.0_f32; FRAME_BYTES];
         for &(time, weight) in &samples {
-            for (sum, pixel) in sum.chunks_exact_mut(4).zip(sample(time).chunks_exact(4)) {
+            for (sum, pixel) in sum
+                .as_chunks_mut::<4>()
+                .0
+                .iter_mut()
+                .zip(sample(time).as_chunks::<4>().0)
+            {
                 add_linear(tables, sum, pixel, weight);
             }
         }
         let whole = sum
-            .chunks_exact(4)
+            .as_chunks::<4>()
+            .0
+            .iter()
             .flat_map(|sum| encode_linear(tables, sum))
             .collect::<Vec<_>>();
 
@@ -433,5 +500,59 @@ mod tests {
         )
         .unwrap();
         assert_eq!(samples, vec![(0.1, 0.5), (0.2, 0.5)]);
+    }
+
+    #[test]
+    fn weighted_table_accumulation_is_bit_identical_to_reference() {
+        let tables = linear_tables();
+        let samples = exposure(0.5, 1.0 / 60.0, 8);
+        let frame_pixels: Vec<u8> = (0..FRAME_BYTES)
+            .map(|i| ((i.wrapping_mul(131) ^ (i >> 8)) & 0xFF) as u8)
+            .collect();
+
+        let mut ref_sum = vec![0.0_f32; FRAME_BYTES];
+        for &(_, weight) in &samples {
+            for (sum, pixel) in ref_sum
+                .as_chunks_mut::<4>()
+                .0
+                .iter_mut()
+                .zip(frame_pixels.as_chunks::<4>().0)
+            {
+                add_linear(tables, sum, pixel, weight);
+            }
+        }
+        let reference: Vec<u8> = ref_sum
+            .as_chunks::<4>()
+            .0
+            .iter()
+            .flat_map(|sum| encode_linear(tables, sum))
+            .collect();
+
+        let mut opt_sum = vec![0.0_f32; FRAME_BYTES];
+        for &(_, weight) in &samples {
+            let weighted = WeightedLinear::new(tables, weight);
+            for (sum, pixel) in opt_sum
+                .as_chunks_mut::<4>()
+                .0
+                .iter_mut()
+                .zip(frame_pixels.as_chunks::<4>().0)
+            {
+                weighted.add(sum, pixel);
+            }
+        }
+        let optimized = encode_frame(tables, &opt_sum);
+        assert_eq!(
+            ref_sum.len(),
+            opt_sum.len(),
+            "accumulated float buffers match length"
+        );
+        assert!(
+            ref_sum
+                .iter()
+                .zip(&opt_sum)
+                .all(|(a, b)| a.to_bits() == b.to_bits()),
+            "accumulated f32 sums are IEEE-754 bit-for-bit identical"
+        );
+        assert_eq!(optimized, reference);
     }
 }

@@ -11,11 +11,18 @@ restrained calibration immediately below.
 - **Packet travel:** `smootherstep(t) = 6t⁵ − 15t⁴ + 10t³`; peak speed is 1.875
   times the average, versus cubic in-out's 3. Velocity and acceleration meet the
   hold continuously. Invert it monotonically to compute trail crossing times.
-  Use `StageActor::glide` between resting compositions; use spring retargeting
-  when an interruption must retain momentum.
-- **Camera:** zero-bounce `StageActor::to` springs, usually 1.0–1.8 seconds
-  (opening dolly 2.2). Retain quintic glides for precisely timed resting moves;
-  compare the same framing before choosing the feel.
+  Use `StageActor::glide` (or a `Move::Glide` camera shot) between resting
+  compositions; use spring retargeting when an interruption must retain momentum.
+- **Camera:** zero-bounce springs (`Move::Spring`), usually 1.0–1.8 seconds
+  (opening dolly 2.2–2.6). Retain quintic glides for precisely timed resting
+  moves; compare the same framing before choosing the feel. Write shots with
+  the `CameraRig` (`stage.camera()`): `establish` (start 300–400 px back),
+  `frame` with 140–170 px padding for a group (about 430 for one card held
+  near 2×), `follow` a packet on a 0.6–0.8 s catch, `focus_on` with
+  `aperture` 0.4–1.0, `orbit` 0.3–0.6 rad on a 3+ s glide, `dolly_zoom` about
+  500 px on a 2.4 s glide at an impact (give it near and far depth cues to
+  stretch), a 0.6 s `whip`, `handheld` near 1 only on quiet beats, and a
+  slow glide `push_in` or tight `frame` on the resolution.
 - **Orb contact:** intersect the packet path with the visible shell, invert its
   travel curve for contact age, then send a geodesic wave at 3.6 rad/s. A 25 ms
   attack and 480 ms exponential decay drive local light; a short 120 ms contact
@@ -24,6 +31,7 @@ restrained calibration immediately below.
 - **Rigid panels:** scale 1.035 → 1, spring duration 0.6 / bounce 0.12; y 16 → 0,
   duration 0.55 / bounce 0.16. Opacity 180 ms, blur 3 → 0 over 300 ms. Content
   follows after 65 ms on its own 0.36 / zero-bounce spring. No entrance flash.
+  (`StageActor::settle_in`; `SpringPlan::PANEL` and `CONTENT` name these feels.)
 - **Contact:** surge peak 0.45; cable bow 10 px, builds over 90 ms then settles
   on a 0.42 / bounce 0.28 spring. Brief flow establishes the connection, then
   returns to stillness.
@@ -34,7 +42,8 @@ restrained calibration immediately below.
   Measured packet labels stop short of connected bodies (`fit_between_ports`).
 - **Hero entrance:** scale 0.58 → 1 on a 0.85 s / 0.2-bounce spring, blur 11 → 0
   on its own 0.7 s zero-bounce spring, angular offset −1.8 → 0 radians over
-  1.25 s cubic-out. Never animate a multiplier of absolute time for spin.
+  1.25 s cubic-out (`StageActor::orb_in(.., OrbEntrance::HERO)`). Never animate
+  a multiplier of absolute time for spin.
 - **Material:** card flashes lift ink and rim without tinting the substrate.
   An overhead key gives the neutral rim depth; local packet reflections and
   socket floods supply color. Orb pulses only change illumination, never radius.
@@ -129,6 +138,9 @@ One clock per packet: `age` in seconds since dispatch, and its flight time.
 
 ## Pacing
 
-React 0.3 s, step 0.8 s, settle 1.2 s, read 1 s. Rows ripple 0.12 s apart.
+React 0.3 s, step 0.8 s, settle 1.2 s, read 1 s. Rows ripple 0.12 s apart
+(`author::stagger(rows, at, millis(120), ..)`). A reply launches no earlier than
+`stage::reply_after(arrival)`: its 340 ms gather waits for the request, plus an
+80 ms reaction.
 Rewind: hold 0.15 s, then 1.25 s on `cubic-bezier(.65, 0, .25, 1)`, blurred by
 its speed.

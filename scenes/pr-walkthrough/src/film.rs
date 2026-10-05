@@ -6,20 +6,18 @@
 use anyhow::{Context, Result};
 use psychopomp::{
     author::{PlanBuilder, seconds},
-    caption::{CaptionActor, CaptionAlign, CaptionPlan, CaptionSpanPlan},
-    editor::diff::Diff,
-    narration::Narration,
+    caption::CaptionSpanPlan,
+    editor::diff::{Diff, DiffEditor},
+    narration::{Narration, Spoken},
     plan::ScenePlan,
     sequence::{SequenceActor, SequencePlan},
     tone::Tone,
 };
 
+pub use psychopomp::chrome::{FOOTER_Y, HEADER_Y, LEFT, RIGHT, chip, footer};
+
 /// The dip between segments.
 pub const TRANSITION: u64 = 700_000_000;
-pub const LEFT: f32 = 140.0;
-pub const RIGHT: f32 = 1780.0;
-pub const HEADER_Y: f32 = 96.0;
-pub const FOOTER_Y: f32 = 1004.0;
 
 pub struct Pr {
     pub number: &'static str,
@@ -31,42 +29,14 @@ pub fn span(text: &str, tone: Tone) -> CaptionSpanPlan {
     CaptionSpanPlan::new(text, tone)
 }
 
-/// `#50784  keep the real startup error`, top left.
+/// `#50784  keep the real startup error`, top left: typed at `type_at`, or
+/// already present when `None`.
 pub fn header(scene: &mut PlanBuilder, pr: &Pr, type_at: Option<u64>) -> Result<()> {
-    let plan = CaptionPlan::line(
-        [LEFT, HEADER_Y],
-        30.0,
-        vec![
-            span(pr.number, Tone::Accent),
-            span("  ", Tone::Plain),
-            span(pr.title, Tone::Plain),
-        ],
-    );
-    let mut caption = CaptionActor::declare(scene, "header", &plan)?;
+    let mut caption = psychopomp::chrome::header(scene, pr.number, pr.title)?;
     if let Some(at) = type_at {
         caption.type_in(scene, at, 55.0, 0.6);
     }
     Ok(())
-}
-
-/// A status chip, top right: `● before`.
-pub fn chip(scene: &mut PlanBuilder, id: &str, dot: Tone, text: &str) -> Result<CaptionActor> {
-    let plan = CaptionPlan::line(
-        [RIGHT, HEADER_Y],
-        22.0,
-        vec![span("● ", dot), span(text, Tone::Plain)],
-    )
-    .aligned(CaptionAlign::Right)
-    .chip();
-    CaptionActor::declare(scene, id, &plan)
-}
-
-pub fn footer(
-    scene: &mut PlanBuilder,
-    id: &str,
-    spans: Vec<CaptionSpanPlan>,
-) -> Result<CaptionActor> {
-    CaptionActor::declare(scene, id, &CaptionPlan::line([LEFT, FOOTER_Y], 28.0, spans))
 }
 
 #[derive(Clone, Copy)]
@@ -114,14 +84,15 @@ pub struct Flow {
 // ---------------------------------------------------------------------------
 
 pub fn behavior(pr: &Pr, narration: &Narration, flow: Flow) -> Result<ScenePlan> {
-    let before_clip = narration.clip(&format!("{}-before", pr.slug))?;
-    let after_clip = narration.clip(&format!("{}-after", pr.slug))?;
-    let lead = seconds(1.0);
-    let gap = seconds(1.6);
-    let duration = lead + before_clip.duration() + gap + after_clip.duration() + seconds(1.4);
-    let mut scene = PlanBuilder::new(format!("{}-behavior", pr.slug), duration);
-    let spoken_before = before_clip.place(&mut scene, lead);
-    let spoken_after = after_clip.place(&mut scene, spoken_before.end() + gap);
+    let reading = narration.reading(
+        seconds(1.0),
+        [
+            (&format!("{}-before", pr.slug), seconds(1.6)),
+            (&format!("{}-after", pr.slug), seconds(1.4)),
+        ],
+    )?;
+    let mut scene = PlanBuilder::new(format!("{}-behavior", pr.slug), reading.duration());
+    let [spoken_before, spoken_after] = reading.place(&mut scene);
     let switch = spoken_before.end() + seconds(0.4);
     let time = |at: At| -> u64 {
         let base = match at.0 {
@@ -188,14 +159,25 @@ pub fn behavior(pr: &Pr, narration: &Narration, flow: Flow) -> Result<ScenePlan>
 pub fn code(
     pr: &Pr,
     narration: &Narration,
-    (diff, steps, note): (Diff, Vec<&'static str>, &'static str),
+    change: (Diff, Vec<&'static str>, &'static str),
     entrance: bool,
 ) -> Result<ScenePlan> {
-    let clip = narration.clip(&format!("{}-code", pr.slug))?;
-    let lead = seconds(0.9);
-    let duration = lead + clip.duration() + seconds(1.6);
-    let mut scene = PlanBuilder::new(format!("{}-code", pr.slug), duration);
-    let spoken = clip.place(&mut scene, lead);
+    code_with(pr, narration, change, entrance, |_, _, _| Ok(()))
+}
+
+/// [`code`], then `annotate` pins callouts, diagnostics, or hovers to the
+/// diff's ranges, timed by the same narration, before the plan is finished.
+pub fn code_with(
+    pr: &Pr,
+    narration: &Narration,
+    (diff, steps, note): (Diff, Vec<&'static str>, &'static str),
+    entrance: bool,
+    annotate: impl FnOnce(&mut PlanBuilder, &DiffEditor, &Spoken<'_>) -> Result<()>,
+) -> Result<ScenePlan> {
+    let reading =
+        narration.reading(seconds(0.9), [(&format!("{}-code", pr.slug), seconds(1.6))])?;
+    let mut scene = PlanBuilder::new(format!("{}-code", pr.slug), reading.duration());
+    let [spoken] = reading.place(&mut scene);
     header(&mut scene, pr, None)?;
     let mut change = chip(&mut scene, "chip-change", Tone::Accent, "the change")?;
     change.show(&mut scene, seconds(0.2));
@@ -203,9 +185,10 @@ pub fn code(
         .iter()
         .map(|phrase| spoken.at(phrase))
         .collect::<Vec<_>>();
-    diff.declare(&mut scene, &times, seconds(0.9), entrance)?;
+    let editor = diff.declare(&mut scene, &times, seconds(0.9), entrance)?;
     let mut caption = footer(&mut scene, "footer", vec![span(note, Tone::Muted)])?;
     caption.show(&mut scene, seconds(0.6));
+    annotate(&mut scene, &editor, &spoken)?;
     scene.finish().with_context(|| format!("{}-code", pr.slug))
 }
 

@@ -1,4 +1,5 @@
 //! Deterministic noise: the same inputs give the same value in any frame order.
+use super::{Vec2, easing::smootherstep};
 
 /// A well-mixed 0..1 value for an integer and a salt.
 pub fn hash(value: u32, salt: u32) -> f32 {
@@ -21,8 +22,111 @@ pub fn smooth_noise(t: f32, salt: u32) -> f32 {
     at(0) + (at(1) - at(0)) * eased
 }
 
+/// Smooth 2D value noise in 0..1: hashed values on the integer lattice,
+/// joined by smoothstep. Integer hashing makes it bit-identical to
+/// `fx_lattice2` in the shaders' `effects/dissolve.wgsl`, so CPU particles
+/// and GPU pixels agree on the same field.
+pub fn lattice_noise2(x: f32, y: f32, salt: u32) -> f32 {
+    let (cx, cy) = (x.floor(), y.floor());
+    let (fx, fy) = (x - cx, y - cy);
+    let at = |dx: i32, dy: i32| {
+        let ix = (cx as i32).wrapping_add(dx) as u32;
+        let iy = (cy as i32).wrapping_add(dy) as u32;
+        hash(ix.wrapping_add(iy.wrapping_mul(0x27D4_EB2F)), salt)
+    };
+    let (ux, uy) = (fx * fx * (3.0 - 2.0 * fx), fy * fy * (3.0 - 2.0 * fy));
+    let bottom = at(0, 0) + (at(1, 0) - at(0, 0)) * ux;
+    let top = at(0, 1) + (at(1, 1) - at(0, 1)) * ux;
+    bottom + (top - bottom) * uy
+}
+
+/// Three octaves of [`lattice_noise2`], normalized to 0..1.
+pub fn lattice_fbm2(x: f32, y: f32, salt: u32) -> f32 {
+    let mut sum = 0.0;
+    let (mut px, mut py, mut amplitude) = (x, y, 0.5);
+    for octave in 0..3 {
+        sum += lattice_noise2(px, py, salt.wrapping_add(octave)) * amplitude;
+        (px, py) = (px * 2.03 + 17.0, py * 2.03 + 5.0);
+        amplitude *= 0.5;
+    }
+    sum / 0.875
+}
+
+/// Smooth deterministic value noise in 0..1 over the plane: hashed values at
+/// whole coordinates, joined by a minimum-jerk blend in each axis.
+pub fn value_noise2(point: Vec2, salt: u32) -> f32 {
+    let cell = point.floor();
+    let f = point - cell;
+    let (x, y) = (cell.x as i64, cell.y as i64);
+    let at = |dx: i64, dy: i64| {
+        let row = hash((y + dy) as u32, salt);
+        hash((x + dx) as u32, salt ^ row.to_bits())
+    };
+    let (u, v) = (smootherstep(f.x), smootherstep(f.y));
+    let top = at(0, 0) + (at(1, 0) - at(0, 0)) * u;
+    let bottom = at(0, 1) + (at(1, 1) - at(0, 1)) * u;
+    top + (bottom - top) * v
+}
+
+/// Fractal value noise in 0..1: `octaves` layers, each twice the frequency
+/// and half the amplitude of the last, for organic edges with fine detail.
+pub fn fractal_noise2(point: Vec2, octaves: u32, salt: u32) -> f32 {
+    let (mut sum, mut amplitude, mut total, mut frequency) = (0.0, 1.0, 0.0, 1.0);
+    for octave in 0..octaves {
+        // Rotate each octave so the lattices do not line up.
+        let turned = Vec2::new(0.8, 0.6).rotate(point * frequency);
+        sum += amplitude * value_noise2(turned, salt.wrapping_add(octave * 0x9E37));
+        total += amplitude;
+        amplitude *= 0.5;
+        frequency *= 2.03;
+    }
+    sum / total.max(1e-6)
+}
+
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn lattice_noise_is_continuous_bounded_and_hits_its_lattice() {
+        use super::{hash, lattice_fbm2, lattice_noise2};
+        assert_eq!(
+            lattice_noise2(3.0, -2.0, 9),
+            hash(
+                3_u32.wrapping_add((-2_i32 as u32).wrapping_mul(0x27D4_EB2F)),
+                9
+            )
+        );
+        let mut previous = lattice_fbm2(0.0, 0.3, 4);
+        for i in 1..4000 {
+            let value = lattice_fbm2(i as f32 * 0.002, 0.3, 4);
+            assert!((0.0..1.0).contains(&value));
+            assert!((value - previous).abs() < 0.02);
+            previous = value;
+        }
+    }
+
+    #[test]
+    fn plane_noise_is_continuous_bounded_and_repeatable() {
+        use super::{Vec2, fractal_noise2, value_noise2};
+        let samples = (0..2000)
+            .map(|i| value_noise2(Vec2::new(i as f32 * 0.01, 3.3 - i as f32 * 0.007), 5))
+            .collect::<Vec<_>>();
+        assert!(samples.iter().all(|v| (0.0..=1.0).contains(v)));
+        assert!(
+            samples
+                .windows(2)
+                .all(|pair| (pair[0] - pair[1]).abs() < 0.05)
+        );
+        let at = Vec2::new(12.25, -7.5);
+        assert_eq!(fractal_noise2(at, 5, 1), fractal_noise2(at, 5, 1));
+        assert_ne!(fractal_noise2(at, 5, 1), fractal_noise2(at, 5, 2));
+        assert!((0.0..=1.0).contains(&fractal_noise2(at, 5, 1)));
+        // Whole coordinates are the hashed lattice values.
+        assert_eq!(value_noise2(Vec2::new(2.0, -1.0), 9), {
+            let row = super::hash((-1_i64) as u32, 9);
+            super::hash(2, 9 ^ row.to_bits())
+        });
+    }
+
     #[test]
     fn hashes_are_stable_and_spread() {
         let values = (0..1000).map(|i| super::hash(i, 7)).collect::<Vec<_>>();

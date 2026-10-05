@@ -5,7 +5,7 @@
 //! so the plot shows exactly what the engine does.
 use anyhow::{Context, Result, bail};
 use psychopomp::{
-    author::{ContinuousHandle, PlanBuilder, SECOND},
+    author::{ContinuousHandle, PlanBuilder, SECOND, millis},
     axis::AxisPlan,
     caption::{CaptionActor, CaptionPlan, CaptionSpanPlan},
     lanes::{LanesActor, LanesPlan},
@@ -16,7 +16,6 @@ use psychopomp::{
     tone::Tone,
 };
 
-const MS: u64 = 1_000_000;
 /// Where the retargeted spring changes its mind, in its own seconds.
 const RETARGET: f32 = 0.16;
 const SPAN: [f32; 2] = [0.0, 1.6];
@@ -37,8 +36,8 @@ pub fn build_plan() -> Result<ScenePlan> {
             (" vs ", Tone::Muted),
             ("bouncy", Tone::Accent),
         ],
-        300 * MS,
-        7300 * MS,
+        millis(300),
+        millis(7300),
     )?;
     caption(
         &mut scene,
@@ -47,8 +46,8 @@ pub fn build_plan() -> Result<ScenePlan> {
             ("retarget mid-flight: ", Tone::Plain),
             ("velocity carries over", Tone::Accent),
         ],
-        7700 * MS,
-        14_700 * MS,
+        millis(7700),
+        millis(14_700),
     )?;
     caption(
         &mut scene,
@@ -57,7 +56,7 @@ pub fn build_plan() -> Result<ScenePlan> {
             ("a Scene Plan is just ", Tone::Plain),
             ("channels over time", Tone::Accent),
         ],
-        15_300 * MS,
+        millis(15_300),
         23 * SECOND,
     )?;
 
@@ -71,9 +70,9 @@ pub fn build_plan() -> Result<ScenePlan> {
             .then(|| channel.property.clone())
     })?;
     let mut lanes = LanesActor::declare(&mut scene, "lanes", &recipe)?;
-    lanes.show(&mut scene, 15_500 * MS, 1.4);
-    let scrubbed = lanes.scrub(&mut scene, [0.0, 15.0], 17_200 * MS, 5.0);
-    lanes.emphasize(&mut scene, "plot.playhead", 17_200 * MS, 1.0);
+    lanes.show(&mut scene, millis(15_500), 1.4);
+    let scrubbed = lanes.scrub(&mut scene, [0.0, 15.0], millis(17_200), 5.0);
+    lanes.emphasize(&mut scene, "plot.playhead", millis(17_200), 1.0);
     lanes.emphasize(&mut scene, "plot.playhead", scrubbed, 0.0);
 
     scene.cue("plan", STORY_END, 23 * SECOND);
@@ -171,29 +170,29 @@ fn plot_story(scene: &mut PlanBuilder) -> Result<PlotActor> {
     let mut plot = PlotActor::declare(scene, "plot", &recipe)?;
 
     // Springs.
-    plot.show(scene, 400 * MS, 1.0);
-    plot.draw(scene, "critical", 1200 * MS, 1.2);
-    plot.draw(scene, "bouncy", 2300 * MS, 1.4);
-    plot.fade(scene, "critical", 3900 * MS, 0.35);
-    let arrived = plot.ride(scene, "bouncy", SPAN, 4000 * MS, 3.0);
-    plot.velocity(scene, "bouncy", 4000 * MS, 1.0);
-    plot.stop_ride(scene, "bouncy", arrived + 200 * MS);
-    plot.velocity(scene, "bouncy", arrived + 200 * MS, 0.0);
-    scene.cue("springs", 0, 7600 * MS);
+    plot.show(scene, millis(400), 1.0);
+    plot.draw(scene, "critical", millis(1200), 1.2);
+    plot.draw(scene, "bouncy", millis(2300), 1.4);
+    plot.fade(scene, "critical", millis(3900), 0.35);
+    let arrived = plot.ride(scene, "bouncy", SPAN, millis(4000), 3.0);
+    plot.velocity(scene, "bouncy", millis(4000), 1.0);
+    plot.stop_ride(scene, "bouncy", arrived + millis(200));
+    plot.velocity(scene, "bouncy", arrived + millis(200), 0.0);
+    scene.cue("springs", 0, millis(7600));
 
     // Retarget, on the same axes.
-    plot.fade(scene, "critical", 7700 * MS, 0.0);
-    plot.fade(scene, "bouncy", 7700 * MS, 0.0);
-    plot.draw(scene, "target", 8100 * MS, 0.9);
-    plot.mark(scene, "retarget", 8500 * MS);
-    plot.draw(scene, "interrupted", 8800 * MS, 1.4);
-    plot.draw(scene, "restart", 10_300 * MS, 1.0);
-    plot.fade(scene, "restart", 11_500 * MS, 0.6);
-    let arrived = plot.ride(scene, "interrupted", SPAN, 11_600 * MS, 3.0);
-    plot.velocity(scene, "interrupted", 11_600 * MS, 1.0);
+    plot.fade(scene, "critical", millis(7700), 0.0);
+    plot.fade(scene, "bouncy", millis(7700), 0.0);
+    plot.draw(scene, "target", millis(8100), 0.9);
+    plot.mark(scene, "retarget", millis(8500));
+    plot.draw(scene, "interrupted", millis(8800), 1.4);
+    plot.draw(scene, "restart", millis(10_300), 1.0);
+    plot.fade(scene, "restart", millis(11_500), 0.6);
+    let arrived = plot.ride(scene, "interrupted", SPAN, millis(11_600), 3.0);
+    plot.velocity(scene, "interrupted", millis(11_600), 1.0);
     plot.stop_ride(scene, "interrupted", arrived);
     plot.velocity(scene, "interrupted", arrived, 0.0);
-    scene.cue("retarget", 7600 * MS, STORY_END);
+    scene.cue("retarget", millis(7600), STORY_END);
     Ok(plot)
 }
 
