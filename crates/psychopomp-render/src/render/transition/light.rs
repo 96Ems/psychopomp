@@ -15,7 +15,7 @@ use psychopomp::{
 use super::{Frames, Paint, add, linear, mix, paint_rows, put, scale};
 
 /// How far a flash overexposes the frame before it whites out.
-const FLASH_GAIN: f32 = 6.0;
+const FLASH_GAIN: f32 = 3.6;
 
 pub(super) fn flash(frames: Frames, phase: TransitionPhase, paint: Paint) -> Vec<u8> {
     let Frames {
@@ -101,7 +101,7 @@ const LEAKS: [Glow; 5] = [
     ),
 ];
 /// How brightly the leak burns at its peak, before it is screened in.
-const LEAK_GAIN: f32 = 2.4;
+const LEAK_GAIN: f32 = 1.35;
 
 pub(super) fn leak(frames: Frames, phase: TransitionPhase, paint: Paint) -> Vec<u8> {
     let Frames {
