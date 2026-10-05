@@ -274,7 +274,7 @@ impl VideoActor {
     /// Fade out in place.
     pub fn hide(&mut self, scene: &mut PlanBuilder, at_nanos: u64) {
         let opacity = self.channel(scene, "opacity", 1.0);
-        scene.spring(&opacity, at_nanos, 0.0, 0.3, 0.0);
+        scene.spring_with(&opacity, at_nanos, 0.0, crate::plan::SpringPlan::EXIT);
     }
 }
 

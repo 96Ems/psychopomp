@@ -255,14 +255,14 @@ pub(crate) fn show(scene: &mut PlanBuilder, actor: &ActorHandle, at_nanos: u64) 
     let opacity = scene.channel(actor, "opacity", 0.0);
     let y = scene.channel(actor, "y", 10.0);
     scene.spring(&opacity, at_nanos, 1.0, 0.35, 0.0);
-    scene.spring(&y, at_nanos, 0.0, 0.45, 0.0);
+    scene.spring_with(&y, at_nanos, 0.0, crate::plan::SpringPlan::ENTER);
 }
 
 /// Fade out in place. If `opacity` was not already declared by `show` or
 /// `type_in`, it starts at the recipe's visible resting value (`1.0`).
 pub(crate) fn hide(scene: &mut PlanBuilder, actor: &ActorHandle, at_nanos: u64) {
     let opacity = scene.channel(actor, "opacity", 1.0);
-    scene.spring(&opacity, at_nanos, 0.0, 0.3, 0.0);
+    scene.spring_with(&opacity, at_nanos, 0.0, crate::plan::SpringPlan::EXIT);
 }
 
 /// Reveal `chars` characters on a 0..1 `typed` channel at `chars_per_second`,

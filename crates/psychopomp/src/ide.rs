@@ -631,11 +631,11 @@ impl HoverActor {
     /// overshoot. A hover with a `show` starts hidden.
     pub fn show(&self, scene: &mut PlanBuilder, at_nanos: u64) {
         let presence = scene.channel(&self.actor, "presence", 0.0);
-        scene.spring(&presence, at_nanos, 1.0, 0.32, 0.18);
+        scene.spring_with(&presence, at_nanos, 1.0, SpringPlan::POP);
     }
 
     pub fn hide(&self, scene: &mut PlanBuilder, at_nanos: u64) {
-        let presence = scene.channel(&self.actor, "presence", 0.0);
+        let presence = scene.channel(&self.actor, "presence", 1.0);
         scene.spring(&presence, at_nanos, 0.0, 0.2, 0.0);
     }
 }
@@ -706,7 +706,7 @@ impl CursorActor {
 
     /// The caret fades and stops blinking.
     pub fn hide(&self, scene: &mut PlanBuilder, at_nanos: u64) {
-        let opacity = self.channel(scene, "opacity", 0.0);
+        let opacity = self.channel(scene, "opacity", 1.0);
         let blink = self.channel(scene, "blink", -1.0);
         scene.set(&blink, at_nanos, -1.0);
         scene.spring(&opacity, at_nanos, 0.0, 0.16, 0.0);
@@ -719,11 +719,7 @@ impl CursorActor {
             self.actor.id()
         );
         self.hold(scene, at_nanos);
-        let spring = SpringPlan {
-            position_threshold: 1e-5,
-            velocity_threshold: 1e-5,
-            ..SpringPlan::visual(0.32, 0.0)
-        };
+        let spring = SpringPlan::visual(0.32, 0.0).with_thresholds(1e-5, 1e-5);
         for (index, id) in self.anchors.clone().iter().enumerate() {
             let initial = if index == 0 { 1.0 } else { 0.0 };
             let weight = self.channel(scene, &CursorPlan::weight_property(id), initial);
@@ -766,7 +762,7 @@ impl CursorActor {
         scene.spring(&head, at_nanos, 0.0, 0.3, 0.0);
         scene.spring(&tail, at_nanos, 0.0, 0.3, 0.0);
         let sweep = at_nanos + 300_000_000;
-        scene.ease(&head, sweep, 1.0, seconds, Ease::CubicInOut);
+        scene.ease(&head, sweep, 1.0, seconds, Ease::GLIDE);
         let done = sweep + crate::author::whole_millis(seconds);
         self.rest(scene, done);
         Ok(done)
