@@ -6,7 +6,7 @@ use anyhow::{Result, ensure};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    author::{ActorHandle, ContinuousHandle, PlanBuilder},
+    author::{ActorHandle, ContinuousHandle, DRAW_SECONDS, PlanBuilder, STAGGER},
     math::easing::Ease,
     tone::Tone,
 };
@@ -19,8 +19,6 @@ pub const LOWER_THIRD_RECIPE: &str = "lower-third";
 pub const LOWER_THIRD_PROPERTIES: [&str; 6] = ["opacity", "x", "y", "bar", "name", "role"];
 
 const DEFAULT_SIZE: f32 = 46.0;
-/// The draw-on curve that neither jumps off its foot nor parks at the top.
-const DRAW: Ease = Ease::CubicBezier([0.45, 0.0, 0.2, 1.0]);
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
@@ -172,11 +170,11 @@ impl LowerThirdActor {
     /// A lower third with a `show` starts hidden. Returns when it has landed.
     pub fn show(&mut self, scene: &mut PlanBuilder, at_nanos: u64) -> u64 {
         let bar = self.channel(scene, "bar", 0.0);
-        scene.ease(&bar, at_nanos, 1.0, 0.42, DRAW);
+        scene.ease(&bar, at_nanos, 1.0, DRAW_SECONDS, Ease::DRAW);
         let name = self.channel(scene, "name", 0.0);
-        scene.spring(&name, at_nanos + 140_000_000, 1.0, 0.55, 0.0);
+        scene.ease(&name, at_nanos + STAGGER, 1.0, 0.46, Ease::DRAW);
         let role = self.channel(scene, "role", 0.0);
-        scene.spring(&role, at_nanos + 280_000_000, 1.0, 0.5, 0.0);
+        scene.ease(&role, at_nanos + 2 * STAGGER, 1.0, 0.44, Ease::DRAW);
         at_nanos + 800_000_000
     }
 
@@ -184,11 +182,11 @@ impl LowerThirdActor {
     /// when it has gone.
     pub fn hide(&mut self, scene: &mut PlanBuilder, at_nanos: u64) -> u64 {
         let role = self.channel(scene, "role", 1.0);
-        scene.spring(&role, at_nanos, 0.0, 0.32, 0.0);
+        scene.ease(&role, at_nanos, 0.0, 0.26, Ease::GLIDE);
         let name = self.channel(scene, "name", 1.0);
-        scene.spring(&name, at_nanos + 70_000_000, 0.0, 0.36, 0.0);
+        scene.ease(&name, at_nanos + 60_000_000, 0.0, 0.28, Ease::GLIDE);
         let bar = self.channel(scene, "bar", 1.0);
-        scene.ease(&bar, at_nanos + 220_000_000, 0.0, 0.34, Ease::Smootherstep);
+        scene.ease(&bar, at_nanos + 300_000_000, 0.0, 0.26, Ease::GLIDE);
         at_nanos + 560_000_000
     }
 }
