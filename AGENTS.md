@@ -29,6 +29,8 @@ cargo run --release -- plan render <plan-or-reel.json> output/<name>.mp4 --theme
 cargo run --release -- plan present <deck.json>              # native presentation
 cargo run --release -- plan frame <plan-or-reel.json> <seconds> out.png --shutter
 cargo run --release -- plan snapshot <plan-or-reel.json> <times> <dir> [--compare]
+cargo run --release -- verify baseline [LABEL | --out DIR]   # every plan in verify.json + key frames
+cargo run --release -- verify compare [LABEL | DIR] [--expect NAME,..]
 bun scripts/sheet.ts <plan-or-reel.json> <t1,t2,... | from:to:step> --shutter
 bun scripts/narrate.ts <scene>/narration/script.json [--draft]
 ```
@@ -43,7 +45,8 @@ typography, choreography, sampling, or encoding changes.
   recipe data; no GPU.
 - `crates/psychopomp-render` (binary `psychopomp`): `plan_runtime/` preflights and
   prepares plans, `render/` paints recipes, `exposure.rs` and `encode.rs` deliver video.
-- `scenes/`: one Rust Scene Program per film or showroom.
+- `scenes/`: one Rust Scene Program per film or showroom. The workspace globs
+  `scenes/*`, so a new scene needs no `Cargo.toml` edit; list it in `verify.json`.
 - A new recipe adds values and an authoring handle in `crates/psychopomp`, strict
   preflight in `plan_runtime/<x>.rs`, pixels in `render/<x>.rs`, and a showroom in
   `scenes/<x>/`.
@@ -62,6 +65,10 @@ future flexibility. Add an abstraction when a second real use exposes the seam.
   private lerps or easings in renderers or scenes.
 - Code identity and layout stay independent of glyphs, GPUs, colors, and screen
   coordinates.
+- A new Stage channel gets its rest value in the one defaults table
+  (`StageElement::channel_defaults` or `StagePost::channel_default` in
+  `crates/psychopomp/src/stage.rs`), which authoring and the renderer both read;
+  `every_stage_property_has_exactly_one_default` fails until it is there.
 - Generated plans and media go in ignored `target/` and `output/`.
 - Never commit secrets. Narration keys come from the environment.
 
@@ -81,10 +88,41 @@ Viewers must be able to follow the same code through a change.
 
 - Add focused unit tests beside pure logic for invariants: identity, endpoints,
   velocity continuity, validation failures, and out-of-order sampling.
-- For renderer changes, inspect a targeted artifact at full scale. For
-  behavior-preserving refactors, `plan snapshot` before and `--compare` after:
-  rendering is deterministic, so any changed pixel is real.
+- For renderer changes, inspect a targeted artifact at full scale.
+- Run `verify baseline` before an engine or scene change and `verify compare`
+  after, naming the scenes you meant to change with `--expect`. It re-runs every
+  Scene Program in `verify.json`, loads (validates) each plan, compares plan bytes
+  with a summary of changed actors and channels, and compares key frames rendered
+  on one renderer, in about 15 seconds. Rendering is deterministic, so any changed
+  pixel is real. Use `plan snapshot --compare` only for times outside the manifest;
+  do not hand-write snapshot loops.
+- `verify` builds Scene Programs with the dev profile, as `cargo run -p` does.
+  Release and dev builds can differ in a plan's last float digits
+  (constant-folded `sin`/`cos`), so emit a baseline and its comparison with the
+  same profile; compare refuses a baseline that recorded another.
+- A manifest scene's `requires` names ignored inputs, such as generated sprites.
+  Without them, `verify` compares that plan but renders none of its frames, and
+  says so.
 - Compare performance only at identical resolution, frames, samples, and profile.
 
-Before finishing, run the three checks above and say if GPU, font, or FFmpeg
-limits prevented artifact-level verification.
+Before finishing, run the three checks above and `verify compare`, and say if
+GPU, font, or FFmpeg limits prevented artifact-level verification.
+
+## Working alongside other agents
+
+- Never end a turn while a background command runs: a subagent is not resumed
+  when it finishes. Run builds and renders in the foreground with a long timeout.
+- Shell commands run in zsh. An unquoted `$flags` stays one word
+  (`"--theme neutral"`), so write flags out or use an array
+  (`flags=(--theme neutral)`, then `"${flags[@]}"`), and quote globs
+  (`--include='*.rs'`).
+- Share one baseline. Before fanning out, run `verify baseline --out <dir>` once
+  on the base commit; each agent runs `verify compare <dir>` (any argument with a
+  `/` is a directory, otherwise a label under `target/verify/`) instead of
+  building the base or rendering its own. Plans store workspace paths as `$ROOT`, so one
+  baseline serves every worktree.
+- The machine is shared. Check frames with `plan frame`, `plan snapshot`, sheets,
+  and short `plan render --range a..b` or `--cue` windows; render a full film
+  once, after those pass. Cap compile jobs (`CARGO_BUILD_JOBS=4`) when several
+  agents build at once.
+- Brief subagents from `docs/AGENT_BRIEF.md`.

@@ -77,7 +77,8 @@ authoring. Engineering rules are in `AGENTS.md`.
    `cargo run -p psychopomp-media -- adopt scenes/<name>/narration` (no
    regeneration). Done when a plain run reports every resource `=`.
 
-4. **Author the Scene Program** in `scenes/<name>` (add it to the workspace).
+4. **Author the Scene Program** in `scenes/<name>` (the workspace picks it up; add
+   it to `verify.json` with a few key times).
    Use `psychopomp::score` (`SCENE_PLANS.md`, "Author With The Score DSL") so
    `PlanBuilder` is the only `mut` binding and every actor (`Stage`, `Camera`,
    `Caption`, `Callout`, `RollingNumber`, `Checklist`, `Meter`, `Bars`,
@@ -113,10 +114,13 @@ authoring. Engineering rules are in `AGENTS.md`.
    and edit `stage.wgsl`/`stage_post.wgsl`: every frame and sheet picks up shader edits
    without a Rust rebuild.
    Then render one behavior segment with audio (`plan render <reel> out.mp4 --cue <scene-id>`)
-   and inspect frames extracted during motion. Done when every segment has been
-   looked at and no text overlaps, clips, or reads against the wrong chip.
+   or a 2–3 second window (`--range a..b`) and inspect frames extracted during
+   motion. Done when every segment has been looked at and no text overlaps, clips,
+   or reads against the wrong chip.
 
-6. **Render and verify** the whole reel:
+6. **Render and verify** the whole reel once, after the sheets and short windows
+   pass. Run it in the foreground with a long timeout and never end a turn while it
+   is still running:
    ```sh
    cargo run --release -- plan render <reel> output/<name>.mp4 --theme neutral
    ```
@@ -131,7 +135,10 @@ authoring. Engineering rules are in `AGENTS.md`.
 When a reel needs something the engine cannot do, add it to Psychopomp rather than
 working around it in one scene: plan types and validation in `crates/psychopomp`,
 strict-channel preflight in `plan_runtime`, pixels in `render`, GPU-free tests plus
-an `#[ignore]` GPU test, and the docs `AGENTS.md` asks you to keep current.
+an `#[ignore]` GPU test, and the docs `AGENTS.md` asks you to keep current. Run
+`cargo run --release -- verify baseline` before the change and `verify compare
+--expect <scenes you changed>` after it to prove every other showroom and film is
+untouched.
 
 Build from small reusable pieces. Interpolation, easing, curves, shape ports, and
 connectors belong in `psychopomp::math` (organized like pmndrs `math`: core `lerp`/

@@ -89,6 +89,7 @@ Renderer crate (`crates/psychopomp-render/src`), plan runtime:
 - `crates/psychopomp-render/src/plan_runtime/attachments.rs`: private companion-track compilation for layout-aware semantic coordinates
 - `crates/psychopomp-render/src/plan_runtime/delivery.rs`: PNG and MP4 delivery from a prepared scene
 - `crates/psychopomp-render/src/plan_runtime/still.rs`: plan or reel delivery as video, single frames, or compared frame snapshots
+- `crates/psychopomp-render/src/plan_runtime/verify.rs`: `psychopomp verify`: builds and runs the Scene Programs in the root `verify.json`, loads each plan, renders its key frames on one renderer, and stores or compares plans and pixels; `verify/manifest.rs` parses the manifest and `verify/diff.rs` summarizes plan changes by segment, actor, channel, cue, and media ID
 - `crates/psychopomp-render/src/plan_runtime/reel.rs`: Reel preparation, layer mixing, media retiming, and reel frame/video delivery
 - `crates/psychopomp-render/src/plan_runtime/proof.rs`: small test primitives for recipe-specific pixel and interruption checks
 - `crates/psychopomp-render/src/plan_runtime/presentation.rs`: native winit window, step navigation, and smooth/pixelated display filtering
