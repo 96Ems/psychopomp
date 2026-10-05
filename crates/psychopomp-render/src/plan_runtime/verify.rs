@@ -30,6 +30,11 @@ use manifest::{Manifest, Scene};
 pub(crate) const USAGE: &str = "psychopomp verify baseline [LABEL] [--manifest FILE] [--out DIR] [--only NAME,..] | psychopomp verify compare [LABEL | DIR] [--manifest FILE] [--out DIR] [--only NAME,..] [--expect NAME,..]";
 
 const DEFAULT_LABEL: &str = "baseline";
+/// The profile Scene Programs are built with: the one `cargo run -p` uses,
+/// so emitted plans match checked-in ones. Release and dev builds can differ
+/// in a plan's last float digits (constant-folded trigonometry), so a
+/// baseline and its comparison must share a profile.
+const PROFILE: &str = "dev";
 const SUMMARY: &str = "summary.json";
 /// Absolute paths under the workspace are stored relative to this marker, so
 /// worktrees can share one baseline.
@@ -148,6 +153,7 @@ fn absolute(path: &Path) -> PathBuf {
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 struct Summary {
+    profile: String,
     commit: Option<String>,
     dirty: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -178,6 +184,9 @@ struct SceneRecord {
     seconds: f64,
     #[serde(skip_serializing_if = "Option::is_none")]
     error: Option<String>,
+    /// Why no frame rendered: a required file is missing.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    skipped: Option<String>,
     /// When comparing: the plan's byte identity and structural changes.
     #[serde(skip_serializing_if = "Option::is_none")]
     plan: Option<PlanComparison>,
@@ -245,8 +254,14 @@ impl Baseline {
                 path.display()
             )
         })?;
-        let summary = serde_json::from_str(&json)
+        let summary: Summary = serde_json::from_str(&json)
             .with_context(|| format!("parse baseline {}", path.display()))?;
+        ensure!(
+            summary.profile == PROFILE,
+            "baseline {} emitted plans with the {} profile, not {PROFILE}; recreate it",
+            directory.display(),
+            summary.profile
+        );
         Ok(Self { directory, summary })
     }
 
@@ -308,6 +323,7 @@ fn run(options: Options) -> Result<()> {
                 .get(&(scene.package.as_str(), scene.args.as_slice()))
                 .cloned(),
             plan: None,
+            skipped: None,
         };
         if record.error.is_none()
             && let Err(error) = verify_scene(
@@ -329,6 +345,7 @@ fn run(options: Options) -> Result<()> {
     timings.total = started.elapsed().as_secs_f64();
 
     let summary = Summary {
+        profile: PROFILE.to_owned(),
         commit: git(root, &["rev-parse", "--short", "HEAD"]),
         dirty: git(root, &["status", "--porcelain", "--untracked-files=no"])
             .is_some_and(|status| !status.is_empty()),
@@ -377,7 +394,8 @@ fn build(root: &Path, scenes: &[&Scene]) -> Result<HashMap<String, PathBuf>> {
     let mut command = Command::new(cargo);
     command.current_dir(root).args([
         "build",
-        "--release",
+        "--profile",
+        PROFILE,
         "--quiet",
         "--message-format=json-render-diagnostics",
     ]);
@@ -451,6 +469,10 @@ fn verify_scene(
     )?;
     if let Some(baseline) = baseline {
         record.plan = Some(compare_plans(baseline.plan(&scene.name).as_deref(), &json));
+    }
+    if let Some(missing) = scene.missing(root) {
+        record.skipped = Some(format!("frames need {missing}"));
+        return Ok(());
     }
 
     let loaded = Loaded::load_on(&source, record.theme, renderer)?;
@@ -635,8 +657,13 @@ fn print_scene(record: &SceneRecord, comparing: bool) {
         return;
     }
     let total = record.frames.len();
+    let skipped = record
+        .skipped
+        .as_ref()
+        .map(|reason| format!("  (no frames: {reason})"))
+        .unwrap_or_default();
     if !comparing {
-        println!("{name:<24} {total:>2} frames          {seconds:6.2}s");
+        println!("{name:<24} {total:>2} frames          {seconds:6.2}s{skipped}");
         return;
     }
     let plan = match &record.plan {
@@ -659,7 +686,7 @@ fn print_scene(record: &SceneRecord, comparing: bool) {
     } else {
         format!("{differing} of {total} frames CHANGED")
     };
-    println!("{name:<24} {plan:<13} {frames:<22} {seconds:6.2}s");
+    println!("{name:<24} {plan:<13} {frames:<22} {seconds:6.2}s{skipped}");
     let changes = record.plan.iter().flat_map(|plan| &plan.changes);
     for change in changes.clone().take(SHOWN) {
         println!("    {change}");
@@ -714,6 +741,11 @@ fn conclude(
         "{} scenes, {frames} frames: build {build:.1}s, emit {emit:.1}s, render {render:.1}s, total {total:.1}s",
         summary.scenes.len()
     );
+    for scene in &summary.scenes {
+        if let Some(reason) = &scene.skipped {
+            println!("{}: plan only, {reason}", scene.name);
+        }
+    }
     let failed = summary
         .scenes
         .iter()

@@ -37,6 +37,11 @@ pub(super) struct Scene {
     pub shutter: Vec<f64>,
     #[serde(default)]
     pub theme: Option<Theme>,
+    /// Ignored files the frames need, such as generated sprites, relative to
+    /// the manifest. Without them the plan is still compared but no frame
+    /// renders.
+    #[serde(default)]
+    pub requires: Vec<String>,
 }
 
 impl Manifest {
@@ -106,6 +111,14 @@ impl Scene {
         self.theme.unwrap_or(manifest.theme)
     }
 
+    /// The first required path missing under `root`.
+    pub fn missing(&self, root: &Path) -> Option<&str> {
+        self.requires
+            .iter()
+            .map(String::as_str)
+            .find(|path| !root.join(path).exists())
+    }
+
     /// Each frame to render: its time and whether it goes through the shutter.
     pub fn frames(&self) -> impl Iterator<Item = (f64, bool)> + '_ {
         let instants = self.times.iter().map(|&at| (at, false));
@@ -139,7 +152,8 @@ mod tests {
               "times": [3], "theme": "original" },
             { "name": "cut", "package": "films", "args": ["cut"], "plan": "scenes/films/cut.json",
               "shutter": [1] },
-            { "name": "reel-b", "package": "films", "plan": "scenes/films/b.json", "times": [1] }
+            { "name": "reel-b", "package": "films", "plan": "scenes/films/b.json", "times": [1],
+              "requires": ["output/films/sprites"] }
         ]
     }"#;
 
@@ -163,6 +177,20 @@ mod tests {
         .unwrap()
         .theme;
         assert_eq!(theme, Theme::Original, "the renderer's default theme");
+    }
+
+    #[test]
+    fn required_paths_are_checked_under_the_root() {
+        let manifest = Manifest::parse(MANIFEST).unwrap();
+        let root = std::env::temp_dir().join(format!("verify-requires-{}", std::process::id()));
+        assert_eq!(
+            manifest.scenes[3].missing(&root),
+            Some("output/films/sprites")
+        );
+        std::fs::create_dir_all(root.join("output/films/sprites")).unwrap();
+        assert_eq!(manifest.scenes[3].missing(&root), None);
+        assert_eq!(manifest.scenes[0].missing(&root), None, "nothing required");
+        std::fs::remove_dir_all(&root).unwrap();
     }
 
     #[test]
