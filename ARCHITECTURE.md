@@ -63,6 +63,8 @@ Lightweight crate (`crates/psychopomp/src`):
 - `crates/psychopomp/src/anchor.rs`: the shared Anchor model: `Edge` (re-exported as `CalloutSide`), `AnchorPlan` (point, stage, editor, with offsets), the borrowed `AnchorTarget` every renderer path resolves, weight channel names, validation, `blend`, and `move_to`
 - `crates/psychopomp/src/text.rs`: typed `text` recipe values in the hand-built JSON shape and the `TextActor` handle (`show`, `hide`, `show_during`, `swap`, `move_to`)
 - `crates/psychopomp/src/image.rs`: Image recipe values (bare or framed, title, radius, anchors), the image placement helper, and the `ImageActor` handle (`fly_in`, `hide`, `move_to`)
+- `crates/psychopomp/src/footage.rs`: Footage: the `Clip` (trim, rate, hold/loop/bounce, reverse, freeze, decode rate and width) and its exact nanosecond playhead mapping, `Fit` and focus windows, `Mask`, color `Treatment`, the `footage` overlay recipe (`FootagePlan`), placement and audio helpers, the `Playhead` handle on a `time` channel (`freeze`, `play`, `ramp`, `retime`, `seek`, `stutter`), the `FootageActor` handle (`fly_in`, `toss_in`, `glide`, `move_to`, `focus`, `drift`, `treat`, `hide`, `audio`), and `probe` (ffprobe at authoring time)
+- `crates/psychopomp/src/footage/layout.rs`: GPU-free collage layouts returning `Tile`s: `grid`, `masonry`, `scatter`, `pile`, `filmstrip`, and `by_distance` for ripple staggers
 - `crates/psychopomp/src/math.rs` and `math/`: shared motion and geometry math (glam vectors, lerp/remap/smoothstep, easing, closed-form dynamics such as the settling spring, arc-length curves, shape ports and connectors, rounded-box distance fields, thin-surface glass optics, deterministic hash)
 
 Media crate (`crates/psychopomp-media/src`), Generated Resources for Scene Programs:
@@ -108,9 +110,8 @@ Renderer crate (`crates/psychopomp-render/src`), plan runtime:
 - `crates/psychopomp-render/src/plan_runtime/viz.rs` and `viz/`: the visualization overlays as one group (`VizInputs`, `PreparedViz`) with strict-channel preflight per recipe in `viz/{checklist,meter,bars,subtitles,confetti}.rs`
 - `crates/psychopomp-render/src/plan_runtime/callout.rs`: callout poses from anchors validated and resolved through the shared `plan_runtime/anchor.rs`
 - `crates/psychopomp-render/src/plan_runtime/lens.rs`: Lens preflight, anchor validation, and per-sample glass from blended anchors
-- `crates/psychopomp-render/src/plan_runtime/video.rs`: Video Card preflight, frame caches, and source-time mapping
+- `crates/psychopomp-render/src/plan_runtime/footage.rs`: Video Card, image, footage-overlay, and Stage-footage preflight lowered into one `FootagePlan` path; decode-size choice; the per-sample playhead-to-frame mapping; cached overlay layers; Stage footage frames
 - `crates/psychopomp-render/src/plan_runtime/anchor.rs`: shared anchor validation against the root, per-sample resolution (`render::stage_anchor`, `PreparedEditor::anchor`), and weighted pinning for every pinnable overlay
-- `crates/psychopomp-render/src/plan_runtime/image.rs`: Image preflight (recipe, channels, image placement) and one-time decoding
 - `crates/psychopomp-render/src/plan_runtime/stage.rs`: Stage root preflight and preparation
 - `crates/psychopomp-render/src/plan_runtime/lower_third.rs`: Lower Third strict-channel preflight
 - `crates/psychopomp-render/src/plan_runtime/terminal.rs`, `chat.rs`, and `changed_files.rs`: text-surface preflight (per-line, per-message, per-reaction, and per-row channels checked against their IDs and kinds); chat preparation measures wrapped text, changed-files preparation measures columns and compiles its rolling totals
@@ -139,8 +140,8 @@ Renderer crate, pixels and delivery:
 - `crates/psychopomp-render/src/render/ide.rs`: selection, Inlay Hint chip, diagnostic wave and gutter icon, caret, and Hover Card pixels on the flat editor surface
 - `crates/psychopomp-render/src/render/viz.rs` and `viz/`: checklist, meter, bars, subtitles, and confetti pixels over the chart ink, plus the shared Readout painter (`viz/readout.rs`), a weighted stroke, arcs, and rotated rectangles
 - `crates/psychopomp-render/src/render/lens.rs`: Lens pixels: linear-light refraction of the composed frame, rim softening, specular light, and contact shadow
-- `crates/psychopomp-render/src/render/video.rs`: projected Video Card pixels with a focus window
-- `crates/psychopomp-render/src/render/image.rs`: PNG/JPEG/WebP decoding by signature, premultiplied halving, and bare or framed projected image pixels
+- `crates/psychopomp-render/src/render/footage.rs`: projected footage pixels for Video Cards, images, and footage (fit and focus window, mask, color treatment, title bar), drawn directly or as a cached layer, and the banded layer blend
+- `crates/psychopomp-render/src/render/image.rs`: PNG/JPEG/WebP decoding by signature and premultiplied halving
 - `crates/psychopomp-render/src/render/wipe.rs`: Reel wipe pixels: antialiased split, divider line and shadow, riding labels
 - `crates/psychopomp-render/src/render/window.rs`: the text surfaces' Window shell (composed once per pose through the projected card and cached as a layer), title bar, CommitMono span runs, and weighted strokes
 - `crates/psychopomp-render/src/render/terminal.rs`, `chat.rs`, and `changed_files.rs`: Terminal, Chat Thread, and Changed Files pixels
@@ -149,7 +150,8 @@ Renderer crate, pixels and delivery:
 - `crates/psychopomp-render/src/render/stage.rs`, `stage.wgsl`, `stage_post.wgsl`: Stage primitives, HDR bloom, and composite; `PSYCHOPOMP_SHADER_DIR` loads the WGSL live
 - `crates/psychopomp-render/src/render/effects/*.wgsl`: binding-free noise, combustion, pressure, rewind, lightning, dissolve, shield, and scan Modules, composed by the Stage shaders; see `EFFECTS.md`
 - `crates/psychopomp-render/src/render/debug.rs`: optional native debug HUD
-- `crates/psychopomp-render/src/video.rs`: FFmpeg-decoded seekable RGBA frame cache for input video
+- `crates/psychopomp-render/src/video.rs`: FFmpeg-decoded seekable RGBA frame cache for input video and image sequences, keyed by source content and decode contract
+- `crates/psychopomp-render/src/footage.rs`: the footage store: every source a plan shows, opened once and shared, with frames read through one bounded LRU
 - `crates/psychopomp-render/src/exposure.rs`: delivery dimensions, shutter samples and weights, linear-light accumulation, and encoding a timeline one exposed frame at a time
 - `crates/psychopomp-render/src/encode.rs`: concrete FFmpeg subprocess, raw RGBA protocol, and compiled audio placement
 
@@ -184,6 +186,7 @@ Scene Programs (`scenes/`), each emitting a Scene Plan, Deck, or Reel:
 - `scenes/anchors/`: Anchor showroom reel: a caption, a Rolling Number, text labels, a callout, and a framed image riding Stage cards through a dolly, a jolt, and glides between anchors; then a caption and a Rolling Number on code ranges while lines insert and the panel zooms; then a cursor caption, a counter, and a callout on Sequence Diagram rows and headers as the diagram slides
 - `scenes/loupe/`: Lens showroom reel: a loupe reads code ranges (glide, capsule scan, floating focus), then follows a Stage card's changing status through a dolly
 - `scenes/transitions/`: transitions showroom: every reel transition between Stage, code, and title frames, each named in a chip
+- `scenes/footage/`: Footage showroom reel: a masonry wall of stills and clips tossed in, one clip freezing, ramping, and stuttering while the rest recede to reference footage; footage at Stage depths under an orbiting camera with a circular clip pinned to a card; a pile of prints drawn into a filmstrip (`--bench` writes a twenty-clip measuring wall)
 
 ## Scene Programs And Rendering Compile Separately
 
@@ -218,7 +221,7 @@ Shared rules have narrow owners rather than a recipe registry:
 - `plan_runtime/generated.rs` reserves generated channel IDs and actor/property
   pairs. Task x/y is the sole explicit authored override, not last-writer-wins.
 
-Planned audio and visual media share the same exact source and timeline ranges but have different concrete consumers. Audio lowers into `Composition` and the FFmpeg encoder. A video placement is accepted only when a `video` actor explicitly consumes its media ID; unconsumed video and image media remain errors. The Video Card recipe (`plan_runtime/video.rs`) maps the original global clock through the planned timeline range into source time, samples its own `VideoFrameCache`, and presents the footage through the shared projected card compositor. Video Cards are overlays, not roots: they draw first, beneath diagram and text overlays, over any root (a blank background, an editor, or a Stage). Each card's source-frame index joins the visual sample key (and a Stage's overlay key), so settled footage still renders every new frame. Video never reaches the audio-only encoder, and there is no generic video layer or media graph. Image placements are likewise accepted only when an `image` actor consumes them; `plan_runtime/image.rs` reads and decodes the file once at preparation (never at preflight) and draws it with the Video Cards, through the same projected card.
+Planned audio and visual media share the same exact source and timeline ranges but have different concrete consumers. Audio lowers into `Composition` and the FFmpeg encoder. Video and image placements are accepted only when footage consumes them (a `video`, `image`, or `footage` actor, or a Stage `footage` element); unconsumed video and image media remain errors. Video never reaches the audio-only encoder, and there is no generic video layer or media graph: footage audio is an ordinary audio placement of the same file (see Footage).
 
 Scene Plan v2 allows a scalar initial value or event target to reference one component of a stable Semantic Target plus an offset. The core validates target identity, component names, and finite offsets without interpreting the target selector. During renderer preparation, the actor's concrete recipe resolves selectors into geometry; only then are ordinary numeric Property Tracks compiled. This keeps font measurement renderer-owned while preserving pointer and highlight trajectories as inspectable general channels.
 
@@ -265,7 +268,7 @@ Each compiled spring has a deterministic settling time. Underdamped motion uses 
 
 Media time is stored as integer nanoseconds, so repeated source-range edits retain exact boundaries.
 
-`crates/psychopomp-render/src/video.rs` is the narrow input-video boundary used by Video Cards. FFmpeg decodes a checked-in H.264 recording into an ignored seekable RGBA cache under `target/`; fixed-size frame offsets then provide deterministic arbitrary-time sampling without codec bindings or retaining the decoded recording in memory. The cache is regenerated when the immutable source changes.
+`crates/psychopomp-render/src/video.rs` is the narrow input-video boundary. FFmpeg decodes a video (or a printf-pattern image sequence through `image2`, or a VP8/VP9 WebM's side-channel alpha through libvpx) into an ignored seekable straight-alpha RGBA cache under `target/psychopomp-cache/footage`, named by the bytes of every file it reads and the decode contract (size, rate, decoder, trimmed range); fixed-size frame offsets then provide deterministic arbitrary-time sampling without codec bindings or retaining the decoded recording in memory. Any actor or plan showing the same source at the same size shares one decode; the directory is safe to delete.
 
 The decoder receives null stdin, never the persistent server's request stream.
 A failed seek/read invalidates the in-memory frame identity before it can expose
@@ -559,7 +562,7 @@ The compositor supports multiple non-overlapping reveals on one stable line. Foc
 `crates/psychopomp-render/src/render/task.rs` owns the concrete Effect Task visual recipe: compressed running nodes, energy sweeps, icons, result text, error bubbles, and labels, composited as `TaskVisualFrame` actors over other pixels. All moving pixel layers share one fractional transform, rounded signed-distance edge, and analytic coverage so the body, sweep, border, and glow remain one coherent material. Result content keeps its natural transform but is analytically masked by the current sampled rounded body after text blur, preventing spring intermediates from leaking outside the Task without scaling content to fit.
 
 
-`render/video.rs` draws a Video Card in one direct pass: `ContentFit::Region` maps the focus window (fractional source pixels) onto the footage rectangle below the optional title bar, so zoomed footage is resampled once through the projection. The title bar is rasterized at twice its size into a small transparent strip and composited through `FrameUi::card_layer`, which reuses the card's projection and rounded clip without a second shell or shadow. Material, border, and shadow come from the theme palette. The lightweight `video.rs` owns the focus math: a window center and size, clamped inside the frame, whose corners move linearly on one spring so every point of the focused region travels monotonically.
+`render/footage.rs` draws a Video Card in one direct pass: `ContentFit::Region` maps the focus window (fractional source pixels) onto the footage rectangle below the optional title bar, so zoomed footage is resampled once through the projection. The title bar is rasterized at twice its size into a small transparent strip and composited through `FrameUi::card_layer`, which reuses the card's projection and rounded clip without a second shell or shadow. Material, border, and shadow come from the theme palette. The lightweight `video.rs` owns the focus math: a window center and size, clamped inside the frame, whose corners move linearly on one spring so every point of the focused region travels monotonically.
 
 `scenes/opencode-session-tool` combines planned video, layered SFX, continuous card motion, and named cues through the process seam. Its immutable source recording aligns a real Vim session on the left with one already-running OpenCode v2 client on the right; a titled Video Card preserves those source pixels and their aspect ratio while ordinary `text` actors carry explanatory overlays. The 20.5-second rapid-fire artifact demonstrates live command, agent, project-skill, reference, model, permission, ambient-instruction, and local-plugin generation changes without restarting the OpenCode service, client, or session.
 
@@ -750,6 +753,59 @@ per-sample composite. Other overlays adopt anchors the same way: add
 `anchor::validate`, channels with `anchor::accepts`), list the actor in
 `PreparedPlan::pinnable` and in preflight's anchor validation, and draw at
 `PreparedPlan::pin`.
+
+### Footage
+
+Images, videos, and image sequences are one capability rather than parallel
+recipes. The lightweight `footage.rs` owns the `Clip` (which placement, its
+trim, rate, hold/loop/bounce, reverse, freeze) and its playhead mapping in
+integer nanoseconds: the natural playhead runs from the placement's timeline
+start at the clip's rate, a written `time` channel replaces it, and
+`Clip::source_nanos` holds, wraps, bounces, and mirrors it inside the trim.
+Freezes, ramps, stutters, and scrubs are therefore ordinary channel events
+(`Playhead`), never per-frame integration; a speed ramp is one
+`Ease::Decelerate` whose slopes are the two rates. A footage placement names
+the file and the span it is available in, not the trim, because placement
+validation ties source and timeline durations together and a rate would
+break that.
+
+The renderer lowers all three overlay payloads into a `FootagePlan`
+(`plan_runtime/footage.rs`): a Video Card is a framed rectangle whose trim is
+its placement's source range and whose decode is its authored size and rate;
+an image is a bare or framed rectangle whose height follows its decoded
+pixels. Video Cards draw first, then images and footage in declaration order,
+so old plans keep their order and their exact pixels (they take the original
+direct compositor path). New footage chooses a decode width on a shared
+ladder at about twice the widest it is shown (its largest `scale` over its
+tightest `focus-size`, cropped by its fit), never past the source, so tiles
+of nearby sizes share one decode. `FootageStore` opens each source once:
+stills decode in memory; videos and sequences decode once to disk and read
+frames through one LRU bounded by `PSYCHOPOMP_FOOTAGE_CACHE_MB` (384 MiB).
+
+`render/footage.rs` draws through the shared projected card. `CardShape`
+generalizes the card's rounded outline to a circle or polygon (its border and
+shadow follow it), and `SourceTreatment` desaturates, tints, or dims source
+pixels before they meet the material; the rounded, untreated path is the
+original code. Each footage overlay is drawn alone into a cached layer keyed
+by its pose, its frame identity, and the theme, and a sample blends every
+run of layers in one banded pass; a still overlay among moving ones costs a
+blend, not a projection. Over is associative, so this equals drawing
+directly to within 8-bit rounding; sub-0.2 px blur normalizes to none,
+exactly as the compositor samples. Each overlay's frame identity joins the
+visual sample key and its playing `time` channel leaves the motion key, so
+samples within one source frame merge and a playing clip renders every new
+frame.
+
+A Stage `footage` element is a camera-facing quad (a billboard, like a
+card), so it gets depth, parallax, draw order, depth of field, follows,
+and anchors from the Stage's own placement. Every footage element's frame
+lives in one `Rgba8UnormSrgb` atlas slot; each shutter sample uploads only
+slots whose frame identity changed (writes land before the next
+submission), and primitive kind 13 samples its fit and focus window with
+premultiplied bilinear taps, spreading 16 golden-angle taps for depth of
+field or minification, cut by a rounded box, circle, or polygon and treated
+like an overlay. The Stage already renders every sample, so its footage
+needs no key. Plans with footage carry media, so they remain export-only.
 
 ### IDE annotations
 
