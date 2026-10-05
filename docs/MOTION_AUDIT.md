@@ -155,7 +155,24 @@ Every showroom and component is evaluated against the house motion rules (`expla
 
 ## 2. Shared Motion Token System
 
-_Pending audit synthesis._
+Defined in `crates/psychopomp/src/author.rs`, `crates/psychopomp/src/score.rs`, and `crates/psychopomp/src/math/easing.rs`, grounded in `.agents/skills/explainer-motion/TECHNIQUES.md` and `PRIOR_ART.md`:
+
+| Token | Value | Purpose |
+|---|---|---|
+| `SpringPlan::PANEL` / `Feel::PANEL` | `0.6 s`, bounce `0.12` | Rigid panel body settling into place (`StageActor::settle_in`, `window::settle_in`) |
+| `SpringPlan::CONTENT` / `Feel::CONTENT` | `0.36 s`, bounce `0.0` | Ink following its container (`CONTENT_LAG = 65 ms` behind), or overlay opacity entrance |
+| `SpringPlan::ENTER` / `Feel::ENTER` | `0.45 s`, bounce `0.0` | Spatial entrance and persistent layout room opening (caption/text rise, tree fold/scroll, code line motion, chat message slot) |
+| `SpringPlan::EXIT` / `Feel::EXIT` | `0.24 s`, bounce `0.0` | Clean exit fade in place — simpler and faster than entry |
+| `SpringPlan::MOVE` / `Feel::MOVE` | `0.6 s`, bounce `0.0` | Point-to-point spatial translation and anchor weight glide (`.with_thresholds(1e-5, 1e-5)`) |
+| `SpringPlan::SNAP` / `Feel::SNAP` | `0.3 s`, bounce `0.0` | Quick state change, focus shift, or status cross-fade |
+| `SpringPlan::POP` / `Feel::POP` | `0.32 s`, bounce `0.18` | Small floating UI pop (hover card, reaction pill, delta chip) |
+| `SpringPlan::CAMERA` / `Feel::CAMERA` | `1.6 s`, bounce `0.0` | Camera move with weight and a natural tail |
+| `SpringPlan::LIVELY` / `Feel::LIVELY` | `0.85 s`, bounce `0.2` | Hero orb landing with deliberate overshoot |
+| `Ease::DRAW` | `CubicBezier([0.45, 0.0, 0.2, 1.0])` | Wire, leader, accent bar, and axis draw-on (`DRAW_SECONDS = 0.42 s`) |
+| `Ease::GLIDE` | `Ease::Smootherstep` | Minimum-jerk travel between resting holds |
+| `author::STAGGER` | `millis(120)` (`120 ms`) | Canonical row/card ripple gap |
+| `author::CONTENT_LAG` | `millis(65)` (`65 ms`) | Lead between a rigid container and its content |
+| `author::DRAW_SECONDS` | `0.42 s` | Standard leader and accent-bar draw-on duration |
 
 ---
 
