@@ -125,4 +125,7 @@ GPU, font, or FFmpeg limits prevented artifact-level verification.
   and short `plan render --range a..b` or `--cue` windows; render a full film
   once, after those pass. Cap compile jobs (`CARGO_BUILD_JOBS=4`) when several
   agents build at once.
+- `plan render` waits for one machine-wide render slot and names the PID holding
+  it; set `PSYCHOPOMP_RENDER_SLOTS=2` to allow two, or `0` to skip the queue.
+  Frames, snapshots, and `verify` never wait.
 - Brief subagents from `docs/AGENT_BRIEF.md`.

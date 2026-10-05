@@ -48,6 +48,7 @@ mod presentation;
 #[cfg(test)]
 mod proof;
 mod reel;
+mod render_queue;
 mod rich_text;
 mod rolling;
 mod sequence;
@@ -296,6 +297,7 @@ fn render_command(arguments: &[String], theme: Theme) -> Result<()> {
     let path = Path::new(path);
     let file = PlanFile::read(path)?;
     let window = file.window(selection)?;
+    let _slot = render_queue::wait()?;
     let base = path.parent().unwrap_or_else(|| Path::new("."));
     let (loaded, mut renderer) = pollster::block_on(still::Loaded::prepare(file, base, theme))?;
     loaded.render_video(&mut renderer, &output, window)
