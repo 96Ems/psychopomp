@@ -296,6 +296,14 @@ A monochrome SVG drawn on the Stage through the camera: a bundled Phosphor icon
 by name, or SVG path data. It is rasterized once into the Stage's text atlas and
 tinted by its Tone, so it sizes in world pixels and defocuses like text.
 
+## Sprite Sheet
+
+An image sequence of one portrait's expressions crossed with mouth shapes and a
+blink, laid out in `lipsync::SpriteSheet` slot order. A **Sprite** plays it by
+cutting a footage playhead to one frame at a time, so lip sync, blinks, and
+expression changes are pure functions of plan time. A **Viseme** is the mouth
+shape (`lipsync::Mouth`) a letter or pause shows on the sprite tick.
+
 ## Caption
 
 Short lines of styled CommitMono text in an explainer's terminal voice. Spans carry

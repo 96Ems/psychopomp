@@ -23,6 +23,7 @@ pub mod image;
 pub mod lanes;
 pub mod layout;
 pub mod lens;
+pub mod lipsync;
 pub mod lower_third;
 pub mod math;
 pub mod meter;
