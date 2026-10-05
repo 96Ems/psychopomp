@@ -28,6 +28,18 @@ The position and velocity of one animated scalar at a specific time. Carrying bo
 
 A lightweight Rust executable that may perform arbitrary calculations, imports, data loading, and control flow before emitting one Scene Plan. A Scene Program is durable authoring source; its emitted plan is compiled output.
 
+## Score
+
+The authoring surface (`psychopomp::score`) that schedules composable **Beats** onto a `PlanBuilder`. `PlanBuilder` is the sole mutable target; actor handles (`Stage`, `Camera`, `Caption`, `Callout`, `RollingNumber`, `Tree`, `Plot`, `Lanes`, `Sequence`, `Video`, `Terminal`, `Chat`, `ChangedFiles`, `LowerThird`, `Checklist`, `Meter`, `Bars`, `Subtitles`, `Confetti`, `Text`, `Image`, `Lens`, `Diagnostic`, `Hover`, `Cursor`) are cloneable values whose methods take `&self` and return Beats.
+
+## Beat
+
+A composable unit of choreography with denotation `Time (start_nanos) → (Span, Writes)`. Beats combine via `.then` / `chain!` (sequential), `.also` / `all!` / `at!` (parallel), `.with` (accompaniment at start), `.on_end` (reaction at completion), `.after` / `.early` (time offsets), and `stagger` / `each`, lowering directly to ordinary `PlanBuilder` events without changing the Scene Plan format.
+
+## Span
+
+The choreographic interval `[start, end]` in integer nanoseconds occupied by a Beat's primary action (for example when a panel is ready to wire, when a beam makes contact, or when a packet arrives), distinct from how long its physical springs or trails continue settling afterward. A `Span` implements `CueTime` (`.after`, `.early`, `.not_before`, `.reply`) so later beats can chain from or guard against it.
+
 ## Scene Plan
 
 A versioned, renderer-independent value containing stable actor declarations, continuous channels, state channels, exact cues, and media placements. Agents may inspect, validate, diff, and render a Scene Plan without recompiling or restarting the renderer.

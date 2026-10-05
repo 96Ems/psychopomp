@@ -1418,47 +1418,64 @@ let plan = scene.finish()?;
 
 Renderer Recipe payloads remain adapter-owned. The lightweight core validates stable IDs, channel references, event ordering, finite values, cue ranges, exact media ranges, and Scene Plan versioning without knowing what a Task, editor, Video Card, or title card looks like.
 
-### Author With Timing Helpers
+### Author With The Score DSL
 
-Authoring helpers emit ordinary events; none changes the plan format.
+`psychopomp::score` is the primary way to author choreography. `PlanBuilder` is the only mutable binding; actor handles (`Stage`, `Camera`, `Caption`, `Callout`, `RollingNumber`, `Tree`, `Plot`, `Lanes`, `Sequence`, `Video`, `Terminal`, `Chat`, `ChangedFiles`, `LowerThird`, `Checklist`, `Meter`, `Bars`, `Subtitles`, `Confetti`, `Text`, `Image`, `Lens`, `Diagnostic`, `Hover`, `Cursor`) and sounds (`sfx::*.beat(id, gain_db)`, `audio.beat(gain_db)`) are immutable `Clone` values whose methods take `&self` and return composable `Beat`s (`Time -> (Span, Writes)`). Every combinator compiles directly to ordinary `PlanBuilder` events—none changes the Scene Plan format:
 
 ```rust
-use psychopomp::author::{PlanTime, millis, seconds, spread, stagger};
-use psychopomp::stage::reply_after;
+use psychopomp::{
+    all, at,
+    author::{PlanBuilder, millis, seconds, spread},
+    plan::SpringPlan,
+    score::{Beat, Caption, CueTime, Stage, each, stagger},
+    sfx,
+    stage::Move,
+};
 
 // Narration: a lead, then each clip and the gap after it.
 let reading = narration.reading(seconds(1.6), [("before", seconds(2.4)), ("after", seconds(2.4))])?;
 let mut scene = PlanBuilder::new("film", reading.duration());
 let [before, after] = reading.place(&mut scene);
 
-// Rows ripple 120 ms apart; `stagger` returns the latest end.
-let settled = stagger(["api", "db", "cache"], before.at("three services"), millis(120), |card, at| {
-    s.settle_in(sc, card, at)
-});
-// Six packets spread evenly between two words, both included.
-for (packet, launch) in VOLLEY.iter().zip(spread(6, before.at("packets"), before.at("wires"))) { .. }
+// Value actor handles: `scene` is the only `mut`.
+let s = Stage::declare(&mut scene, "stage", &stage_plan)?;
+let cam = s.camera();
+let hdr = Caption::header(&mut scene, "#50825", "await compaction")?;
 
-// A beat keyed to a word that must still wait for its cause.
-let lookup = s.send(sc, "lookup", after.at("just once").not_before(reply_after(find)), 0.55);
+// Rows ripple 120 ms apart; `scene.at` / `at!` returns the occupied `Span`.
+let settled = scene.at(
+    before.at("three services"),
+    stagger(millis(120), ["api", "db", "cache"], |card| s.settle_in(card)),
+);
+
+// Sequence (`.then`), accompaniment (`.with`), arrival reactions (`.on_end`), and camera shots:
+let find = at!(scene, before.at("asks") =>
+    hdr.type_in(55.0, 0.6),
+    s.send("find", 0.6)
+        .with(sfx::SEND.beat("find", -11.0))
+        .with(cam.follow("find", Move::Spring(0.5)))
+        .then(s.land("api").also(cam.release(Move::Spring(0.8)))),
+);
+
+// A beat keyed to a word that must still wait for its cause (`Span::reply` = 340 ms gather + 80 ms reaction).
+scene.at(
+    after.at("just once").not_before(find.reply()),
+    s.send("lookup", 0.55)
+        .with(sfx::SEND.beat("lookup", -11.0))
+        .then(s.land("db")),
+);
+
 // Time a beat by where it lands rather than where it starts.
-s.send_arriving(sc, "kill", before.at("sigterm"), 0.55);   // the packet arrives on the word
-s.connect_contacting(sc, "link", before.at("plugs in"), 0.4); // port pop + draw end on the word
-s.spring(sc, "camera.x", at, -110.0, SpringPlan::CAMERA);
+scene.at(before.at("sigterm"), s.send_arriving("kill", 0.55).then(s.land("api")));
+scene.at(before.at("plugs in"), s.connect_contacting("link", 0.4));
+scene.at(at, s.spring("camera.x", -110.0, SpringPlan::CAMERA));
 ```
 
-- Sound effects come from `psychopomp::sfx` (`TICK`, `SEND`, `FAILURE`,
-  `LAUNCH`, `IMPACT`, `DEATH`, `GLITCH`, `MARK`, `BLOOM`, `SEVER`, `RESET`,
-  `SUCCESS`, `CONFIRM`, `RISER`, `BOOM`, `WHOOSH`, `SPARKLE`) with exact lengths:
-  `sfx::IMPACT.play(sc, "kill-impact", arrival, -5.0)`. Their paths assume the
-  plan is written beside its Scene Program in `scenes/<name>/`; a scene's own
-  files use `Sfx::new(path, length_nanos)`.
-- `reply_after(arrival)`: a reply's gather may only begin once its request has
-  landed: 340 ms of gather plus an 80 ms reaction (`REACT_SECONDS`).
-- Named spring feels on `SpringPlan`, for `StageActor::spring` and
-  `PlanBuilder::spring_with`: `PANEL` (0.6 s, bounce 0.12, a rigid panel
-  settling), `CONTENT` (0.36 s, ink following its panel), `SNAP` (0.3 s, a
-  status or fade), `CAMERA` (1.6 s critically damped move), and `LIVELY`
-  (0.85 s, bounce 0.2, a hero landing).
+- **Combinators (`psychopomp::score`)**: `.then(b)` / `chain![...]` (sequence), `.then_after(gap, b)`, `.also(b)` / `all![...]` / `at!(scene, time => ...)` (parallel), `.with(b)` (accompany at start, preserving primary span), `.on_end(b)` (trigger at end, preserving primary span), `.after(d)` / `.early(d)` (time shift), `stagger(gap, items, f)`, and `each(items, f)`.
+- **Spatial envelopes (`psychopomp::layout::Placement`)**: `Placement::card(at, size)`, `Placement::orb(at, radius)`, `Placement::of(&stage_plan, id)`, with relative anchors `.below(gap)`, `.above(gap)`, `.beside_right(gap, size)`, `.beside_left(gap, size)`, `.stack_below(gap, size)`, `.align_left(inset, y_offset)`, and distributions `layout::row`, `layout::column`, `layout::spread_x`.
+- **Sound effects (`psychopomp::sfx`)**: `TICK`, `SEND`, `FAILURE`, `LAUNCH`, `IMPACT`, `DEATH`, `GLITCH`, `MARK`, `BLOOM`, `SEVER`, `RESET`, `SUCCESS`, `CONFIRM`, `RISER`, `BOOM`, `WHOOSH`, `SPARKLE` with exact 48 kHz sample lengths. Use `sfx::IMPACT.beat("kill-impact", -5.0)` inside a score (or `sfx::IMPACT.play(&mut scene, "kill-impact", arrival, -5.0)` imperatively). Generated `psychopomp_media::Audio` resources also expose `audio.beat(gain_db)`.
+- **`CueTime::reply()` / `reply_after(arrival)`**: a reply's gather begins once its request has landed (`340 ms` gather + `80 ms` reaction).
+- **Named spring feels (`SpringPlan` / `score::Feel`)**: `PANEL` (0.6 s, bounce 0.12), `CONTENT` (0.36 s, no bounce), `SNAP` (0.3 s, no bounce), `CAMERA` (1.6 s, critically damped), and `LIVELY` (0.85 s, bounce 0.2).
 
 Scene Plan v2 scalar values may reference a component of a stable Semantic Target. The target's selector remains recipe-owned; for the hero, the editor recipe resolves logical code range IDs through `cosmic-text` before compiling highlight and pointer channels into the shared Timeline.
 
