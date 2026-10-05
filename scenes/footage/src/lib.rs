@@ -388,13 +388,19 @@ pub fn build_stage() -> Result<ScenePlan> {
     let ready = stage.settle_in(&mut scene, "agent", 600 * MS);
 
     // The countdown, cut to a circle, rides the agent card through every move.
-    let pip = FootagePlan::new(Clip::new("pip-media").looping(), [0.0, 0.0], [170.0, 170.0])
-        .circle()
-        .framed()
-        .anchor(AnchorPlan::stage("agent", "agent", Edge::Top).with_offset([0.0, -112.0]));
+    let pip = FootagePlan::new(
+        Clip::new("pip-media").trimmed(0.0, 6.0).looping(),
+        [0.0, 0.0],
+        [170.0, 170.0],
+    )
+    .circle()
+    .framed()
+    .anchor(AnchorPlan::stage("agent", "agent", Edge::Top).with_offset([0.0, -112.0]));
     let pip_media = COUNTDOWN.media("pip-media", &scene);
     let pip = FootageActor::declare(&mut scene, "pip", &pip, pip_media)?;
     pip.fly_in(&mut scene, ready);
+    // Its own beeps, quietly, following its trim and its loops.
+    pip.audio(&mut scene, -18.0)?;
 
     camera.aperture(&mut scene, seconds(1.6), 0.55, Move::Glide(1.0));
     camera.focus_on(&mut scene, "screen", seconds(1.6), Move::Glide(1.0))?;
