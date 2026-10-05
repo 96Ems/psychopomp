@@ -19,9 +19,9 @@ const EDGE_FADE_EM: f32 = 0.14;
 /// smaller unit shares the digits' baseline.
 const BASELINE_EM: f32 = 0.3;
 /// Wheel speeds, in faces per second, from sharp to fully smeared.
-const SMEAR_RATES: [f32; 2] = [6.0, 30.0];
-/// The smear's deviation, in rows.
-const SMEAR_ROWS: f32 = 0.16;
+const SMEAR_RATES: [f32; 2] = [6.0, 28.0];
+/// The smear's deviation, in rows (matching `rolling::SMEAR_PER_ROW`).
+const SMEAR_ROWS: f32 = 0.04;
 
 /// A readout to draw at its sampled value.
 pub(in crate::render) struct Readout<'a> {
@@ -102,7 +102,12 @@ impl HeadlessRenderer {
             match cell.glyph {
                 ReadoutGlyph::Digit(wheel) => {
                     let cell_width = digit_width * cell.presence;
-                    let rate = wheel_rate(readout.format, cell.place, readout.velocity);
+                    let turning = cell.place == 0 || (wheel - wheel.round()).abs() > 1e-4;
+                    let rate = if turning {
+                        wheel_rate(readout.format, cell.place, readout.velocity)
+                    } else {
+                        0.0
+                    };
                     let filter = TextFilter::Smear {
                         sigma: row * SMEAR_ROWS,
                         amount: remap_clamp(rate, SMEAR_RATES, [0.0, 1.0]),
