@@ -38,6 +38,7 @@ members = [
   "scenes/footage",
   "scenes/balls-with-dots",
   "scenes/balls-v3",
+  "scenes/amdahl",
 ]
 default-members = ["crates/psychopomp-render"]
 resolver = "3"

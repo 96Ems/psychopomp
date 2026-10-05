@@ -1644,6 +1644,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "psychopomp-amdahl"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "psychopomp",
+ "psychopomp-media",
+ "psychopomp-pr-walkthrough",
+ "serde_json",
+]
+
+[[package]]
 name = "psychopomp-anchors"
 version = "0.1.0"
 dependencies = [
