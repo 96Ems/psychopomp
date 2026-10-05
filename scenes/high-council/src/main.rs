@@ -79,6 +79,8 @@ struct Part {
     /// Silence before this part, in milliseconds; negative interrupts.
     gap: i64,
     banner: Option<&'static str>,
+    /// A change of face mid-line: at the word, the expression.
+    turn: Option<(&'static str, &'static str)>,
     act: usize,
 }
 
@@ -97,8 +99,14 @@ const fn part(
         text,
         gap,
         banner: None,
+        turn: None,
         act,
     }
+}
+
+const fn turn(mut part: Part, word: &'static str, expression: &'static str) -> Part {
+    part.turn = Some((word, expression));
+    part
 }
 
 const fn shout(mut part: Part, banner: &'static str) -> Part {
@@ -143,21 +151,29 @@ const COUNCIL: &[Part] = &[
         "[warm, conversational] Every morning, six AI advisors read the OpenCode repo and its issues while you sleep. Each one pitches a single idea... [amused] and then they argue about it.",
     ),
     // Act I: the Simplifier.
-    part(
-        "simplifier-1",
-        &["simplifier"],
-        "excited",
-        600,
-        1,
-        "[imperious, thrilled] SIRE! Deep in the GitHub Copilot dungeon sits a twenty-five-file, four-thousand-line mummy! A vendored fork of the Vercel AI SDK, just to speak chat and responses!",
+    turn(
+        part(
+            "simplifier-1",
+            &["simplifier"],
+            "excited",
+            600,
+            1,
+            "[imperious, thrilled] SIRE! Deep in the GitHub Copilot dungeon sits a twenty-five-file, four-thousand-line mummy! A vendored fork of the Vercel AI SDK, just to speak chat and responses!",
+        ),
+        "mummy",
+        "annoyed",
     ),
-    part(
-        "simplifier-2",
-        &["simplifier"],
-        "smug",
-        250,
-        1,
-        "[gleeful, savoring every word] Our own native AI package already speaks both. Give me the cleaver, and I shall lop off four thousand lines before noon!",
+    turn(
+        part(
+            "simplifier-2",
+            &["simplifier"],
+            "smug",
+            250,
+            1,
+            "[gleeful, savoring every word] Our own native AI package already speaks both. Give me the cleaver, and I shall lop off four thousand lines before noon!",
+        ),
+        "cleaver",
+        "excited",
     ),
     shout(
         part(
@@ -171,32 +187,44 @@ const COUNCIL: &[Part] = &[
         "ONE PIPELINE!",
     ),
     shout(
-        part(
-            "contrarian-1",
-            &["contrarian"],
+        turn(
+            part(
+                "contrarian-1",
+                &["contrarian"],
+                "annoyed",
+                -350,
+                1,
+                "[interrupting, quick and sneering] I DISAGREE, SIRE! That ugly fork round-trips Copilot's reasoning token across tool turns! Teach the native path that trick first, or the cleaver lobotomizes every session!",
+            ),
+            "teach",
             "smug",
-            -350,
-            1,
-            "[interrupting, quick and sneering] I DISAGREE, SIRE! That ugly fork round-trips Copilot's reasoning token across tool turns! Teach the native path that trick first, or the cleaver lobotomizes every session!",
         ),
         "I DISAGREE, SIRE!",
     ),
     // Act II: Performance.
-    part(
-        "performance-1",
-        &["performance"],
-        "worried",
-        600,
-        2,
-        "[frantic, breathless, very fast] My Liege! Put your ear to the motherboard! One agent step with ten tool calls fires forty-seven durable events!",
+    turn(
+        part(
+            "performance-1",
+            &["performance"],
+            "worried",
+            600,
+            2,
+            "[frantic, breathless, very fast] My Liege! Put your ear to the motherboard! One agent step with ten tool calls fires forty-seven durable events!",
+        ),
+        "fortyseven",
+        "excited",
     ),
-    part(
-        "performance-2",
-        &["performance"],
-        "annoyed",
-        200,
-        2,
-        "[manic, rapid-fire] And every single one opens its own SQLite transaction, reads the whole message, decodes it, and rewrites the entire row! Keep the hot message in memory, Sire!",
+    turn(
+        part(
+            "performance-2",
+            &["performance"],
+            "annoyed",
+            200,
+            2,
+            "[manic, rapid-fire] And every single one opens its own SQLite transaction, reads the whole message, decodes it, and rewrites the entire row! Keep the hot message in memory, Sire!",
+        ),
+        "keep",
+        "worried",
     ),
     shout(
         part(
@@ -221,21 +249,29 @@ const COUNCIL: &[Part] = &[
         "CALM YOUR STOPWATCH!",
     ),
     // Act III: the Bug Hunter.
-    part(
-        "bug-hunter-2",
-        &["bug-hunter"],
-        "smug",
-        600,
-        3,
-        "[gravelly, grim relish] Three prize beetles, Sire, caught alive in the compaction chamber! [barking, intense] Beetle the First! We ask the model for a summary, but hand it every tool. So it calls a tool instead, and compaction dies screaming: no summary!",
-    ),
-    part(
-        "bug-hunter-3",
-        &["bug-hunter"],
+    turn(
+        part(
+            "bug-hunter-2",
+            &["bug-hunter"],
+            "smug",
+            600,
+            3,
+            "[gravelly, grim relish] Three prize beetles, Sire, caught alive in the compaction chamber! [barking, intense] Beetle the First! We ask the model for a summary, but hand it every tool. So it calls a tool instead, and compaction dies screaming: no summary!",
+        ),
+        "beetle",
         "excited",
-        200,
-        3,
-        "[urgent, gravelly] Beetle the Second drags two hundred thousand tokens past the keep budget! Beetle the Third stuffs the model's reasoning into the recap! Let me crush all three today!",
+    ),
+    turn(
+        part(
+            "bug-hunter-3",
+            &["bug-hunter"],
+            "excited",
+            200,
+            3,
+            "[urgent, gravelly] Beetle the Second drags two hundred thousand tokens past the keep budget! Beetle the Third stuffs the model's reasoning into the recap! Let me crush all three today!",
+        ),
+        "crush",
+        "smug",
     ),
     shout(
         part(
@@ -271,13 +307,17 @@ const CLOSER: &[Part] = &[
         "[grand, ceremonial] Three royal decrees await your seal, Sire.",
     ),
     shout(
-        part(
-            "contrarian-close",
-            &["contrarian"],
-            "smug",
-            250,
-            4,
-            "[smirking, theatrical] Or press Anarchy, and let the issue tracker burn. I'm paid either way.",
+        turn(
+            part(
+                "contrarian-close",
+                &["contrarian"],
+                "smug",
+                250,
+                4,
+                "[smirking, theatrical] Or press Anarchy, and let the issue tracker burn. I'm paid either way.",
+            ),
+            "paid",
+            "excited",
         ),
         "ANARCHY!",
     ),
@@ -295,7 +335,7 @@ const CLOSER: &[Part] = &[
         "",
         700,
         4,
-        "[warm, wry] High Council. Good morning.",
+        "[warm, wry] That's the High Council. Good morning.",
     ),
 ];
 
@@ -327,10 +367,11 @@ fn main() -> Result<()> {
             };
             let audio = media.say(&id, &voice(speaker)?, part.text)?;
             // Advisors talk a touch faster than they were directed; pitch holds.
-            audios.push(if *speaker == "narrator" {
-                audio
-            } else {
-                audio.derive(Effect::tempo(1.1))?
+            // The Contrarian drawls most, so he gets the biggest nudge.
+            audios.push(match *speaker {
+                "narrator" => audio,
+                "contrarian" => audio.derive(Effect::tempo(1.2))?,
+                _ => audio.derive(Effect::tempo(1.12))?,
             });
         }
         lines.insert(part.id, audios);
@@ -678,6 +719,19 @@ fn council_film(
             let expression = sheet.expression(part.expression)?;
             expressions[advisor].push((start.saturating_sub(TICK), expression));
             let spoken = words(audio, start);
+            if let Some((word, face)) = part.turn {
+                let normalize = |text: &str| {
+                    text.chars()
+                        .filter(|c| c.is_alphanumeric())
+                        .collect::<String>()
+                        .to_lowercase()
+                };
+                let (_, at, _) = spoken
+                    .iter()
+                    .find(|(text, _, _)| normalize(text) == word)
+                    .with_context(|| format!("{} never says '{word}'", part.id))?;
+                expressions[advisor].push((*at, sheet.expression(face)?));
+            }
             mouths[advisor].extend(lipsync::visemes(
                 spoken
                     .iter()

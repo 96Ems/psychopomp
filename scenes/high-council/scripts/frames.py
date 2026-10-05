@@ -162,7 +162,8 @@ def sprites():
         index = 0
         for expression in SPEC["expressions"]:
             face = Image.open(src / f"{expression}.png").convert("RGBA")
-            frames = [face] + [Image.alpha_composite(face, patch[m]) for m in MOUTHS[1:]] + [Image.alpha_composite(face, blink)]
+            open_eyes = [face] + [Image.alpha_composite(face, patch[m]) for m in MOUTHS[1:]]
+            frames = open_eyes + [Image.alpha_composite(frame, blink) for frame in open_eyes]
             for frame in frames:
                 lofi(frame).save(out / f"{index:02d}.png")
                 index += 1
@@ -177,8 +178,13 @@ def sprites():
 
 
 def lofi(frame):
-    # Digitized video: 15-bit color and chunky 2x pixels.
+    # Digitized video: codec blocks, 15-bit color, and chunky 2x pixels.
+    import io
+
     rgb = frame.convert("RGB")
+    crunched = io.BytesIO()
+    rgb.save(crunched, "JPEG", quality=30, subsampling=2)
+    rgb = Image.open(crunched).convert("RGB")
     rgb = rgb.point(lambda v: (v >> 3) << 3)
     return rgb.resize((640, 480), Image.NEAREST)
 
