@@ -8,6 +8,14 @@ Every frame is a pure function of time, so any frame renders identically in any
 order, and interrupted motion keeps its velocity. It is an early, thoroughly
 vibe-coded prototype, tested on macOS (Metal).
 
+## The optchat film
+
+[docs/optchat-v5.mp4](docs/optchat-v5.mp4) is a 2:26 explainer for the optchat
+plugin, generated from this repository: a Rust scene under `scenes/optchat/`, the
+narration that was recorded for it, and the local TTS/STT stack above.
+[docs/THE_FILM.md](docs/THE_FILM.md) documents how to regenerate the whole thing —
+narration, reel, contact sheet, render — anchors included.
+
 ## This fork: local TTS + word timings on Linux
 
 Upstream voices a scene with macOS `say` or a paid API and times it with

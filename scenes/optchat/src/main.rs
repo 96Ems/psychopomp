@@ -1,11 +1,15 @@
 //! optchat explainer reel: a narrated, seven-segment film about the optchat
-//! plugin. Its point is not memory but the absence of a chore: **you never
-//! compact again** — every turn starts from a clean, fixed-size view, and the
-//! harness's own compaction request is answered from that view.
+//! plugin, oriented on **orchestrator mode** — one conversation holds a mission
+//! and a ledger of finished runs while sub-agents fan out, and that chat is
+//! append-only and never rewritten, so the prompt cache keeps hitting. Memory
+//! mode is the single segment that shows the log kept word for word, the tree
+//! of one-line summaries, and the fixed-size 95k view.
 //!
 //! Every visual beat is keyed to a phrase the recorded narration still says
 //! (`scenes/optchat/narration`), so re-voicing the script re-times the film and
-//! a stale anchor panics with its clip. Run:
+//! a stale anchor panics with its clip. Big numbers only ever describe the
+//! session's accumulated log; the one number in a "context sent to the model"
+//! position is the fixed 95k view. Run:
 //!
 //! ```sh
 //! cargo run -p psychopomp-optchat
@@ -27,7 +31,7 @@ use psychopomp::{
     readout::ReadoutFormat,
     rolling::{RollingNumberActor, RollingNumberPlan},
     sfx,
-    stage::{OrbEntrance, StageActor, StageElement, StagePlan, StagePost},
+    stage::{Arrow, Curve, StageActor, StageElement, StagePlan, StagePost, Waypoint},
     terminal::{TerminalActor, TerminalPlan},
     tone::Tone,
 };
@@ -43,6 +47,11 @@ const TYPE: f32 = 42.0;
 /// A faster type-in for the longest captions, so they finish inside their beat.
 const TYPE_LONG: f32 = 96.0;
 
+/// The plugin's context budget: 128 kB at ~1.35 bytes per token is the 95k the
+/// view is fixed at, every turn. It is the only figure a "sent to the model"
+/// position is allowed to carry.
+const VIEW_TOKENS: &str = "95";
+
 fn span(text: &str, tone: Tone) -> CaptionSpanPlan {
     CaptionSpanPlan::new(text, tone)
 }
@@ -54,10 +63,10 @@ fn main() -> Result<()> {
         "optchat",
         vec![
             intro(&narration)?,
-            before(&narration)?,
-            after(&narration)?,
+            memory(&narration)?,
             zoom(&narration)?,
-            plugin(&narration)?,
+            orchestrator(&narration)?,
+            fanout(&narration)?,
             tui(&narration)?,
             outro(&narration)?,
         ],
@@ -75,7 +84,7 @@ fn main() -> Result<()> {
 }
 
 // ---------------------------------------------------------------------------
-// 1. intro — the hard limit, and the promise: you never compact again
+// 1. intro — two walls (what it remembers, and what it costs), then the answer
 // ---------------------------------------------------------------------------
 
 fn intro(narration: &Narration) -> Result<ScenePlan> {
@@ -83,25 +92,27 @@ fn intro(narration: &Narration) -> Result<ScenePlan> {
     let mut scene = PlanBuilder::new("optchat-intro", reading.duration());
     let [said] = reading.place(&mut scene);
 
-    let mut head = header(&mut scene, "optchat", "never compact again")?;
+    let mut head = header(&mut scene, "optchat", "two walls · one answer")?;
     head.show(&mut scene, seconds(0.2));
-    let mut status = chip(&mut scene, "chip", Tone::Muted, "before")?;
+    let mut status = chip(&mut scene, "chip", Tone::Muted, "two walls")?;
     status.show(&mut scene, seconds(0.4));
 
-    // A session fills its window; the next one starts from zero.
+    // ---- wall one: what a session can remember --------------------------
     let mut term = TerminalActor::declare(
         &mut scene,
         "term",
-        TerminalPlan::new([120.0, 200.0], 900.0, 11)
+        TerminalPlan::new([120.0, 240.0], 820.0, 9)
             .size(20.0)
             .titled("opencode — session")
             .prompt(vec![span("~/dev ❯ ", Tone::Accent)]),
     )?;
-    let shown = term.show(&mut scene, seconds(0.55));
-    let entered = term.type_command(&mut scene, shown + seconds(0.30), "opencode")?;
+    let shown = term.show(&mut scene, seconds(0.5));
+    let entered = term.type_command(&mut scene, shown + seconds(0.3), "opencode")?;
+
+    let walls = said.at("two walls").max(entered + seconds(0.15));
     term.print(
         &mut scene,
-        entered + seconds(0.25),
+        walls,
         [
             vec![span("● session 1 started", Tone::Plain)],
             vec![span("user  explain how the engine loop works", Tone::Plain)],
@@ -112,41 +123,42 @@ fn intro(narration: &Narration) -> Result<ScenePlan> {
         ],
     )?;
 
-    // The window meter climbs to its ceiling at the hard limit.
+    // The log climbs past the window: the first wall is the hard limit.
     let mut meter = MeterActor::declare(
         &mut scene,
         "window",
         &MeterPlan::ring(
-            [1540.0, 430.0],
+            [1520.0, 470.0],
             150.0,
             AxisPlan::new([0.0, 1_200_000.0]).nice(4),
         )
-        .label("context carried")
+        .label("the window")
         .readout(ReadoutFormat::new(0))
+        .threshold(128_000.0, Tone::Warning)
         .threshold(1_100_000.0, Tone::Error),
         0.0,
     )?;
-    let limit = said.at("hard limit");
-    meter.show(&mut scene, limit);
-    meter.sweep(&mut scene, limit, 1_180_000.0, 2.2);
-    meter.flash(&mut scene, limit + seconds(2.2), 0.7);
+    let window_at = said.at("a window");
+    meter.show(&mut scene, window_at);
+    meter.sweep(&mut scene, window_at, 1_180_000.0, 1.9);
 
     let mut f_limit = footer(
         &mut scene,
         "footer-limit",
         vec![
-            span("one hard limit: ", Tone::Muted),
-            span("the window", Tone::Error),
+            span("one wall: ", Tone::Muted),
+            span("what the session can remember — a window", Tone::Error),
         ],
     )?;
-    f_limit.type_in(&mut scene, limit, TYPE, 0.7);
+    f_limit.type_in(&mut scene, walls, TYPE, 0.7);
 
-    // "and the next one starts from zero": compaction rewrites the past away.
-    let next = said.at("the next one");
-    f_limit.hide(&mut scene, next.saturating_sub(seconds(0.2)));
+    // ...and a compaction that throws the detail away.
+    let detail = said.at("the detail away");
+    f_limit.hide(&mut scene, detail.saturating_sub(seconds(0.3)));
+    meter.flash(&mut scene, detail, 0.7);
     term.print(
         &mut scene,
-        next,
+        detail,
         [
             vec![span(
                 "✻ context full — compaction rewrites the past",
@@ -155,286 +167,163 @@ fn intro(narration: &Narration) -> Result<ScenePlan> {
             vec![span("  the detail is gone", Tone::Muted)],
         ],
     )?;
-    meter.set(&mut scene, next + seconds(0.4), 0.0);
-    let restarted = term.type_command(&mut scene, next + seconds(0.9), "opencode")?;
+    let mut f_zero = footer(
+        &mut scene,
+        "footer-zero",
+        vec![
+            span("and a compaction ", Tone::Plain),
+            span("that throws the detail away", Tone::Error),
+        ],
+    )?;
+    f_zero.type_in(&mut scene, detail, TYPE, 0.7);
+
+    let restarted = term.type_command(&mut scene, detail + seconds(0.9), "opencode")?;
     term.print(
         &mut scene,
         restarted + seconds(0.2),
         [vec![span("● session 2 started — from zero", Tone::Warning)]],
     )?;
-    let mut f_zero = footer(
+
+    // ---- wall two: what it costs — every turn pays again ----------------
+    let cost = said.at("what it costs");
+    let clear_wall = cost.saturating_sub(seconds(0.4));
+    f_zero.hide(&mut scene, clear_wall);
+    term.hide(&mut scene, clear_wall);
+    meter.hide(&mut scene, clear_wall);
+
+    let plan = StagePlan {
+        post: StagePost::RESTRAINED,
+        elements: vec![
+            StageElement::card(
+                "session",
+                [330.0, 560.0, 0.0],
+                [330.0, 120.0],
+                "the session",
+            )
+            .statuses(&[("1,000 messages · 1.5 MB log", Tone::Plain)])
+            .tone(Tone::Request),
+            StageElement::card("turn", [960.0, 560.0, 0.0], [430.0, 120.0], "every turn")
+                .statuses(&[("the whole history attached", Tone::Warning)])
+                .tone(Tone::Warning),
+            StageElement::card("model", [1590.0, 560.0, 0.0], [220.0, 110.0], "the model")
+                .tone(Tone::Plain),
+            StageElement::beam("send", "session", "turn").tone(Tone::Request),
+            StageElement::beam("ask", "turn", "model").tone(Tone::Warning),
+            StageElement::packet("cost-1", "send")
+                .labeled("the history")
+                .tone(Tone::Warning),
+            StageElement::packet("cost-2", "send")
+                .labeled("the history")
+                .tone(Tone::Warning),
+            StageElement::packet("cost-3", "send")
+                .labeled("the history")
+                .tone(Tone::Warning),
+        ],
+    };
+    let mut stage = StageActor::declare(&mut scene, "cost-stage", &plan)?;
+    stage.settle_in(&mut scene, "session", cost);
+    stage.settle_in(&mut scene, "turn", cost + seconds(0.2));
+    stage.settle_in(&mut scene, "model", cost + seconds(0.4));
+    stage.connect(&mut scene, "send", cost + seconds(0.5), 0.5);
+    stage.connect(&mut scene, "ask", cost + seconds(0.7), 0.5);
+
+    // Every turn re-sends the whole history.
+    let send_at = cost + seconds(0.6);
+    for (index, packet) in ["cost-1", "cost-2", "cost-3"].iter().enumerate() {
+        let at = send_at + seconds(index as f64 * 0.75);
+        let arrival = stage.send(&mut scene, packet, at, 0.6);
+        stage.land(&mut scene, "turn", arrival);
+        sfx::TICK.play(&mut scene, *packet, at, -19.0);
+    }
+    let again = said.at("the history again");
+    stage.hit(&mut scene, "turn.flash", again, 0.5, 0.0);
+    stage.jolt(&mut scene, again, [1.0, 0.0], 0.35);
+
+    let mut f_cost = footer(
         &mut scene,
-        "footer-zero",
+        "footer-cost",
         vec![
-            span("compacted or thrown away — ", Tone::Plain),
-            span("the next one starts from zero", Tone::Warning),
+            span("and what it costs: ", Tone::Plain),
+            span("every turn pays for the history again", Tone::Error),
         ],
     )?;
-    f_zero.type_in(&mut scene, next + seconds(0.2), TYPE, 0.7);
+    f_cost.type_in(&mut scene, cost, TYPE, 0.7);
 
-    // "the longer the context, the worse it works": it climbs again, and decays.
-    let longer = said.at("the longer the context");
-    f_zero.hide(&mut scene, longer.saturating_sub(seconds(0.2)));
-    meter.show(&mut scene, longer);
-    meter.sweep(&mut scene, longer, 820_000.0, 3.6);
-    let mut f_decay = footer(
-        &mut scene,
-        "footer-decay",
-        vec![
-            span("the longer the context, ", Tone::Plain),
-            span("the worse it works", Tone::Error),
-        ],
-    )?;
-    f_decay.type_in(&mut scene, longer, TYPE, 0.7);
+    // ---- the answer ------------------------------------------------------
+    let both = said.at("answers both");
+    f_cost.hide(&mut scene, both.saturating_sub(seconds(0.3)));
+    status.hide(&mut scene, both);
+    let mut promise = chip(&mut scene, "chip-promise", Tone::Success, "the answer")?;
+    promise.show(&mut scene, both);
 
-    // "optchat removes the limit": the chip flips to the promise.
-    let removes = said.at("removes the limit");
-    f_decay.hide(&mut scene, removes.saturating_sub(seconds(0.25)));
-    status.hide(&mut scene, removes);
-    let mut promise = chip(&mut scene, "chip-promise", Tone::Success, "the promise")?;
-    promise.show(&mut scene, removes);
-
-    // "one chat that never ends".
-    let endless = said.at("one chat that never ends");
+    let never = said.at("never compacts");
     let mut line_a = CaptionActor::declare(
         &mut scene,
-        "endless",
+        "answer-a",
         &CaptionPlan::line(
-            [960.0, 720.0],
-            28.0,
+            [960.0, 300.0],
+            30.0,
             vec![
-                span("one chat ", Tone::Plain),
-                span("that never ends", Tone::Success),
+                span("a chat ", Tone::Plain),
+                span("that never compacts", Tone::Success),
             ],
         )
         .aligned(CaptionAlign::Center),
     )?;
-    line_a.type_in(&mut scene, endless, TYPE, 0.9);
+    line_a.type_in(&mut scene, never.saturating_sub(seconds(0.7)), TYPE, 0.6);
 
-    // "and no compaction ever again": the closing promise.
-    let no_compaction = said.at("no compaction");
-    meter.hide(&mut scene, no_compaction.saturating_sub(seconds(0.3)));
+    let team = said.at("one conversation into a team");
     let mut line_b = CaptionActor::declare(
         &mut scene,
-        "no-compaction",
+        "answer-b",
         &CaptionPlan::line(
-            [960.0, 830.0],
-            28.0,
+            [960.0, 385.0],
+            30.0,
             vec![
-                span("no compaction ", Tone::Plain),
-                span("ever again", Tone::Accent),
+                span("and a second mode: ", Tone::Plain),
+                span("one conversation into a team", Tone::Accent),
             ],
         )
         .aligned(CaptionAlign::Center),
     )?;
-    line_b.type_in(&mut scene, no_compaction, TYPE, 1.0);
+    line_b.type_in(&mut scene, team.saturating_sub(seconds(0.9)), TYPE, 0.8);
+    sfx::BLOOM.play(&mut scene, "team", team, -13.0);
 
     scene.finish().context("optchat-intro")
 }
 
 // ---------------------------------------------------------------------------
-// 2. before — one card, one request, the whole history each turn
+// 2. memory — the log kept word for word, the tree, and one fixed-size view
 // ---------------------------------------------------------------------------
 
-fn before(narration: &Narration) -> Result<ScenePlan> {
-    let reading = narration.reading(LEAD, [("before", GAP)])?;
-    let mut scene = PlanBuilder::new("optchat-before", reading.duration());
+fn memory(narration: &Narration) -> Result<ScenePlan> {
+    let reading = narration.reading(LEAD, [("memory", GAP)])?;
+    let mut scene = PlanBuilder::new("optchat-memory", reading.duration());
     let [said] = reading.place(&mut scene);
 
     let plan = StagePlan {
         post: StagePost::RESTRAINED,
         elements: vec![
-            StageElement::card("session", [360.0, 470.0, 0.0], [330.0, 130.0], "session")
-                .statuses(&[("1,000 messages", Tone::Plain), ("1.5 MB log", Tone::Muted)])
-                .tone(Tone::Request),
-            StageElement::card(
-                "request",
-                [960.0, 720.0, 0.0],
-                [440.0, 110.0],
-                "one request",
-            )
-            .statuses(&[("the whole history attached", Tone::Warning)])
-            .tone(Tone::Warning),
-            StageElement::orb("model", [1620.0, 470.0, 0.0], 120.0).tone(Tone::Plain),
-            StageElement::card(
-                "cache",
-                [1360.0, 720.0, 0.0],
-                [320.0, 100.0],
-                "prompt cache",
-            )
-            .statuses(&[("re-read every turn", Tone::Muted)]),
-            StageElement::beam("ask", "request", "model").tone(Tone::Request),
-            StageElement::beam("read", "cache", "model").tone(Tone::Warning),
-            StageElement::packet("turn", "ask")
-                .labeled("1.2M tokens")
-                .tone(Tone::Request),
-            StageElement::packet("reread", "read")
-                .reversed()
-                .labeled("re-read")
-                .tone(Tone::Warning),
-        ],
-    };
-    let mut stage = StageActor::declare(&mut scene, "stage", &plan)?;
-
-    let mut head = header(&mut scene, "optchat", "one card, one request")?;
-    head.show(&mut scene, seconds(0.18));
-    let mut status = chip(&mut scene, "chip", Tone::Error, "before")?;
-    status.show(&mut scene, seconds(0.35));
-
-    stage.settle_in(&mut scene, "session", seconds(0.15));
-    stage.orb_in(&mut scene, "model", seconds(0.2), OrbEntrance::HERO);
-
-    let session_at = said.at("what you have today");
-    stage.settle_in(
-        &mut scene,
-        "request",
-        session_at.saturating_sub(seconds(0.25)),
-    );
-    stage.connect(&mut scene, "ask", session_at, 0.5);
-    sfx::TICK.play(&mut scene, "connect-ask", session_at, -20.0);
-
-    let mut first = footer(
-        &mut scene,
-        "footer-a",
-        vec![
-            span("one card = one request · ", Tone::Muted),
-            span("the whole history, every turn", Tone::Warning),
-        ],
-    )?;
-    first.type_in(&mut scene, session_at, TYPE, 0.8);
-
-    // The context carried climbs to 1.2M tokens.
-    let mut tokens = RollingNumberActor::declare(
-        &mut scene,
-        "tokens",
-        RollingNumberPlan::new([960.0, 180.0], 54.0, "0.0")
-            .aligned(CaptionAlign::Center)
-            .tone(Tone::Accent)
-            .prefix(vec![span("context ", Tone::Muted)])
-            .suffix(vec![span("M tokens", Tone::Muted)])
-            .chip(),
-    )?;
-    let thousand = said.at("a thousand messages");
-    tokens.show(&mut scene, thousand.saturating_sub(seconds(0.4)));
-    tokens.roll(&mut scene, thousand, "0.3")?;
-    tokens.roll(&mut scene, said.at("every turn sends"), "0.7")?;
-    tokens.roll(&mut scene, said.at("whole history again"), "1.2")?;
-
-    let again = said.at("whole history again");
-    let hit = stage.send(&mut scene, "turn", again, 0.6);
-    sfx::SEND.play(&mut scene, "turn-send", again, -9.0);
-    sfx::IMPACT.play(&mut scene, "turn-hit", hit, -11.0);
-    stage.jolt(&mut scene, hit, [1100.0 * 0.35, 0.0], 0.55);
-    stage.land(&mut scene, "model", hit);
-    stage.hit(&mut scene, "model.pulse", hit, 0.5, 0.0);
-
-    // A meter fills; the window is reached.
-    let mut meter = MeterActor::declare(
-        &mut scene,
-        "context",
-        &MeterPlan::bar(
-            [960.0, 930.0],
-            1200.0,
-            AxisPlan::new([0.0, 1_200_000.0]).nice(4),
-        )
-        .label("context")
-        .readout(ReadoutFormat::new(0))
-        .threshold(900_000.0, Tone::Warning)
-        .threshold(1_100_000.0, Tone::Error),
-        0.0,
-    )?;
-    let fills = said.at("the window fills");
-    meter.show(&mut scene, fills.saturating_sub(seconds(0.4)));
-    meter.sweep(&mut scene, fills, 950_000.0, 1.8);
-    first.hide(&mut scene, fills);
-
-    // The cache re-reads everything; the answer is worse.
-    let rereads = said.at("the provider re-reads");
-    stage.connect(
-        &mut scene,
-        "read",
-        rereads.saturating_sub(seconds(0.4)),
-        0.4,
-    );
-    let reread = stage.send(
-        &mut scene,
-        "reread",
-        rereads.saturating_sub(seconds(0.3)),
-        0.45,
-    );
-    stage.hit(&mut scene, "cache.flash", reread, 0.45, 0.0);
-    stage.land(&mut scene, "model", reread);
-    meter.set(&mut scene, rereads, 1_200_000.0);
-    meter.flash(&mut scene, rereads, 0.8);
-    sfx::FAILURE.play(&mut scene, "cache-reread", reread, -9.0);
-
-    let mut second = footer(
-        &mut scene,
-        "footer-b",
-        vec![
-            span("the cache re-reads the whole history — ", Tone::Plain),
-            span("the answer is worse", Tone::Error),
-        ],
-    )?;
-    second.type_in(&mut scene, rereads, TYPE, 0.8);
-
-    // The honest label: the log it would have carried is an upper bound.
-    let decay = said.at("answers decay");
-    second.hide(&mut scene, decay.saturating_sub(seconds(0.2)));
-    let mut bound = footer(
-        &mut scene,
-        "footer-bound",
-        vec![
-            span("real ~1,000-message run · ", Tone::Muted),
-            span("full log is an upper bound", Tone::Warning),
-            span(" — past the window OpenCode compacts", Tone::Muted),
-        ],
-    )?;
-    bound.type_in(&mut scene, decay, TYPE_LONG, 0.4);
-
-    scene.finish().context("optchat-before")
-}
-
-// ---------------------------------------------------------------------------
-// 3. after — the same space, replayed: a log that merges into a tree
-// ---------------------------------------------------------------------------
-
-fn after(narration: &Narration) -> Result<ScenePlan> {
-    let reading = narration.reading(LEAD, [("after", GAP)])?;
-    let mut scene = PlanBuilder::new("optchat-after", reading.duration());
-    let [said] = reading.place(&mut scene);
-
-    let plan = StagePlan {
-        post: StagePost::RESTRAINED,
-        elements: vec![
-            StageElement::card("log", [300.0, 470.0, 0.0], [280.0, 120.0], "log")
-                .statuses(&[
-                    ("every line, verbatim", Tone::Plain),
-                    ("never edited", Tone::Success),
-                ])
+            StageElement::card("log", [300.0, 430.0, 0.0], [300.0, 120.0], "the log")
+                .statuses(&[("every line, kept word for word", Tone::Success)])
                 .tone(Tone::Success),
-            StageElement::card("m1", [640.0, 780.0, -10.0], [120.0, 64.0], "msg 1")
+            StageElement::card("m1", [560.0, 790.0, -10.0], [140.0, 64.0], "msg 1")
                 .tone(Tone::Muted),
-            StageElement::card("m2", [790.0, 780.0, -10.0], [120.0, 64.0], "msg 2")
+            StageElement::card("m2", [720.0, 790.0, -10.0], [140.0, 64.0], "msg 2")
                 .tone(Tone::Muted),
-            StageElement::card("m3", [940.0, 780.0, -10.0], [120.0, 64.0], "msg 3")
+            StageElement::card("m3", [880.0, 790.0, -10.0], [140.0, 64.0], "msg 3")
                 .tone(Tone::Muted),
-            StageElement::card("m4", [1090.0, 780.0, -10.0], [120.0, 64.0], "msg 4")
+            StageElement::card("m4", [1040.0, 790.0, -10.0], [140.0, 64.0], "msg 4")
                 .tone(Tone::Muted),
-            StageElement::card("s12", [715.0, 600.0, 0.0], [160.0, 72.0], "sum 1-2")
+            StageElement::card("s12", [640.0, 560.0, 0.0], [180.0, 72.0], "sum 1-2")
                 .tone(Tone::Accent),
-            StageElement::card("s34", [1015.0, 600.0, 0.0], [160.0, 72.0], "sum 3-4")
+            StageElement::card("s34", [960.0, 560.0, 0.0], [180.0, 72.0], "sum 3-4")
                 .tone(Tone::Accent),
-            StageElement::card("root", [865.0, 420.0, 0.0], [200.0, 78.0], "sum 1-4")
+            StageElement::card("root", [800.0, 430.0, 0.0], [220.0, 78.0], "sum 1-4")
                 .tone(Tone::Accent),
-            StageElement::card(
-                "view",
-                [900.0, 940.0, 0.0],
-                [1080.0, 86.0],
-                "view · fixed size",
-            )
-            .statuses(&[("recent whole · older summarized", Tone::Muted)])
-            .tone(Tone::Success),
+            StageElement::card("view", [800.0, 890.0, 0.0], [760.0, 90.0], "the view")
+                .statuses(&[("recent whole · older summarized", Tone::Muted)])
+                .tone(Tone::Success),
             StageElement::beam("stream", "log", "m1").tone(Tone::Success),
             StageElement::beam("p1", "m1", "s12"),
             StageElement::beam("p2", "m2", "s12"),
@@ -442,6 +331,7 @@ fn after(narration: &Narration) -> Result<ScenePlan> {
             StageElement::beam("p4", "m4", "s34"),
             StageElement::beam("up1", "s12", "root").tone(Tone::Accent),
             StageElement::beam("up2", "s34", "root").tone(Tone::Accent),
+            StageElement::beam("render", "root", "view").tone(Tone::Success),
             StageElement::packet("l1", "stream")
                 .labeled("msg")
                 .tone(Tone::Plain),
@@ -451,127 +341,215 @@ fn after(narration: &Narration) -> Result<ScenePlan> {
             StageElement::packet("l3", "stream")
                 .labeled("msg")
                 .tone(Tone::Plain),
+            StageElement::packet("v1", "render")
+                .labeled("view")
+                .tone(Tone::Success),
         ],
     };
     let mut stage = StageActor::declare(&mut scene, "stage", &plan)?;
 
-    let mut head = header(&mut scene, "optchat", "the replay, same space")?;
+    let mut head = header(
+        &mut scene,
+        "optchat",
+        "memory mode · the log, a tree, a view",
+    )?;
     head.show(&mut scene, seconds(0.18));
-    let mut status = chip(&mut scene, "chip", Tone::Success, "after the plugin")?;
-    status.show(&mut scene, seconds(0.35));
+    let mut status = chip(&mut scene, "chip", Tone::Success, "memory mode")?;
+    status.show(&mut scene, seconds(0.3));
 
-    // The log is kept: a beam of packets streams in.
-    let keeps = said.at("keeps the log");
-    stage.settle_in(&mut scene, "log", keeps.saturating_sub(seconds(0.3)));
-    let streamed = stage.connect(&mut scene, "stream", keeps, 0.5);
-    sfx::TICK.play(&mut scene, "connect-stream", keeps, -20.0);
+    // ---- the log is kept word for word ----------------------------------
+    let word_for_word = said.at("word for word");
+    stage.settle_in(
+        &mut scene,
+        "log",
+        word_for_word.saturating_sub(seconds(0.3)),
+    );
+    let streamed = stage.connect(
+        &mut scene,
+        "stream",
+        word_for_word.saturating_sub(seconds(0.2)),
+        0.5,
+    );
     let l1 = stage.send(&mut scene, "l1", streamed, 0.5);
     stage.send(&mut scene, "l2", l1 + seconds(0.35), 0.5);
     stage.send(&mut scene, "l3", l1 + seconds(0.7), 0.5);
+    sfx::TICK.play(&mut scene, "memory-stream", word_for_word, -20.0);
 
-    let mut first = footer(
+    let mut f1 = footer(
         &mut scene,
-        "footer-a",
+        "footer-log",
         vec![
             span("the log is kept ", Tone::Plain),
-            span("exactly as written", Tone::Success),
+            span("word for word", Tone::Success),
         ],
     )?;
-    first.type_in(&mut scene, keeps, TYPE, 0.7);
+    f1.type_in(&mut scene, word_for_word, TYPE, 0.6);
 
-    // The messages land, then pairs merge into a tree.
-    let cheap = said.at("a cheap model writes");
+    // ---- a cheap model writes one line per message ----------------------
+    let cheap = said.at("a cheap model");
     stage.settle_in(&mut scene, "m1", cheap);
     stage.settle_in(&mut scene, "m2", cheap + seconds(0.12));
     stage.settle_in(&mut scene, "m3", cheap + seconds(0.24));
     stage.settle_in(&mut scene, "m4", cheap + seconds(0.36));
+    f1.hide(&mut scene, cheap.saturating_sub(seconds(0.2)));
+    let mut f2 = footer(
+        &mut scene,
+        "footer-lines",
+        vec![
+            span("a cheap model writes ", Tone::Plain),
+            span("one line per message", Tone::Accent),
+        ],
+    )?;
+    f2.type_in(&mut scene, cheap, TYPE, 0.6);
 
-    let merge = said.at("merge into a tree");
-    first.hide(&mut scene, merge);
-    let b12 = stage.connect(&mut scene, "p1", merge.saturating_sub(seconds(0.5)), 0.4);
+    // ---- the lines pair up into a tree ----------------------------------
+    let merge = said.at("lines pair up into a tree");
+    f2.hide(&mut scene, merge.saturating_sub(seconds(0.2)));
+    stage.connect(&mut scene, "p1", merge.saturating_sub(seconds(0.5)), 0.4);
     stage.connect(&mut scene, "p2", merge.saturating_sub(seconds(0.5)), 0.4);
     stage.connect(&mut scene, "p3", merge.saturating_sub(seconds(0.35)), 0.4);
     stage.connect(&mut scene, "p4", merge.saturating_sub(seconds(0.35)), 0.4);
     let s12 = stage.settle_in(&mut scene, "s12", merge);
     stage.settle_in(&mut scene, "s34", merge + seconds(0.1));
     stage.land(&mut scene, "s12", s12);
-    sfx::TICK.play(&mut scene, "connect-merge", b12, -18.0);
-    stage.connect(&mut scene, "up1", merge + seconds(1.0), 0.45);
-    stage.connect(&mut scene, "up2", merge + seconds(1.0), 0.45);
-    let root = stage.settle_in(&mut scene, "root", merge + seconds(1.5));
+    let b12 = stage.connect(&mut scene, "up1", merge + seconds(0.9), 0.45);
+    stage.connect(&mut scene, "up2", merge + seconds(0.9), 0.45);
+    let root = stage.settle_in(&mut scene, "root", merge + seconds(1.4));
     stage.land(&mut scene, "root", root);
-    stage.hit(&mut scene, "root.flash", root, 0.5, 0.0);
-    sfx::BLOOM.play(&mut scene, "merge-bloom", root, -12.0);
-
-    // A fixed-size view at the bottom that stops growing.
-    let view = said.at("view of a fixed size");
-    stage.settle_in(&mut scene, "view", view);
-    stage.connect(
+    sfx::TICK.play(&mut scene, "memory-merge", b12, -18.0);
+    sfx::BLOOM.play(&mut scene, "memory-root", root, -12.0);
+    let mut f3 = footer(
         &mut scene,
-        "stream",
-        view.saturating_sub(seconds(0.4)),
-        0.35,
-    );
-    let mut second = footer(
-        &mut scene,
-        "footer-b",
+        "footer-tree",
         vec![
-            span("every turn sends ", Tone::Plain),
-            span("a view of a fixed size", Tone::Success),
+            span("the lines pair up ", Tone::Plain),
+            span("into a tree", Tone::Accent),
         ],
     )?;
-    second.type_in(&mut scene, view, TYPE, 0.8);
+    f3.type_in(&mut scene, merge, TYPE, 0.6);
 
-    // The whole log against the view: 1,200k to 107k is ×11 smaller.
+    // ---- the log outgrows the window; the view never does ---------------
+    let outgrows = said.at("the log outgrows the window");
+    f3.hide(&mut scene, outgrows.saturating_sub(seconds(0.25)));
+    let mut window = MeterActor::declare(
+        &mut scene,
+        "log",
+        &MeterPlan::bar(
+            [520.0, 205.0],
+            700.0,
+            AxisPlan::new([0.0, 1_200_000.0]).nice(4),
+        )
+        .label("the log")
+        .readout(ReadoutFormat::new(0))
+        .threshold(128_000.0, Tone::Warning)
+        .threshold(1_100_000.0, Tone::Error),
+        0.0,
+    )?;
+    window.show(&mut scene, outgrows.saturating_sub(seconds(0.3)));
+    window.sweep(&mut scene, outgrows, 1_200_000.0, 1.5);
+    let mut f4 = footer(
+        &mut scene,
+        "footer-window",
+        vec![
+            span("the log outgrows the window — ", Tone::Plain),
+            span("that is what forces a compaction", Tone::Error),
+        ],
+    )?;
+    f4.type_in(&mut scene, outgrows, TYPE, 0.6);
+
+    let view_never = said.at("the view never does");
+    window.hide(&mut scene, view_never.saturating_sub(seconds(0.2)));
+    f4.hide(&mut scene, view_never.saturating_sub(seconds(0.3)));
+    stage.settle_in(&mut scene, "view", view_never);
+    stage.connect(
+        &mut scene,
+        "render",
+        view_never.saturating_sub(seconds(0.3)),
+        0.4,
+    );
+    let arrived = stage.send(&mut scene, "v1", view_never + seconds(0.5), 0.45);
+    stage.land(&mut scene, "view", arrived);
+    sfx::BLOOM.play(&mut scene, "memory-view", arrived, -14.0);
+    let mut f5 = footer(
+        &mut scene,
+        "footer-view",
+        vec![
+            span("the view never does — ", Tone::Plain),
+            span("it stays a fixed size", Tone::Success),
+        ],
+    )?;
+    f5.type_in(&mut scene, view_never, TYPE, 0.6);
+
+    // ---- every turn carries the view: the two pills ---------------------
+    // The red pill is the whole session log; the green is the fixed view. No
+    // number here describes what ONE request carries except the 95k view.
+    let carries = said.at("every turn carries");
     let mut tokens = RollingNumberActor::declare(
         &mut scene,
         "tokens",
-        RollingNumberPlan::new([250.0, 170.0], 52.0, "1200")
+        RollingNumberPlan::new([960.0, 170.0], 52.0, "0")
+            .aligned(CaptionAlign::Center)
             .tone(Tone::Error)
-            .prefix(vec![span("whole log ", Tone::Muted)])
+            .prefix(vec![span("the log so far ", Tone::Muted)])
             .suffix(vec![span("k tokens", Tone::Muted)])
             .chip(),
     )?;
-    let older = said.at("older ones many per line");
-    tokens.show(&mut scene, view);
-    tokens.roll(&mut scene, older, "1200")?;
-
-    // The reduction itself has to be on screen, not implied: the view under the whole
-    // log, counting up to its real size while the log stays put. It appears with the
-    // view (the narration gives us the whole beat) instead of flashing for two seconds.
-    let constant = said.at("constant size");
     let mut smaller = RollingNumberActor::declare(
         &mut scene,
         "smaller",
-        RollingNumberPlan::new([250.0, 252.0], 40.0, "0")
+        RollingNumberPlan::new([960.0, 262.0], 52.0, "0")
+            .aligned(CaptionAlign::Center)
             .tone(Tone::Success)
             .prefix(vec![span("the view ", Tone::Muted)])
             .suffix(vec![span("k tokens · ×12 smaller", Tone::Muted)])
             .chip(),
     )?;
-    smaller.show(&mut scene, view);
-    smaller.roll(&mut scene, view + seconds(0.3), "95")?;
-    sfx::BLOOM.play(&mut scene, "view-bloom", constant, -14.0);
+    f5.hide(&mut scene, carries.saturating_sub(seconds(0.25)));
+    tokens.show(&mut scene, carries);
+    tokens.roll(&mut scene, carries + seconds(0.2), "1200")?;
+    smaller.show(&mut scene, carries + seconds(0.35));
+    smaller.roll(&mut scene, carries + seconds(0.55), VIEW_TOKENS)?;
+    sfx::MARK.play(
+        &mut scene,
+        "memory-log-count",
+        carries + seconds(0.2),
+        -16.0,
+    );
 
-    // The honest label again: the full log is what it would have carried.
-    let infinite = said.at("infinite context");
-    second.hide(&mut scene, infinite.saturating_sub(seconds(0.2)));
+    let ratio = said.at("tokens,12 times less");
+    sfx::BLOOM.play(&mut scene, "memory-ratio", ratio, -13.0);
+    let clean = said.at("starts clean");
+    stage.hit(&mut scene, "view.flash", clean, 0.5, 0.0);
+    let mut f6 = footer(
+        &mut scene,
+        "footer-clean",
+        vec![
+            span("every turn starts from ", Tone::Plain),
+            span("a clean, fixed-size view", Tone::Success),
+        ],
+    )?;
+    f6.type_in(&mut scene, clean.saturating_sub(seconds(0.9)), TYPE, 0.6);
+
+    // ---- the honest boundary label --------------------------------------
+    let no_rot = said.at("no context rot");
+    f6.hide(&mut scene, no_rot.saturating_sub(seconds(0.2)));
     let mut bound = footer(
         &mut scene,
         "footer-bound",
         vec![
-            span("real ~1,000-message run · ", Tone::Muted),
-            span("full log is an upper bound", Tone::Warning),
+            span("~1,000-message run · ", Tone::Muted),
+            span("the log is an upper bound", Tone::Warning),
             span(" — past the window OpenCode compacts", Tone::Muted),
         ],
     )?;
-    bound.type_in(&mut scene, infinite, TYPE_LONG, 0.4);
+    bound.type_in(&mut scene, no_rot, TYPE_LONG, 0.4);
+    sfx::CONFIRM.play(&mut scene, "memory-clean", said.at("no compaction"), -14.0);
 
-    scene.finish().context("optchat-after")
+    scene.finish().context("optchat-memory")
 }
 
 // ---------------------------------------------------------------------------
-// 4. zoom — a vague line opens down to the original message, then the code
+// 3. zoom — a vague line opens down to the original message, then the code
 // ---------------------------------------------------------------------------
 
 fn zoom(narration: &Narration) -> Result<ScenePlan> {
@@ -579,14 +557,14 @@ fn zoom(narration: &Narration) -> Result<ScenePlan> {
     let mut scene = PlanBuilder::new("optchat-zoom", reading.duration());
     let [said] = reading.place(&mut scene);
 
-    // A terminal walks the zoom: a vague line opens into the two it was made
-    // from, down to the original message.
+    // A terminal walks the plugin's own zoom tool, call by call: the result of
+    // each call is the pair printed under it.
     let mut zoomer = TerminalActor::declare(
         &mut scene,
         "zoom-term",
         TerminalPlan::new([150.0, 230.0], 1260.0, 11)
             .size(22.0)
-            .titled("opencode · zoom")
+            .titled("opencode · zoom tool")
             .prompt(vec![span("~/dev ❯ ", Tone::Accent)]),
     )?;
 
@@ -595,7 +573,7 @@ fn zoom(narration: &Narration) -> Result<ScenePlan> {
     let mut status = chip(&mut scene, "chip", Tone::Accent, "zoom")?;
     status.show(&mut scene, seconds(0.3));
 
-    // A vague line opens into the two lines it was made from, down to the message.
+    // A vague line opens into the lines it was made from, down to the message.
     let vague = said.at("when a line is too vague");
     let opens = said.at("the line opens");
     let any_fact = said.at("any fact in your history");
@@ -603,20 +581,23 @@ fn zoom(narration: &Narration) -> Result<ScenePlan> {
     let and_date = said.at("and date");
 
     zoomer.show(&mut scene, seconds(0.5));
-    zoomer.type_command(&mut scene, vague.saturating_sub(seconds(0.5)), "zoom 64 8")?;
+    zoomer.type_command(
+        &mut scene,
+        vague.saturating_sub(seconds(0.5)),
+        "zoom(64, 8)",
+    )?;
     zoomer.print(
         &mut scene,
         opens,
         [
-            vec![span(
-                "line 64       a vague summary · covers 8 messages",
-                Tone::Warning,
-            )],
             vec![
-                span("  ├─ line 32   ", Tone::Accent),
-                span("covers 4   · the two it was made from", Tone::Muted),
+                span("node 64    ", Tone::Warning),
+                span("a vague line · covers 8 messages", Tone::Muted),
             ],
-            vec![span("  └─ line 48   covers 4", Tone::Accent)],
+            vec![
+                span("→ 8 lines under it: ", Tone::Accent),
+                span("32 40 44 48 52 56 60 62", Tone::Plain),
+            ],
         ],
     )?;
 
@@ -634,19 +615,19 @@ fn zoom(narration: &Narration) -> Result<ScenePlan> {
     zoomer.type_command(
         &mut scene,
         original.saturating_sub(seconds(0.6)),
-        "zoom 64 1",
+        "zoom(64, 1)",
     )?;
     zoomer.print(
         &mut scene,
         original,
         [vec![
-            span("\"explain how the engine loop works\"", Tone::Success),
+            span("→ \"explain how the engine loop works\"", Tone::Success),
             span("   the original, word for word", Tone::Muted),
         ]],
     )?;
     sfx::BLOOM.play(&mut scene, "orig", original, -14.0);
 
-    // The real code: the hook that rebuilds the context, and the zoom tool.
+    // The real code: the hook that rebuilds the context, and the two tools.
     let diff = Diff {
         file_name: "optchat/index.ts",
         lines: vec![
@@ -680,7 +661,7 @@ fn zoom(narration: &Narration) -> Result<ScenePlan> {
         "footer-code",
         vec![
             span("condensed for display · ", Tone::Muted),
-            span("the hook that rebuilds the context, and zoom", Tone::Plain),
+            span("the hook that rebuilds the context", Tone::Plain),
         ],
     )?;
     caption.type_in(&mut scene, any_fact, TYPE, 0.7);
@@ -689,7 +670,7 @@ fn zoom(narration: &Narration) -> Result<ScenePlan> {
         &mut scene,
         "footer-tools",
         vec![
-            span("two tools are enough: ", Tone::Plain),
+            span("the plugin's own tools: ", Tone::Plain),
             span("zoom", Tone::Accent),
             span(" and ", Tone::Plain),
             span("date", Tone::Accent),
@@ -714,133 +695,578 @@ fn zoom(narration: &Narration) -> Result<ScenePlan> {
 }
 
 // ---------------------------------------------------------------------------
-// 5. plugin — what it is: one directory, two sides, no configuration
+// 4. orchestrator — one chat: a mission and a ledger, sub-agents fanning out,
+//    the chat never rewritten so the prompt cache keeps hitting
 // ---------------------------------------------------------------------------
 
-fn plugin(narration: &Narration) -> Result<ScenePlan> {
-    let reading = narration.reading(LEAD, [("plugin", GAP)])?;
-    let mut scene = PlanBuilder::new("optchat-plugin", reading.duration());
+fn orchestrator(narration: &Narration) -> Result<ScenePlan> {
+    let reading = narration.reading(LEAD, [("orchestrator", GAP)])?;
+    let mut scene = PlanBuilder::new("optchat-orchestrator", reading.duration());
+    let [said] = reading.place(&mut scene);
+
+    let submissions = ["api", "tests", "docs", "schema"];
+    let mut elements = vec![
+        StageElement::card(
+            "chat",
+            [560.0, 300.0, 0.0],
+            [700.0, 190.0],
+            "the orchestrator's chat",
+        )
+        .statuses(&[
+            ("the mission · a ledger of finished runs", Tone::Plain),
+            ("append-only · never rewritten", Tone::Success),
+        ])
+        .tone(Tone::Success),
+        StageElement::card(
+            "cache",
+            [1500.0, 300.0, 0.0],
+            [420.0, 130.0],
+            "the prompt cache",
+        )
+        .statuses(&[("the head never changes → keeps hitting", Tone::Success)])
+        .tone(Tone::Success),
+        StageElement::label(
+            "head",
+            [960.0, 150.0, 0.0],
+            22.0,
+            &[
+                ("head: the mission + the ledger ", Tone::Muted),
+                ("— the same, turn after turn", Tone::Success),
+            ],
+        ),
+        StageElement::label(
+            "runs",
+            [960.0, 500.0, 0.0],
+            20.0,
+            &[
+                ("the ledger:  ", Tone::Muted),
+                ("run 12 ✓   run 11 ✓   run 10 ✓", Tone::Plain),
+            ],
+        ),
+        StageElement::beam("cache-line", "chat", "cache").tone(Tone::Success),
+    ];
+    let positions = [
+        [330.0, 760.0, 0.0],
+        [730.0, 760.0, 0.0],
+        [1130.0, 760.0, 0.0],
+        [1530.0, 760.0, 0.0],
+    ];
+    for (index, subject) in submissions.iter().enumerate() {
+        elements.push(
+            StageElement::card(
+                &format!("sa{index}"),
+                positions[index],
+                [340.0, 170.0],
+                &format!("sub-agent · {subject}"),
+            )
+            .statuses(&[
+                ("its own brief · its own context", Tone::Plain),
+                ("a diff, a log, a dead end", Tone::Muted),
+            ])
+            .tone(Tone::Accent),
+        );
+        elements.push(
+            StageElement::beam(&format!("fan{index}"), "chat", &format!("sa{index}"))
+                .tone(Tone::Accent),
+        );
+        elements.push(
+            StageElement::packet(&format!("brief{index}"), &format!("fan{index}"))
+                .labeled("brief")
+                .tone(Tone::Accent),
+        );
+    }
+    let plan = StagePlan {
+        post: StagePost::RESTRAINED,
+        elements,
+    };
+    let mut stage = StageActor::declare(&mut scene, "stage", &plan)?;
+
+    let mut head = header(
+        &mut scene,
+        "optchat",
+        "orchestrator mode · one chat holds the mission and the ledger",
+    )?;
+    head.show(&mut scene, seconds(0.18));
+    let mut status = chip(&mut scene, "chip", Tone::Accent, "orchestrator")?;
+    status.show(&mut scene, seconds(0.3));
+
+    // ---- one conversation holds the mission and the ledger --------------
+    let holds = said.at("one conversation holds nothing");
+    stage.settle_in(&mut scene, "chat", holds);
+    stage.fade_in(&mut scene, "head", holds, 1.0, 0.4);
+    let ledger = said.at("mission and a ledger");
+    let mut f1 = footer(
+        &mut scene,
+        "footer-holds",
+        vec![
+            span("one conversation holds nothing but ", Tone::Plain),
+            span("the mission and a ledger", Tone::Success),
+        ],
+    )?;
+    f1.type_in(&mut scene, ledger, TYPE, 0.6);
+    stage.fade_in(
+        &mut scene,
+        "runs",
+        said.at("a ledger of finished runs"),
+        1.0,
+        0.4,
+    );
+
+    // ---- the noise fans out into sub-agent sessions ---------------------
+    let noise = said.at("every piece of noise");
+    f1.hide(&mut scene, noise.saturating_sub(seconds(0.2)));
+    for index in 0..submissions.len() {
+        let at = noise + seconds(index as f64 * 0.5);
+        let beam = format!("fan{index}");
+        stage.settle_in(&mut scene, &format!("sa{index}"), at);
+        stage.connect(&mut scene, &beam, at + seconds(0.2), 0.5);
+        let arrival = stage.send(
+            &mut scene,
+            &format!("brief{index}"),
+            at + seconds(0.4),
+            0.55,
+        );
+        stage.land(&mut scene, &format!("sa{index}"), arrival);
+        stage.hit(&mut scene, &format!("sa{index}.flash"), arrival, 0.5, 0.0);
+        sfx::TICK.play(&mut scene, &beam, at, -20.0);
+    }
+    let mut f2 = footer(
+        &mut scene,
+        "footer-noise",
+        vec![
+            span(
+                "every piece of noise — a diff, a log, a dead end — ",
+                Tone::Plain,
+            ),
+            span("stays in a sub-agent session", Tone::Accent),
+        ],
+    )?;
+    f2.type_in(&mut scene, noise, TYPE, 0.6);
+    // The noise is named inside the boxes as it starts happening.
+    let diff = said.at("a diff");
+    for index in 0..submissions.len() {
+        stage.swap_status(
+            &mut scene,
+            &format!("sa{index}"),
+            diff + seconds(index as f64 * 0.12),
+            [0, 1],
+            0.4,
+        );
+    }
+
+    let session = said.at("sub-agent session");
+    f2.hide(&mut scene, session.saturating_sub(seconds(0.2)));
+    let mut f3 = footer(
+        &mut scene,
+        "footer-session",
+        vec![
+            span("a sub-agent session it ", Tone::Muted),
+            span("starts, follows, and resumes", Tone::Accent),
+            span(" — the noise never reaches the chat", Tone::Success),
+        ],
+    )?;
+    f3.type_in(&mut scene, session, TYPE, 0.6);
+
+    // ---- the chat stays short, append-only, never rewritten -------------
+    let short = said.at("your chat stays short");
+    f3.hide(&mut scene, short.saturating_sub(seconds(0.25)));
+    stage.hit(&mut scene, "chat.flash", short, 0.5, 0.0);
+    let mut f4 = footer(
+        &mut scene,
+        "footer-short",
+        vec![
+            span("your chat stays ", Tone::Plain),
+            span("short, append-only", Tone::Success),
+            span(", never rewritten", Tone::Plain),
+        ],
+    )?;
+    f4.type_in(&mut scene, short, TYPE, 0.6);
+    // The chat's second status line: append-only, never rewritten.
+    stage.swap_status(&mut scene, "chat", said.at("append only"), [0, 1], 0.4);
+
+    // ---- ...so the cache keeps hitting ----------------------------------
+    let rewritten = said.at("never rewritten");
+    stage.settle_in(&mut scene, "cache", rewritten);
+    stage.connect(
+        &mut scene,
+        "cache-line",
+        rewritten.saturating_sub(seconds(0.2)),
+        0.5,
+    );
+    stage.land(&mut scene, "cache", rewritten + seconds(0.4));
+
+    let hitting = said.at("the cache keeps hitting");
+    f4.hide(&mut scene, hitting.saturating_sub(seconds(0.2)));
+    stage.hit(&mut scene, "cache.flash", hitting, 0.6, 0.0);
+    sfx::SUCCESS.play(&mut scene, "cache", hitting, -13.0);
+    let mut f5 = footer(
+        &mut scene,
+        "footer-cache",
+        vec![
+            span(
+                "the head never changes while the sub-agents churn — ",
+                Tone::Plain,
+            ),
+            span("the prompt cache keeps hitting", Tone::Success),
+        ],
+    )?;
+    f5.type_in(&mut scene, hitting, TYPE, 1.0);
+
+    // ---- while N sub-agents work ----------------------------------------
+    let work = said.at("sub-agents work");
+    stage.hit(&mut scene, "chat.flash", work, 0.4, 0.0);
+    stage.fade_in(
+        &mut scene,
+        "runs",
+        work.saturating_sub(seconds(0.2)),
+        1.0,
+        0.4,
+    );
+
+    scene.finish().context("optchat-orchestrator")
+}
+
+// ---------------------------------------------------------------------------
+// 5. fanout — the orchestration loop: one sub-agent per subject, logged,
+//    status, collected, stopped, resumed — and the orchestrator's tools
+// ---------------------------------------------------------------------------
+
+fn fanout(narration: &Narration) -> Result<ScenePlan> {
+    let reading = narration.reading(LEAD, [("fanout", GAP)])?;
+    let mut scene = PlanBuilder::new("optchat-fanout", reading.duration());
     let [said] = reading.place(&mut scene);
 
     let plan = StagePlan {
         post: StagePost::RESTRAINED,
         elements: vec![
-            StageElement::card("dir", [960.0, 250.0, 0.0], [520.0, 116.0], "one directory")
-                .statuses(&[
-                    ("opencode v2 plugin", Tone::Muted),
-                    ("works on 2.0.22 · 2.0.23", Tone::Muted),
-                ])
+            // the fan-out
+            StageElement::card("fan", [870.0, 240.0, 0.0], [300.0, 110.0], "spawn")
+                .statuses(&[("one sub-agent per subject", Tone::Plain)])
                 .tone(Tone::Accent),
-            StageElement::card("server", [620.0, 620.0, 0.0], [500.0, 176.0], "server side")
-                .statuses(&[
-                    ("rebuilds the context of every turn", Tone::Plain),
-                    ("answers compaction with the view", Tone::Success),
-                ])
+            StageElement::card(
+                "parallel",
+                [1260.0, 240.0, 0.0],
+                [300.0, 110.0],
+                "in parallel",
+            )
+            .statuses(&[("its own brief · its own context", Tone::Muted)])
+            .tone(Tone::Accent),
+            StageElement::card("noise", [1630.0, 240.0, 0.0], [280.0, 110.0], "the noise")
+                .statuses(&[("never reaches you", Tone::Success)])
                 .tone(Tone::Success),
-            StageElement::card("cli", [1320.0, 620.0, 0.0], [440.0, 150.0], "cli side")
-                .statuses(&[("the /optchat pop-up", Tone::Plain)])
-                .tone(Tone::Request),
-            StageElement::beam("to-server", "dir", "server").tone(Tone::Success),
-            StageElement::beam("to-cli", "dir", "cli").tone(Tone::Request),
-            StageElement::packet("turn", "to-server")
-                .labeled("turn")
+            // the loop
+            StageElement::card("log", [1630.0, 480.0, 0.0], [280.0, 100.0], "log")
+                .statuses(&[("one line per run", Tone::Plain)])
+                .tone(Tone::Plain),
+            StageElement::card("ask", [1260.0, 480.0, 0.0], [300.0, 100.0], "status")
+                .statuses(&[("asks, never blocks", Tone::Plain)])
+                .tone(Tone::Plain),
+            StageElement::card("collect", [870.0, 480.0, 0.0], [300.0, 100.0], "collect")
+                .statuses(&[("what is done", Tone::Plain)])
+                .tone(Tone::Plain),
+            StageElement::card("stop", [870.0, 720.0, 0.0], [300.0, 100.0], "stop")
+                .statuses(&[("what no longer matters", Tone::Muted)])
+                .tone(Tone::Warning),
+            StageElement::card("resume", [1260.0, 720.0, 0.0], [320.0, 100.0], "resume")
+                .statuses(&[("the same sub-agent", Tone::Success)])
+                .tone(Tone::Success),
+            StageElement::card("evidence", [1630.0, 720.0, 0.0], [280.0, 100.0], "evidence")
+                .statuses(&[("never a summary", Tone::Success)])
+                .tone(Tone::Success),
+            // the loop-back, routed clear of the middle card
+            StageElement::Path {
+                id: "back".to_owned(),
+                through: vec![
+                    Waypoint::Element("resume".to_owned()),
+                    Waypoint::Point([1440.0, 600.0, 0.0]),
+                    Waypoint::Element("parallel".to_owned()),
+                ],
+                curve: Curve::Straight,
+                corner: 90.0,
+                bend: 0.0,
+                tone: Tone::Success,
+                width: 4.0,
+                dash: Some([14.0, 10.0]),
+                arrow: Arrow::End,
+            },
+            // the wires
+            StageElement::beam("b-fan", "fan", "parallel").tone(Tone::Accent),
+            StageElement::beam("b-noise", "parallel", "noise").tone(Tone::Success),
+            StageElement::beam("b-down", "noise", "log").tone(Tone::Plain),
+            StageElement::beam("b-ask", "log", "ask").tone(Tone::Plain),
+            StageElement::beam("b-collect", "ask", "collect").tone(Tone::Plain),
+            StageElement::beam("b-stop", "collect", "stop").tone(Tone::Warning),
+            StageElement::beam("b-resume", "stop", "resume").tone(Tone::Success),
+            StageElement::beam("b-evidence", "resume", "evidence").tone(Tone::Success),
+            // what travels on them
+            StageElement::packet("p-fan", "b-fan")
+                .labeled("subject")
+                .tone(Tone::Accent),
+            StageElement::packet("p-line", "b-down")
+                .labeled("one line")
+                .tone(Tone::Plain),
+            StageElement::packet("p-ask", "b-ask")
+                .labeled("status")
+                .tone(Tone::Plain),
+            StageElement::packet("p-collect", "b-collect")
+                .labeled("what is done")
+                .tone(Tone::Plain),
+            StageElement::packet("p-stop", "b-stop")
+                .labeled("stop")
+                .tone(Tone::Warning),
+            StageElement::packet("p-resume", "b-resume")
+                .labeled("resume")
+                .tone(Tone::Success),
+            StageElement::packet("p-evidence", "b-evidence")
+                .labeled("evidence")
                 .tone(Tone::Success),
         ],
     };
     let mut stage = StageActor::declare(&mut scene, "stage", &plan)?;
 
-    let mut head = header(&mut scene, "optchat", "the plugin")?;
+    let mut head = header(
+        &mut scene,
+        "optchat",
+        "the fan-out · one sub-agent per subject",
+    )?;
     head.show(&mut scene, seconds(0.18));
-    let mut status = chip(&mut scene, "chip", Tone::Accent, "the plugin")?;
+    let mut status = chip(&mut scene, "chip", Tone::Accent, "the loop")?;
     status.show(&mut scene, seconds(0.3));
 
-    let directory = said.at("one directory");
-    stage.settle_in(&mut scene, "dir", directory);
-    let mut one = footer(
+    // The orchestrator's tools, exactly as it exposes them, as call → result.
+    let mut tools = TerminalActor::declare(
         &mut scene,
-        "footer-one",
-        vec![
-            span("the plugin is ", Tone::Plain),
-            span("one directory", Tone::Accent),
-            span(" — an opencode v2 plugin", Tone::Muted),
-        ],
+        "tools",
+        TerminalPlan::new([150.0, 190.0], 520.0, 22)
+            .size(17.0)
+            .titled("the orchestrator's tools")
+            .prompt(vec![span("❯ ", Tone::Accent)]),
     )?;
-    one.type_in(&mut scene, directory, TYPE, 0.7);
+    tools.show(&mut scene, seconds(0.5));
 
-    // Server side: rebuilds the context, answers the harness's compaction request.
-    let server = said.at("the server side");
-    stage.connect(&mut scene, "to-server", server, 0.5);
-    stage.settle_in(&mut scene, "server", server + seconds(0.3));
-    sfx::TICK.play(&mut scene, "to-server", server, -18.0);
-    let mut side = footer(
+    let fans = said.at("fans out");
+    let subjects = said.at("one sub-agent per subject");
+    let parallel = said.at("running in parallel");
+    let reaches = said.at("never reaches you");
+    let line_per_run = said.at("logs one line per run");
+    let asks = said.at("asks status");
+    let collect = said.at("collects what is done");
+    let stop = said.at("interrupts what matters");
+    let resume = said.at("resumes the same sub-agent");
+    let evidence = said.at("never trusts a summary");
+
+    // ---- one sub-agent per subject, in parallel -------------------------
+    tools.print(
         &mut scene,
-        "footer-server",
-        vec![
-            span("server side: ", Tone::Muted),
-            span("it rebuilds the context of every turn", Tone::Plain),
-        ],
-    )?;
-    side.type_in(&mut scene, server, TYPE, 0.7);
-    one.hide(&mut scene, server.saturating_sub(seconds(0.2)));
-
-    let every = said.at("every turn");
-    let turn = stage.send(&mut scene, "turn", every, 0.6);
-    stage.land(&mut scene, "server", turn);
-
-    // "so compaction never runs".
-    let never = said.at("compaction never runs");
-    stage.hit(&mut scene, "server.flash", never, 0.5, 0.0);
-    side.hide(&mut scene, never.saturating_sub(seconds(0.2)));
-    let mut answer = footer(
-        &mut scene,
-        "footer-answer",
-        vec![
-            span(
-                "it answers the harness's compaction request with the view — ",
+        fans,
+        [
+            vec![span("spawn    start a sub-agent on a subject", Tone::Plain)],
+            vec![span("collect  what a finished run returned", Tone::Plain)],
+            vec![span("status   the ledger, without blocking", Tone::Plain)],
+            vec![span(
+                "stop     end a run that no longer matters",
                 Tone::Plain,
-            ),
-            span("compaction never runs", Tone::Success),
+            )],
+            vec![span("note     one line into the ledger", Tone::Plain)],
+            vec![span("find     search the log", Tone::Plain)],
+            vec![span("zoom     open a line into its parts", Tone::Plain)],
+            vec![span("date     when a line was said", Tone::Plain)],
         ],
     )?;
-    answer.type_in(&mut scene, never, TYPE, 0.7);
-
-    // CLI side: the pop-up.
-    let cli = said.at("the command line");
-    stage.connect(&mut scene, "to-cli", cli, 0.5);
-    stage.settle_in(&mut scene, "cli", cli + seconds(0.3));
-    sfx::TICK.play(&mut scene, "to-cli", cli, -18.0);
-
-    let popup = said.at("adds a pop-up");
-    answer.hide(&mut scene, popup.saturating_sub(seconds(0.2)));
-    let mut cli_note = footer(
+    stage.settle_in(&mut scene, "fan", subjects.saturating_sub(seconds(0.2)));
+    stage.connect(&mut scene, "b-fan", fans, 0.5);
+    let fanned = stage.send(&mut scene, "p-fan", fans + seconds(0.3), 0.55);
+    stage.land(&mut scene, "parallel", fanned);
+    stage.settle_in(
         &mut scene,
-        "footer-cli",
-        vec![
-            span("cli side: ", Tone::Muted),
-            span("a pop-up in the terminal", Tone::Request),
-        ],
-    )?;
-    cli_note.type_in(&mut scene, cli, TYPE, 0.7);
+        "parallel",
+        parallel.saturating_sub(seconds(0.3)),
+    );
+    stage.connect(&mut scene, "b-noise", parallel, 0.5);
+    stage.settle_in(&mut scene, "noise", reaches.saturating_sub(seconds(0.3)));
+    stage.hit(&mut scene, "noise.flash", reaches, 0.5, 0.0);
 
-    // "No configuration, no dependency, MIT."
-    let config = said.at("no configuration");
-    cli_note.hide(&mut scene, config.saturating_sub(seconds(0.2)));
-    let mut free = footer(
+    let mut f1 = footer(
         &mut scene,
-        "footer-mit",
+        "footer-fan",
         vec![
-            span("no configuration · no dependency · ", Tone::Muted),
-            span("MIT", Tone::Success),
+            span("say the word: ", Tone::Plain),
+            span("one sub-agent per subject", Tone::Accent),
+            span(", in parallel", Tone::Plain),
         ],
     )?;
-    free.type_in(&mut scene, config, TYPE, 0.8);
-    sfx::CONFIRM.play(&mut scene, "mit", said.at("MIT"), -14.0);
+    f1.type_in(&mut scene, fans, TYPE, 0.6);
+    f1.hide(&mut scene, reaches.saturating_sub(seconds(0.2)));
+    let mut f2 = footer(
+        &mut scene,
+        "footer-noise",
+        vec![
+            span("each with its own brief and context — ", Tone::Plain),
+            span("their noise never reaches you", Tone::Success),
+        ],
+    )?;
+    f2.type_in(&mut scene, reaches, TYPE, 0.6);
 
-    scene.finish().context("optchat-plugin")
+    // ---- the loop: log, status, collect, stop, resume -------------------
+    f2.hide(&mut scene, line_per_run.saturating_sub(seconds(0.25)));
+    stage.connect(
+        &mut scene,
+        "b-down",
+        line_per_run.saturating_sub(seconds(0.4)),
+        0.5,
+    );
+    stage.settle_in(&mut scene, "log", line_per_run.saturating_sub(seconds(0.3)));
+    let logged = stage.send(
+        &mut scene,
+        "p-line",
+        line_per_run.saturating_sub(seconds(0.2)),
+        0.5,
+    );
+    stage.land(&mut scene, "log", logged);
+    let mut f3 = footer(
+        &mut scene,
+        "footer-log",
+        vec![
+            span("the orchestrator logs ", Tone::Plain),
+            span("one line per run", Tone::Plain),
+        ],
+    )?;
+    f3.type_in(&mut scene, line_per_run, TYPE, 0.6);
+
+    f3.hide(&mut scene, asks.saturating_sub(seconds(0.2)));
+    stage.connect(&mut scene, "b-ask", asks.saturating_sub(seconds(0.4)), 0.4);
+    stage.settle_in(&mut scene, "ask", asks.saturating_sub(seconds(0.3)));
+    stage.send(&mut scene, "p-ask", asks.saturating_sub(seconds(0.1)), 0.45);
+    tools.type_command(&mut scene, asks, "status")?;
+    tools.print(
+        &mut scene,
+        asks + seconds(0.6),
+        [
+            vec![span("run 12  api audit      done", Tone::Plain)],
+            vec![span("run 13  test sweep     running", Tone::Plain)],
+            vec![span("run 14  docs pass      queued", Tone::Muted)],
+        ],
+    )?;
+    let mut f4 = footer(
+        &mut scene,
+        "footer-status",
+        vec![
+            span("it asks ", Tone::Plain),
+            span("status", Tone::Accent),
+            span(" instead of blocking", Tone::Plain),
+        ],
+    )?;
+    f4.type_in(&mut scene, asks, TYPE, 0.6);
+
+    f4.hide(&mut scene, collect.saturating_sub(seconds(0.25)));
+    stage.connect(
+        &mut scene,
+        "b-collect",
+        collect.saturating_sub(seconds(0.5)),
+        0.4,
+    );
+    stage.settle_in(&mut scene, "collect", collect.saturating_sub(seconds(0.3)));
+    let done = stage.send(&mut scene, "p-collect", collect, 0.45);
+    stage.land(&mut scene, "collect", done);
+    sfx::TICK.play(
+        &mut scene,
+        "b-collect",
+        collect.saturating_sub(seconds(0.5)),
+        -18.0,
+    );
+    tools.type_command(&mut scene, collect + seconds(0.5), "collect 12")?;
+    tools.print(
+        &mut scene,
+        collect + seconds(1.3),
+        [vec![span(
+            "→ 3 files touched · no schema change",
+            Tone::Success,
+        )]],
+    )?;
+    let mut f5 = footer(
+        &mut scene,
+        "footer-collect",
+        vec![
+            span("it collects ", Tone::Plain),
+            span("what is done", Tone::Plain),
+        ],
+    )?;
+    f5.type_in(&mut scene, collect, TYPE, 0.6);
+
+    f5.hide(&mut scene, stop.saturating_sub(seconds(0.25)));
+    stage.connect(&mut scene, "b-stop", stop.saturating_sub(seconds(0.5)), 0.4);
+    stage.settle_in(&mut scene, "stop", stop.saturating_sub(seconds(0.3)));
+    stage.send(&mut scene, "p-stop", stop, 0.45);
+    let mut f6 = footer(
+        &mut scene,
+        "footer-stop",
+        vec![
+            span("it stops ", Tone::Warning),
+            span("what no longer matters", Tone::Plain),
+        ],
+    )?;
+    f6.type_in(&mut scene, stop, TYPE, 0.6);
+
+    f6.hide(&mut scene, resume.saturating_sub(seconds(0.25)));
+    stage.connect(
+        &mut scene,
+        "b-resume",
+        resume.saturating_sub(seconds(0.5)),
+        0.4,
+    );
+    stage.settle_in(&mut scene, "resume", resume.saturating_sub(seconds(0.3)));
+    let resumed = stage.send(&mut scene, "p-resume", resume, 0.45);
+    stage.land(&mut scene, "resume", resumed);
+    stage.connect(&mut scene, "back", resume + seconds(0.6), 0.6);
+    let mut f7 = footer(
+        &mut scene,
+        "footer-resume",
+        vec![
+            span("it resumes ", Tone::Plain),
+            span("the same sub-agent", Tone::Success),
+            span(" when a subject needs more", Tone::Plain),
+        ],
+    )?;
+    f7.type_in(&mut scene, resume, TYPE, 0.6);
+
+    // ---- evidence, not a summary ----------------------------------------
+    f7.hide(&mut scene, evidence.saturating_sub(seconds(0.3)));
+    stage.fade_in(&mut scene, "evidence", evidence, 1.0, 0.4);
+    stage.connect(
+        &mut scene,
+        "b-evidence",
+        evidence.saturating_sub(seconds(0.3)),
+        0.4,
+    );
+    let landed = stage.send(&mut scene, "p-evidence", evidence, 0.45);
+    stage.land(&mut scene, "evidence", landed);
+    stage.hit(&mut scene, "evidence.flash", landed, 0.5, 0.0);
+    sfx::BLOOM.play(&mut scene, "evidence", landed, -12.0);
+    tools.type_command(&mut scene, evidence + seconds(0.4), "collect 14")?;
+    tools.print(
+        &mut scene,
+        evidence + seconds(1.2),
+        [vec![span(
+            "→ the diff, re-read by a second sub-agent",
+            Tone::Success,
+        )]],
+    )?;
+    let mut f8 = footer(
+        &mut scene,
+        "footer-evidence",
+        vec![
+            span("it never trusts a summary — ", Tone::Plain),
+            span("evidence", Tone::Success),
+            span(", a second sub-agent checks the first", Tone::Plain),
+        ],
+    )?;
+    f8.type_in(&mut scene, evidence, TYPE, 0.6);
+
+    scene.finish().context("optchat-fanout")
 }
 
 // ---------------------------------------------------------------------------
-// 6. tui — the pop-up: Stats, View, Summaries, Settings
+// 6. tui — the pop-up: two switches, Stats, View, Summaries, Settings
 // ---------------------------------------------------------------------------
 
 fn tui(narration: &Narration) -> Result<ScenePlan> {
@@ -848,12 +1274,12 @@ fn tui(narration: &Narration) -> Result<ScenePlan> {
     let mut scene = PlanBuilder::new("optchat-tui", reading.duration());
     let [said] = reading.place(&mut scene);
 
-    let mut head = header(&mut scene, "optchat", "the pop-up")?;
+    let mut head = header(&mut scene, "optchat", "the pop-up · two switches")?;
     head.show(&mut scene, seconds(0.18));
     let mut status = chip(&mut scene, "chip", Tone::Accent, "the pop-up")?;
     status.show(&mut scene, seconds(0.3));
 
-    // ---- Stats: what a turn carries, and what it costs --------------------
+    // ---- Stats: the two switches, then what a turn carries and costs -----
     let mut stats = TerminalActor::declare(
         &mut scene,
         "term-stats",
@@ -865,16 +1291,31 @@ fn tui(narration: &Narration) -> Result<ScenePlan> {
     stats.show(&mut scene, seconds(0.6));
     stats.type_command(&mut scene, seconds(1.0), "/optchat")?;
 
-    let screens = said.at("the screens");
+    let popup = said.at("the pop-up is there");
     stats.print(
         &mut scene,
-        screens,
-        [vec![
-            span("optchat  ", Tone::Accent),
-            span("─  Stats · View · Summaries · Settings", Tone::Muted),
-        ]],
+        popup,
+        [
+            vec![span("optchat  ─  the pop-up", Tone::Accent)],
+            vec![span(
+                "Memory · Orchestrator · Stats · View · Summaries · Settings",
+                Tone::Muted,
+            )],
+        ],
     )?;
-    let statistics = said.at("stats");
+
+    let switches = said.at("two switches");
+    stats.print(
+        &mut scene,
+        switches,
+        [
+            vec![span("## Modes", Tone::Accent)],
+            vec![span("memory        on", Tone::Success)],
+            vec![span("orchestrator  on", Tone::Success)],
+        ],
+    )?;
+
+    let statistics = said.at("then stats");
     stats.print(
         &mut scene,
         statistics,
@@ -934,13 +1375,13 @@ fn tui(narration: &Narration) -> Result<ScenePlan> {
     bars.show(&mut scene, carries);
     bars.reveal_rows(&mut scene, carries + seconds(0.1));
 
-    let since = said.at("since a request");
+    let since = said.at("a request");
     bars.grow(&mut scene, since, "optchat", &[("cost", 0.16)])?;
     opt.show(&mut scene, since);
     opt.roll(&mut scene, since, "0.16")?;
     sfx::SUCCESS.play(&mut scene, "cost-optchat", since, -14.0);
 
-    let whole = said.at("for the whole log");
+    let whole = said.at("the whole log");
     bars.grow(&mut scene, whole, "full", &[("cost", 0.86)])?;
     full.show(&mut scene, whole);
     full.roll(&mut scene, whole, "0.86")?;
@@ -957,7 +1398,7 @@ fn tui(narration: &Narration) -> Result<ScenePlan> {
     bill.type_in(&mut scene, since, TYPE, 0.8);
 
     // ---- View: the context line by line, originals bright ----------------
-    let view = said.at("view");
+    let view = said.at("the view");
     let clear = view.saturating_sub(seconds(0.25));
     stats.hide(&mut scene, clear);
     bars.hide(&mut scene, clear);
@@ -975,10 +1416,10 @@ fn tui(narration: &Narration) -> Result<ScenePlan> {
     )?;
     show_view.show(&mut scene, view.saturating_sub(seconds(0.1)));
 
-    let lines = said.at("the context line by line");
+    let originals = said.at("originals bright");
     show_view.print(
         &mut scene,
-        lines,
+        originals,
         [
             vec![span(
                 "originals bright · summaries on a grey ramp",
@@ -1065,9 +1506,9 @@ fn tui(narration: &Narration) -> Result<ScenePlan> {
         ],
     )?;
 
-    // ---- Settings: five knobs --------------------------------------------
-    let knobs = said.at("knobs");
-    let clear = knobs.saturating_sub(seconds(0.25));
+    // ---- Settings: the two switches --------------------------------------
+    let settings_at = said.at("the settings");
+    let clear = settings_at.saturating_sub(seconds(0.25));
     summaries.hide(&mut scene, clear);
 
     let mut settings = TerminalActor::declare(
@@ -1078,13 +1519,14 @@ fn tui(narration: &Narration) -> Result<ScenePlan> {
             .titled("optchat · settings")
             .prompt(vec![span("~/dev ❯ ", Tone::Accent)]),
     )?;
-    settings.show(&mut scene, knobs.saturating_sub(seconds(0.15)));
+    settings.show(&mut scene, settings_at.saturating_sub(seconds(0.15)));
     settings.print(
         &mut scene,
-        knobs,
+        settings_at,
         [
-            vec![span("five knobs", Tone::Muted)],
+            vec![span("## Modes", Tone::Accent)],
             vec![span("memory             on", Tone::Success)],
+            vec![span("orchestrator       on", Tone::Success)],
             vec![span(
                 "compactor model    (the session's model)",
                 Tone::Plain,
@@ -1099,7 +1541,7 @@ fn tui(narration: &Narration) -> Result<ScenePlan> {
 }
 
 // ---------------------------------------------------------------------------
-// 7. outro — one line to install, plain files, and the credits
+// 7. outro — one line to install, the two modes, plain files, and the credits
 // ---------------------------------------------------------------------------
 
 fn outro(narration: &Narration) -> Result<ScenePlan> {
@@ -1130,7 +1572,7 @@ fn outro(narration: &Narration) -> Result<ScenePlan> {
     )?;
     sfx::CONFIRM.play(&mut scene, "install", entered, -14.0);
 
-    let files = said.at("plain files");
+    let disk = said.at("playing files");
     term.print(
         &mut scene,
         entered + seconds(0.2),
@@ -1138,30 +1580,65 @@ fn outro(narration: &Narration) -> Result<ScenePlan> {
     )?;
     term.print(
         &mut scene,
-        files,
+        disk,
         [
             vec![span(
-                "main/2026-10-05.jsonl   every message, verbatim",
+                "main/2026-10-05.jsonl     the log, every message verbatim",
                 Tone::Plain,
             )],
             vec![span(
-                "tree/2026-10-05.jsonl   one summary per node",
+                "tree/2026-10-05.jsonl     the tree, one summary per node",
                 Tone::Plain,
             )],
             vec![span(
-                "zoom(id, n)             reads any line back",
-                Tone::Accent,
+                "ledger/2026-10-05.jsonl   the ledger, one line per run",
+                Tone::Plain,
             )],
         ],
     )?;
 
+    // The two modes, one after the other.
+    let memory_mode = said.at("memory mode");
+    let mut mode_a = CaptionActor::declare(
+        &mut scene,
+        "mode-memory",
+        &CaptionPlan::line(
+            [960.0, 560.0],
+            26.0,
+            vec![
+                span("memory mode ", Tone::Success),
+                span("for the conversation you keep", Tone::Plain),
+            ],
+        )
+        .aligned(CaptionAlign::Center),
+    )?;
+    mode_a.type_in(&mut scene, memory_mode, TYPE, 0.6);
+
+    let orchestrator_mode = said.at("orchestrator mode");
+    mode_a.hide(&mut scene, orchestrator_mode.saturating_sub(seconds(0.2)));
+    let mut mode_b = CaptionActor::declare(
+        &mut scene,
+        "mode-orchestrator",
+        &CaptionPlan::line(
+            [960.0, 630.0],
+            26.0,
+            vec![
+                span("orchestrator mode ", Tone::Accent),
+                span("for the work you fan out", Tone::Plain),
+            ],
+        )
+        .aligned(CaptionAlign::Center),
+    )?;
+    mode_b.type_in(&mut scene, orchestrator_mode, TYPE, 0.6);
+
     // The closing line: you never compact again.
     let memory = said.at("the chat is the memory");
+    mode_b.hide(&mut scene, memory.saturating_sub(seconds(0.3)));
     let mut line_a = CaptionActor::declare(
         &mut scene,
         "closing-memory",
         &CaptionPlan::line(
-            [960.0, 660.0],
+            [960.0, 690.0],
             28.0,
             vec![
                 span("the log is the chat, ", Tone::Plain),
@@ -1177,7 +1654,7 @@ fn outro(narration: &Narration) -> Result<ScenePlan> {
         &mut scene,
         "closing",
         &CaptionPlan::line(
-            [960.0, 740.0],
+            [960.0, 760.0],
             28.0,
             vec![
                 span("and you ", Tone::Plain),
