@@ -1,6 +1,8 @@
 # The optchat film — how it is made, and how to regenerate it
 
-`docs/optchat-v5.mp4` (2:26, 1920×1080, 60 fps, −17.7 LUFS) is generated entirely
+The film is hosted with the plugin it explains:
+[opencode2-plugin-optchat · media/optchat-v5.mp4](https://github.com/96Ems/opencode2-plugin-optchat/blob/main/media/optchat-v5.mp4)
+(2:26, 1920×1080, 60 fps, −17.7 LUFS). It is generated entirely
 from this repository: a Rust scene, a narrated script, and the local TTS/STT stack
 described in [LOCAL_TTS_STT.md](LOCAL_TTS_STT.md). No paid API, no cloud renderer.
 
