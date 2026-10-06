@@ -536,17 +536,21 @@ fn after(narration: &Narration) -> Result<ScenePlan> {
     tokens.show(&mut scene, view);
     tokens.roll(&mut scene, older, "1200")?;
 
+    // The reduction itself has to be on screen, not implied: the view under the whole
+    // log, counting up to its real size while the log stays put. It appears with the
+    // view (the narration gives us the whole beat) instead of flashing for two seconds.
     let constant = said.at("constant size");
     let mut smaller = RollingNumberActor::declare(
         &mut scene,
         "smaller",
-        RollingNumberPlan::new([1180.0, 170.0], 52.0, "11")
+        RollingNumberPlan::new([250.0, 252.0], 40.0, "0")
             .tone(Tone::Success)
-            .prefix(vec![span("×", Tone::Muted)])
-            .suffix(vec![span(" smaller", Tone::Muted)])
+            .prefix(vec![span("the view ", Tone::Muted)])
+            .suffix(vec![span("k tokens · ×12 smaller", Tone::Muted)])
             .chip(),
     )?;
-    smaller.show(&mut scene, constant);
+    smaller.show(&mut scene, view);
+    smaller.roll(&mut scene, view + seconds(0.3), "95")?;
     sfx::BLOOM.play(&mut scene, "view-bloom", constant, -14.0);
 
     // The honest label again: the full log is what it would have carried.
@@ -884,7 +888,7 @@ fn tui(narration: &Narration) -> Result<ScenePlan> {
                 span("transcript  1.5 MB", Tone::Plain),
                 span("   · log, never rewritten", Tone::Muted),
             ],
-            vec![span("compression ×11.4", Tone::Success)],
+            vec![span("compression ×12", Tone::Success)],
         ],
     )?;
 
@@ -946,8 +950,8 @@ fn tui(narration: &Narration) -> Result<ScenePlan> {
         &mut scene,
         "footer-bill",
         vec![
-            span("0.16 ¢ a request against 0.86 ¢ ", Tone::Plain),
-            span("carrying the whole log", Tone::Muted),
+            span("0.16 ¢ a request against 0.86 ¢ · ", Tone::Plain),
+            span("95k tokens against 1,200k (×12)", Tone::Success),
         ],
     )?;
     bill.type_in(&mut scene, since, TYPE, 0.8);

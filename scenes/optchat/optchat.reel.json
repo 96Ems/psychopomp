@@ -4747,24 +4747,30 @@
             "data": {
               "chip": true,
               "origin": [
-                1180.0,
-                170.0
+                250.0,
+                252.0
               ],
               "prefix": [
                 {
-                  "text": "×",
+                  "text": "the view ",
                   "tone": "muted"
                 }
               ],
-              "size": 52.0,
+              "rolls": [
+                {
+                  "atNanos": 11020000000,
+                  "value": "95"
+                }
+              ],
+              "size": 40.0,
               "suffix": [
                 {
-                  "text": " smaller",
+                  "text": "k tokens · ×12 smaller",
                   "tone": "muted"
                 }
               ],
               "tone": "success",
-              "value": "11"
+              "value": "0"
             }
           },
           {
@@ -6801,7 +6807,7 @@
             "events": [
               {
                 "operation": "spring",
-                "atNanos": 16320000000,
+                "atNanos": 10720000000,
                 "target": 1.0,
                 "responseSeconds": 0.42000002,
                 "dampingRatio": 1.0,
@@ -6818,7 +6824,7 @@
             "events": [
               {
                 "operation": "spring",
-                "atNanos": 16320000000,
+                "atNanos": 10720000000,
                 "target": 0.0,
                 "responseSeconds": 0.54,
                 "dampingRatio": 1.0,
@@ -12246,7 +12252,7 @@
                   "kind": "output",
                   "spans": [
                     {
-                      "text": "compression ×11.4",
+                      "text": "compression ×12",
                       "tone": "success"
                     }
                   ]
@@ -12399,11 +12405,11 @@
               "lines": [
                 [
                   {
-                    "text": "0.16 ¢ a request against 0.86 ¢ "
+                    "text": "0.16 ¢ a request against 0.86 ¢ · "
                   },
                   {
-                    "text": "carrying the whole log",
-                    "tone": "muted"
+                    "text": "95k tokens against 1,200k (×12)",
+                    "tone": "success"
                   }
                 ]
               ],
@@ -13263,271 +13269,326 @@
               {
                 "operation": "set",
                 "atNanos": 8103809523,
-                "value": 0.018518519
+                "value": 0.015384615
               },
               {
                 "operation": "set",
                 "atNanos": 8127619046,
-                "value": 0.037037037
+                "value": 0.03076923
               },
               {
                 "operation": "set",
                 "atNanos": 8151428569,
-                "value": 0.055555556
+                "value": 0.046153847
               },
               {
                 "operation": "set",
                 "atNanos": 8175238092,
-                "value": 0.074074075
+                "value": 0.06153846
               },
               {
                 "operation": "set",
                 "atNanos": 8199047615,
-                "value": 0.09259259
+                "value": 0.07692308
               },
               {
                 "operation": "set",
                 "atNanos": 8222857138,
-                "value": 0.11111111
+                "value": 0.092307694
               },
               {
                 "operation": "set",
                 "atNanos": 8246666661,
-                "value": 0.12962963
+                "value": 0.10769231
               },
               {
                 "operation": "set",
                 "atNanos": 8270476184,
-                "value": 0.14814815
+                "value": 0.12307692
               },
               {
                 "operation": "set",
                 "atNanos": 8294285707,
-                "value": 0.16666667
+                "value": 0.13846155
               },
               {
                 "operation": "set",
                 "atNanos": 8318095230,
-                "value": 0.18518518
+                "value": 0.15384616
               },
               {
                 "operation": "set",
                 "atNanos": 8341904753,
-                "value": 0.2037037
+                "value": 0.16923077
               },
               {
                 "operation": "set",
                 "atNanos": 8365714276,
-                "value": 0.22222222
+                "value": 0.18461539
               },
               {
                 "operation": "set",
                 "atNanos": 8389523799,
-                "value": 0.24074075
+                "value": 0.2
               },
               {
                 "operation": "set",
                 "atNanos": 8413333322,
-                "value": 0.25925925
+                "value": 0.21538462
               },
               {
                 "operation": "set",
                 "atNanos": 8437142845,
-                "value": 0.2777778
+                "value": 0.23076923
               },
               {
                 "operation": "set",
                 "atNanos": 8460952368,
-                "value": 0.2962963
+                "value": 0.24615385
               },
               {
                 "operation": "set",
                 "atNanos": 8484761891,
-                "value": 0.3148148
+                "value": 0.26153848
               },
               {
                 "operation": "set",
                 "atNanos": 8508571414,
-                "value": 0.33333334
+                "value": 0.2769231
               },
               {
                 "operation": "set",
                 "atNanos": 8532380937,
-                "value": 0.35185185
+                "value": 0.2923077
               },
               {
                 "operation": "set",
                 "atNanos": 8556190460,
-                "value": 0.37037036
+                "value": 0.30769232
               },
               {
                 "operation": "set",
                 "atNanos": 8579999983,
-                "value": 0.3888889
+                "value": 0.32307693
               },
               {
                 "operation": "set",
                 "atNanos": 8603809506,
-                "value": 0.4074074
+                "value": 0.33846155
               },
               {
                 "operation": "set",
                 "atNanos": 8627619029,
-                "value": 0.42592594
+                "value": 0.35384616
               },
               {
                 "operation": "set",
                 "atNanos": 8651428552,
-                "value": 0.44444445
+                "value": 0.36923078
               },
               {
                 "operation": "set",
                 "atNanos": 8675238075,
-                "value": 0.46296296
+                "value": 0.3846154
               },
               {
                 "operation": "set",
                 "atNanos": 8699047598,
-                "value": 0.4814815
+                "value": 0.4
               },
               {
                 "operation": "set",
                 "atNanos": 8722857121,
-                "value": 0.5
+                "value": 0.41538462
               },
               {
                 "operation": "set",
                 "atNanos": 8746666644,
-                "value": 0.5185185
+                "value": 0.43076923
               },
               {
                 "operation": "set",
                 "atNanos": 8770476167,
-                "value": 0.537037
+                "value": 0.44615385
               },
               {
                 "operation": "set",
                 "atNanos": 8794285690,
-                "value": 0.5555556
+                "value": 0.46153846
               },
               {
                 "operation": "set",
                 "atNanos": 8818095213,
-                "value": 0.5740741
+                "value": 0.47692308
               },
               {
                 "operation": "set",
                 "atNanos": 8841904736,
-                "value": 0.5925926
+                "value": 0.4923077
               },
               {
                 "operation": "set",
                 "atNanos": 8865714259,
-                "value": 0.6111111
+                "value": 0.50769234
               },
               {
                 "operation": "set",
                 "atNanos": 8889523782,
-                "value": 0.6296296
+                "value": 0.52307695
               },
               {
                 "operation": "set",
                 "atNanos": 8913333305,
-                "value": 0.6481481
+                "value": 0.53846157
               },
               {
                 "operation": "set",
                 "atNanos": 8937142828,
-                "value": 0.6666667
+                "value": 0.5538462
               },
               {
                 "operation": "set",
                 "atNanos": 8960952351,
-                "value": 0.6851852
+                "value": 0.5692308
               },
               {
                 "operation": "set",
                 "atNanos": 8984761874,
-                "value": 0.7037037
+                "value": 0.5846154
               },
               {
                 "operation": "set",
                 "atNanos": 9008571397,
-                "value": 0.7222222
+                "value": 0.6
               },
               {
                 "operation": "set",
                 "atNanos": 9032380920,
-                "value": 0.7407407
+                "value": 0.61538464
               },
               {
                 "operation": "set",
                 "atNanos": 9056190443,
-                "value": 0.7592593
+                "value": 0.63076925
               },
               {
                 "operation": "set",
                 "atNanos": 9079999966,
-                "value": 0.7777778
+                "value": 0.64615387
               },
               {
                 "operation": "set",
                 "atNanos": 9103809489,
-                "value": 0.7962963
+                "value": 0.6615385
               },
               {
                 "operation": "set",
                 "atNanos": 9127619012,
-                "value": 0.8148148
+                "value": 0.6769231
               },
               {
                 "operation": "set",
                 "atNanos": 9151428535,
-                "value": 0.8333333
+                "value": 0.6923077
               },
               {
                 "operation": "set",
                 "atNanos": 9175238058,
-                "value": 0.8518519
+                "value": 0.7076923
               },
               {
                 "operation": "set",
                 "atNanos": 9199047581,
-                "value": 0.8703704
+                "value": 0.72307694
               },
               {
                 "operation": "set",
                 "atNanos": 9222857104,
-                "value": 0.8888889
+                "value": 0.73846155
               },
               {
                 "operation": "set",
                 "atNanos": 9246666627,
-                "value": 0.9074074
+                "value": 0.75384617
               },
               {
                 "operation": "set",
                 "atNanos": 9270476150,
-                "value": 0.9259259
+                "value": 0.7692308
               },
               {
                 "operation": "set",
                 "atNanos": 9294285673,
-                "value": 0.9444444
+                "value": 0.7846154
               },
               {
                 "operation": "set",
                 "atNanos": 9318095196,
-                "value": 0.962963
+                "value": 0.8
               },
               {
                 "operation": "set",
                 "atNanos": 9341904719,
-                "value": 0.9814815
+                "value": 0.8153846
               },
               {
                 "operation": "set",
                 "atNanos": 9365714242,
+                "value": 0.83076924
+              },
+              {
+                "operation": "set",
+                "atNanos": 9389523765,
+                "value": 0.84615386
+              },
+              {
+                "operation": "set",
+                "atNanos": 9413333288,
+                "value": 0.86153847
+              },
+              {
+                "operation": "set",
+                "atNanos": 9437142811,
+                "value": 0.8769231
+              },
+              {
+                "operation": "set",
+                "atNanos": 9460952334,
+                "value": 0.8923077
+              },
+              {
+                "operation": "set",
+                "atNanos": 9484761857,
+                "value": 0.9076923
+              },
+              {
+                "operation": "set",
+                "atNanos": 9508571380,
+                "value": 0.9230769
+              },
+              {
+                "operation": "set",
+                "atNanos": 9532380903,
+                "value": 0.93846154
+              },
+              {
+                "operation": "set",
+                "atNanos": 9556190426,
+                "value": 0.95384616
+              },
+              {
+                "operation": "set",
+                "atNanos": 9579999949,
+                "value": 0.9692308
+              },
+              {
+                "operation": "set",
+                "atNanos": 9603809472,
+                "value": 0.9846154
+              },
+              {
+                "operation": "set",
+                "atNanos": 9627618995,
                 "value": 1.0
               }
             ]
@@ -13545,7 +13606,7 @@
               },
               {
                 "operation": "spring",
-                "atNanos": 10165714253,
+                "atNanos": 10427619006,
                 "target": 0.0,
                 "responseSeconds": 0.24000001,
                 "dampingRatio": 1.0,
